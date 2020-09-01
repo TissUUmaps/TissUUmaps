@@ -1,0 +1,19 @@
+.ISS_viewer {
+    height: 92vh;
+    //width:97vh;
+    background-color: #676767;
+}
+
+.ISS_menu {
+    height: 92vh;
+}
+
+.nav-tabs>li>a.active,
+.nav-tabs>li>a.active:hover,
+.nav-tabs>li>a.active:focus {
+    color: #555555;
+    background-color: #ffffff;
+    border: 1px solid #dddddd;
+    border-bottom-color: transparent;
+    cursor: default;
+}
