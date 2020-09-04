@@ -45,9 +45,9 @@ FlaskTissUUmaps allows to save all TissUUmaps states (Gene expressions, Cell mor
 	(tissuumaps) C:\
     ```
 
-1. Install dependencies (openslide and flask):
+1. Install dependencies (openslide, flask and pillow):
     ```bash
-	pip install openslide-python flask
+	pip install openslide-python flask pillow
     ```
 
     > Openslide-python depends on the openslide library.
@@ -60,6 +60,12 @@ FlaskTissUUmaps allows to save all TissUUmaps states (Gene expressions, Cell mor
     >
     >  * For linux:
     >    * Install openslide using your distribution package (for example in Ubuntu : `apt-get install openslide-tools`).
+    > 
+    > In linux, check that you only have one installation of pillow:
+    >   ```bash
+    >   sudo pip uninstall pillow
+    >   pip install pillow
+    >   ```
 
 1. Clone the FlaskTissUUmaps git repository or download in zip format and extract to a FlaskTissUUmaps folder
     ```bash
