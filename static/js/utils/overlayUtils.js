@@ -106,7 +106,7 @@ overlayUtils.modifyDisplayIfAny = function() {
     if (xmin < 0) { xmin = 0; };
     if (xmax > 1.0) { xmax = 1.0; };
     if (ymin < 0) { ymin = 0; };
-    if (ymax > 1.0) { ymax = 1.0; };
+    if (ymax > imageHeight / imageWidth) { ymax = imageHeight / imageWidth; };
 
     var total = imageWidth * imageHeight;
 

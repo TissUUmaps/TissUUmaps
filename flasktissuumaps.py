@@ -93,6 +93,10 @@ class _SlideCache(object):
             osr = OpenSlide(path)
         except:
             osr = ImageSlide(path)
+            #Fix for 16 bits tiff files
+            if osr._image.getextrema()[1] > 256:
+                osr._image = osr._image.point(lambda i:i*(1./256)).convert('L')
+        
         slide = DeepZoomGenerator(osr, **self.dz_opts)
         slide.osr = osr
         
