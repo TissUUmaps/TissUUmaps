@@ -35,26 +35,35 @@ overlayUtils.setItemOpacity = function(item, opacity) {
 /** 
  * @param {Number} item Index of an OSD tile source
  * Set the opacity of a tile source */
- overlayUtils.setItemSaturation = function(item, saturation) {
+ overlayUtils.setItemsSaturation = function(allFilters) {
+    function getCamanFun(index) {
+        return function(context, callback) {
+            Caman(context.canvas, function() {
+                console.log(index, allFilters);
+                this.saturation(200*allFilters[index][1]-100);
+                // Do not forget to call this.render with the callback
+                this.render(callback);
+            })
+        }
+    }
     var op = tmapp["object_prefix"];
-    if (!tmapp[op + "_viewer"].world.getItemAt(item)) {
+    if (!tmapp[op + "_viewer"].world.getItemAt(allFilters.length-1)) {
         setTimeout(function() {
-            overlayUtils.setItemSaturation(item, saturation);
+            overlayUtils.setItemSaturation(allFilters);
         }, 100);
         return;
     }
-    console.log(saturation);
+    filters = [];
+    for(var filterIndex=0;filterIndex<allFilters.length;filterIndex++){
+        console.log("filterIndex",filterIndex);
+        filters.push({
+            items: tmapp[op + "_viewer"].world.getItemAt(allFilters[filterIndex][0]),
+            processors: getCamanFun(filterIndex)
+        })
+    }
+    console.log(filters);
     tmapp[op + "_viewer"].setFilterOptions({
-        filters: [{
-            items: tmapp[op + "_viewer"].world.getItemAt(item),
-            processors: function(context, callback) {
-                Caman(context.canvas, function() {
-                    this.saturation(200*saturation-100);
-                    // Do not forget to call this.render with the callback
-                    this.render(callback);
-                })
-            }
-        }]
+        filters: filters
     });
 }
 

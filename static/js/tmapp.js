@@ -216,6 +216,7 @@ tmapp.addLayerSettings = function(layerName, i) {
     saturation.setAttribute("value", "0.5");
     saturation.setAttribute("layer", (i + 1));
     saturation.id = "saturation-layer-" + (i + 1);
+    saturation.className = "saturation-range";
     var td_saturation = document.createElement("td");
     td_saturation.appendChild(saturation);
 
@@ -223,7 +224,7 @@ tmapp.addLayerSettings = function(layerName, i) {
     tr.appendChild(td_visible);
     tr.appendChild(td_opacity);
     tr.appendChild(td_saturation);
-    layerTable.appendChild(tr);
+    layerTable.prepend(tr);
 
     visible.addEventListener("change", function(ev) {
         var layer = ev.srcElement.getAttribute("layer")
@@ -247,9 +248,15 @@ tmapp.addLayerSettings = function(layerName, i) {
     });
     
     saturation.addEventListener("change", function(ev) {
-        var layer = ev.srcElement.getAttribute("layer")
-        var slider = ev.srcElement;
-        overlayUtils.setItemSaturation(layer, slider.value);
+        saturationsRanges = document.getElementsByClassName("saturation-range");
+        items = []
+        for (i = 0; i < saturationsRanges.length; i++) {
+            saturationsRanges[i];
+            items.push(
+                [saturationsRanges[i].getAttribute("layer"),saturationsRanges[i].value]
+            );
+        }
+        overlayUtils.setItemsSaturation(items);
     });
 }
 
