@@ -15,7 +15,7 @@ overlayUtils = {
     _drawRegions: false,
     _d3nodes: {},
     _percentageForSubsample: 0.25,
-    _zoomForSubsample: 5.15
+    _zoomForSubsample:5.15
 }
 
 /** 
@@ -33,14 +33,40 @@ overlayUtils.setItemOpacity = function(item, opacity) {
 }
 
 /** 
+ * @param {Number} item Index of an OSD tile source
+ * Set the opacity of a tile source */
+ overlayUtils.setItemSaturation = function(item, saturation) {
+    var op = tmapp["object_prefix"];
+    if (!tmapp[op + "_viewer"].world.getItemAt(item)) {
+        setTimeout(function() {
+            overlayUtils.setItemSaturation(item, saturation);
+        }, 100);
+        return;
+    }
+    console.log(saturation);
+    tmapp[op + "_viewer"].setFilterOptions({
+        filters: [{
+            items: tmapp[op + "_viewer"].world.getItemAt(item),
+            processors: function(context, callback) {
+                Caman(context.canvas, function() {
+                    this.saturation(200*saturation-100);
+                    // Do not forget to call this.render with the callback
+                    this.render(callback);
+                })
+            }
+        }]
+    });
+}
+
+/** 
  * @param {String} layerName name of an existing d3 node
  * @param {Number} opacity desired opacity
  * Set the opacity of a tile source */
-overlayUtils.setLayerOpacity = function(layerName, opacity) {
-    if (layerName in overlayUtils._d3nodes) {
+overlayUtils.setLayerOpacity= function(layerName,opacity){
+    if(layerName in overlayUtils._d3nodes){
         var layer = overlayUtils._d3nodes[layerName];
-        layer._groups[0][0].style.opacity = opacity;
-    } else {
+        layer._groups[0][0].style.opacity=opacity;    
+    }else{
         console.log("layer does not exist or is not a D3 node");
     }
 }
@@ -49,7 +75,7 @@ overlayUtils.setLayerOpacity = function(layerName, opacity) {
  * @param {String} colortype A string from [hex,hsl,rgb]
  * Get a random color in the desired format
  */
-overlayUtils.randomColor = function(colortype) {
+overlayUtils.randomColor = function (colortype) {
     if (!colortype) {
         colortype = "hex";
     }
@@ -75,7 +101,7 @@ overlayUtils.randomColor = function(colortype) {
         return d3color.rgb().toString();
     }
     if (colortype == "hex") {
-        var hex = function(value) {
+        var hex = function (value) {
             value = Math.max(0, Math.min(255, Math.round(value) || 0));
             return (value < 16 ? "0" : "") + value.toString(16);
         }
@@ -88,39 +114,34 @@ overlayUtils.randomColor = function(colortype) {
  * Main function to update the view if there has been a reason for it. 
  * It computes all the elements that have to be drawn.
  */
-overlayUtils.modifyDisplayIfAny = function() {
+overlayUtils.modifyDisplayIfAny = function () {
     //get four corners of view
     var op = tmapp["object_prefix"];
     var bounds = tmapp[op + "_viewer"].viewport.getBounds();
     var currentZoom = tmapp[op + "_viewer"].viewport.getZoom();
 
     var xmin, xmax, ymin, ymax;
-    xmin = bounds.x;
-    ymin = bounds.y;
-    xmax = xmin + bounds.width;
-    ymax = ymin + bounds.height;
+    xmin = bounds.x; ymin = bounds.y;
+    xmax = xmin + bounds.width; ymax = ymin + bounds.height;
 
     var imageWidth = OSDViewerUtils.getImageWidth();
     var imageHeight = OSDViewerUtils.getImageHeight();
 
-    if (xmin < 0) { xmin = 0; };
-    if (xmax > 1.0) { xmax = 1.0; };
-    if (ymin < 0) { ymin = 0; };
-    if (ymax > imageHeight / imageWidth) { ymax = imageHeight / imageWidth; };
-
+    if (xmin < 0) { xmin = 0; }; if (xmax > 1.0) { xmax = 1.0; };
+    if (ymin < 0) { ymin = 0; }; if (ymax > imageHeight / imageWidth) { ymax = imageHeight / imageWidth; };
+    
     var total = imageWidth * imageHeight;
 
     //convert to global image coords
-    xmin *= imageWidth;
-    xmax *= imageWidth;
-    ymin *= imageWidth;
-    ymax *= imageWidth;
+    xmin *= imageWidth; xmax *= imageWidth; ymin *= imageWidth; ymax *= imageWidth;
 
     var portion = (xmax - xmin) * (ymax - ymin);
     var percentage = portion / total;
 
     //get barcodes that are checked to draw
     for (var barcode in markerUtils._checkBoxes) {
+        if (tmapp["hideSVGMarkers"]) continue;  // We are using WebGL instead for the drawing
+
         if (markerUtils._checkBoxes[barcode].checked) {
             var markersInViewportBounds = []
             if (percentage < overlayUtils._percentageForSubsample) {
@@ -143,19 +164,19 @@ overlayUtils.modifyDisplayIfAny = function() {
                     markerUtils.drawAllFromBarcode(barcode);
                 }
             }
-        }
+        } 
     }
 
     //if anything from cpdata exists
-    var cpop = "CP";
-    if (CPDataUtils.hasOwnProperty(cpop + "_rawdata")) { //I need to put a button here to draw or remove
+    var cpop="CP";
+    if(CPDataUtils.hasOwnProperty(cpop+"_rawdata")){ //I need to put a button here to draw or remove
         //Zoom of 1 means all image is visible so low res. Bigger than 1 means zooming in.
-        if (currentZoom > overlayUtils._zoomForSubsample) {
-            markerUtils.drawCPdata({ searchInTree: true, xmin: xmin, xmax: xmax, ymin: ymin, ymax: ymax });
+        if (currentZoom > overlayUtils._zoomForSubsample) {            
+            markerUtils.drawCPdata({searchInTree:true,xmin:xmin, xmax:xmax, ymin:ymin, ymax:ymax});
         } else {
             console.log("subsample");
             //I create the subsampled one already when I read de CP csv, in CPDataUtils[cpop + "_subsampled_data"]     
-            markerUtils.drawCPdata({ searchInTree: false });
+            markerUtils.drawCPdata({searchInTree:false});            
         }
     }
 }
@@ -163,15 +184,15 @@ overlayUtils.modifyDisplayIfAny = function() {
 /**
  * Save the current SVG overlay to open in a vector graphics editor for a figure for example
  */
-overlayUtils.saveSVG = function() {
+overlayUtils.saveSVG=function(){
     var svg = d3.select("svg");
     var svgData = svg._groups[0][0].outerHTML;
-    var svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+    var svgBlob = new Blob([svgData], {type:"image/svg+xml;charset=utf-8"});
     var svgUrl = URL.createObjectURL(svgBlob);
     var downloadLink = document.createElement("a");
     downloadLink.href = svgUrl;
     downloadLink.download = "currentview.svg";
     document.body.appendChild(downloadLink);
     downloadLink.click();
-    document.body.removeChild(downloadLink);
+    document.body.removeChild(downloadLink); 
 }

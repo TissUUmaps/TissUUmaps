@@ -79,9 +79,10 @@
             <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
                 <!-- The id is what OSD will look for to draw the viewer, the class is our own css to stylize 
                 The ID will give the prefix for all the objects related to the viewer in this case ISS-->
-                <div id="ISS_viewer" class="ISS_viewer"></div>
+                <div id="ISS_viewer" class="ISS_viewer" style="position:absolute; width:97.5%"></div>
+                <canvas id="gl_canvas" width="500" height="500" style="position:relative; z-index:10; pointer-events:none"></canvas>
             </div>
-            <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4 ISS_menu" style="overflow-y:scroll;">
+            <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4 ISS_menu" style="overflow-y:scroll; overflow-x:scroll">
                 <div class="row">
                     <!-- Level 0 tabs -->
                     <ul class="nav nav-tabs L0-tabs">
@@ -98,6 +99,15 @@
                                 <div class="panel-body">
                                     <!-- Row for sub tabs-->
                                     <div class="row" style="padding:0 10px 0 10px">
+                                        <!-- Global marker size slider -->
+                                        <div id="ISS_globalmarkersize" style="position:relative; float:right">
+                                            <label>Marker size&emsp;&emsp;</label><br>
+                                            <input class="form-control" type="range"
+                                                id="ISS_globalmarkersize_text"
+                                                value="100" min="0" max="500" step="10"
+                                                oninput="document.getElementById('ISS_globalmarkersize_label').innerHTML = this.value;"/>
+                                            <em class="range-label" id="ISS_globalmarkersize_label">100</em>
+                                        </div>
                                         <!-- Sub tabs flap objects-->
                                         <ul class="nav nav-tabs L1-tabs">
                                             <li> <a href="#markers-iss-gui" data-toggle="tab" aria-expanded="true" class="active main-child">Gene <span style = "display: block;">expression</span></a></li>
@@ -224,7 +234,6 @@
                                                                 <button id="ISS_cancelsearch_btn" class="btn btn-primary" type="button"> Cancel</button>
                                                             </div>
                                                             <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
-                                                                <input class="form-control" type="text" id="ISS_globalmarkersize_text" placeholder="Global marker size" value="100" />
                                                             </div>
                                                         </div>
                                                         <!-- 1.4 Row for markers -->
@@ -575,7 +584,8 @@
     </div>
 </body>
 <script src="{{ url_for('static', filename='js/bootstrap.4.0.0.bundle.min.js') }}"></script>
-<script src="{{ url_for('static', filename='js/openseadragon.2.4.0.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/openseadragon.2.4.2.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/caman.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/openseadragon-filtering.js') }}"></script>
 <script src="{{ url_for('static', filename='js/openseadragon-svg-overlay.js') }}"></script>
 <script src="{{ url_for('static', filename='js/openseadragon-scalebar.js') }}"></script>
@@ -588,6 +598,7 @@
 <script src="{{ url_for('static', filename='js/utils/regionUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils/overlayUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils/geometryUtils.js') }}"></script>
+<script src="{{ url_for('static', filename='js/utils/glUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/tmapp.js') }}"></script>
 <script>
     document.getElementById("project_title").innerText = "{{ slide_filename }}";
@@ -595,11 +606,26 @@
     $(document).ready(function() {
         tmapp.fixed_file = "{{ slide_url }}";
         tmapp.mpp = "{{ slide_mpp }}";
-        tmapp.stateFilename = "{{ state_filename }}"
+        tmapp.stateFilename = "{{ state_filename }}";
+        tmapp.slideFilename = "{{ slide_filename }}"
         tmapp.layers = []
-            //tmapp.layers =[{name:"Layer name",tileSource:"location/of/your.dzi"}];
         tmapp.registerActions();
         tmapp.init();
+        
+        tmapp.addLayer("{{ slide_filename }}", tmapp._url_suffix + "{{ slide_url }}", -1)
+            //tmapp.layers =[{name:"Layer name",tileSource:"location/of/your.dzi"}];
+        
+        glUtils.init();
+        glUtils.resize();
+        tmapp["ISS_viewer"].addHandler('resize', glUtils.resizeAndDraw);
+        tmapp["ISS_viewer"].addHandler('resize', glUtils.clearNavigatorArea);
+        tmapp["ISS_viewer"].addHandler('open', glUtils.draw);
+        tmapp["ISS_viewer"].addHandler('open', glUtils.clearNavigatorArea);
+        tmapp["ISS_viewer"].addHandler('container-enter', glUtils.draw);
+        tmapp["ISS_viewer"].addHandler('container-enter', glUtils.clearNavigatorArea);
+        tmapp["ISS_viewer"].addHandler('viewport-change', glUtils.draw);
+        tmapp["ISS_viewer"].addHandler('viewport-change', glUtils.clearNavigatorArea);
+        tmapp["ISS_viewer"].addHandler('container-exit', glUtils.postRedraw);
     });
 </script>
 

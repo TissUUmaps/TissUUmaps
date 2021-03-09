@@ -350,9 +350,8 @@ regionUtils.fillRegion = function (regionid) {
 	document.getElementById(regionid + "poly").setAttribute("style", newStyle);
 
 }
-
 /** 
- * @param {String} regionid String id of region to fill
+ * @param {String} regionid String id of region to delete
  * Given a region id, deletes this region in the interface */
 regionUtils.deleteRegion = function (regionid) {
 	var regionPoly = document.getElementById(regionid + "poly")
@@ -362,7 +361,6 @@ regionUtils.deleteRegion = function (regionid) {
 	var rPanel = document.getElementById(op + regionid + "panel");
 	rPanel.parentElement.removeChild(rPanel);
 }
-
 /** 
  * 	@param {String} regionid Region identifier
  *  Change the region properties like color, class name or region name */
@@ -621,7 +619,7 @@ regionUtils.JSONToRegions= function(filepath){
 regionUtils.JSONValToRegions= function(jsonVal){
 	// The file's text will be printed here
 	var maxregionid=0;
-	var regions=jsonVal;
+var regions=jsonVal;
 	for(i in regions){
 		//console.log(regions[i]);
 		regionUtils.createImportedRegion(regions[i]);

@@ -1,45 +1,45 @@
 /**
- * @file dataUtils.js Handling data for TissUUmaps
- * @author Leslie Solorzano
- * @see {@link dataUtils}
- */
+* @file dataUtils.js Handling data for TissUUmaps
+* @author Leslie Solorzano
+* @see {@link dataUtils}
+*/
 
 /**
- * @namespace dataUtils
- * @property {Object} dataUtils._expectedCSV - Expected csv structure
- * @property {Object} dataUtils._subsampledBarcodes - Containing the subsamples barcode trees to display
- * @property {Array}  dataUtils._barcodesByAmount - Sorted list of arrays of the data
- * @property {Number} dataUtils._maximumAmountInLowerRes - Maximum amount of points to display in low res
- * @property {Object} dataUtils._nameAndLetters - Contains two bools drawGeneName and drawGeneLetters to know if and which to display between barcode or gene name
- * @property {Object} dataUtils._drawOptions - Options for markerUtils.printBarcodeUIs */
+* @namespace dataUtils
+* @property {Object} dataUtils._expectedCSV - Expected csv structure
+* @property {Object} dataUtils._subsampledBarcodes - Containing the subsamples barcode trees to display
+* @property {Array}  dataUtils._barcodesByAmount - Sorted list of arrays of the data
+* @property {Number} dataUtils._maximumAmountInLowerRes - Maximum amount of points to display in low res
+* @property {Object} dataUtils._nameAndLetters - Contains two bools drawGeneName and drawGeneLetters to know if and which to display between barcode or gene name
+* @property {Object} dataUtils._drawOptions - Options for markerUtils.printBarcodeUIs */
 dataUtils = {
-        /** _CSVStructure - Expected csv structure */
-        _CSVStructure: { headers: ["barcode", "gene_name", "global_X_pos", "global_Y_pos", "seq_quality_min"] },
-        _expectedCSV: { "group": "macro_cluster", "name": "", "X_col": "global_X_pos", "Y_col": "global_Y_pos", "key": "" },
-        _subsampledBarcodes: {},
-        _barcodesByAmount: [],
-        _maximumAmountInLowerRes: 5000,
-        _nameAndLetters: { drawGeneName: false, drawGeneLetters: false },
-        _drawOptions: { randomColorForMarker: false }
-        //_minimumAmountToDisplay: 500,
-        //_subsamplingRate: 100,
-    }
-    /** 
-     * From the interface, get the key that will be used for nesting the raw data 
-     * and making my lovely quadtrees */
-dataUtils.processISSRawData = function() {
-
+    /** _CSVStructure - Expected csv structure */
+    _CSVStructure: { headers: ["barcode", "gene_name", "global_X_pos", "global_Y_pos", "seq_quality_min"] },
+    _expectedCSV: { "group": "macro_cluster", "name": "", "X_col": "global_X_pos", "Y_col": "global_Y_pos", "key": "" },
+    _subsampledBarcodes: {},
+    _barcodesByAmount: [],
+    _maximumAmountInLowerRes: 5000,
+    _nameAndLetters: { drawGeneName: false, drawGeneLetters: false },
+    _drawOptions: { randomColorForMarker: false }
+    //_minimumAmountToDisplay: 500,
+    //_subsamplingRate: 100,
+}
+/** 
+* From the interface, get the key that will be used for nesting the raw data 
+* and making my lovely quadtrees */
+dataUtils.processISSRawData = function () {
+    
     var imageWidth = OSDViewerUtils.getImageWidth();
     var op = tmapp["object_prefix"];
 
-    var progressParent = interfaceUtils.getElementById("ISS_csv_progress_parent");
-    if (progressParent == null) {
+    var progressParent=interfaceUtils.getElementById("ISS_csv_progress_parent");
+    if(progressParent == null){
         console.log("No progress bar present.")
-    } else {
-        progressParent.style.visibility = "hidden";
-        progressParent.style.display = "none";
+    }else{
+        progressParent.style.visibility="hidden";
+        progressParent.style.display="none";
     }
-
+    
     var ISSBarcodeInputNode = document.getElementById("ISS_barcode_header");
     var barcodeSelector = ISSBarcodeInputNode.options[ISSBarcodeInputNode.selectedIndex].value;
     var ISSNanmeInputNode = document.getElementById("ISS_name_header");
@@ -48,23 +48,23 @@ dataUtils.processISSRawData = function() {
     var xSelector = ISSXNode.options[ISSXNode.selectedIndex].value;
     var ISSYNode = document.getElementById("ISS_Y_header");
     var ySelector = ISSYNode.options[ISSYNode.selectedIndex].value;
-
+    
     //check that the key is available
     var knode = document.getElementById(op + "_key_header");
     var key = knode.options[knode.selectedIndex].value;
-
+    
     if (key.includes("letters")) {
         //make sure that the barcode column is selected
         if ((barcodeSelector == "null")) {
             //console.log("entered here");
             console.log("Key is selected to be Barcode but no column was selected in csv");
             if (!(nameSelector == "null")) {
-                knode.options[1].selected = true; //option for gene name
+                knode.options[1].selected = true;//option for gene name
                 console.log("changing key to gene name");
             }
         }
     }
-
+    
     if (key.includes("gene_name")) {
         //make sure that the barcode column is selected
         if ((nameSelector == "null")) {
@@ -76,9 +76,9 @@ dataUtils.processISSRawData = function() {
             }
         }
     }
-
+    
     //console.log("barcodeSelector nameSelector",barcodeSelector,nameSelector);
-
+    
     if (!(nameSelector == "null")) {
         //console.log("entered here");
         dataUtils._nameAndLetters.drawGeneName = true;
@@ -87,13 +87,13 @@ dataUtils.processISSRawData = function() {
         //console.log("entered here");
         dataUtils._nameAndLetters.drawGeneLetters = true;
     }
-
+    
     var toRemove = [barcodeSelector, nameSelector, xSelector, ySelector];
     var extraSelectors = []
-    dataUtils._CSVStructure[op + "_csv_header"].forEach(function(item) { extraSelectors.push(item) });
+    dataUtils._CSVStructure[op + "_csv_header"].forEach(function (item) { extraSelectors.push(item) });
     extraSelectors = extraSelectors.filter((el) => !toRemove.includes(el));
     dataUtils[op + "_processeddata"] = [];
-    dataUtils[op + "_rawdata"].forEach(function(rawdatum) {
+    dataUtils[op + "_rawdata"].forEach(function (rawdatum) {
         var obj = {};
         obj["letters"] = rawdatum[barcodeSelector];
         obj["gene_name"] = rawdatum[nameSelector];
@@ -101,21 +101,23 @@ dataUtils.processISSRawData = function() {
         obj["global_Y_pos"] = Number(rawdatum[ySelector]);
         obj["viewer_X_pos"] = (obj["global_X_pos"] + 0.5) / imageWidth;
         obj["viewer_Y_pos"] = (obj["global_Y_pos"] + 0.5) / imageWidth;
-        extraSelectors.forEach(function(extraSelector) {
+        extraSelectors.forEach(function (extraSelector) {
             obj[extraSelector] = rawdatum[extraSelector];
         });
         dataUtils[op + "_processeddata"].push(obj);
     });
-
+    
     dataUtils.makeQuadTrees();
-
+    
     delete dataUtils[op + "_rawdata"];
+
+    glUtils.loadMarkers();  // FIXME
 }
 
 
 /** 
- * Show the menu do select the CSV headers that contain the information to display*/
-dataUtils.showMenuCSV = function() {
+* Show the menu do select the CSV headers that contain the information to display*/
+dataUtils.showMenuCSV = function(){
     var op = tmapp["object_prefix"];
     var csvheaders = Object.keys(dataUtils[op + "_rawdata"][0]);
     dataUtils._CSVStructure[op + "_csv_header"] = csvheaders;
@@ -124,13 +126,13 @@ dataUtils.showMenuCSV = function() {
     var ISSX = document.getElementById(op + "_X_header");
     var ISSY = document.getElementById(op + "_Y_header");
     //console.log(dataUtils._CSVStructure["ISS_csv_header"]);
-    [ISSBarcodeInput, ISSNanmeInput, ISSX, ISSY].forEach(function(node) {
+    [ISSBarcodeInput, ISSNanmeInput, ISSX, ISSY].forEach(function (node) {
         node.innerHTML = "";
         var option = document.createElement("option");
         option.value = "null";
         option.text = "-----";
         node.appendChild(option);
-        csvheaders.forEach(function(head) {
+        csvheaders.forEach(function (head) {
             var option = document.createElement("option");
             option.value = head;
             option.text = head;
@@ -150,23 +152,24 @@ dataUtils.showMenuCSV = function() {
 }
 
 /** 
- * Creeate the dataUtils[op + "_barcodeGarden"] ("Garden" as opposed to "forest")
- * To save all the trees per barcode or per key. It is an object so that it is easy to just call
- * the right tree given the key instead of looping through an array. */
-dataUtils.makeQuadTrees = function() {
+* Creeate the dataUtils[op + "_barcodeGarden"] ("Garden" as opposed to "forest")
+* To save all the trees per barcode or per key. It is an object so that it is easy to just call
+* the right tree given the key instead of looping through an array. */
+dataUtils.makeQuadTrees = function () {
     var op = tmapp["object_prefix"];
-    var x = function(d) {
+    var x = function (d) {
         return d["global_X_pos"];
     };
-    var y = function(d) {
+    var y = function (d) {
         return d["global_Y_pos"];
     };
-
-
+    
+    
     var op = tmapp["object_prefix"];
     var knode = document.getElementById(op + "_key_header");
     var key = knode.options[knode.selectedIndex].value;
-    var allbarcodes = d3.nest().key(function(d) { return d[key]; }).entries(dataUtils[op + "_processeddata"]);
+    var allbarcodes = d3.nest().key(function (d) { return d[key]; }).entries(dataUtils[op + "_processeddata"]);
+
     dataUtils[op + "_barcodeGarden"] = {};
     for (var i = 0; i < allbarcodes.length; i++) {
         var gardenKey = allbarcodes[i].key;
@@ -179,50 +182,52 @@ dataUtils.makeQuadTrees = function() {
         //create the subsampled for all those that need it                  
     }
     dataUtils[op + "_data"] = [];
-    allbarcodes.forEach(function(n) {
+    allbarcodes.forEach(function (n) {
         dataUtils[op + "_data"].push(n);
     });
     markerUtils.printBarcodeUIs(dataUtils._drawOptions);
-    var panel = document.getElementById(op + "_csv_headers");
+    var panel = document.getElementById(op+"_csv_headers");
     panel.style = "visibility: hidden; display:none;";
-
+    
 }
 
-dataUtils.XHRCSV = function(thecsv) {
+dataUtils.XHRCSV = function (thecsv) {
     var op = tmapp["object_prefix"];
 
     var panel = interfaceUtils.getElementById(op + "_csv_headers");
-    panel.style.visibility = "hidden";
-    panel.style.display = "none"
+    panel.style.visibility="hidden"; 
+    panel.style.display="none"
 
     var xhr = new XMLHttpRequest();
 
-    var progressParent = interfaceUtils.getElementById("ISS_csv_progress_parent");
-    progressParent.style.visibility = "visible";
-    progressParent.style.display = "block";
+    var progressParent=interfaceUtils.getElementById("ISS_csv_progress_parent");
+    progressParent.style.visibility="visible";
+    progressParent.style.display="block";
     //console.log(progressParent)
 
-    var progressBar = interfaceUtils.getElementById("ISS_csv_progress");
-
+    var progressBar=interfaceUtils.getElementById("ISS_csv_progress");
+    
     // Setup our listener to process compeleted requests
-    xhr.onreadystatechange = function() {
+    xhr.onreadystatechange = function () {        
         // Only run if the request is complete
-        if (xhr.readyState !== 4) return;
+        if (xhr.readyState !== 4) return;        
         // Process our return data
         if (xhr.status >= 200 && xhr.status < 300) {
             // What do when the request is successful
             dataUtils[op + "_rawdata"] = d3.csvParse(xhr.responseText);
             dataUtils.showMenuCSV();
-
-        }
+            
+        }else{
+            console.log("dataUtils.XHRCSV responded with "+xhr.status);
+        }     
     };
-
-    xhr.onprogress = function(pe) {
+    
+    xhr.onprogress = function (pe) {
         if (pe.lengthComputable) {
             var maxsize = pe.total;
-            var prog = pe.loaded;
-            var perc = prog / maxsize * 100;
-            perc = perc.toString() + "%"
+            var prog=pe.loaded;
+            var perc=prog/maxsize*100;
+            perc=perc.toString()+"%"
             progressBar.style.width = perc;
             //console.log(perc);
         }
@@ -230,119 +235,119 @@ dataUtils.XHRCSV = function(thecsv) {
 
     xhr.open('GET', thecsv);
     xhr.send();
-
+    
 }
 
 /** 
- * @param {File} thecsv 
- * @return {Array} The csv headers.
- * This reads the CSV and stores the raw data and sets the headers 
- * in the interface and at [op + "_csv_header"]
- * Later on it should be nested according to the main criteria */
-dataUtils.readCSV = function(thecsv) {
+* @param {File} thecsv 
+* @return {Array} The csv headers.
+* This reads the CSV and stores the raw data and sets the headers 
+* in the interface and at [op + "_csv_header"]
+* Later on it should be nested according to the main criteria */
+dataUtils.readCSV = function (thecsv) {
     var op = tmapp["object_prefix"];
     var panel = interfaceUtils.getElementById(op + "_csv_headers");
-    panel.style.visibility = "hidden";
-    panel.style.display = "none"
+    panel.style.visibility="hidden"; 
+    panel.style.display="none"
     dataUtils[op + "_rawdata"] = {};
     dataUtils._CSVStructure[op + "_csv_header"] = null;
     var request = d3.csv(
         thecsv,
-        function(d) { return d; },
-        function(rows) {
+        function (d) { return d; },
+        function (rows) {
             dataUtils[op + "_rawdata"] = rows;
             dataUtils.showMenuCSV();
         }
     );
 }
-
-/** 
- * subsamples the full amount of barcodes so that in the lower resolutions only a significant portion
- * is drawn and we don't wait and kill our browser.
- * Sumsampling is done homogenously for all the space and density. 
- * @param {Number} amount needed amount of barcodes
- * @param {String} barcode Barcode or gene_name (key) to search for in op+_data*/
-dataUtils.randomMarkersFromBarcode = function(amount, barcode) {
-    var op = tmapp["object_prefix"];
-    dataUtils[op + "_data"].forEach(function(bar) {
-        if (bar.key == barcode) {
-            var barcodes = bar.values;
-            var maxindex = barcodes.length - 1;
-
-            for (var i = 0; i <= maxindex; i++) {
-                var index = Math.floor(Math.random() * (maxindex - i + 0)) + i;
-                var temp = barcodes[i];
-                barcodes[i] = barcodes[index];
-                barcodes[index] = temp;
+    
+    /** 
+    * subsamples the full amount of barcodes so that in the lower resolutions only a significant portion
+    * is drawn and we don't wait and kill our browser.
+    * Sumsampling is done homogenously for all the space and density. 
+    * @param {Number} amount needed amount of barcodes
+    * @param {String} barcode Barcode or gene_name (key) to search for in op+_data*/
+    dataUtils.randomMarkersFromBarcode = function (amount, barcode) {
+        var op = tmapp["object_prefix"];
+        dataUtils[op + "_data"].forEach(function (bar) {
+            if (bar.key == barcode) {
+                var barcodes = bar.values;
+                var maxindex = barcodes.length - 1;
+                
+                for (var i = 0; i <= maxindex; i++) {
+                    var index = Math.floor(Math.random() * (maxindex - i + 0)) + i;
+                    var temp = barcodes[i];
+                    barcodes[i] = barcodes[index];
+                    barcodes[index] = temp;
+                }
+                dataUtils._subsampledBarcodes[barcode] = barcodes.slice(0, amount);
             }
-            dataUtils._subsampledBarcodes[barcode] = barcodes.slice(0, amount);
-        }
-    });
-}
-
-/** 
- * subsamples the full list from a barcode so that in the lower resolutions only a significant portion
- * is drawn and we don't wait and kill our browser  
- * @param {Number} amount needed amount of barcodes
- * @param {barcodes[]} list A list */
-dataUtils.randomSamplesFromList = function(amount, list) {
-    //var op=tmapp["object_prefix"];
-    if (amount >= list.length) return list;
-
-    for (var i = 0; i < amount; i++) {
-        var index = Math.floor(Math.random() * (list.length - i + 0 - 1)) + i;
-        var temp = list[i];
-        list[i] = list[index];
-        list[index] = temp;
+        });
     }
-
-    return list.slice(0, amount);
-
-}
-
-/** 
- * Find all the markers for a specific key (name or barcode)  
- * @param {string} keystring to search in op+_data usually letters like "AGGC" but can be the gene_name */
-dataUtils.findBarcodesInRawData = function(keystring) {
-    var op = tmapp["object_prefix"];
-    var values = null;
-    dataUtils[op + "_data"].forEach(function(input) {
-        if (input.key == keystring) {
-            values = input.values;
+    
+    /** 
+    * subsamples the full list from a barcode so that in the lower resolutions only a significant portion
+    * is drawn and we don't wait and kill our browser  
+    * @param {Number} amount needed amount of barcodes
+    * @param {barcodes[]} list A list */
+    dataUtils.randomSamplesFromList = function (amount, list) {
+        //var op=tmapp["object_prefix"];
+        if (amount >= list.length) return list;
+        
+        for (var i = 0; i < amount; i++) {
+            var index = Math.floor(Math.random() * (list.length - i + 0 - 1)) + i;
+            var temp = list[i];
+            list[i] = list[index];
+            list[index] = temp;
         }
-    });
-    return values;
-}
-
-/** 
- * Take dataUtils[op + "_data"] and sort it (permanently). 
- * Calculate and save the right amount of downsampling for each barcode.
- * And save the subsample arrays, subsampling is homogeneous   */
-dataUtils.sortDataAndDownsample = function() {
-    var op = tmapp["object_prefix"];
-    var compareKeys = function(a, b) {
-        if (a.values.length > b.values.length) { return -1; }
-        if (a.values.length < b.values.length) { return 1; }
-        return 0;
-    };
-
-    dataUtils[op + "_data"].sort(compareKeys);
-
-    //take the last element of the list which has the minimum amount
-    var minamount = dataUtils[op + "_data"][dataUtils[op + "_data"].length - 1].values.length;
-    //take the first element of the list which has the maximum amount
-    var maxamount = dataUtils[op + "_data"][0].values.length;
-    //total amount of barcodes
-    var amountofbarcodes = dataUtils[op + "_data"].length;
-
-    dataUtils[op + "_data"].forEach(function(barcode) {
-        var normalized = (barcode.values.length - minamount) / maxamount;
-        var downsize = dataUtils._maximumAmountInLowerRes * Math.log(barcode.values.length) / Math.log(maxamount);
-        if (downsize > barcode.values.length) { downsize = barcode.values.length; }
-        dataUtils._barcodesByAmount.push({ "barcode": barcode.key, "amount": barcode.values.length, "normalized": normalized, "downsize": downsize });
-    });
-
-    dataUtils._barcodesByAmount.forEach(function(b) {
-        dataUtils.randomMarkersFromBarcode(b.downsize, b.barcode);
-    });
-}
+        
+        return list.slice(0, amount);
+        
+    }
+    
+    /** 
+    * Find all the markers for a specific key (name or barcode)  
+    * @param {string} keystring to search in op+_data usually letters like "AGGC" but can be the gene_name */
+    dataUtils.findBarcodesInRawData = function (keystring) {
+        var op = tmapp["object_prefix"];
+        var values = null;
+        dataUtils[op + "_data"].forEach(function (input) {
+            if (input.key == keystring) {
+                values = input.values;
+            }
+        });
+        return values;
+    }
+    
+    /** 
+    * Take dataUtils[op + "_data"] and sort it (permanently). 
+    * Calculate and save the right amount of downsampling for each barcode.
+    * And save the subsample arrays, subsampling is homogeneous   */
+    dataUtils.sortDataAndDownsample = function () {
+        var op = tmapp["object_prefix"];
+        var compareKeys = function (a, b) {
+            if (a.values.length > b.values.length) { return -1; }
+            if (a.values.length < b.values.length) { return 1; }
+            return 0;
+        };
+        
+        dataUtils[op + "_data"].sort(compareKeys);
+        
+        //take the last element of the list which has the minimum amount
+        var minamount = dataUtils[op + "_data"][dataUtils[op + "_data"].length - 1].values.length;
+        //take the first element of the list which has the maximum amount
+        var maxamount = dataUtils[op + "_data"][0].values.length;
+        //total amount of barcodes
+        var amountofbarcodes = dataUtils[op + "_data"].length;
+        
+        dataUtils[op + "_data"].forEach(function (barcode) {
+            var normalized = (barcode.values.length - minamount) / maxamount;
+            var downsize = dataUtils._maximumAmountInLowerRes * Math.log(barcode.values.length) / Math.log(maxamount);
+            if (downsize > barcode.values.length) { downsize = barcode.values.length; }
+            dataUtils._barcodesByAmount.push({ "barcode": barcode.key, "amount": barcode.values.length, "normalized": normalized, "downsize": downsize });
+        });
+        
+        dataUtils._barcodesByAmount.forEach(function (b) {
+            dataUtils.randomMarkersFromBarcode(b.downsize, b.barcode);
+        });
+    }

@@ -13,7 +13,8 @@ CPDataUtils = {
     _minimumAmountToDisplay: 500,
     _markersize:0.0008,
     _subsamplingfactor:0.15,
-    _drawCPdata: false
+    _drawCPdata: false,
+    _expectedCSV: { "key_header": "Global_Exp_ID", "X_header": "Global_X", "Y_header": "Global_Y", "colorscale": "interpolateRainbow" },
 }
 
 /** 
@@ -39,13 +40,16 @@ CPDataUtils.processISSRawData = function () {
     };
     if(!CPDataUtils[cpop + "_tree"])
         CPDataUtils[cpop + "_tree"] = d3.quadtree().x(x).y(y).addAll(CPDataUtils[cpop + "_rawdata"]);  
-    CPDataUtils._drawCPdata=true;
+    CPDataUtils._drawCPdata=!tmapp["hideSVGMarkers"];  // SVG markers should not be drawn when WebGL is used
     markerUtils.drawCPdata({searchInTree:false}); //mandatory options obj
+
+    glUtils.loadCPMarkers();  // FIXME
 }
 
 CPDataUtils.readCSV = function (thecsv) {
     var cpop = "CP";//tmapp["object_prefix"];
     CPDataUtils[cpop + "_rawdata"] = {};
+    CPDataUtils[cpop + "_rawdata_stats"]={};
     CPDataUtils._CSVStructure[cpop + "_csv_header"] = null;
     var request = d3.csv(
         thecsv,
@@ -130,6 +134,11 @@ CPDataUtils.loadFromRawData = function () {
         markerUtils.drawCPdata({searchInTree:false});
     }
     CPProperty.addEventListener("change", changeProperty);
+    
+    if (csvheaders.includes(CPDataUtils._expectedCSV["key_header"])) CPKey.value = CPDataUtils._expectedCSV["key_header"];
+    if (csvheaders.includes(CPDataUtils._expectedCSV["X_header"])) CPX.value = CPDataUtils._expectedCSV["X_header"];
+    if (csvheaders.includes(CPDataUtils._expectedCSV["Y_header"])) CPY.value = CPDataUtils._expectedCSV["Y_header"];
+    CPLut.value = "interpolateRainbow";
 }
 
 /** 

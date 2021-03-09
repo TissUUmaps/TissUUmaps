@@ -94,8 +94,8 @@ class _SlideCache(object):
         except:
             osr = ImageSlide(path)
             #Fix for 16 bits tiff files
-            if osr._image.getextrema()[1] > 256:
-                osr._image = osr._image.point(lambda i:i*(1./256)).convert('L')
+            # if osr._image.getextrema()[1] > 256:
+            #     osr._image = osr._image.point(lambda i:i*(1./256)).convert('L')
         
         slide = DeepZoomGenerator(osr, **self.dz_opts)
         slide.osr = osr
@@ -184,13 +184,15 @@ def _get_slide(path):
 def setTmapsState(path):
     jsonFilename = os.path.abspath(os.path.join(app.basedir, path))
     jsonFilename = os.path.splitext(jsonFilename)[0]+'.tmap'
+    print (request.method)
+    
     if request.method == 'POST':
         state = request.get_json(silent=False)
+        print (state["Markers"]["_nameAndLetters"])
         # we save the state in a tmap file
         with open(jsonFilename,"w") as jsonFile:
             json.dump(state, jsonFile)
     else:
-        print (jsonFilename, os.path.isfile(jsonFilename))
         if os.path.isfile(jsonFilename):
             with open(jsonFilename,"r") as jsonFile:
                 state = json.load(jsonFile)
