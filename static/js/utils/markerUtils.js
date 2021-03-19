@@ -24,15 +24,15 @@ markerUtils = {
     _uniqueColorSelector:null, //is a string of the type "[float,float,float]" that gets converted to a string "rgb(uint8,uint8,uint8)"
     _startCullingAt: 9000,
     _checkBoxes: {},
-    _d3Symbols: [d3.symbolCross, d3.symbolDiamond, d3.symbolSquare, d3.symbolTriangle, d3.symbolStar, d3.symbolWye],
-    _d3SymbolStrings: ["Cross", "Diamond", "Square", "Triangle", "Star", "Wye"],
+    _d3Symbols: [d3.symbolCross, d3.symbolDiamond, d3.symbolSquare, d3.symbolTriangle, d3.symbolStar, d3.symbolWye, d3.symbolCircle],
+    _d3SymbolStrings: ["Cross", "Diamond", "Square", "Triangle", "Star", "Wye", "Circle"],
     _colorsperkey:null
 }
 
 /** 
  * Draw a D3 symbol
  * @param {string} group d3 group where to put this marker at.
- * @param {sring} type [symbolCross, symbolDiamond, symbolSquare, symbolTriangle, symbolStar, symbolWye]
+ * @param {sring} type [symbolCross, symbolDiamond, symbolSquare, symbolTriangle, symbolStar, symbolWye, symbolCircle]
  * @param {Number} x x coordinate normalized by the width of the image
  * @param {Number} y y coordinate normalized by the width of the image... YES it is the width as well
  * @param {Number} size size relative to the normalized image width (width=1). Common size can be 0.005
@@ -404,6 +404,20 @@ markerUtils.markerUI = function (barObject,options) {
     //var tdkey = HTMLElementUtils.createElement({ type: "td", innerText: barObject.key });
     //row.appendChild(tdkey);
 
+    var check = HTMLElementUtils.createElement({ type: "td" });
+    var checkinput = HTMLElementUtils.inputTypeCheckbox({
+        id: barObject.key + "-checkbox-" + op,
+        extraAttributes: { barcode: barObject.key },
+        eventListeners: { click: function () {
+            markerUtils.markerBoxToggle($(this));
+            document.getElementById("AllMarkers-checkbox-" + op).checked = false;
+        }}
+    });
+    markerUtils._checkBoxes[barObject.key] = checkinput;
+
+    check.appendChild(checkinput);
+    row.appendChild(check);
+
     if(options.drawGeneLetters){
         var barcodeLetters=barObject.values[0].letters;
         var lettersrow = HTMLElementUtils.createElement({ type: "td", innerText: barcodeLetters,
@@ -418,22 +432,8 @@ markerUtils.markerUI = function (barObject,options) {
         row.appendChild(name);
     }
 
-    var amount = HTMLElementUtils.createElement({ type: "td", innerText: '(' + barObject.values.length + ')' });
+    var amount = HTMLElementUtils.createElement({ type: "td", innerText: barObject.values.length });
     row.appendChild(amount);
-
-    var check = HTMLElementUtils.createElement({ type: "td" });
-    var checkinput = HTMLElementUtils.inputTypeCheckbox({
-        id: barObject.key + "-checkbox-" + op,
-        extraAttributes: { barcode: barObject.key },
-        eventListeners: { click: function () {
-            markerUtils.markerBoxToggle($(this));
-            document.getElementById("AllMarkers-checkbox-" + op).checked = false;
-        }}
-    });
-    markerUtils._checkBoxes[barObject.key] = checkinput;
-
-    check.appendChild(checkinput);
-    row.appendChild(check);
 
     var thecolor="#5fb5f6"
     if(options.randomColorForMarker){
@@ -459,7 +459,7 @@ markerUtils.markerUI = function (barObject,options) {
     var shape = HTMLElementUtils.createElement({ type: "td" });
     var shapeParams = { random: true, id: barObject.key + "-shape-" + op, "options": markerUtils._d3SymbolStrings };
     var shapeinput = HTMLElementUtils.selectTypeDropDown(shapeParams);
-    if (shapeParams.random) { var rnd = Math.floor(Math.random() * (markerUtils._d3SymbolStrings.length)) + 0; shapeinput.selectedIndex = rnd; }
+    if (shapeParams.random) { var rnd = Math.floor(Math.random() * (markerUtils._d3SymbolStrings.length-1)) + 0; shapeinput.selectedIndex = rnd; }
     shape.appendChild(shapeinput);
     row.appendChild(shape);
 
@@ -490,6 +490,18 @@ markerUtils.markerUIAll = function (options) {
     //var tdkey = HTMLElementUtils.createElement({ type: "td", innerText: barObject.key });
     //row.appendChild(tdkey);
 
+    var check = HTMLElementUtils.createElement({ type: "td" });
+    var checkinput = HTMLElementUtils.inputTypeCheckbox({
+        id: "AllMarkers-checkbox-" + op,
+        eventListeners: { click: function () { 
+            // TODO: Remove JQuery dependency here?
+            $("#ISS_table input[type=checkbox]").prop("checked",$("#AllMarkers-checkbox-ISS").prop("checked"));
+         } }
+    });
+    
+    check.appendChild(checkinput);
+    row.appendChild(check);
+
     if(options.drawGeneLetters){
         var lettersrow = HTMLElementUtils.createElement({ type: "td", innerText: "All Barcodes",
             extraAttributes: { "title": "All Barcodes", "data-title":"All Barcodes" } });
@@ -505,20 +517,8 @@ markerUtils.markerUIAll = function (options) {
     dataUtils[op + "_data"].forEach(function (barcode) {
         length += barcode.values.length;
     });
-    var amount = HTMLElementUtils.createElement({ type: "td", innerText: '(' + length + ')' });
+    var amount = HTMLElementUtils.createElement({ type: "td", innerText: length });
     row.appendChild(amount);
-
-    var check = HTMLElementUtils.createElement({ type: "td" });
-    var checkinput = HTMLElementUtils.inputTypeCheckbox({
-        id: "AllMarkers-checkbox-" + op,
-        eventListeners: { click: function () { 
-            // TODO: Remove JQuery dependency here?
-            $("#ISS_table input[type=checkbox]").prop("checked",$("#AllMarkers-checkbox-ISS").prop("checked"));
-         } }
-    });
-    
-    check.appendChild(checkinput);
-    row.appendChild(check);
 
     var color = HTMLElementUtils.createElement({ type: "td" });
     row.appendChild(color);
@@ -542,9 +542,9 @@ markerUtils.printBarcodeUIs = function (options) {
     var op = tmapp["object_prefix"];
     //overlayUtils._d3nodes[op]=d3.select( tmapp[op+"_svgov"].node());
     //chekc if gene_name exists    
-    var headers = ["Count", "Show", "Color", "Shape"];
+    var headers = ["Count", "Color", "Shape"];
     if (markerUtils._showSizeColumn) {
-        headers = ["Count", "Show", "Color", "Shape", "Size"];
+        headers = ["Count", "Color", "Shape", "Size"];
     }
     dataUtils.sortDataAndDownsample();
     //this is causing weird behaviour sometims it creates the name column sometimes no
@@ -562,6 +562,7 @@ markerUtils.printBarcodeUIs = function (options) {
         options.drawGeneLetters=true;
         headers.unshift("Barcode");
     }
+    headers.unshift("");
 
     var container = document.getElementById(op + "_markers"); container.innerHTML = "";
     var tbl = document.createElement("table");
@@ -571,11 +572,11 @@ markerUtils.printBarcodeUIs = function (options) {
 
     var colg=document.createElement ("colgroup");
     if(headers.length == 6 ){
-        colg.innerHTML='<col width="20%"><col width="20%"><col width="12%"><col width="12%"><col width="15%"><col width="17%">';
+        colg.innerHTML='<col width="2%"><col width="23%"><col width="20%"><col width="16%"><col width="12%"><col width="17%">';
         tbl.appendChild(colg);
     }
     else if(headers.length == 7 ){
-        colg.innerHTML='<col width="16%"><col width="16%"><col width="15%"><col width="11%"><col width="11%"><col width="15%"><col width="16%">';
+        colg.innerHTML='<col width="2%"><col width="16%"><col width="16%"><col width="15%"><col width="11%"><col width="15%"><col width="16%">';
         tbl.appendChild(colg);
     } else if(headers.length>1 && headers.length<6){
         var quotient = Math.floor(100/headers.length);
@@ -585,11 +586,14 @@ markerUtils.printBarcodeUIs = function (options) {
     }
 
     var tblHead = document.createElement("thead");
+    var tblHeadTr = document.createElement("tr");
+    tblHead.appendChild(tblHeadTr);
+
     var tblBody = document.createElement("tbody");
     headers.forEach(function (header) {
         var th = document.createElement("th");
         th.appendChild(document.createTextNode(header));
-        tblHead.appendChild(th);
+        tblHeadTr.appendChild(th);
     });
     tbl.appendChild(tblHead);
     

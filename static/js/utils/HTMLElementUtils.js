@@ -19,6 +19,7 @@ HTMLElementUtils.inputTypeCheckbox = function (params) {
     var checkbox = document.createElement("input");
     checkbox.setAttribute("type", "checkbox");
     (params.id || null ? checkbox.setAttribute("id", params.id) : null);
+    (params["class"] || null ? checkbox.setAttribute("class", params["class"]) : null);
     var extraAttributes = params.extraAttributes || null;
     if (extraAttributes) {
         for (var attr in extraAttributes) {
@@ -73,6 +74,30 @@ HTMLElementUtils.inputTypeText = function (params) {
     return text;
 }
 
+/** Create a range input  */
+HTMLElementUtils.inputTypeRange = function (params) {
+    if (!params) {
+        var rangeInput = document.createElement("input");
+        rangeInput.type = "range";
+        return rangeInput
+    }
+    var rangeInput = document.createElement("input");
+    rangeInput.type = "range";
+    (params.id || null ? rangeInput.setAttribute("id", params.id) : null);
+    (params["class"] || null ? rangeInput.setAttribute("class", params["class"]) : null);
+    (params.min || null ? rangeInput.setAttribute("min", params.min) : null);
+    (params.max || null ? rangeInput.setAttribute("max", params.max) : null);
+    (params.step || null ? rangeInput.setAttribute("step", params.step) : null);
+    var eventListeners = params.eventListeners || null;
+    if (eventListeners) {
+        for (var message in eventListeners) {
+            rangeInput.addEventListener(message, eventListeners[message]);
+        }
+    }
+    return rangeInput;
+}
+
+
 /** Create a drop down select  */
 HTMLElementUtils.selectTypeDropDown = function (params) {
     if (!params) {
@@ -90,6 +115,36 @@ HTMLElementUtils.selectTypeDropDown = function (params) {
         });
     }
     return select;
+}
+
+/** Create an HTML element with the common tags (e.g a,p,h1) */
+HTMLElementUtils.createFilter = function (params) {
+    console.log("Params: ",params);
+    if (!params) {
+        return null;
+    }
+    var type = params.type || null;
+    if (type == "range") {
+        filterInput = HTMLElementUtils.inputTypeRange(params);
+    }
+    else if (type == "checkbox") {
+        filterInput = HTMLElementUtils.inputTypeCheckbox(params);
+    }
+    filterInput.setAttribute("value", params.value);
+    filterInput.setAttribute("layer", params.layer);
+    filterInput.setAttribute("filter", params.filter);
+    filterInput.setAttribute("id", "filterInput-" + params.filter + "-" + params.layer);
+    filterInput.setAttribute("list", "filterDatalist-" + params.filter + "-" + params.layer);
+
+    datalist = document.createElement("datalist");
+    datalist.setAttribute("id", "filterDatalist-" + params.filter + "-" + params.layer);
+    option = document.createElement("option");
+    option.text = params.value;
+    datalist.appendChild(option);
+
+    filterInput.appendChild(datalist);
+
+    return filterInput;
 }
 
 /** Create an HTML element with the common tags (e.g a,p,h1) */
@@ -245,6 +300,93 @@ HTMLElementUtils.createForm = function (params) {
     }
     return form;
 }
+
+/**
+ * This method is used to add a layer */
+HTMLElementUtils.addLayerSettings = function(layerName, layerIndex) {
+    var settingsPanel = document.getElementById("image-overlay-panel");
+    var layerTable = document.getElementById("image-overlay-tbody");
+    if (!layerTable) {
+        layerTable = document.createElement("table");
+        layerTable.id = "image-overlay-table";
+        layerTable.className += "table table-striped"
+        filterHeaders = "";
+        for (filterIndex = 0; filterIndex < filterUtils._filtersUsed.length; filterIndex++) {
+            filterHeaders += "<th style='text-align:center;'>" + filterUtils._filtersUsed[filterIndex] + "</th>";
+        }
+        layerTable.innerHTML = "<thead><th style='text-align:center;'>Name</th><th style='text-align:center;'>Visible</th><th style='text-align:center;'>Opacity</th>" + filterHeaders + "</thead><tbody id='image-overlay-tbody'></tbody>"
+        settingsPanel.appendChild(layerTable);
+    }
+    layerTable = document.getElementById("image-overlay-tbody");
+    var tr = document.createElement("tr");
+
+    var visible = document.createElement("input");
+    visible.type = "checkbox";
+    visible.checked = true; 
+    visible.id = "visible-layer-" + (layerIndex + 1);
+    visible.setAttribute("layer", (layerIndex + 1));
+    var td_visible = document.createElement("td");
+    td_visible.appendChild(visible);
+    td_visible.style.textAlign = "center";
+    td_visible.style.padding = "6px";
+    td_visible.style.minWidth = "100px";
+
+    var opacity = document.createElement("input");
+    opacity.type = "range";
+    opacity.setAttribute("min", "0");
+    opacity.setAttribute("max", "1");
+    opacity.setAttribute("step", "0.1");
+    opacity.setAttribute("layer", (layerIndex + 1));
+    opacity.id = "opacity-layer-" + (layerIndex + 1);
+    var td_opacity = document.createElement("td");
+    td_opacity.appendChild(opacity);
+    td_opacity.style.textAlign = "center";
+    td_opacity.style.padding = "6px";
+    td_opacity.style.minWidth = "100px";
+
+    tr.innerHTML = "<td style='padding:6px;'>" + layerName + "</td>";
+    tr.appendChild(td_visible);
+    tr.appendChild(td_opacity);
+
+    for (filterIndex = 0; filterIndex < filterUtils._filtersUsed.length; filterIndex++) {
+        filterName = filterUtils._filtersUsed[filterIndex];
+        filterParams = filterUtils.getFilterParams(filterName)
+        filterParams.layer = layerIndex + 1;
+        
+        filterInput = HTMLElementUtils.createFilter(filterParams);
+        var td_filterInput = document.createElement("td");
+        td_filterInput.style.textAlign = "center";
+        td_filterInput.style.padding = "6px";
+        td_filterInput.style.minWidth = "100px";
+        td_filterInput.appendChild(filterInput);
+        
+        tr.appendChild(td_filterInput);
+    }
+    layerTable.prepend(tr);
+
+    visible.addEventListener("change", function(ev) {
+        var layer = ev.srcElement.getAttribute("layer")
+        var slider = document.querySelectorAll('[layer="' + layer + '"][type="range"]')[0];
+        var checkbox = ev.srcElement;
+        if (checkbox.checked) {
+            overlayUtils.setItemOpacity(layer, slider.value);
+        } else {
+            overlayUtils.setItemOpacity(layer, 0);
+        }
+    });
+    opacity.addEventListener("change", function(ev) {
+        var layer = ev.srcElement.getAttribute("layer")
+        var slider = ev.srcElement;
+        var checkbox = document.querySelectorAll('[layer="' + layer + '"][type="checkbox"]')[0];
+        if (checkbox.checked) {
+            overlayUtils.setItemOpacity(layer, slider.value);
+        } else {
+            overlayUtils.setItemOpacity(layer, 0);
+        }
+    });
+    
+}
+
 
 /** Create a color in YCbCr space to divide between the possible 4 letters */
 HTMLElementUtils.barcodeHTMLColor = function (barcode) {

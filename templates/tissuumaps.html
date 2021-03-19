@@ -4,6 +4,7 @@
 <head>
     <title>TissUUmaps</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta charset="utf-8"/>
     <!--<script src="https://d3js.org/d3.v4.min.js"></script>-->
     <!--<script src="//d3js.org/d3-scale-chromatic.v0.3.min.js"></script>-->
     <script src="{{ url_for('static', filename='js/d3.v4.min.js') }}"></script>
@@ -76,494 +77,381 @@
     <div class="container-fluid">
         <div class="row">
             <!-- Row for viewer  -->
-            <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
+            <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8" style="max-width: calc(100% - 506px);">
                 <!-- The id is what OSD will look for to draw the viewer, the class is our own css to stylize 
                 The ID will give the prefix for all the objects related to the viewer in this case ISS-->
-                <div id="ISS_viewer" class="ISS_viewer" style="position:absolute; width:97.5%"></div>
+                <div id="ISS_viewer" class="ISS_viewer" style="position:absolute; width:100%">
+                </div>
                 <canvas id="gl_canvas" width="500" height="500" style="position:relative; z-index:10; pointer-events:none"></canvas>
-            </div>
-            <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4 ISS_menu" style="overflow-y:scroll; overflow-x:scroll">
-                <div class="row">
+                    <!-- Global marker size slider -->
+                    <div id="ISS_globalmarkersize">
+                        <label>Marker size</label><br>
+                        <input class="form-control" type="range" style="box-shadow: none;"
+                            id="ISS_globalmarkersize_text"
+                            value="100" min="0" max="500" step="10"
+                            oninput="document.getElementById('ISS_globalmarkersize_label').innerHTML = this.value;"/>
+                        <em class="range-label" id="ISS_globalmarkersize_label">100</em>
+                    </div>
+                </div>
+            <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4 ISS_menu" style="overflow-y:hidden; overflow-x:auto;min-width: 506px;">
+                <div class="row row-fullheight" style="padding-bottom: 0px;">
                     <!-- Level 0 tabs -->
-                    <ul class="nav nav-tabs L0-tabs">
-                        <li> <a href="#markers-gui" data-toggle="tab" aria-expanded="true" class="active main-child">Marker data</a> </li>
-                        <li><a href="#image-gui" data-toggle="tab" aria-expanded="false">Image data</a></li>
-                        <li><a href="#settings-gui" data-toggle="tab" aria-expanded="false">Settings</a></li>
+                    <ul class="nav nav-tabs L0-tabs fixed-height">
+                        <li> <a href="#markers-iss-gui" data-toggle="tab" aria-expanded="true"
+                                class="active main-child">Gene expression</a></li>
+                        <li> <a href="#markers-cp-gui" data-toggle="tab"
+                                aria-expanded="false">Cell morphology</a></li>
+                        <li> <a href="#markers-regions-gui" data-toggle="tab"
+                                aria-expanded="false">Regions</a></li>
+                        <li> <a href="#image-gui" data-toggle="tab"
+                                aria-expanded="false">Image layers</a></li>
+
                     </ul>
 
-                    <div id="TM-tabs" class="tab-content">
-                        <!-- three main tabs and sub tabs-->
-                        <!-- TAB 1 - Marker data (markers,cp data, regions) /////////////////////////////////////////////////////////////////////// -->
-                        <div class="tab-pane active" id="markers-gui">
-                            <div class="panel panel-default">
-                                <div class="panel-body">
-                                    <!-- Row for sub tabs-->
-                                    <div class="row" style="padding:0 10px 0 10px">
-                                        <!-- Global marker size slider -->
-                                        <div id="ISS_globalmarkersize" style="position:relative; float:right">
-                                            <label>Marker size&emsp;&emsp;</label><br>
-                                            <input class="form-control" type="range"
-                                                id="ISS_globalmarkersize_text"
-                                                value="100" min="0" max="500" step="10"
-                                                oninput="document.getElementById('ISS_globalmarkersize_label').innerHTML = this.value;"/>
-                                            <em class="range-label" id="ISS_globalmarkersize_label">100</em>
+                    <div id="TM-tabs" class="tab-content extended-height">
+                        <!-- TAB 1.1 ISS data  -------------------------------------------------------------------------------- -->
+                        <div class="tab-pane active" id="markers-iss-gui" style="height:100%;">
+                            <div class="panel panel-default" style="height:100%;">
+                                <div class="panel-body row-fullheight">
+                                    <!-- 1.1 Row of file selection -->
+                                    <div class="row fixed-height">
+                                        <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                                            <div id="ISS_input_csv" style="margin-bottom: 5px;">
+                                                <label for="ISS_csv">Choose a CSV:</label>
+                                                <input class="form-control-file form-control form-control-sm" type="file" id="ISS_csv" name="ISS_csv"
+                                                    accept=".csv,.tsv,.txt">
+                                                <script type="text/javascript">
+                                                    d3.select("#ISS_csv")
+                                                        .on("change", function () {
+                                                            var file = d3.event.target.files[0];
+                                                            if (file) {
+                                                                var reader = new FileReader();
+                                                                reader.onloadend = function (evt) {
+                                                                    var dataUrl = evt.target.result;
+                                                                    dataUtils.readCSV(dataUrl);
+                                                                };
+                                                                reader.readAsDataURL(file);
+                                                            }
+                                                        });
+                                                </script>
+                                            </div>
                                         </div>
-                                        <!-- Sub tabs flap objects-->
-                                        <ul class="nav nav-tabs L1-tabs">
-                                            <li> <a href="#markers-iss-gui" data-toggle="tab" aria-expanded="true" class="active main-child">Gene <span style = "display: block;">expression</span></a></li>
-                                            <li> <a href="#markers-cp-gui" data-toggle="tab" aria-expanded="false">Cell <span style = "display: block;">morphology</span></a></li>
-                                            <li> <a href="#markers-regions-gui" data-toggle="tab" aria-expanded="false">Regions <span style = "display: block;"></span></a></li>
-                                            <li> <a href="#markers-settings-gui" data-toggle="tab" aria-expanded="false">Settings <span style = "display: block;"></span></a></li>
+                                    </div>
+                                    <!-- 1.2 Row header selection -->
+                                    <div class="row fixed-height" id="ISS_csv_headers"
+                                        style="visibility: hidden; display:none;">
+                                        <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                                            <div class="row">
+                                                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                                                    <label for="ISS_barcode_header">Barcode
+                                                        column</label>
+                                                </div>
+                                                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                                                    <select class="custom-select"
+                                                        id="ISS_barcode_header">
+                                                        <option value="null"> </option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                                                    <label for="ISS_name_header">Name column</label>
+                                                </div>
+                                                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                                                    <select class="custom-select" id="ISS_name_header">
+                                                        <option value="null"></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                                                    <label for="ISS_X_header">X column</label>
+                                                </div>
+                                                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                                                    <select class="custom-select" id="ISS_X_header">
+                                                        <option value="null"></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                                                    <label for="ISS_Y_header">Y column</label>
+                                                </div>
+                                                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                                                    <select class="custom-select" id="ISS_Y_header">
+                                                        <option value="null"></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                                                    <label for="ISS_key_header">Key</label>
+                                                </div>
+                                                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                                                    <select class="custom-select" id="ISS_key_header">
+                                                        <option value="letters">Barcode</option>
+                                                        <option value="gene_name">Name</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+
+                                                </div>
+                                                <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                                                    <button id="ISS_bringmarkers_btn"
+                                                        class="btn btn-primary" type="button">
+                                                        Load markers</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- 1.3 Row for barcode search -->
+                                    <div class="row fixed-height">
+                                        <div class="col-xs-5 col-sm-5 col-md-5 col-lg-5">
+                                            <input class="form-control" type="text" id="ISS_search">
+                                        </div>
+                                        <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+                                            <button id="ISS_searchmarkers_btn" class="btn btn-primary"
+                                                type="button"> Search</button>
+                                        </div>
+                                        <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+                                            <button id="ISS_cancelsearch_btn" class="btn btn-primary"
+                                                type="button"> Cancel</button>
+                                        </div>
+                                        <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
+                                        </div>
+                                    </div>
+                                    <!-- 1.4 Row for markers -->
+                                    <div class="row extended-height" id="ISS_markers">
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- TAB 1.2 CP data  -------------------------------------------------------------------------------- -->
+                        <div class="tab-pane" id="markers-cp-gui" style="height:100%;">
+                            <div class="panel panel-default" style="height:100%;">
+                                <div class="panel-body">
+                                    <!-- 2.1 Row of file selection -->
+                                    <div class="row" id="CP_data_panel">
+                                        <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                                            <div id="CP_input_csv" style="margin-bottom: 5px;">
+                                                <label for="CP_csv">Choose a CSV:</label>
+                                                <input class="form-control-file form-control form-control-sm" type="file" id="CP_csv" name="CP_csv"
+                                                    accept=".csv,.tsv,.txt">
+                                                <script type="text/javascript">
+                                                    d3.select("#CP_csv")
+                                                        .on("change", function () {
+                                                            var file = d3.event.target.files[0];
+                                                            if (file) {
+                                                                var reader = new FileReader();
+                                                                reader.onloadend = function (evt) {
+                                                                    var dataUrl = evt.target.result;
+                                                                    CPDataUtils.readCSV(dataUrl);
+                                                                };
+                                                                reader.readAsDataURL(file);
+                                                            }
+                                                        });
+                                                </script>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <!-- 2.2 Row header selection -->
+                                    <div class="row" id="CP_csv_headers"
+                                        style="visibility: hidden; display:none;">
+                                        <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
+                                            <div class="row">
+                                                <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                                                    <label for="CP_key_header">Select global ID</label>
+                                                </div>
+                                                <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
+                                                    <select class="custom-select" id="CP_key_header">
+                                                        <option value="null"> </option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                                                    <label for="CP_property_header">Property</label>
+                                                </div>
+                                                <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
+                                                    <select class="custom-select"
+                                                        id="CP_property_header">
+                                                        <option value="null"> </option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                                                    <label for="CP_X_header">X column</label>
+                                                </div>
+                                                <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
+                                                    <select class="custom-select" id="CP_X_header">
+                                                        <option value="null"></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                                                    <label for="CP_Y_header">Y column</label>
+                                                </div>
+                                                <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
+                                                    <select class="custom-select" id="CP_Y_header">
+                                                        <option value="null"></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                                                    <label for="CP_colorscale">Color scale</label>
+                                                </div>
+                                                <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
+                                                    <select class="custom-select" id="CP_colorscale">
+                                                        <option value="null"></option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+
+                                                </div>
+                                                <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
+                                                    <button id="CP_bringmarkers_btn"
+                                                        class="btn btn-primary" type="button">
+                                                        Select</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- TAB 1.3 Region data ----------------------------------------------------------------------------- -->
+                        <div class="tab-pane" id="markers-regions-gui" style="height:100%;">
+                            <div class="panel panel-default" style="height:100%;">
+                                <div class="panel-body" style="height:100%;">
+                                    <div class="row row-fullheight">
+                                        <!-- Tabs 1.3.0 region subtabs -->
+                                        <ul class="nav nav-tabs L2-tabs fixed-height">
+                                            <li><a href="#markers-regions-project-gui" data-toggle="tab" aria-expanded="false" class="active main-child">Regions</a></li>
+                                            <li><a href="#markers-regions-import-gui" data-toggle="tab"
+                                                    aria-expanded="false">Import</a></li>
+                                            <li><a href="#markers-regions-export-gui" data-toggle="tab"
+                                                    aria-expanded="false">Export</a></li>
                                         </ul>
-                                        <!-- Sub tabs and content-->
-                                        <div id="marker-subtabs" class="tab-content">
-                                            <!-- TAB 1.1 iss data -------------------------------------------------------------------------------- -->
-                                            <div class="tab-pane active" id="markers-iss-gui">
+                                        <div id="markers-region-subtabs" class="tab-content extended-height">
+                                            <!-- Tabs 1.3.1 -->
+                                            <div class="tab-pane active" id="markers-regions-project-gui" style="height:100%;">
+                                                <div class="panel panel-default" style="height:100%;">
+                                                    <div class="panel-body row-fullheight">
+                                                        <div class="row fixed-height">
+                                                            <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                                                                <button id="ISS_drawregions_btn"
+                                                                    class="btn btn-secondary" type="button">
+                                                                    Draw regions</button>
+                                                            </div>
+                                                            <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
+                                                                <button id="ISS_fillregions_btn"
+                                                                    class="btn btn-primary" type="button"> Fill
+                                                                    regions</button>
+                                                            </div>
+                                                        </div>
+                                                        <div class="extended-height" id="markers-regions-div">
+                                                            <div class="row" id="markers-regions-panel">
+
+                                                            </div>                                                                   
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <!-- Tabs 1.3.2 -->
+                                            <div class="tab-pane" id="markers-regions-import-gui">
                                                 <div class="panel panel-default">
                                                     <div class="panel-body">
-                                                        <!-- 1.1 Row of file selection -->
-                                                        <div class="row">
-                                                            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                                                                <div id="ISS_input_csv" style="margin-bottom: 5px;">
-                                                                    <label for="ISS_csv">Choose a CSV:</label>
-                                                                    <input type="file" id="ISS_csv" name="ISS_csv" accept=".csv,.tsv,.txt">
-                                                                    <script type="text/javascript">
-                                                                        d3.select("#ISS_csv")
-                                                                            .on("change", function() {
-                                                                                var file = d3.event.target.files[0];
-                                                                                if (file) {
-                                                                                    var reader = new FileReader();
-                                                                                    reader.onloadend = function(evt) {
-                                                                                        var dataUrl = evt.target.result;
-                                                                                        dataUtils.readCSV(dataUrl);
-                                                                                    };
-                                                                                    reader.readAsDataURL(file);
-                                                                                }
-                                                                            });
-                                                                    </script>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <!-- 1.2 Row header selection -->
-                                                        <div class="row" id="ISS_csv_headers" style="visibility: hidden; display:none;">
-                                                            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                                                                <div class="row">
-                                                                    <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-                                                                        <label for="ISS_barcode_header">Barcode
-                                                                            column</label>
-                                                                    </div>
-                                                                    <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-                                                                        <select class="custom-select" id="ISS_barcode_header">
-                                                                            <option value="null"> </option>
-                                                                        </select>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="row">
-                                                                    <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-                                                                        <label for="ISS_name_header">Name column</label>
-                                                                    </div>
-                                                                    <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-                                                                        <select class="custom-select" id="ISS_name_header">
-                                                                            <option value="null"></option>
-                                                                        </select>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="row">
-                                                                    <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-                                                                        <label for="ISS_X_header">X column</label>
-                                                                    </div>
-                                                                    <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-                                                                        <select class="custom-select" id="ISS_X_header">
-                                                                            <option value="null"></option>
-                                                                        </select>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="row">
-                                                                    <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-                                                                        <label for="ISS_Y_header">Y column</label>
-                                                                    </div>
-                                                                    <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-                                                                        <select class="custom-select" id="ISS_Y_header">
-                                                                            <option value="null"></option>
-                                                                        </select>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="row">
-                                                                    <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-                                                                        <label for="ISS_key_header">Key</label>
-                                                                    </div>
-                                                                    <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-                                                                        <select class="custom-select" id="ISS_key_header">
-                                                                            <option value="letters">Barcode</option>
-                                                                            <option value="gene_name">Name</option>
-                                                                        </select>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="row">
-                                                                    <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-
-                                                                    </div>
-                                                                    <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
-                                                                        <button id="ISS_bringmarkers_btn" class="btn btn-primary" type="button">
-                                                                            Load markers</button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <!-- 1.3 Row for barcode search -->
                                                         <div class="row">
                                                             <div class="col-xs-5 col-sm-5 col-md-5 col-lg-5">
+                                                                <input
+                                                                    class="form-control-file form-control form-control-sm"
+                                                                    type="file" id="ISS_region_files_import"
+                                                                    name="files[]" />
+                                                                <br>
                                                             </div>
                                                             <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
-                                                            </div>
-                                                            <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
-                                                            </div>
-                                                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
-                                                                <label>Global size</label>
+                                                                <button id="ISS_import_regions"
+                                                                    class="btn btn-primary" type="button">
+                                                                    Import</button>
                                                             </div>
                                                         </div>
-                                                        <!-- 1.32 Row for barcode search -->
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <!-- Tabs 1.3.3 -->
+                                            <div class="tab-pane" id="markers-regions-export-gui">
+                                                <div class="panel panel-default">
+                                                    <div class="panel-body">
                                                         <div class="row">
                                                             <div class="col-xs-5 col-sm-5 col-md-5 col-lg-5">
-                                                                <input class="form-control" type="text" id="ISS_search">
+                                                                <label for="ISS_region_file_name">Download
+                                                                    regions for later use</label>
+                                                            </div>
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-xs-5 col-sm-5 col-md-5 col-lg-5">
+                                                                <input class="form-control form-control-sm"
+                                                                    type="text" id="ISS_region_file_name"
+                                                                    placeholder="regions.json"
+                                                                    value="regions.json">
                                                             </div>
                                                             <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
-                                                                <button id="ISS_searchmarkers_btn" class="btn btn-primary" type="button"> Search</button>
+                                                                <button id="ISS_export_regions"
+                                                                    class="btn btn-primary" type="button">
+                                                                    Export</button>
+                                                            </div>
+                                                        </div>
+                                                        <br>
+                                                        <div class="row">
+                                                            <div class="col-xs-5 col-sm-5 col-md-5 col-lg-5">
+                                                                <label for="ISS_region_csv_name">Download
+                                                                    expression in regions</label>
+                                                            </div>
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-xs-5 col-sm-5 col-md-5 col-lg-5">
+                                                                <input class="form-control form-control-sm"
+                                                                    type="text" id="ISS_region_csv_name"
+                                                                    placeholder="regions.csv"
+                                                                    value="regions.csv" />
                                                             </div>
                                                             <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
-                                                                <button id="ISS_cancelsearch_btn" class="btn btn-primary" type="button"> Cancel</button>
+                                                                <button id="ISS_export_regions_csv"
+                                                                    class="btn btn-primary" type="button">
+                                                                    Export</button>
                                                             </div>
-                                                            <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
-                                                            </div>
-                                                        </div>
-                                                        <!-- 1.4 Row for markers -->
-                                                        <div class="row" id="ISS_markers" style="padding: 20px 15px 15px 15px">
-
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <!-- TAB 1.2 CP data  -------------------------------------------------------------------------------- -->
-                                            <div class="tab-pane" id="markers-cp-gui">
-                                                <div class="panel panel-default">
-                                                    <div class="panel-body">
-                                                        <!-- 2.1 Row of file selection -->
-                                                        <div class="row" id="CP_data_panel">
-                                                            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                                                                <div id="CP_input_csv" style="margin-bottom: 5px;">
-                                                                    <label for="CP_csv">Choose a CSV:</label>
-                                                                    <input type="file" id="CP_csv" name="CP_csv" accept=".csv,.tsv,.txt">
-                                                                    <script type="text/javascript">
-                                                                        d3.select("#CP_csv")
-                                                                            .on("change", function() {
-                                                                                var file = d3.event.target.files[0];
-                                                                                if (file) {
-                                                                                    var reader = new FileReader();
-                                                                                    reader.onloadend = function(evt) {
-                                                                                        var dataUrl = evt.target.result;
-                                                                                        CPDataUtils.readCSV(dataUrl);
-                                                                                    };
-                                                                                    reader.readAsDataURL(file);
-                                                                                }
-                                                                            });
-                                                                    </script>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <!-- 2.2 Row header selection -->
-                                                        <div class="row" id="CP_csv_headers" style="visibility: hidden; display:none;">
-                                                            <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                                                                <div class="row">
-                                                                    <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
-                                                                        <label for="CP_key_header">Select global ID</label>
-                                                                    </div>
-                                                                    <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
-                                                                        <select class="custom-select" id="CP_key_header">
-                                                                            <option value="null"> </option>
-                                                                        </select>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="row">
-                                                                    <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
-                                                                        <label for="CP_property_header">Property</label>
-                                                                    </div>
-                                                                    <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
-                                                                        <select class="custom-select" id="CP_property_header">
-                                                                            <option value="null"> </option>
-                                                                        </select>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="row">
-                                                                    <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
-                                                                        <label for="CP_X_header">X column</label>
-                                                                    </div>
-                                                                    <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
-                                                                        <select class="custom-select" id="CP_X_header">
-                                                                            <option value="null"></option>
-                                                                        </select>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="row">
-                                                                    <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
-                                                                        <label for="CP_Y_header">Y column</label>
-                                                                    </div>
-                                                                    <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
-                                                                        <select class="custom-select" id="CP_Y_header">
-                                                                            <option value="null"></option>
-                                                                        </select>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="row">
-                                                                    <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
-                                                                        <label for="CP_colorscale">Color scale</label>
-                                                                    </div>
-                                                                    <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
-                                                                        <select class="custom-select" id="CP_colorscale">
-                                                                            <option value="null"></option>
-                                                                        </select>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="row">
-                                                                    <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
-
-                                                                    </div>
-                                                                    <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8">
-                                                                        <button id="CP_bringmarkers_btn" class="btn btn-primary" type="button">
-                                                                            Select</button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <!-- TAB 1.3 Region data ----------------------------------------------------------------------------- -->
-                                            <div class="tab-pane" id="markers-regions-gui">
-                                                <div class="panel panel-default">
-                                                    <div class="panel-body">
-                                                        <div class="row" style="padding:0 10px 0 10px">
-                                                            <!-- Tabs 1.3.0 region subtabs -->
-                                                            <ul class="nav nav-tabs L2-tabs">
-                                                                <li><a href="#markers-regions-project-gui" data-toggle="tab" aria-expanded="false" class="active main-child">Regions</a></li>
-                                                                <li><a href="#markers-regions-import-gui" data-toggle="tab" aria-expanded="false">Import</a></li>
-                                                                <li><a href="#markers-regions-export-gui" data-toggle="tab" aria-expanded="false">Export</a></li>
-                                                                <li><a href="#markers-regions-settings-gui" data-toggle="tab" aria-expanded="false">Settings</a></li>
-                                                            </ul>
-                                                            <div id="markers-region-subtabs" class="tab-content">
-                                                                <!-- Tabs 1.3.1 -->
-                                                                <div class="tab-pane active" id="markers-regions-project-gui">
-                                                                    <br>
-                                                                    <div class="row">
-                                                                        <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
-                                                                            <button id="ISS_drawregions_btn" class="btn btn-secondary" type="button">
-                                                                                Draw regions</button>
-                                                                        </div>
-                                                                        <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
-                                                                            <button id="ISS_fillregions_btn" class="btn btn-primary" type="button"> Fill
-                                                                                regions</button>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="row" style="border-bottom:1px solid #aaaaaa;  margin:10px">
-                                                                    </div>
-                                                                    <div class="row" id="markers-regions-panel" style="padding: 10px 15px 15px 15px">
-
-                                                                    </div>
-                                                                </div>
-                                                                <!-- Tabs 1.3.2 -->
-                                                                <div class="tab-pane" id="markers-regions-import-gui">
-                                                                    <br>
-                                                                    <div class="row">
-                                                                        <div class="col-xs-5 col-sm-5 col-md-5 col-lg-5">
-                                                                            <input class="form-control-file form-control form-control-sm" type="file" id="ISS_region_files_import" name="files[]" />
-                                                                            <br>
-                                                                        </div>
-                                                                        <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
-                                                                            <button id="ISS_import_regions" class="btn btn-primary" type="button">
-                                                                                Import</button>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                                <!-- Tabs 1.3.3 -->
-                                                                <div class="tab-pane" id="markers-regions-export-gui">
-                                                                    <br>
-                                                                    <div class="row">
-                                                                        <div class="col-xs-5 col-sm-5 col-md-5 col-lg-5">
-                                                                            <label for="ISS_region_file_name">Download
-                                                                                regions for later use</label>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="row">
-                                                                        <div class="col-xs-5 col-sm-5 col-md-5 col-lg-5">
-                                                                            <input class="form-control form-control-sm" type="text" id="ISS_region_file_name" placeholder="regions.json" value="regions.json">
-                                                                        </div>
-                                                                        <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
-                                                                            <button id="ISS_export_regions" class="btn btn-primary" type="button">
-                                                                                Export</button>
-                                                                        </div>
-                                                                    </div>
-                                                                    <br>
-                                                                    <div class="row">
-                                                                        <div class="col-xs-5 col-sm-5 col-md-5 col-lg-5">
-                                                                            <label for="ISS_region_csv_name">Download
-                                                                                expression in regions</label>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="row">
-                                                                        <div class="col-xs-5 col-sm-5 col-md-5 col-lg-5">
-                                                                            <input class="form-control form-control-sm" type="text" id="ISS_region_csv_name" placeholder="regions.csv" value="regions.csv" />
-                                                                        </div>
-                                                                        <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
-                                                                            <button id="ISS_export_regions_csv" class="btn btn-primary" type="button">
-                                                                                Export</button>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                                <!-- Tabs 1.3.4 -->
-                                                                <div class="tab-pane active" id="markers-regions-settings-gui">
-                                                                    <br>
-                                                                    <div class="row">
-                                                                        <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                                                                            <p>Change region utilities settings:</p>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="row">
-                                                                        <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                                                                            <textarea class="form-control" rows="5" id="textArea"></textarea>
-                                                                            <br>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="row">
-                                                                        <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
-                                                                            <button id="ISS_drawregions_btn" class="btn" type="button" disabled> Change settings</button>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <!-- TAB 1.4 Settings for markers-->
-                                            <div class="tab-pane" id="markers-settings-gui">
-                                                <div class="panel panel-default">
-                                                    <div class="panel-body">
-                                                        <div class="row" id="markers-settings-panel" style="padding: 10px 15px 15px 15px">
-
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                        <!-- End of marker subtabs -->
                                     </div>
-                                    <!-- end of subtab row-->
                                 </div>
-                                <!-- end of panel body-->
                             </div>
-                            <!-- end of a main panel -->
                         </div>
-                        <!-- end of markers-gui-->
-                        <!-- TAB 2 - Image data (Overlays, brightness contrast) /////////////////////////////////////////////////////////////////// -->
-                        <div class="tab-pane" id="image-gui">
-                            <div class="panel panel-default">
+                        <!-- TAB 1.4 Overlay data ----------------------------------------------------------------------------- -->
+                        <div class="tab-pane" id="image-gui" style="height:100%;">
+                            <div class="panel panel-default" style="height:100%;">
                                 <div class="panel-body">
-                                    <!-- Row for sub tabs-->
-                                    <div class="row" style="padding:0 10px 0 10px">
-                                        <!-- Sub tabs flap objects-->
-                                        <ul class="nav nav-tabs L1-tabs">
-                                            <li> <a href="#image-overlay-gui" data-toggle="tab" aria-expanded="true" class="active main-child">Overlays</a></li>
-                                            <li> <a href="#image-settings-gui" data-toggle="tab" aria-expanded="false">Settings</a></li>
-                                        </ul>
-                                        <div id="image-subtabs" class="tab-content">
-                                            <!-- TAB 2.1 Image overlays which are also images ----------------------------------------------------- -->
-                                            <div class="tab-pane" id="image-overlay-gui">
-                                                <div class="panel panel-default">
-                                                    <div class="panel-body">
-                                                        <div class="row" id="image-overlay-panel" style="padding: 10px 15px 15px 15px">
-
-                                                        </div>
-                                                        <select id="layerSelect">
-                                                            {% for entry in folder_dir.children recursive %} {% if entry.url_path %}
-                                                            <option value="{{ url_for('slide', path=entry.url_path) }}.dzi">
-                                                                {{ entry.name }}
-                                                            </option>
-                                                            {% endif %}
-                                                            {% endfor %}
-                                                        </select>
-                                                        <button id="ISS_add_layer_btn" class="btn btn-primary btn-sm" type="button">
-                                                            Add image as a layer</button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <!-- TAB 2.2 Image overlays settings if any ----------------------------------------------------------- -->
-                                            <div class="tab-pane" id="image-settings-gui">
-                                                <div class="panel panel-default">
-                                                    <div class="panel-body">
-                                                        <div class="row" id="image-settings-panel" style="padding: 10px 15px 15px 15px">
-                                                            <div class="row">
-                                                                <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                                                                    <p>Change overlay utilities settings:</p>
-                                                                </div>
-                                                            </div>
-                                                            <div class="row">
-                                                                <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
-                                                                    <textarea class="form-control" rows="5" id="textArea"></textarea>
-                                                                    <br>
-                                                                </div>
-                                                            </div>
-                                                            <div class="row">
-                                                                <div class="col-xs-3 col-sm-3 col-md-3 col-lg-3">
-                                                                    <button id="image-settings-btn" class="btn" type="button">
-                                                                        Change settings</button>
-                                                                </div>
-                                                            </div>
-
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <h3>Slide properties</h3>
-                                            {% if properties %}
-                                            <div id="properties-inner" style="word-wrap: break-word;">
-                                                {% for name in properties %}
-                                                <b>{{ name }}</b><br/> {{ properties[name] }}<br/> {% endfor %}
-                                            </div>
-                                            {% else %}
-                                            <span class="notice">None</span> {% endif %}
-                                        </div>
-                                        <!-- End of marker subtabs -->
-                                    </div>
-                                    <!-- end of subtab row-->
-                                </div>
-                                <!-- end of panel body-->
-                            </div>
-                            <!-- end of a main panel -->
-                        </div>
-                        <!-- end of image-gui-->
-                        <!-- TAB 3 - general settings (some code in here instead of console?) ///////////////////////////////////////////////////// -->
-                        <div class="tab-pane" id="settings-gui">
-                            <div class="panel panel-default">
-                                <div class="panel-body">
-                                    <div class="row" id="settings-panel" style="padding: 10px 15px 15px 15px">
-                                        <p></p>
-
+                                    <div class="row" id="image-overlay-panel" style="overflow-x:auto;">
+                                        
                                     </div>
                                 </div>
-                                <!-- end of panel body-->
-                            </div>
-                            <!-- end of a main panel -->
-                        </div>
-                        <!-- end of settings-gui-->
-                    </div>
-                    <!-- end of TM-tabs-->
-                </div>
-                <!-- end of Level 0 tabs -->
-            </div>
-            <!-- end of lateral panel -->
-        </div>
-        <!-- end of single row -->
-    </div>
-    <!-- end of container-fuild-->
+                            </div> <!-- end of a main panel -->
+                        </div> <!-- end of image-gui-->
+                    </div> <!-- end of TM-tabs-->
+                </div> <!-- end of Level 0 tabs -->
+            </div> <!-- end of lateral panel -->
+        </div><!-- end of single row -->
+    </div><!-- end of container-fuild-->
     <div class="modal in" id="loadingModal" tabindex="-1" role="dialog" aria-labelledby="modalLabelSmall" aria-hidden="true">
         <div class="modal-dialog modal-sm">
             <div class="modal-content">
@@ -597,6 +485,7 @@
 <script src="{{ url_for('static', filename='js/utils/HTMLElementUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils/regionUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils/overlayUtils.js') }}"></script>
+<script src="{{ url_for('static', filename='js/utils/filterUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils/geometryUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils/glUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/tmapp.js') }}"></script>
@@ -612,7 +501,7 @@
         tmapp.registerActions();
         tmapp.init();
         
-        tmapp.addLayer("{{ slide_filename }}", tmapp._url_suffix + "{{ slide_url }}", -1)
+        //tmapp.addLayer("{{ slide_filename }}", tmapp._url_suffix + "{{ slide_url }}", -1)
             //tmapp.layers =[{name:"Layer name",tileSource:"location/of/your.dzi"}];
         
         glUtils.init();

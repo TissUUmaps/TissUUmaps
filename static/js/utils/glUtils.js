@@ -13,6 +13,7 @@ glUtils = {
     _viewportRect: [0, 0, 1, 1],
     _markerScale: 1.0,
     _markerScalarRange: [0.0, 1.0],
+    _useColorFromMarker: false,
     _colorscaleName: "null",
     _colorscaleData: [],
     _barcodeToLUTIndex: {},
@@ -30,6 +31,7 @@ glUtils._markersVS = `
     uniform int u_markerType;
     uniform float u_markerScale;
     uniform vec2 u_markerScalarRange;
+    uniform bool u_useColorFromMarker;
     uniform sampler2D u_colorLUT;
     uniform sampler2D u_colorscale;
 
@@ -43,6 +45,12 @@ glUtils._markersVS = `
     #define MARKER_TYPE_CP 1
     #define SHAPE_GRID_SIZE 4.0
 
+    vec3 hex_to_rgb(float v)
+    {
+        // Extract RGB color from 24-bit hex color stored in float
+        return mod(floor(v / vec3(65536.0, 256.0, 1.0) + 0.5), 256.0) / 255.0;
+    }
+
     void main()
     {
         vec2 imagePos = a_position.xy * u_imageSize;
@@ -55,10 +63,12 @@ glUtils._markersVS = `
             v_color = texture2D(u_colorLUT, vec2(a_position.z, 0.5));
         } else if (u_markerType == MARKER_TYPE_CP) {
             vec2 range = u_markerScalarRange;
-            float normalized = (a_position.w - range[0]) / (range[1] - range[0]);
+            float normalized = (a_position.z - range[0]) / (range[1] - range[0]);
             v_color.rgb = texture2D(u_colorscale, vec2(normalized, 0.5)).rgb;
-            v_color.a = 7.0 / 255.0;
+            v_color.a = 7.0 / 255.0;  // Give CP markers a round shape
         }
+
+        if (u_useColorFromMarker) v_color.rgb = hex_to_rgb(a_position.w);
 
         gl_Position = vec4(ndcPos, 0.0, 1.0);
         gl_PointSize = max(1.0, u_markerScale / u_viewportRect.w);
@@ -168,12 +178,17 @@ glUtils.loadMarkers = function() {
     // that we can use with the LUT textures for color, visibility, etc.
     glUtils._updateBarcodeToLUTIndexDict(markerData, keyName);
 
+    const colorPropertyName = markerUtils._uniqueColorSelector;
+    const useColorFromMarker = markerUtils._uniqueColor && (colorPropertyName in markerData[0]);
+    let hexColor = "#000000";
+
     const positions = [];
     for (let i = 0; i < numPoints; ++i) {
+        if (useColorFromMarker) hexColor = markerData[i][colorPropertyName];
         positions[4 * i + 0] = markerData[i].global_X_pos / imageWidth;
         positions[4 * i + 1] = markerData[i].global_Y_pos / imageHeight;
-        positions[4 * i + 2] = glUtils._barcodeToLUTIndex[markerData[i].letters] / 255.0;
-        positions[4 * i + 3] = 0.0;  // Reserved for future use
+        positions[4 * i + 2] = glUtils._barcodeToLUTIndex[markerData[i].letters] / 4095.0;
+        positions[4 * i + 3] = Number("0x" + hexColor.substring(1,7));
     }
 
     const bytedata = new Float32Array(positions);
@@ -183,6 +198,7 @@ glUtils.loadMarkers = function() {
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
     glUtils._numBarcodePoints = numPoints;
+    glUtils._useColorFromMarker = useColorFromMarker;
     glUtils.updateLUTTextures();
 }
 
@@ -201,15 +217,19 @@ glUtils.loadCPMarkers = function() {
     const imageWidth = OSDViewerUtils.getImageWidth();
     const imageHeight = OSDViewerUtils.getImageHeight();
 
+    const useColorFromMarker = colorscaleName.includes("ownColorFromColumn");
+    let hexColor = "#000000";
+
     const positions = [];
     let scalarRange = [1e9, -1e9];
     for (let i = 0; i < numPoints; ++i) {
+        if (useColorFromMarker) hexColor = markerData[i][propertyName];
         positions[4 * i + 0] = Number(markerData[i][xColumnName]) / imageWidth;
         positions[4 * i + 1] = Number(markerData[i][yColumnName]) / imageHeight;
-        positions[4 * i + 2] = 7.0;  // Give all CP markers a round shape
-        positions[4 * i + 3] = Number(markerData[i][propertyName]);
-        scalarRange[0] = Math.min(scalarRange[0], positions[4 * i + 3]);
-        scalarRange[1] = Math.max(scalarRange[1], positions[4 * i + 3]);
+        positions[4 * i + 2] = Number(markerData[i][propertyName]);
+        positions[4 * i + 3] = Number("0x" + hexColor.substring(1,7));
+        scalarRange[0] = Math.min(scalarRange[0], positions[4 * i + 2]);
+        scalarRange[1] = Math.max(scalarRange[1], positions[4 * i + 2]);
     }
 
     const bytedata = new Float32Array(positions);
@@ -246,7 +266,7 @@ glUtils._updateBarcodeToLUTIndexDict = function(markerData, keyName) {
 
 glUtils._createColorLUTTexture = function(gl) {
     const randomColors = [];
-    for (let i = 0; i < 256; ++i) {
+    for (let i = 0; i < 4096; ++i) {
         randomColors[4 * i + 0] = Math.random() * 256.0; 
         randomColors[4 * i + 1] = Math.random() * 256.0;
         randomColors[4 * i + 2] = Math.random() * 256.0;
@@ -261,7 +281,7 @@ glUtils._createColorLUTTexture = function(gl) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); 
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 1, 0, gl.RGBA,
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 4096, 1, 0, gl.RGBA,
                   gl.UNSIGNED_BYTE, bytedata);
     gl.bindTexture(gl.TEXTURE_2D, null);
 
@@ -273,7 +293,7 @@ glUtils._updateColorLUTTexture = function(gl, texture) {
     const allMarkersCheckbox = document.getElementById("AllMarkers-checkbox-ISS");
     const showAll = allMarkersCheckbox && allMarkersCheckbox.checked;
 
-    const colors = new Array(256 * 4);
+    const colors = new Array(4096 * 4);
     for (let [barcode, index] of Object.entries(glUtils._barcodeToLUTIndex)) {
         // Get color, shape, etc. from HTML input elements for barcode
         const key = glUtils._barcodeToKey[barcode];  // Could be barcode or gene name
@@ -289,7 +309,7 @@ glUtils._updateColorLUTTexture = function(gl, texture) {
     const bytedata = new Uint8Array(colors);
 
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 1, 0, gl.RGBA,
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 4096, 1, 0, gl.RGBA,
                   gl.UNSIGNED_BYTE, bytedata);
     gl.bindTexture(gl.TEXTURE_2D, null);
 }
@@ -365,7 +385,8 @@ glUtils._updateColorbarCanvas = function(colorscaleName, colorscaleData, propert
     const ctx = canvas.getContext("2d");
 
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    if (!glUtils._showColorbar || colorscaleName == "null") return;
+    if (!glUtils._showColorbar || colorscaleName == "null" ||
+        colorscaleName == "ownColorFromColumn") return;
 
     const gradient = ctx.createLinearGradient(64, 0, 256+64, 0);
     const numStops = 32;
@@ -497,6 +518,7 @@ glUtils.draw = function() {
     gl.vertexAttribPointer(POSITION, 4, gl.FLOAT, false, 0, 0);
     gl.uniform1i(gl.getUniformLocation(program, "u_markerType"), 0);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), glUtils._markerScale);
+    gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromMarker"), glUtils._useColorFromMarker);
     gl.drawArrays(gl.POINTS, 0, glUtils._numBarcodePoints);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
@@ -505,6 +527,8 @@ glUtils.draw = function() {
     gl.vertexAttribPointer(POSITION, 4, gl.FLOAT, false, 0, 0);
     gl.uniform1i(gl.getUniformLocation(program, "u_markerType"), 1);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), glUtils._markerScale * 0.5);
+    gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromMarker"),
+        glUtils._colorscaleName.includes("ownColorFromColumn"));
     if (glUtils._colorscaleName != "null") {  // Only show markers when a colorscale is selected
         gl.drawArrays(gl.POINTS, 0, glUtils._numCPPoints);
     }

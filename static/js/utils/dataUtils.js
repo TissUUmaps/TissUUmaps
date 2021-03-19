@@ -110,7 +110,7 @@ dataUtils.processISSRawData = function () {
     dataUtils.makeQuadTrees();
     
     delete dataUtils[op + "_rawdata"];
-
+    document.getElementById("ISS_globalmarkersize").style.display = "block";
     glUtils.loadMarkers();  // FIXME
 }
 
@@ -169,7 +169,7 @@ dataUtils.makeQuadTrees = function () {
     var knode = document.getElementById(op + "_key_header");
     var key = knode.options[knode.selectedIndex].value;
     var allbarcodes = d3.nest().key(function (d) { return d[key]; }).entries(dataUtils[op + "_processeddata"]);
-
+    console.log(allbarcodes);
     dataUtils[op + "_barcodeGarden"] = {};
     for (var i = 0; i < allbarcodes.length; i++) {
         var gardenKey = allbarcodes[i].key;

@@ -18,6 +18,29 @@ overlayUtils = {
     _zoomForSubsample:5.15
 }
 
+/**
+ * This method is used to add all layers from tmapp */
+overlayUtils.addAllLayers = function() {
+    tmapp.layers.forEach(function(layer, i) {
+        overlayUtils.addLayer(layer.name, layer.tileSource, i);
+    });
+}
+
+/**
+ * This method is used to add a layer */
+overlayUtils.addLayer = function(layerName, tileSource, i) {
+    var op = tmapp["object_prefix"];
+    var vname = op + "_viewer";
+
+    tmapp[vname].addTiledImage({
+        index: i + 1,
+        tileSource: tmapp._url_suffix + tileSource,
+        opacity: 1.0
+    });
+    HTMLElementUtils.addLayerSettings(layerName, i);
+}
+
+
 /** 
  * @param {Number} item Index of an OSD tile source
  * Set the opacity of a tile source */
@@ -32,40 +55,18 @@ overlayUtils.setItemOpacity = function(item, opacity) {
     tmapp[op + "_viewer"].world.getItemAt(item).setOpacity(opacity);
 }
 
-/** 
- * @param {Number} item Index of an OSD tile source
- * Set the opacity of a tile source */
- overlayUtils.setItemsSaturation = function(allFilters) {
-    function getCamanFun(index) {
-        return function(context, callback) {
-            Caman(context.canvas, function() {
-                console.log(index, allFilters);
-                this.saturation(200*allFilters[index][1]-100);
-                // Do not forget to call this.render with the callback
-                this.render(callback);
-            })
-        }
-    }
+overlayUtils.areAllFullyLoaded = function () {
+    var tiledImage;
     var op = tmapp["object_prefix"];
-    if (!tmapp[op + "_viewer"].world.getItemAt(allFilters.length-1)) {
-        setTimeout(function() {
-            overlayUtils.setItemSaturation(allFilters);
-        }, 100);
-        return;
+    var count = tmapp[op + "_viewer"].world.getItemCount();
+    for (var i = 0; i < count; i++) {
+      tiledImage = tmapp[op + "_viewer"].world.getItemAt(i);
+      if (!tiledImage.getFullyLoaded() && tiledImage.getOpacity() != 0) {
+        return false;
+      }
     }
-    filters = [];
-    for(var filterIndex=0;filterIndex<allFilters.length;filterIndex++){
-        console.log("filterIndex",filterIndex);
-        filters.push({
-            items: tmapp[op + "_viewer"].world.getItemAt(allFilters[filterIndex][0]),
-            processors: getCamanFun(filterIndex)
-        })
-    }
-    console.log(filters);
-    tmapp[op + "_viewer"].setFilterOptions({
-        filters: filters
-    });
-}
+    return true;
+  }
 
 /** 
  * @param {String} layerName name of an existing d3 node

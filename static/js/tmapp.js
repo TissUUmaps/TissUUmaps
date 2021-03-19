@@ -12,7 +12,9 @@
 tmapp = {
     _url_suffix: "",
     _scrollDelay: 900,
-    fixed_file: ""
+    fixed_file: "",
+    mpp:0,
+    slideFilename:"Main"
 }
 
 /** 
@@ -42,7 +44,7 @@ tmapp.registerActions = function () {
             as[j].addEventListener("click",function(){interfaceUtils.hideTabsExcept($(this))});
         }
     }
-    interfaceUtils.activateMainChildTabs("markers-gui");
+    //interfaceUtils.activateMainChildTabs("markers-gui");
 
 }
 /**
@@ -62,12 +64,12 @@ tmapp.init = function () {
     //init OSD viewer
     tmapp[vname] = OpenSeadragon(tmapp.options_osd);
     //open the DZI xml file pointing to the tiles
-    //tmapp[vname].open(this._url_suffix + this.fixed_file);
+    overlayUtils.addLayer(tmapp.slideFilename, tmapp._url_suffix +  this.fixed_file, -1)
     //pixelate because we need the exact values of pixels
     tmapp[vname].addHandler("tile-drawn", OSDViewerUtils.pixelateAtMaximumZoomHandler);
 
     if(tmapp.layers){
-            tmapp.addAllLayers();
+        overlayUtils.addAllLayers();
     }
     //Create svgOverlay(); so that anything like D3, or any canvas library can act upon. https://d3js.org/
     var svgovname = tmapp["object_prefix"] + "_svgov";
@@ -126,139 +128,25 @@ tmapp.init = function () {
         scrollHandler: scroll_handler
     }).setTracking(true);
 
-        if (tmapp.mpp != "0") {
-            tmapp[vname].scalebar({
-                pixelsPerMeter: tmapp.mpp ? (1e6 / tmapp.mpp) : 0,
-                xOffset: 200,
-                yOffset: 10,
-                barThickness: 3,
-                color: '#555555',
-                fontColor: '#333333',
-                backgroundColor: 'rgba(255, 255, 255, 0.5)',
-                sizeAndTextRenderer: OpenSeadragon.ScalebarSizeAndTextRenderer.METRIC_LENGTH
-            });
-        }
-        tmapp.loadState();
+    elt = document.getElementById("ISS_globalmarkersize");
+    tmapp[vname].addControl(elt,{anchor: OpenSeadragon.ControlAnchor.TOP_RIGHT});
+    elt.style.display="None";
+
+    if (tmapp.mpp != 0) {
+        tmapp[vname].scalebar({
+            pixelsPerMeter: tmapp.mpp ? (1e6 / tmapp.mpp) : 0,
+            xOffset: 200,
+            yOffset: 10,
+            barThickness: 3,
+            color: '#555555',
+            fontColor: '#333333',
+            backgroundColor: 'rgba(255, 255, 255, 0.5)',
+            sizeAndTextRenderer: OpenSeadragon.ScalebarSizeAndTextRenderer.METRIC_LENGTH
+        });
+    }
+    tmapp.loadState();
     //document.getElementById('cancelsearch-moving-button').addEventListener('click', function(){ markerUtils.showAllRows("moving");}); 
 } //finish init
-tmapp.addAllLayers = function() {
-    tmapp.layers.forEach(function(layer, i) {
-        tmapp.addLayer(layer.name, layer.tileSource, i);
-    });
-}
-
-/**
- * This method is used to add a layer from select input */
-tmapp.addLayerFromSelect = function() {
-    var e = document.getElementById("layerSelect");
-    var layerName = e.options[e.selectedIndex].text;
-    var tileSource = e.options[e.selectedIndex].value;
-    tmapp.layers.push({
-        name: layerName,
-        tileSource: tileSource
-    });
-    console.log("tileSource", tileSource);
-    i = tmapp.layers.length - 1;
-    tmapp.addLayer(layerName, tileSource, i)
-}
-
-/**
- * This method is used to add a layer */
-tmapp.addLayer = function(layerName, tileSource, i) {
-    var op = tmapp["object_prefix"];
-    var vname = op + "_viewer";
-
-    tmapp[vname].addTiledImage({
-        index: i + 1,
-        tileSource: tmapp._url_suffix + tileSource,
-        opacity: 1.0
-    });
-    tmapp.addLayerSettings(layerName, i);
-}
-
-/**
- * This method is used to add a layer */
-tmapp.addLayerSettings = function(layerName, i) {
-    var settingsPanel = document.getElementById("image-overlay-panel");
-    var layerTable = document.getElementById("image-overlay-table");
-    if (!layerTable) {
-        layerTable = document.createElement("table");
-        layerTable.id = "image-overlay-table";
-        layerTable.className += "table table-striped"
-        layerTable.innerHTML = "<thead><th>Layer name</th><th>Visible</th><th>Opactiy</th><th>Saturation</th></thead>";
-        settingsPanel.appendChild(layerTable);
-    }
-    var tr = document.createElement("tr");
-
-    var visible = document.createElement("input");
-    visible.type = "checkbox";
-    visible.checked = true; 
-    visible.id = "visible-layer-" + (i + 1);
-    visible.setAttribute("layer", (i + 1));
-    var td_visible = document.createElement("td");
-    td_visible.appendChild(visible);
-
-    var opacity = document.createElement("input");
-    opacity.type = "range";
-    opacity.setAttribute("min", "0");
-    opacity.setAttribute("max", "1");
-    opacity.setAttribute("step", "0.1");
-    opacity.setAttribute("layer", (i + 1));
-    opacity.id = "opacity-layer-" + (i + 1);
-    var td_opacity = document.createElement("td");
-    td_opacity.appendChild(opacity);
-
-    var saturation = document.createElement("input");
-    saturation.type = "range";
-    saturation.setAttribute("min", "0");
-    saturation.setAttribute("max", "1");
-    saturation.setAttribute("step", "0.1");
-    saturation.setAttribute("value", "0.5");
-    saturation.setAttribute("layer", (i + 1));
-    saturation.id = "saturation-layer-" + (i + 1);
-    saturation.className = "saturation-range";
-    var td_saturation = document.createElement("td");
-    td_saturation.appendChild(saturation);
-
-    tr.innerHTML = "<td>" + layerName + "</td>";
-    tr.appendChild(td_visible);
-    tr.appendChild(td_opacity);
-    tr.appendChild(td_saturation);
-    layerTable.prepend(tr);
-
-    visible.addEventListener("change", function(ev) {
-        var layer = ev.srcElement.getAttribute("layer")
-        var slider = document.querySelectorAll('[layer="' + layer + '"][type="range"]')[0];
-        var checkbox = ev.srcElement;
-        if (checkbox.checked) {
-            overlayUtils.setItemOpacity(layer, slider.value);
-        } else {
-            overlayUtils.setItemOpacity(layer, 0);
-        }
-    });
-    opacity.addEventListener("change", function(ev) {
-        var layer = ev.srcElement.getAttribute("layer")
-        var slider = ev.srcElement;
-        var checkbox = document.querySelectorAll('[layer="' + layer + '"][type="checkbox"]')[0];
-        if (checkbox.checked) {
-            overlayUtils.setItemOpacity(layer, slider.value);
-        } else {
-            overlayUtils.setItemOpacity(layer, 0);
-        }
-    });
-    
-    saturation.addEventListener("change", function(ev) {
-        saturationsRanges = document.getElementsByClassName("saturation-range");
-        items = []
-        for (i = 0; i < saturationsRanges.length; i++) {
-            saturationsRanges[i];
-            items.push(
-                [saturationsRanges[i].getAttribute("layer"),saturationsRanges[i].value]
-            );
-        }
-        overlayUtils.setItemsSaturation(items);
-    });
-}
 
 /**
  * This method is used to save the TissUUmaps state (gene expression, cell morphology, regions) */

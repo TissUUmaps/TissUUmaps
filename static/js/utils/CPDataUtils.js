@@ -42,7 +42,8 @@ CPDataUtils.processISSRawData = function () {
         CPDataUtils[cpop + "_tree"] = d3.quadtree().x(x).y(y).addAll(CPDataUtils[cpop + "_rawdata"]);  
     CPDataUtils._drawCPdata=!tmapp["hideSVGMarkers"];  // SVG markers should not be drawn when WebGL is used
     markerUtils.drawCPdata({searchInTree:false}); //mandatory options obj
-
+    document.getElementById("ISS_globalmarkersize").style.display = "block";
+    
     glUtils.loadCPMarkers();  // FIXME
 }
 
