@@ -321,8 +321,11 @@ class webEngine(QWebEngineView):
     @pyqtSlot()
     def foo(self):
         folderpath = QFileDialog.getOpenFileName(self, 'Select a File')[0]
+        print (folderpath, os.path.dirname(folderpath), os.path.basename(folderpath),  app.config['SLIDE_DIR'])
+        print (app.basedir)
         app.basedir = os.path.abspath(os.path.dirname(folderpath) + "\\")
-        self.load(QUrl(self.location + "/" + os.path.basename(folderpath)))
+        print (app.basedir)
+        self.load(QUrl(self.location + os.path.basename(folderpath)))
         self.setWindowTitle("TissUUmaps - " + os.path.basename(folderpath))
 
 # Define function for QtWebEngine

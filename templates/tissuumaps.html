@@ -516,7 +516,7 @@
 <script src="{{ url_for('static', filename='js/utils/filterUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils/geometryUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils/glUtils.js') }}"></script>
-<script src="{{ url_for('static', filename='js/tmapp.js') }}?tmp=123"></script>
+<script src="{{ url_for('static', filename='js/tmapp.js') }}"></script>
 <script>
     document.getElementById("project_title").innerText = "{{ slide_filename }}";
     // ----------
@@ -551,4 +551,7 @@
 
     document.getElementById("navbarDropdownMenuLink").addEventListener("click", function(){
         backend.foo();
-stRedraw);
+    });
+</script>
+
+</html>
