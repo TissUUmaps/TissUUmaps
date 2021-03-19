@@ -435,26 +435,28 @@ markerUtils.markerUI = function (barObject,options) {
     var amount = HTMLElementUtils.createElement({ type: "td", innerText: barObject.values.length });
     row.appendChild(amount);
 
-    var thecolor="#5fb5f6"
-    if(options.randomColorForMarker){
-        thecolor=overlayUtils.randomColor("hex");
+    if (!markerUtils._uniqueColor) {
+        var thecolor="#5fb5f6"
+        if(options.randomColorForMarker){
+            thecolor=overlayUtils.randomColor("hex");
+        }
+        else if(markerUtils._colorsperkey){
+            thecolor=markerUtils._colorsperkey[barObject.key];
+            //if it ends up undefined give a random color anyways
+            if(!thecolor) thecolor=HTMLElementUtils.barcodeHTMLColor(barObject.key);
+        }else{
+            thecolor=HTMLElementUtils.barcodeHTMLColor(barObject.key);
+        }
+        thecolor = thecolor.toLowerCase();  // Should be lowercase for color inputs
+        var color = HTMLElementUtils.createElement({ type: "td" });
+        var colorinput = HTMLElementUtils.inputTypeColor({ id: barObject.key + "-color-" + op, extraAttributes: { value: thecolor } })
+        color.appendChild(colorinput);
+        row.appendChild(color);
+    
+        // Workaround for black color inputs in Safari (WebKit)
+        colorinput.value = "#ffffff";
+        colorinput.value = thecolor;
     }
-    else if(markerUtils._colorsperkey){
-        thecolor=markerUtils._colorsperkey[barObject.key];
-        //if it ends up undefined give a random color anyways
-        if(!thecolor) thecolor=HTMLElementUtils.barcodeHTMLColor(barObject.key);
-    }else{
-        thecolor=HTMLElementUtils.barcodeHTMLColor(barObject.key);
-    }
-    thecolor = thecolor.toLowerCase();  // Should be lowercase for color inputs
-    var color = HTMLElementUtils.createElement({ type: "td" });
-    var colorinput = HTMLElementUtils.inputTypeColor({ id: barObject.key + "-color-" + op, extraAttributes: { value: thecolor } })
-    color.appendChild(colorinput);
-    row.appendChild(color);
-
-    // Workaround for black color inputs in Safari (WebKit)
-    colorinput.value = "#ffffff";
-    colorinput.value = thecolor;
 
     var shape = HTMLElementUtils.createElement({ type: "td" });
     var shapeParams = { random: true, id: barObject.key + "-shape-" + op, "options": markerUtils._d3SymbolStrings };
@@ -519,10 +521,11 @@ markerUtils.markerUIAll = function (options) {
     });
     var amount = HTMLElementUtils.createElement({ type: "td", innerText: length });
     row.appendChild(amount);
-
-    var color = HTMLElementUtils.createElement({ type: "td" });
-    row.appendChild(color);
-
+    
+    if (!markerUtils._uniqueColor) {
+        var color = HTMLElementUtils.createElement({ type: "td" });
+        row.appendChild(color);
+    }
     var shape = HTMLElementUtils.createElement({ type: "td" });
     row.appendChild(shape);
 
@@ -545,6 +548,9 @@ markerUtils.printBarcodeUIs = function (options) {
     var headers = ["Count", "Color", "Shape"];
     if (markerUtils._showSizeColumn) {
         headers = ["Count", "Color", "Shape", "Size"];
+    }
+    if (markerUtils._uniqueColor) {
+        headers = ["Count", "Shape"];
     }
     dataUtils.sortDataAndDownsample();
     //this is causing weird behaviour sometims it creates the name column sometimes no
@@ -571,7 +577,15 @@ markerUtils.printBarcodeUIs = function (options) {
     tbl.setAttribute("style","word-break: break-all;");
 
     var colg=document.createElement ("colgroup");
-    if(headers.length == 6 ){
+    if(headers.length == 4 ){
+        colg.innerHTML='<col width="2%"><col width="23%"><col width="16%"><col width="17%">';
+        tbl.appendChild(colg);
+    }
+    else if(headers.length == 5 ){
+        colg.innerHTML='<col width="2%"><col width="23%"><col width="20%"><col width="16%"><col width="17%">';
+        tbl.appendChild(colg);
+    }
+    else if(headers.length == 6 ){
         colg.innerHTML='<col width="2%"><col width="23%"><col width="20%"><col width="16%"><col width="12%"><col width="17%">';
         tbl.appendChild(colg);
     }

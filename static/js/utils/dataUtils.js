@@ -48,7 +48,18 @@ dataUtils.processISSRawData = function () {
     var xSelector = ISSXNode.options[ISSXNode.selectedIndex].value;
     var ISSYNode = document.getElementById("ISS_Y_header");
     var ySelector = ISSYNode.options[ISSYNode.selectedIndex].value;
+    var ISSColor = document.getElementById("ISS_color_header");
+    var colorSelector = ISSColor.options[ISSColor.selectedIndex].value;
     
+    if (colorSelector != "null"){
+        markerUtils._uniqueColor = true;
+        markerUtils._uniqueColorSelector = colorSelector;
+    }
+    else {
+        markerUtils._uniqueColor = false;
+        markerUtils._uniqueColorSelector = "";
+    }
+
     //check that the key is available
     var knode = document.getElementById(op + "_key_header");
     var key = knode.options[knode.selectedIndex].value;
@@ -125,8 +136,9 @@ dataUtils.showMenuCSV = function(){
     var ISSNanmeInput = document.getElementById(op + "_name_header");
     var ISSX = document.getElementById(op + "_X_header");
     var ISSY = document.getElementById(op + "_Y_header");
+    var ISSColor = document.getElementById(op + "_color_header");
     //console.log(dataUtils._CSVStructure["ISS_csv_header"]);
-    [ISSBarcodeInput, ISSNanmeInput, ISSX, ISSY].forEach(function (node) {
+    [ISSBarcodeInput, ISSNanmeInput, ISSX, ISSY, ISSColor].forEach(function (node) {
         node.innerHTML = "";
         var option = document.createElement("option");
         option.value = "null";

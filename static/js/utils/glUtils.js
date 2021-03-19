@@ -297,7 +297,13 @@ glUtils._updateColorLUTTexture = function(gl, texture) {
     for (let [barcode, index] of Object.entries(glUtils._barcodeToLUTIndex)) {
         // Get color, shape, etc. from HTML input elements for barcode
         const key = glUtils._barcodeToKey[barcode];  // Could be barcode or gene name
-        const hexColor = document.getElementById(key + "-color-ISS").value;
+        hexInput = document.getElementById(key + "-color-ISS")
+        if (hexInput) {
+            var hexColor = document.getElementById(key + "-color-ISS").value;
+        }
+        else {
+            var hexColor = "#ff0000";
+        }
         const shape = document.getElementById(key + "-shape-ISS").value;
         const visible = showAll || markerUtils._checkBoxes[key].checked;
         colors[4 * index + 0] = Number("0x" + hexColor.substring(1,3)); 
