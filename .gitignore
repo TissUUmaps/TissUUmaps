@@ -1,2 +1,7 @@
 
 debug.log
+.vscode/settings.json
+.jython_cache
+dist
+build
+__pycache__

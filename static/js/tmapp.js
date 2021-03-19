@@ -24,8 +24,8 @@ tmapp.registerActions = function () {
     var op = tmapp["object_prefix"];
     var cpop="CP";
 
-        interfaceUtils.listen(op + '_save_btn', 'click', function() { tmapp.saveState() }, false);
-        interfaceUtils.listen(op + '_add_layer_btn', 'click', function() { tmapp.addLayerFromSelect() }, false);
+    interfaceUtils.listen(op + '_save_btn', 'click', function() { tmapp.saveState() }, false);
+    interfaceUtils.listen(op + '_add_layer_btn', 'click', function() { overlayUtils.addLayerFromSelect() }, false);
     interfaceUtils.listen(op + '_bringmarkers_btn','click', function () { dataUtils.processISSRawData(); },false);
     interfaceUtils.listen(op + '_searchmarkers_btn','click', function () { markerUtils.hideRowsThatDontContain(); },false);
     interfaceUtils.listen(op + '_cancelsearch_btn','click', function () { markerUtils.showAllRows(); },false);

@@ -19,6 +19,15 @@
 from collections import OrderedDict
 from flask import Flask, abort, make_response, render_template, url_for,  request, Response, jsonify, send_from_directory
 
+from PyQt5.QtCore import *
+from PyQt5.QtWebEngineWidgets import *
+from PyQt5.QtWidgets import QApplication, QFileDialog
+from PyQt5.QtWebChannel import QWebChannel
+from PyQt5 import QtGui 
+
+from threading import Timer
+import sys
+
 import json
 from io import BytesIO
 import openslide
@@ -285,6 +294,42 @@ def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
                                'misc/favicon.ico', mimetype='image/vnd.microsoft.icon')
 
+
+class webEngine(QWebEngineView):
+
+    def __init__(self, location, qt_app, app):
+        super().__init__()
+        self.app = app
+        self.location = location
+        self.webchannel = QWebChannel()
+        self.page().setWebChannel(self.webchannel)
+        self.webchannel.registerObject('backend', self)
+
+        #if app.config['SLIDE_DIR'] == ".":
+        #    folderpath = QFileDialog.getExistingDirectory(self, 'Select Data Folder')
+        #    app.config['SLIDE_DIR'] = folderpath
+        
+        self.setWindowTitle("TissUUmaps")
+        self.resize(1024, 800)
+        self.setZoomFactor(1.0)
+        #self.page().profile().clearHttpCache()
+        self.load(QUrl(self.location))
+        self.setWindowIcon(QtGui.QIcon('static/misc/favicon.ico')) 
+        self.showMaximized()
+        sys.exit(qt_app.exec_())
+
+    @pyqtSlot()
+    def foo(self):
+        folderpath = QFileDialog.getOpenFileName(self, 'Select a File')[0]
+        app.basedir = os.path.abspath(os.path.dirname(folderpath) + "\\")
+        self.load(QUrl(self.location + "/" + os.path.basename(folderpath)))
+        self.setWindowTitle("TissUUmaps - " + os.path.basename(folderpath))
+
+# Define function for QtWebEngine
+def ui(location, app):
+    qt_app = QApplication(["-style=windows"])
+    web = webEngine(location, qt_app, app)
+    
 if __name__ == '__main__':
     parser = OptionParser(usage='Usage: %prog [options] [slide-directory]')
     parser.add_option('-B', '--ignore-bounds', dest='DEEPZOOM_LIMIT_BOUNDS',
@@ -330,5 +375,10 @@ if __name__ == '__main__':
         app.config['SLIDE_DIR'] = args[0]
     except IndexError:
         pass
-
-    app.run(host=opts.host, port=opts.port, threaded=True)
+    Timer(0.01,lambda: ui("http://127.0.0.1:5000/", app)).start()
+    import threading
+    
+    def flaskThread():
+        app.run(host=opts.host, port=opts.port, threaded=False, debug=False)
+    threading.Thread(target=flaskThread,daemon=True).start()
+    #app.run(host=opts.host, port=opts.port, threaded=False, debug=False)

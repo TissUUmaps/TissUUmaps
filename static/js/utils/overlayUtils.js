@@ -19,6 +19,21 @@ overlayUtils = {
 }
 
 /**
+ * This method is used to add a layer from select input */
+ overlayUtils.addLayerFromSelect = function() {
+    var e = document.getElementById("layerSelect");
+    var layerName = e.options[e.selectedIndex].text;
+    var tileSource = e.options[e.selectedIndex].value;
+    tmapp.layers.push({
+        name: layerName,
+        tileSource: tileSource
+    });
+    console.log("tileSource", tileSource);
+    i = tmapp.layers.length - 1;
+    overlayUtils.addLayer(layerName, tileSource, i)
+}
+
+/**
  * This method is used to add all layers from tmapp */
 overlayUtils.addAllLayers = function() {
     tmapp.layers.forEach(function(layer, i) {

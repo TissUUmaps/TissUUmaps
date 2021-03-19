@@ -10,6 +10,8 @@
     <script src="{{ url_for('static', filename='js/d3.v4.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/d3-scale-chromatic.v0.3.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/jquery-3.5.1.min.js') }}"></script>
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    
     <link rel="stylesheet" href="{{ url_for('static', filename='css/tmcpmain.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/TissueMapsTheme.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/tm-icon-style.css') }}">
@@ -39,8 +41,11 @@
                     </ul>
                 </li>
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <!--<a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     Open
+                    </a>-->
+                    <a class="nav-link" href="#" id="navbarDropdownMenuLink">
+                        Open Image
                     </a>
                     <ul class="dropdown-menu">
                         {% for entry in root_dir.children recursive %} {% if entry.url_path %}
@@ -220,7 +225,7 @@
                                         </div>
                                     </div>
                                     <!-- 1.3 Row for barcode search -->
-                                    <div class="row fixed-height">
+                                    <div class="row fixed-height" id="ISS_searchmarkers_row" style="display:None;">
                                         <div class="col-xs-5 col-sm-5 col-md-5 col-lg-5">
                                             <input class="form-control" type="text" id="ISS_search">
                                         </div>
@@ -457,6 +462,16 @@
                                     <div class="row" id="image-overlay-panel" style="overflow-x:auto;">
                                         
                                     </div>
+                                    <select id="layerSelect">
+                                        {% for entry in folder_dir.children recursive %} {% if entry.url_path %}
+                                        <option value="{{ url_for('slide', path=entry.url_path) }}.dzi">
+                                            {{ entry.name }}
+                                        </option>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                    <button id="ISS_add_layer_btn" class="btn btn-primary btn-sm" type="button">
+                                        Add image as a layer</button>
                                 </div>
                             </div> <!-- end of a main panel -->
                         </div> <!-- end of image-gui-->
@@ -501,7 +516,7 @@
 <script src="{{ url_for('static', filename='js/utils/filterUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils/geometryUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils/glUtils.js') }}"></script>
-<script src="{{ url_for('static', filename='js/tmapp.js') }}"></script>
+<script src="{{ url_for('static', filename='js/tmapp.js') }}?tmp=123"></script>
 <script>
     document.getElementById("project_title").innerText = "{{ slide_filename }}";
     // ----------
@@ -529,6 +544,11 @@
         tmapp["ISS_viewer"].addHandler('viewport-change', glUtils.clearNavigatorArea);
         tmapp["ISS_viewer"].addHandler('container-exit', glUtils.postRedraw);
     });
-</script>
+    var backend;
+    new QWebChannel(qt.webChannelTransport, function (channel) {
+        backend = channel.objects.backend;
+    });
 
-</html>
+    document.getElementById("navbarDropdownMenuLink").addEventListener("click", function(){
+        backend.foo();
+stRedraw);

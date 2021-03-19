@@ -24,6 +24,10 @@
     cursor: default;
 }
 
+.navbar {
+    border-radius: 0px !important; 
+}
+
 .range-label {
     width:30px;
     display:inline-block;
