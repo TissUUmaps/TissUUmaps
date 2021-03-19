@@ -396,7 +396,9 @@ interfaceUtils.checkSelectNotZero=function(domid){
  * @param {object} ul dom object of the a tag 
  * find and actiate main tabs */
 interfaceUtils.activateMainChildTabs=function(elid){
-
+    if (!document.getElementById(elid)) {
+        return;
+    }
     //first, find children ul and then their main children onwards
     children=document.getElementById(elid).getElementsByTagName("a");
     maintabids=[];

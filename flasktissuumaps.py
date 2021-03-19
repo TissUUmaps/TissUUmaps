@@ -312,7 +312,7 @@ class webEngine(QWebEngineView):
         self.setWindowTitle("TissUUmaps")
         self.resize(1024, 800)
         self.setZoomFactor(1.0)
-        #self.page().profile().clearHttpCache()
+        self.page().profile().clearHttpCache()
         self.load(QUrl(self.location))
         self.setWindowIcon(QtGui.QIcon('static/misc/favicon.ico')) 
         self.showMaximized()
@@ -321,10 +321,9 @@ class webEngine(QWebEngineView):
     @pyqtSlot()
     def foo(self):
         folderpath = QFileDialog.getOpenFileName(self, 'Select a File')[0]
-        print (folderpath, os.path.dirname(folderpath), os.path.basename(folderpath),  app.config['SLIDE_DIR'])
-        print (app.basedir)
+        if not folderpath:
+            return
         app.basedir = os.path.abspath(os.path.dirname(folderpath) + "\\")
-        print (app.basedir)
         self.load(QUrl(self.location + os.path.basename(folderpath)))
         self.setWindowTitle("TissUUmaps - " + os.path.basename(folderpath))
 
@@ -382,6 +381,7 @@ if __name__ == '__main__':
     import threading
     
     def flaskThread():
-        app.run(host=opts.host, port=opts.port, threaded=False, debug=False)
+        while(True):
+            app.run(host=opts.host, port=opts.port, threaded=False, debug=False)
     threading.Thread(target=flaskThread,daemon=True).start()
     #app.run(host=opts.host, port=opts.port, threaded=False, debug=False)
