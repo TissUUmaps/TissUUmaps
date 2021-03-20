@@ -1389,7 +1389,7 @@ html {
 
 body {
     font-family: Tahoma, Geneva, sans-serif;
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1.42857143;
     color: #333333;
     background-color: #ffffff;
@@ -4705,7 +4705,7 @@ select[multiple].input-group-sm>.input-group-btn>.btn {
 .nav>li>a {
     position: relative;
     display: block;
-    padding: 10px 15px;
+    padding: 6px 11px;
 }
 
 .nav>li>a:hover,
