@@ -36,8 +36,8 @@ tmapp.registerActions = function () {
     interfaceUtils.listen(op + '_export_regions_csv','click', function () { regionUtils.pointsInRegionsToCSV() },false);
     interfaceUtils.listen(op + '_fillregions_btn','click', function () { regionUtils.fillAllRegions(); },false);
     interfaceUtils.listen(cpop + '_bringmarkers_btn','click', function () { CPDataUtils.processISSRawData() },false);
-
-    var uls=document.getElementsByTagName("ul");
+    var navtabs=document.getElementsByClassName("nav-tabs")[0];
+    var uls=navtabs.getElementsByTagName("ul");
     for(var i=0;i<uls.length;i++){
         var as=uls[i].getElementsByTagName("a");
         for(var j=0;j<as.length;j++){

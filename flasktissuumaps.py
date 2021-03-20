@@ -375,17 +375,19 @@ class webEngine(QWebEngineView):
         if not folderpath:
             return {"dzi":None,"name":None}
         parts = Path(folderpath).parts
+        print (app.basedir, parts)
         if (app.basedir != parts[0]):
             QMessageBox.about(self, "Error", "All layers must be in the same drive")
             return {"dzi":None,"name":None}
         imgPath = os.path.join(*parts[1:])
+        print (imgPath)
         try:
             _get_slide(imgPath)
         except:
             QMessageBox.about(self, "Error", "TissUUmaps did not manage to open this image.")
             return {"dzi":None,"name":None}
         return {
-            "dzi":imgPath + ".dzi",
+            "dzi":"/"+imgPath + ".dzi",
             "name":os.path.basename(imgPath)
         }
 
