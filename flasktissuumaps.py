@@ -315,6 +315,8 @@ class webEngine(QWebEngineView):
     def __init__(self, location, qt_app, app):
         super().__init__()
         self.app = app
+        self.setMinimumSize(800,400)
+        self.setContextMenuPolicy(Qt.NoContextMenu)
         self.lastdir = str(Path.home())
         self.setPage(CustomWebEnginePage(self))
         self.location = location

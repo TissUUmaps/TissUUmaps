@@ -1,3 +1,6 @@
+body {
+    overflow:hidden;
+}
 .ISS_viewer{
     height:calc(100vh - 72px);
 	background-color:#676767;
