@@ -18,10 +18,11 @@
 
 from collections import OrderedDict
 from flask import Flask, abort, make_response, render_template, url_for,  request, Response, jsonify, send_from_directory
+from pathlib import Path
 
 from PyQt5.QtCore import *
 from PyQt5.QtWebEngineWidgets import *
-from PyQt5.QtWidgets import QApplication, QFileDialog
+from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5 import QtGui 
 
@@ -176,7 +177,7 @@ def _setup():
 
 def _get_slide(path):
     path = os.path.abspath(os.path.join(app.basedir, path))
-    if not path.startswith(app.basedir + os.path.sep):
+    if not path.startswith(app.basedir):
         # Directory traversal
         abort(404)
     if not os.path.exists(path):
@@ -213,21 +214,23 @@ def setTmapsState(path):
 @app.route('/')
 @requires_auth
 def index():
-    return render_template('files.html', root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']))
+    #return render_template('files.html', root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']))
+    return render_template('files.html')
 
 @app.route('/<path:path>')
 @requires_auth
 def slide(path):
-    state_filename = "/TmapsState/" + path 
+    state_filename = "/TmapsState/" + path.replace("\\","\\\\") 
 
     slide = _get_slide(path)
     slide_url = url_for('dzi', path=path)
     slide_properties = slide.properties
     
     associated_urls = dict((name, url_for('dzi_asso', path=path, associated_name=name)) for name in slide.associated_images.keys())
-    folder_dir = _Directory(os.path.abspath(app.basedir)+"/",
-                            os.path.dirname(path))
-    return render_template('tissuumaps.html', associated=associated_urls, slide_url=slide_url, state_filename=state_filename, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
+    #folder_dir = _Directory(os.path.abspath(app.basedir)+"/",
+    #                        os.path.dirname(path))
+    #return render_template('tissuumaps.html', associated=associated_urls, slide_url=slide_url, state_filename=state_filename, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
+    return render_template('tissuumaps.html', associated=associated_urls, slide_url=slide_url, state_filename=state_filename, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties)
 
 
 @app.route('/<path:path>.dzi')
@@ -295,17 +298,30 @@ def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
                                'misc/favicon.ico', mimetype='image/vnd.microsoft.icon')
 
+from PyQt5.QtWebEngineWidgets import QWebEnginePage
+from PyQt5.QtGui import QDesktopServices
+
+class CustomWebEnginePage(QWebEnginePage):
+    """ Custom WebEnginePage to customize how we handle link navigation """
+
+    def acceptNavigationRequest(self, url,  _type, isMainFrame):
+        print ("Nav !", url,  _type, isMainFrame)
+        if _type == QWebEnginePage.NavigationTypeLinkClicked:
+            QDesktopServices.openUrl(url)
+            return False
+        return True
 
 class webEngine(QWebEngineView):
-
     def __init__(self, location, qt_app, app):
         super().__init__()
         self.app = app
+        self.lastdir = str(Path.home())
+        self.setPage(CustomWebEnginePage(self))
         self.location = location
         self.webchannel = QWebChannel()
         self.page().setWebChannel(self.webchannel)
         self.webchannel.registerObject('backend', self)
-
+        
         #if app.config['SLIDE_DIR'] == ".":
         #    folderpath = QFileDialog.getExistingDirectory(self, 'Select Data Folder')
         #    app.config['SLIDE_DIR'] = folderpath
@@ -323,19 +339,66 @@ class webEngine(QWebEngineView):
         sys.exit(qt_app.exec_())
 
     @pyqtSlot()
-    def foo(self):
-        folderpath = QFileDialog.getOpenFileName(self, 'Select a File')[0]
+    def openImage(self):
+        oldBaseDir = app.basedir
+        home = str(Path.home())
+        
+        folderpath = QFileDialog.getOpenFileName(self, 'Select a File',self.lastdir)[0]
+        self.lastdir = os.path.dirname(folderpath)
         if not folderpath:
             return
-        app.basedir = os.path.abspath(os.path.dirname(folderpath) + "\\")
-        self.load(QUrl(self.location + os.path.basename(folderpath)))
+        parts = Path(folderpath).parts
+
+        app.basedir = parts[0]
+        imgPath = os.path.join(*parts[1:])
+        try:
+            _get_slide(imgPath)
+        except:
+            app.basedir = oldBaseDir
+            import traceback
+            print (traceback.format_stack())
+            QMessageBox.about(self, "Error", "TissUUmaps did not manage to open this image.")
+
+            return
+        
+        self.load(QUrl(self.location + imgPath))
         self.setWindowTitle("TissUUmaps - " + os.path.basename(folderpath))
+
+    @pyqtSlot()
+    def exit(self):
+        self.close()
+        #sys.exit()
+
+    @pyqtSlot(result="QJsonObject")
+    def addLayer(self):
+        folderpath = QFileDialog.getOpenFileName(self, 'Select a File')[0]
+        if not folderpath:
+            return {"dzi":None,"name":None}
+        parts = Path(folderpath).parts
+        if (app.basedir != parts[0]):
+            QMessageBox.about(self, "Error", "All layers must be in the same drive")
+            return {"dzi":None,"name":None}
+        imgPath = os.path.join(*parts[1:])
+        try:
+            _get_slide(imgPath)
+        except:
+            QMessageBox.about(self, "Error", "TissUUmaps did not manage to open this image.")
+            return {"dzi":None,"name":None}
+        return {
+            "dzi":imgPath + ".dzi",
+            "name":os.path.basename(imgPath)
+        }
 
 # Define function for QtWebEngine
 def ui(location, app):
     qt_app = QApplication([])
     web = webEngine(location, qt_app, app)
     
+def is_port_in_use(port):
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('localhost', port)) == 0
+        
 if __name__ == '__main__':
     parser = OptionParser(usage='Usage: %prog [options] [slide-directory]')
     parser.add_option('-B', '--ignore-bounds', dest='DEEPZOOM_LIMIT_BOUNDS',
@@ -382,11 +445,15 @@ if __name__ == '__main__':
     except IndexError:
         pass
     #Timer(0.01,lambda: ui("http://127.0.0.1:5000/", app)).start()
-    
+    port = 5000
+    while (is_port_in_use(port)):
+        port += 1
+        if port == 6000:
+            exit(0)
     def flaskThread():
-        app.run(host=opts.host, port=opts.port, threaded=True, debug=False)
+        app.run(host=opts.host, port=port, threaded=True, debug=False)
     threading.Thread(target=flaskThread,daemon=True).start()
     
-    ui("http://127.0.0.1:5000/", app)
+    ui("http://127.0.0.1:" + str(port) +  "/", app)
     #threading.Thread(target=flaskThread,daemon=True).start()
     #app.run(host="0.0.0.0", port=opts.port, threaded=False, debug=False)

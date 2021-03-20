@@ -192,12 +192,14 @@ tmapp.loadState = function() {
     var cpop = "CP";
     var vname = op + "_viewer";
     $('#loadingModal').modal('show');
+    console.log("LoadState...",tmapp.stateFilename);
     $.ajax({
         type: "GET",
         url: tmapp.stateFilename,
         // The key needs to match your method's input parameter (case-sensitive).
         dataType: "json",
         success: function(data) {
+            console.log("LoadState...", data);
             try {
                 if (data["Regions"]) {
                     regionUtils.JSONValToRegions(data["Regions"]);

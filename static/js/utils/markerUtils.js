@@ -420,14 +420,14 @@ markerUtils.markerUI = function (barObject,options) {
 
     if(options.drawGeneLetters){
         var barcodeLetters=barObject.values[0].letters;
-        var lettersrow = HTMLElementUtils.createElement({ type: "td", innerText: barcodeLetters,
+        var lettersrow = HTMLElementUtils.createElement({ type: "td", innerHTML: "<label for='" + barObject.key + "-checkbox-" + op + "'>"+barcodeLetters+"</label>",
             extraAttributes: { "title": barcodeLetters, "data-title":barcodeLetters } });
         row.appendChild(lettersrow);
     }
 
     if(options.drawGeneName){
         var gn=barObject.values[0].gene_name;
-        var name = HTMLElementUtils.createElement({ type: "td", innerText: gn,
+        var name = HTMLElementUtils.createElement({ type: "td", innerHTML:  "<label for='" + barObject.key + "-checkbox-" + op + "'>"+gn+"</label>",
             extraAttributes: { "title": gn, "data-title":gn } });
         row.appendChild(name);
     }
@@ -505,13 +505,13 @@ markerUtils.markerUIAll = function (options) {
     row.appendChild(check);
 
     if(options.drawGeneLetters){
-        var lettersrow = HTMLElementUtils.createElement({ type: "td", innerText: "All Barcodes",
+        var lettersrow = HTMLElementUtils.createElement({ type: "td", innerHTML:  "<label for='AllMarkers-checkbox-" + op + "'>All Barcodes</label>",
             extraAttributes: { "title": "All Barcodes", "data-title":"All Barcodes" } });
         row.appendChild(lettersrow);
     }
 
     if(options.drawGeneName){
-        var name = HTMLElementUtils.createElement({ type: "td", innerText: "All Genes",
+        var name = HTMLElementUtils.createElement({ type: "td", innerHTML:  "<label for='AllMarkers-checkbox-" + op + "'>All Genes</label>",
             extraAttributes: { "title": "All Genes", "data-title":"All Genes" } });
         row.appendChild(name);
     }

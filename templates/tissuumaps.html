@@ -16,19 +16,11 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/TissueMapsTheme.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/tm-icon-style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dropdowns.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tmcpstandalone.min.css') }}">
 </head>
 
 <body style="background-color:#ccc;">
     <div class="navbar navbar-default">
-        <div class="navbar-header">
-            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-responsive-collapse">
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand" href="https://tissuumaps.research.it.uu.se/"><img style="height:50px; margin-top:-15px; overflow: visible; z-index: 9999;" src="{{ url_for( 'static', filename='misc/uulogowhitetuum.png' ) }}"> </a>
-        </div>
-        <div class="navbar-collapse collapse navbar-responsive-collapse">
             <ul class="nav navbar-nav">
                 <li class="dropdown">
                     <a style="visibility: hidden;display:none;" href="#" class="dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
@@ -44,40 +36,48 @@
                     <!--<a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     Open
                     </a>-->
-                    <a class="nav-link" href="#" id="navbarDropdownMenuLink">
-                        Open Image
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        File
                     </a>
                     <ul class="dropdown-menu">
-                        {% for entry in root_dir.children recursive %} {% if entry.url_path %}
                         <li>
-                            <a href="{{ url_for('slide', path=entry.url_path) }}">
-                                <span>{{ entry.name }}</span>
+                            <a href="#" id="openImage">
+                                <span>Open Image</span>
                             </a>
                         </li>
-                        {% else %}
-                        <!--<span class='title'>{{ entry.name }}</span>-->
-                        {% endif %} {% if entry.children %}
-                        <li class="dropdown-submenu">
-                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
-                                <span class="nav-label">{{ entry.name }}</span>
+                        <li>
+                            <a href="#" id="exitTissUUmaps">
+                                <span>Exit TissUUmaps</span>
                             </a>
-                            <ul class="dropdown-menu">
-                                {{ loop(entry.children) }}
-                            </ul>
                         </li>
-                        {% endif %} {% else %}
-                        <li class="none">None</li>
-                        {% endfor %}
                     </ul>
                 </li>
-                <li>
+                
+                <li class="nav-item dropdown">
+                    <!--<a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Open
+                    </a>-->
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Help
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a href="https://tissuumaps.research.it.uu.se/">
+                                <span>About TissUUmaps</span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+                <li style="display:None;">
+                    <a id="project_title" href="#"> Slide Name</a>
+                </li>
+                <!--<li>
                     <a id="ISS_save_btn" href="#"> Save TissUUmaps state</a>
                 </li>
                 <li>
                     <a id="project_title" href="#"> Slide Name</a>
-                </li>
+                </li>-->
             </ul>
-        </div>
     </div>
     <div class="container-fluid">
         <div class="row">
@@ -462,16 +462,9 @@
                                     <div class="row" id="image-overlay-panel" style="overflow-x:auto;">
                                         
                                     </div>
-                                    <select id="layerSelect">
-                                        {% for entry in folder_dir.children recursive %} {% if entry.url_path %}
-                                        <option value="{{ url_for('slide', path=entry.url_path) }}.dzi">
-                                            {{ entry.name }}
-                                        </option>
-                                        {% endif %}
-                                        {% endfor %}
-                                    </select>
-                                    <button id="ISS_add_layer_btn" class="btn btn-primary btn-sm" type="button">
-                                        Add image as a layer</button>
+                                    
+                                    <button id="ISS_add_layer_img_btn" class="btn btn-primary btn-sm" type="button">
+                                        Add layer image</button>
                                 </div>
                             </div> <!-- end of a main panel -->
                         </div> <!-- end of image-gui-->
@@ -480,7 +473,7 @@
             </div> <!-- end of lateral panel -->
         </div><!-- end of single row -->
     </div><!-- end of container-fuild-->
-    <div class="modal in" id="loadingModal" tabindex="-1" role="dialog" aria-labelledby="modalLabelSmall" aria-hidden="true">
+    <div class="modal in" id="loadingModal" tabindex="-1" role="dialog" aria-labelledby="modalLabelSmall" aria-hidden="true" style="display:None;">
         <div class="modal-dialog modal-sm">
             <div class="modal-content">
                 
@@ -549,8 +542,26 @@
         backend = channel.objects.backend;
     });
 
-    document.getElementById("navbarDropdownMenuLink").addEventListener("click", function(){
-        backend.foo();
+    document.getElementById("openImage").addEventListener("click", function(){
+        backend.openImage();
+    });
+    document.getElementById("exitTissUUmaps").addEventListener("click", function(){
+        backend.exit();
+    });
+    document.getElementById("ISS_add_layer_img_btn").addEventListener("click", function(){
+        backend.addLayer(function(layerImg) {
+            if (layerImg["dzi"]!=null) {
+                var layerName = layerImg["name"];
+                var tileSource = layerImg["dzi"];
+                tmapp.layers.push({
+                    name: layerName,
+                    tileSource: tileSource
+                });
+                console.log("tileSource", tileSource);
+                i = tmapp.layers.length - 1;
+                overlayUtils.addLayer(layerName, tileSource, i)
+            }
+        });
     });
 </script>
 
