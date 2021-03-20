@@ -25,7 +25,8 @@ from PyQt5.QtWidgets import QApplication, QFileDialog
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5 import QtGui 
 
-from threading import Timer
+#from threading import Timer
+import threading, time
 import sys
 
 import json
@@ -312,10 +313,13 @@ class webEngine(QWebEngineView):
         self.setWindowTitle("TissUUmaps")
         self.resize(1024, 800)
         self.setZoomFactor(1.0)
-        #self.page().profile().clearHttpCache()
+        self.page().profile().clearHttpCache()
+        
+        time.sleep(0.1)
         self.load(QUrl(self.location))
         self.setWindowIcon(QtGui.QIcon('static/misc/favicon.ico')) 
         self.showMaximized()
+        #qt_app.exec_()
         sys.exit(qt_app.exec_())
 
     @pyqtSlot()
@@ -323,14 +327,14 @@ class webEngine(QWebEngineView):
         folderpath = QFileDialog.getOpenFileName(self, 'Select a File')[0]
         print (folderpath, os.path.dirname(folderpath), os.path.basename(folderpath),  app.config['SLIDE_DIR'])
         print (app.basedir)
-        app.basedir = os.path.abspath(os.path.dirname(folderpath) + "\\")
+        app.basedir = os.path.abspath(os.path.dirname(folderpath) + "/")
         print (app.basedir)
         self.load(QUrl(self.location + os.path.basename(folderpath)))
         self.setWindowTitle("TissUUmaps - " + os.path.basename(folderpath))
 
 # Define function for QtWebEngine
 def ui(location, app):
-    qt_app = QApplication(["-style=windows"])
+    qt_app = QApplication([])
     web = webEngine(location, qt_app, app)
     
 if __name__ == '__main__':
@@ -378,10 +382,12 @@ if __name__ == '__main__':
         app.config['SLIDE_DIR'] = args[0]
     except IndexError:
         pass
-    Timer(0.01,lambda: ui("http://127.0.0.1:5000/", app)).start()
-    import threading
+    #Timer(0.01,lambda: ui("http://127.0.0.1:5000/", app)).start()
     
     def flaskThread():
-        app.run(host=opts.host, port=opts.port, threaded=False, debug=False)
+        app.run(host=opts.host, port=opts.port, threaded=True, debug=False)
     threading.Thread(target=flaskThread,daemon=True).start()
-    #app.run(host=opts.host, port=opts.port, threaded=False, debug=False)
+    
+    ui("http://127.0.0.1:5000/", app)
+    #threading.Thread(target=flaskThread,daemon=True).start()
+    #app.run(host="0.0.0.0", port=opts.port, threaded=False, debug=False)
