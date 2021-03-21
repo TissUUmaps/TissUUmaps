@@ -1,12 +1,12 @@
-# FlaskTissUUmaps
-FlaskTissUUmaps is a minimal python server for [TissUUmaps](https://tissuumaps.research.it.uu.se/) using Flask.
+# Standalone TissUUmaps
+Standalone TissUUmaps is [TissUUmaps](https://tissuumaps.research.it.uu.se/) running locally on your computer.
 
 ## Differences with TissUUmaps
 
 ### Image format
-FlaskTissUUmaps allows to visualize all images from a folder and sub-folders in TissUUmaps. By using a minimal deepzoom server, FlaskTissUUmaps removes the need for creating DZI files of every image.
+Standalone TissUUmaps can open images directly in TissUUmaps. By using a minimal deepzoom flask server, Standalone TissUUmaps removes the need for creating DZI files of every image.
 
-FlaskTissUUmaps can read whole slide images in any format recognized by the [OpenSlide library](https://openslide.org/api/python/#openslide-python):
+Standalone TissUUmaps can read whole slide images in any format recognized by the [OpenSlide library](https://openslide.org/api/python/#openslide-python):
  * Aperio (.svs, .tif)
  * Hamamatsu (.ndpi, .vms, .vmu)
  * Leica (.scn)
@@ -19,11 +19,7 @@ FlaskTissUUmaps can read whole slide images in any format recognized by the [Ope
 
 plus classical images in any format recognized by the [PIL library](https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html) (png, jpg, *etc.*)
 
-> :warning: Warning: classical non pyramidal images will have to be loaded in RAM and will be read entirely for each generated tile. If you have big images, consider converting them in pyramidal format using VIPS.
-
-### Saving TissUUmaps state
-FlaskTissUUmaps allows to save all TissUUmaps states (Gene expressions, Cell morphology, Regions, Layers) so that you can reload images with all additional information, just as you saved them.
-
+> :warning: Warning: non pyramidal images will have to be loaded in RAM and will be read entirely for each generated tile. If you have big images, consider converting them in pyramidal format using VIPS.
 
 ## Installation
 
@@ -32,7 +28,7 @@ FlaskTissUUmaps allows to save all TissUUmaps states (Gene expressions, Cell mor
 1. Install [Anaconda](https://docs.anaconda.com/anaconda/install/) (or miniconda).
 1. Create a new conda environment from an Anaconda prompt:
     ```bash
-	conda create --name tissuumaps
+	conda create --name tissuumaps python=3.8
     ```
 
 1. Activate the new conda environment:
@@ -45,9 +41,9 @@ FlaskTissUUmaps allows to save all TissUUmaps states (Gene expressions, Cell mor
 	(tissuumaps) C:\
     ```
 
-1. Install dependencies (openslide, flask and pillow):
+1. Install dependencies (openslide, flask, pillow and PyQt5):
     ```bash
-	pip install openslide-python flask pillow
+	pip install openslide-python flask pillow PyQtWebEngine
     ```
 
     > Openslide-python depends on the openslide library.
@@ -69,41 +65,11 @@ FlaskTissUUmaps allows to save all TissUUmaps states (Gene expressions, Cell mor
 
 1. Clone the FlaskTissUUmaps git repository or download in zip format and extract to a FlaskTissUUmaps folder
     ```bash
-	git clone https://github.com/wahlby-lab/FlaskTissUUmaps
+	git clone https://github.com/wahlby-lab/FlaskTissUUmaps --branch standalone
     ```
 
 1. Go to the FlaskTissUUmaps folder and start the FlaskTissUUmaps server:
     ```bash
-	cd \Users\myUser\Documents\FlaskTissUUmaps
-    python flasktissuumaps.py path_to_image_folder
+	cd FlaskTissUUmaps
+    python flasktissuumaps.py
     ```
-1. Open http://127.0.0.1:5000/ in your favorite browser.
-
-   > :warning: Remember that Flask is running on a built-in development server (`flask run`) and should not be used in production. If you want to deploy FlaskTissUUmaps on a production server, please read https://flask.palletsprojects.com/en/1.1.x/tutorial/deploy/ or any similar tutorial.
-
-## Options
-
-FlaskTissUUmaps can be used with the following options:
-```bash
-Usage: flasktissuumaps.py [options] [slide-directory]
-
-Options:
-  -h, --help            show this help message and exit
-  -B, --ignore-bounds   display entire scan area
-  -c FILE, --config=FILE
-                        config file
-  -d, --debug           run in debugging mode (insecure)
-  -e PIXELS, --overlap=PIXELS
-                        overlap of adjacent tiles [1]
-  -f {jpeg|png}, --format={jpeg|png}
-                        image format for tiles [jpeg]
-  -l ADDRESS, --listen=ADDRESS
-                        address to listen on [127.0.0.1]
-  -p PORT, --port=PORT  port to listen on [5000]
-  -Q QUALITY, --quality=QUALITY
-                        JPEG compression quality [75]
-  -s PIXELS, --size=PIXELS
-                        tile size [254]
-  -D LEVELS, --depth=LEVELS
-                        folder depth search for opening files [4]
-```

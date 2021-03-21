@@ -76,7 +76,14 @@ DEEPZOOM_TILE_QUALITY = 75
 
 FOLDER_DEPTH = 4
 
-app = Flask(__name__)
+# determine if application is a script file or frozen exe
+if getattr(sys, 'frozen', False):
+    template_folder=os.path.join(sys._MEIPASS, 'templates')
+    os.chdir(sys._MEIPASS)
+elif __file__:
+    template_folder="templates"
+print ("template_folder",template_folder)
+app = Flask(__name__,template_folder=template_folder)
 app.config.from_object(__name__)
 app.config.from_envvar('DEEPZOOM_MULTISERVER_SETTINGS', silent=True)
 
@@ -436,6 +443,7 @@ if __name__ == '__main__':
 
     (opts, args) = parser.parse_args()
     # Load config file if specified
+
     if opts.config is not None:
         app.config.from_pyfile(opts.config)
     # Overwrite only those settings specified on the command line
