@@ -68,7 +68,7 @@ plus classical images in any format recognized by the [PIL library](https://pill
 	git clone https://github.com/wahlby-lab/FlaskTissUUmaps --branch standalone
     ```
 
-1. Go to the FlaskTissUUmaps folder and start the FlaskTissUUmaps server:
+1. Go to the FlaskTissUUmaps folder and start Standalone TissUUmaps:
     ```bash
 	cd FlaskTissUUmaps
     python flasktissuumaps.py
