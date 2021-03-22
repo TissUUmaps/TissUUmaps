@@ -344,7 +344,6 @@ HTMLElementUtils.addLayerSettings = function(layerName, tileSource, layerIndex) 
     td_opacity.style.padding = "6px";
     td_opacity.style.minWidth = "100px";
     tileSource = tileSource.replace(/\\/g, '\\\\');
-    alert(tileSource);
     propInfo = " <span style='cursor:pointer' onClick='backend.getProperties(\"" + tileSource + "\")'>ⓘ</span>";
     tr.innerHTML = "<td style='padding:6px;'>" + layerName + propInfo + "</td>";
     tr.appendChild(td_visible);
