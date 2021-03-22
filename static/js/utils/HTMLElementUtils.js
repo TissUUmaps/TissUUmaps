@@ -7,7 +7,11 @@
 /**
 * @namespace HTMLElementUtils
 */
-HTMLElementUtils = {}
+HTMLElementUtils = {
+    _colorsperiter:[],
+    _colorsperbarcode:{},
+    _iter:0
+}
 
 /** Create a checkbox input  */
 HTMLElementUtils.inputTypeCheckbox = function (params) {
@@ -391,6 +395,18 @@ HTMLElementUtils.addLayerSettings = function(layerName, tileSource, layerIndex) 
 
 /** Create a color in YCbCr space to divide between the possible 4 letters */
 HTMLElementUtils.barcodeHTMLColor = function (barcode) {
+    if(HTMLElementUtils._colorsperiter){
+        if (HTMLElementUtils._colorsperbarcode[barcode]) {
+            return HTMLElementUtils._colorsperbarcode[barcode]
+        }
+        thecolor=HTMLElementUtils._colorsperiter[HTMLElementUtils._iter];
+        HTMLElementUtils._iter += 1;
+        //if it ends up undefined give a random color anyways
+        if(thecolor) {
+            HTMLElementUtils._colorsperbarcode[barcode] = thecolor;
+            return thecolor;
+        }
+    }
     //A Red, T Green, C Bluemagenta, G yellow
     var maincolor = barcode.charAt(0).toLowerCase();
     var red = 0; var green = 0; var blue = 0;

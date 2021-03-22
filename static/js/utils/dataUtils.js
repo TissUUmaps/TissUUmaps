@@ -122,6 +122,7 @@ dataUtils.processISSRawData = function () {
     
     delete dataUtils[op + "_rawdata"];
     document.getElementById("ISS_globalmarkersize").style.display = "block";
+    document.getElementById("ISS_searchmarkers_row").style.display = "block";
     glUtils.loadMarkers();  // FIXME
 }
 

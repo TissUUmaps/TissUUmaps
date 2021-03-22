@@ -20,7 +20,7 @@
                 type:"range",
                 min:-100,
                 max:100,
-                step:1,
+                step:0.5,
                 value:0
             },
             filterFunction: function (value) {

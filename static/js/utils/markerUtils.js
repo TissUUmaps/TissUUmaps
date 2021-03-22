@@ -653,7 +653,7 @@ markerUtils.hideRowsThatDontContain = function () {
     }
 
     
-    for (var i = 0; i < rows.length; i++) {
+    for (var i = 2; i < rows.length; i++) {
         var show=false;
         needles.forEach(function(needle){
             if (contains(rows[i], needle)) {
