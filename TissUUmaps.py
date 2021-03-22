@@ -426,16 +426,19 @@ class webEngine(QWebEngineView):
         folderpath = QFileDialog.getOpenFileName(self, 'Select a File')[0]
         if not folderpath:
             returnDict = {"dzi":None,"name":None}
+            return returnDict
         parts = Path(folderpath).parts
         if (app.basedir != parts[0]):
             QMessageBox.about(self, "Error", "All layers must be in the same drive")
             returnDict = {"dzi":None,"name":None}
+            return returnDict
         imgPath = os.path.join(*parts[1:])
         try:
             _get_slide(imgPath)
         except:
             QMessageBox.about(self, "Error", "TissUUmaps did not manage to open this image.")
             returnDict = {"dzi":None,"name":None}
+            return returnDict
         returnDict = {
             "dzi":"/"+imgPath + ".dzi",
             "name":os.path.basename(imgPath)
