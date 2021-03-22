@@ -52,7 +52,7 @@ overlayUtils.addLayer = function(layerName, tileSource, i) {
         tileSource: tmapp._url_suffix + tileSource,
         opacity: 1.0
     });
-    HTMLElementUtils.addLayerSettings(layerName, i);
+    HTMLElementUtils.addLayerSettings(layerName, tileSource, i);
 }
 
 

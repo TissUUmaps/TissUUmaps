@@ -557,9 +557,8 @@
                     name: layerName,
                     tileSource: tileSource
                 });
-                console.log("tileSource", tileSource);
                 i = tmapp.layers.length - 1;
-                overlayUtils.addLayer(layerName, tileSource, i)
+                overlayUtils.addLayer(layerName, encodeURIComponent(tileSource), i);
             }
         });
     });

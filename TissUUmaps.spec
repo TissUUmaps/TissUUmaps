@@ -3,8 +3,8 @@
 block_cipher = None
 
 
-a = Analysis(['flasktissuumaps.py'],
-             pathex=['C:\\Users\\chrav452\\Documents\\GitHub\\FlaskTissUUmaps'],
+a = Analysis(['TissUUmaps.py'],
+             pathex=['./'],
              binaries=[],
              datas=[('templates', 'templates'), ('static', 'static')],
              hiddenimports=[],
@@ -21,7 +21,7 @@ exe = EXE(pyz,
           a.scripts,
           [],
           exclude_binaries=True,
-          name='flasktissuumaps',
+          name='TissUUmaps',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
@@ -34,4 +34,4 @@ coll = COLLECT(exe,
                strip=False,
                upx=True,
                upx_exclude=[],
-               name='flasktissuumaps')
+               name='TissUUmaps')

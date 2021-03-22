@@ -22,7 +22,7 @@ from pathlib import Path
 
 from PyQt5.QtCore import *
 from PyQt5.QtWebEngineWidgets import *
-from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QPlainTextEdit, QDialog
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5 import QtGui 
 
@@ -40,6 +40,7 @@ from optparse import OptionParser
 from threading import Lock
 from functools import wraps
 import imghdr
+import urllib.parse
 
 import PIL
 PIL.Image.MAX_IMAGE_PIXELS = 93312000000
@@ -169,10 +170,7 @@ class _SlideFile(object):
         self.name = os.path.basename(relpath)
         self.url_path = relpath.replace("\\","/")
 
-
-@app.before_first_request
-def _setup():
-    app.basedir = os.path.abspath(app.config['SLIDE_DIR'])
+def setup(app):
     config_map = {
         'DEEPZOOM_TILE_SIZE': 'tile_size',
         'DEEPZOOM_OVERLAP': 'overlap',
@@ -180,6 +178,10 @@ def _setup():
     }
     opts = dict((v, app.config[k]) for k, v in config_map.items())
     app.cache = _SlideCache(app.config['SLIDE_CACHE_SIZE'], opts)
+
+@app.before_first_request
+def _setup():
+    setup(app)
 
 
 def _get_slide(path):
@@ -318,8 +320,23 @@ class CustomWebEnginePage(QWebEnginePage):
             return False
         return True
 
+class textWindow(QDialog):
+    def __init__(self, parent, title, message):
+        QDialog.__init__(self, parent)
+
+        self.setMinimumSize(QSize(700, 500))    
+        self.setWindowTitle(title) 
+
+        # Add text field
+        self.b = QPlainTextEdit(self)
+        self.b.setMinimumSize (650,450)
+        self.b.setReadOnly(True)
+        self.b.insertPlainText(message)
+        self.b.move(10,10)
+        self.b.resize(400,200)
+    
 class webEngine(QWebEngineView):
-    def __init__(self, location, qt_app, app):
+    def __init__(self, location, qt_app, app, args):
         super().__init__()
         self.app = app
         self.setMinimumSize(800,400)
@@ -341,23 +358,48 @@ class webEngine(QWebEngineView):
         self.page().profile().clearHttpCache()
         
         time.sleep(0.1)
-        self.load(QUrl(self.location))
+        if (len(args) > 0):
+            if not self.openImagePath(args[0]):
+                self.load(QUrl(self.location))
+        else:
+            self.load(QUrl(self.location))
         self.setWindowIcon(QtGui.QIcon('static/misc/favicon.ico')) 
         self.showMaximized()
         #qt_app.exec_()
         sys.exit(qt_app.exec_())
 
+    @pyqtSlot(str)
+    def getProperties(self, path):
+        try:
+            path = urllib.parse.unquote(path)[:-4]
+            print (path)
+            slide = _get_slide(path)
+            propString = "\n".join([n + ": " + v for n,v in slide.properties.items()])
+        except:
+            propString = ""
+        
+        messageBox = textWindow(self,os.path.basename(path) + " properties", propString)
+        messageBox.show()
+        
     @pyqtSlot()
     def openImage(self):
-        oldBaseDir = app.basedir
         home = str(Path.home())
         
         folderpath = QFileDialog.getOpenFileName(self, 'Select a File',self.lastdir)[0]
+        self.openImagePath(folderpath)
+    
+    def openImagePath (self, folderpath):
+        print (folderpath)
+        try:
+            oldBaseDir = app.basedir
+        except AttributeError:
+            oldBaseDir = ""
         self.lastdir = os.path.dirname(folderpath)
         if not folderpath:
             return
         parts = Path(folderpath).parts
-
+        if (not hasattr(app, 'cache')):
+            setup(app)
         app.basedir = parts[0]
         imgPath = os.path.join(*parts[1:])
         try:
@@ -365,13 +407,14 @@ class webEngine(QWebEngineView):
         except:
             app.basedir = oldBaseDir
             import traceback
-            print (traceback.format_stack())
+            print (traceback.format_exc())
             QMessageBox.about(self, "Error", "TissUUmaps did not manage to open this image.")
 
-            return
-        
+            return False
+        print (app.basedir, self.location + imgPath)
         self.load(QUrl(self.location + imgPath))
         self.setWindowTitle("TissUUmaps - " + os.path.basename(folderpath))
+        return True
 
     @pyqtSlot()
     def exit(self):
@@ -382,28 +425,28 @@ class webEngine(QWebEngineView):
     def addLayer(self):
         folderpath = QFileDialog.getOpenFileName(self, 'Select a File')[0]
         if not folderpath:
-            return {"dzi":None,"name":None}
+            returnDict = {"dzi":None,"name":None}
         parts = Path(folderpath).parts
-        print (app.basedir, parts)
         if (app.basedir != parts[0]):
             QMessageBox.about(self, "Error", "All layers must be in the same drive")
-            return {"dzi":None,"name":None}
+            returnDict = {"dzi":None,"name":None}
         imgPath = os.path.join(*parts[1:])
-        print (imgPath)
         try:
             _get_slide(imgPath)
         except:
             QMessageBox.about(self, "Error", "TissUUmaps did not manage to open this image.")
-            return {"dzi":None,"name":None}
-        return {
+            returnDict = {"dzi":None,"name":None}
+        returnDict = {
             "dzi":"/"+imgPath + ".dzi",
             "name":os.path.basename(imgPath)
         }
+        print ("returnDict", returnDict)
+        return returnDict
 
 # Define function for QtWebEngine
-def ui(location, app):
+def ui(location, app, args):
     qt_app = QApplication([])
-    web = webEngine(location, qt_app, app)
+    web = webEngine(location, qt_app, app, args)
     
 def is_port_in_use(port):
     import socket
@@ -452,10 +495,10 @@ if __name__ == '__main__':
             delattr(opts, k)
     app.config.from_object(opts)
     # Set slide directory
-    try:
-        app.config['SLIDE_DIR'] = args[0]
-    except IndexError:
-        pass
+    #try:
+    #    app.config['SLIDE_DIR'] = args[0]
+    #except IndexError:
+    #    pass
     #Timer(0.01,lambda: ui("http://127.0.0.1:5000/", app)).start()
     port = 5000
     while (is_port_in_use(port)):
@@ -466,6 +509,6 @@ if __name__ == '__main__':
         app.run(host=opts.host, port=port, threaded=True, debug=False)
     threading.Thread(target=flaskThread,daemon=True).start()
     
-    ui("http://127.0.0.1:" + str(port) +  "/", app)
+    ui("http://127.0.0.1:" + str(port) +  "/", app, args)
     #threading.Thread(target=flaskThread,daemon=True).start()
     #app.run(host="0.0.0.0", port=opts.port, threaded=False, debug=False)

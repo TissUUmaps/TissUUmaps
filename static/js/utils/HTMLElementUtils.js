@@ -303,7 +303,7 @@ HTMLElementUtils.createForm = function (params) {
 
 /**
  * This method is used to add a layer */
-HTMLElementUtils.addLayerSettings = function(layerName, layerIndex) {
+HTMLElementUtils.addLayerSettings = function(layerName, tileSource, layerIndex) {
     var settingsPanel = document.getElementById("image-overlay-panel");
     var layerTable = document.getElementById("image-overlay-tbody");
     if (!layerTable) {
@@ -343,8 +343,8 @@ HTMLElementUtils.addLayerSettings = function(layerName, layerIndex) {
     td_opacity.style.textAlign = "center";
     td_opacity.style.padding = "6px";
     td_opacity.style.minWidth = "100px";
-
-    tr.innerHTML = "<td style='padding:6px;'>" + layerName + "</td>";
+    propInfo = " <span style='cursor:pointer' onClick='backend.getProperties(\"" + tileSource + "\")'>ⓘ</span>";
+    tr.innerHTML = "<td style='padding:6px;'>" + layerName + propInfo + "</td>";
     tr.appendChild(td_visible);
     tr.appendChild(td_opacity);
 

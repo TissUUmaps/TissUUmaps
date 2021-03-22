@@ -1,2 +1,3 @@
-pyinstaller.exe --noconsole --add-data "templates;templates" --add-data "static;static"  --icon="static/misc/favicon.ico" .\flasktissuumaps.py --noconfirm
-Rename-Item -Path dist\flasktissuumaps\PyQt5\Qt -NewName Qt5
+pyinstaller.exe --noconsole .\TissUUmaps.spec --noconfirm
+Rename-Item -Path dist\TissUUmaps\PyQt5\Qt -NewName Qt5
+ISCC.exe build_installer.iss
