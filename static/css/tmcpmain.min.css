@@ -41,9 +41,6 @@ body {
     display:flex;
     flex-flow:column;
 }
-.fixed-height {
-    flex: 0 1 auto;
-}
 .extended-height {
     flex: 1 0 0;
 }

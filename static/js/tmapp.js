@@ -62,8 +62,6 @@ tmapp.init = function () {
     var vname = op + "_viewer";
     //init OSD viewer
     tmapp[vname] = OpenSeadragon(tmapp.options_osd);
-    //open the DZI xml file pointing to the tiles
-    overlayUtils.addLayer(tmapp.slideFilename, tmapp._url_suffix +  this.fixed_file, -1)
     //pixelate because we need the exact values of pixels
     tmapp[vname].addHandler("tile-drawn", OSDViewerUtils.pixelateAtMaximumZoomHandler);
 
@@ -128,8 +126,10 @@ tmapp.init = function () {
     }).setTracking(true);
 
     elt = document.getElementById("ISS_globalmarkersize");
-    tmapp[vname].addControl(elt,{anchor: OpenSeadragon.ControlAnchor.TOP_RIGHT});
-    elt.style.display="None";
+    if (elt) {
+        tmapp[vname].addControl(elt,{anchor: OpenSeadragon.ControlAnchor.TOP_RIGHT});
+        elt.style.display="None";
+    }
 
     if (tmapp.mpp != 0) {
         tmapp[vname].scalebar({
@@ -143,8 +143,15 @@ tmapp.init = function () {
             sizeAndTextRenderer: OpenSeadragon.ScalebarSizeAndTextRenderer.METRIC_LENGTH
         });
     }
-    tmapp.loadState();
+    //tmapp.loadState();
     //document.getElementById('cancelsearch-moving-button').addEventListener('click', function(){ markerUtils.showAllRows("moving");}); 
+    filterUtils.initFilters();
+    if (window.hasOwnProperty("glUtils")) {
+        console.log("Using GPU-based marker drawing (WebGL canvas)")
+        glUtils.init();
+    } else {
+        console.log("Using CPU-based marker drawing (SVG canvas)")
+    }
 } //finish init
 
 /**
@@ -213,7 +220,7 @@ tmapp.loadState = function() {
                     if (!tmapp.layers) {
                         tmapp.layers = [];
                     }
-                    tmapp.addAllLayers();
+                    overlayUtils.addAllLayers();
                 }
                 if (data["CPData"]) { if (data["CPData"]["rawdata"]) {
                     CPDataUtils[cpop + "_rawdata"] = data["CPData"]["rawdata"];
@@ -258,5 +265,6 @@ tmapp.options_osd = {
     zoomPerClick: 1.0,
     constrainDuringPan: true,
     visibilityRatio: 1,
-    showNavigationControl: false
+    showNavigationControl: false,
+    maxImageCacheCount:500
 }

@@ -281,6 +281,8 @@ def tile(path, level, col, row, format):
     tile.save(buf, format, quality=app.config['DEEPZOOM_TILE_QUALITY'])
     resp = make_response(buf.getvalue())
     resp.mimetype = 'image/%s' % format
+    resp.cache_control.max_age = 1209600
+    resp.cache_control.public = True
     return resp
 
 @app.route('/<path:path>.dzi/<path:associated_name>_files/<int:level>/<int:col>_<int:row>.<format>')

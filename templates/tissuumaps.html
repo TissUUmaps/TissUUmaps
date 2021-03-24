@@ -23,7 +23,8 @@
     <div class="navbar navbar-default">
             <ul class="nav navbar-nav">
                 <li class="dropdown">
-                    <a style="visibility: hidden;display:none;" href="#" class="dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                    <a style="visibility: hidden;display:none;" href="#" class="dropdown-toggle" data-toggle="dropdown" 
+                         aria-expanded="false">
                         Projects
                         <b class="caret"></b>
                     </a>
@@ -87,21 +88,20 @@
                 The ID will give the prefix for all the objects related to the viewer in this case ISS-->
                 <div id="ISS_viewer" class="ISS_viewer" style="position:absolute; width:100%">
                 </div>
-                <canvas id="gl_canvas" width="500" height="500" style="position:relative; z-index:10; pointer-events:none"></canvas>
-                    <!-- Global marker size slider -->
-                    <div id="ISS_globalmarkersize">
-                        <label>Marker size</label><br>
-                        <input class="form-control" type="range" style="box-shadow: none;"
-                            id="ISS_globalmarkersize_text"
-                            value="100" min="0" max="500" step="10"
-                            oninput="document.getElementById('ISS_globalmarkersize_label').innerHTML = this.value;"/>
-                        <em class="range-label" id="ISS_globalmarkersize_label">100</em>
-                    </div>
+                <!-- Global marker size slider -->
+                <div id="ISS_globalmarkersize">
+                    <label>Marker size</label><br>
+                    <input class="form-control" type="range" style="box-shadow: none;"
+                        id="ISS_globalmarkersize_text"
+                        value="100" min="0" max="500" step="10"
+                        oninput="document.getElementById('ISS_globalmarkersize_label').innerHTML = this.value;"/>
+                    <em class="range-label" id="ISS_globalmarkersize_label">100</em>
+                </div>
                 </div>
             <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4 ISS_menu" style="overflow-y:hidden; overflow-x:auto;min-width: 506px;">
                 <div class="row row-fullheight" style="padding-bottom: 0px;">
                     <!-- Level 0 tabs -->
-                    <ul class="nav nav-tabs L0-tabs fixed-height">
+                    <ul class="nav nav-tabs L0-tabs">
                         <li> <a href="#markers-iss-gui" data-toggle="tab" aria-expanded="true"
                                 class="active main-child">Gene expression</a></li>
                         <li> <a href="#markers-cp-gui" data-toggle="tab"
@@ -118,11 +118,19 @@
                         <div class="tab-pane active" id="markers-iss-gui" style="height:100%;">
                             <div class="panel panel-default" style="height:100%;">
                                 <div class="panel-body row-fullheight">
-                                    <!-- 1.1 Row of file selection -->
-                                    <div class="row fixed-height">
+                                    <!-- 1.1 Row download -->
+                                    <div id="ISS_rowDownloadMarkers">
+                                    </div>
+                                    <div class="row" >
+                                        <div class="progress" id="ISS_csv_progress_parent" style="visibility:hidden; display:none; margin: 0px 10px 0px 10px;">
+                                            <div id="ISS_csv_progress" class="progress-bar progress-bar-striped" role="progressbar" style="width: 0%; " aria-valuenow="10" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                     <!-- 1.1.1 Row of file selection -->
+                                     <div class="row" >
                                         <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
                                             <div id="ISS_input_csv" style="margin-bottom: 5px;">
-                                                <label for="ISS_csv">Import Gene Expression from CSV file:</label>
+                                                <label id="label_ISS_csv" for="ISS_csv">Import gene expression from CSV file:</label>
                                                 <input class="form-control-file form-control form-control-sm" type="file" id="ISS_csv" name="ISS_csv"
                                                     accept=".csv,.tsv,.txt">
                                                 <script type="text/javascript">
@@ -143,7 +151,7 @@
                                         </div>
                                     </div>
                                     <!-- 1.2 Row header selection -->
-                                    <div class="row fixed-height" id="ISS_csv_headers"
+                                    <div class="row" id="ISS_csv_headers"
                                         style="visibility: hidden; display:none;">
                                         <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
                                             <div class="row">
@@ -225,7 +233,7 @@
                                         </div>
                                     </div>
                                     <!-- 1.3 Row for barcode search -->
-                                    <div class="row fixed-height" id="ISS_searchmarkers_row" style="display:None;">
+                                    <div class="row" id="ISS_searchmarkers_row" style="display:None;">
                                         <div class="col-xs-5 col-sm-5 col-md-5 col-lg-5">
                                             <label for="ISS_search">Filter:</label>
                                             <input class="form-control" type="text" id="ISS_search">
@@ -242,11 +250,19 @@
                         <div class="tab-pane" id="markers-cp-gui" style="height:100%;">
                             <div class="panel panel-default" style="height:100%;">
                                 <div class="panel-body">
+                                    <!-- 1.1 Row download -->
+                                    <div id="ISS_rowDownloadMarkersCP">
+                                    </div>
+                                    <div class="row">
+                                        <div class="progress" id="ISS_CP_csv_progress_parent" style="visibility:hidden; display:none; margin: 0px 10px 0px 10px;">
+                                            <div id="ISS_CP_csv_progress" class="progress-bar progress-bar-striped" role="progressbar" style="width: 0%; " aria-valuenow="10" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
                                     <!-- 2.1 Row of file selection -->
                                     <div class="row" id="CP_data_panel">
                                         <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
                                             <div id="CP_input_csv" style="margin-bottom: 5px;">
-                                                <label for="CP_csv">Import Cell Morphology from CSV file:</label>
+                                                <label id="label_CP_csv" for="CP_csv">Import cell morphology from CSV file:</label>
                                                 <input class="form-control-file form-control form-control-sm" type="file" id="CP_csv" name="CP_csv"
                                                     accept=".csv,.tsv,.txt">
                                                 <script type="text/javascript">
@@ -342,7 +358,7 @@
                                 <div class="panel-body" style="height:100%;">
                                     <div class="row row-fullheight">
                                         <!-- Tabs 1.3.0 region subtabs -->
-                                        <ul class="nav nav-tabs L2-tabs fixed-height">
+                                        <ul class="nav nav-tabs L2-tabs">
                                             <li><a href="#markers-regions-project-gui" data-toggle="tab" aria-expanded="false" class="active main-child">Regions</a></li>
                                             <li><a href="#markers-regions-import-gui" data-toggle="tab"
                                                     aria-expanded="false">Import</a></li>
@@ -354,7 +370,9 @@
                                             <div class="tab-pane active" id="markers-regions-project-gui" style="height:100%;">
                                                 <div class="panel panel-default" style="height:100%;">
                                                     <div class="panel-body row-fullheight">
-                                                        <div class="row fixed-height">
+                                                        <div id="ISS_rowDownloadRegions">
+                                                        </div>
+                                                        <div class="row">
                                                             <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4">
                                                                 <button id="ISS_drawregions_btn"
                                                                     class="btn btn-secondary" type="button">
@@ -450,12 +468,21 @@
                         <div class="tab-pane" id="image-gui" style="height:100%;">
                             <div class="panel panel-default" style="height:100%;">
                                 <div class="panel-body">
-                                    <div class="row" id="image-overlay-panel" style="overflow-x:auto;">
+                                    <div class="row" id="image-overlay-panel" style="overflow-x:scroll;margin-bottom:10px;">
                                         
                                     </div>
                                     
-                                    <button id="ISS_add_layer_img_btn" class="btn btn-primary btn-sm" type="button">
-                                        Add layer image</button>
+                                    <div class="row">
+                                        <button id="ISS_add_layer_img_btn" class="btn btn-primary btn-sm" type="button">
+                                            Add layer image
+                                        </button>
+                                    </div>
+                                    <div class="row">
+                                        <a href="#filterSettings" data-toggle="collapse" aria-expanded="false">[Filter settings]</a>
+                                    </div>
+                                    <div class="row collapse" id="filterSettings">
+                                        
+                                    </div>
                                 </div>
                             </div> <!-- end of a main panel -->
                         </div> <!-- end of image-gui-->
@@ -512,21 +539,6 @@
         tmapp.layers = []
         tmapp.registerActions();
         tmapp.init();
-        
-        //tmapp.addLayer("{{ slide_filename }}", tmapp._url_suffix + "{{ slide_url }}", -1)
-            //tmapp.layers =[{name:"Layer name",tileSource:"location/of/your.dzi"}];
-        
-        glUtils.init();
-        glUtils.resize();
-        tmapp["ISS_viewer"].addHandler('resize', glUtils.resizeAndDraw);
-        tmapp["ISS_viewer"].addHandler('resize', glUtils.clearNavigatorArea);
-        tmapp["ISS_viewer"].addHandler('open', glUtils.draw);
-        tmapp["ISS_viewer"].addHandler('open', glUtils.clearNavigatorArea);
-        tmapp["ISS_viewer"].addHandler('container-enter', glUtils.draw);
-        tmapp["ISS_viewer"].addHandler('container-enter', glUtils.clearNavigatorArea);
-        tmapp["ISS_viewer"].addHandler('viewport-change', glUtils.draw);
-        tmapp["ISS_viewer"].addHandler('viewport-change', glUtils.clearNavigatorArea);
-        tmapp["ISS_viewer"].addHandler('container-exit', glUtils.postRedraw);
     });
     var backend;
     new QWebChannel(qt.webChannelTransport, function (channel) {
@@ -550,6 +562,7 @@
                 });
                 i = tmapp.layers.length - 1;
                 overlayUtils.addLayer(layerName, tileSource, i);
+                HTMLElementUtils.addLayerSettings(layerName, tileSource, i);
             }
         });
     });
