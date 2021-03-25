@@ -65,9 +65,10 @@ tmapp.init = function () {
     //pixelate because we need the exact values of pixels
     tmapp[vname].addHandler("tile-drawn", OSDViewerUtils.pixelateAtMaximumZoomHandler);
 
-    if(tmapp.layers){
-        overlayUtils.addAllLayers();
+    if(!tmapp.layers){
+        tmapp.layers = [];
     }
+    overlayUtils.addAllLayers();
     //Create svgOverlay(); so that anything like D3, or any canvas library can act upon. https://d3js.org/
     var svgovname = tmapp["object_prefix"] + "_svgov";
     tmapp[svgovname] = tmapp[vname].svgOverlay();
