@@ -54,9 +54,9 @@ plus classical images in any format recognized by the [PIL library](https://pill
     >  * For MacOs:
     >    * Install openslide using your MacPorts or Homebrew (`port install openslide` or `brew install openslide`).
 
-1. Install python dependencies (openslide, flask and pillow):
+1. Install python dependencies (openslide, flask, pillow and PyQt5):
     ```bash
-	pip install openslide-python flask pillow
+	pip install openslide-python flask pillow PyQtWebEngine
     ```
     > In linux, check that you only have one installation of pillow:
     >   ```bash
