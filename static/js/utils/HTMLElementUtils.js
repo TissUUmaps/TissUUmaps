@@ -7,7 +7,11 @@
 /**
 * @namespace HTMLElementUtils
 */
-HTMLElementUtils = {}
+HTMLElementUtils = {
+    _colorsperiter:[],
+    _colorsperbarcode:{},
+    _iter:0
+}
 
 /** Create a checkbox input  */
 HTMLElementUtils.inputTypeCheckbox = function (params) {
@@ -20,6 +24,7 @@ HTMLElementUtils.inputTypeCheckbox = function (params) {
     checkbox.setAttribute("type", "checkbox");
     (params.id || null ? checkbox.setAttribute("id", params.id) : null);
     (params["class"] || null ? checkbox.setAttribute("class", params["class"]) : null);
+    (params["checked"] || null ? checkbox.checked=params["checked"] : null);
     var extraAttributes = params.extraAttributes || null;
     if (extraAttributes) {
         for (var attr in extraAttributes) {
@@ -105,21 +110,33 @@ HTMLElementUtils.selectTypeDropDown = function (params) {
     }
     var select = document.createElement("select");
     (params.id || null ? select.setAttribute("id", params.id) : null);
+    (params["class"] || null ? select.setAttribute("class", params["class"]) : null);
     var options = params.options || null;
     if (options) {
         options.forEach(function (symbol, i) {
             var option = document.createElement("option");
-            option.value = i;
-            option.text = symbol;
+            if (symbol.text) {
+                option.value = symbol.value;
+                option.text = symbol.text;
+            }
+            else {
+                option.value = i;
+                option.text = symbol;
+            }
             select.appendChild(option);
         });
+    }
+    var eventListeners = params.eventListeners || null;
+    if (params.eventListeners) {
+        for (var message in eventListeners) {
+            select.addEventListener(message, eventListeners[message]);
+        }
     }
     return select;
 }
 
-/** Create an HTML element with the common tags (e.g a,p,h1) */
+/** Create an HTML filter */
 HTMLElementUtils.createFilter = function (params) {
-    console.log("Params: ",params);
     if (!params) {
         return null;
     }
@@ -130,7 +147,12 @@ HTMLElementUtils.createFilter = function (params) {
     else if (type == "checkbox") {
         filterInput = HTMLElementUtils.inputTypeCheckbox(params);
     }
-    filterInput.setAttribute("value", params.value);
+    else if (type == "select") {
+        filterInput = HTMLElementUtils.selectTypeDropDown(params);
+    }
+    if (params.value != undefined) {
+        filterInput.setAttribute("value", params.value);
+    }
     filterInput.setAttribute("layer", params.layer);
     filterInput.setAttribute("filter", params.filter);
     filterInput.setAttribute("id", "filterInput-" + params.filter + "-" + params.layer);
@@ -244,7 +266,6 @@ HTMLElementUtils.createColumn = function (params) {
     return column;
 }
 
-
 /** Create a button */
 HTMLElementUtils.createButton = function (params) {
     if (!params) {
@@ -255,9 +276,11 @@ HTMLElementUtils.createButton = function (params) {
     var button = document.createElement("button");
     (params.id || null ? button.setAttribute("id", params.id) : null);
     (params.innerText || null ? button.innerHTML = params.innerText : null);
-    if (params.eventListeners) {
+    (params["class"] || null ? button.setAttribute("class", params["class"]) : null);
+    var eventListeners = params.eventListeners || null;
+    if (eventListeners) {
         for (var message in eventListeners) {
-            checkbox.addEventListener(message, eventListeners[message]);
+            button.addEventListener(message, eventListeners[message]);
         }
     }
     if (params.extraAttributes) {
@@ -303,13 +326,14 @@ HTMLElementUtils.createForm = function (params) {
 
 /**
  * This method is used to add a layer */
-HTMLElementUtils.addLayerSettings = function(layerName, layerIndex) {
+HTMLElementUtils.addLayerSettings = function(layerName, tileSource, layerIndex) {
     var settingsPanel = document.getElementById("image-overlay-panel");
     var layerTable = document.getElementById("image-overlay-tbody");
     if (!layerTable) {
         layerTable = document.createElement("table");
         layerTable.id = "image-overlay-table";
         layerTable.className += "table table-striped"
+        layerTable.style.marginBottom = "0px";
         filterHeaders = "";
         for (filterIndex = 0; filterIndex < filterUtils._filtersUsed.length; filterIndex++) {
             filterHeaders += "<th style='text-align:center;'>" + filterUtils._filtersUsed[filterIndex] + "</th>";
@@ -343,8 +367,9 @@ HTMLElementUtils.addLayerSettings = function(layerName, layerIndex) {
     td_opacity.style.textAlign = "center";
     td_opacity.style.padding = "6px";
     td_opacity.style.minWidth = "100px";
-
-    tr.innerHTML = "<td style='padding:6px;'>" + layerName + "</td>";
+    tileSource = tileSource.replace(/\\/g, '\\\\');
+    propInfo = " <span style='cursor:pointer' onClick='backend.getProperties(\"" + tileSource + "\")'>ⓘ</span>";
+    tr.innerHTML = "<td style='padding:6px;'>" + layerName + propInfo + "</td>";
     tr.appendChild(td_visible);
     tr.appendChild(td_opacity);
 
@@ -374,7 +399,7 @@ HTMLElementUtils.addLayerSettings = function(layerName, layerIndex) {
             overlayUtils.setItemOpacity(layer, 0);
         }
     });
-    opacity.addEventListener("change", function(ev) {
+    opacity.addEventListener("input", function(ev) {
         var layer = ev.srcElement.getAttribute("layer")
         var slider = ev.srcElement;
         var checkbox = document.querySelectorAll('[layer="' + layer + '"][type="checkbox"]')[0];
@@ -390,6 +415,18 @@ HTMLElementUtils.addLayerSettings = function(layerName, layerIndex) {
 
 /** Create a color in YCbCr space to divide between the possible 4 letters */
 HTMLElementUtils.barcodeHTMLColor = function (barcode) {
+    if(HTMLElementUtils._colorsperiter){
+        if (HTMLElementUtils._colorsperbarcode[barcode]) {
+            return HTMLElementUtils._colorsperbarcode[barcode]
+        }
+        thecolor=HTMLElementUtils._colorsperiter[HTMLElementUtils._iter];
+        HTMLElementUtils._iter += 1;
+        //if it ends up undefined give a random color anyways
+        if(thecolor) {
+            HTMLElementUtils._colorsperbarcode[barcode] = thecolor;
+            return thecolor;
+        }
+    }
     //A Red, T Green, C Bluemagenta, G yellow
     var maincolor = barcode.charAt(0).toLowerCase();
     var red = 0; var green = 0; var blue = 0;
@@ -448,4 +485,54 @@ HTMLElementUtils.getFirstChildByClass = function (e, c) {
         }
     });
     return thisChild;
+}
+
+HTMLElementUtils.createDLButton = function(downloadRow, innerText, callback, comment) {
+    var row = HTMLElementUtils.createRow(null);
+    var buttonDiv = document.createElement("div");
+    buttonDiv.setAttribute("class", "col-xs-6 col-sm-6 col-md-6 col-lg-6");
+    row.appendChild(buttonDiv);
+    var paramButton = {
+        eventListeners: {"click":callback},
+        "class": "btn btn-primary",
+        innerText: innerText
+    }
+    var DLButton = HTMLElementUtils.createButton(paramButton);
+    DLButton.style.width = "100%";
+    buttonDiv.appendChild(DLButton);
+    
+    var commentDiv = document.createElement("div");
+    commentDiv.setAttribute("class", "col-xs-6 col-sm-6 col-md-6 col-lg-6");
+    commentDiv.innerHTML = `<p style=" font-size:smaller; font-style: italic; color:#aaaaaa; padding-left:10px;"> ${comment} </p>`
+    row.appendChild(commentDiv);
+
+    downloadRow.appendChild(row);
+}
+
+HTMLElementUtils.createDLButtonMarkers = function(innerText, dataURL, comment) {
+    var downloadRow = document.getElementById("ISS_rowDownloadMarkers");
+    callback = function(e){
+        dataUtils.XHRCSV(dataURL)
+    }
+    HTMLElementUtils.createDLButton(downloadRow, innerText, callback, comment);
+    var label = document.getElementById("label_ISS_csv");
+    label.innerHTML = "Or import gene expression from CSV file:";
+}
+
+HTMLElementUtils.createDLButtonMarkersCP = function(innerText, dataURL, comment) {
+    var downloadRow = document.getElementById("ISS_rowDownloadMarkersCP");
+    callback = function(e){
+        CPDataUtils.readCSV(dataURL)
+    }
+    HTMLElementUtils.createDLButton(downloadRow, innerText, callback, comment);
+    var label = document.getElementById("label_CP_csv");
+    label.innerHTML = "Or import cell morphology from CSV file:";
+}
+
+HTMLElementUtils.createDLButtonRegions = function(innerText, dataURL, comment) {
+    var downloadRow = document.getElementById("ISS_rowDownloadRegions");
+    callback = function(e){
+        regionUtils.JSONToRegions(dataURL)
+    }
+    HTMLElementUtils.createDLButton(downloadRow, innerText, callback, comment);
 }

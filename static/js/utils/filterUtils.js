@@ -13,14 +13,41 @@
  filterUtils = {
     // Choose between ["Brightness", "Exposure", "Hue", "Contrast", "Vibrance", "Noise", 
     //                 "Saturation","Gamma","Invert","Greyscale","Threshold","Erosion","Dilation"]
-    _filtersUsed: ["Saturation","Brightness"],
+    _filtersUsed: ["Saturation","Brightness","Contrast"],
     _filters: {
+        "Color channel":{
+            params:{
+                type:"select",
+                options:[
+                    {text:"----", value:0},
+                    {text:"Red", value:"100,0,0"},
+                    {text:"Green", value:"0,100,0"},
+                    {text:"Blue", value:"0,0,100"},
+                    {text:"Yellow", value:"100,100,0"},
+                    {text:"Cyan", value:"0,100,100"},
+                    {text:"Magenta", value:"100,0,100"},
+                    {text:"Gray", value:"100,100,100"}
+                ]
+            },
+            filterFunction: function (value) {
+                if (value == 0) {  return function (context, callback) {callback();}}
+                return function(context, callback) {
+                    Caman(context.canvas, function() {
+                        var valueRGB = value.split(",")
+                        this.channels(
+                            {red: valueRGB[0]-100, green: valueRGB[1]-100, blue: valueRGB[2]-100}
+                        )
+                        this.render(callback);
+                    });
+                }
+            }
+        },
         "Brightness":{
             params:{
                 type:"range",
                 min:-100,
                 max:100,
-                step:1,
+                step:0.5,
                 value:0
             },
             filterFunction: function (value) {
@@ -214,12 +241,79 @@
 }
 
 /** 
+ * 
+ * Init list of filters */
+ filterUtils.initFilters = function() {
+    var settingsPanel = document.getElementById("filterSettings");
+    if (!settingsPanel) return;
+    for (var filter in filterUtils._filters) {
+        selectParams = {
+            eventListeners:{
+                "change": function (e) {
+                    filterName = e.srcElement.getAttribute("filter");
+                    checked = e.srcElement.checked;
+                    if (checked)
+                        filterUtils._filtersUsed.push(filterName);
+                    else 
+                        filterUtils._filtersUsed = filterUtils._filtersUsed.filter(function(value, index, arr){ 
+                            return value != filterName;
+                        });
+                    overlayUtils.addAllLayersSettings();
+                    filterUtils.getFilterItems();
+                }
+            },
+            "class":"filterSelection",
+            "checked":filterUtils._filtersUsed.filter(e => e === filter).length > 0,
+            id:"filerCheck_" + filter,
+            extraAttributes: {
+                "filter": filter
+            }
+        }
+        select = HTMLElementUtils.inputTypeCheckbox(selectParams);
+        settingsPanel.appendChild(select);
+        var label = document.createElement("label");
+        label.setAttribute("for", "filerCheck_" + filter);
+        label.innerHTML = "&nbsp;" + filter;
+        settingsPanel.appendChild(label);
+        settingsPanel.appendChild(document.createElement("br"));
+    }
+    modeParams = {
+        eventListeners:{
+            "change": function (e) {
+                compositeMode = e.srcElement.value;
+                filterUtils.setCompositeOperation(compositeMode);
+            }
+        },
+        options:[
+            {text:"Channels", value:"source-over"},
+            {text:"Composite", value:"lighter"}
+        ]
+    }
+    var label = document.createElement("label");
+    label.innerHTML = "Merging mode:&nbsp;";
+    settingsPanel.appendChild(label);
+    select = HTMLElementUtils.selectTypeDropDown(modeParams);
+    settingsPanel.appendChild(select);
+}
+
+/** 
+ * 
+ * Update list of filters from checkboxes */
+ filterUtils.updateFilterList = function() {
+    var checkboxes = document.getElementsByClassName('filterSelection');
+    filterUtils._filtersUsed = [];
+    for (i = 0; i < checkboxes.length; i++) {
+        filterUtils._filtersUsed.push();
+    }
+}
+
+/** 
  * @param {Number} filterName 
  * Get params for a given filter */
 filterUtils.getFilterParams = function(filterName) {
     filterParams = filterUtils._filters[filterName].params;
     filterParams.eventListeners = {
-        "change": filterUtils.getFilterItems
+        "input": filterUtils.getFilterItems
     };
     filterParams["class"] = "filterInput";
     filterParams.filter = filterName;
@@ -241,7 +335,7 @@ filterUtils.getFilterFunction = function(filterName) {
 	caman.Store.put = function() {};
 
     var op = tmapp["object_prefix"];
-    if (!overlayUtils.areAllFullyLoaded() || !tmapp[op + "_viewer"].world.getItemAt(Object.keys(filterUtils._filterItems).length-1)) {
+    if (!tmapp[op + "_viewer"].world.getItemAt(Object.keys(filterUtils._filterItems).length-1)) {
         setTimeout(function() {
             if (calledItems == filterUtils._filterItems)
                 filterUtils.applyFilterItems(calledItems);
@@ -264,23 +358,27 @@ filterUtils.getFilterFunction = function(filterName) {
     tmapp[op + "_viewer"].setFilterOptions({
         filters: filters
     });
+    for ( var i = 0; i < tmapp[op + "_viewer"].world._items.length; i++ ) {
+        tmapp[op + "_viewer"].world._items[i].tilesMatrix={};
+    }
 }
 
 /** 
  * Get filter functions and values from html ranges and checkboxes
  *  */
 filterUtils.getFilterItems = function() {
+    var op = tmapp["object_prefix"];
     filterInputsRanges = document.getElementsByClassName("filterInput");
     items = {}
+    for (i = 0; i < tmapp[op + "_viewer"].world.getItemCount(); i++) {
+        items[i] = []
+    }
     for (i = 0; i < filterInputsRanges.length; i++) {
         filterInputsRanges[i];
-        if (!items[filterInputsRanges[i].getAttribute("layer")]) {
-            items[filterInputsRanges[i].getAttribute("layer")] = []
-        }
         filterFunction = filterUtils.getFilterFunction(filterInputsRanges[i].getAttribute("filter"));
-        if (filterInputsRanges[i].type == "range")
+        if (filterInputsRanges[i].type == "range" || filterInputsRanges[i].type == "select-one")
             inputValue = filterInputsRanges[i].value;
-        else
+        else if (filterInputsRanges[i].type == "checkbox")
             inputValue = filterInputsRanges[i].checked;
         if (inputValue) {
             items[filterInputsRanges[i].getAttribute("layer")].push(
@@ -293,4 +391,12 @@ filterUtils.getFilterItems = function() {
     }
     filterUtils._filterItems = items;
     filterUtils.applyFilterItems(items);
+}
+
+filterUtils.setCompositeOperation = function(compositeOperation) {
+    var op = tmapp["object_prefix"];
+    tmapp[op + "_viewer"].compositeOperation = compositeOperation;
+    for (i = 0; i < tmapp[op + "_viewer"].world.getItemCount(); i++) {
+        tmapp[op + "_viewer"].world.getItemAt(i).setCompositeOperation(compositeOperation);
+    }
 }

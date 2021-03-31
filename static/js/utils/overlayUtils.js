@@ -21,9 +21,38 @@ overlayUtils = {
 /**
  * This method is used to add all layers from tmapp */
 overlayUtils.addAllLayers = function() {
+    overlayUtils.addLayer(tmapp.slideFilename, tmapp._url_suffix +  tmapp.fixed_file, -1)
     tmapp.layers.forEach(function(layer, i) {
         overlayUtils.addLayer(layer.name, layer.tileSource, i);
     });
+    overlayUtils.addAllLayersSettings();
+}
+
+/**
+ * This method is used to add all layer settings */
+ overlayUtils.addAllLayersSettings = function() {
+    var settingsPanel = document.getElementById("image-overlay-panel");
+    settingsPanel.innerHTML = "";
+    HTMLElementUtils.addLayerSettings(tmapp.slideFilename, tmapp._url_suffix +  tmapp.fixed_file, -1);
+    tmapp.layers.forEach(function(layer, i) {
+        HTMLElementUtils.addLayerSettings(layer.name, layer.tileSource, i);
+    });
+}
+
+/**
+ * This method is used to add a layer from select input */
+overlayUtils.addLayerFromSelect = function() {
+    var e = document.getElementById("layerSelect");
+    var layerName = e.options[e.selectedIndex].text;
+    var tileSource = e.options[e.selectedIndex].value;
+    tmapp.layers.push({
+        name: layerName,
+        tileSource: tileSource
+    });
+    console.log("tileSource", tileSource);
+    i = tmapp.layers.length - 1;
+    overlayUtils.addLayer(layerName, tileSource, i);
+    overlayUtils.addAllLayersSettings();
 }
 
 /**
@@ -37,7 +66,6 @@ overlayUtils.addLayer = function(layerName, tileSource, i) {
         tileSource: tmapp._url_suffix + tileSource,
         opacity: 1.0
     });
-    HTMLElementUtils.addLayerSettings(layerName, i);
 }
 
 

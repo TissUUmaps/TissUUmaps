@@ -1,3 +1,6 @@
+body {
+    overflow:hidden;
+}
 .ISS_viewer{
     height:calc(100vh - 72px);
 	background-color:#676767;
@@ -24,6 +27,10 @@
     cursor: default;
 }
 
+.navbar {
+    border-radius: 0px !important; 
+}
+
 .range-label {
     width:30px;
     display:inline-block;
@@ -33,9 +40,6 @@
     height:100%;
     display:flex;
     flex-flow:column;
-}
-.fixed-height {
-    flex: 0 1 auto;
 }
 .extended-height {
     flex: 1 0 0;

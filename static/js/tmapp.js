@@ -24,11 +24,10 @@ tmapp.registerActions = function () {
     var op = tmapp["object_prefix"];
     var cpop="CP";
 
-        interfaceUtils.listen(op + '_save_btn', 'click', function() { tmapp.saveState() }, false);
-        interfaceUtils.listen(op + '_add_layer_btn', 'click', function() { tmapp.addLayerFromSelect() }, false);
+    interfaceUtils.listen(op + '_save_btn', 'click', function() { tmapp.saveState() }, false);
+    interfaceUtils.listen(op + '_add_layer_btn', 'click', function() { overlayUtils.addLayerFromSelect() }, false);
     interfaceUtils.listen(op + '_bringmarkers_btn','click', function () { dataUtils.processISSRawData(); },false);
-    interfaceUtils.listen(op + '_searchmarkers_btn','click', function () { markerUtils.hideRowsThatDontContain(); },false);
-    interfaceUtils.listen(op + '_cancelsearch_btn','click', function () { markerUtils.showAllRows(); },false);
+    interfaceUtils.listen(op + '_search','input', function () { markerUtils.hideRowsThatDontContain(); },false);
     interfaceUtils.listen(op + '_drawall_btn','click', function () { markerUtils.drawAllToggle(); },false);
     interfaceUtils.listen(op + '_drawregions_btn','click', function () { regionUtils.regionsOnOff() },false);
     interfaceUtils.listen(op + '_export_regions','click', function () { regionUtils.exportRegionsToJSON() },false);
@@ -36,8 +35,8 @@ tmapp.registerActions = function () {
     interfaceUtils.listen(op + '_export_regions_csv','click', function () { regionUtils.pointsInRegionsToCSV() },false);
     interfaceUtils.listen(op + '_fillregions_btn','click', function () { regionUtils.fillAllRegions(); },false);
     interfaceUtils.listen(cpop + '_bringmarkers_btn','click', function () { CPDataUtils.processISSRawData() },false);
-
-    var uls=document.getElementsByTagName("ul");
+    var navtabs=document.getElementsByClassName("nav-tabs")[0];
+    var uls=navtabs.getElementsByTagName("ul");
     for(var i=0;i<uls.length;i++){
         var as=uls[i].getElementsByTagName("a");
         for(var j=0;j<as.length;j++){
@@ -63,14 +62,13 @@ tmapp.init = function () {
     var vname = op + "_viewer";
     //init OSD viewer
     tmapp[vname] = OpenSeadragon(tmapp.options_osd);
-    //open the DZI xml file pointing to the tiles
-    overlayUtils.addLayer(tmapp.slideFilename, tmapp._url_suffix +  this.fixed_file, -1)
     //pixelate because we need the exact values of pixels
     tmapp[vname].addHandler("tile-drawn", OSDViewerUtils.pixelateAtMaximumZoomHandler);
 
-    if(tmapp.layers){
-        overlayUtils.addAllLayers();
+    if(!tmapp.layers){
+        tmapp.layers = [];
     }
+    overlayUtils.addAllLayers();
     //Create svgOverlay(); so that anything like D3, or any canvas library can act upon. https://d3js.org/
     var svgovname = tmapp["object_prefix"] + "_svgov";
     tmapp[svgovname] = tmapp[vname].svgOverlay();
@@ -129,8 +127,10 @@ tmapp.init = function () {
     }).setTracking(true);
 
     elt = document.getElementById("ISS_globalmarkersize");
-    tmapp[vname].addControl(elt,{anchor: OpenSeadragon.ControlAnchor.TOP_RIGHT});
-    elt.style.display="None";
+    if (elt) {
+        tmapp[vname].addControl(elt,{anchor: OpenSeadragon.ControlAnchor.TOP_RIGHT});
+        elt.style.display="None";
+    }
 
     if (tmapp.mpp != 0) {
         tmapp[vname].scalebar({
@@ -144,8 +144,15 @@ tmapp.init = function () {
             sizeAndTextRenderer: OpenSeadragon.ScalebarSizeAndTextRenderer.METRIC_LENGTH
         });
     }
-    tmapp.loadState();
+    //tmapp.loadState();
     //document.getElementById('cancelsearch-moving-button').addEventListener('click', function(){ markerUtils.showAllRows("moving");}); 
+    filterUtils.initFilters();
+    if (window.hasOwnProperty("glUtils")) {
+        console.log("Using GPU-based marker drawing (WebGL canvas)")
+        glUtils.init();
+    } else {
+        console.log("Using CPU-based marker drawing (SVG canvas)")
+    }
 } //finish init
 
 /**
@@ -192,12 +199,14 @@ tmapp.loadState = function() {
     var cpop = "CP";
     var vname = op + "_viewer";
     $('#loadingModal').modal('show');
+    console.log("LoadState...",tmapp.stateFilename);
     $.ajax({
         type: "GET",
         url: tmapp.stateFilename,
         // The key needs to match your method's input parameter (case-sensitive).
         dataType: "json",
         success: function(data) {
+            console.log("LoadState...", data);
             try {
                 if (data["Regions"]) {
                     regionUtils.JSONValToRegions(data["Regions"]);
@@ -212,7 +221,7 @@ tmapp.loadState = function() {
                     if (!tmapp.layers) {
                         tmapp.layers = [];
                     }
-                    tmapp.addAllLayers();
+                    overlayUtils.addAllLayers();
                 }
                 if (data["CPData"]) { if (data["CPData"]["rawdata"]) {
                     CPDataUtils[cpop + "_rawdata"] = data["CPData"]["rawdata"];
@@ -257,5 +266,6 @@ tmapp.options_osd = {
     zoomPerClick: 1.0,
     constrainDuringPan: true,
     visibilityRatio: 1,
-    showNavigationControl: false
+    showNavigationControl: false,
+    maxImageCacheCount:500
 }

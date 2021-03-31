@@ -49,9 +49,13 @@ dataUtils.processISSRawData = function () {
     var ISSYNode = document.getElementById("ISS_Y_header");
     var ySelector = ISSYNode.options[ISSYNode.selectedIndex].value;
     var ISSColor = document.getElementById("ISS_color_header");
-    var colorSelector = ISSColor.options[ISSColor.selectedIndex].value;
+    if (ISSColor)
+        var colorSelector = ISSColor.options[ISSColor.selectedIndex].value;
+    else
+
+        var colorSelector = "null";
     
-    if (colorSelector != "null"){
+    if (colorSelector && colorSelector != "null"){
         markerUtils._uniqueColor = true;
         markerUtils._uniqueColorSelector = colorSelector;
     }
@@ -121,8 +125,15 @@ dataUtils.processISSRawData = function () {
     dataUtils.makeQuadTrees();
     
     delete dataUtils[op + "_rawdata"];
-    document.getElementById("ISS_globalmarkersize").style.display = "block";
-    glUtils.loadMarkers();  // FIXME
+    if (document.getElementById("ISS_globalmarkersize")) {
+        document.getElementById("ISS_globalmarkersize").style.display = "block";
+    }
+    if (document.getElementById("ISS_searchmarkers_row")) {
+        document.getElementById("ISS_searchmarkers_row").style.display = "block";
+    }
+    if (window.hasOwnProperty("glUtils")) {
+        glUtils.loadMarkers();  // Update vertex buffers, etc. for WebGL drawing
+    }
 }
 
 
@@ -139,6 +150,7 @@ dataUtils.showMenuCSV = function(){
     var ISSColor = document.getElementById(op + "_color_header");
     //console.log(dataUtils._CSVStructure["ISS_csv_header"]);
     [ISSBarcodeInput, ISSNanmeInput, ISSX, ISSY, ISSColor].forEach(function (node) {
+        if (!node) return;
         node.innerHTML = "";
         var option = document.createElement("option");
         option.value = "null";
@@ -218,6 +230,7 @@ dataUtils.XHRCSV = function (thecsv) {
     //console.log(progressParent)
 
     var progressBar=interfaceUtils.getElementById("ISS_csv_progress");
+    var fakeProgress = 0;
     
     // Setup our listener to process compeleted requests
     xhr.onreadystatechange = function () {        
@@ -226,6 +239,7 @@ dataUtils.XHRCSV = function (thecsv) {
         // Process our return data
         if (xhr.status >= 200 && xhr.status < 300) {
             // What do when the request is successful
+            progressBar.style.width = "100%";
             dataUtils[op + "_rawdata"] = d3.csvParse(xhr.responseText);
             dataUtils.showMenuCSV();
             
@@ -242,6 +256,13 @@ dataUtils.XHRCSV = function (thecsv) {
             perc=perc.toString()+"%"
             progressBar.style.width = perc;
             //console.log(perc);
+        }
+        else {
+            fakeProgress += 1;
+            console.log(fakeProgress, Math.min(100, 100*(1-Math.exp(-fakeProgress/50.))))
+            var perc=Math.min(100, 100*(1-Math.exp(-fakeProgress/50.)));
+            perc=perc.toString()+"%"
+            progressBar.style.width = perc;
         }
     }
 
