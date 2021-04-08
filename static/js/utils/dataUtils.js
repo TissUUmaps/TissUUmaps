@@ -136,6 +136,12 @@ dataUtils.processISSRawData = function () {
     }
 }
 
+/** 
+* Set expected headers
+*/
+dataUtils.setExpectedCSV = function(expectedCSV){
+    dataUtils._expectedCSV = expectedCSV;
+}
 
 /** 
 * Show the menu do select the CSV headers that contain the information to display*/
@@ -148,6 +154,7 @@ dataUtils.showMenuCSV = function(){
     var ISSX = document.getElementById(op + "_X_header");
     var ISSY = document.getElementById(op + "_Y_header");
     var ISSColor = document.getElementById(op + "_color_header");
+    var ISSKey = document.getElementById(op + "_key_header");
     //console.log(dataUtils._CSVStructure["ISS_csv_header"]);
     [ISSBarcodeInput, ISSNanmeInput, ISSX, ISSY, ISSColor].forEach(function (node) {
         if (!node) return;
@@ -172,6 +179,8 @@ dataUtils.showMenuCSV = function(){
     if (csvheaders.includes(dataUtils._expectedCSV["name"])) ISSNanmeInput.value = dataUtils._expectedCSV["name"];
     if (csvheaders.includes(dataUtils._expectedCSV["X_col"])) ISSX.value = dataUtils._expectedCSV["X_col"];
     if (csvheaders.includes(dataUtils._expectedCSV["Y_col"])) ISSY.value = dataUtils._expectedCSV["Y_col"];
+    if (csvheaders.includes(dataUtils._expectedCSV["color"])) ISSColor.value = dataUtils._expectedCSV["color"];
+    if (dataUtils._expectedCSV["key"]) ISSKey.value = dataUtils._expectedCSV["key"];
 
 }
 

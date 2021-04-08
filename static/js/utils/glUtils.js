@@ -605,7 +605,7 @@ glUtils.init = function() {
     this._buffers["CPMarkers"] = this._createDummyMarkerBuffer(gl, this._numCPMarkers);
     this._textures["colorLUT"] = this._createColorLUTTexture(gl);
     this._textures["colorscale"] = this._createColorScaleTexture(gl);
-    this._textures["shapeAtlas"] = this._loadTextureFromImageURL(gl, "static/misc/markershapes.png");
+    this._textures["shapeAtlas"] = this._loadTextureFromImageURL(gl, "/static/misc/markershapes.png");
 
     this._createColorbarCanvas();  // The colorbar is drawn separately in a 2D-canvas
 

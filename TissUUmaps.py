@@ -15,6 +15,7 @@
 # along with this library; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
+import encodings.idna
 
 from collections import OrderedDict
 from flask import Flask, abort, make_response, render_template, url_for,  request, Response, jsonify, send_from_directory
@@ -22,13 +23,16 @@ from pathlib import Path
 
 from PyQt5.QtCore import *
 from PyQt5.QtWebEngineWidgets import *
-from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QPlainTextEdit, QDialog
+from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QPlainTextEdit, QDialog, QSplashScreen
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5 import QtGui 
+from PyQt5.QtGui import QDesktopServices
+
 
 #from threading import Timer
 import threading, time
 import sys
+import socket
 
 import json
 from io import BytesIO
@@ -41,6 +45,7 @@ from threading import Lock
 from functools import wraps
 import imghdr
 import urllib.parse
+import urllib.request
 
 import PIL
 PIL.Image.MAX_IMAGE_PIXELS = 93312000000
@@ -183,6 +188,10 @@ def setup(app):
 def _setup():
     setup(app)
 
+@app.errorhandler(404)
+def page_not_found(e):
+    # note that we set the 404 status explicitly
+    return render_template('files.html', root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), message="Impossible to load this file"), 404
 
 def _get_slide(path):
     path = os.path.abspath(os.path.join(app.basedir, path))
@@ -241,6 +250,27 @@ def slide(path):
     #return render_template('tissuumaps.html', associated=associated_urls, slide_url=slide_url, state_filename=state_filename, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
     return render_template('tissuumaps.html', associated=associated_urls, slide_url=slide_url, state_filename=state_filename, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties)
 
+@app.route('/<path:path>.csv')
+@requires_auth
+def csvFile(path):
+    completePath = os.path.abspath(os.path.join(app.basedir, path) + ".csv")
+    directory = os.path.dirname(completePath)
+    filename = os.path.basename(completePath)
+    if os.path.isfile(completePath):
+        return send_from_directory(directory, filename)
+    else:
+        abort(404)
+    
+@app.route('/<path:path>.json')
+@requires_auth
+def jsonFile(path):
+    completePath = os.path.abspath(os.path.join(app.basedir, path) + ".json")
+    directory = os.path.dirname(completePath)
+    filename = os.path.basename(completePath)
+    if os.path.isfile(completePath):
+        return send_from_directory(directory, filename)
+    else:
+        abort(404)
 
 @app.route('/<path:path>.dzi')
 @requires_auth
@@ -309,14 +339,10 @@ def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
                                'misc/favicon.ico', mimetype='image/vnd.microsoft.icon')
 
-from PyQt5.QtWebEngineWidgets import QWebEnginePage
-from PyQt5.QtGui import QDesktopServices
-
 class CustomWebEnginePage(QWebEnginePage):
     """ Custom WebEnginePage to customize how we handle link navigation """
 
     def acceptNavigationRequest(self, url,  _type, isMainFrame):
-        print ("Nav !", url,  _type, isMainFrame)
         if _type == QWebEnginePage.NavigationTypeLinkClicked:
             QDesktopServices.openUrl(url)
             return False
@@ -338,38 +364,45 @@ class textWindow(QDialog):
         self.b.resize(400,200)
     
 class webEngine(QWebEngineView):
-    def __init__(self, location, qt_app, app, args):
+    def __init__(self, qt_app, app, args):
         super().__init__()
         self.app = app
         self.setMinimumSize(800,400)
         self.setContextMenuPolicy(Qt.NoContextMenu)
         self.lastdir = str(Path.home())
         self.setPage(CustomWebEnginePage(self))
-        self.location = location
         self.webchannel = QWebChannel()
         self.page().setWebChannel(self.webchannel)
         self.webchannel.registerObject('backend', self)
-        
-        #if app.config['SLIDE_DIR'] == ".":
-        #    folderpath = QFileDialog.getExistingDirectory(self, 'Select Data Folder')
-        #    app.config['SLIDE_DIR'] = folderpath
+        self.location = None
         
         self.setWindowTitle("TissUUmaps")
         self.resize(1024, 800)
         self.setZoomFactor(1.0)
         self.page().profile().clearHttpCache()
         
-        time.sleep(0.1)
+        self.setWindowIcon(QtGui.QIcon('static/misc/favicon.ico')) 
+        self.showMaximized()
+
+    def run (self):
+        sys.exit(qt_app.exec_())
+
+    def setLocation (self, location):
+        self.location = location
+        while True:
+            try:
+                if (urllib.request.urlopen(self.location).getcode() == 200):
+                    break
+            except:
+                pass
+            time.sleep(0.1)
+        print ("loading page ", self.location)
         if (len(args) > 0):
             if not self.openImagePath(args[0]):
                 self.load(QUrl(self.location))
         else:
             self.load(QUrl(self.location))
-        self.setWindowIcon(QtGui.QIcon('static/misc/favicon.ico')) 
-        self.showMaximized()
-        #qt_app.exec_()
-        sys.exit(qt_app.exec_())
-
+            
     @pyqtSlot(str)
     def getProperties(self, path):
         try:
@@ -447,14 +480,8 @@ class webEngine(QWebEngineView):
         }
         print ("returnDict", returnDict)
         return returnDict
-
-# Define function for QtWebEngine
-def ui(location, app, args):
-    qt_app = QApplication([])
-    web = webEngine(location, qt_app, app, args)
     
 def is_port_in_use(port):
-    import socket
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         return s.connect_ex(('localhost', port)) == 0
         
@@ -505,15 +532,44 @@ if __name__ == '__main__':
     #except IndexError:
     #    pass
     #Timer(0.01,lambda: ui("http://127.0.0.1:5000/", app)).start()
+    qInstallMessageHandler(lambda x,y,z: None)
+
+    qt_app = QApplication([])
+    
+    logo = QtGui.QPixmap('static/misc/design/logo.png')
+    logo = logo.scaledToWidth(512, Qt.SmoothTransformation)
+    splash = QSplashScreen(logo, Qt.WindowStaysOnTopHint)
+
+    desktop = qt_app.desktop()
+    scrn = desktop.screenNumber(QtGui.QCursor.pos())
+    currentDesktopsCenter = desktop.availableGeometry(scrn).center()
+    splash.move(currentDesktopsCenter - splash.rect().center())
+
+    # can display startup information
+
+    splash.show()
+
+    #splash.showMessage('Loading TissUUmaps...',Qt.AlignBottom | Qt.AlignCenter,Qt.white)
+
+    qt_app.processEvents()
     port = 5000
+    print ("Starting port detection")
     while (is_port_in_use(port)):
         port += 1
         if port == 6000:
             exit(0)
+    print ("Ending port detection", port)
+
     def flaskThread():
         app.run(host=opts.host, port=port, threaded=True, debug=False)
+    
     threading.Thread(target=flaskThread,daemon=True).start()
     
-    ui("http://127.0.0.1:" + str(port) +  "/", app, args)
+    
+    ui = webEngine(qt_app, app, args)
+    ui.setLocation ("http://127.0.0.1:" + str(port) + "/")
+    
+    QTimer.singleShot(1000, splash.close)
+    ui.run()
     #threading.Thread(target=flaskThread,daemon=True).start()
     #app.run(host="0.0.0.0", port=opts.port, threaded=False, debug=False)

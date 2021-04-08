@@ -509,19 +509,21 @@ HTMLElementUtils.createDLButton = function(downloadRow, innerText, callback, com
     downloadRow.appendChild(row);
 }
 
-HTMLElementUtils.createDLButtonMarkers = function(innerText, dataURL, comment) {
+HTMLElementUtils.createDLButtonMarkers = function(innerText, dataURL, comment, expectedCSV) {
     var downloadRow = document.getElementById("ISS_rowDownloadMarkers");
     callback = function(e){
-        dataUtils.XHRCSV(dataURL)
+        if (expectedCSV !== undefined) dataUtils.setExpectedCSV(expectedCSV);
+        dataUtils.XHRCSV(dataURL);
     }
     HTMLElementUtils.createDLButton(downloadRow, innerText, callback, comment);
     var label = document.getElementById("label_ISS_csv");
     label.innerHTML = "Or import gene expression from CSV file:";
 }
 
-HTMLElementUtils.createDLButtonMarkersCP = function(innerText, dataURL, comment) {
+HTMLElementUtils.createDLButtonMarkersCP = function(innerText, dataURL, comment, expectedCSV) {
     var downloadRow = document.getElementById("ISS_rowDownloadMarkersCP");
     callback = function(e){
+        if (expectedCSV !== undefined) CPDataUtils.setExpectedCSV(expectedCSV);
         CPDataUtils.readCSV(dataURL)
     }
     HTMLElementUtils.createDLButton(downloadRow, innerText, callback, comment);
