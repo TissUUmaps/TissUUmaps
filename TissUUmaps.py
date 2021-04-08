@@ -15,6 +15,7 @@
 # along with this library; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
+import encodings.idna
 
 from collections import OrderedDict
 from flask import Flask, abort, make_response, render_template, url_for,  request, Response, jsonify, send_from_directory
@@ -550,6 +551,7 @@ if __name__ == '__main__':
 
     #splash.showMessage('Loading TissUUmaps...',Qt.AlignBottom | Qt.AlignCenter,Qt.white)
 
+    qt_app.processEvents()
     port = 5000
     print ("Starting port detection")
     while (is_port_in_use(port)):
@@ -566,8 +568,8 @@ if __name__ == '__main__':
     
     ui = webEngine(qt_app, app, args)
     ui.setLocation ("http://127.0.0.1:" + str(port) + "/")
-    splash.close()
-
+    
+    QTimer.singleShot(1000, splash.close)
     ui.run()
     #threading.Thread(target=flaskThread,daemon=True).start()
     #app.run(host="0.0.0.0", port=opts.port, threaded=False, debug=False)
