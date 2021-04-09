@@ -633,6 +633,13 @@ if __name__ == '__main__':
     
     threading.Thread(target=flaskThread,daemon=True).start()
     
+    fmt = QtGui.QSurfaceFormat()
+    fmt.setVersion(4, 1)
+    fmt.setProfile(QtGui.QSurfaceFormat.CoreProfile)
+    fmt.setSamples(4)
+    QtGui.QSurfaceFormat.setDefaultFormat(fmt)
+
+    vp = QtGui.QOpenGLVersionProfile(fmt)
     
     ui = webEngine(qt_app, app, args)
     ui.setLocation ("http://127.0.0.1:" + str(port) + "/")
