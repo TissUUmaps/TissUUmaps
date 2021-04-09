@@ -81,7 +81,6 @@ DEEPZOOM_FORMAT = 'jpeg'
 DEEPZOOM_TILE_SIZE = 254
 DEEPZOOM_OVERLAP = 1
 DEEPZOOM_LIMIT_BOUNDS = True
-DEEPZOOM_TILE_QUALITY = 75
 
 FOLDER_DEPTH = 4
 
@@ -139,7 +138,17 @@ class _SlideCache(object):
             slide.properties = osr.properties
             slide.mpp = (float(mpp_x) + float(mpp_y)) / 2
         except (KeyError, ValueError):
-            slide.mpp = 0
+            try:
+                if osr.properties["tiff.ResolutionUnit"]=="centimetre":
+                    numerator = 10000 # microns in CM
+                else:
+                    numerator = 25400 # Microns in Inch
+                mpp_x = numerator / float(osr.properties["tiff.XResolution"])
+                mpp_y = numerator / float(osr.properties["tiff.YResolution"])
+                slide.properties = osr.properties
+                slide.mpp = (float(mpp_x) + float(mpp_y)) / 2
+            except:
+                slide.mpp = 0
         try:
             slide.properties = slide.properties
         except:
