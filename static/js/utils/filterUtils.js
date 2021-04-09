@@ -45,9 +45,9 @@
         "Brightness":{
             params:{
                 type:"range",
-                min:-100,
-                max:100,
-                step:0.5,
+                min:-50,
+                max:50,
+                step:0.1,
                 value:0
             },
             filterFunction: function (value) {
@@ -100,7 +100,7 @@
             params:{
                 type:"range",
                 min:0,
-                max:3,
+                max:4,
                 step:0.01,
                 value:1
             },
