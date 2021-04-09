@@ -23,7 +23,7 @@ from pathlib import Path
 
 from PyQt5.QtCore import *
 from PyQt5.QtWebEngineWidgets import *
-from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QPlainTextEdit, QDialog, QSplashScreen
+from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QPlainTextEdit, QDialog, QSplashScreen, QProgressDialog
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5 import QtGui 
 from PyQt5.QtGui import QDesktopServices
@@ -34,10 +34,12 @@ import threading, time
 import sys
 import socket
 
+import pyvips
+
 import json
 from io import BytesIO
 import openslide
-from openslide import ImageSlide, OpenSlide, OpenSlideError, open_slide
+from openslide import ImageSlide, OpenSlide, OpenSlideError, OpenSlideUnsupportedFormatError, open_slide
 from openslide.deepzoom import DeepZoomGenerator
 import os
 from optparse import OptionParser
@@ -48,6 +50,7 @@ import urllib.parse
 import urllib.request
 
 import PIL
+
 PIL.Image.MAX_IMAGE_PIXELS = 93312000000
 
 def check_auth(username, password):
@@ -92,7 +95,7 @@ print ("template_folder",template_folder)
 app = Flask(__name__,template_folder=template_folder)
 app.config.from_object(__name__)
 app.config.from_envvar('DEEPZOOM_MULTISERVER_SETTINGS', silent=True)
-
+ui = None
 class PILBytesIO(BytesIO):
     def fileno(self):
         '''Classic PIL doesn't understand io.UnsupportedOperation.'''
@@ -113,10 +116,12 @@ class _SlideCache(object):
                 slide = self._cache.pop(path)
                 self._cache[path] = slide
                 return slide
-        try:
-            osr = OpenSlide(path)
-        except:
-            osr = ImageSlide(path)
+        
+        osr = OpenSlide(path)
+        #try:
+        #    osr = OpenSlide(path)
+        #except:
+        #    osr = ImageSlide(path)
             #Fix for 16 bits tiff files
             # if osr._image.getextrema()[1] > 256:
             #     osr._image = osr._image.point(lambda i:i*(1./256)).convert('L')
@@ -204,7 +209,8 @@ def _get_slide(path):
         slide = app.cache.get(path)
         slide.filename = os.path.basename(path)
         return slide
-    except OpenSlideError:
+    except:
+        print ("Impossible to load this file with openslide.")
         abort(404)
 
 
@@ -363,6 +369,37 @@ class textWindow(QDialog):
         self.b.move(10,10)
         self.b.resize(400,200)
     
+class ImageConverter():
+    def __init__(self, inputImage, outputImage):
+        self.inputImage = inputImage
+        self.outputImage = outputImage
+    
+    def convert (self):
+        if not os.path.isfile(self.outputImage):
+            self.progress = QProgressDialog("Converting file...", None, 0, 0, ui)
+            self.progress.setWindowModality(Qt.WindowModal)
+            self.progress.setAutoClose(True)
+            qt_app.processEvents()
+                    
+            def convertThread():
+                try:
+                    imgVips = pyvips.Image.new_from_file(self.inputImage)
+                    imgVips = imgVips.scaleimage()
+                    imgVips.tiffsave(self.outputImage, pyramid=True, tile=True, tile_width=256, tile_height=256, properties=True, bitdepth=8)
+                except: 
+                    print ("Impossible to convert image using VIPS:")
+                    import traceback
+                    print (traceback.format_exc())
+                self.convertDone = True
+            self.convertDone = False
+            threading.Thread(target=convertThread,daemon=True).start()
+            while(not self.convertDone):
+                time.sleep(0.02)
+                self.progress.setValue(0)
+                qt_app.processEvents()
+            self.progress.close()
+        return self.outputImage
+
 class webEngine(QWebEngineView):
     def __init__(self, qt_app, app, args):
         super().__init__()
@@ -383,7 +420,7 @@ class webEngine(QWebEngineView):
         
         self.setWindowIcon(QtGui.QIcon('static/misc/favicon.ico')) 
         self.showMaximized()
-
+    
     def run (self):
         sys.exit(qt_app.exec_())
 
@@ -440,12 +477,22 @@ class webEngine(QWebEngineView):
         try:
             _get_slide(imgPath)
         except:
-            app.basedir = oldBaseDir
-            import traceback
-            print (traceback.format_exc())
-            QMessageBox.about(self, "Error", "TissUUmaps did not manage to open this image.")
+            try:
+                newpath = os.path.splitext(folderpath)[0] + "_TMAP.tif"
+                folderpath = ImageConverter(folderpath,newpath).convert()
+                parts = Path(folderpath).parts
+                if (not hasattr(app, 'cache')):
+                    setup(app)
+                app.basedir = parts[0]
+                imgPath = os.path.join(*parts[1:])
+                _get_slide(imgPath)
+            except:
+                app.basedir = oldBaseDir
+                import traceback
+                print (traceback.format_exc())
+                QMessageBox.about(self, "Error", "TissUUmaps did not manage to open this image.")
 
-            return False
+                return False
         print (app.basedir, self.location + imgPath)
         self.load(QUrl(self.location + imgPath))
         self.setWindowTitle("TissUUmaps - " + os.path.basename(folderpath))
@@ -471,9 +518,21 @@ class webEngine(QWebEngineView):
         try:
             _get_slide(imgPath)
         except:
-            QMessageBox.about(self, "Error", "TissUUmaps did not manage to open this image.")
-            returnDict = {"dzi":None,"name":None}
-            return returnDict
+            try:
+                folderpath = ImageConverter(folderpath,folderpath.replace(".tif","_TMAP.tif")).convert()
+                parts = Path(folderpath).parts
+                if (not hasattr(app, 'cache')):
+                    setup(app)
+                app.basedir = parts[0]
+                imgPath = os.path.join(*parts[1:])
+                _get_slide(imgPath)
+            except:
+                app.basedir = oldBaseDir
+                import traceback
+                print (traceback.format_exc())
+                QMessageBox.about(self, "Error", "TissUUmaps did not manage to open this image.")
+                returnDict = {"dzi":None,"name":None}
+                return returnDict
         returnDict = {
             "dzi":"/"+imgPath + ".dzi",
             "name":os.path.basename(imgPath)
@@ -484,7 +543,7 @@ class webEngine(QWebEngineView):
 def is_port_in_use(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         return s.connect_ex(('localhost', port)) == 0
-        
+
 if __name__ == '__main__':
     parser = OptionParser(usage='Usage: %prog [options] [slide-directory]')
     parser.add_option('-B', '--ignore-bounds', dest='DEEPZOOM_LIMIT_BOUNDS',
