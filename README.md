@@ -58,9 +58,9 @@ FlaskTissUUmaps allows to save all TissUUmaps states (Gene expressions, Cell mor
     >  * For MacOs:
     >    * Install openslide using your MacPorts or Homebrew (`port install openslide` or `brew install openslide`).
 
-1. Install python dependencies (openslide, flask and pillow):
+1. Install python dependencies (openslide, flask, pyvips and pillow):
     ```bash
-	pip install openslide-python flask pillow
+	pip install openslide-python flask pyvips pillow
     ```
     > In linux, check that you only have one installation of pillow:
     >   ```bash
