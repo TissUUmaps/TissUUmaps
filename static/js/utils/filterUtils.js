@@ -399,4 +399,37 @@ filterUtils.setCompositeOperation = function(compositeOperation) {
     for (i = 0; i < tmapp[op + "_viewer"].world.getItemCount(); i++) {
         tmapp[op + "_viewer"].world.getItemAt(i).setCompositeOperation(compositeOperation);
     }
+
+/** Create an HTML filter */
+filterUtils.createHTMLFilter = function (params) {
+    if (!params) {
+        return null;
+    }
+    var type = params.type || null;
+    if (type == "range") {
+        filterInput = HTMLElementUtils.inputTypeRange(params);
+    }
+    else if (type == "checkbox") {
+        filterInput = HTMLElementUtils.inputTypeCheckbox(params);
+    }
+    else if (type == "select") {
+        filterInput = HTMLElementUtils.selectTypeDropDown(params);
+    }
+    if (params.value != undefined) {
+        filterInput.setAttribute("value", params.value);
+    }
+    filterInput.setAttribute("layer", params.layer);
+    filterInput.setAttribute("filter", params.filter);
+    filterInput.setAttribute("id", "filterInput-" + params.filter + "-" + params.layer);
+    filterInput.setAttribute("list", "filterDatalist-" + params.filter + "-" + params.layer);
+
+    datalist = document.createElement("datalist");
+    datalist.setAttribute("id", "filterDatalist-" + params.filter + "-" + params.layer);
+    option = document.createElement("option");
+    option.text = params.value;
+    datalist.appendChild(option);
+
+    filterInput.appendChild(datalist);
+
+    return filterInput;
 }

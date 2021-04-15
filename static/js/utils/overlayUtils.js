@@ -21,22 +21,119 @@ overlayUtils = {
 /**
  * This method is used to add all layers from tmapp */
 overlayUtils.addAllLayers = function() {
-    overlayUtils.addLayer(tmapp.slideFilename, tmapp._url_suffix +  tmapp.fixed_file, -1)
+    var iStart = -1;
+    if (tmapp.fixed_file && tmapp.fixed_file != "") {
+        overlayUtils.addLayer(tmapp.slideFilename, tmapp._url_suffix +  tmapp.fixed_file, -1)
+        iStart=0;
+    }
     tmapp.layers.forEach(function(layer, i) {
-        overlayUtils.addLayer(layer.name, layer.tileSource, i);
+        overlayUtils.addLayer(layer.name, layer.tileSource, i+iStart);
     });
     overlayUtils.addAllLayersSettings();
 }
 
 /**
  * This method is used to add all layer settings */
- overlayUtils.addAllLayersSettings = function() {
+overlayUtils.addAllLayersSettings = function() {
     var settingsPanel = document.getElementById("image-overlay-panel");
     settingsPanel.innerHTML = "";
-    HTMLElementUtils.addLayerSettings(tmapp.slideFilename, tmapp._url_suffix +  tmapp.fixed_file, -1);
+    var iStart = -1;
+    if (tmapp.fixed_file && tmapp.fixed_file != "") {
+        overlayUtils.addLayerSettings(tmapp.slideFilename, tmapp._url_suffix +  tmapp.fixed_file, -1);
+        iStart=0;
+    }
     tmapp.layers.forEach(function(layer, i) {
-        HTMLElementUtils.addLayerSettings(layer.name, layer.tileSource, i);
+        overlayUtils.addLayerSettings(layer.name, layer.tileSource, i+iStart);
     });
+    filterUtils.setRangesFromFilterItems();
+}
+
+/**
+ * This method is used to add a layer */
+overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex) {
+    var settingsPanel = document.getElementById("image-overlay-panel");
+    var layerTable = document.getElementById("image-overlay-tbody");
+    if (!layerTable) {
+        layerTable = document.createElement("table");
+        layerTable.id = "image-overlay-table";
+        layerTable.className += "table table-striped"
+        layerTable.style.marginBottom = "0px";
+        filterHeaders = "";
+        for (filterIndex = 0; filterIndex < filterUtils._filtersUsed.length; filterIndex++) {
+            filterHeaders += "<th style='text-align:center;'>" + filterUtils._filtersUsed[filterIndex] + "</th>";
+        }
+        layerTable.innerHTML = "<thead><th style='text-align:center;'>Name</th><th style='text-align:center;'>Visible</th><th style='text-align:center;'>Opacity</th>" + filterHeaders + "</thead><tbody id='image-overlay-tbody'></tbody>"
+        settingsPanel.appendChild(layerTable);
+    }
+    layerTable = document.getElementById("image-overlay-tbody");
+    var tr = document.createElement("tr");
+
+    var visible = document.createElement("input");
+    visible.type = "checkbox";
+    if (layerIndex < 0)
+        visible.checked = true; 
+    visible.id = "visible-layer-" + (layerIndex + 1);
+    visible.setAttribute("layer", (layerIndex + 1));
+    var td_visible = document.createElement("td");
+    td_visible.appendChild(visible);
+    td_visible.style.textAlign = "center";
+    td_visible.style.padding = "6px";
+    td_visible.style.minWidth = "100px";
+
+    var opacity = document.createElement("input");
+    opacity.type = "range";
+    opacity.setAttribute("min", "0");
+    opacity.setAttribute("max", "1");
+    opacity.setAttribute("step", "0.1");
+    opacity.setAttribute("layer", (layerIndex + 1));
+    opacity.id = "opacity-layer-" + (layerIndex + 1);
+    var td_opacity = document.createElement("td");
+    td_opacity.appendChild(opacity);
+    td_opacity.style.textAlign = "center";
+    td_opacity.style.padding = "6px";
+    td_opacity.style.minWidth = "100px";
+    tileSource = tileSource.replace(/\\/g, '\\\\');
+    tr.innerHTML = "<td style='padding:6px;'>" + layerName + "</td>";
+    tr.appendChild(td_visible);
+    tr.appendChild(td_opacity);
+
+    for (filterIndex = 0; filterIndex < filterUtils._filtersUsed.length; filterIndex++) {
+        filterName = filterUtils._filtersUsed[filterIndex];
+        filterParams = filterUtils.getFilterParams(filterName)
+        filterParams.layer = layerIndex + 1;
+        
+        filterInput = filterUtils.createHTMLFilter(filterParams);
+        var td_filterInput = document.createElement("td");
+        td_filterInput.style.textAlign = "center";
+        td_filterInput.style.padding = "6px";
+        td_filterInput.style.minWidth = "100px";
+        td_filterInput.appendChild(filterInput);
+        
+        tr.appendChild(td_filterInput);
+    }
+    layerTable.prepend(tr);
+
+    visible.addEventListener("change", function(ev) {
+        var layer = ev.srcElement.getAttribute("layer")
+        var slider = document.querySelectorAll('[layer="' + layer + '"][type="range"]')[0];
+        var checkbox = ev.srcElement;
+        if (checkbox.checked) {
+            overlayUtils.setItemOpacity(layer, slider.value);
+        } else {
+            overlayUtils.setItemOpacity(layer, 0);
+        }
+    });
+    opacity.addEventListener("input", function(ev) {
+        var layer = ev.srcElement.getAttribute("layer")
+        var slider = ev.srcElement;
+        var checkbox = document.querySelectorAll('[layer="' + layer + '"][type="checkbox"]')[0];
+        if (checkbox.checked) {
+            overlayUtils.setItemOpacity(layer, slider.value);
+        } else {
+            overlayUtils.setItemOpacity(layer, 0);
+        }
+    });
+    
 }
 
 /**
@@ -60,11 +157,14 @@ overlayUtils.addLayerFromSelect = function() {
 overlayUtils.addLayer = function(layerName, tileSource, i) {
     var op = tmapp["object_prefix"];
     var vname = op + "_viewer";
-
+    var opacity = 1.0;
+    if (i >= 0) {
+        opacity = 0.0;
+    }
     tmapp[vname].addTiledImage({
         index: i + 1,
         tileSource: tmapp._url_suffix + tileSource,
-        opacity: 1.0
+        opacity: opacity
     });
 }
 
