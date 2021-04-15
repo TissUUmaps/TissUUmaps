@@ -151,9 +151,7 @@ class _SlideFile(object):
         self.name = os.path.basename(relpath)
         self.url_path = relpath.replace("\\","/")
 
-
-@app.before_first_request
-def _setup():
+def setup(app):
     app.basedir = os.path.abspath(app.config['SLIDE_DIR'])
     config_map = {
         'DEEPZOOM_TILE_SIZE': 'tile_size',
@@ -163,6 +161,14 @@ def _setup():
     opts = dict((v, app.config[k]) for k, v in config_map.items())
     app.cache = _SlideCache(app.config['SLIDE_CACHE_SIZE'], opts)
 
+@app.before_first_request
+def _setup():
+    setup(app)
+
+@app.errorhandler(404)
+def page_not_found(e):
+    # note that we set the 404 status explicitly
+    return render_template('files.html', root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), message="Impossible to load this file"), 404
 
 def _get_slide(path):
     path = os.path.abspath(os.path.join(app.basedir, path))
