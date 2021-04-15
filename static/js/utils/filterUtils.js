@@ -8,12 +8,12 @@
  * @namespace filterUtils
  * @property {Bool}   filterUtils._filtersUsed - 
  * @property {Object} filterUtils._filters - 
- * @property {Object} filterUtils._filterItems - 
  */
  filterUtils = {
     // Choose between ["Brightness", "Exposure", "Hue", "Contrast", "Vibrance", "Noise", 
     //                 "Saturation","Gamma","Invert","Greyscale","Threshold","Erosion","Dilation"]
     _filtersUsed: ["Saturation","Brightness","Contrast"],
+    _layerFilters: {},
     _filters: {
         "Color channel":{
             params:{
@@ -235,9 +235,19 @@
                 if (value == 1) {  return function (context, callback) {callback();}}
                 return OpenSeadragon.Filters.MORPHOLOGICAL_OPERATION(value, Math.max);
             }
+        },
+        "Visible":{
+            params:{
+                type:"checkbox"
+            },
+            filterFunction: function (value) {
+                console.log(e)
+                .setOpacity(opacity)
+            }
         }
     },
-    _filterItems:{}
+    _filterItems:{},
+    _compositeMode:"source-over"
 }
 
 /** 
@@ -259,6 +269,7 @@
                             return value != filterName;
                         });
                     overlayUtils.addAllLayersSettings();
+                    filterUtils.setRangesFromFilterItems();
                     filterUtils.getFilterItems();
                 }
             },
@@ -284,6 +295,7 @@
                 filterUtils.setCompositeOperation(compositeMode);
             }
         },
+        id: "filterCompositeMode",
         options:[
             {text:"Channels", value:"source-over"},
             {text:"Composite", value:"lighter"}
@@ -293,18 +305,10 @@
     label.innerHTML = "Merging mode:&nbsp;";
     settingsPanel.appendChild(label);
     select = HTMLElementUtils.selectTypeDropDown(modeParams);
+    select.value = filterUtils._compositeMode;
+    filterUtils.setCompositeOperation(filterUtils._compositeMode);
     settingsPanel.appendChild(select);
-}
-
-/** 
- * 
- * Update list of filters from checkboxes */
- filterUtils.updateFilterList = function() {
-    var checkboxes = document.getElementsByClassName('filterSelection');
-    filterUtils._filtersUsed = [];
-    for (i = 0; i < checkboxes.length; i++) {
-        filterUtils._filtersUsed.push();
-    }
+    filterUtils.getFilterItems();
 }
 
 /** 
@@ -335,7 +339,7 @@ filterUtils.getFilterFunction = function(filterName) {
 	caman.Store.put = function() {};
 
     var op = tmapp["object_prefix"];
-    if (!tmapp[op + "_viewer"].world.getItemAt(Object.keys(filterUtils._filterItems).length-1)) {
+    if (!tmapp[op + "_viewer"].world || !tmapp[op + "_viewer"].world.getItemAt(Object.keys(filterUtils._filterItems).length-1)) {
         setTimeout(function() {
             if (calledItems == filterUtils._filterItems)
                 filterUtils.applyFilterItems(calledItems);
@@ -364,41 +368,84 @@ filterUtils.getFilterFunction = function(filterName) {
 }
 
 /** 
+ * Set html ranges and checkboxes from filter items
+ *  */
+ filterUtils.setRangesFromFilterItems = function() {
+    var op = tmapp["object_prefix"];
+    console.log("setRangesFromFilterItems",filterUtils._filterItems);
+    for (const layer in filterUtils._filterItems) {
+        for(var filterIndex=0;filterIndex<filterUtils._filterItems[layer].length;filterIndex++) {
+            item = filterUtils._filterItems[layer][filterIndex];
+            filterRange = document.querySelector('[filter="'+item.name+'"][layer="'+layer+'"]');
+            if (filterRange) {
+                if (filterRange.type == "range" || filterRange.type == "select-one")
+                    filterRange.value = item.value;
+                else if (filterRange.type == "checkbox")
+                    filterRange.checked = item.value;
+                
+            }
+        }
+    };
+}
+
+/** 
  * Get filter functions and values from html ranges and checkboxes
  *  */
 filterUtils.getFilterItems = function() {
     var op = tmapp["object_prefix"];
+    if (!tmapp[op + "_viewer"].world || !tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1)) {
+        setTimeout(function() {
+            filterUtils.getFilterItems();
+        }, 100);
+        return;
+    }
+    console.log("getFilterItems");
     filterInputsRanges = document.getElementsByClassName("filterInput");
-    items = {}
-    for (i = 0; i < tmapp[op + "_viewer"].world.getItemCount(); i++) {
-        items[i] = []
+    items = {};
+    for (i = 0; i < filterInputsRanges.length; i++) {
+        var filterLayer = filterInputsRanges[i].getAttribute("layer");
+        items[filterLayer] = []
     }
     for (i = 0; i < filterInputsRanges.length; i++) {
-        filterInputsRanges[i];
-        filterFunction = filterUtils.getFilterFunction(filterInputsRanges[i].getAttribute("filter"));
+        var filterName = filterInputsRanges[i].getAttribute("filter");
+        var filterLayer = filterInputsRanges[i].getAttribute("layer");
+        var filterFunction = filterUtils.getFilterFunction(filterName);
+        
         if (filterInputsRanges[i].type == "range" || filterInputsRanges[i].type == "select-one")
             inputValue = filterInputsRanges[i].value;
         else if (filterInputsRanges[i].type == "checkbox")
             inputValue = filterInputsRanges[i].checked;
         if (inputValue) {
-            items[filterInputsRanges[i].getAttribute("layer")].push(
+            items[filterLayer].push(
                 {
-                    filterFunction: filterUtils.getFilterFunction(filterInputsRanges[i].getAttribute("filter")),
-                    value: inputValue
+                    filterFunction: filterFunction,
+                    value: inputValue,
+                    name: filterName
                 }
             );
         }
     }
     filterUtils._filterItems = items;
+    console.log(items);
     filterUtils.applyFilterItems(items);
 }
 
 filterUtils.setCompositeOperation = function(compositeOperation) {
     var op = tmapp["object_prefix"];
+    if (!tmapp[op + "_viewer"].world || !tmapp[op + "_viewer"].world.getItemAt(Object.keys(filterUtils._filterItems).length-1)) {
+        setTimeout(function() {
+            filterUtils.setCompositeOperation(compositeOperation);
+        }, 100);
+        return;
+    }
+    var filterCompositeMode = document.getElementById("filterCompositeMode");
+    filterCompositeMode.value = compositeOperation;
     tmapp[op + "_viewer"].compositeOperation = compositeOperation;
     for (i = 0; i < tmapp[op + "_viewer"].world.getItemCount(); i++) {
         tmapp[op + "_viewer"].world.getItemAt(i).setCompositeOperation(compositeOperation);
     }
+    filterUtils._compositeMode = compositeOperation;
+}
 
 /** Create an HTML filter */
 filterUtils.createHTMLFilter = function (params) {
