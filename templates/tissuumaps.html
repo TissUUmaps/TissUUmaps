@@ -24,7 +24,7 @@
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="https://tissuumaps.research.it.uu.se/"><img style="height:50px; margin-top:-15px; overflow: visible; z-index: 9999;" src="{{ url_for( 'static', filename='misc/uulogowhitetuum.png' ) }}"> </a>
+            <a class="navbar-brand" target="_blank" href="https://tissuumaps.research.it.uu.se/"><img style="height:50px; margin-top:-15px; overflow: visible; z-index: 9999;" src="{{ url_for( 'static', filename='misc/uulogowhitetuum.png' ) }}"> </a>
         </div>
         <div class="navbar-collapse collapse navbar-responsive-collapse">
             <ul class="nav navbar-nav">
@@ -61,8 +61,29 @@
                             </ul>
                         </li>
                         {% endif %} {% else %}
-                        <li class="none">None</li>
+                        <!--<li class="none">None</li>-->
                         {% endfor %}
+                    </ul>
+                </li>
+                <li class="nav-item dropdown" id="plugin-dropdown" style="display:none;">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Plugins
+                    </a>
+                    <ul class="dropdown-menu">
+                        {% for plugin in plugins %} {% if plugin %}
+                        <li class="dropdown-submenu">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                                <span class="nav-label">{{ plugin }}</span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a href="#" onclick="{{ plugin }}.run();">
+                                        <span>Run</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                        {% endif %}{% endfor %}
                     </ul>
                 </li>
                 <li>
@@ -525,6 +546,9 @@
 <script src="{{ url_for('static', filename='js/utils/geometryUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils/glUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/tmapp.js') }}"></script>
+{% for plugin in plugins %}{% if plugin %}
+    <script src="/plugin/{{ plugin }}.js"></script>
+{% endif %}{% endfor %}
 <script>
     document.getElementById("project_title").innerText = "{{ slide_filename }}";
     // ----------
@@ -536,6 +560,10 @@
         tmapp.layers = []
         tmapp.registerActions();
         tmapp.init();
+        {% for plugin in plugins %}{% if plugin %}
+            {{ plugin }}.init(tmapp);
+            document.getElementById("plugin-dropdown").style.display="block";
+        {% endif %}{% endfor %}
     });
 </script>
 

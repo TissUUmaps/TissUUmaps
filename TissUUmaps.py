@@ -29,6 +29,8 @@ from optparse import OptionParser
 from threading import Lock
 from functools import wraps
 import imghdr
+import importlib
+import glob
 
 import PIL
 PIL.Image.MAX_IMAGE_PIXELS = 93312000000
@@ -64,6 +66,7 @@ DEEPZOOM_LIMIT_BOUNDS = True
 DEEPZOOM_TILE_QUALITY = 75
 
 FOLDER_DEPTH = 4
+PLUGINS = []
 
 app = Flask(__name__)
 app.config.from_object(__name__)
@@ -223,9 +226,31 @@ def slide(path):
     associated_urls = dict((name, url_for('dzi_asso', path=path, associated_name=name)) for name in slide.associated_images.keys())
     folder_dir = _Directory(os.path.abspath(app.basedir)+"/",
                             os.path.dirname(path))
-    return render_template('tissuumaps.html', associated=associated_urls, slide_url=slide_url, state_filename=state_filename, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
+    return render_template('tissuumaps.html', plugins=app.config["PLUGINS"], associated=associated_urls, slide_url=slide_url, state_filename=state_filename, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
 
 
+@app.route('/<path:path>.csv')
+@requires_auth
+def csvFile(path):
+    completePath = os.path.abspath(os.path.join(app.basedir, path) + ".csv")
+    directory = os.path.dirname(completePath)
+    filename = os.path.basename(completePath)
+    if os.path.isfile(completePath):
+        return send_from_directory(directory, filename)
+    else:
+        abort(404)
+    
+@app.route('/<path:path>.json')
+@requires_auth
+def jsonFile(path):
+    completePath = os.path.abspath(os.path.join(app.basedir, path) + ".json")
+    directory = os.path.dirname(completePath)
+    filename = os.path.basename(completePath)
+    if os.path.isfile(completePath):
+        return send_from_directory(directory, filename)
+    else:
+        abort(404)
+    
 @app.route('/<path:path>.dzi')
 @requires_auth
 def dzi(path):
@@ -288,6 +313,37 @@ def tile_asso(path, associated_name, level, col, row, format):
     resp.mimetype = 'image/%s' % format
     return resp
 
+def load_plugin(name):
+    mod = importlib.import_module("."+name,package="plugins")
+    return mod
+
+@app.route('/plugin/<path:pluginName>.js')
+def runPlugin(pluginName):
+    directory = "plugins"
+    filename = pluginName + ".js"
+    completePath = os.path.abspath(os.path.join(directory, pluginName + ".js"))
+    print (completePath)
+    if os.path.isfile(completePath):
+        return send_from_directory(directory, filename)
+    else:
+        abort(404)
+
+@app.route('/plugin/<path:pluginName>/<path:method>', methods=['GET', 'POST'])
+@requires_auth
+def pluginJS(pluginName, method):
+    print ("runPlugin", pluginName, method)
+    print (request.method)
+    
+    pluginModule = load_plugin(pluginName)
+    pluginInstance = pluginModule.Plugin(app)
+    pluginMethod = getattr(pluginInstance, method)
+    if request.method == 'POST':
+        content = request.get_json(silent=False)
+        return pluginMethod(content)
+    else:
+        content = request.args
+        return pluginMethod(content)
+
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
@@ -328,6 +384,11 @@ if __name__ == '__main__':
     # Load config file if specified
     if opts.config is not None:
         app.config.from_pyfile(opts.config)
+    for module in glob.glob("plugins/*.py"):
+        if "__init__.py" in module:
+            continue
+        app.config["PLUGINS"].append(os.path.splitext(os.path.basename(module))[0])
+    
     # Overwrite only those settings specified on the command line
     for k in dir(opts):
         if not k.startswith('_') and getattr(opts, k) is None:
