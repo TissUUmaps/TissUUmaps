@@ -58,6 +58,13 @@ CPDataUtils.processISSRawData = function () {
     }
 }
 
+/** 
+* Set expected headers
+*/
+CPDataUtils.setExpectedCSV = function(expectedCSV){
+    CPDataUtils._expectedCSV = expectedCSV;
+}
+
 CPDataUtils.readCSV = function (thecsv) {
     var cpop = "CP";//tmapp["object_prefix"];
     CPDataUtils[cpop + "_rawdata"] = {};
@@ -174,6 +181,7 @@ CPDataUtils.loadFromRawData = function () {
     CPProperty.addEventListener("change", changeProperty);
     
     if (csvheaders.includes(CPDataUtils._expectedCSV["key_header"])) CPKey.value = CPDataUtils._expectedCSV["key_header"];
+    if (csvheaders.includes(CPDataUtils._expectedCSV["property_header"])) CPProperty.value = CPDataUtils._expectedCSV["property_header"];
     if (csvheaders.includes(CPDataUtils._expectedCSV["X_header"])) CPX.value = CPDataUtils._expectedCSV["X_header"];
     if (csvheaders.includes(CPDataUtils._expectedCSV["Y_header"])) CPY.value = CPDataUtils._expectedCSV["Y_header"];
     CPLut.value = "interpolateRainbow";
