@@ -76,10 +76,7 @@
                                 <span class="nav-label">{{ plugin }}</span>
                             </a>
                             <ul class="dropdown-menu">
-                                <li>
-                                    <a href="#" onclick="{{ plugin }}.run();">
-                                        <span>Run</span>
-                                    </a>
+                                <li id="dropdown-menu-{{ plugin }}">
                                 </li>
                             </ul>
                         </li>
@@ -100,15 +97,15 @@
                 The ID will give the prefix for all the objects related to the viewer in this case ISS-->
                 <div id="ISS_viewer" class="ISS_viewer" style="position:absolute; width:100%">
                 </div>
-                    <!-- Global marker size slider -->
-                    <div id="ISS_globalmarkersize">
-                        <label>Marker size</label><br>
-                        <input class="form-control" type="range" style="box-shadow: none;"
-                            id="ISS_globalmarkersize_text"
-                            value="100" min="0" max="500" step="10"
-                            oninput="document.getElementById('ISS_globalmarkersize_label').innerHTML = this.value;"/>
-                        <em class="range-label" id="ISS_globalmarkersize_label">100</em>
-                    </div>
+                <!-- Global marker size slider -->
+                <div id="ISS_globalmarkersize">
+                    <label>Marker size</label><br>
+                    <input class="form-control" type="range" style="box-shadow: none;"
+                        id="ISS_globalmarkersize_text"
+                        value="100" min="0" max="500" step="10"
+                        oninput="document.getElementById('ISS_globalmarkersize_label').innerHTML = this.value;"/>
+                    <em class="range-label" id="ISS_globalmarkersize_label">100</em>
+                </div>
                 </div>
             <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4 ISS_menu" style="overflow-y:hidden; overflow-x:auto;min-width: 506px;">
                 <div class="row row-fullheight" style="padding-bottom: 0px;">
@@ -568,7 +565,6 @@
     $(document).ready(function() {
         tmapp.fixed_file = "{{ slide_url }}";
         tmapp.mpp = "{{ slide_mpp }}";
-        tmapp.stateFilename = "{{ state_filename }}";
         tmapp.slideFilename = "{{ slide_filename }}"
         tmapp.layers = []
         

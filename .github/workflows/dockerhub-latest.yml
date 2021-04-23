@@ -1,0 +1,21 @@
+name: Docker Image TissUUmaps
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    if: github.repository == 'wahlby-lab/FlaskTissUUmaps'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Publish to Docker Hub
+        uses: elgohr/Publish-Docker-Github-Action@master
+        with:
+          name: wahlby-lab/FlaskTissUUmaps
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          dockerfile: container/Dockerfile
+          tags: "latest"

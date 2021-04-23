@@ -8,12 +8,12 @@
  * @namespace filterUtils
  * @property {Bool}   filterUtils._filtersUsed - 
  * @property {Object} filterUtils._filters - 
+ * @property {Object} filterUtils._filterItems - 
  */
  filterUtils = {
     // Choose between ["Brightness", "Exposure", "Hue", "Contrast", "Vibrance", "Noise", 
     //                 "Saturation","Gamma","Invert","Greyscale","Threshold","Erosion","Dilation"]
     _filtersUsed: ["Saturation","Brightness","Contrast"],
-    _layerFilters: {},
     _filters: {
         "Color channel":{
             params:{
@@ -45,9 +45,9 @@
         "Brightness":{
             params:{
                 type:"range",
-                min:-100,
-                max:100,
-                step:0.5,
+                min:-50,
+                max:50,
+                step:0.1,
                 value:0
             },
             filterFunction: function (value) {
@@ -100,7 +100,7 @@
             params:{
                 type:"range",
                 min:0,
-                max:3,
+                max:4,
                 step:0.01,
                 value:1
             },
@@ -234,15 +234,6 @@
             filterFunction: function (value) {
                 if (value == 1) {  return function (context, callback) {callback();}}
                 return OpenSeadragon.Filters.MORPHOLOGICAL_OPERATION(value, Math.max);
-            }
-        },
-        "Visible":{
-            params:{
-                type:"checkbox"
-            },
-            filterFunction: function (value) {
-                console.log(e)
-                .setOpacity(opacity)
             }
         }
     },
@@ -426,7 +417,6 @@ filterUtils.getFilterItems = function() {
         }
     }
     filterUtils._filterItems = items;
-    console.log(items);
     filterUtils.applyFilterItems(items);
 }
 

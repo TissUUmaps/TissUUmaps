@@ -73,6 +73,7 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex) {
     if (layerIndex < 0)
         visible.checked = true; 
     visible.id = "visible-layer-" + (layerIndex + 1);
+    visible.className = "visible-layers";
     visible.setAttribute("layer", (layerIndex + 1));
     var td_visible = document.createElement("td");
     td_visible.appendChild(visible);

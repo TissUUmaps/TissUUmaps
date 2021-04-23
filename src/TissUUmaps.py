@@ -19,6 +19,8 @@
 from collections import OrderedDict
 from flask import Flask, abort, make_response, render_template, url_for,  request, Response, jsonify, send_from_directory
 
+import pyvips
+
 import json
 from io import BytesIO
 import openslide
@@ -57,7 +59,7 @@ def requires_auth(f):
         return f(*args, **kwargs)
     return decorated
 
-SLIDE_DIR = '.'
+SLIDE_DIR = "/mnt/data/shared/"
 SLIDE_CACHE_SIZE = 10
 DEEPZOOM_FORMAT = 'jpeg'
 DEEPZOOM_TILE_SIZE = 254
@@ -92,10 +94,10 @@ class _SlideCache(object):
                 slide = self._cache.pop(path)
                 self._cache[path] = slide
                 return slide
-        try:
-            osr = OpenSlide(path)
-        except:
-            osr = ImageSlide(path)
+        #try:
+        osr = OpenSlide(path)
+        #except:
+        #    osr = ImageSlide(path)
             #Fix for 16 bits tiff files
             # if osr._image.getextrema()[1] > 256:
             #     osr._image = osr._image.point(lambda i:i*(1./256)).convert('L')
@@ -187,28 +189,6 @@ def _get_slide(path):
     except OpenSlideError:
         abort(404)
 
-
-@app.route('/TmapsState/<path:path>', methods=['GET', 'POST'])
-@requires_auth
-def setTmapsState(path):
-    jsonFilename = os.path.abspath(os.path.join(app.basedir, path))
-    jsonFilename = os.path.splitext(jsonFilename)[0]+'.tmap'
-    print (request.method)
-    
-    if request.method == 'POST':
-        state = request.get_json(silent=False)
-        print (state["Markers"]["_nameAndLetters"])
-        # we save the state in a tmap file
-        with open(jsonFilename,"w") as jsonFile:
-            json.dump(state, jsonFile)
-    else:
-        if os.path.isfile(jsonFilename):
-            with open(jsonFilename,"r") as jsonFile:
-                state = json.load(jsonFile)
-        else:
-            return jsonify({})
-    return jsonify(state)
-
 @app.route('/')
 @requires_auth
 def index():
@@ -217,8 +197,6 @@ def index():
 @app.route('/<path:path>')
 @requires_auth
 def slide(path):
-    state_filename = "/TmapsState/" + path 
-
     slide = _get_slide(path)
     slide_url = url_for('dzi', path=path)
     slide_properties = slide.properties
@@ -226,8 +204,25 @@ def slide(path):
     associated_urls = dict((name, url_for('dzi_asso', path=path, associated_name=name)) for name in slide.associated_images.keys())
     folder_dir = _Directory(os.path.abspath(app.basedir)+"/",
                             os.path.dirname(path))
-    return render_template('tissuumaps.html', plugins=app.config["PLUGINS"], associated=associated_urls, slide_url=slide_url, state_filename=state_filename, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
+    return render_template('tissuumaps.html', plugins=app.config["PLUGINS"], associated=associated_urls, slide_url=slide_url, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
 
+@app.route('/ping')
+@requires_auth
+def ping(path):
+    return make_response("pong")
+@app.route('/<path:path>.tmap')
+@requires_auth
+def tmapFile(path):
+    folder_dir = _Directory(os.path.abspath(app.basedir)+"/",
+                            os.path.dirname(path))
+    jsonFilename = os.path.abspath(os.path.join(app.basedir, path) + ".tmap")
+    print (jsonFilename)
+    if os.path.isfile(jsonFilename):
+        with open(jsonFilename,"r") as jsonFile:
+            state = json.load(jsonFile)
+    else:
+        abort(404)
+    return render_template('tissuumaps.html', plugins=app.config["PLUGINS"], tmap_json=state, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
 
 @app.route('/<path:path>.csv')
 @requires_auth
@@ -349,6 +344,12 @@ def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
                                'misc/favicon.ico', mimetype='image/vnd.microsoft.icon')
 
+
+for module in glob.glob("plugins/*.py"):
+    if "__init__.py" in module:
+        continue
+    app.config["PLUGINS"].append(os.path.splitext(os.path.basename(module))[0])    
+
 if __name__ == '__main__':
     parser = OptionParser(usage='Usage: %prog [options] [slide-directory]')
     parser.add_option('-B', '--ignore-bounds', dest='DEEPZOOM_LIMIT_BOUNDS',
@@ -384,11 +385,7 @@ if __name__ == '__main__':
     # Load config file if specified
     if opts.config is not None:
         app.config.from_pyfile(opts.config)
-    for module in glob.glob("plugins/*.py"):
-        if "__init__.py" in module:
-            continue
-        app.config["PLUGINS"].append(os.path.splitext(os.path.basename(module))[0])
-    
+
     # Overwrite only those settings specified on the command line
     for k in dir(opts):
         if not k.startswith('_') and getattr(opts, k) is None:

@@ -1,0 +1,4 @@
+Flask==1.1.2
+openslide-python==1.1.2
+Pillow==8.1.2
+pyvips==2.1.14
