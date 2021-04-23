@@ -208,7 +208,7 @@ def slide(path):
 
 @app.route('/ping')
 @requires_auth
-def ping(path):
+def ping():
     return make_response("pong")
 @app.route('/<path:path>.tmap')
 @requires_auth
