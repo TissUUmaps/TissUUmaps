@@ -14,4 +14,4 @@ ENV PYTHONPATH /app
 
 ENV GUNICORN_CMD_ARGS "--bind=0.0.0.0:80 --workers=4 --thread=4 --worker-class=gthread --forwarded-allow-ips='*' --access-logfile -"
 
-CMD ["gunicorn", "TissUUmaps:app"]
+CMD ["gunicorn", "TissUUmaps_flask:app"]
