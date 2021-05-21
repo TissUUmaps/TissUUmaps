@@ -24,7 +24,6 @@ tmapp.registerActions = function () {
     var op = tmapp["object_prefix"];
     var cpop="CP";
 
-    interfaceUtils.listen(op + '_save_btn', 'click', function() { tmapp.saveState() }, false);
     interfaceUtils.listen(op + '_add_layer_btn', 'click', function() { overlayUtils.addLayerFromSelect() }, false);
     interfaceUtils.listen(op + '_bringmarkers_btn','click', function () { dataUtils.processISSRawData(); },false);
     interfaceUtils.listen(op + '_search','input', function () { markerUtils.hideRowsThatDontContain(); },false);
@@ -144,7 +143,6 @@ tmapp.init = function () {
             sizeAndTextRenderer: OpenSeadragon.ScalebarSizeAndTextRenderer.METRIC_LENGTH
         });
     }
-    //tmapp.loadState();
     //document.getElementById('cancelsearch-moving-button').addEventListener('click', function(){ markerUtils.showAllRows("moving");}); 
     filterUtils.initFilters();
     if (window.hasOwnProperty("glUtils")) {

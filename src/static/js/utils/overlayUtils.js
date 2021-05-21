@@ -165,7 +165,12 @@ overlayUtils.addLayer = function(layerName, tileSource, i) {
     tmapp[vname].addTiledImage({
         index: i + 1,
         tileSource: tmapp._url_suffix + tileSource,
-        opacity: opacity
+        opacity: opacity,
+        success: function(i) {
+            layer0X = tmapp[op + "_viewer"].world.getItemAt(0).getContentSize().x;
+            layerNX = tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).getContentSize().x;
+            tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setWidth(layerNX/layer0X);
+        } 
     });
 }
 

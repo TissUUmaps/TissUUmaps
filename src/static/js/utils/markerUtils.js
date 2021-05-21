@@ -420,14 +420,14 @@ markerUtils.markerUI = function (barObject,options) {
 
     if(options.drawGeneLetters){
         var barcodeLetters=barObject.values[0].letters;
-        var lettersrow = HTMLElementUtils.createElement({ type: "td", innerHTML: "<label style='cursor:pointer' for='" + barObject.key + "-checkbox-" + op + "'>"+barcodeLetters+"</label>",
+        var lettersrow = HTMLElementUtils.createElement({ type: "td", innerHTML: "<label style='cursor:pointer' for='" + barObject.key + "-checkbox-" + op + "'>"+barcodeLetters+" </label>",
             extraAttributes: { "title": barcodeLetters, "data-title":barcodeLetters } });
         row.appendChild(lettersrow);
     }
 
     if(options.drawGeneName){
         var gn=barObject.values[0].gene_name;
-        var name = HTMLElementUtils.createElement({ type: "td", innerHTML:  "<label style='cursor:pointer' for='" + barObject.key + "-checkbox-" + op + "'>"+gn+"</label>",
+        var name = HTMLElementUtils.createElement({ type: "td", innerHTML:  "<label style='cursor:pointer' for='" + barObject.key + "-checkbox-" + op + "'>"+gn+" </label>",
             extraAttributes: { "title": gn, "data-title":gn } });
         row.appendChild(name);
     }
@@ -452,7 +452,7 @@ markerUtils.markerUI = function (barObject,options) {
         var colorinput = HTMLElementUtils.inputTypeColor({ id: barObject.key + "-color-" + op, extraAttributes: { value: thecolor } })
         color.appendChild(colorinput);
         row.appendChild(color);
-    
+
         // Workaround for black color inputs in Safari (WebKit)
         colorinput.value = "#ffffff";
         colorinput.value = thecolor;
@@ -521,7 +521,7 @@ markerUtils.markerUIAll = function (options) {
     });
     var amount = HTMLElementUtils.createElement({ type: "td", innerText: length });
     row.appendChild(amount);
-    
+
     if (!markerUtils._uniqueColor) {
         var color = HTMLElementUtils.createElement({ type: "td" });
         row.appendChild(color);

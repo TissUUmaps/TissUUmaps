@@ -63,7 +63,7 @@ dataUtils.processISSRawData = function () {
         markerUtils._uniqueColor = false;
         markerUtils._uniqueColorSelector = "";
     }
-
+    
     //check that the key is available
     var knode = document.getElementById(op + "_key_header");
     var key = knode.options[knode.selectedIndex].value;
