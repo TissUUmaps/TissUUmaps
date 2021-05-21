@@ -3,7 +3,7 @@ FROM python:3.8
 # Install libvips and openslide
 RUN apt-get update && apt-get install bash nano openslide-tools libvips -y
 
-COPY ./src/requirements.txt /requirements.txt
+COPY ./container/requirements.txt /requirements.txt
 
 RUN pip3 install -r /requirements.txt
 RUN pip3 install gunicorn
