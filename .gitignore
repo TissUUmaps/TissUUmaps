@@ -1,4 +1,7 @@
-build
-dist
-__pycache__
 debug.log
+.vscode/settings.json
+.jython_cache
+dist
+build
+__pycache__
+.DS_Store
