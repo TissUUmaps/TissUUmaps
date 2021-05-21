@@ -1,0 +1,1 @@
+pyinstaller ./TissUUmaps.spec --noconfirm

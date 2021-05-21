@@ -348,7 +348,8 @@ def favicon():
 for module in glob.glob("plugins/*.py"):
     if "__init__.py" in module:
         continue
-    app.config["PLUGINS"].append(os.path.splitext(os.path.basename(module))[0])    
+    app.config["PLUGINS"].append(os.path.splitext(os.path.basename(module))[0])  
+print ("Plugins:", app.config["PLUGINS"])  
 
 if __name__ == '__main__':
     parser = OptionParser(usage='Usage: %prog [options] [slide-directory]')
@@ -397,4 +398,5 @@ if __name__ == '__main__':
     except IndexError:
         pass
 
+    print ("Plugins:", app.config["PLUGINS"])  
     app.run(host=opts.host, port=opts.port, threaded=True)
