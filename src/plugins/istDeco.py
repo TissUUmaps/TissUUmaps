@@ -151,6 +151,7 @@ class Plugin ():
 
         buf = PILBytesIO()
         fig.savefig(buf)
+        #plt.close(fig)
         return buf
         
     def getMatrix (self, jsonParam):
@@ -221,14 +222,18 @@ class Plugin ():
                     continue
         print (tifFiles)
         csvFiles = glob.glob(path + "/*.csv")
-        csvFilesDesc = [
-            {
-                "path": csvFile.replace(absoluteRoot,""),
+        csvFilesDesc = []
+        for csvFile in csvFiles:
+            filePath = csvFile.replace(absoluteRoot,"")
+            if (filePath[0] != "/" and filePath[0] != "\\" ):
+                filePath = "\\" + filePath
+            csvFilesDesc.append({
+                "path": filePath,
                 "title":"Download " + os.path.basename(csvFile),
                 "comment":"",
                 "expectedCSV":{ "group": "target", "name": "gene", "X_col": "x", "Y_col": "y", "key": "letters" }
-            } for csvFile in csvFiles
-        ]
+            })
+        
         layers = []
         layerFilters = {}
         rounds = []
