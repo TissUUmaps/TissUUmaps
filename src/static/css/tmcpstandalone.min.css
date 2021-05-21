@@ -1,0 +1,45 @@
+.nav-tabs > li > a.active, .nav-tabs > li > a.active:hover, .nav-tabs > li > a.active:focus {
+    color: #000;
+    background-color: #ffffff;
+    cursor: default;
+}
+
+.navbar {
+    border-radius: 0px !important; 
+    min-height: 29px;
+    margin-bottom: 7px;
+    border: 0px solid transparent;
+    background-color: #fff;
+    padding-left: 8px;
+}
+
+.navbar-collapse {
+}
+
+.navbar-default {
+    border-bottom: 2px solid #bbb;
+}
+.navbar-default .navbar-nav>li>a {
+    color: #000;
+}
+
+.navbar-nav>li>a {
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+.navbar-nav {
+    float: left;
+    margin: 0;
+}
+.navbar-default .navbar-nav>li>a:focus {
+    color: #000;
+    background-color: #aaa;
+}
+.ISS_menu {
+    height: calc(100vh - 47px);
+    padding-left: 15px;
+}
+.ISS_viewer {
+    height: calc(100vh - 47px);
+    background-color: #676767;
+}
