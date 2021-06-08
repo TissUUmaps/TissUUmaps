@@ -47,10 +47,21 @@ glUtils._markersVS = `
     #define MARKER_TYPE_CP 1
     #define SHAPE_GRID_SIZE 4.0
 
-    vec3 hex_to_rgb(float v)
+    vec3 hex_to_rgb(float val)
     {
-        // Extract RGB color from 24-bit hex color stored in float
-        return mod(floor(v / vec3(65536.0, 256.0, 1.0) + 0.5), 256.0) / 255.0;
+        if(val < 0.) {
+            return vec3(0.);
+        }
+        if(val > 16777216.) {
+            return vec3(1.);
+        }
+        vec3 c = vec3(0.);
+        c.b = mod(val, 256.);
+        val = floor(val/256.);
+        c.g = mod(val, 256.);
+        val = floor(val/256.);
+        c.r = mod(val, 256.);
+        return c/255.;
     }
 
     void main()

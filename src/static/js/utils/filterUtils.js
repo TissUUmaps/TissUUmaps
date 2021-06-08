@@ -15,7 +15,7 @@
     //                 "Saturation","Gamma","Invert","Greyscale","Threshold","Erosion","Dilation"]
     _filtersUsed: ["Saturation","Brightness","Contrast"],
     _filters: {
-        "Color channel":{
+        "Color":{
             params:{
                 type:"select",
                 options:[
@@ -266,7 +266,7 @@
             },
             "class":"filterSelection",
             "checked":filterUtils._filtersUsed.filter(e => e === filter).length > 0,
-            id:"filerCheck_" + filter,
+            id:"filterCheck_" + filter,
             extraAttributes: {
                 "filter": filter
             }
@@ -274,7 +274,7 @@
         select = HTMLElementUtils.inputTypeCheckbox(selectParams);
         settingsPanel.appendChild(select);
         var label = document.createElement("label");
-        label.setAttribute("for", "filerCheck_" + filter);
+        label.setAttribute("for", "filterCheck_" + filter);
         label.innerHTML = "&nbsp;" + filter;
         settingsPanel.appendChild(label);
         settingsPanel.appendChild(document.createElement("br"));
@@ -283,7 +283,8 @@
         eventListeners:{
             "change": function (e) {
                 compositeMode = e.srcElement.value;
-                filterUtils.setCompositeOperation(compositeMode);
+                filterUtils._compositeMode = compositeMode;
+                filterUtils.setCompositeOperation();
             }
         },
         id: "filterCompositeMode",
@@ -297,7 +298,7 @@
     settingsPanel.appendChild(label);
     select = HTMLElementUtils.selectTypeDropDown(modeParams);
     select.value = filterUtils._compositeMode;
-    filterUtils.setCompositeOperation(filterUtils._compositeMode);
+    filterUtils.setCompositeOperation();
     settingsPanel.appendChild(select);
     filterUtils.getFilterItems();
 }
@@ -362,8 +363,8 @@ filterUtils.getFilterFunction = function(filterName) {
  * Set html ranges and checkboxes from filter items
  *  */
  filterUtils.setRangesFromFilterItems = function() {
+
     var op = tmapp["object_prefix"];
-    console.log("setRangesFromFilterItems",filterUtils._filterItems);
     for (const layer in filterUtils._filterItems) {
         for(var filterIndex=0;filterIndex<filterUtils._filterItems[layer].length;filterIndex++) {
             item = filterUtils._filterItems[layer][filterIndex];
@@ -420,21 +421,26 @@ filterUtils.getFilterItems = function() {
     filterUtils.applyFilterItems(items);
 }
 
-filterUtils.setCompositeOperation = function(compositeOperation) {
+filterUtils.setCompositeOperation = function(restart) {
+
+
     var op = tmapp["object_prefix"];
     if (!tmapp[op + "_viewer"].world || !tmapp[op + "_viewer"].world.getItemAt(Object.keys(filterUtils._filterItems).length-1)) {
         setTimeout(function() {
-            filterUtils.setCompositeOperation(compositeOperation);
+            if (restart == undefined){
+                restart = 10;
+            }
+            if (restart > 0)
+                filterUtils.setCompositeOperation(restart-1);
         }, 100);
         return;
     }
     var filterCompositeMode = document.getElementById("filterCompositeMode");
-    filterCompositeMode.value = compositeOperation;
-    tmapp[op + "_viewer"].compositeOperation = compositeOperation;
+    filterCompositeMode.value = filterUtils._compositeMode;
+    tmapp[op + "_viewer"].compositeOperation = filterUtils._compositeMode;
     for (i = 0; i < tmapp[op + "_viewer"].world.getItemCount(); i++) {
-        tmapp[op + "_viewer"].world.getItemAt(i).setCompositeOperation(compositeOperation);
+        tmapp[op + "_viewer"].world.getItemAt(i).setCompositeOperation(filterUtils._compositeMode);
     }
-    filterUtils._compositeMode = compositeOperation;
 }
 
 /** Create an HTML filter */

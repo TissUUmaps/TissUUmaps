@@ -308,8 +308,6 @@ regionUtils.regionUI = function (regionid) {
  * @param {*} y Y coordinate of the point to check
  * @param {*} path SVG path
  * @param {*} tmpPoint Temporary point to check if in path. This is only for speed.
- * @returns 
- * 
  */
  regionUtils.globalPointInPath=function(x,y,path,tmpPoint) {
 	tmpPoint.x = x;

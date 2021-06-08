@@ -140,7 +140,8 @@ tmapp.init = function () {
             color: '#555555',
             fontColor: '#333333',
             backgroundColor: 'rgba(255, 255, 255, 0.5)',
-            sizeAndTextRenderer: OpenSeadragon.ScalebarSizeAndTextRenderer.METRIC_LENGTH
+            sizeAndTextRenderer: OpenSeadragon.ScalebarSizeAndTextRenderer.METRIC_LENGTH,
+            location: OpenSeadragon.ScalebarLocation.BOTTOM_RIGHT
         });
     }
     //document.getElementById('cancelsearch-moving-button').addEventListener('click', function(){ markerUtils.showAllRows("moving");}); 
@@ -167,10 +168,11 @@ tmapp.options_osd = {
     animationTime: 0.0,
     blendTime: 0,
     minZoomImageRatio: 1,
-    maxZoomPixelRatio: 10,
+    maxZoomPixelRatio: 30,
     zoomPerClick: 1.0,
     constrainDuringPan: true,
     visibilityRatio: 1,
     showNavigationControl: false,
-    maxImageCacheCount:500
+    maxImageCacheCount:500,
+    imageSmoothingEnabled:false
 }
