@@ -171,6 +171,8 @@ class _Directory(object):
                 for name in sorted(os.listdir(os.path.join(basedir, relpath))):
                     if ".tissuumaps" in name:
                         continue
+                    if "/private/" in name:
+                        continue
                     cur_relpath = os.path.join(relpath, name)
                     cur_path = os.path.join(basedir, cur_relpath)
                     if os.path.isdir(cur_path):
