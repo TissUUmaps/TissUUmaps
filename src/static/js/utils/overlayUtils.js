@@ -16,7 +16,8 @@ overlayUtils = {
     _d3nodes: {},
     _percentageForSubsample: 0.25,
     _zoomForSubsample:5.15,
-    _layerOpacities:{}
+    _layerOpacities:{},
+    _linkMarkersToChannels:true
 }
 
 /**
@@ -168,9 +169,14 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex) {
             channelName = tmapp.layers[channel- -1].name;
             channelName = channelName.split('.').slice(0, -1).join('.')
             document.getElementById("channelValue").innerHTML = "Channel " + (channel - -2) + ": " + channelName;
-            if (document.getElementById(channelName+"-checkbox-ISS")) {
+            if (overlayUtils._linkMarkersToChannels) {
                 $("#ISS_table input[type=checkbox]").prop("checked",false);
-                $(document.getElementById(channelName +"-checkbox-ISS")).click();
+                if (document.getElementById(channelName+"-checkbox-ISS")) {
+                    $(document.getElementById(channelName +"-checkbox-ISS")).click();
+                }
+                else {
+                    $("#AllMarkers-checkbox-ISS").click().click();
+                }
             }
         };
         channelRange.addEventListener("input", changeFun);
