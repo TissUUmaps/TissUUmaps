@@ -104,6 +104,39 @@ class PILBytesIO(BytesIO):
         '''Classic PIL doesn't understand io.UnsupportedOperation.'''
         raise AttributeError('Not supported')
 
+class ImageConverter():
+    def __init__(self, inputImage, outputImage):
+        self.inputImage = inputImage
+        self.outputImage = outputImage
+    
+    def convert (self):
+        if not os.path.isfile(self.outputImage):
+            def convertThread():
+                try:
+                    imgVips = pyvips.Image.new_from_file(self.inputImage)
+                    minVal = imgVips.percent(10)
+                    maxVal = imgVips.percent(99)
+                    if minVal == maxVal:
+                        minVal = 0
+                        maxVal = 255
+                    print ("minVal, maxVal", minVal, maxVal)
+                    imgVips = (255.* (imgVips - minVal)) / (maxVal - minVal)
+                    imgVips = (imgVips < 0).ifthenelse(0, imgVips)
+                    imgVips = (imgVips > 255).ifthenelse(255, imgVips)
+                    print ("minVal, maxVal", imgVips.min(), imgVips.max())
+                    imgVips = imgVips.scaleimage()
+                    imgVips.tiffsave(self.outputImage, pyramid=True, tile=True, tile_width=256, tile_height=256, properties=True, bitdepth=8)
+                except: 
+                    print ("Impossible to convert image using VIPS:")
+                    import traceback
+                    print (traceback.format_exc())
+                self.convertDone = True
+            self.convertDone = False
+            threading.Thread(target=convertThread,daemon=True).start()
+            while(not self.convertDone):
+                time.sleep(0.02)
+        return self.outputImage
+
 
 class _SlideCache(object):
     def __init__(self, cache_size, dz_opts):
@@ -223,8 +256,19 @@ def _get_slide(path):
         slide.filename = os.path.basename(path)
         return slide
     except:
-        print ("Impossible to load this file with openslide.")
-        abort(404)
+        if ".tissuumaps" in path:
+            abort(404)
+        try:
+            newpath = os.path.dirname(path) + "/.tissuumaps/" + os.path.basename(path)
+            if not os.path.isdir(os.path.dirname(path) + "/.tissuumaps/"):
+                os.makedirs(os.path.dirname(path) + "/.tissuumaps/")
+            path = ImageConverter(path,newpath).convert()
+            #imgPath = imgPath.replace("\\","/")
+            return _get_slide(path)
+        except:
+            import traceback
+            print (traceback.format_exc())
+            abort(404)
 
 
 @app.route('/TmapsState/<path:path>', methods=['GET', 'POST'])
@@ -268,6 +312,37 @@ def slide(path):
     #                        os.path.dirname(path))
     #return render_template('tissuumaps.html', associated=associated_urls, slide_url=slide_url, state_filename=state_filename, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
     return render_template('tissuumaps.html', plugins=app.config["PLUGINS"], associated=associated_urls, slide_url=slide_url, state_filename=state_filename, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties)
+
+@app.route('/ping')
+@requires_auth
+def ping():
+    return make_response("pong")
+
+@app.route('/<path:path>.tmap', methods=['GET', 'POST'])
+@requires_auth
+def tmapFile(path):
+    folder_dir = _Directory(os.path.abspath(app.basedir)+"/",
+                            os.path.dirname(path))
+    jsonFilename = os.path.abspath(os.path.join(app.basedir, path) + ".tmap")
+    print ("jsonFilename", jsonFilename, request.method)
+    if request.method == 'POST':
+        state = request.get_json(silent=False)
+        with open(jsonFilename,"w") as jsonFile:
+            json.dump(state, jsonFile)
+        return state
+    else:
+        if os.path.isfile(jsonFilename):
+            try:
+                with open(jsonFilename,"r") as jsonFile:
+                    state = json.load(jsonFile)
+            except:
+                import traceback
+                print (traceback.format_exc())
+                abort(404)
+        else:
+            abort(404)
+        #return render_template('tissuumaps.html', plugins=app.config["PLUGINS"], jsonProject=state, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
+        return render_template('tissuumaps.html', plugins=app.config["PLUGINS"], jsonProject=state)
 
 @app.route('/<path:path>.csv')
 @requires_auth
@@ -397,6 +472,9 @@ class CustomWebEnginePage(QWebEnginePage):
             QDesktopServices.openUrl(url)
             return False
         return True
+    
+    #def javaScriptConsoleMessage(self, level, msg, line, sourceID):
+    #    print (level, msg, line, sourceID)
 
 class textWindow(QDialog):
     def __init__(self, parent, title, message):
@@ -412,37 +490,6 @@ class textWindow(QDialog):
         self.b.insertPlainText(message)
         self.b.move(10,10)
         self.b.resize(400,200)
-    
-class ImageConverter():
-    def __init__(self, inputImage, outputImage):
-        self.inputImage = inputImage
-        self.outputImage = outputImage
-    
-    def convert (self):
-        if not os.path.isfile(self.outputImage):
-            self.progress = QProgressDialog("Converting file...", None, 0, 0, ui)
-            self.progress.setWindowModality(Qt.WindowModal)
-            self.progress.setAutoClose(True)
-            qt_app.processEvents()
-                    
-            def convertThread():
-                try:
-                    imgVips = pyvips.Image.new_from_file(self.inputImage)
-                    imgVips = imgVips.scaleimage()
-                    imgVips.tiffsave(self.outputImage, pyramid=True, tile=True, tile_width=256, tile_height=256, properties=True, bitdepth=8)
-                except: 
-                    print ("Impossible to convert image using VIPS:")
-                    import traceback
-                    print (traceback.format_exc())
-                self.convertDone = True
-            self.convertDone = False
-            threading.Thread(target=convertThread,daemon=True).start()
-            while(not self.convertDone):
-                time.sleep(0.02)
-                self.progress.setValue(0)
-                qt_app.processEvents()
-            self.progress.close()
-        return self.outputImage
 
 class webEngine(QWebEngineView):
     def __init__(self, qt_app, app, args):
@@ -499,10 +546,23 @@ class webEngine(QWebEngineView):
         
     @pyqtSlot()
     def openImage(self):
-        home = str(Path.home())
-        
         folderpath = QFileDialog.getOpenFileName(self, 'Select a File',self.lastdir)[0]
         self.openImagePath(folderpath)
+
+    @pyqtSlot(result="QJsonObject")
+    def saveProject(self):
+        folderpath = QFileDialog.getSaveFileName(self, 'Save project as',self.lastdir)[0]
+        parts = Path(folderpath).parts
+        if (app.basedir != parts[0]):
+            QMessageBox.about(self, "Error", "All layers must be in the same drive")
+            returnDict = {"dzi":None,"name":None}
+            return returnDict
+        imgPath = os.path.join(*parts[1:])
+        imgPath = imgPath.replace("\\","/") 
+        returnDict = {
+            "path":imgPath
+        }
+        return returnDict
     
     def openImagePath (self, folderpath):
         print (folderpath)
@@ -520,26 +580,16 @@ class webEngine(QWebEngineView):
         imgPath = os.path.join(*parts[1:])
         imgPath = imgPath.replace("\\","/")
         try:
-            _get_slide(imgPath)
-        except:
-            try:
-                newpath = os.path.splitext(folderpath)[0] + "_TMAP.tif"
-                folderpath = ImageConverter(folderpath,newpath).convert()
-                parts = Path(folderpath).parts
-                if (not hasattr(app, 'cache')):
-                    setup(app)
-                app.basedir = parts[0]
-                imgPath = os.path.join(*parts[1:])
-                imgPath = imgPath.replace("\\","/")
+            if not ".tmap" in imgPath:
                 _get_slide(imgPath)
-            except:
-                app.basedir = oldBaseDir
-                import traceback
-                print (traceback.format_exc())
-                QMessageBox.about(self, "Error", "TissUUmaps did not manage to open this image.")
+        except:
+            app.basedir = oldBaseDir
+            import traceback
+            print (traceback.format_exc())
+            QMessageBox.about(self, "Error", "TissUUmaps did not manage to open this image.")
 
-                return False
-        print (app.basedir, self.location + imgPath)
+            return False
+        print ("Opening:", app.basedir, self.location + imgPath, QUrl(self.location + imgPath))
         self.load(QUrl(self.location + imgPath))
         self.setWindowTitle("TissUUmaps - " + os.path.basename(folderpath))
         return True
@@ -564,21 +614,11 @@ class webEngine(QWebEngineView):
         try:
             _get_slide(imgPath)
         except:
-            try:
-                folderpath = ImageConverter(folderpath,folderpath.replace(".tif","_TMAP.tif")).convert()
-                parts = Path(folderpath).parts
-                if (not hasattr(app, 'cache')):
-                    setup(app)
-                app.basedir = parts[0]
-                imgPath = os.path.join(*parts[1:])
-                _get_slide(imgPath)
-            except:
-                app.basedir = oldBaseDir
-                import traceback
-                print (traceback.format_exc())
-                QMessageBox.about(self, "Error", "TissUUmaps did not manage to open this image.")
-                returnDict = {"dzi":None,"name":None}
-                return returnDict
+            import traceback
+            print (traceback.format_exc())
+            QMessageBox.about(self, "Error", "TissUUmaps did not manage to open this image.")
+            returnDict = {"dzi":None,"name":None}
+            return returnDict
         returnDict = {
             "dzi":"/"+imgPath + ".dzi",
             "name":os.path.basename(imgPath)
@@ -650,7 +690,7 @@ if __name__ == '__main__':
     #Timer(0.01,lambda: ui("http://127.0.0.1:5000/", app)).start()
     qInstallMessageHandler(lambda x,y,z: None)
 
-    qt_app = QApplication([])
+    qt_app = QApplication(["--remote-debugging-port=5010"])
     
     logo = QtGui.QPixmap('static/misc/design/logo.png')
     logo = logo.scaledToWidth(512, Qt.SmoothTransformation)

@@ -46,6 +46,11 @@
                             </a>
                         </li>
                         <li>
+                            <a href="#" id="saveProject">
+                                <span>Save Project</span>
+                            </a>
+                        </li>
+                        <li>
                             <a href="#" id="exitTissUUmaps">
                                 <span>Exit TissUUmaps</span>
                             </a>
@@ -545,6 +550,7 @@
 <script src="{{ url_for('static', filename='js/utils/geometryUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils/glUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/tmapp.js') }}"></script>
+<script src="{{ url_for('static', filename='js/projects.js') }}"></script>
 {% for plugin in plugins %}{% if plugin %}
     <script src="/plugin/{{ plugin }}.js"></script>
 {% endif %}{% endfor %}
@@ -552,11 +558,16 @@
     document.getElementById("project_title").innerText = "{{ slide_filename }}";
     // ----------
     $(document).ready(function() {
-        tmapp.fixed_file = "{{ slide_url }}";
+        tmapp.fixed_file = "";
         tmapp.mpp = "{{ slide_mpp }}";
         tmapp.stateFilename = "{{ state_filename }}";
         tmapp.slideFilename = "{{ slide_filename }}"
-        tmapp.layers = []
+        tmapp.layers = [
+            {
+                tileSource:"{{ slide_url }}",
+                name:"{{ slide_filename }}"
+            }
+        ]
         
         tmapp.registerActions();
         tmapp.init();
@@ -564,6 +575,13 @@
             {{ plugin }}.init(tmapp);
             document.getElementById("plugin-dropdown").style.display="block";
         {% endif %}{% endfor %}
+        
+        projects.registerActions();
+
+        {% if jsonProject %}
+            jsonState = {{jsonProject|tojson|safe}}
+            projects.loadProject(jsonState);
+        {% endif %}
     });
     var backend;
     new QWebChannel(qt.webChannelTransport, function (channel) {
@@ -585,9 +603,16 @@
                     name: layerName,
                     tileSource: tileSource
                 });
-                i = tmapp.layers.length - 1;
+                i = tmapp.layers.length - 2;
                 overlayUtils.addLayer(layerName, tileSource, i);
                 overlayUtils.addLayerSettings(layerName, tileSource, i);
+            }
+        });
+    });
+    document.getElementById("saveProject").addEventListener("click", function(){
+        backend.saveProject(function(JSONPath) {
+            if (JSONPath["path"]!=null) {
+                projects.saveProject(JSONPath["path"]);
             }
         });
     });

@@ -40,30 +40,45 @@
                 </li>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    Open
+                    File
                     </a>
                     <ul class="dropdown-menu">
-                        {% for entry in root_dir.children recursive %} {% if entry.url_path %}
-                        <li>
-                            <a href="{{ url_for('slide', path=entry.url_path) }}">
-                                <span>{{ entry.name }}</span>
-                            </a>
-                        </li>
-                        {% else %}
-                        <!--<span class='title'>{{ entry.name }}</span>-->
-                        {% endif %} {% if entry.children %}
                         <li class="dropdown-submenu">
                             <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
-                                <span class="nav-label">{{ entry.name }}</span>
+                                <span class="nav-label">Open File</span>
                             </a>
                             <ul class="dropdown-menu">
-                                {{ loop(entry.children) }}
+                                {% for entry in root_dir.children recursive %} {% if entry.url_path %}
+                                <li>
+                                    <a href="{{ url_for('slide', path=entry.url_path) }}">
+                                        <span>{{ entry.name }}</span>
+                                    </a>
+                                </li>
+                                {% else %}
+                                <!--<span class='title'>{{ entry.name }}</span>-->
+                                {% endif %} {% if entry.children %}
+                                <li class="dropdown-submenu">
+                                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                                        <span class="nav-label">{{ entry.name }}</span>
+                                    </a>
+                                    <ul class="dropdown-menu">
+                                        {{ loop(entry.children) }}
+                                    </ul>
+                                </li>
+                                {% endif %} {% else %}
+                                <!--<li class="none">None</li>-->
+                                {% endfor %}
                             </ul>
                         </li>
-                        {% endif %} {% else %}
-                        <!--<li class="none">None</li>-->
-                        {% endfor %}
+                        <li>
+                            <a href="#" id="save_project_menu">
+                                <span>Save project</span>
+                            </a>
+                        </li>
                     </ul>
+                </li>
+                <li class="nav-item dropdown">
+                    
                 </li>
                 <li class="nav-item dropdown" id="plugin-dropdown" style="display:none;">
                     <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -556,6 +571,7 @@
 <script src="{{ url_for('static', filename='js/utils/geometryUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils/glUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/tmapp.js') }}"></script>
+<script src="{{ url_for('static', filename='js/projects.js') }}"></script>
 {% for plugin in plugins %}{% if plugin %}
     <script src="/plugin/{{ plugin }}.js"></script>
 {% endif %}{% endfor %}
@@ -563,10 +579,15 @@
     document.getElementById("project_title").innerText = "{{ slide_filename }}";
     // ----------
     $(document).ready(function() {
-        tmapp.fixed_file = "{{ slide_url }}";
+        tmapp.fixed_file = "";
         tmapp.mpp = "{{ slide_mpp }}";
         tmapp.slideFilename = "{{ slide_filename }}"
-        tmapp.layers = []
+        tmapp.layers = [
+            {
+                tileSource:"{{ slide_url }}",
+                name:"{{ slide_filename }}"
+            }
+        ]
         
         tmapp.registerActions();
         tmapp.init();
@@ -574,6 +595,13 @@
             {{ plugin }}.init(tmapp);
             document.getElementById("plugin-dropdown").style.display="block";
         {% endif %}{% endfor %}
+
+        projects.registerActions();
+
+        {% if jsonProject %}
+            jsonState = {{jsonProject|tojson|safe}}
+            projects.loadProject(jsonState);
+        {% endif %}
     });
 </script>
 

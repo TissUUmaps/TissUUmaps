@@ -21,6 +21,7 @@ from flask import Flask, abort, make_response, render_template, url_for,  reques
 
 import pyvips
 
+import threading, time
 import json
 from io import BytesIO
 import openslide
@@ -79,6 +80,38 @@ class PILBytesIO(BytesIO):
         '''Classic PIL doesn't understand io.UnsupportedOperation.'''
         raise AttributeError('Not supported')
 
+class ImageConverter():
+    def __init__(self, inputImage, outputImage):
+        self.inputImage = inputImage
+        self.outputImage = outputImage
+    
+    def convert (self):
+        if not os.path.isfile(self.outputImage):
+            def convertThread():
+                try:
+                    imgVips = pyvips.Image.new_from_file(self.inputImage)
+                    minVal = imgVips.percent(10)
+                    maxVal = imgVips.percent(99)
+                    if minVal == maxVal:
+                        minVal = 0
+                        maxVal = 255
+                    print ("minVal, maxVal", minVal, maxVal)
+                    imgVips = (255.* (imgVips - minVal)) / (maxVal - minVal)
+                    imgVips = (imgVips < 0).ifthenelse(0, imgVips)
+                    imgVips = (imgVips > 255).ifthenelse(255, imgVips)
+                    print ("minVal, maxVal", imgVips.min(), imgVips.max())
+                    imgVips = imgVips.scaleimage()
+                    imgVips.tiffsave(self.outputImage, pyramid=True, tile=True, tile_width=256, tile_height=256, properties=True, bitdepth=8)
+                except: 
+                    print ("Impossible to convert image using VIPS:")
+                    import traceback
+                    print (traceback.format_exc())
+                self.convertDone = True
+            self.convertDone = False
+            threading.Thread(target=convertThread,daemon=True).start()
+            while(not self.convertDone):
+                time.sleep(0.02)
+        return self.outputImage
 
 class _SlideCache(object):
     def __init__(self, cache_size, dz_opts):
@@ -136,6 +169,8 @@ class _Directory(object):
         if max_depth != 0:
             try:
                 for name in sorted(os.listdir(os.path.join(basedir, relpath))):
+                    if ".tissuumaps" in name:
+                        continue
                     cur_relpath = os.path.join(relpath, name)
                     cur_path = os.path.join(basedir, cur_relpath)
                     if os.path.isdir(cur_path):
@@ -146,6 +181,9 @@ class _Directory(object):
                         self.children.append(_SlideFile(cur_relpath))
                     elif imghdr.what(cur_path):
                         self.children.append(_SlideFile(cur_relpath))
+                    elif ".tmap" in cur_path:
+                        self.children.append(_SlideFile(cur_relpath))
+
                     
             except:
                 pass
@@ -186,8 +224,20 @@ def _get_slide(path):
         slide = app.cache.get(path)
         slide.filename = os.path.basename(path)
         return slide
-    except OpenSlideError:
-        abort(404)
+    except:
+        if ".tissuumaps" in path:
+            abort(404)
+        try:
+            newpath = os.path.dirname(path) + "/.tissuumaps/" + os.path.basename(path)
+            if not os.path.isdir(os.path.dirname(path) + "/.tissuumaps/"):
+                os.makedirs(os.path.dirname(path) + "/.tissuumaps/")
+            path = ImageConverter(path,newpath).convert()
+            #imgPath = imgPath.replace("\\","/")
+            return _get_slide(path)
+        except:
+            import traceback
+            print (traceback.format_exc())
+            abort(404)
 
 @app.route('/')
 @requires_auth
@@ -210,19 +260,31 @@ def slide(path):
 @requires_auth
 def ping():
     return make_response("pong")
-@app.route('/<path:path>.tmap')
+
+@app.route('/<path:path>.tmap', methods=['GET', 'POST'])
 @requires_auth
 def tmapFile(path):
     folder_dir = _Directory(os.path.abspath(app.basedir)+"/",
                             os.path.dirname(path))
     jsonFilename = os.path.abspath(os.path.join(app.basedir, path) + ".tmap")
     print (jsonFilename)
-    if os.path.isfile(jsonFilename):
-        with open(jsonFilename,"r") as jsonFile:
-            state = json.load(jsonFile)
+    if request.method == 'POST':
+        state = request.get_json(silent=False)
+        with open(jsonFilename,"w") as jsonFile:
+            json.dump(state, jsonFile)
+        return state
     else:
-        abort(404)
-    return render_template('tissuumaps.html', plugins=app.config["PLUGINS"], tmap_json=state, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
+        if os.path.isfile(jsonFilename):
+            try:
+                with open(jsonFilename,"r") as jsonFile:
+                    state = json.load(jsonFile)
+            except:
+                import traceback
+                print (traceback.format_exc())
+                abort(404)
+        else:
+            abort(404)
+        return render_template('tissuumaps.html', plugins=app.config["PLUGINS"], jsonProject=state, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
 
 @app.route('/<path:path>.csv')
 @requires_auth
