@@ -25,7 +25,7 @@ class ImageConverter():
         if not os.path.isfile(self.outputImage):
             try:
                 imgVips = pyvips.Image.new_from_file(self.inputImage)
-                minVal = imgVips.percent(1)
+                minVal = imgVips.percent(10)
                 maxVal = imgVips.percent(99)
                 if minVal == maxVal:
                     minVal = 0
@@ -62,8 +62,20 @@ class Plugin ():
             slide = self.app.cache.get(path)
             return slide
         except OpenSlideError:
-            print ("OpenSlideError, aborting.")
-            abort(500)
+            if ".tissuumaps" in path:
+                abort(500)
+            try:
+                newpath = os.path.dirname(path) + "/.tissuumaps/" + os.path.basename(path)
+                if not os.path.isdir(os.path.dirname(path) + "/.tissuumaps/"):
+                    os.makedirs(os.path.dirname(path) + "/.tissuumaps/")
+                path = ImageConverter(path,newpath).convert()
+                #imgPath = imgPath.replace("\\","/")
+                return self._get_slide(path)
+            except:
+                import traceback
+                print (traceback.format_exc())
+                print ("OpenSlideError, aborting.")
+                abort(500)
     
     def getTile (self, path, bbox):
         path = path.replace(".dzi","")
@@ -169,13 +181,13 @@ class Plugin ():
             rounds = []
             channels = []
             for layer in layers:
-                round, channel = layer["name"].split("/")
+                round, channel = layer["name"].split("_")
                 if round not in rounds:
                     rounds.append(round)
                 if channel not in channels:
                     channels.append(channel)
         for layer in layers:
-            round, channel = layer["name"].split("/")
+            round, channel = layer["name"].split("_")
             if round not in tiles.keys():
                 tiles[round] = {}
             tiles[round][channel] = self.getTile(layer["tileSource"], bbox)
@@ -200,7 +212,7 @@ class Plugin ():
         path = os.path.abspath(os.path.join(self.app.basedir, relativepath))
         absoluteRoot = os.path.abspath(self.app.basedir)
         print ("path",relativepath, path, absoluteRoot)
-        tifFiles_ = glob.glob(path + "/*/*")
+        tifFiles_ = glob.glob(path + "/*")
         tifFiles = []
         for tifFile in tifFiles_:
             if tifFile in tifFiles:
@@ -209,17 +221,8 @@ class Plugin ():
                 self._get_slide(tifFile)
                 tifFiles.append(tifFile)
             except:
-                print ("impossible to read", tifFile,". Trying to convert using VIPS.")
-                newpath = os.path.splitext(tifFile)[0] + "_TMAP.tif"
-                newTifFile = ImageConverter(tifFile,newpath).convert()
-                if newTifFile in tifFiles:
-                    continue
-                try:
-                    self._get_slide(newTifFile)
-                    tifFiles.append(newTifFile)
-                except:
-                    print ("impossible to read", newTifFile,". Abort this file.")
-                    continue
+                print ("impossible to read", tifFile,". Abort this file.")
+                continue
         print (tifFiles)
         csvFiles = glob.glob(path + "/*.csv")
         csvFilesDesc = []
@@ -241,10 +244,14 @@ class Plugin ():
         colors = ["100,0,0","0,100,0","0,0,100","100,100,0","100,0,100","0,100,100"]
         for fileIndex, filename in enumerate(sorted(tifFiles)):
             basename = os.path.basename (filename)
-            channel = os.path.splitext (basename)[0]
-            round = os.path.basename (os.path.dirname (filename))
-            if round not in rounds:
-                rounds.append(round)
+            if "_" in basename:
+                channel = os.path.splitext (basename)[0].split("_")[1]
+                #round = os.path.basename (os.path.dirname (filename))
+                round = os.path.splitext (basename)[0].split("_")[0]
+            else:
+                channel = os.path.splitext (basename)[0]
+                #round = os.path.basename (os.path.dirname (filename))
+                round = ""
             if channel not in channels:
                 channels.append(channel)
             filePath = filename.replace(absoluteRoot,"")
@@ -252,18 +259,18 @@ class Plugin ():
             if (filePath[0] != "/"):
                 filePath = "/" + filePath
             layer = {
-                "name":round + "/" + channel.replace("_TMAP",""),
+                "name":basename,
                 "path":filePath
             }
             print (channels, channel)
             print (channels.index(channel)%len(colors))
-            layerFilter = [{"value": colors[channels.index(channel)%len(colors)],"name": "Color channel"}]
+            layerFilter = [{"value": colors[channels.index(channel)%len(colors)],"name": "Color"}]
             layerFilters[fileIndex] = layerFilter
             layers.append(layer)
         jsonFile = {
             "markerFiles": csvFilesDesc,
             "CPFiles": [],
-            "filters": ["Color channel"],
+            "filters": ["Color"],
             "layers": layers,
             "layerFilters": layerFilters,
             "slideFilename": os.path.basename(path),

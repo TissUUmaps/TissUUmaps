@@ -64,7 +64,7 @@ istDeco.loadImages = function () {
     var vname = op + "_viewer";
 
     subfolder = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
-    subfolder = subfolder.substring(0, subfolder.lastIndexOf('/') + 1);
+    //subfolder = subfolder.substring(0, subfolder.lastIndexOf('/') + 1);
     $("#loadingModal").show();
     $.ajax(
         {
@@ -153,7 +153,7 @@ istDeco.changeOrder = function (doPrompt) {
     rounds = [];
     channels = [];
     layers.forEach(function(layer, i) {
-        parts = layer.name.split("/");
+        parts = layer.name.split("_");
         round = parts[0];
         channel = parts[1];
         if (!channels.includes(channel)) {
@@ -366,7 +366,7 @@ istDeco.getMatrix = function (bbox, layers, markers, order) {
     $(".visible-layers").prop("checked",true);$(".visible-layers").click();
     firstRound = null;
     tmapp.layers.forEach(function(layer, i) {
-        round = layer.name.split("/")[0];
+        round = layer.name.split("_")[0];
         console.log(round, i)
         if (!firstRound)
             firstRound = round;
