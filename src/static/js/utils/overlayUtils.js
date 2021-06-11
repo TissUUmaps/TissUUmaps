@@ -17,7 +17,7 @@ overlayUtils = {
     _percentageForSubsample: 0.25,
     _zoomForSubsample:5.15,
     _layerOpacities:{},
-    _linkMarkersToChannels:true
+    _linkMarkersToChannels:false
 }
 
 /**
