@@ -10,6 +10,7 @@
  * @classdesc The root namespace for projects.
  */
  projects = {
+     _activeState:{}
 }
 
 /** 
@@ -56,12 +57,10 @@
         filename = urlProject.substring( urlProject.lastIndexOf('/'),urlProject.length);
     }
 
-    state = {
-        regions: regionUtils._regions,
-        layers: relativeLayers,
-        filename: filename
-    }
-    ;
+    state = projects._activeState;
+    state.regions = regionUtils._regions;
+    state.layers = relativeLayers;
+    state.filename = filename;
     state.filters = filterUtils._filtersUsed;
     state.layerFilters = filterUtils._filterItems;
     state.compositeMode = filterUtils._compositeMode;
@@ -119,6 +118,7 @@
         compositeMode: ""
     }
     */
+    projects._activeState = state;
     tmapp.fixed_file = "";
     if (state.compositeMode) {
         filterUtils._compositeMode = state.compositeMode;
@@ -183,6 +183,11 @@
     if (state.compositeMode) {
         filterUtils._compositeMode = state.compositeMode;
         filterUtils.setCompositeOperation();
+    }
+    if (state.settings) {
+        state.settings.forEach(function(setting, i) {
+            window[setting.module][setting.function] = setting.value;
+        });
     }
     setTimeout(function(){
         if (state.compositeMode) {
