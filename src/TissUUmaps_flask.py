@@ -53,11 +53,28 @@ def authenticate():
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        
+        path = os.path.abspath(os.path.join(app.basedir, kwargs["path"]))
+        activeFolder = os.path.dirname(path)
+        while (os.path.dirname(activeFolder) != activeFolder and not os.path.isfile(activeFolder + "/auth")):
+            activeFolder = os.path.dirname(activeFolder)
+            print (activeFolder)
+
+        if os.path.isfile(activeFolder + "/auth"):
+            with open(activeFolder + "/auth", 'r') as file:
+                data = file.read().replace('\n', '')
+                user, password = [u.strip() for u in data.split(";")]
+            auth = request.authorization
+            if not auth or not (user == auth.username and password == auth.password):
+                return authenticate()
+            return f(*args, **kwargs)
+        else:
+            return f(*args, **kwargs)
+        print ("*args", args)
+        print ("*kwargs", kwargs["path"])
+        print ("dirname", )
         return f(*args, **kwargs) #Comment this line to add authentifaction
-        auth = request.authorization
-        if not auth or not check_auth(auth.username, auth.password):
-            return authenticate()
-        return f(*args, **kwargs)
+        
     return decorated
 
 SLIDE_DIR = "/mnt/data/shared/"
@@ -95,11 +112,9 @@ class ImageConverter():
                     if minVal == maxVal:
                         minVal = 0
                         maxVal = 255
-                    print ("minVal, maxVal", minVal, maxVal)
                     imgVips = (255.* (imgVips - minVal)) / (maxVal - minVal)
                     imgVips = (imgVips < 0).ifthenelse(0, imgVips)
                     imgVips = (imgVips > 255).ifthenelse(255, imgVips)
-                    print ("minVal, maxVal", imgVips.min(), imgVips.max())
                     imgVips = imgVips.scaleimage()
                     imgVips.tiffsave(self.outputImage, pyramid=True, tile=True, tile_width=256, tile_height=256, properties=True, bitdepth=8)
                 except: 
@@ -171,7 +186,7 @@ class _Directory(object):
                 for name in sorted(os.listdir(os.path.join(basedir, relpath))):
                     if ".tissuumaps" in name:
                         continue
-                    if "/private/" in name:
+                    if "private" in name:
                         continue
                     cur_relpath = os.path.join(relpath, name)
                     cur_path = os.path.join(basedir, cur_relpath)
@@ -185,7 +200,6 @@ class _Directory(object):
                         self.children.append(_SlideFile(cur_relpath))
                     elif ".tmap" in cur_path:
                         self.children.append(_SlideFile(cur_relpath))
-
                     
             except:
                 pass
@@ -332,7 +346,6 @@ def dzi_asso(path,associated_name):
 
 
 @app.route('/<path:path>_files/<int:level>/<int:col>_<int:row>.<format>')
-@requires_auth
 def tile(path, level, col, row, format):
     slide = _get_slide(path)
     format = format.lower()
@@ -354,7 +367,6 @@ def tile(path, level, col, row, format):
     return resp
 
 @app.route('/<path:path>.dzi/<path:associated_name>_files/<int:level>/<int:col>_<int:row>.<format>')
-@requires_auth
 def tile_asso(path, associated_name, level, col, row, format):
     slide = _get_slide(path).associated_images[associated_name]
     format = format.lower()
@@ -388,7 +400,6 @@ def runPlugin(pluginName):
         abort(404)
 
 @app.route('/plugin/<path:pluginName>/<path:method>', methods=['GET', 'POST'])
-@requires_auth
 def pluginJS(pluginName, method):
     print ("runPlugin", pluginName, method)
     print (request.method)
