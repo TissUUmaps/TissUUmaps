@@ -20,7 +20,8 @@ dataUtils = {
     _barcodesByAmount: [],
     _maximumAmountInLowerRes: 5000,
     _nameAndLetters: { drawGeneName: false, drawGeneLetters: false },
-    _drawOptions: { randomColorForMarker: false }
+    _drawOptions: { randomColorForMarker: false },
+    _autoLoadCSV: false
     //_minimumAmountToDisplay: 500,
     //_subsamplingRate: 100,
 }
@@ -181,7 +182,9 @@ dataUtils.showMenuCSV = function(){
     if (csvheaders.includes(dataUtils._expectedCSV["Y_col"])) ISSY.value = dataUtils._expectedCSV["Y_col"];
     if (csvheaders.includes(dataUtils._expectedCSV["color"])) ISSColor.value = dataUtils._expectedCSV["color"];
     if (dataUtils._expectedCSV["key"]) ISSKey.value = dataUtils._expectedCSV["key"];
-
+    if (dataUtils._autoLoadCSV) {
+        document.getElementById(op + "_bringmarkers_btn").click();
+    }
 }
 
 /** 
