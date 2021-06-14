@@ -301,7 +301,11 @@ def tmapFile(path):
                 abort(404)
         else:
             abort(404)
-        return render_template('tissuumaps.html', plugins=app.config["PLUGINS"], jsonProject=state, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
+        if "plugins" in state.keys():
+            plugins = state["plugins"]
+        else:
+            plugins = []
+        return render_template('tissuumaps.html', plugins=plugins, jsonProject=state, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
 
 @app.route('/<path:path>.csv')
 @requires_auth
