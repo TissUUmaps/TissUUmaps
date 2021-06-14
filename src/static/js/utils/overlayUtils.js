@@ -23,13 +23,14 @@ overlayUtils = {
 /**
  * This method is used to add all layers from tmapp */
 overlayUtils.addAllLayers = function() {
-    var iStart = -1;
+    /* For backward compatibility with tmapp.fixed_file, but converted to a layer */
     if (tmapp.fixed_file && tmapp.fixed_file != "") {
+        tmapp.layers.unshift({"name":tmapp.slideFilename, "tileSource":tmapp.fixed_file})
         overlayUtils.addLayer(tmapp.slideFilename, tmapp._url_suffix +  tmapp.fixed_file, -1)
-        iStart=0;
+        tmapp.fixed_file = "";
     }
     tmapp.layers.forEach(function(layer, i) {
-        overlayUtils.addLayer(layer.name, layer.tileSource, i+iStart);
+        overlayUtils.addLayer(layer.name, layer.tileSource, i-1);
     });
     overlayUtils.addAllLayersSettings();
 }
@@ -39,13 +40,8 @@ overlayUtils.addAllLayers = function() {
 overlayUtils.addAllLayersSettings = function() {
     var settingsPanel = document.getElementById("image-overlay-panel");
     settingsPanel.innerHTML = "";
-    var iStart = -1;
-    if (tmapp.fixed_file && tmapp.fixed_file != "") {
-        overlayUtils.addLayerSettings(tmapp.slideFilename, tmapp._url_suffix +  tmapp.fixed_file, -1);
-        iStart=0;
-    }
     tmapp.layers.forEach(function(layer, i) {
-        overlayUtils.addLayerSettings(layer.name, layer.tileSource, i+iStart);
+        overlayUtils.addLayerSettings(layer.name, layer.tileSource, i-1);
     });
     filterUtils.setRangesFromFilterItems();
 }
