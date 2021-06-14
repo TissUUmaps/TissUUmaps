@@ -583,10 +583,12 @@
         tmapp.mpp = "{{ slide_mpp }}";
         tmapp.slideFilename = "{{ slide_filename }}"
         tmapp.layers = [
+            {% if slide_url %}
             {
                 tileSource:"{{ slide_url }}",
                 name:"{{ slide_filename }}"
             }
+            {% endif %}
         ]
         
         tmapp.registerActions();
