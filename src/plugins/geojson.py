@@ -5,7 +5,6 @@ from io import BytesIO
 from PIL import Image
 import matplotlib.pyplot as plt
 import pyvips
-from urllib.parse import unquote
 
 #from mpl_toolkits.axes_grid1 import make_axes_locatable
 #import importlib
@@ -26,7 +25,7 @@ class ImageConverter():
         if not os.path.isfile(self.outputImage):
             try:
                 imgVips = pyvips.Image.new_from_file(self.inputImage)
-                minVal = imgVips.percent(10)
+                minVal = imgVips.percent(1)
                 maxVal = imgVips.percent(99)
                 if minVal == maxVal:
                     minVal = 0
@@ -63,20 +62,8 @@ class Plugin ():
             slide = self.app.cache.get(path)
             return slide
         except OpenSlideError:
-            if ".tissuumaps" in path:
-                abort(500)
-            try:
-                newpath = os.path.dirname(path) + "/.tissuumaps/" + os.path.basename(path)
-                if not os.path.isdir(os.path.dirname(path) + "/.tissuumaps/"):
-                    os.makedirs(os.path.dirname(path) + "/.tissuumaps/")
-                path = ImageConverter(path,newpath).convert()
-                #imgPath = imgPath.replace("\\","/")
-                return self._get_slide(path)
-            except:
-                import traceback
-                print (traceback.format_exc())
-                print ("OpenSlideError, aborting.")
-                abort(500)
+            print ("OpenSlideError, aborting.")
+            abort(500)
     
     def getTile (self, path, bbox):
         path = path.replace(".dzi","")
@@ -182,13 +169,13 @@ class Plugin ():
             rounds = []
             channels = []
             for layer in layers:
-                round, channel = layer["name"].split("_")
+                round, channel = layer["name"].split("/")
                 if round not in rounds:
                     rounds.append(round)
                 if channel not in channels:
                     channels.append(channel)
         for layer in layers:
-            round, channel = layer["name"].split("_")
+            round, channel = layer["name"].split("/")
             if round not in tiles.keys():
                 tiles[round] = {}
             tiles[round][channel] = self.getTile(layer["tileSource"], bbox)
@@ -206,14 +193,14 @@ class Plugin ():
         if (not jsonParam):
             print ("No arguments, aborting.")
             abort(500)
-        relativepath = unquote(jsonParam["path"])
+        relativepath = jsonParam["path"]
         print ('jsonParam["path"]', jsonParam["path"])
         if relativepath[0] == "/":
             relativepath = relativepath[1:]
         path = os.path.abspath(os.path.join(self.app.basedir, relativepath))
         absoluteRoot = os.path.abspath(self.app.basedir)
         print ("path",relativepath, path, absoluteRoot)
-        tifFiles_ = glob.glob(path + "/*")
+        tifFiles_ = glob.glob(path + "/*/*")
         tifFiles = []
         for tifFile in tifFiles_:
             if tifFile in tifFiles:
@@ -222,22 +209,27 @@ class Plugin ():
                 self._get_slide(tifFile)
                 tifFiles.append(tifFile)
             except:
-                print ("impossible to read", tifFile,". Abort this file.")
-                continue
+                print ("impossible to read", tifFile,". Trying to convert using VIPS.")
+                newpath = os.path.splitext(tifFile)[0] + "_TMAP.tif"
+                newTifFile = ImageConverter(tifFile,newpath).convert()
+                if newTifFile in tifFiles:
+                    continue
+                try:
+                    self._get_slide(newTifFile)
+                    tifFiles.append(newTifFile)
+                except:
+                    print ("impossible to read", newTifFile,". Abort this file.")
+                    continue
         print (tifFiles)
         csvFiles = glob.glob(path + "/*.csv")
-        csvFilesDesc = []
-        for csvFile in csvFiles:
-            filePath = csvFile.replace(absoluteRoot,"")
-            if (filePath[0] != "/" and filePath[0] != "\\" ):
-                filePath = "\\" + filePath
-            csvFilesDesc.append({
-                "path": filePath,
+        csvFilesDesc = [
+            {
+                "path": csvFile.replace(absoluteRoot,""),
                 "title":"Download " + os.path.basename(csvFile),
                 "comment":"",
                 "expectedCSV":{ "group": "target", "name": "gene", "X_col": "x", "Y_col": "y", "key": "letters" }
-            })
-        
+            } for csvFile in csvFiles
+        ]
         layers = []
         layerFilters = {}
         rounds = []
@@ -245,14 +237,10 @@ class Plugin ():
         colors = ["100,0,0","0,100,0","0,0,100","100,100,0","100,0,100","0,100,100"]
         for fileIndex, filename in enumerate(sorted(tifFiles)):
             basename = os.path.basename (filename)
-            if "_" in basename:
-                channel = os.path.splitext (basename)[0].split("_")[1]
-                #round = os.path.basename (os.path.dirname (filename))
-                round = os.path.splitext (basename)[0].split("_")[0]
-            else:
-                channel = os.path.splitext (basename)[0]
-                #round = os.path.basename (os.path.dirname (filename))
-                round = ""
+            channel = os.path.splitext (basename)[0]
+            round = os.path.basename (os.path.dirname (filename))
+            if round not in rounds:
+                rounds.append(round)
             if channel not in channels:
                 channels.append(channel)
             filePath = filename.replace(absoluteRoot,"")
@@ -260,18 +248,18 @@ class Plugin ():
             if (filePath[0] != "/"):
                 filePath = "/" + filePath
             layer = {
-                "name":basename,
+                "name":round + "/" + channel.replace("_TMAP",""),
                 "path":filePath
             }
             print (channels, channel)
             print (channels.index(channel)%len(colors))
-            layerFilter = [{"value": colors[channels.index(channel)%len(colors)],"name": "Color"}]
+            layerFilter = [{"value": colors[channels.index(channel)%len(colors)],"name": "Color channel"}]
             layerFilters[fileIndex] = layerFilter
             layers.append(layer)
         jsonFile = {
             "markerFiles": csvFilesDesc,
             "CPFiles": [],
-            "filters": ["Color"],
+            "filters": ["Color channel"],
             "layers": layers,
             "layerFilters": layerFilters,
             "slideFilename": os.path.basename(path),
