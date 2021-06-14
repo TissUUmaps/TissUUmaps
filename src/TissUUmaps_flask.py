@@ -53,7 +53,8 @@ def authenticate():
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        
+        if not "path" in kwargs.keys():
+            return f(*args, **kwargs)
         path = os.path.abspath(os.path.join(app.basedir, kwargs["path"]))
         activeFolder = os.path.dirname(path)
         while (os.path.dirname(activeFolder) != activeFolder and not os.path.isfile(activeFolder + "/auth")):

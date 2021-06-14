@@ -53,7 +53,7 @@
         console.log(subfolder, filename, urlProject)
     }
     else {
-        urlProject = "/" + urlProject + ".tmap"
+        urlProject = "/" + urlProject + ".tmap" // TODO fix "/" + urlProject + ".tmap"
         filename = urlProject.substring( urlProject.lastIndexOf('/'),urlProject.length);
     }
 
@@ -118,6 +118,16 @@
         compositeMode: ""
     }
     */
+    if (state.regions) {
+        var maxregionid=0;
+        for(i in state.regions){
+            //console.log(regions[i]);
+            regionUtils.createImportedRegion(state.regions[i]);
+            var numbers = state.regions[i].id.match(/\d+/g).map(Number);
+            if(numbers[0]>maxregionid) maxregionid=numbers[0];
+        }
+        regionUtils._currentRegionId=maxregionid;		
+    }
     projects._activeState = state;
     tmapp.fixed_file = "";
     if (state.compositeMode) {
