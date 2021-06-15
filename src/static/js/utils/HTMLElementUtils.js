@@ -384,34 +384,47 @@ HTMLElementUtils.createDLButton = function(downloadRow, innerText, callback, com
     row.appendChild(commentDiv);
 
     downloadRow.appendChild(row);
+    return row;
 }
 
-HTMLElementUtils.createDLButtonMarkers = function(innerText, dataURL, comment, expectedCSV) {
+HTMLElementUtils.createDLButtonMarkers = function(innerText, dataURL, comment, expectedCSV, autoLoad) {
     var downloadRow = document.getElementById("ISS_rowDownloadMarkers");
     callback = function(e){
         if (expectedCSV !== undefined) dataUtils.setExpectedCSV(expectedCSV);
         dataUtils.XHRCSV(dataURL);
     }
-    HTMLElementUtils.createDLButton(downloadRow, innerText, callback, comment);
+    var buttonRow = HTMLElementUtils.createDLButton(downloadRow, innerText, callback, comment);
     var label = document.getElementById("label_ISS_csv");
-    label.innerHTML = "Or import gene expression from CSV file:";
+    if (autoLoad) {
+        callback(null);
+        buttonRow.style.display="none";
+    }
+    else {label.innerHTML = "Or import gene expression from CSV file:";}
 }
 
-HTMLElementUtils.createDLButtonMarkersCP = function(innerText, dataURL, comment, expectedCSV) {
+HTMLElementUtils.createDLButtonMarkersCP = function(innerText, dataURL, comment, expectedCSV, autoLoad) {
     var downloadRow = document.getElementById("ISS_rowDownloadMarkersCP");
     callback = function(e){
         if (expectedCSV !== undefined) CPDataUtils.setExpectedCSV(expectedCSV);
         CPDataUtils.readCSV(dataURL)
     }
-    HTMLElementUtils.createDLButton(downloadRow, innerText, callback, comment);
+    var buttonRow = HTMLElementUtils.createDLButton(downloadRow, innerText, callback, comment);
     var label = document.getElementById("label_CP_csv");
-    label.innerHTML = "Or import cell morphology from CSV file:";
+    if (autoLoad) {
+        callback(null);
+        buttonRow.style.display="none";
+    }
+    else {label.innerHTML = "Or import cell morphology from CSV file:";}
 }
 
-HTMLElementUtils.createDLButtonRegions = function(innerText, dataURL, comment) {
+HTMLElementUtils.createDLButtonRegions = function(innerText, dataURL, comment, autoLoad) {
     var downloadRow = document.getElementById("ISS_rowDownloadRegions");
     callback = function(e){
         regionUtils.JSONToRegions(dataURL)
     }
-    HTMLElementUtils.createDLButton(downloadRow, innerText, callback, comment);
+    var buttonRow = HTMLElementUtils.createDLButton(downloadRow, innerText, callback, comment);
+    if (autoLoad) {
+        callback(null);
+        buttonRow.style.display="none";
+    }
 }

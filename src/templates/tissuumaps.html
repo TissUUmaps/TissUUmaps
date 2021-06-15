@@ -145,13 +145,14 @@
                                     <!-- 1.1 Row download -->
                                     <div id="ISS_rowDownloadMarkers">
                                     </div>
-                                    <div class="row" >
-                                        <div class="progress" id="ISS_csv_progress_parent" style="visibility:hidden; display:none; margin: 0px 10px 0px 10px;">
+                                    <div class="row" id="ISS_csv_progress_parent" style="visibility:hidden; display:none; margin: 0px 10px 0px 10px;">
+                                        Loading markers...
+                                        <div class="progress">
                                             <div id="ISS_csv_progress" class="progress-bar progress-bar-striped" role="progressbar" style="width: 0%; " aria-valuenow="10" aria-valuemin="0" aria-valuemax="100"></div>
                                         </div>
                                     </div>
                                      <!-- 1.1.1 Row of file selection -->
-                                     <div class="row" >
+                                     <div class="row" id="ISS_data_panel">
                                         <div class="col-xs-12 col-sm-12 col-md-12 col-lg-12">
                                             <div id="ISS_input_csv" style="margin-bottom: 5px;">
                                                 <label id="label_ISS_csv" for="ISS_csv">Import gene expression from CSV file:</label>
@@ -277,8 +278,9 @@
                                     <!-- 1.1 Row download -->
                                     <div id="ISS_rowDownloadMarkersCP">
                                     </div>
-                                    <div class="row">
-                                        <div class="progress" id="ISS_CP_csv_progress_parent" style="visibility:hidden; display:none; margin: 0px 10px 0px 10px;">
+                                    <div class="row" id="ISS_CP_csv_progress_parent" style="visibility:hidden; display:none; margin: 0px 10px 0px 10px;">
+                                        Loading markers...
+                                        <div class="progress">
                                             <div id="ISS_CP_csv_progress" class="progress-bar progress-bar-striped" role="progressbar" style="width: 0%; " aria-valuenow="10" aria-valuemin="0" aria-valuemax="100"></div>
                                         </div>
                                     </div>
@@ -606,6 +608,5 @@
         {% endif %}
     });
 </script>
-
 
 </html>

@@ -49,7 +49,7 @@
         subfolder = subfolder + commonPath
         //subfolder = subfolder.replace(commonPath,"");
         urlProject = subfolder + "/" + filename + ".tmap"
-        if (urlProject[0] == "/") urlProject = urlProject.substring(1, urlProject.length);
+        if (urlProject[0] == "/" && urlProject[1] == "/") urlProject = urlProject.substring(1, urlProject.length);
         console.log(subfolder, filename, urlProject)
     }
     else {
@@ -139,7 +139,8 @@
                 markerFile.title,
                 markerFile.path,
                 markerFile.comment,
-                markerFile.expectedCSV
+                markerFile.expectedCSV,
+                markerFile.autoLoad
             );
         });
     }
@@ -149,7 +150,8 @@
                 CPFile.title,
                 CPFile.path,
                 CPFile.comment,
-                CPFile.expectedCSV
+                CPFile.expectedCSV,
+                CPFile.autoLoad
             );
         });
     }
@@ -158,13 +160,18 @@
             HTMLElementUtils.createDLButtonRegions(
                 regionFile.title,
                 regionFile.path,
-                regionFile.comment
+                regionFile.comment,
+                regionFile.autoLoad
             );
         });
     }
     if (state.slideFilename) {
         tmapp.slideFilename = state.slideFilename;
         document.getElementById("project_title").innerText = state.slideFilename;
+    }
+    if (state.hideCSVImport) {
+        document.getElementById("ISS_data_panel").style.display="none";
+        document.getElementById("CP_data_panel").style.display="none";
     }
     tmapp.layers = [];
     subfolder = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
