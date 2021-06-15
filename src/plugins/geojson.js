@@ -79,6 +79,9 @@ geojson.geoJSON2regions = function (geoJSONObjects) {
 
     var viewer = tmapp[tmapp["object_prefix"] + "_viewer"]
     var canvas = overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
+    if (!Array.isArray(geoJSONObjects)) {
+        geoJSONObjects = [geoJSONObjects];
+    }
     geoJSONObjects.forEach(function(geoJSONObj, geoJSONObjIndex) {
         var geometryType = geoJSONObj.geometry.type;
         var coordinates;
