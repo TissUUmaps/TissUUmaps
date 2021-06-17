@@ -10,7 +10,7 @@
    * @property {Obj}   markerUtils._checkBoxes - 
    * @property {Array(String)}   markerUtils._d3Symbols -  
    * @property {Array(String)}   markerUtils._d3SymbolStrings - 
-   * * @property {Object}   load colors per key if known previously 
+   * * @property {Object}  markerUtils._colorsperkey - load colors per key if known previously 
    * 
 */
 
@@ -26,7 +26,8 @@ markerUtils = {
     _checkBoxes: {},
     _d3Symbols: [d3.symbolCross, d3.symbolDiamond, d3.symbolSquare, d3.symbolTriangle, d3.symbolStar, d3.symbolWye, d3.symbolCircle],
     _d3SymbolStrings: ["Cross", "Diamond", "Square", "Triangle", "Star", "Wye", "Circle"],
-    _colorsperkey:null
+    _colorsperkey:null,
+    _startMarkersOn:false
 }
 
 /** 
@@ -503,7 +504,6 @@ markerUtils.markerUIAll = function (options) {
     
     check.appendChild(checkinput);
     row.appendChild(check);
-
     if(options.drawGeneLetters){
         var lettersrow = HTMLElementUtils.createElement({ type: "td", innerHTML:  "<label style='cursor:pointer' for='AllMarkers-checkbox-" + op + "'>All Barcodes</label>",
             extraAttributes: { "title": "All Barcodes", "data-title":"All Barcodes" } });
@@ -533,7 +533,11 @@ markerUtils.markerUIAll = function (options) {
         var size = HTMLElementUtils.createElement({ type: "td" });
         row.appendChild(size);
     }
-
+    if (markerUtils._startMarkersOn) {
+        setTimeout(function() {
+            checkinput.click();
+        },100);
+    }
     return row;
 }
 
