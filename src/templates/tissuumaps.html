@@ -70,6 +70,13 @@
                                 {% endfor %}
                             </ul>
                         </li>
+                        {% if jsonProject %}
+                        <li>
+                            <a href="#" id="project_settings_menu">
+                                <span>Project advanced settings</span>
+                            </a>
+                        </li>
+                        {% endif %}
                         <li>
                             <a href="#" id="save_project_menu">
                                 <span>Save project</span>

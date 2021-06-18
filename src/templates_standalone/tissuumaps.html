@@ -45,6 +45,13 @@
                                 <span>Open Image</span>
                             </a>
                         </li>
+                        {% if jsonProject %}
+                        <li>
+                            <a href="#" id="projectSettings">
+                                <span>Project advanced settings</span>
+                            </a>
+                        </li>
+                        {% endif %}
                         <li>
                             <a href="#" id="saveProject">
                                 <span>Save Project</span>
@@ -619,6 +626,9 @@
                 projects.saveProject(JSONPath["path"]);
             }
         });
+    });
+    document.getElementById("projectSettings").addEventListener("click", function(){
+        projects.editSettings();
     });
 </script>
 

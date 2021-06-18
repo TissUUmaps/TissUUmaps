@@ -10,13 +10,41 @@
  * @classdesc The root namespace for projects.
  */
  projects = {
-     _activeState:{}
+     _activeState:{},
+     _hideCSVImport: false,
+     _settings:[
+        {
+            "module":"dataUtils",
+            "function":"_autoLoadCSV",
+            "value":"boolean",
+            "desc":"Automatically load csv with default headers"
+        },
+        {
+            "module":"markerUtils",
+            "function":"_startMarkersOn",
+            "value":"boolean",
+            "desc":"Load with all markers visible"
+        },
+        {
+            "function": "_linkMarkersToChannels",
+            "module": "overlayUtils",
+            "value": "boolean",
+            "desc": "Link markers to channels in slider"
+        },
+        {
+            "function": "_hideCSVImport",
+            "module": "projects",
+            "value": "boolean",
+            "desc": "Hide CSV file input on project load"
+        }
+     ]
 }
 
 /** 
  * Get all the buttons from the interface and assign all the functions associated to them */
  projects.registerActions = function () {
     interfaceUtils.listen('save_project_menu', 'click', function() { projects.saveProject() }, false);
+    interfaceUtils.listen('project_settings_menu', 'click', function() { projects.editSettings() }, false);
 }
 
 /**
@@ -48,12 +76,18 @@
         subfolder = window.location.pathname.substring(0, window.location.pathname.indexOf('/'));
         subfolder = subfolder + commonPath
         //subfolder = subfolder.replace(commonPath,"");
-        urlProject = subfolder + "/" + filename + ".tmap"
+        urlProject = subfolder + "/" + filename
+        if (! urlProject.split('.').pop() == "tmap") {
+            urlProject = urlProject + ".tmap"
+        }
         if (urlProject[0] == "/" && urlProject[1] == "/") urlProject = urlProject.substring(1, urlProject.length);
         console.log(subfolder, filename, urlProject)
     }
     else {
-        urlProject = "/" + urlProject + ".tmap" // TODO fix "/" + urlProject + ".tmap"
+        urlProject = "/" + urlProject
+        if (! urlProject.split('.').pop() == "tmap") {
+            urlProject = urlProject + ".tmap"
+        }
         filename = urlProject.substring( urlProject.lastIndexOf('/'),urlProject.length);
     }
 
@@ -88,6 +122,72 @@
     });
     return true;
 }
+
+/**
+ * This method is used to load the TissUUmaps state (gene expression, cell morphology, regions) */
+ projects.editSettings = function() {
+    settingsModal = document.getElementById("settingsModal");
+    if (! settingsModal) {
+        var div = document.createElement('div');
+        div.innerHTML = `<div class="modal in" id="settingsModal" tabindex="-1" role="dialog" aria-labelledby="modalLabelSmall" aria-hidden="true" style="display:None;">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="$('#settingsModal').hide();">
+                        <span aria-hidden="true">&times;</span>
+                        </button>
+                        <h4 class="modal-title" id="modalLabelSmall">Edit project settings</h4>
+                    </div>
+                    
+                    <div class="modal-body" id="settingsModalContent">
+                    </div>
+                
+                </div>
+            </div>
+        </div>`;
+        console.log(div)
+        document.body.appendChild(div);
+    }
+    settingsModal = document.getElementById("settingsModal");
+    settingsModalContent = document.getElementById("settingsModalContent");
+    settingsModalContent.innerHTML = "";
+    projects._settings.forEach(function(setting, index) {
+        row = HTMLElementUtils.createRow();
+        checkbox = HTMLElementUtils.inputTypeCheckbox({
+            id: "settings-" + index,
+            class: "setting-value",
+            checked: window[setting.module][setting.function],
+            extraAttributes: {
+                module: setting.module,
+                function: setting.function
+            },
+            eventListeners: { click: function () { 
+                // TODO: Remove JQuery dependency here?
+                window[setting.module][setting.function] = this.checked;
+                projects._activeState.settings.forEach(function(settingSaved, index, object) {
+                    if (settingSaved.function == setting.function && settingSaved.function == setting.function) {
+                        object.splice(index, 1);
+                    }
+                });
+                console.dir(projects._activeState.settings);
+                projects._activeState.settings.push(
+                    {
+                        "module":setting.module,
+                        "function":setting.function,
+                        "value":window[setting.module][setting.function]
+                    }
+                );
+                console.dir(projects._activeState.settings);
+             } }
+        });
+        row.appendChild(checkbox);
+        desc = HTMLElementUtils.createElement({ type: "span", innerHTML:  "<label style='cursor:pointer' for='settings-" + index + "'>&nbsp;&nbsp;"+setting.desc+"</label>"});
+        row.appendChild(desc);
+        settingsModalContent.appendChild(row);
+    })
+    settingsModal.style.display="block";
+ }
 
 /**
  * This method is used to load the TissUUmaps state (gene expression, cell morphology, regions) */
@@ -169,10 +269,6 @@
         tmapp.slideFilename = state.slideFilename;
         document.getElementById("project_title").innerText = state.slideFilename;
     }
-    if (state.hideCSVImport) {
-        document.getElementById("ISS_data_panel").style.display="none";
-        document.getElementById("CP_data_panel").style.display="none";
-    }
     tmapp.layers = [];
     subfolder = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
     state.layers.forEach(function(layer) {
@@ -205,6 +301,10 @@
         state.settings.forEach(function(setting, i) {
             window[setting.module][setting.function] = setting.value;
         });
+    }
+    if (projects._hideCSVImport) {
+        document.getElementById("ISS_data_panel").style.display="none";
+        document.getElementById("CP_data_panel").style.display="none";
     }
     setTimeout(function(){
         if (state.compositeMode) {

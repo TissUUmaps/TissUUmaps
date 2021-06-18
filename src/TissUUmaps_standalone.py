@@ -119,11 +119,9 @@ class ImageConverter():
                     if minVal == maxVal:
                         minVal = 0
                         maxVal = 255
-                    print ("minVal, maxVal", minVal, maxVal)
                     imgVips = (255.* (imgVips - minVal)) / (maxVal - minVal)
                     imgVips = (imgVips < 0).ifthenelse(0, imgVips)
                     imgVips = (imgVips > 255).ifthenelse(255, imgVips)
-                    print ("minVal, maxVal", imgVips.min(), imgVips.max())
                     imgVips = imgVips.scaleimage()
                     imgVips.tiffsave(self.outputImage, pyramid=True, tile=True, tile_width=256, tile_height=256, properties=True, bitdepth=8)
                 except: 
@@ -136,7 +134,6 @@ class ImageConverter():
             while(not self.convertDone):
                 time.sleep(0.02)
         return self.outputImage
-
 
 class _SlideCache(object):
     def __init__(self, cache_size, dz_opts):
@@ -206,6 +203,10 @@ class _Directory(object):
         if max_depth != 0:
             try:
                 for name in sorted(os.listdir(os.path.join(basedir, relpath))):
+                    if ".tissuumaps" in name:
+                        continue
+                    if "private" in name:
+                        continue
                     cur_relpath = os.path.join(relpath, name)
                     cur_path = os.path.join(basedir, cur_relpath)
                     if os.path.isdir(cur_path):
@@ -215,6 +216,8 @@ class _Directory(object):
                     elif OpenSlide.detect_format(cur_path):
                         self.children.append(_SlideFile(cur_relpath))
                     elif imghdr.what(cur_path):
+                        self.children.append(_SlideFile(cur_relpath))
+                    elif ".tmap" in cur_path:
                         self.children.append(_SlideFile(cur_relpath))
                     
             except:
@@ -270,28 +273,6 @@ def _get_slide(path):
             print (traceback.format_exc())
             abort(404)
 
-
-@app.route('/TmapsState/<path:path>', methods=['GET', 'POST'])
-@requires_auth
-def setTmapsState(path):
-    jsonFilename = os.path.abspath(os.path.join(app.basedir, path))
-    jsonFilename = os.path.splitext(jsonFilename)[0]+'.tmap'
-    print (request.method)
-    
-    if request.method == 'POST':
-        state = request.get_json(silent=False)
-        print (state["Markers"]["_nameAndLetters"])
-        # we save the state in a tmap file
-        with open(jsonFilename,"w") as jsonFile:
-            json.dump(state, jsonFile)
-    else:
-        if os.path.isfile(jsonFilename):
-            with open(jsonFilename,"r") as jsonFile:
-                state = json.load(jsonFile)
-        else:
-            return jsonify({})
-    return jsonify(state)
-
 @app.route('/')
 @requires_auth
 def index():
@@ -301,8 +282,6 @@ def index():
 @app.route('/<path:path>')
 @requires_auth
 def slide(path):
-    state_filename = "/TmapsState/" + path.replace("\\","\\\\") 
-
     slide = _get_slide(path)
     slide_url = url_for('dzi', path=path)
     slide_properties = slide.properties
@@ -311,7 +290,7 @@ def slide(path):
     #folder_dir = _Directory(os.path.abspath(app.basedir)+"/",
     #                        os.path.dirname(path))
     #return render_template('tissuumaps.html', associated=associated_urls, slide_url=slide_url, state_filename=state_filename, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
-    return render_template('tissuumaps.html', plugins=app.config["PLUGINS"], associated=associated_urls, slide_url=slide_url, state_filename=state_filename, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties)
+    return render_template('tissuumaps.html', plugins=app.config["PLUGINS"], associated=associated_urls, slide_url=slide_url, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties)
 
 @app.route('/ping')
 @requires_auth
@@ -324,11 +303,10 @@ def tmapFile(path):
     folder_dir = _Directory(os.path.abspath(app.basedir)+"/",
                             os.path.dirname(path))
     jsonFilename = os.path.abspath(os.path.join(app.basedir, path) + ".tmap")
-    print ("jsonFilename", jsonFilename, request.method)
     if request.method == 'POST':
         state = request.get_json(silent=False)
         with open(jsonFilename,"w") as jsonFile:
-            json.dump(state, jsonFile)
+            json.dump(state, jsonFile, indent=4, sort_keys=True)
         return state
     else:
         if os.path.isfile(jsonFilename):
@@ -388,7 +366,6 @@ def dzi_asso(path,associated_name):
 
 
 @app.route('/<path:path>_files/<int:level>/<int:col>_<int:row>.<format>')
-@requires_auth
 def tile(path, level, col, row, format):
     slide = _get_slide(path)
     format = format.lower()
@@ -410,7 +387,6 @@ def tile(path, level, col, row, format):
     return resp
 
 @app.route('/<path:path>.dzi/<path:associated_name>_files/<int:level>/<int:col>_<int:row>.<format>')
-@requires_auth
 def tile_asso(path, associated_name, level, col, row, format):
     slide = _get_slide(path).associated_images[associated_name]
     format = format.lower()
@@ -444,7 +420,6 @@ def runPlugin(pluginName):
         abort(404)
 
 @app.route('/plugin/<path:pluginName>/<path:method>', methods=['GET', 'POST'])
-@requires_auth
 def pluginJS(pluginName, method):
     print ("runPlugin", pluginName, method)
     print (request.method)

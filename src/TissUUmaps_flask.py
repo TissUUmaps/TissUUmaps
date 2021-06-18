@@ -71,9 +71,6 @@ def requires_auth(f):
             return f(*args, **kwargs)
         else:
             return f(*args, **kwargs)
-        print ("*args", args)
-        print ("*kwargs", kwargs["path"])
-        print ("dirname", )
         return f(*args, **kwargs) #Comment this line to add authentifaction
         
     return decorated
@@ -271,7 +268,12 @@ def slide(path):
     associated_urls = dict((name, url_for('dzi_asso', path=path, associated_name=name)) for name in slide.associated_images.keys())
     folder_dir = _Directory(os.path.abspath(app.basedir)+"/",
                             os.path.dirname(path))
-    return render_template('tissuumaps.html', plugins=app.config["PLUGINS"], associated=associated_urls, slide_url=slide_url, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
+    if "private" in path:
+        root_dir = _Directory(os.path.abspath(app.basedir)+"/", os.path.dirname(path), max_depth=app.config['FOLDER_DEPTH'])
+    else:
+        root_dir = _Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH'])
+    
+    return render_template('tissuumaps.html', plugins=app.config["PLUGINS"], associated=associated_urls, slide_url=slide_url, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties, root_dir=root_dir, folder_dir=folder_dir)
 
 @app.route('/ping')
 @requires_auth
@@ -284,11 +286,10 @@ def tmapFile(path):
     folder_dir = _Directory(os.path.abspath(app.basedir)+"/",
                             os.path.dirname(path))
     jsonFilename = os.path.abspath(os.path.join(app.basedir, path) + ".tmap")
-    print (jsonFilename)
     if request.method == 'POST':
         state = request.get_json(silent=False)
         with open(jsonFilename,"w") as jsonFile:
-            json.dump(state, jsonFile)
+            json.dump(state, jsonFile, indent=4, sort_keys=True)
         return state
     else:
         if os.path.isfile(jsonFilename):
@@ -305,7 +306,12 @@ def tmapFile(path):
             plugins = state["plugins"]
         else:
             plugins = []
-        return render_template('tissuumaps.html', plugins=plugins, jsonProject=state, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
+        
+        if "private" in path:
+            root_dir = _Directory(os.path.abspath(app.basedir)+"/", os.path.dirname(path), max_depth=app.config['FOLDER_DEPTH'])
+        else:
+            root_dir = _Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH'])
+        return render_template('tissuumaps.html', plugins=plugins, jsonProject=state, root_dir=root_dir, folder_dir=folder_dir)
 
 @app.route('/<path:path>.csv')
 @requires_auth
