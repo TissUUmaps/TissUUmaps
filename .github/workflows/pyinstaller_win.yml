@@ -54,5 +54,5 @@ jobs:
     - name: Upload the installer as an artifact
       uses: actions/upload-artifact@v2
       with:
-        path: "dist/TissUUmaps_winInstaller.exe"
+        path: "standalone/dist/TissUUmaps_winInstaller.exe"
         name: TissUUmaps_winInstaller.exe
