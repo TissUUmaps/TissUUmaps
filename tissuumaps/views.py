@@ -287,7 +287,7 @@ def tmapFile(path):
             else:
                 root_dir = _Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH'])
             
-            return render_template('server/tissuumaps.html', plugins=app.config["PLUGINS"], jsonProject=state, root_dir=root_dir, folder_dir=folder_dir)
+            return render_template('server/tissuumaps.html', plugins=plugins, jsonProject=state, root_dir=root_dir, folder_dir=folder_dir)
 
 
 @app.route('/<path:path>.csv')
@@ -381,10 +381,12 @@ def runPlugin(pluginName):
     directory = "plugins"
     filename = pluginName + ".js"
     completePath = os.path.abspath(os.path.join(directory, pluginName + ".js"))
-    print (completePath)
+    directory = os.path.dirname(completePath)
+    filename = os.path.basename(completePath)
     if os.path.isfile(completePath):
         return send_from_directory(directory, filename)
     else:
+        print (completePath, "is not an existing file.")
         abort(404)
 
 @app.route('/plugin/<path:pluginName>/<path:method>', methods=['GET', 'POST'])
