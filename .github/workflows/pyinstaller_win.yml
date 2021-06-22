@@ -1,13 +1,17 @@
 name: PyInstaller
 
-on: [push]
+on:
+  release:
+    types: [created]
 
 jobs:
   build:
 
     runs-on: windows-latest
-    env:
-       working-directory: ./standalone
+    defaults:
+      run:
+        shell: bash
+        working-directory: standalone
     steps:
     - uses: actions/checkout@v1
     - name: Set up Python 3.8
