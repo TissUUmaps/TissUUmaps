@@ -65,6 +65,10 @@ jobs:
     needs: [build]
     steps:
     - uses: actions/checkout@master
+    - name: Download a single artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: TissUUmaps_winInstaller.exe
     - name: Create release
       uses: Roang-zero1/github-create-release-action@master
       env:
