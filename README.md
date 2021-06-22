@@ -108,3 +108,4 @@ Options:
   -D LEVELS, --depth=LEVELS
                         folder depth search for opening files [4]
 ```
+
