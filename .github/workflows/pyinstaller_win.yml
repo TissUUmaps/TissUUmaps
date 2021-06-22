@@ -70,6 +70,6 @@ jobs:
       uses: Roang-zero1/github-upload-release-artifacts-action@master
       with:
         args:
-        - TissUUmaps_winInstaller.exe
+          TissUUmaps_winInstaller.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
