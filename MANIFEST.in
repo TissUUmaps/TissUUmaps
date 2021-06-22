@@ -1,4 +1,3 @@
 recursive-include tissuumaps/templates *
-recursive-include tissuumaps/templates_standalone *
 recursive-include tissuumaps/static *
 recursive-include tissuumaps/plugins *
