@@ -1,8 +1,9 @@
 name: Docker Image TissUUmaps
 
 on:
-  release:
-    types: [created]
+  push:
+    tags:
+      - '*'
 
 jobs:
   build:
