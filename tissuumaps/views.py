@@ -1,59 +1,22 @@
-#!/usr/bin/env python
-#
-# flaskTissUUmaps - a minimal python server for TissUUmaps using Flask
-#
-# This library is free software; you can redistribute it and/or modify it
-# under the terms of version 3.0 of the GNU General Public License
-# as published by the Free Software Foundation.
-#
-# This library is distributed in the hope that it will be useful, but
-# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-# or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
-# License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this library; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-#
-import encodings.idna
-
-from collections import OrderedDict
-from flask import Flask, abort, make_response, render_template, url_for,  request, Response, jsonify, send_from_directory
-from pathlib import Path
-
-from PyQt5.QtCore import *
-from PyQt5.QtWebEngineWidgets import *
-from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QPlainTextEdit, QDialog, QSplashScreen, QProgressDialog
-from PyQt5.QtWebChannel import QWebChannel
-from PyQt5 import QtGui 
-from PyQt5.QtGui import QDesktopServices
-
-
-#from threading import Timer
-import threading, time
-import sys
-import socket
 
 import pyvips
 
+from collections import OrderedDict
+from flask import Flask, abort, make_response, render_template, url_for,  request, Response, jsonify, send_from_directory
+
 import json
-from io import BytesIO
+import io
 import openslide
 from openslide import ImageSlide, OpenSlide, OpenSlideError, OpenSlideUnsupportedFormatError, open_slide
 from openslide.deepzoom import DeepZoomGenerator
 import os
-from optparse import OptionParser
 from threading import Lock
 from functools import wraps
 import imghdr
-import urllib.parse
-import urllib.request
 import importlib
-import glob
+import encodings.idna
 
-import PIL
-
-PIL.Image.MAX_IMAGE_PIXELS = 93312000000
+from tissuumaps import app
 
 def check_auth(username, password):
     if username == "username" and password == "password":
@@ -77,29 +40,7 @@ def requires_auth(f):
         return f(*args, **kwargs)
     return decorated
 
-SLIDE_DIR = '.'
-SLIDE_CACHE_SIZE = 10
-DEEPZOOM_FORMAT = 'jpeg'
-DEEPZOOM_TILE_SIZE = 254
-DEEPZOOM_OVERLAP = 1
-DEEPZOOM_LIMIT_BOUNDS = True
-DEEPZOOM_TILE_QUALITY = 90
-
-FOLDER_DEPTH = 4
-PLUGINS = []
-
-# determine if application is a script file or frozen exe
-if getattr(sys, 'frozen', False):
-    template_folder=os.path.join(sys._MEIPASS, 'templates_standalone')
-    os.chdir(sys._MEIPASS)
-elif __file__:
-    template_folder="templates_standalone"
-print ("template_folder",template_folder)
-app = Flask(__name__,template_folder=template_folder)
-app.config.from_object(__name__)
-app.config.from_envvar('DEEPZOOM_MULTISERVER_SETTINGS', silent=True)
-ui = None
-class PILBytesIO(BytesIO):
+class PILBytesIO(io.BytesIO):
     def fileno(self):
         '''Classic PIL doesn't understand io.UnsupportedOperation.'''
         raise AttributeError('Not supported')
@@ -230,6 +171,7 @@ class _SlideFile(object):
         self.url_path = relpath.replace("\\","/")
 
 def setup(app):
+    app.basedir = os.path.abspath(app.config['SLIDE_DIR'])
     config_map = {
         'DEEPZOOM_TILE_SIZE': 'tile_size',
         'DEEPZOOM_OVERLAP': 'overlap',
@@ -245,7 +187,11 @@ def _setup():
 @app.errorhandler(404)
 def page_not_found(e):
     # note that we set the 404 status explicitly
-    return render_template('files.html', root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), message="Impossible to load this file"), 404
+    if app.config["isStandalone"]:
+        return render_template('standalone/files.html', message="Impossible to load this file"), 404
+    else:
+        return render_template('server/files.html', root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), message="Impossible to load this file"), 404
+    
 
 def _get_slide(path):
     path = os.path.abspath(os.path.join(app.basedir, path))
@@ -277,7 +223,11 @@ def _get_slide(path):
 @requires_auth
 def index():
     #return render_template('files.html', root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']))
-    return render_template('files.html')
+    if app.config["isStandalone"]:
+        return render_template('standalone/files.html')
+    else:
+        return render_template('server/files.html', root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']))
+        
 
 @app.route('/<path:path>')
 @requires_auth
@@ -289,8 +239,13 @@ def slide(path):
     associated_urls = dict((name, url_for('dzi_asso', path=path, associated_name=name)) for name in slide.associated_images.keys())
     #folder_dir = _Directory(os.path.abspath(app.basedir)+"/",
     #                        os.path.dirname(path))
-    #return render_template('tissuumaps.html', associated=associated_urls, slide_url=slide_url, state_filename=state_filename, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
-    return render_template('tissuumaps.html', plugins=app.config["PLUGINS"], associated=associated_urls, slide_url=slide_url, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties)
+    #
+    if app.config["isStandalone"]:
+        return render_template('standalone/tissuumaps.html', plugins=app.config["PLUGINS"], slide_url=slide_url, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties)
+    else:
+        folder_dir = _Directory(os.path.abspath(app.basedir)+"/",
+                                os.path.dirname(path))
+        return render_template('server/tissuumaps.html', associated=associated_urls, slide_url=slide_url, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
 
 @app.route('/ping')
 @requires_auth
@@ -300,8 +255,6 @@ def ping():
 @app.route('/<path:path>.tmap', methods=['GET', 'POST'])
 @requires_auth
 def tmapFile(path):
-    folder_dir = _Directory(os.path.abspath(app.basedir)+"/",
-                            os.path.dirname(path))
     jsonFilename = os.path.abspath(os.path.join(app.basedir, path) + ".tmap")
     if request.method == 'POST':
         state = request.get_json(silent=False)
@@ -319,8 +272,23 @@ def tmapFile(path):
                 abort(404)
         else:
             abort(404)
-        #return render_template('tissuumaps.html', plugins=app.config["PLUGINS"], jsonProject=state, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
-        return render_template('tissuumaps.html', plugins=app.config["PLUGINS"], jsonProject=state)
+        if "plugins" in state.keys():
+            plugins = state["plugins"]
+        else:
+            plugins = []
+        
+        if app.config["isStandalone"]:
+            return render_template('standalone/tissuumaps.html', plugins=app.config["PLUGINS"], jsonProject=state)
+        else:
+            folder_dir = _Directory(os.path.abspath(app.basedir)+"/",
+                                    os.path.dirname(path))
+            if "private" in path:
+                root_dir = _Directory(os.path.abspath(app.basedir)+"/", os.path.dirname(path), max_depth=app.config['FOLDER_DEPTH'])
+            else:
+                root_dir = _Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH'])
+            
+            return render_template('server/tissuumaps.html', plugins=app.config["PLUGINS"], jsonProject=state, root_dir=root_dir, folder_dir=folder_dir)
+
 
 @app.route('/<path:path>.csv')
 @requires_auth
@@ -438,276 +406,3 @@ def pluginJS(pluginName, method):
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
                                'misc/favicon.ico', mimetype='image/vnd.microsoft.icon')
-
-class CustomWebEnginePage(QWebEnginePage):
-    """ Custom WebEnginePage to customize how we handle link navigation """
-
-    def acceptNavigationRequest(self, url,  _type, isMainFrame):
-        if _type == QWebEnginePage.NavigationTypeLinkClicked:
-            QDesktopServices.openUrl(url)
-            return False
-        return True
-    
-    #def javaScriptConsoleMessage(self, level, msg, line, sourceID):
-    #    print (level, msg, line, sourceID)
-
-class textWindow(QDialog):
-    def __init__(self, parent, title, message):
-        QDialog.__init__(self, parent)
-
-        self.setMinimumSize(QSize(700, 500))    
-        self.setWindowTitle(title) 
-
-        # Add text field
-        self.b = QPlainTextEdit(self)
-        self.b.setMinimumSize (650,450)
-        self.b.setReadOnly(True)
-        self.b.insertPlainText(message)
-        self.b.move(10,10)
-        self.b.resize(400,200)
-
-class webEngine(QWebEngineView):
-    def __init__(self, qt_app, app, args):
-        super().__init__()
-        self.app = app
-        self.setMinimumSize(800,400)
-        self.setContextMenuPolicy(Qt.NoContextMenu)
-        self.lastdir = str(Path.home())
-        self.setPage(CustomWebEnginePage(self))
-        self.webchannel = QWebChannel()
-        self.page().setWebChannel(self.webchannel)
-        self.webchannel.registerObject('backend', self)
-        self.location = None
-        
-        self.setWindowTitle("TissUUmaps")
-        self.resize(1024, 800)
-        self.setZoomFactor(1.0)
-        self.page().profile().clearHttpCache()
-        
-        self.setWindowIcon(QtGui.QIcon('static/misc/favicon.ico')) 
-        self.showMaximized()
-    
-    def run (self):
-        sys.exit(qt_app.exec_())
-
-    def setLocation (self, location):
-        self.location = location
-        while True:
-            try:
-                if (urllib.request.urlopen(self.location).getcode() == 200):
-                    break
-            except:
-                pass
-            time.sleep(0.1)
-        print ("loading page ", self.location)
-        if (len(args) > 0):
-            if not self.openImagePath(args[0]):
-                self.load(QUrl(self.location))
-        else:
-            self.load(QUrl(self.location))
-            
-    @pyqtSlot(str)
-    def getProperties(self, path):
-        try:
-            path = urllib.parse.unquote(path)[:-4]
-            print (path)
-            slide = _get_slide(path)
-            propString = "\n".join([n + ": " + v for n,v in slide.properties.items()])
-        except:
-            propString = ""
-        
-        messageBox = textWindow(self,os.path.basename(path) + " properties", propString)
-        messageBox.show()
-        
-    @pyqtSlot()
-    def openImage(self):
-        folderpath = QFileDialog.getOpenFileName(self, 'Select a File',self.lastdir)[0]
-        self.openImagePath(folderpath)
-
-    @pyqtSlot(result="QJsonObject")
-    def saveProject(self):
-        folderpath = QFileDialog.getSaveFileName(self, 'Save project as',self.lastdir)[0]
-        parts = Path(folderpath).parts
-        if (app.basedir != parts[0]):
-            QMessageBox.about(self, "Error", "All layers must be in the same drive")
-            returnDict = {"dzi":None,"name":None}
-            return returnDict
-        imgPath = os.path.join(*parts[1:])
-        imgPath = imgPath.replace("\\","/") 
-        returnDict = {
-            "path":imgPath
-        }
-        return returnDict
-    
-    def openImagePath (self, folderpath):
-        print (folderpath)
-        try:
-            oldBaseDir = app.basedir
-        except AttributeError:
-            oldBaseDir = ""
-        self.lastdir = os.path.dirname(folderpath)
-        if not folderpath:
-            return
-        parts = Path(folderpath).parts
-        if (not hasattr(app, 'cache')):
-            setup(app)
-        app.basedir = parts[0]
-        imgPath = os.path.join(*parts[1:])
-        imgPath = imgPath.replace("\\","/")
-        try:
-            if not ".tmap" in imgPath:
-                _get_slide(imgPath)
-        except:
-            app.basedir = oldBaseDir
-            import traceback
-            print (traceback.format_exc())
-            QMessageBox.about(self, "Error", "TissUUmaps did not manage to open this image.")
-
-            return False
-        print ("Opening:", app.basedir, self.location + imgPath, QUrl(self.location + imgPath))
-        self.load(QUrl(self.location + imgPath))
-        self.setWindowTitle("TissUUmaps - " + os.path.basename(folderpath))
-        return True
-
-    @pyqtSlot()
-    def exit(self):
-        self.close()
-        #sys.exit()
-
-    @pyqtSlot(result="QJsonObject")
-    def addLayer(self):
-        folderpath = QFileDialog.getOpenFileName(self, 'Select a File')[0]
-        if not folderpath:
-            returnDict = {"dzi":None,"name":None}
-            return returnDict
-        parts = Path(folderpath).parts
-        if (app.basedir != parts[0]):
-            QMessageBox.about(self, "Error", "All layers must be in the same drive")
-            returnDict = {"dzi":None,"name":None}
-            return returnDict
-        imgPath = os.path.join(*parts[1:])
-        try:
-            _get_slide(imgPath)
-        except:
-            import traceback
-            print (traceback.format_exc())
-            QMessageBox.about(self, "Error", "TissUUmaps did not manage to open this image.")
-            returnDict = {"dzi":None,"name":None}
-            return returnDict
-        returnDict = {
-            "dzi":"/"+imgPath + ".dzi",
-            "name":os.path.basename(imgPath)
-        }
-        print ("returnDict", returnDict)
-        return returnDict
-    
-def is_port_in_use(port):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(('localhost', port)) == 0
-
-if __name__ == '__main__':
-    parser = OptionParser(usage='Usage: %prog [options] [slide-directory]')
-    parser.add_option('-B', '--ignore-bounds', dest='DEEPZOOM_LIMIT_BOUNDS',
-                default=False, action='store_false',
-                help='display entire scan area')
-    parser.add_option('-c', '--config', metavar='FILE', dest='config',
-                help='config file')
-    parser.add_option('-d', '--debug', dest='DEBUG', action='store_true',
-                help='run in debugging mode (insecure)')
-    parser.add_option('-e', '--overlap', metavar='PIXELS',
-                dest='DEEPZOOM_OVERLAP', type='int',
-                help='overlap of adjacent tiles [1]')
-    parser.add_option('-f', '--format', metavar='{jpeg|png}',
-                dest='DEEPZOOM_FORMAT',
-                help='image format for tiles [jpeg]')
-    parser.add_option('-l', '--listen', metavar='ADDRESS', dest='host',
-                default='127.0.0.1',
-                help='address to listen on [127.0.0.1]')
-    parser.add_option('-p', '--port', metavar='PORT', dest='port',
-                type='int', default=5000,
-                help='port to listen on [5000]')
-    parser.add_option('-Q', '--quality', metavar='QUALITY',
-                dest='DEEPZOOM_TILE_QUALITY', type='int',
-                help='JPEG compression quality [75]')
-    parser.add_option('-s', '--size', metavar='PIXELS',
-                dest='DEEPZOOM_TILE_SIZE', type='int',
-                help='tile size [254]')
-    parser.add_option('-D', '--depth', metavar='LEVELS',
-                dest='FOLDER_DEPTH', type='int',
-                help='folder depth search for opening files [4]')
-
-    (opts, args) = parser.parse_args()
-    # Load config file if specified
-    if opts.config is not None:
-        app.config.from_pyfile(opts.config)
-        
-    if getattr(sys, 'frozen', False):
-        plugins_folder=os.path.join(sys._MEIPASS, 'plugins')
-        os.chdir(sys._MEIPASS)
-    elif __file__:
-        plugins_folder="plugins"
-
-    for module in glob.glob(plugins_folder + "/*.py"):
-        if "__init__.py" in module:
-            continue
-        app.config["PLUGINS"].append(os.path.splitext(os.path.basename(module))[0])
-    
-    # Overwrite only those settings specified on the command line
-    for k in dir(opts):
-        if not k.startswith('_') and getattr(opts, k) is None:
-            delattr(opts, k)
-    app.config.from_object(opts)
-    # Set slide directory
-    #try:
-    #    app.config['SLIDE_DIR'] = args[0]
-    #except IndexError:
-    #    pass
-    #Timer(0.01,lambda: ui("http://127.0.0.1:5000/", app)).start()
-    qInstallMessageHandler(lambda x,y,z: None)
-
-    qt_app = QApplication(["--remote-debugging-port=5010"])
-    
-    logo = QtGui.QPixmap('static/misc/design/logo.png')
-    logo = logo.scaledToWidth(512, Qt.SmoothTransformation)
-    splash = QSplashScreen(logo, Qt.WindowStaysOnTopHint)
-
-    desktop = qt_app.desktop()
-    scrn = desktop.screenNumber(QtGui.QCursor.pos())
-    currentDesktopsCenter = desktop.availableGeometry(scrn).center()
-    splash.move(currentDesktopsCenter - splash.rect().center())
-
-    # can display startup information
-
-    splash.show()
-
-    #splash.showMessage('Loading TissUUmaps...',Qt.AlignBottom | Qt.AlignCenter,Qt.white)
-
-    qt_app.processEvents()
-    port = 5000
-    print ("Starting port detection")
-    while (is_port_in_use(port)):
-        port += 1
-        if port == 6000:
-            exit(0)
-    print ("Ending port detection", port)
-
-    def flaskThread():
-        app.run(host=opts.host, port=port, threaded=True, debug=False)
-    
-    threading.Thread(target=flaskThread,daemon=True).start()
-    
-    fmt = QtGui.QSurfaceFormat()
-    fmt.setVersion(4, 1)
-    fmt.setProfile(QtGui.QSurfaceFormat.CoreProfile)
-    fmt.setSamples(4)
-    QtGui.QSurfaceFormat.setDefaultFormat(fmt)
-
-    vp = QtGui.QOpenGLVersionProfile(fmt)
-    
-    ui = webEngine(qt_app, app, args)
-    ui.setLocation ("http://127.0.0.1:" + str(port) + "/")
-    
-    QTimer.singleShot(1000, splash.close)
-    ui.run()
-    #threading.Thread(target=flaskThread,daemon=True).start()
-    #app.run(host="0.0.0.0", port=opts.port, threaded=False, debug=False)

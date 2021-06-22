@@ -1,6 +1,6 @@
 #!/bin/bash
 app="tissuumaps"
 docker build -t ${app} -f container/Dockerfile .
-docker run -d -p 56733:80 \
+docker run -p 56733:80 \
   --name=${app} \
-  -v /mnt/c/Users/chrav452/Documents/datatest_tissuumaps:/mnt/data ${app}
+  -v /home/chrav452/shared:/mnt/data ${app}

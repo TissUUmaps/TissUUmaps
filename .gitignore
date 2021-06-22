@@ -6,3 +6,4 @@ build
 __pycache__
 .DS_Store
 src/out
+TissUUmaps.egg-info

@@ -77,7 +77,8 @@
         subfolder = subfolder + commonPath
         //subfolder = subfolder.replace(commonPath,"");
         urlProject = subfolder + "/" + filename
-        if (! urlProject.split('.').pop() == "tmap") {
+        console.log("urlProject.split('.').pop()", urlProject.split('.').pop());
+        if (urlProject.split('.').pop() != "tmap") {
             urlProject = urlProject + ".tmap"
         }
         if (urlProject[0] == "/" && urlProject[1] == "/") urlProject = urlProject.substring(1, urlProject.length);

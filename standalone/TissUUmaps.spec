@@ -3,10 +3,10 @@
 block_cipher = None
 
 
-a = Analysis(['../src/TissUUmaps_standalone.py'],
+a = Analysis(['../tissuumaps/gui.py'],
              pathex=['./'],
              binaries=[],
-             datas=[('../src/templates_standalone', 'templates_standalone'), ('../src/static', 'static'), ('../src/plugins/__init__.py','plugins')],
+             datas=[('../tissuumaps/templates', 'templates'), ('../tissuumaps/static', 'static'), ('../tissuumaps/plugins/__init__.py','plugins')],
              hiddenimports=["pyvips","matplotlib","mpl_toolkits"],
              hookspath=[],
              runtime_hooks=[],
@@ -22,12 +22,12 @@ exe = EXE(pyz,
           [],
           exclude_binaries=True,
           name='TissUUmaps',
-          debug=False,
+          debug=True,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
-          console=False,
-          icon='../src/static/misc/favicon.ico')
+          console=True,
+          icon='../tissuumaps/static/misc/favicon.ico')
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
