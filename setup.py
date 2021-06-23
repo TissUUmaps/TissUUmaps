@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
      name='TissUUmaps',  
-     version='2.3.2',
+     version='2.3.3',
      author="Leslie Solorzano, Christophe Avenel, Fredrik Nysjö",
      author_email="christophe.avenel@it.uu.se",
      description="TissUUmaps is a lightweight viewer that uses basic web tools to visualize gene expression data or any kind of point data on top of whole slide images.",
@@ -31,4 +31,10 @@ setuptools.setup(
          "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
          "Operating System :: OS Independent",
      ],
+     entry_points={
+        'console_scripts': [
+            'tissuumaps_server = tissuumaps.__main__:main',
+            'tissuumaps = tissuumaps.gui:main'
+        ]
+    }
  )
