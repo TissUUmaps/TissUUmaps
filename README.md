@@ -1,5 +1,5 @@
 # FlaskTissUUmaps
-FlaskTissUUmaps is a minimal python server for [TissUUmaps](https://tissuumaps.research.it.uu.se/) using Flask.
+FlaskTissUUmaps is a minimal python server for [TissUUmaps](https://tissuumaps.research.it.uu.se/) using Flask that comes with a standalone User Interface.
 
 ## Differences with TissUUmaps
 
@@ -25,7 +25,14 @@ plus classical images in any format recognized by the [PIL library](https://pill
 FlaskTissUUmaps allows to save all TissUUmaps states (Gene expressions, Cell morphology, Regions, Layers) so that you can reload images with all additional information, just as you saved them.
 
 
-## Installation
+
+## Windows installation
+
+1. Download the Windows Installer from [the last release](https://github.com/wahlby-lab/FlaskTissUUmaps/releases/latest) and install it. Note that the installer is not signed yet and may trigger warnings from the browser and from the firewall. You can safely pass these warnings.
+
+2. Start TissUUmaps.
+
+## Installation from PIP
 
 > Note that steps 1-4 are optional and can be replaced by installing a recent version of Python.
 
@@ -45,48 +52,34 @@ FlaskTissUUmaps allows to save all TissUUmaps states (Gene expressions, Cell mor
 	(tissuumaps) C:\
     ```
 
-1. Install the Openslide library 
-    >  * For windows:
-    >    * Install [Microsoft Visual Studio Build Tools](https://visualstudio.microsoft.com/fr/downloads/).
-    >    * Install the [openslide library](https://openslide.org/download/#windows-binaries).
-    >    * Make sure the `bin` directory of openslide is in the `PATH` environment variable.
-    >    * If the `libopenslide-0.dll` still fails to load, see fix [here](https://github.com/openslide/openslide-python/issues/51#issuecomment-656728468).
-    >
-    >  * For linux:
-    >    * Install openslide using your distribution package (for example in Ubuntu : `apt-get install openslide-tools`).
-    > 
-    >  * For MacOs:
-    >    * Install openslide using your MacPorts or Homebrew (`port install openslide` or `brew install openslide`).
-
-1. Install python dependencies (openslide, flask and pillow):
+1. Install the TissUUmaps library:
     ```bash
-	pip install openslide-python flask pillow
-    ```
-    > In linux, check that you only have one installation of pillow:
-    >   ```bash
-    >   sudo pip uninstall pillow
-    >   pip install pillow
-    >   ```
-
-1. Clone the FlaskTissUUmaps git repository or download in zip format and extract to a FlaskTissUUmaps folder
-    ```bash
-	git clone https://github.com/wahlby-lab/FlaskTissUUmaps
+	pip install tissuumaps
     ```
 
-1. Go to the FlaskTissUUmaps folder and start the FlaskTissUUmaps server:
+## Option 1: Start the Graphical User Interface of TissUUmaps
+
+1. Start TissUUmaps user interface:
     ```bash
-	cd \Users\myUser\Documents\FlaskTissUUmaps
-    python flasktissuumaps.py path_to_image_folder
+	tissuumaps
     ```
+
+## Option 2: Start only the flask server
+
+1. Start TissUUmaps as a server:
+    ```bash
+	tissuumaps_server path_to_your_images
+    ```
+
 1. Open http://127.0.0.1:5000/ in your favorite browser.
 
    > :warning: Remember that Flask is running on a built-in development server (`flask run`) and should not be used in production. If you want to deploy FlaskTissUUmaps on a production server, please read https://flask.palletsprojects.com/en/1.1.x/tutorial/deploy/ or any similar tutorial.
 
-## Options
+1. Options:
 
 FlaskTissUUmaps can be used with the following options:
 ```bash
-Usage: flasktissuumaps.py [options] [slide-directory]
+Usage: tissuumaps_server [options] [slide-directory]
 
 Options:
   -h, --help            show this help message and exit
