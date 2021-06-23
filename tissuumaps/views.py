@@ -245,7 +245,7 @@ def slide(path):
     else:
         folder_dir = _Directory(os.path.abspath(app.basedir)+"/",
                                 os.path.dirname(path))
-        return render_template('server/tissuumaps.html', associated=associated_urls, slide_url=slide_url, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
+        return render_template('server/tissuumaps.html', plugins=app.config["PLUGINS"], slide_url=slide_url, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
 
 @app.route('/ping')
 @requires_auth
