@@ -1,9 +1,7 @@
 name: Docker Image TissUUmaps
 
 on:
-  push:
-    tags:
-      - '*'
+  push
 
 jobs:
   build:
