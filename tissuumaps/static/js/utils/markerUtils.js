@@ -817,3 +817,52 @@ markerUtils.drawBarcodeByView = function (barcode) {
     }//markerUtils.drawAllFromList(dataUtils.subsampledBarcodes[barcode]);
 
 }
+
+/** Adding piechart legend in the upper left corner */
+markerUtils.addPiechartLegend = function () {
+    var op = tmapp["object_prefix"];
+    if (!markerUtils._uniquePiechartSelector || markerUtils._uniquePiechartSelector == "null")
+        return;
+    if (document.getElementById("piechartLegend") == undefined) {
+        var elt = document.createElement('div');
+        elt.className = "piechartLegend"
+        elt.id = "piechartLegend"
+        elt.style.zIndex = "100";
+        elt.style.paddingLeft = "5px";
+        elt.style.paddingBottom = "2px";
+        tmapp['ISS_viewer'].addControl(elt,{anchor: OpenSeadragon.ControlAnchor.TOP_LEFT});
+    }
+    elt = document.getElementById("piechartLegend");
+    elt.innerHTML = "";
+    var table = HTMLElementUtils.createElement({ type: "table"});
+    table.style.borderSpacing = "3px";
+    table.style.borderCollapse = "separate";
+    var title = HTMLElementUtils.createElement({ type: "div", innerHTML: "<b>Piechart legend</b>"});
+    elt.appendChild(title);
+    elt.appendChild(table);
+    var sectors = [];
+    if (markerUtils._uniquePiechartSelector.split(";").length > 1) {
+        sectors = markerUtils._uniquePiechartSelector.split(";");
+    }
+    else {
+        numSectors = dataUtils[op + "_data"][0].values[0][markerUtils._uniquePiechartSelector].split(";").length;
+        for(var i = 0; i < numSectors; i++) {
+            sectors.push("Sector " + (i+1));
+        }
+    }
+    sectors.forEach(function (sector, index) {
+        var row = HTMLElementUtils.createElement({ type: "tr"});
+        row.style.paddingBottom = "4px";
+        var colortd = HTMLElementUtils.createElement({ type: "td", innerHTML: "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"});
+        colortd.style.backgroundColor = glUtils._piechartPalette[index % glUtils._piechartPalette.length];
+        colortd.style.maxWidth = "70px";
+        colortd.style.borderWidth= "1px";
+        colortd.style.borderColor= "black";
+        colortd.style.borderStyle= "solid";
+        var labeltd = HTMLElementUtils.createElement({ type: "td", innerHTML: "&nbsp;" + sector});
+        row.appendChild(colortd);
+        row.appendChild(labeltd);
+        table.appendChild(row);
+    })
+    console.log(sectors);
+}
