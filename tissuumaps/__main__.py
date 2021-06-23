@@ -2,7 +2,7 @@ from optparse import OptionParser
 
 from . import views
 
-def start ():
+def main ():
     parser = OptionParser(usage='Usage: %prog [options] [slide-directory]')
     parser.add_option('-B', '--ignore-bounds', dest='DEEPZOOM_LIMIT_BOUNDS',
                 default=False, action='store_false',
@@ -52,4 +52,4 @@ def start ():
     views.app.run(host=opts.host, port=opts.port, threaded=True, debug=False)
 
 if __name__ == '__main__':
-    start ()
+    main ()

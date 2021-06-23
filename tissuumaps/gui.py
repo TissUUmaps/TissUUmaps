@@ -190,86 +190,89 @@ def is_port_in_use(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         return s.connect_ex(('localhost', port)) == 0
 
+def main():
+    parser = OptionParser(usage='Usage: %prog [options] [slide-directory]')
+    parser.add_option('-B', '--ignore-bounds', dest='DEEPZOOM_LIMIT_BOUNDS',
+                default=False, action='store_false',
+                help='display entire scan area')
+    parser.add_option('-c', '--config', metavar='FILE', dest='config',
+                help='config file')
+    parser.add_option('-d', '--debug', dest='DEBUG', action='store_true',
+                help='run in debugging mode (insecure)')
+    parser.add_option('-e', '--overlap', metavar='PIXELS',
+                dest='DEEPZOOM_OVERLAP', type='int',
+                help='overlap of adjacent tiles [1]')
+    parser.add_option('-f', '--format', metavar='{jpeg|png}',
+                dest='DEEPZOOM_FORMAT',
+                help='image format for tiles [jpeg]')
+    parser.add_option('-l', '--listen', metavar='ADDRESS', dest='host',
+                default='127.0.0.1',
+                help='address to listen on [127.0.0.1]')
+    parser.add_option('-p', '--port', metavar='PORT', dest='port',
+                type='int', default=5000,
+                help='port to listen on [5000]')
+    parser.add_option('-Q', '--quality', metavar='QUALITY',
+                dest='DEEPZOOM_TILE_QUALITY', type='int',
+                help='JPEG compression quality [75]')
+    parser.add_option('-s', '--size', metavar='PIXELS',
+                dest='DEEPZOOM_TILE_SIZE', type='int',
+                help='tile size [254]')
+    parser.add_option('-D', '--depth', metavar='LEVELS',
+                dest='FOLDER_DEPTH', type='int',
+                help='folder depth search for opening files [4]')
 
-parser = OptionParser(usage='Usage: %prog [options] [slide-directory]')
-parser.add_option('-B', '--ignore-bounds', dest='DEEPZOOM_LIMIT_BOUNDS',
-            default=False, action='store_false',
-            help='display entire scan area')
-parser.add_option('-c', '--config', metavar='FILE', dest='config',
-            help='config file')
-parser.add_option('-d', '--debug', dest='DEBUG', action='store_true',
-            help='run in debugging mode (insecure)')
-parser.add_option('-e', '--overlap', metavar='PIXELS',
-            dest='DEEPZOOM_OVERLAP', type='int',
-            help='overlap of adjacent tiles [1]')
-parser.add_option('-f', '--format', metavar='{jpeg|png}',
-            dest='DEEPZOOM_FORMAT',
-            help='image format for tiles [jpeg]')
-parser.add_option('-l', '--listen', metavar='ADDRESS', dest='host',
-            default='127.0.0.1',
-            help='address to listen on [127.0.0.1]')
-parser.add_option('-p', '--port', metavar='PORT', dest='port',
-            type='int', default=5000,
-            help='port to listen on [5000]')
-parser.add_option('-Q', '--quality', metavar='QUALITY',
-            dest='DEEPZOOM_TILE_QUALITY', type='int',
-            help='JPEG compression quality [75]')
-parser.add_option('-s', '--size', metavar='PIXELS',
-            dest='DEEPZOOM_TILE_SIZE', type='int',
-            help='tile size [254]')
-parser.add_option('-D', '--depth', metavar='LEVELS',
-            dest='FOLDER_DEPTH', type='int',
-            help='folder depth search for opening files [4]')
+    (opts, args) = parser.parse_args()
+    # Overwrite only those settings specified on the command line
+    for k in dir(opts):
+        if not k.startswith('_') and getattr(opts, k) is None:
+            delattr(opts, k)
+    views.app.config.from_object(opts)
+    views.app.config["isStandalone"] = True
 
-(opts, args) = parser.parse_args()
-# Overwrite only those settings specified on the command line
-for k in dir(opts):
-    if not k.startswith('_') and getattr(opts, k) is None:
-        delattr(opts, k)
-views.app.config.from_object(opts)
-views.app.config["isStandalone"] = True
+    qInstallMessageHandler(lambda x,y,z: None)
 
-qInstallMessageHandler(lambda x,y,z: None)
+    qt_app = QApplication(["--remote-debugging-port=5010"])
 
-qt_app = QApplication(["--remote-debugging-port=5010"])
+    logo = QtGui.QPixmap('static/misc/design/logo.png')
+    logo = logo.scaledToWidth(512, Qt.SmoothTransformation)
+    splash = QSplashScreen(logo, Qt.WindowStaysOnTopHint)
 
-logo = QtGui.QPixmap('static/misc/design/logo.png')
-logo = logo.scaledToWidth(512, Qt.SmoothTransformation)
-splash = QSplashScreen(logo, Qt.WindowStaysOnTopHint)
+    desktop = qt_app.desktop()
+    scrn = desktop.screenNumber(QtGui.QCursor.pos())
+    currentDesktopsCenter = desktop.availableGeometry(scrn).center()
+    splash.move(currentDesktopsCenter - splash.rect().center())
 
-desktop = qt_app.desktop()
-scrn = desktop.screenNumber(QtGui.QCursor.pos())
-currentDesktopsCenter = desktop.availableGeometry(scrn).center()
-splash.move(currentDesktopsCenter - splash.rect().center())
+    splash.show()
+    #splash.showMessage('Loading TissUUmaps...',Qt.AlignBottom | Qt.AlignCenter,Qt.white)
 
-splash.show()
-#splash.showMessage('Loading TissUUmaps...',Qt.AlignBottom | Qt.AlignCenter,Qt.white)
+    qt_app.processEvents()
 
-qt_app.processEvents()
+    port = 5000
+    print ("Starting port detection")
+    while (is_port_in_use(port)):
+        port += 1
+        if port == 6000:
+            exit(0)
+    print ("Ending port detection", port)
 
-port = 5000
-print ("Starting port detection")
-while (is_port_in_use(port)):
-    port += 1
-    if port == 6000:
-        exit(0)
-print ("Ending port detection", port)
+    def flaskThread():
+        views.app.run(host="127.0.0.1", port=port, threaded=True, debug=False)
 
-def flaskThread():
-    views.app.run(host="127.0.0.1", port=port, threaded=True, debug=False)
+    threading.Thread(target=flaskThread,daemon=True).start()
 
-threading.Thread(target=flaskThread,daemon=True).start()
+    fmt = QtGui.QSurfaceFormat()
+    fmt.setVersion(4, 1)
+    fmt.setProfile(QtGui.QSurfaceFormat.CoreProfile)
+    fmt.setSamples(4)
+    QtGui.QSurfaceFormat.setDefaultFormat(fmt)
 
-fmt = QtGui.QSurfaceFormat()
-fmt.setVersion(4, 1)
-fmt.setProfile(QtGui.QSurfaceFormat.CoreProfile)
-fmt.setSamples(4)
-QtGui.QSurfaceFormat.setDefaultFormat(fmt)
+    vp = QtGui.QOpenGLVersionProfile(fmt)
 
-vp = QtGui.QOpenGLVersionProfile(fmt)
+    ui = webEngine(qt_app, views.app, args)
+    ui.setLocation ("http://127.0.0.1:" + str(port) + "/")
 
-ui = webEngine(qt_app, views.app, args)
-ui.setLocation ("http://127.0.0.1:" + str(port) + "/")
+    QTimer.singleShot(1000, splash.close)
+    ui.run()
 
-QTimer.singleShot(1000, splash.close)
-ui.run()
+if __name__ == '__main__':
+    main ()
