@@ -323,93 +323,93 @@ dataUtils.readCSV = function (thecsv) {
     );
 }
     
-    /** 
-    * subsamples the full amount of barcodes so that in the lower resolutions only a significant portion
-    * is drawn and we don't wait and kill our browser.
-    * Sumsampling is done homogenously for all the space and density. 
-    * @param {Number} amount needed amount of barcodes
-    * @param {String} barcode Barcode or gene_name (key) to search for in op+_data*/
-    dataUtils.randomMarkersFromBarcode = function (amount, barcode) {
-        var op = tmapp["object_prefix"];
-        dataUtils[op + "_data"].forEach(function (bar) {
-            if (bar.key == barcode) {
-                var barcodes = bar.values;
-                var maxindex = barcodes.length - 1;
-                
-                for (var i = 0; i <= maxindex; i++) {
-                    var index = Math.floor(Math.random() * (maxindex - i + 0)) + i;
-                    var temp = barcodes[i];
-                    barcodes[i] = barcodes[index];
-                    barcodes[index] = temp;
-                }
-                dataUtils._subsampledBarcodes[barcode] = barcodes.slice(0, amount);
+/** 
+* subsamples the full amount of barcodes so that in the lower resolutions only a significant portion
+* is drawn and we don't wait and kill our browser.
+* Sumsampling is done homogenously for all the space and density. 
+* @param {Number} amount needed amount of barcodes
+* @param {String} barcode Barcode or gene_name (key) to search for in op+_data*/
+dataUtils.randomMarkersFromBarcode = function (amount, barcode) {
+    var op = tmapp["object_prefix"];
+    dataUtils[op + "_data"].forEach(function (bar) {
+        if (bar.key == barcode) {
+            var barcodes = bar.values;
+            var maxindex = barcodes.length - 1;
+            
+            for (var i = 0; i <= maxindex; i++) {
+                var index = Math.floor(Math.random() * (maxindex - i + 0)) + i;
+                var temp = barcodes[i];
+                barcodes[i] = barcodes[index];
+                barcodes[index] = temp;
             }
-        });
-    }
-    
-    /** 
-    * subsamples the full list from a barcode so that in the lower resolutions only a significant portion
-    * is drawn and we don't wait and kill our browser  
-    * @param {Number} amount needed amount of barcodes
-    * @param {barcodes[]} list A list */
-    dataUtils.randomSamplesFromList = function (amount, list) {
-        //var op=tmapp["object_prefix"];
-        if (amount >= list.length) return list;
-        
-        for (var i = 0; i < amount; i++) {
-            var index = Math.floor(Math.random() * (list.length - i + 0 - 1)) + i;
-            var temp = list[i];
-            list[i] = list[index];
-            list[index] = temp;
+            dataUtils._subsampledBarcodes[barcode] = barcodes.slice(0, amount);
         }
-        
-        return list.slice(0, amount);
-        
+    });
+}
+
+/** 
+* subsamples the full list from a barcode so that in the lower resolutions only a significant portion
+* is drawn and we don't wait and kill our browser  
+* @param {Number} amount needed amount of barcodes
+* @param {barcodes[]} list A list */
+dataUtils.randomSamplesFromList = function (amount, list) {
+    //var op=tmapp["object_prefix"];
+    if (amount >= list.length) return list;
+    
+    for (var i = 0; i < amount; i++) {
+        var index = Math.floor(Math.random() * (list.length - i + 0 - 1)) + i;
+        var temp = list[i];
+        list[i] = list[index];
+        list[index] = temp;
     }
     
-    /** 
-    * Find all the markers for a specific key (name or barcode)  
-    * @param {string} keystring to search in op+_data usually letters like "AGGC" but can be the gene_name */
-    dataUtils.findBarcodesInRawData = function (keystring) {
-        var op = tmapp["object_prefix"];
-        var values = null;
-        dataUtils[op + "_data"].forEach(function (input) {
-            if (input.key == keystring) {
-                values = input.values;
-            }
-        });
-        return values;
-    }
+    return list.slice(0, amount);
     
-    /** 
-    * Take dataUtils[op + "_data"] and sort it (permanently). 
-    * Calculate and save the right amount of downsampling for each barcode.
-    * And save the subsample arrays, subsampling is homogeneous   */
-    dataUtils.sortDataAndDownsample = function () {
-        var op = tmapp["object_prefix"];
-        var compareKeys = function (a, b) {
-            if (a.values.length > b.values.length) { return -1; }
-            if (a.values.length < b.values.length) { return 1; }
-            return 0;
-        };
-        
-        dataUtils[op + "_data"].sort(compareKeys);
-        
-        //take the last element of the list which has the minimum amount
-        var minamount = dataUtils[op + "_data"][dataUtils[op + "_data"].length - 1].values.length;
-        //take the first element of the list which has the maximum amount
-        var maxamount = dataUtils[op + "_data"][0].values.length;
-        //total amount of barcodes
-        var amountofbarcodes = dataUtils[op + "_data"].length;
-        
-        dataUtils[op + "_data"].forEach(function (barcode) {
-            var normalized = (barcode.values.length - minamount) / maxamount;
-            var downsize = dataUtils._maximumAmountInLowerRes * Math.log(barcode.values.length) / Math.log(maxamount);
-            if (downsize > barcode.values.length) { downsize = barcode.values.length; }
-            dataUtils._barcodesByAmount.push({ "barcode": barcode.key, "amount": barcode.values.length, "normalized": normalized, "downsize": downsize });
-        });
-        
-        dataUtils._barcodesByAmount.forEach(function (b) {
-            dataUtils.randomMarkersFromBarcode(b.downsize, b.barcode);
-        });
-    }
+}
+
+/** 
+* Find all the markers for a specific key (name or barcode)  
+* @param {string} keystring to search in op+_data usually letters like "AGGC" but can be the gene_name */
+dataUtils.findBarcodesInRawData = function (keystring) {
+    var op = tmapp["object_prefix"];
+    var values = null;
+    dataUtils[op + "_data"].forEach(function (input) {
+        if (input.key == keystring) {
+            values = input.values;
+        }
+    });
+    return values;
+}
+
+/** 
+* Take dataUtils[op + "_data"] and sort it (permanently). 
+* Calculate and save the right amount of downsampling for each barcode.
+* And save the subsample arrays, subsampling is homogeneous   */
+dataUtils.sortDataAndDownsample = function () {
+    var op = tmapp["object_prefix"];
+    var compareKeys = function (a, b) {
+        if (a.values.length > b.values.length) { return -1; }
+        if (a.values.length < b.values.length) { return 1; }
+        return 0;
+    };
+    
+    dataUtils[op + "_data"].sort(compareKeys);
+    
+    //take the last element of the list which has the minimum amount
+    var minamount = dataUtils[op + "_data"][dataUtils[op + "_data"].length - 1].values.length;
+    //take the first element of the list which has the maximum amount
+    var maxamount = dataUtils[op + "_data"][0].values.length;
+    //total amount of barcodes
+    var amountofbarcodes = dataUtils[op + "_data"].length;
+    
+    dataUtils[op + "_data"].forEach(function (barcode) {
+        var normalized = (barcode.values.length - minamount) / maxamount;
+        var downsize = dataUtils._maximumAmountInLowerRes * Math.log(barcode.values.length) / Math.log(maxamount);
+        if (downsize > barcode.values.length) { downsize = barcode.values.length; }
+        dataUtils._barcodesByAmount.push({ "barcode": barcode.key, "amount": barcode.values.length, "normalized": normalized, "downsize": downsize });
+    });
+    
+    dataUtils._barcodesByAmount.forEach(function (b) {
+        dataUtils.randomMarkersFromBarcode(b.downsize, b.barcode);
+    });
+}
