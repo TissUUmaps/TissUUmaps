@@ -100,10 +100,13 @@ geojson.geoJSON2regions = function (geoJSONObjects) {
         console.log(hexColor);
         coordinates = coordinates.map (function(coordinateList, i) {
             return coordinateList.map (function(coordinateList_i, index) {
-                return coordinateList_i.map(function(x) {
-                    xPoint = new OpenSeadragon.Point(x[0], imageHeight-x[1]);
+                coordinateList_i = coordinateList_i.map(function(x) {
+                    xPoint = new OpenSeadragon.Point(x[0], x[1]);
                     xPixel = viewer.world.getItemAt(0).imageToViewportCoordinates(xPoint);
                     return [xPixel.x, xPixel.y];
+                });
+                return coordinateList_i.filter(function(value, index, Arr) {
+                    return index % 4 == 0;
                 });
             });
         })
