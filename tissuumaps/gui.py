@@ -231,7 +231,15 @@ def main():
 
     qInstallMessageHandler(lambda x,y,z: None)
 
-    qt_app = QApplication(["--remote-debugging-port=5010"])
+    fmt = QtGui.QSurfaceFormat()
+    fmt.setVersion(4, 1)
+    fmt.setProfile(QtGui.QSurfaceFormat.CoreProfile)
+    fmt.setSamples(4)
+    QtGui.QSurfaceFormat.setDefaultFormat(fmt)
+
+    vp = QtGui.QOpenGLVersionProfile(fmt)
+    
+    qt_app = QApplication([])
 
     logo = QtGui.QPixmap('static/misc/design/logo.png')
     logo = logo.scaledToWidth(512, Qt.SmoothTransformation)
@@ -259,14 +267,6 @@ def main():
         views.app.run(host="127.0.0.1", port=port, threaded=True, debug=False)
 
     threading.Thread(target=flaskThread,daemon=True).start()
-
-    fmt = QtGui.QSurfaceFormat()
-    fmt.setVersion(4, 1)
-    fmt.setProfile(QtGui.QSurfaceFormat.CoreProfile)
-    fmt.setSamples(4)
-    QtGui.QSurfaceFormat.setDefaultFormat(fmt)
-
-    vp = QtGui.QOpenGLVersionProfile(fmt)
 
     ui = webEngine(qt_app, views.app, args)
     ui.setLocation ("http://127.0.0.1:" + str(port) + "/")

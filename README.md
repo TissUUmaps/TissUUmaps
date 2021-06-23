@@ -59,7 +59,7 @@ FlaskTissUUmaps allows to save all TissUUmaps states (Gene expressions, Cell mor
 
 ## Option 1: Start the Graphical User Interface of TissUUmaps
 
-1. Start TissUUmaps user interface:
+1. Start the TissUUmaps user interface:
     ```bash
 	tissuumaps
     ```
