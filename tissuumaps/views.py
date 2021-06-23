@@ -138,7 +138,7 @@ class _SlideCache(object):
 
 
 class _Directory(object):
-    def __init__(self, basedir, relpath='', max_depth=4):
+    def __init__(self, basedir, relpath='', max_depth=4, filter=None):
         self.name = os.path.basename(relpath)
         self.children = []
         if max_depth != 0:
@@ -151,9 +151,11 @@ class _Directory(object):
                     cur_relpath = os.path.join(relpath, name)
                     cur_path = os.path.join(basedir, cur_relpath)
                     if os.path.isdir(cur_path):
-                        cur_dir = _Directory(basedir, cur_relpath, max_depth=max_depth-1)
+                        cur_dir = _Directory(basedir, cur_relpath, max_depth=max_depth-1, filter=filter)
                         if cur_dir.children:
                             self.children.append(cur_dir)
+                    elif filter != None and filter not in name:
+                        continue
                     elif OpenSlide.detect_format(cur_path):
                         self.children.append(_SlideFile(cur_relpath))
                     elif imghdr.what(cur_path):
@@ -245,7 +247,11 @@ def slide(path):
     else:
         folder_dir = _Directory(os.path.abspath(app.basedir)+"/",
                                 os.path.dirname(path))
-        return render_template('server/tissuumaps.html', plugins=app.config["PLUGINS"], slide_url=slide_url, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties, root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']), folder_dir=folder_dir)
+        if "private" in path:
+            root_dir = _Directory(os.path.abspath(app.basedir)+"/", os.path.dirname(path), max_depth=app.config['FOLDER_DEPTH'])
+        else:
+            root_dir = _Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH'])
+        return render_template('server/tissuumaps.html', plugins=app.config["PLUGINS"], slide_url=slide_url, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties, root_dir=root_dir, folder_dir=folder_dir)
 
 @app.route('/ping')
 @requires_auth
@@ -283,7 +289,7 @@ def tmapFile(path):
             folder_dir = _Directory(os.path.abspath(app.basedir)+"/",
                                     os.path.dirname(path))
             if "private" in path:
-                root_dir = _Directory(os.path.abspath(app.basedir)+"/", os.path.dirname(path), max_depth=app.config['FOLDER_DEPTH'])
+                root_dir = _Directory(os.path.abspath(app.basedir)+"/", os.path.dirname(path), max_depth=app.config['FOLDER_DEPTH'], filter=".tmap")
             else:
                 root_dir = _Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH'])
             
