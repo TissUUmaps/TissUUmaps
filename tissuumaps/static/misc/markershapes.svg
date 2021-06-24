@@ -15,7 +15,10 @@
    version="1.1"
    id="svg8"
    inkscape:version="0.92.3 (2405546, 2018-03-11)"
-   sodipodi:docname="markershapes.svg">
+   sodipodi:docname="markershapes.svg"
+   inkscape:export-filename="/home/fredrik/Development/TissUUmaps/misc/markershapes.png"
+   inkscape:export-xdpi="409.60007"
+   inkscape:export-ydpi="409.60007">
   <defs
      id="defs2" />
   <sodipodi:namedview
@@ -26,7 +29,7 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="0.9899495"
-     inkscape:cx="52.788446"
+     inkscape:cx="-116.91718"
      inkscape:cy="218.3075"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
@@ -222,7 +225,7 @@
        cy="66.812508"
        cx="71.437492"
        id="circle851"
-       style="fill:#ffffff;stroke:#808080;stroke-width:0.26499999;stroke-miterlimit:4;stroke-dasharray:none"
+       style="fill:#ffffff;stroke:none;stroke-width:0.26499999;stroke-miterlimit:4;stroke-dasharray:none"
        inkscape:export-xdpi="204.8"
        inkscape:export-ydpi="204.8" />
     <rect
