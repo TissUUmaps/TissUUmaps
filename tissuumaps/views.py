@@ -10,6 +10,7 @@ import openslide
 from openslide import ImageSlide, OpenSlide, OpenSlideError, OpenSlideUnsupportedFormatError, open_slide
 from openslide.deepzoom import DeepZoomGenerator
 import os
+import threading, time
 from threading import Lock
 from functools import wraps
 import imghdr
@@ -17,6 +18,7 @@ import importlib
 import encodings.idna
 
 from tissuumaps import app
+import gzip
 
 def check_auth(username, password):
     if username == "username" and password == "password":
@@ -55,7 +57,7 @@ class ImageConverter():
             def convertThread():
                 try:
                     imgVips = pyvips.Image.new_from_file(self.inputImage)
-                    minVal = imgVips.percent(10)
+                    minVal = imgVips.percent(0)
                     maxVal = imgVips.percent(99)
                     if minVal == maxVal:
                         minVal = 0
@@ -303,7 +305,10 @@ def csvFile(path):
     directory = os.path.dirname(completePath)
     filename = os.path.basename(completePath)
     if os.path.isfile(completePath):
-        return send_from_directory(directory, filename)
+        if not os.path.isfile(completePath + ".gz"):
+            with open(completePath, 'rb') as f_in, gzip.open(completePath + ".gz", 'wb', compresslevel=9) as f_out:
+                f_out.writelines(f_in)
+        return send_from_directory(directory, filename + ".gz")
     else:
         abort(404)
     
