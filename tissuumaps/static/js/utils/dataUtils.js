@@ -200,7 +200,9 @@ dataUtils.showMenuCSV = function(){
     if (csvheaders.includes(dataUtils._expectedCSV["piechart"])) ISSPiechart.value = dataUtils._expectedCSV["piechart"];
     if (dataUtils._expectedCSV["key"]) ISSKey.value = dataUtils._expectedCSV["key"];
     if (dataUtils._autoLoadCSV) {
-        document.getElementById(op + "_bringmarkers_btn").click();
+        setTimeout(function () {
+            document.getElementById(op + "_bringmarkers_btn").click();
+        },500);
     }
 }
 
