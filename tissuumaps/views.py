@@ -1,4 +1,3 @@
-
 import pyvips
 
 from collections import OrderedDict
@@ -53,6 +52,7 @@ class ImageConverter():
         self.outputImage = outputImage
     
     def convert (self):
+        print ("Converting:",self.inputImage, self.outputImage, os.path.isfile(self.outputImage))
         if not os.path.isfile(self.outputImage):
             def convertThread():
                 try:
@@ -212,7 +212,7 @@ def _get_slide(path):
         if ".tissuumaps" in path:
             abort(404)
         try:
-            newpath = os.path.dirname(path) + "/.tissuumaps/" + os.path.basename(path)
+            newpath = os.path.dirname(path) + "/.tissuumaps/" + os.path.splitext(os.path.basename(path))[0] + ".tif"
             if not os.path.isdir(os.path.dirname(path) + "/.tissuumaps/"):
                 os.makedirs(os.path.dirname(path) + "/.tissuumaps/")
             path = ImageConverter(path,newpath).convert()
