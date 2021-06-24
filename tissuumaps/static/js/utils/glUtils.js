@@ -13,6 +13,7 @@ glUtils = {
     _imageSize: [1, 1],
     _viewportRect: [0, 0, 1, 1],
     _markerScale: 1.0,
+    _markerScale2: 1.0,
     _markerScalarRange: [0.0, 1.0],
     _markerOpacity: 1.0,
     _useColorFromMarker: false,
@@ -33,6 +34,7 @@ glUtils._markersVS = `
     uniform mat2 u_viewportTransform;
     uniform int u_markerType;
     uniform float u_markerScale;
+    uniform float u_markerScale2;
     uniform vec2 u_markerScalarRange;
     uniform float u_markerOpacity;
     uniform bool u_useColorFromMarker;
@@ -85,7 +87,7 @@ glUtils._markersVS = `
         if (u_useColorFromMarker) v_color.rgb = hex_to_rgb(a_position.w);
 
         gl_Position = vec4(ndcPos, 0.0, 1.0);
-        gl_PointSize = max(2.0, u_markerScale / u_viewportRect.w);
+        gl_PointSize = max(2.0, u_markerScale * u_markerScale2 / u_viewportRect.w);
 
         v_shapeOrigin.x = mod(v_color.a * 255.0 - 1.0, SHAPE_GRID_SIZE);
         v_shapeOrigin.y = floor((v_color.a * 255.0 - 1.0) / SHAPE_GRID_SIZE);
@@ -404,7 +406,13 @@ glUtils._updateColorLUTTexture = function(gl, texture) {
         else {
             var hexColor = "#000000";
         }
-        const shape = document.getElementById(key + "-shape-ISS").value;
+        shapeInput = document.getElementById(key + "-shape-ISS")
+        if (shapeInput) {
+            var shape = document.getElementById(key + "-shape-ISS").value;
+        }
+        else {
+            var shape = "";
+        };
         const visible = showAll || markerUtils._checkBoxes[key].checked;
         colors[4 * index + 0] = Number("0x" + hexColor.substring(1,3)); 
         colors[4 * index + 1] = Number("0x" + hexColor.substring(3,5));
@@ -623,6 +631,7 @@ glUtils.draw = function() {
     gl.vertexAttribPointer(POSITION, 4, gl.FLOAT, false, 0, 0);
     gl.uniform1i(gl.getUniformLocation(program, "u_markerType"), 0);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), glUtils._markerScale);
+    gl.uniform1f(gl.getUniformLocation(program, "u_markerScale2"), glUtils._markerScale2);
     gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromMarker"), glUtils._useColorFromMarker);
     gl.uniform1i(gl.getUniformLocation(program, "u_usePiechartFromMarker"), glUtils._usePiechartFromMarker);
     if (glUtils._usePiechartFromMarker) {
@@ -644,6 +653,7 @@ glUtils.draw = function() {
     gl.vertexAttribPointer(POSITION, 4, gl.FLOAT, false, 0, 0);
     gl.uniform1i(gl.getUniformLocation(program, "u_markerType"), 1);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), glUtils._markerScale * 0.5);
+    gl.uniform1f(gl.getUniformLocation(program, "u_markerScale2"), glUtils._markerScale2);
     gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromMarker"),
         glUtils._colorscaleName.includes("ownColorFromColumn"));
     gl.uniform1i(gl.getUniformLocation(program, "u_usePiechartFromMarker"), false);
