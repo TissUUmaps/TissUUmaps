@@ -266,9 +266,9 @@
             );
         });
     }
-    if (state.slideFilename) {
-        tmapp.slideFilename = state.slideFilename;
-        document.getElementById("project_title").innerText = state.slideFilename;
+    if (state.filename) {
+        tmapp.slideFilename = state.filename;
+        document.getElementById("project_title").innerText = state.filename;
     }
     tmapp.layers = [];
     subfolder = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
@@ -308,6 +308,12 @@
         document.getElementById("CP_data_panel").style.display="none";
     }
     setTimeout(function(){
+        if (state.boundingBox) {
+            setTimeout(function() {
+                tmapp[tmapp["object_prefix"] + "_viewer"].viewport.fitBounds(new OpenSeadragon.Rect(state.boundingBox.x, state.boundingBox.y, state.boundingBox.width, state.boundingBox.height), false);
+                console.log("Changing BBox")
+            },1000);
+        }
         if (state.compositeMode) {
             filterUtils._compositeMode = state.compositeMode;
             filterUtils.setCompositeOperation();
