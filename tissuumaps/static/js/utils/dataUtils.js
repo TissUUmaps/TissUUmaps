@@ -188,7 +188,9 @@ dataUtils.showMenuCSV = function(){
         });
     });
     var panel = document.getElementById(op + "_csv_headers");
-    panel.style = "";
+    if (!dataUtils._autoLoadCSV) {
+        panel.style = "";
+    }
     //search for defaults if any, "barcode" used to be called "letters"
     //it is still "letters in the obejct" but the BarcodeInputValue can be anything chosen by the user
     //and found in the csv column

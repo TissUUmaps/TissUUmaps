@@ -31,7 +31,8 @@ markerUtils = {
     _d3Symbols: [d3.symbolCross, d3.symbolDiamond, d3.symbolSquare, d3.symbolTriangle, d3.symbolStar, d3.symbolWye, d3.symbolCircle],
     _d3SymbolStrings: ["Cross", "Diamond", "Square", "Triangle", "Star", "Wye", "Circle"],
     _colorsperkey:null,
-    _startMarkersOn:false
+    _startMarkersOn:false,
+    _randomShape:true
 }
 
 /** 
@@ -465,7 +466,7 @@ markerUtils.markerUI = function (barObject,options) {
 
     if (!markerUtils._uniquePiechart) {
         var shape = HTMLElementUtils.createElement({ type: "td" });
-        var shapeParams = { random: true, id: barObject.key + "-shape-" + op, "options": markerUtils._d3SymbolStrings };
+        var shapeParams = { random: markerUtils._randomShape, id: barObject.key + "-shape-" + op, "options": markerUtils._d3SymbolStrings };
         var shapeinput = HTMLElementUtils.selectTypeDropDown(shapeParams);
         if (shapeParams.random) { var rnd = Math.floor(Math.random() * (markerUtils._d3SymbolStrings.length-1)) + 0; shapeinput.selectedIndex = rnd; }
         shape.appendChild(shapeinput);

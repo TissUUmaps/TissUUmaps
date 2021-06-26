@@ -236,13 +236,22 @@
     }
     if (state.markerFiles) {
         state.markerFiles.forEach(function(markerFile) {
-            HTMLElementUtils.createDLButtonMarkers(
-                markerFile.title,
-                markerFile.path,
-                markerFile.comment,
-                markerFile.expectedCSV,
-                markerFile.autoLoad
-            );
+            if( Object.prototype.toString.call( markerFile.path ) === '[object Array]' ) {
+                HTMLElementUtils.createDLSelectMarkers(
+                    markerFile.path,
+                    markerFile.comment,
+                    markerFile.expectedCSV
+                );        
+            }
+            else {
+                HTMLElementUtils.createDLButtonMarkers(
+                    markerFile.title,
+                    markerFile.path,
+                    markerFile.comment,
+                    markerFile.expectedCSV,
+                    markerFile.autoLoad
+                );
+            }
         });
     }
     if (state.CPFiles) {
