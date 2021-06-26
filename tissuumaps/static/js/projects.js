@@ -238,6 +238,7 @@
         state.markerFiles.forEach(function(markerFile) {
             if( Object.prototype.toString.call( markerFile.path ) === '[object Array]' ) {
                 HTMLElementUtils.createDLSelectMarkers(
+                    markerFile.title,
                     markerFile.path,
                     markerFile.comment,
                     markerFile.expectedCSV

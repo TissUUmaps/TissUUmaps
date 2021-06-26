@@ -364,9 +364,14 @@ HTMLElementUtils.getFirstChildByClass = function (e, c) {
     return thisChild;
 }
 
-HTMLElementUtils.createDLSelect = function(downloadRow, callback, comment, options) {
+HTMLElementUtils.createDLSelect = function(downloadRow, innerText, callback, comment, options) {
     var row = HTMLElementUtils.createRow(null);
     var selectDiv = document.createElement("div");
+    var titleDiv = document.createElement("div");
+    titleDiv.setAttribute("class", "col-xs-12 col-sm-12 col-md-12 col-lg-12");
+    titleDiv.innerHTML = `<b> ${innerText} </b>`
+    row.appendChild(titleDiv);
+    
     selectDiv.setAttribute("class", "col-xs-6 col-sm-6 col-md-6 col-lg-6");
     row.appendChild(selectDiv);
     var paramSelect = {
@@ -388,7 +393,7 @@ HTMLElementUtils.createDLSelect = function(downloadRow, callback, comment, optio
     return row;
 }
 
-HTMLElementUtils.createDLSelectMarkers = function(dataURLs, comment, expectedCSV) {
+HTMLElementUtils.createDLSelectMarkers = function(innerText, dataURLs, comment, expectedCSV) {
     var downloadRow = document.getElementById("ISS_rowDownloadMarkers");
     callback = function(e){
         var dataURL = (this.value || this.options[this.selectedIndex].value);  //crossbrowser solution =)
@@ -403,7 +408,7 @@ HTMLElementUtils.createDLSelectMarkers = function(dataURLs, comment, expectedCSV
             "text": dataURL.split('/').reverse()[0]
         })
     });
-    HTMLElementUtils.createDLSelect(downloadRow,  callback, comment, options);
+    HTMLElementUtils.createDLSelect(downloadRow, innerText, callback, comment, options);
     var label = document.getElementById("label_ISS_csv");
     label.innerHTML = "Or import gene expression from CSV file:";
 }
