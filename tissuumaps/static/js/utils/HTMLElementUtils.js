@@ -375,12 +375,14 @@ HTMLElementUtils.createDLSelect = function(downloadRow, innerText, callback, com
     selectDiv.setAttribute("class", "col-xs-6 col-sm-6 col-md-6 col-lg-6");
     row.appendChild(selectDiv);
     var paramSelect = {
-        eventListeners: {"change":callback},
+        // eventListeners: {"change":callback},
         // "class": "btn btn-primary",
         // innerText: innerText
-        options: options
+        options: options,
+        class: "chosen-select"
     }
     var DLSelect = HTMLElementUtils.selectTypeDropDown(paramSelect);
+    DLSelect.setAttribute("data-placeholder", "Choose a gene...")
     DLSelect.style.width = "100%";
     selectDiv.appendChild(DLSelect);
     
@@ -390,13 +392,19 @@ HTMLElementUtils.createDLSelect = function(downloadRow, innerText, callback, com
     row.appendChild(commentDiv);
 
     downloadRow.appendChild(row);
+
+    $(".chosen-select").chosen({disable_search_threshold: 10, search_contains: true});
+    $(".chosen-select").on('change', function(evt, params) {
+        callback(evt, params);
+    });
     return row;
 }
 
 HTMLElementUtils.createDLSelectMarkers = function(innerText, dataURLs, comment, expectedCSV) {
     var downloadRow = document.getElementById("ISS_rowDownloadMarkers");
-    callback = function(e){
-        var dataURL = (this.value || this.options[this.selectedIndex].value);  //crossbrowser solution =)
+    callback = function(e, params){
+        console.log(params);
+        var dataURL = params.selected;
         if (dataURL == "") return;
         if (expectedCSV !== undefined) dataUtils.setExpectedCSV(expectedCSV);
         dataUtils.XHRCSV(dataURL);
