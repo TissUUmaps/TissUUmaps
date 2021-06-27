@@ -219,6 +219,12 @@
         compositeMode: ""
     }
     */
+    if (state.tabs) {
+        state.tabs.forEach(function(tab, i) {
+            if (tab.title) {document.getElementById("title-tab-" + tab.name).innerHTML = tab.title}
+            if (tab.visible === false) {document.getElementById("title-tab-" + tab.name).style.display="none"}
+        });
+    }
     if (state.regions) {
         var maxregionid=0;
         for(i in state.regions){
