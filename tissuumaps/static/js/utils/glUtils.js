@@ -100,8 +100,8 @@ glUtils._markersVS = `
         gl_Position = vec4(ndcPos, 0.0, 1.0);
         gl_PointSize = max(2.0, min(256.0, u_markerScale * u_markerScale2 / u_viewportRect.w));
 
-        v_shapeOrigin.x = mod(v_color.a * 255.0 - 1.0, SHAPE_GRID_SIZE);
-        v_shapeOrigin.y = floor((v_color.a * 255.0 - 1.0) / SHAPE_GRID_SIZE);
+        v_shapeOrigin.x = mod((v_color.a + 0.00001) * 255.0 - 1.0, SHAPE_GRID_SIZE);
+        v_shapeOrigin.y = floor(((v_color.a + 0.00001) * 255.0 - 1.0) / SHAPE_GRID_SIZE);
         v_shapeSize = gl_PointSize;
 
         // Discard point here in vertex shader if marker is hidden
