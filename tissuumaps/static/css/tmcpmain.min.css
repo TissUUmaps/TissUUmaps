@@ -73,3 +73,6 @@ body {
     font-size:20px;
     line-height: 14px;
 }
+#ISS_table {
+    user-select:none;
+}
