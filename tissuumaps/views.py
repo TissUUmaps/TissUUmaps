@@ -34,11 +34,23 @@ def authenticate():
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        return f(*args, **kwargs) #Comment this line to add authentifaction
-        auth = request.authorization
-        if not auth or not check_auth(auth.username, auth.password):
-            return authenticate()
-        return f(*args, **kwargs)
+        if not "path" in kwargs.keys():
+            return f(*args, **kwargs)
+        path = os.path.abspath(os.path.join(app.basedir, kwargs["path"]))
+        activeFolder = os.path.dirname(path)
+        while (os.path.dirname(activeFolder) != activeFolder and not os.path.isfile(activeFolder + "/auth")):
+            activeFolder = os.path.dirname(activeFolder)
+            print (activeFolder)
+        if os.path.isfile(activeFolder + "/auth"):
+            with open(activeFolder + "/auth", 'r') as file:
+                data = file.read().replace('\n', '')
+                user, password = [u.strip() for u in data.split(";")]
+            auth = request.authorization
+            if not auth or not (user == auth.username and password == auth.password):
+                return authenticate()
+            return f(*args, **kwargs)
+        else:
+            return f(*args, **kwargs)
     return decorated
 
 class PILBytesIO(io.BytesIO):
