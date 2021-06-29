@@ -32,7 +32,8 @@ markerUtils = {
     _d3SymbolStrings: ["Cross", "Diamond", "Square", "Triangle", "Star", "Wye", "Circle"],
     _colorsperkey:null,
     _startMarkersOn:false,
-    _randomShape:true
+    _randomShape:true,
+    _headerNames:{"Barcode":"Barcode","Gene":"Gene"}
 }
 
 /** 
@@ -512,14 +513,14 @@ markerUtils.markerUIAll = function (options) {
     check.appendChild(checkinput);
     row.appendChild(check);
     if(options.drawGeneLetters){
-        var lettersrow = HTMLElementUtils.createElement({ type: "td", innerHTML:  "<label style='cursor:pointer' for='AllMarkers-checkbox-" + op + "'>All Barcodes</label>",
-            extraAttributes: { "title": "All Barcodes", "data-title":"All Barcodes" } });
+        var lettersrow = HTMLElementUtils.createElement({ type: "td", innerHTML:  "<label style='cursor:pointer' for='AllMarkers-checkbox-" + op + "'>All</label>",
+            extraAttributes: { "title": "All", "data-title":"All" } });
         row.appendChild(lettersrow);
     }
 
     if(options.drawGeneName){
-        var name = HTMLElementUtils.createElement({ type: "td", innerHTML:  "<label style='cursor:pointer' for='AllMarkers-checkbox-" + op + "'>All Genes</label>",
-            extraAttributes: { "title": "All Genes", "data-title":"All Genes" } });
+        var name = HTMLElementUtils.createElement({ type: "td", innerHTML:  "<label style='cursor:pointer' for='AllMarkers-checkbox-" + op + "'>All</label>",
+            extraAttributes: { "title": "All", "data-title":"All" } });
         row.appendChild(name);
     }
     var length = 0;
@@ -622,7 +623,13 @@ markerUtils.printBarcodeUIs = function (options) {
     var tblBody = document.createElement("tbody");
     headers.forEach(function (header) {
         var th = document.createElement("th");
-        th.appendChild(document.createTextNode(header));
+        if (markerUtils._headerNames[header]) {
+            headerText = markerUtils._headerNames[header];
+        }
+        else {
+            headerText = header;
+        }
+        th.appendChild(document.createTextNode(headerText));
         tblHeadTr.appendChild(th);
     });
     tbl.appendChild(tblHead);
@@ -873,4 +880,37 @@ markerUtils.addPiechartLegend = function () {
         table.appendChild(row);
     })
     console.log(sectors);
+}
+
+/** Adding piechart legend in the upper left corner */
+markerUtils.makePieChartTable = function (barcode) {
+    var op = tmapp["object_prefix"];
+    var sectors = [];
+    if (markerUtils._uniquePiechartSelector.split(";").length > 1) {
+        sectors = markerUtils._uniquePiechartSelector.split(";");
+    }
+    else {
+        numSectors = dataUtils[op + "_data"][0].values[0][markerUtils._uniquePiechartSelector].split(";").length;
+        for(var i = 0; i < numSectors; i++) {
+            sectors.push("Sector " + (i+1));
+        }
+    }
+    outText = "";
+    sectorValues = barcode[markerUtils._uniquePiechartSelector].split(";")
+    sortedSectors = [];
+    sectors.forEach(function (sector, index) {
+        sortedSectors.push([parseFloat(sectorValues[index]), sector, index])
+    });
+    console.dir(sortedSectors);
+    sortedSectors.sort(
+        function cmp(a, b) {
+            console.log("Comparing",a,b,a[0]-b[0]);
+            return b[0]-a[0];
+        }
+    );
+    console.dir(sortedSectors);
+    sortedSectors.forEach(function (sector) {
+        outText += "<span style='border:2px solid " + glUtils._piechartPalette[sector[2] % glUtils._piechartPalette.length] + ";padding:3px;margin:2px;display: inline-block;'>" + sector[1] + ": " + (sector[0] * 100).toFixed(1) + " %</span> ";
+    })
+    return outText;
 }

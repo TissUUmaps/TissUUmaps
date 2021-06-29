@@ -13,17 +13,22 @@ glUtils = {
     _imageSize: [1, 1],
     _viewportRect: [0, 0, 1, 1],
     _markerScale: 1.0,
+    _useMarkerScaleFix: true,
     _markerScale2: 1.0,
     _markerScalarRange: [0.0, 1.0],
     _markerOpacity: 1.0,
     _useColorFromMarker: false,
     _usePiechartFromMarker: false,
+    _pickedMarker: -1,
+    _pickingEnabled: false,
+    _pickingLocation: [0.0, 0.0],
     _colorscaleName: "null",
     _colorscaleData: [],
     _barcodeToLUTIndex: {},
     _barcodeToKey: {},
     _options: {antialias: false, premultipliedAlpha: false},
     _showColorbar: true,
+    _showMarkerInfo: true,
     _piechartPalette: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
 
@@ -40,10 +45,12 @@ glUtils._markersVS = `
     uniform bool u_useColorFromMarker;
     uniform bool u_usePiechartFromMarker;
     uniform bool u_alphaPass;
+    uniform float u_pickedMarker;
     uniform sampler2D u_colorLUT;
     uniform sampler2D u_colorscale;
 
     attribute vec4 a_position;
+    attribute float a_index;
 
     varying vec4 v_color;
     varying vec2 v_shapeOrigin;
@@ -53,6 +60,7 @@ glUtils._markersVS = `
     #define MARKER_TYPE_BARCODE 0
     #define MARKER_TYPE_CP 1
     #define SHAPE_GRID_SIZE 4.0
+    #define DISCARD_VERTEX { gl_Position = vec4(2.0, 2.0, 2.0, 0.0); return; }
 
     vec3 hex_to_rgb(float v)
     {
@@ -70,12 +78,15 @@ glUtils._markersVS = `
         ndcPos = u_viewportTransform * ndcPos;
 
         if (u_markerType == MARKER_TYPE_BARCODE) {
-            if (u_usePiechartFromMarker) {
+            float barcodeID = mod(a_position.z, 4096.0);
+            v_color = texture2D(u_colorLUT, vec2(barcodeID / 4095.0, 0.5));
+
+            if (u_usePiechartFromMarker && v_color.a > 0.0) {
+                v_shapeSector = a_position.z / 16777215.0;
                 v_color.rgb = hex_to_rgb(a_position.w);
                 v_color.a = 8.0 / 255.0;  // Give markers a round shape
-                if (u_alphaPass) v_color.a *= float(a_position.z > 0.999);
-            } else {
-            v_color = texture2D(u_colorLUT, vec2(a_position.z, 0.5));
+                if (u_pickedMarker == a_index) v_color.a = 7.0 / 255.0;
+                if (u_alphaPass) v_color.a *= float(v_shapeSector > 0.999);
             }
         } else if (u_markerType == MARKER_TYPE_CP) {
             vec2 range = u_markerScalarRange;
@@ -87,16 +98,15 @@ glUtils._markersVS = `
         if (u_useColorFromMarker) v_color.rgb = hex_to_rgb(a_position.w);
 
         gl_Position = vec4(ndcPos, 0.0, 1.0);
-        gl_PointSize = max(2.0, u_markerScale * u_markerScale2 / u_viewportRect.w);
+        gl_PointSize = max(2.0, min(256.0, u_markerScale * u_markerScale2 / u_viewportRect.w));
 
         v_shapeOrigin.x = mod(v_color.a * 255.0 - 1.0, SHAPE_GRID_SIZE);
         v_shapeOrigin.y = floor((v_color.a * 255.0 - 1.0) / SHAPE_GRID_SIZE);
-        v_shapeSector = a_position.z;  // TODO
         v_shapeSize = gl_PointSize;
 
         // Discard point here in vertex shader if marker is hidden
         v_color.a = v_color.a > 0.0 ? u_markerOpacity : 0.0;
-        if (v_color.a == 0.0) gl_Position = vec4(2.0, 2.0, 2.0, 0.0);
+        if (v_color.a == 0.0) DISCARD_VERTEX;
     }
 `;
 
@@ -157,6 +167,77 @@ glUtils._markersFS = `
 `;
 
 
+glUtils._pickingVS = `
+    uniform vec2 u_imageSize;
+    uniform vec4 u_viewportRect;
+    uniform mat2 u_viewportTransform;
+    uniform vec2 u_canvasSize;
+    uniform vec2 u_pickingLocation;
+    uniform float u_markerScale;
+    uniform float u_markerScale2;
+    uniform int u_op;
+    uniform sampler2D u_colorLUT;
+
+    attribute vec4 a_position;
+    attribute float a_index;
+
+    varying vec4 v_color;
+
+    #define OP_CLEAR 0
+    #define OP_WRITE_INDEX 1
+    #define DISCARD_VERTEX { gl_Position = vec4(2.0, 2.0, 2.0, 0.0); return; }
+
+    vec3 hex_to_rgb(float v)
+    {
+        // Extract RGB color from 24-bit hex color stored in float
+        v = clamp(v, 0.0, 16777215.0);
+        return floor(mod((v + 0.49) / vec3(65536.0, 256.0, 1.0), 256.0)) / 255.0;
+    }
+
+    void main()
+    {
+        vec2 imagePos = a_position.xy * u_imageSize;
+        vec2 viewportPos = imagePos - u_viewportRect.xy;
+        vec2 ndcPos = (viewportPos / u_viewportRect.zw) * 2.0 - 1.0;
+        ndcPos.y = -ndcPos.y;
+        ndcPos = u_viewportTransform * ndcPos;
+
+        v_color = vec4(0.0);
+        if (u_op == OP_WRITE_INDEX) {
+            float barcodeID = mod(a_position.z, 4096.0);
+            float shapeID = texture2D(u_colorLUT, vec2(barcodeID / 4095.0, 0.5)).a;
+            if (shapeID == 0.0) DISCARD_VERTEX;
+
+            vec2 canvasPos = (ndcPos * 0.5 + 0.5) * u_canvasSize;
+            canvasPos.y = (u_canvasSize.y - canvasPos.y);  // Y-axis is inverted
+            float pointSize = max(2.0, min(256.0, u_markerScale * u_markerScale2 / u_viewportRect.w));
+            
+            // TODO This test works as an inside/outside test for the special
+            // case where the marker shape is round; for the general case, we
+            // would need to sample the shape texture of each marker.
+            if (length(canvasPos - u_pickingLocation) > pointSize * 0.4) DISCARD_VERTEX;
+
+            v_color.rgb = hex_to_rgb(a_index + float(u_op));
+        }
+
+        gl_Position = vec4(-0.9999, -0.9999, 0.0, 1.0);
+        gl_PointSize = 1.0;
+    }
+`;
+
+
+glUtils._pickingFS = `
+    precision mediump float;
+
+    varying vec4 v_color;
+
+    void main()
+    {
+        gl_FragColor = v_color;
+    }
+`;
+
+
 glUtils._loadShaderProgram = function(gl, vertSource, fragSource) {
     const vertShader = gl.createShader(gl.VERTEX_SHADER);
     gl.shaderSource(vertShader, vertSource);
@@ -189,15 +270,16 @@ glUtils._loadShaderProgram = function(gl, vertSource, fragSource) {
 
 
 glUtils._createDummyMarkerBuffer = function(gl, numPoints) {
-    const positions = [];
+    const positions = [], indices = [];
     for (let i = 0; i < numPoints; ++i) {
         positions[4 * i + 0] = Math.random();  // X-coord
         positions[4 * i + 1] = Math.random();  // Y-coord
         positions[4 * i + 2] = Math.random();  // LUT-coord
         positions[4 * i + 3] = i / numPoints;  // Scalar data
+        indices[i] = i;  // Store index needed for picking
     }
 
-    const bytedata = new Float32Array(positions);
+    const bytedata = new Float32Array(positions.concat(indices));
 
     const buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer); 
@@ -205,23 +287,6 @@ glUtils._createDummyMarkerBuffer = function(gl, numPoints) {
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
     return buffer;
-}
-
-
-// Generate a list of random normalized sector angles in format (TODO)
-glUtils._createDummySectors = function(numSectors) {
-    let sectors = [], sum = 0;
-    for (let i = 0; i < numSectors; ++i) {
-        sectors[i] = Math.floor(Math.random() * 100.0);
-        sum += sectors[i];
-    }
-    for (let i = 0; i < numSectors; ++i) {
-        sectors[i] /= sum;
-    }
-    for (let i = numSectors - 2; i >= 0; --i) {
-        sectors[i] += sectors[i + 1];
-    }
-    return sectors;
 }
 
 
@@ -265,7 +330,7 @@ glUtils.loadMarkers = function() {
     const usePiechartFromMarker = markerUtils._uniquePiechart && (sectorsPropertyName in markerData[0]);
     const piechartPalette = glUtils._piechartPalette;
 
-    const positions = [];
+    const positions = [], indices = [];
     if (usePiechartFromMarker) {
         const numSectors = markerData[0][sectorsPropertyName].split(";").length;
         for (let i = 0; i < numPoints; ++i) {
@@ -276,22 +341,25 @@ glUtils.loadMarkers = function() {
                 hexColor = piechartPalette[j % piechartPalette.length];
                 positions[4 * k + 0] = markerData[i].global_X_pos / imageWidth;
                 positions[4 * k + 1] = markerData[i].global_Y_pos / imageHeight;
-                positions[4 * k + 2] = piechartAngles[j];
+                positions[4 * k + 2] = glUtils._barcodeToLUTIndex[markerData[i].letters] +
+                                       Math.floor(piechartAngles[j] * 4095.0) * 4096.0;
                 positions[4 * k + 3] = Number("0x" + hexColor.substring(1,7));
+                indices[k] = i;  // Store index needed for picking
             }
         }
         numPoints *= numSectors;
     } else {
-    for (let i = 0; i < numPoints; ++i) {
-        if (useColorFromMarker) hexColor = markerData[i][colorPropertyName];
-        positions[4 * i + 0] = markerData[i].global_X_pos / imageWidth;
-        positions[4 * i + 1] = markerData[i].global_Y_pos / imageHeight;
-        positions[4 * i + 2] = glUtils._barcodeToLUTIndex[markerData[i].letters] / 4095.0;
-        positions[4 * i + 3] = Number("0x" + hexColor.substring(1,7));
-    }
+        for (let i = 0; i < numPoints; ++i) {
+            if (useColorFromMarker) hexColor = markerData[i][colorPropertyName];
+            positions[4 * i + 0] = markerData[i].global_X_pos / imageWidth;
+            positions[4 * i + 1] = markerData[i].global_Y_pos / imageHeight;
+            positions[4 * i + 2] = glUtils._barcodeToLUTIndex[markerData[i].letters];
+            positions[4 * i + 3] = Number("0x" + hexColor.substring(1,7));
+            indices[i] = i;  // Store index needed for picking
+        }
     }
 
-    const bytedata = new Float32Array(positions);
+    const bytedata = new Float32Array(positions.concat(indices));
 
     gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers["barcodeMarkers"]);
     gl.bufferData(gl.ARRAY_BUFFER, bytedata, gl.STATIC_DRAW);
@@ -322,7 +390,7 @@ glUtils.loadCPMarkers = function() {
     const useColorFromMarker = colorscaleName.includes("ownColorFromColumn");
     let hexColor = "#000000";
 
-    const positions = [];
+    const positions = [], indices = [];
     let scalarRange = [1e9, -1e9];
     for (let i = 0; i < numPoints; ++i) {
         if (useColorFromMarker) hexColor = markerData[i][propertyName];
@@ -330,11 +398,12 @@ glUtils.loadCPMarkers = function() {
         positions[4 * i + 1] = Number(markerData[i][yColumnName]) / imageHeight;
         positions[4 * i + 2] = Number(markerData[i][propertyName]);
         positions[4 * i + 3] = Number("0x" + hexColor.substring(1,7));
+        indices[i] = i;  // Store index needed for picking
         scalarRange[0] = Math.min(scalarRange[0], positions[4 * i + 2]);
         scalarRange[1] = Math.max(scalarRange[1], positions[4 * i + 2]);
     }
 
-    const bytedata = new Float32Array(positions);
+    const bytedata = new Float32Array(positions.concat(indices));
 
     gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers["CPMarkers"]);
     gl.bufferData(gl.ARRAY_BUFFER, bytedata, gl.STATIC_DRAW);
@@ -585,35 +654,21 @@ glUtils._loadTextureFromImageURL = function(gl, src) {
 glUtils.clearNavigatorArea = function() {}
 
 
-glUtils.draw = function() {
-    const canvas = document.getElementById("gl_canvas");
-    const gl = canvas.getContext("webgl", glUtils._options);
-
-    const bounds = tmapp["ISS_viewer"].viewport.getBounds();
-    glUtils._viewportRect = [bounds.x, bounds.y, bounds.width, bounds.height];
-    const homeBounds = tmapp["ISS_viewer"].world.getHomeBounds();
-    glUtils._imageSize = [homeBounds.width, homeBounds.height];
-    const orientationDegrees = tmapp["ISS_viewer"].viewport.getRotation();
-
-    // The OSD viewer can be rotated, so need to apply the same transform to markers
-    const t = orientationDegrees * (3.141592 / 180.0);
-    const viewportTransform = [Math.cos(t), -Math.sin(t), Math.sin(t), Math.cos(t)];
-
-    gl.clearColor(0.0, 0.0, 0.0, 0.0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-
+glUtils.drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
+    // Set up render pipeline
     const program = glUtils._programs["markers"];
-
     gl.useProgram(program);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     const POSITION = gl.getAttribLocation(program, "a_position");
+    const INDEX = gl.getAttribLocation(program, "a_index");
     gl.uniform2fv(gl.getUniformLocation(program, "u_imageSize"), glUtils._imageSize);
     gl.uniform4fv(gl.getUniformLocation(program, "u_viewportRect"), glUtils._viewportRect);
     gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
     gl.uniform2fv(gl.getUniformLocation(program, "u_markerScalarRange"), glUtils._markerScalarRange);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity);
+
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["colorLUT"]);
     gl.uniform1i(gl.getUniformLocation(program, "u_colorLUT"), 0);
@@ -624,16 +679,17 @@ glUtils.draw = function() {
     gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["shapeAtlas"]);
     gl.uniform1i(gl.getUniformLocation(program, "u_shapeAtlas"), 2);
 
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
     gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers["barcodeMarkers"]);
     gl.enableVertexAttribArray(POSITION);
     gl.vertexAttribPointer(POSITION, 4, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(INDEX);
+    gl.vertexAttribPointer(INDEX, 1, gl.FLOAT, false, 0, glUtils._numBarcodePoints * 16);
     gl.uniform1i(gl.getUniformLocation(program, "u_markerType"), 0);
-    gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), glUtils._markerScale);
+    gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerScale2"), glUtils._markerScale2);
     gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromMarker"), glUtils._useColorFromMarker);
     gl.uniform1i(gl.getUniformLocation(program, "u_usePiechartFromMarker"), glUtils._usePiechartFromMarker);
+    gl.uniform1f(gl.getUniformLocation(program, "u_pickedMarker"), glUtils._pickedMarker);
     if (glUtils._usePiechartFromMarker) {
         // 1st pass: draw alpha for whole marker shapes
         gl.uniform1i(gl.getUniformLocation(program, "u_alphaPass"), true);
@@ -651,8 +707,10 @@ glUtils.draw = function() {
     gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers["CPMarkers"]);
     gl.enableVertexAttribArray(POSITION);
     gl.vertexAttribPointer(POSITION, 4, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(INDEX);
+    gl.vertexAttribPointer(INDEX, 1, gl.FLOAT, false, 0, glUtils._numCPPoints * 16);
     gl.uniform1i(gl.getUniformLocation(program, "u_markerType"), 1);
-    gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), glUtils._markerScale * 0.5);
+    gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted * 0.5);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerScale2"), glUtils._markerScale2);
     gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromMarker"),
         glUtils._colorscaleName.includes("ownColorFromColumn"));
@@ -662,9 +720,117 @@ glUtils.draw = function() {
     }
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
+    // Restore render pipeline state
     gl.blendFunc(gl.ONE, gl.ONE);
     gl.disable(gl.BLEND);
     gl.useProgram(null);
+}
+
+
+glUtils.drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) {
+    if (!glUtils._usePiechartFromMarker) {
+        glUtils._pickedMarker = -1;
+        return;  // TODO: Right now, we only perform picking for piecharts
+    }
+
+    // Set up render pipeline
+    const program = glUtils._programs["picking"];
+    gl.useProgram(program);
+
+    const POSITION = gl.getAttribLocation(program, "a_position");
+    const INDEX = gl.getAttribLocation(program, "a_index");
+    gl.uniform2fv(gl.getUniformLocation(program, "u_imageSize"), glUtils._imageSize);
+    gl.uniform4fv(gl.getUniformLocation(program, "u_viewportRect"), glUtils._viewportRect);
+    gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
+    gl.uniform2fv(gl.getUniformLocation(program, "u_canvasSize"), [gl.canvas.width, gl.canvas.height]);
+    gl.uniform2fv(gl.getUniformLocation(program, "u_pickingLocation"), glUtils._pickingLocation);
+    gl.uniform1f(gl.getUniformLocation(program, "u_markerScale2"), glUtils._markerScale2);
+    gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["colorLUT"]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_colorLUT"), 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers["barcodeMarkers"]);
+    gl.enableVertexAttribArray(POSITION);
+    gl.vertexAttribPointer(POSITION, 4, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(INDEX);
+    gl.vertexAttribPointer(INDEX, 1, gl.FLOAT, false, 0, glUtils._numBarcodePoints * 16);
+    // 1st pass: clear the corner pixel
+    gl.uniform1i(gl.getUniformLocation(program, "u_op"), 0);
+    gl.drawArrays(gl.POINTS, 0, 1);
+    // 2nd pass: draw all the markers (as single pixels)
+    gl.uniform1i(gl.getUniformLocation(program, "u_op"), 1);
+    gl.drawArrays(gl.POINTS, 0, glUtils._numBarcodePoints);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+    // Read back pixel at location (0, 0) to get the picked object
+    const result = new Uint8Array(4);
+    gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, result);
+    const picked = Number(result[2] + result[1] * 256 + result[0] * 65536) - 1;
+    glUtils._pickedMarker = picked;
+
+    // Restore render pipeline state
+    gl.useProgram(null);
+}
+
+
+glUtils.draw = function() {
+    const canvas = document.getElementById("gl_canvas");
+    const gl = canvas.getContext("webgl", glUtils._options);
+
+    const bounds = tmapp["ISS_viewer"].viewport.getBounds();
+    glUtils._viewportRect = [bounds.x, bounds.y, bounds.width, bounds.height];
+    const homeBounds = tmapp["ISS_viewer"].world.getHomeBounds();
+    glUtils._imageSize = [homeBounds.width, homeBounds.height];
+    const orientationDegrees = tmapp["ISS_viewer"].viewport.getRotation();
+
+    // The OSD viewer can be rotated, so need to apply the same transform to markers
+    const t = orientationDegrees * (3.141592 / 180.0);
+    const viewportTransform = [Math.cos(t), -Math.sin(t), Math.sin(t), Math.cos(t)];
+
+    // Compute adjusted marker scale so that the actual marker size becomes less
+    // dependant on screen resolution or window size
+    let markerScaleAdjusted = glUtils._markerScale;
+    if (glUtils._useMarkerScaleFix) markerScaleAdjusted *= (gl.canvas.height / 900.0);
+
+    gl.clearColor(0.0, 0.0, 0.0, 0.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+    if (glUtils._pickingEnabled) {
+        glUtils.drawPickingPass(gl, viewportTransform, markerScaleAdjusted);
+        glUtils._pickingEnabled = false;  // Clear flag until next click event
+    }
+
+    glUtils.drawColorPass(gl, viewportTransform, markerScaleAdjusted);
+}
+
+
+glUtils.pick = function(event) {
+    if (event.quick) {
+        glUtils._pickingEnabled = true;
+        glUtils._pickingLocation = [event.position.x, event.position.y];
+        glUtils.draw();
+
+        tmapp["ISS_viewer"].removeOverlay("ISS_marker_info");
+        if (glUtils._pickedMarker >= 0 && glUtils._showMarkerInfo) {
+            const div = document.createElement("div");
+            div.id = "ISS_marker_info";
+            div.width = "1px"; div.height = "1px";
+            div.style = "background-color:white; margin:0px; padding:2px 6px; " +
+                        "border:1px solid; z-index:10; opacity:80%; pointer-events:none";
+            div.innerHTML = markerUtils.makePieChartTable(dataUtils["ISS_processeddata"][glUtils._pickedMarker]);
+
+            tmapp["ISS_viewer"].addOverlay({
+                element: div,
+                placement: "TOP_LEFT",
+                location: tmapp["ISS_viewer"].viewport.viewerElementToViewportCoordinates(event.position),
+                checkResize: false,
+                rotationMode: OpenSeadragon.OverlayRotationMode.NO_ROTATION
+            });
+        }
+    }
 }
 
 
@@ -720,6 +886,7 @@ glUtils.init = function() {
     osd.appendChild(canvas);
 
     this._programs["markers"] = this._loadShaderProgram(gl, this._markersVS, this._markersFS);
+    this._programs["picking"] = this._loadShaderProgram(gl, this._pickingVS, this._pickingFS);
     this._buffers["barcodeMarkers"] = this._createDummyMarkerBuffer(gl, this._numBarcodePoints);
     this._buffers["CPMarkers"] = this._createDummyMarkerBuffer(gl, this._numCPMarkers);
     this._textures["colorLUT"] = this._createColorLUTTexture(gl);
@@ -741,6 +908,8 @@ glUtils.init = function() {
     tmapp["ISS_viewer"].addHandler('open', glUtils.draw);
     tmapp["ISS_viewer"].removeHandler('viewport-change', glUtils.draw);
     tmapp["ISS_viewer"].addHandler('viewport-change', glUtils.draw);
+    tmapp["ISS_viewer"].removeHandler('canvas-click', glUtils.pick);
+    tmapp["ISS_viewer"].addHandler('canvas-click', glUtils.pick);
 
     glUtils._initialized = true;
     glUtils.resize();  // Force initial resize to OSD canvas size
