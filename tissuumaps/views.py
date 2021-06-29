@@ -305,10 +305,19 @@ def csvFile(path):
     directory = os.path.dirname(completePath)
     filename = os.path.basename(completePath)
     if os.path.isfile(completePath):
-        if not os.path.isfile(completePath + ".gz"):
-            with open(completePath, 'rb') as f_in, gzip.open(completePath + ".gz", 'wb', compresslevel=9) as f_out:
+        if os.path.isfile(completePath + ".gz"):
+            os.rename(completePath + ".gz", completePath + ".cgz")
+
+        if not os.path.isfile(completePath + ".cgz"):
+            with open(completePath, 'rb') as f_in, gzip.open(completePath + ".cgz", 'wb', compresslevel=9) as f_out:
                 f_out.writelines(f_in)
-        return send_from_directory(directory, filename + ".gz")
+        response = make_response(send_from_directory(directory, filename + ".cgz"))
+        response.headers['Content-Encoding'] = 'gzip'
+        response.headers['Vary'] = 'Accept-Encoding'
+        response.headers['Transfer-Encoding'] = 'gzip'
+
+        response.headers['Content-Type'] = 'text/csv; charset=UTF-8'
+        return response
     else:
         abort(404)
     
