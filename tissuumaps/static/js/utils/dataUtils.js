@@ -111,9 +111,16 @@ dataUtils.processISSRawData = function () {
         //console.log("entered here");
         dataUtils._nameAndLetters.drawGeneName = true;
     }
+    else {
+        dataUtils._nameAndLetters.drawGeneName = false;
+    }
     if (!(barcodeSelector == "null")) {
         //console.log("entered here");
         dataUtils._nameAndLetters.drawGeneLetters = true;
+    }
+    else {
+        //console.log("entered here");
+        dataUtils._nameAndLetters.drawGeneLetters = false;
     }
     
     var toRemove = [barcodeSelector, nameSelector, xSelector, ySelector];
