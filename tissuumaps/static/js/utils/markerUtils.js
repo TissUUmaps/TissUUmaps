@@ -882,8 +882,8 @@ markerUtils.addPiechartLegend = function () {
     console.log(sectors);
 }
 
-/** Adding piechart legend in the upper left corner */
-markerUtils.makePieChartTable = function (barcode) {
+/** Adding piechart table on pickup */
+markerUtils.makePiechartTable = function (barcode) {
     var op = tmapp["object_prefix"];
     var sectors = [];
     if (markerUtils._uniquePiechartSelector.split(";").length > 1) {
@@ -904,7 +904,7 @@ markerUtils.makePieChartTable = function (barcode) {
     console.dir(sortedSectors);
     sortedSectors.sort(
         function cmp(a, b) {
-            console.log("Comparing",a,b,a[0]-b[0]);
+
             return b[0]-a[0];
         }
     );
