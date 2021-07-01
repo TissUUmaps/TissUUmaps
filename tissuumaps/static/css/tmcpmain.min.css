@@ -2,13 +2,15 @@ body {
     overflow:hidden;
 }
 .ISS_viewer{
+    position:absolute;
     height:calc(100vh - 72px);
+    width:calc(100% - 14px);
 	background-color:#676767;
 }
 
 .ISS_menu{
     height:calc(100vh - 72px);
-    padding-left:15px;
+    padding-left:6px;
 }
 
 #ISS_markers {
@@ -75,4 +77,20 @@ body {
 }
 #ISS_table {
     user-select:none;
+}
+#ISS_collapse_btn {
+    display: block;
+    position: absolute;
+    right: -2px;
+    height: calc(34vh - 72px);
+    margin-top: 33vh;
+    margin-bottom: 33vh;
+    vertical-align: middle;
+    line-height: calc(34vh - 72px);
+    width: 12px;
+    text-align: center;
+    padding: 0px;
+    font-size: 11px;
+    background-color: #888;
+    color: white;
 }

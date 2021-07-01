@@ -25,6 +25,7 @@ tmapp.registerActions = function () {
     var cpop="CP";
 
     interfaceUtils.listen(op + '_add_layer_btn', 'click', function() { overlayUtils.addLayerFromSelect() }, false);
+    interfaceUtils.listen(op + '_collapse_btn','click', function () { interfaceUtils.toggeRightPanel() },false);
     interfaceUtils.listen(op + '_bringmarkers_btn','click', function () { dataUtils.processISSRawData(); },false);
     interfaceUtils.listen(op + '_search','input', function () { markerUtils.hideRowsThatDontContain(); },false);
     interfaceUtils.listen(op + '_drawall_btn','click', function () { markerUtils.drawAllToggle(); },false);

@@ -500,3 +500,26 @@ interfaceUtils.hideTabsExcept = function (a) {
     }
    
 }
+
+/** 
+ * @param {object} a dom object of the a tag 
+ * hides all the tabs that should not he  displayed except a itself */
+ interfaceUtils.toggeRightPanel = function (a) {
+    var op = tmapp["object_prefix"];
+    var menu=document.getElementById(op + "_menu");
+    var main=document.getElementById(op + "_viewer_container");
+    var btn=document.getElementById(op + "_collapse_btn");
+    var style = window.getComputedStyle(menu);
+    if (style.display === 'none') {
+        menu.style.display = "block";
+        main.style.width = "66.66666%";
+        main.style.maxWidth = "Calc(100% - 506px)";
+        btn.innerText = ">";
+    }
+    else {
+        menu.style.display = "none";
+        main.style.width = "100%";
+        main.style.maxWidth = "";
+        btn.innerText = "<";
+    }
+}
