@@ -325,6 +325,7 @@ def csvFile(path):
     directory = os.path.dirname(completePath)
     filename = os.path.basename(completePath)
     if os.path.isfile(completePath):
+        # Temporary fix for gz files without csv
         if os.path.isfile(completePath + ".gz"):
             os.rename(completePath + ".gz", completePath + ".cgz")
 
@@ -335,7 +336,7 @@ def csvFile(path):
         response.headers['Content-Encoding'] = 'gzip'
         response.headers['Vary'] = 'Accept-Encoding'
         response.headers['Transfer-Encoding'] = 'gzip'
-
+        response.headers['Content-Length'] = os.path.getsize(completePath + ".cgz")
         response.headers['Content-Type'] = 'text/csv; charset=UTF-8'
         return response
     else:
