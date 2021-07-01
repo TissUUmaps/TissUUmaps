@@ -50,11 +50,16 @@ dataUtils.processISSRawData = function () {
     var ISSYNode = document.getElementById("ISS_Y_header");
     var ySelector = ISSYNode.options[ISSYNode.selectedIndex].value;
     var ISSColor = document.getElementById("ISS_color_header");
+    var ISSScale = document.getElementById("ISS_scale_header");
     var ISSPiechart = document.getElementById("ISS_piechart_header");
     if (ISSColor)
         var colorSelector = ISSColor.options[ISSColor.selectedIndex].value;
     else
         var colorSelector = "null";
+    if (ISSScale)
+        var scaleSelector = ISSPiechart.options[ISSScale.selectedIndex].value;
+    else
+        var scaleSelector = "null";
     if (ISSPiechart)
         var piechartSelector = ISSPiechart.options[ISSPiechart.selectedIndex].value;
     else
@@ -75,6 +80,14 @@ dataUtils.processISSRawData = function () {
     else {
         markerUtils._uniquePiechart = false;
         markerUtils._uniquePiechartSelector = "";
+    }
+    if (scaleSelector && scaleSelector != "null"){
+        markerUtils._uniqueScale = true;
+        markerUtils._uniqueScaleSelector = scaleSelector;
+    }
+    else {
+        markerUtils._uniqueScale = false;
+        markerUtils._uniqueScaleSelector = "";
     }
     
     //check that the key is available
@@ -177,10 +190,11 @@ dataUtils.showMenuCSV = function(){
     var ISSX = document.getElementById(op + "_X_header");
     var ISSY = document.getElementById(op + "_Y_header");
     var ISSColor = document.getElementById(op + "_color_header");
+    var ISSScale = document.getElementById(op + "_scale_header");
     var ISSPiechart = document.getElementById(op + "_piechart_header");
     var ISSKey = document.getElementById(op + "_key_header");
     //console.log(dataUtils._CSVStructure["ISS_csv_header"]);
-    [ISSBarcodeInput, ISSNanmeInput, ISSX, ISSY, ISSColor, ISSPiechart].forEach(function (node) {
+    [ISSBarcodeInput, ISSNanmeInput, ISSX, ISSY, ISSColor, ISSScale, ISSPiechart].forEach(function (node) {
         if (!node) return;
         node.innerHTML = "";
         var option = document.createElement("option");
