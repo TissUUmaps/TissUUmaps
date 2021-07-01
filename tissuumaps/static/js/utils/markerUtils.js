@@ -847,6 +847,8 @@ markerUtils.addPiechartLegend = function () {
         elt.style.zIndex = "100";
         elt.style.paddingLeft = "5px";
         elt.style.paddingBottom = "2px";
+        elt.style.overflowY = "auto";
+        elt.style.maxHeight = "Calc(100vh - 245px)";
         tmapp['ISS_viewer'].addControl(elt,{anchor: OpenSeadragon.ControlAnchor.TOP_LEFT});
     }
     elt = document.getElementById("piechartLegend");
@@ -854,6 +856,7 @@ markerUtils.addPiechartLegend = function () {
     var table = HTMLElementUtils.createElement({ type: "table"});
     table.style.borderSpacing = "3px";
     table.style.borderCollapse = "separate";
+    table.style.fontSize = "10px";
     var title = HTMLElementUtils.createElement({ type: "div", innerHTML: "<b>Piechart legend</b>"});
     elt.appendChild(title);
     elt.appendChild(table);
