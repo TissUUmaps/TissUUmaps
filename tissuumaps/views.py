@@ -245,6 +245,14 @@ def index():
         return render_template('server/files.html', root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']))
         
 
+@app.route('/web/<path:path>')
+@requires_auth
+def base_static(path):
+    completePath = os.path.abspath(os.path.join(app.basedir, path))
+    directory = os.path.dirname(completePath) + "/web/"
+    filename = os.path.basename(completePath)
+    return send_from_directory(directory, filename)
+
 @app.route('/<path:path>')
 @requires_auth
 def slide(path):
