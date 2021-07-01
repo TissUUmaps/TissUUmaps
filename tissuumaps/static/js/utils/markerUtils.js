@@ -33,6 +33,7 @@ markerUtils = {
     _colorsperkey:null,
     _startMarkersOn:false,
     _randomShape:true,
+    _selectedShape:0,
     _headerNames:{"Barcode":"Barcode","Gene":"Gene"}
 }
 
@@ -470,6 +471,7 @@ markerUtils.markerUI = function (barObject,options) {
         var shapeParams = { random: markerUtils._randomShape, id: barObject.key + "-shape-" + op, "options": markerUtils._d3SymbolStrings };
         var shapeinput = HTMLElementUtils.selectTypeDropDown(shapeParams);
         if (shapeParams.random) { var rnd = Math.floor(Math.random() * (markerUtils._d3SymbolStrings.length-1)) + 0; shapeinput.selectedIndex = rnd; }
+        else {shapeinput.selectedIndex = markerUtils._selectedShape}
         shape.appendChild(shapeinput);
         row.appendChild(shape);
     }
