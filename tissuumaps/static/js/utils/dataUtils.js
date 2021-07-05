@@ -302,6 +302,8 @@ dataUtils.XHRCSV = function (thecsv) {
             
         }else{
             console.log("dataUtils.XHRCSV responded with "+xhr.status);
+            progressParent.style.display = "none";
+            alert ("Impossible to load data, please contact an administrator.")
         }     
     };
     
