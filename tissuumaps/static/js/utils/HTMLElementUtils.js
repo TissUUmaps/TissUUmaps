@@ -400,10 +400,14 @@ HTMLElementUtils.createDLSelect = function(downloadRow, innerText, callback, com
     return row;
 }
 
-HTMLElementUtils.createDLSelectMarkers = function(innerText, dataURLs, comment, expectedCSV) {
+HTMLElementUtils.createDLSelectMarkers = function(innerText, dataURLs, comment, expectedCSV, settings) {
     var downloadRow = document.getElementById("ISS_rowDownloadMarkers");
     callback = function(e, params){
-        console.log(params);
+        if (settings) {
+            settings.forEach(function(setting, i) {
+                window[setting.module][setting.function] = setting.value;
+            });
+        }
         var dataURL = params.selected;
         if (dataURL == "") return;
         if (expectedCSV !== undefined) dataUtils.setExpectedCSV(expectedCSV);
@@ -444,9 +448,14 @@ HTMLElementUtils.createDLButton = function(downloadRow, innerText, callback, com
     return row;
 }
 
-HTMLElementUtils.createDLButtonMarkers = function(innerText, dataURL, comment, expectedCSV, autoLoad) {
+HTMLElementUtils.createDLButtonMarkers = function(innerText, dataURL, comment, expectedCSV, autoLoad, settings) {
     var downloadRow = document.getElementById("ISS_rowDownloadMarkers");
     callback = function(e){
+        if (settings) {
+            settings.forEach(function(setting, i) {
+                window[setting.module][setting.function] = setting.value;
+            });
+        }
         if (expectedCSV !== undefined) dataUtils.setExpectedCSV(expectedCSV);
         dataUtils.XHRCSV(dataURL);
     }
@@ -459,9 +468,14 @@ HTMLElementUtils.createDLButtonMarkers = function(innerText, dataURL, comment, e
     else {label.innerHTML = "Or import gene expression from CSV file:";}
 }
 
-HTMLElementUtils.createDLButtonMarkersCP = function(innerText, dataURL, comment, expectedCSV, autoLoad) {
+HTMLElementUtils.createDLButtonMarkersCP = function(innerText, dataURL, comment, expectedCSV, autoLoad, settings) {
     var downloadRow = document.getElementById("ISS_rowDownloadMarkersCP");
     callback = function(e){
+        if (settings) {
+            settings.forEach(function(setting, i) {
+                window[setting.module][setting.function] = setting.value;
+            });
+        }
         if (expectedCSV !== undefined) CPDataUtils.setExpectedCSV(expectedCSV);
         CPDataUtils.readCSV(dataURL)
     }
@@ -474,9 +488,14 @@ HTMLElementUtils.createDLButtonMarkersCP = function(innerText, dataURL, comment,
     else {label.innerHTML = "Or import cell morphology from CSV file:";}
 }
 
-HTMLElementUtils.createDLButtonRegions = function(innerText, dataURL, comment, autoLoad) {
+HTMLElementUtils.createDLButtonRegions = function(innerText, dataURL, comment, autoLoad, settings) {
     var downloadRow = document.getElementById("ISS_rowDownloadRegions");
     callback = function(e){
+        if (settings) {
+            settings.forEach(function(setting, i) {
+                window[setting.module][setting.function] = setting.value;
+            });
+        }
         regionUtils.JSONToRegions(dataURL)
     }
     var buttonRow = HTMLElementUtils.createDLButton(downloadRow, innerText, callback, comment);

@@ -247,7 +247,8 @@
                     markerFile.title,
                     markerFile.path,
                     markerFile.comment,
-                    markerFile.expectedCSV
+                    markerFile.expectedCSV,
+                    markerFile.settings
                 );        
             }
             else {
@@ -256,7 +257,8 @@
                     markerFile.path,
                     markerFile.comment,
                     markerFile.expectedCSV,
-                    markerFile.autoLoad
+                    markerFile.autoLoad,
+                    markerFile.settings
                 );
             }
         });
