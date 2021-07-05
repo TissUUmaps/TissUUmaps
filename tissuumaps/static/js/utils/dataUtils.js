@@ -224,6 +224,7 @@ dataUtils.showMenuCSV = function(){
     if (csvheaders.includes(dataUtils._expectedCSV["Y_col"])) ISSY.value = dataUtils._expectedCSV["Y_col"];
     if (csvheaders.includes(dataUtils._expectedCSV["color"])) ISSColor.value = dataUtils._expectedCSV["color"];
     if (csvheaders.includes(dataUtils._expectedCSV["piechart"])) ISSPiechart.value = dataUtils._expectedCSV["piechart"];
+    if (csvheaders.includes(dataUtils._expectedCSV["scale"])) ISSScale.value = dataUtils._expectedCSV["scale"];
     if (dataUtils._expectedCSV["key"]) ISSKey.value = dataUtils._expectedCSV["key"];
     if (dataUtils._autoLoadCSV) {
         setTimeout(function () {
