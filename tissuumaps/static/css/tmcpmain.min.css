@@ -94,3 +94,12 @@ body {
     background-color: #888;
     color: white;
 }
+.chosen-single {
+    background: none !important;
+    background-color: #ad1d28 !important;
+    color: white !important;
+    height: 38px !important;
+    line-height: 38px !important;
+    text-align: center !important;
+    font-size: 14px !important;
+}
