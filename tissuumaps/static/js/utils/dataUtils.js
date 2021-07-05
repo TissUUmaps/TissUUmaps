@@ -170,6 +170,9 @@ dataUtils.processISSRawData = function () {
     if (markerUtils._uniquePiechartSelector != ""){
         markerUtils.addPiechartLegend();
     }
+    else {
+        document.getElementById("piechartLegend").style.display="none";
+    }
 }
 
 /** 

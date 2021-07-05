@@ -852,6 +852,7 @@ markerUtils.addPiechartLegend = function () {
         tmapp['ISS_viewer'].addControl(elt,{anchor: OpenSeadragon.ControlAnchor.TOP_LEFT});
     }
     elt = document.getElementById("piechartLegend");
+    elt.style.display="block";
     elt.innerHTML = "";
     var table = HTMLElementUtils.createElement({ type: "table"});
     table.style.borderSpacing = "3px";
