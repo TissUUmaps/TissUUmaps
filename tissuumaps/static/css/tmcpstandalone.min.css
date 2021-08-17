@@ -35,10 +35,6 @@
     color: #000;
     background-color: #aaa;
 }
-.ISS_menu {
-    height: calc(100vh - 47px);
-    padding-left: 15px;
-}
 .ISS_viewer {
     height: calc(100vh - 47px);
     background-color: #676767;

@@ -112,10 +112,10 @@
     <div class="container-fluid">
         <div class="row">
             <!-- Row for viewer  -->
-            <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8" style="max-width: calc(100% - 506px);">
+            <div class="col-xs-8 col-sm-8 col-md-8 col-lg-8" style="max-width: calc(100% - 506px);" id="ISS_viewer_container">
                 <!-- The id is what OSD will look for to draw the viewer, the class is our own css to stylize 
                 The ID will give the prefix for all the objects related to the viewer in this case ISS-->
-                <div id="ISS_viewer" class="ISS_viewer" style="position:absolute; width:100%">
+                <div id="ISS_viewer" class="ISS_viewer">
                 </div>
                 <!-- Global marker size slider -->
                 <div id="ISS_globalmarkersize">
@@ -126,19 +126,20 @@
                         oninput="document.getElementById('ISS_globalmarkersize_label').innerHTML = this.value;"/>
                     <em class="range-label" id="ISS_globalmarkersize_label">100</em>
                 </div>
-                </div>
-            <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4 ISS_menu" style="overflow-y:hidden; overflow-x:auto;min-width: 506px;">
+                <div class="btn btn-secondary" id="ISS_collapse_btn">&gt;</div>
+            </div>
+            <div class="col-xs-4 col-sm-4 col-md-4 col-lg-4 ISS_menu" id="ISS_menu" style="overflow-y:hidden; overflow-x:auto;min-width: 506px;">
                 <div class="row row-fullheight" style="padding-bottom: 0px;">
                     <!-- Level 0 tabs -->
                     <ul class="nav nav-tabs L0-tabs">
                         <li> <a href="#markers-iss-gui" data-toggle="tab" aria-expanded="true"
-                                class="active main-child">Gene expression</a></li>
+                                class="active main-child" id="title-tab-markers">Gene expression</a></li>
                         <li> <a href="#markers-cp-gui" data-toggle="tab"
-                                aria-expanded="false">Cell morphology</a></li>
+                                aria-expanded="false" id="title-tab-CPmarkers">Cell morphology</a></li>
                         <li> <a href="#markers-regions-gui" data-toggle="tab"
-                                aria-expanded="false">Regions</a></li>
+                                aria-expanded="false" id="title-tab-regions">Regions</a></li>
                         <li> <a href="#image-gui" data-toggle="tab"
-                                aria-expanded="false">Image layers</a></li>
+                                aria-expanded="false" id="title-tab-image">Image layers</a></li>
 
                     </ul>
 
@@ -153,7 +154,7 @@
                                     <div class="row" id="ISS_csv_progress_parent" style="visibility:hidden; display:none; margin: 0px 10px 0px 10px;">
                                         Loading markers...
                                         <div class="progress">
-                                                                                <div id="ISS_csv_progress" class="progress-bar progress-bar-striped" role="progressbar" style="width: 0%; " aria-valuenow="10" aria-valuemin="0" aria-valuemax="100"></div>
+                                            <div id="ISS_csv_progress" class="progress-bar progress-bar-striped" role="progressbar" style="width: 0%; " aria-valuenow="10" aria-valuemin="0" aria-valuemax="100"></div>
                                         </div>
                                     </div>
                                      <!-- 1.1.1 Row of file selection -->
@@ -247,6 +248,16 @@
                                                     </div>
                                                     <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
                                                         <select class="custom-select" id="ISS_color_header">
+                                                            <option value="null"></option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                                                        <label for="ISS_scale_header">Scale (only if one scale per marker)</label>
+                                                    </div>
+                                                    <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                                                        <select class="custom-select" id="ISS_scale_header">
                                                             <option value="null"></option>
                                                         </select>
                                                     </div>
