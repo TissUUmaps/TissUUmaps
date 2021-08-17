@@ -21,6 +21,7 @@ import pathlib
 import sys
 from flask import Flask
 from optparse import OptionParser
+import logging
 
 SLIDE_DIR = "/mnt/data/shared/"
 SLIDE_CACHE_SIZE = 10
@@ -45,8 +46,9 @@ else: #if __file__:
     static_folder=os.path.join(folderPath, 'static')
     os.chdir(folderPath)
 
-print ("template_folder",template_folder)
-print ("static_folder",static_folder)
+logging.info("template_folder: " + template_folder)
+logging.info("static_folder: " + static_folder)
+
 app = Flask(__name__,template_folder=template_folder,static_folder=static_folder)
 app.config.from_object(__name__)
 app.config.from_envvar('DEEPZOOM_MULTISERVER_SETTINGS', silent=True)

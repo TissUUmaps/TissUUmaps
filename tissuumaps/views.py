@@ -40,7 +40,6 @@ def requires_auth(f):
         activeFolder = os.path.dirname(path)
         while (os.path.dirname(activeFolder) != activeFolder and not os.path.isfile(activeFolder + "/auth")):
             activeFolder = os.path.dirname(activeFolder)
-            print (activeFolder)
         if os.path.isfile(activeFolder + "/auth"):
             with open(activeFolder + "/auth", 'r') as file:
                 data = file.read().replace('\n', '')
