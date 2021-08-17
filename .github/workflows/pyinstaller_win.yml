@@ -30,9 +30,6 @@ jobs:
     - name: copy vips bin files
       run: |
         cp vips-dev-8.10/bin/* dist/TissUUmaps/
-    - name: rename Qt to Qt5
-      run: |
-        mv dist/TissUUmaps/PyQt5/Qt dist/TissUUmaps/PyQt5/Qt5
         
     - name: Checkout fred
       uses: actions/checkout@v2
