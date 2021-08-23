@@ -208,8 +208,9 @@ class Plugin ():
             abort(500)
         relativepath = unquote(jsonParam["path"])
         print ('jsonParam["path"]', jsonParam["path"])
-        if relativepath[0] == "/":
-            relativepath = relativepath[1:]
+        if (relativepath != ""):
+            if relativepath[0] == "/":
+                relativepath = relativepath[1:]
         path = os.path.abspath(os.path.join(self.app.basedir, relativepath))
         absoluteRoot = os.path.abspath(self.app.basedir)
         print ("path",relativepath, path, absoluteRoot)

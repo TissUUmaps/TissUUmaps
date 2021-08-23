@@ -1,14 +1,14 @@
 /**
- * @file istDeco.js
+ * @file qcControl.js
  * @author Christophe Avenel
  */
 
 /**
- * @namespace istDeco
- * @classdesc The root namespace for istDeco.
+ * @namespace qcControl
+ * @classdesc The root namespace for qcControl.
  */
-var istDeco;
-istDeco = {
+var qcControl;
+qcControl = {
     functions:[
         {
             name:"Load images",
@@ -41,26 +41,26 @@ istDeco = {
  * it will create the buttons to display them in the settings panel.
  * The SVG overlays for the viewer are also initialized here 
  * @summary After setting up the tmapp object, initialize it*/
-istDeco.init = function (tmappObject) {
-    istDeco.tmapp = tmappObject;
-    istDeco.functions.forEach(function(funElement, i) {
+qcControl.init = function (tmappObject) {
+    qcControl.tmapp = tmappObject;
+    qcControl.functions.forEach(function(funElement, i) {
         var aElement = document.createElement("a");
         aElement.href = "#";
         aElement.addEventListener("click",function (event) {
             console.log("Click", event, funElement.function);
-            window["istDeco"][funElement.function]();
+            window["qcControl"][funElement.function]();
         });
         var spanElement = document.createElement("span");
         aElement.appendChild(spanElement);
         spanElement.innerHTML = funElement.name;
-        dropdownMenu = document.getElementById("dropdown-menu-istDeco");
+        dropdownMenu = document.getElementById("dropdown-menu-qcControl");
         dropdownMenu.appendChild(aElement);
     });
 }
 
-istDeco.loadImages = function () {
+qcControl.loadImages = function () {
     console.log("Load Images");
-    var op = istDeco.tmapp["object_prefix"];
+    var op = qcControl.tmapp["object_prefix"];
     var vname = op + "_viewer";
 
     subfolder = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
@@ -70,7 +70,7 @@ istDeco.loadImages = function () {
         {
             // Post select to url.
             type : 'post',
-            url : '/plugin/istDeco/importFolder',
+            url : '/plugin/qcControl/importFolder',
             contentType: 'application/json; charset=utf-8',
             data : JSON.stringify({
                     'path' : subfolder
@@ -78,7 +78,7 @@ istDeco.loadImages = function () {
             success : function(data)
             {
                 $("#loadingModal").hide();
-                istDeco.loadState(data);
+                qcControl.loadState(data);
             },
             complete : function(data)
             {
@@ -92,38 +92,38 @@ istDeco.loadImages = function () {
     );
 }
 
-istDeco.run = function () {
+qcControl.run = function () {
     console.log("Load Images");
-    var op = istDeco.tmapp["object_prefix"];
+    var op = qcControl.tmapp["object_prefix"];
     var vname = op + "_viewer";
 
     var click_handler = function (event) {
         if (event.quick) {
-            var OSDviewer = istDeco.tmapp[tmapp["object_prefix"] + "_viewer"];
+            var OSDviewer = qcControl.tmapp[tmapp["object_prefix"] + "_viewer"];
             var viewportCoords = OSDviewer.viewport.pointFromPixel(event.position)
             var normCoords = OSDviewer.viewport.viewportToImageCoordinates(viewportCoords);
 
-            var bbox = [Math.round(normCoords.x - istDeco._bboxSize/2), Math.round(normCoords.y - istDeco._bboxSize/2), istDeco._bboxSize, istDeco._bboxSize];
-            var layers = istDeco.getLayers();
-            var markers = istDeco.getMarkers(bbox);
+            var bbox = [Math.round(normCoords.x - qcControl._bboxSize/2), Math.round(normCoords.y - qcControl._bboxSize/2), qcControl._bboxSize, qcControl._bboxSize];
+            var layers = qcControl.getLayers();
+            var markers = qcControl.getMarkers(bbox);
             if (markers.length > 0) {
-                if (!istDeco._order_rounds)
-                    istDeco.changeOrder(false);
+                if (!qcControl._order_rounds)
+                    qcControl.changeOrder(false);
             }
-            img = document.getElementById("ISS_istDeco_img");
+            img = document.getElementById("ISS_qcControl_img");
             console.log(img);
             if (img) 
                 img.style.filter = "blur(5px)";
-            istDeco.getMatrix(bbox,layers,markers);
+            qcControl.getMatrix(bbox,layers,markers);
             
             color = "red";
-            var boundBoxOverlay = document.getElementById("overlay-istDeco");
+            var boundBoxOverlay = document.getElementById("overlay-qcControl");
             if (boundBoxOverlay) {
                 OSDviewer.removeOverlay(boundBoxOverlay);
             }
             var boundBoxRect = OSDviewer.viewport.imageToViewportRectangle(
                 bbox[0], bbox[1], bbox[2], bbox[3]);
-            boundBoxOverlay = $("<div id=\"overlay-istDeco\"></div>");
+            boundBoxOverlay = $("<div id=\"overlay-qcControl\"></div>");
             boundBoxOverlay.css({
                 border: "2px solid " + color
             });
@@ -137,19 +137,19 @@ istDeco.run = function () {
 
     //OSD handlers are not registered manually they have to be registered
     //using MouseTracker OSD objects 
-    if (istDeco.ISS_mouse_tracker == undefined) {
-        istDeco.ISS_mouse_tracker = new OpenSeadragon.MouseTracker({
+    if (qcControl.ISS_mouse_tracker == undefined) {
+        qcControl.ISS_mouse_tracker = new OpenSeadragon.MouseTracker({
             //element: this.fixed_svgov.node().parentNode, 
-            element: istDeco.tmapp[vname].canvas,
+            element: qcControl.tmapp[vname].canvas,
             clickHandler: click_handler
         }).setTracking(true);
     }
 }
 
-istDeco.changeOrder = function (doPrompt) {
+qcControl.changeOrder = function (doPrompt) {
     if (doPrompt == undefined)
     doPrompt = true;
-    var layers = istDeco.getLayers();
+    var layers = qcControl.getLayers();
     rounds = [];
     channels = [];
     layers.forEach(function(layer, i) {
@@ -164,17 +164,17 @@ istDeco.changeOrder = function (doPrompt) {
         }
     });
     if (doPrompt) {
-        istDeco._order_rounds = prompt("Can you check order of rounds?",rounds.join(";")).split(";");
-        istDeco._order_channels = prompt("Can you check order of channels?",channels.join(";")).split(";");
+        qcControl._order_rounds = prompt("Can you check order of rounds?",rounds.join(";")).split(";");
+        qcControl._order_channels = prompt("Can you check order of channels?",channels.join(";")).split(";");
     }
 }
 
-istDeco.changeBboxSize = function (doPrompt) {
-    istDeco._bboxSize = parseInt(prompt("Select the window region size:",istDeco._bboxSize));
+qcControl.changeBboxSize = function (doPrompt) {
+    qcControl._bboxSize = parseInt(prompt("Select the window region size:",qcControl._bboxSize));
 }
 
-istDeco.getMarkers = function (bbox) {
-    var op = istDeco.tmapp["object_prefix"];
+qcControl.getMarkers = function (bbox) {
+    var op = qcControl.tmapp["object_prefix"];
     var vname = op + "_viewer";
     if (!dataUtils[op + "_barcodeGarden"]) {
         return [];
@@ -214,7 +214,7 @@ istDeco.getMarkers = function (bbox) {
     return markersInViewportBounds;
 }
 
-istDeco.getLayers = function () {
+qcControl.getLayers = function () {
     layers = []
     /*if (tmapp.fixed_file && tmapp.fixed_file != "") {
         layers.push( {
@@ -231,30 +231,30 @@ istDeco.getLayers = function () {
     return layers;
 }
 
-istDeco.getMatrix = function (bbox, layers, markers, order) {
-    var op = istDeco.tmapp["object_prefix"];
+qcControl.getMatrix = function (bbox, layers, markers, order) {
+    var op = qcControl.tmapp["object_prefix"];
     var vname = op + "_viewer";
     console.log("Calling ajax getMatrix")
     $.ajax(
         {
             // Post select to url.
             type : 'post',
-            url : '/plugin/istDeco/getMatrix',
+            url : '/plugin/qcControl/getMatrix',
             contentType: 'application/json; charset=utf-8',
             data : JSON.stringify({
                     'bbox' : bbox,
                     'layers' : layers,
                     'markers' : markers,
-                    'order_rounds': istDeco._order_rounds,
-                    'order_channels': istDeco._order_channels,
+                    'order_rounds': qcControl._order_rounds,
+                    'order_channels': qcControl._order_channels,
             }),
             success : function(data)
             {
-                img = document.getElementById("ISS_istDeco_img");
+                img = document.getElementById("ISS_qcControl_img");
                 console.log("img", img)
                 if (!img) {
                     var img = document.createElement("img");
-                    img.id = "ISS_istDeco_img";
+                    img.id = "ISS_qcControl_img";
                     var elt = document.createElement("div");
                     elt.appendChild(img);
                     tmapp[vname].addControl(elt,{anchor: OpenSeadragon.ControlAnchor.BOTTOM_RIGHT});
@@ -276,7 +276,7 @@ istDeco.getMatrix = function (bbox, layers, markers, order) {
 
 /**
  * This method is used to load the TissUUmaps state (gene expression, cell morphology, regions) */
- istDeco.loadState = function(state) {
+ qcControl.loadState = function(state) {
     /*
     {
         markerFiles: [

@@ -81,7 +81,7 @@ class webEngine(QWebEngineView):
             except:
                 pass
             
-            print ("Impossible to load",self.location, urllib.request.urlopen(self.location).getcode())
+            print ("Impossible to load",self.location)
             time.sleep(0.1)
         print ("loading page ", self.location)
         if (len(self.args) > 0):

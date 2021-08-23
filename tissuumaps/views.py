@@ -413,7 +413,7 @@ def tile_asso(path, associated_name, level, col, row, format):
     return resp
 
 def load_plugin(name):
-    mod = importlib.import_module("."+name,package="plugins")
+    mod = importlib.import_module("."+name,package="tissuumaps.plugins")
     return mod
 
 @app.route('/plugin/<path:pluginName>.js')
