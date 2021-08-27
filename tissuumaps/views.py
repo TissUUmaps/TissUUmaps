@@ -12,6 +12,8 @@ import os
 import threading, time
 from threading import Lock
 from functools import wraps
+import logging
+
 import imghdr
 import importlib
 import encodings.idna
@@ -63,7 +65,7 @@ class ImageConverter():
         self.outputImage = outputImage
     
     def convert (self):
-        print ("Converting:",self.inputImage, self.outputImage, os.path.isfile(self.outputImage))
+        logging.debug ("Converting:",self.inputImage, self.outputImage, os.path.isfile(self.outputImage))
         if not os.path.isfile(self.outputImage):
             def convertThread():
                 try:
@@ -79,9 +81,9 @@ class ImageConverter():
                     imgVips = imgVips.scaleimage()
                     imgVips.tiffsave(self.outputImage, pyramid=True, tile=True, tile_width=256, tile_height=256, properties=True, bitdepth=8)
                 except: 
-                    print ("Impossible to convert image using VIPS:")
+                    logging.error ("Impossible to convert image using VIPS:")
                     import traceback
-                    print (traceback.format_exc())
+                    logging.error (traceback.format_exc())
                 self.convertDone = True
             self.convertDone = False
             threading.Thread(target=convertThread,daemon=True).start()
@@ -231,7 +233,7 @@ def _get_slide(path):
             return _get_slide(path)
         except:
             import traceback
-            print (traceback.format_exc())
+            logging.error (traceback.format_exc())
             abort(404)
 
 @app.route('/')
@@ -264,7 +266,7 @@ def slide(path):
     #                        os.path.dirname(path))
     #
     if app.config["isStandalone"]:
-        return render_template('standalone/tissuumaps.html', plugins=app.config["PLUGINS"], slide_url=slide_url, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties)
+        return render_template('standalone/tissuumaps.html', plugins=app.config["PLUGINS"], slide_url=slide_url, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties, associated=associated_urls)
     else:
         folder_dir = _Directory(os.path.abspath(app.basedir)+"/",
                                 os.path.dirname(path))
@@ -272,7 +274,7 @@ def slide(path):
             root_dir = _Directory(os.path.abspath(app.basedir)+"/", os.path.dirname(path), max_depth=app.config['FOLDER_DEPTH'])
         else:
             root_dir = _Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH'])
-        return render_template('server/tissuumaps.html', plugins=app.config["PLUGINS"], slide_url=slide_url, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties, root_dir=root_dir, folder_dir=folder_dir)
+        return render_template('server/tissuumaps.html', plugins=app.config["PLUGINS"], slide_url=slide_url, slide_filename=slide.filename, slide_mpp=slide.mpp, properties=slide_properties, root_dir=root_dir, folder_dir=folder_dir, associated=associated_urls)
 
 @app.route('/ping')
 @requires_auth
@@ -295,7 +297,7 @@ def tmapFile(path):
                     state = json.load(jsonFile)
             except:
                 import traceback
-                print (traceback.format_exc())
+                logging.error (traceback.format_exc())
                 abort(404)
         else:
             abort(404)
@@ -426,13 +428,13 @@ def runPlugin(pluginName):
     if os.path.isfile(completePath):
         return send_from_directory(directory, filename)
     else:
-        print (completePath, "is not an existing file.")
+        logging.error (completePath, "is not an existing file.")
         abort(404)
 
 @app.route('/plugin/<path:pluginName>/<path:method>', methods=['GET', 'POST'])
 def pluginJS(pluginName, method):
-    print ("runPlugin", pluginName, method)
-    print (request.method)
+    logging.info ("runPlugin", pluginName, method)
+    logging.debug (request.method)
     
     pluginModule = load_plugin(pluginName)
     pluginInstance = pluginModule.Plugin(app)
