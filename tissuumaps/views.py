@@ -367,8 +367,8 @@ def dzi(path):
 @requires_auth
 def dzi_asso(path,associated_name):
     slide = _get_slide(path)
-    associated_image = slide.osr.associated_images[associated_name]
-    dzg = DeepZoomGenerator(ImageSlide(associated_image))
+    associated_image = slide.associated_images[associated_name]
+    dzg = associated_image#DeepZoomGenerator(ImageSlide(associated_image))
     format = app.config['DEEPZOOM_FORMAT']
     resp = make_response(dzg.get_dzi(format))
     resp.mimetype = 'application/xml'

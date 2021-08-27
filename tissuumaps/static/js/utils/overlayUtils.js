@@ -248,9 +248,15 @@ overlayUtils.addLayer = function(layerName, tileSource, i) {
         tileSource: tmapp._url_suffix + tileSource,
         opacity: opacity,
         success: function(i) {
+            console.log("tileSource.substring(-4, 0)", tileSource,  tileSource.substring(tileSource.length - 4));
             layer0X = tmapp[op + "_viewer"].world.getItemAt(0).getContentSize().x;
             layerNX = tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).getContentSize().x;
-            tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setWidth(layerNX/layer0X);
+            if (tileSource.substring(tileSource.length - 4) == ".dzi") {
+                tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setWidth(layerNX/layer0X);
+            }
+            else {
+                tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setWidth(1 / 5);
+            }
         } 
     });
 }

@@ -600,7 +600,15 @@
             {
                 tileSource:"{{ slide_url }}",
                 name:"{{ slide_filename }}"
-            }
+            },
+            {% endif %}
+            {% if associated %}
+                {% for name in associated|sort %}
+                {
+                    tileSource:"{{ associated[name] }}",
+                    name:"{{ slide_filename }}/{{ name }}"
+                },
+                {% endfor %}
             {% endif %}
         ]
         
