@@ -6,6 +6,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import pyvips
 from urllib.parse import unquote
+import logging
 
 #from mpl_toolkits.axes_grid1 import make_axes_locatable
 #import importlib
@@ -31,17 +32,17 @@ class ImageConverter():
                 if minVal == maxVal:
                     minVal = 0
                     maxVal = 255
-                print ("minVal, maxVal", minVal, maxVal)
+                logging.debug ("minVal, maxVal", minVal, maxVal)
                 imgVips = (255.* (imgVips - minVal)) / (maxVal - minVal)
                 imgVips = (imgVips < 0).ifthenelse(0, imgVips)
                 imgVips = (imgVips > 255).ifthenelse(255, imgVips)
-                print ("minVal, maxVal", imgVips.min(), imgVips.max())
+                logging.debug ("minVal, maxVal", imgVips.min(), imgVips.max())
                 imgVips = imgVips.scaleimage()
                 imgVips.tiffsave(self.outputImage, pyramid=True, tile=True, tile_width=256, tile_height=256, properties=True, bitdepth=8)
             except: 
-                print ("Impossible to convert image using VIPS:")
+                logging.error ("Impossible to convert image using VIPS:")
                 import traceback
-                print (traceback.format_exc())
+                logging.error (traceback.format_exc())
             self.convertDone = True
         return self.outputImage
 
@@ -51,13 +52,13 @@ class Plugin ():
 
     def _get_slide(self, path):
         path = os.path.abspath(os.path.join(self.app.basedir, path))
-        print (path)
+        logging.debug (path)
         if not path.startswith(self.app.basedir):
             # Directory traversal
-            print ("Directory traversal, aborting.")
+            logging.error ("Directory traversal, aborting.")
             abort(500)
         if not os.path.exists(path):
-            print ("not os.path.exists, aborting.")
+            logging.error ("not os.path.exists, aborting.")
             abort(500)
         try:
             slide = self.app.cache.get(path)
@@ -74,8 +75,8 @@ class Plugin ():
                 return self._get_slide(path)
             except:
                 import traceback
-                print (traceback.format_exc())
-                print ("OpenSlideError, aborting.")
+                logging.error (traceback.format_exc())
+                logging.error ("OpenSlideError, aborting.")
                 abort(500)
     
     def getTile (self, path, bbox):
@@ -88,7 +89,7 @@ class Plugin ():
                 tile = slide.osr.read_region((bbox[0],bbox[1]), 0, (bbox[2], bbox[3]))
         except ValueError:
             # Invalid level or coordinates
-            print ("ValueError, aborting.")
+            logging.error ("ValueError, aborting.")
             abort(500)
         return tile
 
@@ -152,7 +153,8 @@ class Plugin ():
                 ax.plot(x, y, 'o-', label=markerchannels, color=marker["color"], markersize=5, marker="x")
             except:
                 import traceback
-                traceback.print_exc()
+                import traceback
+                logging.error (traceback.format_exc())
                 pass
         
         ax.set_xticks([i*singleWidth + singleWidth/2-0.5 for i,_ in enumerate(channels)])
@@ -164,17 +166,19 @@ class Plugin ():
 
         buf = PILBytesIO()
         fig.savefig(buf)
+        fig.clf()
+        plt.close()
         #plt.close(fig)
         return buf
         
     def getMatrix (self, jsonParam):
         if (not jsonParam):
-            print ("No arguments, aborting.")
+            logging.error ("No arguments, aborting.")
             abort(500)
         bbox = jsonParam["bbox"]
         layers = jsonParam["layers"]
         markers = jsonParam["markers"]
-        print ("getMatrix", bbox, layers, markers)
+        logging.debug ("getMatrix", bbox, layers, markers)
         tiles = {}
         rounds = jsonParam["order_rounds"]
         channels = jsonParam["order_channels"]
@@ -204,16 +208,16 @@ class Plugin ():
 
     def importFolder (self, jsonParam):
         if (not jsonParam):
-            print ("No arguments, aborting.")
+            logging.error ("No arguments, aborting.")
             abort(500)
         relativepath = unquote(jsonParam["path"])
-        print ('jsonParam["path"]', jsonParam["path"])
+        logging.debug ('jsonParam["path"]', jsonParam["path"])
         if (relativepath != ""):
             if relativepath[0] == "/":
                 relativepath = relativepath[1:]
         path = os.path.abspath(os.path.join(self.app.basedir, relativepath))
         absoluteRoot = os.path.abspath(self.app.basedir)
-        print ("path",relativepath, path, absoluteRoot)
+        logging.debug ("path",relativepath, path, absoluteRoot)
         tifFiles_ = glob.glob(path + "/*")
         tifFiles = []
         for tifFile in tifFiles_:
@@ -223,9 +227,9 @@ class Plugin ():
                 self._get_slide(tifFile)
                 tifFiles.append(tifFile)
             except:
-                print ("impossible to read", tifFile,". Abort this file.")
+                logging.error ("impossible to read", tifFile,". Abort this file.")
                 continue
-        print (tifFiles)
+        logging.debug (tifFiles)
         csvFiles = glob.glob(path + "/*.csv")
         csvFilesDesc = []
         for csvFile in csvFiles:
@@ -264,8 +268,8 @@ class Plugin ():
                 "name":basename,
                 "path":filePath
             }
-            print (channels, channel)
-            print (channels.index(channel)%len(colors))
+            logging.debug (channels, channel)
+            logging.debug (channels.index(channel)%len(colors))
             layerFilter = [{"value": colors[channels.index(channel)%len(colors)],"name": "Color"}]
             layerFilters[fileIndex] = layerFilter
             layers.append(layer)
