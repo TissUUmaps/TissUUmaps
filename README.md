@@ -75,30 +75,3 @@ FlaskTissUUmaps allows to save all TissUUmaps states (Gene expressions, Cell mor
 
    > :warning: Remember that Flask is running on a built-in development server (`flask run`) and should not be used in production. If you want to deploy FlaskTissUUmaps on a production server, please read https://flask.palletsprojects.com/en/1.1.x/tutorial/deploy/ or any similar tutorial.
 
-1. Options:
-
-FlaskTissUUmaps can be used with the following options:
-```bash
-Usage: tissuumaps_server [options] [slide-directory]
-
-Options:
-  -h, --help            show this help message and exit
-  -B, --ignore-bounds   display entire scan area
-  -c FILE, --config=FILE
-                        config file
-  -d, --debug           run in debugging mode (insecure)
-  -e PIXELS, --overlap=PIXELS
-                        overlap of adjacent tiles [1]
-  -f {jpeg|png}, --format={jpeg|png}
-                        image format for tiles [jpeg]
-  -l ADDRESS, --listen=ADDRESS
-                        address to listen on [127.0.0.1]
-  -p PORT, --port=PORT  port to listen on [5000]
-  -Q QUALITY, --quality=QUALITY
-                        JPEG compression quality [75]
-  -s PIXELS, --size=PIXELS
-                        tile size [254]
-  -D LEVELS, --depth=LEVELS
-                        folder depth search for opening files [4]
-```
-
