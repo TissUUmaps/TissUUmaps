@@ -39,7 +39,7 @@ FlaskTissUUmaps allows to save all TissUUmaps states (Gene expressions, Cell mor
 1. Install [Anaconda](https://docs.anaconda.com/anaconda/install/) (or miniconda).
 1. Create a new conda environment from an Anaconda prompt:
     ```bash
-	conda create --name tissuumaps -channel conda-forge
+	conda create --name tissuumaps -channel conda-forge python=3.9
     ```
 
 1. Activate the new conda environment:
