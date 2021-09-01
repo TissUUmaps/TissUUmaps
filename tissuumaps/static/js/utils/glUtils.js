@@ -27,7 +27,7 @@ glUtils = {
     _colorscaleData: [],
     _barcodeToLUTIndex: {},
     _barcodeToKey: {},
-    _options: {antialias: false, premultipliedAlpha: false},
+    _options: {antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: true},
     _showColorbar: true,
     _showMarkerInfo: true,
     _piechartPalette: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]

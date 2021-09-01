@@ -65,10 +65,23 @@ class webEngine(QWebEngineView):
         self.resize(1024, 800)
         self.setZoomFactor(1.0)
         self.page().profile().clearHttpCache()
-        
+        self.page().profile().downloadRequested.connect(
+            self.on_downloadRequested
+        )
         self.setWindowIcon(QtGui.QIcon('static/misc/favicon.ico')) 
         self.showMaximized()
     
+    def on_downloadRequested(self, download):
+        old_path = download.path()  # download.path()
+        suffix = QFileInfo(old_path).suffix()
+        print (suffix)
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save File", old_path, "*." + suffix
+        )
+        if path:
+            download.setPath(path)
+            download.accept()
+        
     def run (self):
         sys.exit(self.qt_app.exec_())
 

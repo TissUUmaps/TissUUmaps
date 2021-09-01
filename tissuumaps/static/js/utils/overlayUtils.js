@@ -248,7 +248,6 @@ overlayUtils.addLayer = function(layerName, tileSource, i) {
         tileSource: tmapp._url_suffix + tileSource,
         opacity: opacity,
         success: function(i) {
-            console.log("tileSource.substring(-4, 0)", tileSource,  tileSource.substring(tileSource.length - 4));
             layer0X = tmapp[op + "_viewer"].world.getItemAt(0).getContentSize().x;
             layerNX = tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).getContentSize().x;
             if (tileSource.substring(tileSource.length - 4) == ".dzi") {
@@ -428,4 +427,43 @@ overlayUtils.saveSVG=function(){
     document.body.appendChild(downloadLink);
     downloadLink.click();
     document.body.removeChild(downloadLink); 
+}
+
+overlayUtils.savePNG=function() {
+    // Create an empty canvas element
+    $("#loadingModal").show();
+    var canvas = document.createElement("canvas");
+    var ctx_osd = document.querySelector(".openseadragon-canvas canvas").getContext("2d");
+    var ctx_webgl = document.querySelector("#gl_canvas").getContext("webgl");
+    canvas.width = ctx_osd.canvas.width;
+    canvas.height = ctx_osd.canvas.height;
+    
+    // Copy the image contents to the canvas
+    var ctx = canvas.getContext("2d");
+    
+    ctx.drawImage(ctx_osd.canvas, 0, 0);
+    ctx.drawImage(ctx_webgl.canvas, 0, 0);
+    console.log(canvas.width,canvas.height);
+    var dataURL = canvas.toDataURL("image/png");
+    
+    var svgString = new XMLSerializer().serializeToString(document.querySelector('.openseadragon-canvas svg'));
+
+    var DOMURL = self.URL || self.webkitURL || self;
+    var img = new Image();
+    var svg = new Blob([svgString], {type: "image/svg+xml;charset=utf-8"});
+    var url = DOMURL.createObjectURL(svg);
+    img.onload = function() {
+        ctx.drawImage(img, 0, 0);
+        var png = canvas.toDataURL("image/png");
+        console.log(png.replace(/^data:image\/(png|jpg);base64,/, ""));
+    
+        var a = document.createElement("a"); //Create <a>
+        a.href = png; //Image Base64 Goes here
+        a.download = "TissUUmaps_capture.png"; //File name Here
+        a.click(); //Downloaded file
+        $("#loadingModal").hide();
+        DOMURL.revokeObjectURL(png);
+    };
+    img.src = url;
+    console.log(url);
 }
