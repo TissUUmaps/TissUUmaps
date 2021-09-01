@@ -6,6 +6,8 @@
    * @property {Number}     markerUtils._globalMarkerSize - 
    * @property {Number}   markerUtils._uniqueColor - Keep then number of drawn regions and also let them be the id, 
    * @property {String} markerUtils._uniqueColorSelector - 
+   * @property {Bool} markerUtils._uniqueScale -
+   * @property {String} markerUtils._uniqueScaleSelector -
    * @property {Bool} markerUtils._uniquePiechart -
    * @property {String} markerUtils._uniquePiechartSelector -
    * @property {Number}   markerUtils._startCullingAt - 
@@ -24,6 +26,8 @@ markerUtils = {
     _showSizeColumn: false,
     _uniqueColor:false, //if this and selector are true, it will try to find a color unique to each spot
     _uniqueColorSelector:null, //is a string of the type "[float,float,float]" that gets converted to a string "rgb(uint8,uint8,uint8)"
+    _uniqueScale:false, //if this and selector are true, it will try to find a color unique to each spot
+    _uniqueScaleSelector:null, //is a string of the type "[float,float,float]" that gets converted to a string "rgb(uint8,uint8,uint8)"
     _uniquePiechart:false, //if this and selector are true, it will try to show a unique piechart for each spot
     _uniquePiechartSelector:null, //a string with the name of the piechart data field in the CSV
     _startCullingAt: 9000,
