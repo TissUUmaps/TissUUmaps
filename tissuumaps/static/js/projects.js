@@ -235,6 +235,9 @@
         }
         regionUtils._currentRegionId=maxregionid;		
     }
+    if (state.regionFile) {
+        regionUtils.JSONToRegions(state.regionFile);
+    }
     projects._activeState = state;
     tmapp.fixed_file = "";
     if (state.compositeMode) {

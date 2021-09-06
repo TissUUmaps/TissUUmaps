@@ -152,7 +152,10 @@ regionUtils.createImportedRegion = function (region) {
 		.attr("class", "regionpoly").attr("polycolor", hexcolor).style('stroke-width', regionUtils._polygonStrokeWidth.toString())
 		.style("stroke", hexcolor).style("fill", "none");*/
 	regionUtils.regionUI(region.id);
-
+	if (region.filled) {
+		region.filled = false;
+		regionUtils.fillRegion(region.id)
+	}
 }
 
 /** 
