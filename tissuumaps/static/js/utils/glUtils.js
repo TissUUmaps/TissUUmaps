@@ -14,7 +14,7 @@ glUtils = {
     _viewportRect: [0, 0, 1, 1],
     _markerScale: 1.0,
     _useMarkerScaleFix: true,
-    _markerScale2: 1.0,
+    _globalMarkerScale: 1.0,
     _markerScalarRange: [0.0, 1.0],
     _markerOpacity: 1.0,
     _useColorFromMarker: false,
@@ -40,7 +40,7 @@ glUtils._markersVS = `
     uniform mat2 u_viewportTransform;
     uniform int u_markerType;
     uniform float u_markerScale;
-    uniform float u_markerScale2;
+    uniform float u_globalMarkerScale;
     uniform vec2 u_markerScalarRange;
     uniform float u_markerOpacity;
     uniform bool u_useColorFromMarker;
@@ -100,7 +100,7 @@ glUtils._markersVS = `
         if (u_useColorFromMarker) v_color.rgb = hex_to_rgb(a_position.w);
 
         gl_Position = vec4(ndcPos, 0.0, 1.0);
-        gl_PointSize = max(2.0, min(256.0, a_scale * u_markerScale * u_markerScale2 / u_viewportRect.w));
+        gl_PointSize = max(2.0, min(256.0, a_scale * u_markerScale * u_globalMarkerScale / u_viewportRect.w));
 
         v_shapeOrigin.x = mod((v_color.a + 0.00001) * 255.0 - 1.0, SHAPE_GRID_SIZE);
         v_shapeOrigin.y = floor(((v_color.a + 0.00001) * 255.0 - 1.0) / SHAPE_GRID_SIZE);
@@ -176,7 +176,7 @@ glUtils._pickingVS = `
     uniform vec2 u_canvasSize;
     uniform vec2 u_pickingLocation;
     uniform float u_markerScale;
-    uniform float u_markerScale2;
+    uniform float u_globalMarkerScale;
     uniform int u_op;
     uniform sampler2D u_colorLUT;
 
@@ -213,7 +213,7 @@ glUtils._pickingVS = `
 
             vec2 canvasPos = (ndcPos * 0.5 + 0.5) * u_canvasSize;
             canvasPos.y = (u_canvasSize.y - canvasPos.y);  // Y-axis is inverted
-            float pointSize = max(2.0, min(256.0, a_scale * u_markerScale * u_markerScale2 / u_viewportRect.w));
+            float pointSize = max(2.0, min(256.0, a_scale * u_markerScale * u_globalMarkerScale / u_viewportRect.w));
             
             // TODO This test works as an inside/outside test for the special
             // case where the marker shape is round; for the general case, we
@@ -707,7 +707,7 @@ glUtils.drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
     gl.vertexAttribPointer(SCALE, 1, gl.FLOAT, false, 0, glUtils._numBarcodePoints * 20);
     gl.uniform1i(gl.getUniformLocation(program, "u_markerType"), 0);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
-    gl.uniform1f(gl.getUniformLocation(program, "u_markerScale2"), glUtils._markerScale2);
+    gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale);
     gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromMarker"), glUtils._useColorFromMarker);
     gl.uniform1i(gl.getUniformLocation(program, "u_usePiechartFromMarker"), glUtils._usePiechartFromMarker);
     gl.uniform1f(gl.getUniformLocation(program, "u_pickedMarker"), glUtils._pickedMarker);
@@ -734,7 +734,7 @@ glUtils.drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
     gl.vertexAttribPointer(SCALE, 1, gl.FLOAT, false, 0, glUtils._numCPPoints * 20);
     gl.uniform1i(gl.getUniformLocation(program, "u_markerType"), 1);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
-    gl.uniform1f(gl.getUniformLocation(program, "u_markerScale2"), glUtils._markerScale2);
+    gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale);
     gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromMarker"),
         glUtils._colorscaleName.includes("ownColorFromColumn"));
     gl.uniform1i(gl.getUniformLocation(program, "u_usePiechartFromMarker"), false);
@@ -768,7 +768,7 @@ glUtils.drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) {
     gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
     gl.uniform2fv(gl.getUniformLocation(program, "u_canvasSize"), [gl.canvas.width, gl.canvas.height]);
     gl.uniform2fv(gl.getUniformLocation(program, "u_pickingLocation"), glUtils._pickingLocation);
-    gl.uniform1f(gl.getUniformLocation(program, "u_markerScale2"), glUtils._markerScale2);
+    gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
 
     gl.activeTexture(gl.TEXTURE0);
