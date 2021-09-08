@@ -8,6 +8,7 @@ from PyQt5.QtGui import QDesktopServices
 from optparse import OptionParser
 
 from pathlib import Path
+import subprocess
 
 import threading, time
 import sys
@@ -81,6 +82,17 @@ class webEngine(QWebEngineView):
         if path:
             download.setPath(path)
             download.accept()
+
+            def openImageThread():
+                for i in range(100):
+                    if os.path.isfile(path):
+                        break
+                    time.sleep(0.1)
+                else:
+                    return
+                os.startfile(os.path.normpath(path))
+            
+            threading.Thread(target=openImageThread,daemon=True).start()
         
     def run (self):
         sys.exit(self.qt_app.exec_())
