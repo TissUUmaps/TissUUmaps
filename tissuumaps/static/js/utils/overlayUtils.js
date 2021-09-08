@@ -459,7 +459,9 @@ overlayUtils.savePNG=function() {
     
         var a = document.createElement("a"); //Create <a>
         a.href = png; //Image Base64 Goes here
-        a.download = "TissUUmaps_capture.png"; //File name Here
+        var rightNow = new Date();
+        var res = rightNow.toISOString().slice(0,19).replace(/-/g,"").replace(/:/g,"").replace(/\./g,"").replace(/T/g,"_");
+        a.download = "TissUUmaps_capture_" + res + ".png"; //File name Here
         a.click(); //Downloaded file
         $("#loadingModal").hide();
         DOMURL.revokeObjectURL(png);
