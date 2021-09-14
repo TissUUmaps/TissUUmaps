@@ -330,9 +330,17 @@ def csvFile(path):
         if os.path.isfile(completePath + ".gz"):
             os.rename(completePath + ".gz", completePath + ".cgz")
 
+        generate_cgz = False
         if not os.path.isfile(completePath + ".cgz"):
+            generate_cgz = True
+        elif os.path.getmtime(completePath) > os.path.getmtime(completePath + ".cgz"):
+            # In this case, the csv file has been recently modified and the cgz file is
+            # stale, so it must be regenerated.
+            generate_cgz = True
+        if generate_cgz:
             with open(completePath, 'rb') as f_in, gzip.open(completePath + ".cgz", 'wb', compresslevel=9) as f_out:
                 f_out.writelines(f_in)
+
         response = make_response(send_from_directory(directory, filename + ".cgz"))
         response.headers['Content-Encoding'] = 'gzip'
         response.headers['Vary'] = 'Accept-Encoding'
