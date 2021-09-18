@@ -49,7 +49,7 @@ def main ():
     except IndexError:
         pass
 
-    views.app.run(host=opts.host, port=opts.port, threaded=True, debug=False)
+    views.app.run(host=opts.host, port=opts.port, threaded=True, debug=opts.DEBUG)
 
 if __name__ == '__main__':
     main ()
