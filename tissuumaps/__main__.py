@@ -10,7 +10,7 @@ def main ():
     parser.add_option('-c', '--config', metavar='FILE', dest='config',
                 help='config file')
     parser.add_option('-d', '--debug', dest='DEBUG', action='store_true',
-                help='run in debugging mode (insecure)')
+                help='run in debugging mode (insecure)', default=False)
     parser.add_option('-e', '--overlap', metavar='PIXELS',
                 dest='DEEPZOOM_OVERLAP', type='int',
                 help='overlap of adjacent tiles [1]')
