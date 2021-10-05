@@ -504,7 +504,7 @@ interfaceUtils.hideTabsExcept = function (a) {
 /** 
  * @param {object} a dom object of the a tag 
  * hides all the tabs that should not he  displayed except a itself */
- interfaceUtils.toggeRightPanel = function (a) {
+ interfaceUtils.toggleRightPanel = function (a) {
     var op = tmapp["object_prefix"];
     var menu=document.getElementById(op + "_menu");
     var main=document.getElementById(op + "_viewer_container");
