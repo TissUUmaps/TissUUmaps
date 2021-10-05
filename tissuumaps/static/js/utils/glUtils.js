@@ -645,7 +645,7 @@ glUtils._createMarkerWebGLCanvas = function() {
     const canvas = document.createElement("canvas");
     canvas.id = "gl_canvas";
     canvas.width = "1"; canvas.height = "1";
-    canvas.style = "position:relative; pointer-events:none";
+    canvas.style = "position:relative; pointer-events:none; z-index: 12;";
     return canvas;
 }
 
@@ -845,7 +845,7 @@ glUtils.pick = function(event) {
             div.id = "ISS_marker_info";
             div.width = "1px"; div.height = "1px";
             div.style = "background-color:white; margin:0px; padding:2px 6px; " +
-                        "border:1px solid; z-index:10; opacity:80%; pointer-events:none";
+                        "border:1px solid; z-index:19; opacity:80%; pointer-events:none";
             div.innerHTML = markerUtils.makePiechartTable(dataUtils["ISS_processeddata"][glUtils._pickedMarker]);
 
             tmapp["ISS_viewer"].addOverlay({
