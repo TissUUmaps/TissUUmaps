@@ -13,13 +13,13 @@ import logging
 
 # External libraries
 import imghdr
+import pyvips
 import openslide
 from openslide import (
     ImageSlide,
     OpenSlide,
 )
 from openslide.deepzoom import DeepZoomGenerator
-import pyvips
 from tissuumaps import app
 
 # Flask dependencies
