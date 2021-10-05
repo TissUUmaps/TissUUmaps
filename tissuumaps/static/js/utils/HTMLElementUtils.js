@@ -374,12 +374,14 @@ HTMLElementUtils.createDLSelect = function(downloadRow, innerText, callback, com
     
     selectDiv.setAttribute("class", "col-xs-6 col-sm-6 col-md-6 col-lg-6");
     row.appendChild(selectDiv);
+    id_str = (Math.random() + 1).toString(36).substring(12);
     var paramSelect = {
         // eventListeners: {"change":callback},
         // "class": "btn btn-primary",
         // innerText: innerText
         options: options,
-        class: "chosen-select"
+        class: "chosen-select",
+        id: "chosen-select-"+id_str
     }
     var DLSelect = HTMLElementUtils.selectTypeDropDown(paramSelect);
     DLSelect.setAttribute("data-placeholder", "Choose a gene...")
@@ -394,7 +396,7 @@ HTMLElementUtils.createDLSelect = function(downloadRow, innerText, callback, com
     downloadRow.appendChild(row);
 
     $(".chosen-select").chosen({disable_search_threshold: 10, search_contains: true});
-    $(".chosen-select").on('change', function(evt, params) {
+    $("#chosen-select-" + id_str).on('change', function(evt, params) {
         callback(evt, params);
     });
     return row;
