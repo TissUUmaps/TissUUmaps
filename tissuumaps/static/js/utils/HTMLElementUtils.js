@@ -374,7 +374,7 @@ HTMLElementUtils.createDLSelect = function(downloadRow, innerText, callback, com
     
     selectDiv.setAttribute("class", "col-xs-6 col-sm-6 col-md-6 col-lg-6");
     row.appendChild(selectDiv);
-    id_str = (Math.random() + 1).toString(36).substring(12);
+    id_str = (Math.random() + 1).toString(36).substring(7);
     var paramSelect = {
         // eventListeners: {"change":callback},
         // "class": "btn btn-primary",
