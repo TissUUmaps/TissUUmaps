@@ -587,8 +587,8 @@
 <script src="{{ url_for('static', filename='js/utils/filterUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils/geometryUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils/glUtils.js') }}"></script>
+<script src="{{ url_for('static', filename='js/utils/projectUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/tmapp.js') }}"></script>
-<script src="{{ url_for('static', filename='js/projects.js') }}"></script>
 {% for plugin in plugins %}{% if plugin %}
     <script src="/plugin/{{ plugin }}.js"></script>
 {% endif %}{% endfor %}
@@ -623,12 +623,10 @@
             {{ plugin }}.init(tmapp);
             document.getElementById("plugin-dropdown").style.display="block";
         {% endif %}{% endfor %}
-        
-        projects.registerActions();
 
         {% if jsonProject %}
             jsonState = {{jsonProject|tojson|safe}}
-            projects.loadProject(jsonState);
+            projectUtils.loadProject(jsonState);
         {% endif %}
     });
     var backend;
@@ -660,12 +658,12 @@
     document.getElementById("saveProject").addEventListener("click", function(){
         backend.saveProject(function(JSONPath) {
             if (JSONPath["path"]!=null) {
-                projects.saveProject(JSONPath["path"]);
+                projectUtils.saveProject(JSONPath["path"]);
             }
         });
     });
     document.getElementById("projectSettings").addEventListener("click", function(){
-        projects.editSettings();
+        projectUtils.editSettings();
     });
 </script>
 

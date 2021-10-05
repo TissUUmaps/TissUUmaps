@@ -608,8 +608,8 @@
 <script src="{{ url_for('static', filename='js/utils/filterUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils/geometryUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils/glUtils.js') }}"></script>
+<script src="{{ url_for('static', filename='js/utils/projectUtils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/tmapp.js') }}"></script>
-<script src="{{ url_for('static', filename='js/projects.js') }}"></script>
 {% for plugin in plugins %}{% if plugin %}
     <script src="/plugin/{{ plugin }}.js"></script>
 {% endif %}{% endfor %}
@@ -644,11 +644,11 @@
             document.getElementById("plugin-dropdown").style.display="block";
         {% endif %}{% endfor %}
         
-        projects.registerActions();
+        
 
         {% if jsonProject %}
             jsonState = {{jsonProject|tojson|safe}}
-            projects.loadProject(jsonState);
+            projectUtils.loadProject(jsonState);
         {% endif %}
     });
 </script>

@@ -1,15 +1,15 @@
 /**
- * @file projects.js
+ * @file projectUtils.js
  * @author Christophe Avenel
- * @see {@link projects}
+ * @see {@link projectUtils}
  */
 
 /**
- * @namespace projects
- * @version projects 2.0
- * @classdesc The root namespace for projects.
+ * @namespace projectUtils
+ * @version projectUtils 2.0
+ * @classdesc The root namespace for projectUtils.
  */
- projects = {
+ projectUtils = {
      _activeState:{},
      _hideCSVImport: false,
      _settings:[
@@ -33,7 +33,7 @@
         },
         {
             "function": "_hideCSVImport",
-            "module": "projects",
+            "module": "projectUtils",
             "value": "boolean",
             "desc": "Hide CSV file input on project load"
         }
@@ -42,14 +42,14 @@
 
 /** 
  * Get all the buttons from the interface and assign all the functions associated to them */
- projects.registerActions = function () {
-    interfaceUtils.listen('save_project_menu', 'click', function() { projects.saveProject() }, false);
-    interfaceUtils.listen('project_settings_menu', 'click', function() { projects.editSettings() }, false);
+ projectUtils.registerActions = function () {
+    interfaceUtils.listen('save_project_menu', 'click', function() { projectUtils.saveProject() }, false);
+    interfaceUtils.listen('project_settings_menu', 'click', function() { projectUtils.editSettings() }, false);
 }
 
 /**
  * This method is used to save the TissUUmaps state (gene expression, cell morphology, regions) */
- projects.saveProject = function(urlProject) {
+ projectUtils.saveProject = function(urlProject) {
     $('#loadingModal').modal('show');
     var op = tmapp["object_prefix"];
     var cpop = "CP";
@@ -59,7 +59,7 @@
         tmapp.layers.forEach(function(layer) {
             relativePaths.push(layer.tileSource)
         });
-        commonPath = projects.commonPath(tmapp.layers);
+        commonPath = projectUtils.commonPath(tmapp.layers);
     }
     else {
         commonPath = urlProject.substring(0, urlProject.lastIndexOf('/')+2);
@@ -92,7 +92,7 @@
         filename = urlProject.substring( urlProject.lastIndexOf('/'),urlProject.length);
     }
 
-    state = projects._activeState;
+    state = projectUtils._activeState;
     state.regions = regionUtils._regions;
     state.layers = relativeLayers;
     state.filename = filename;
@@ -126,7 +126,7 @@
 
 /**
  * This method is used to load the TissUUmaps state (gene expression, cell morphology, regions) */
- projects.editSettings = function() {
+ projectUtils.editSettings = function() {
     settingsModal = document.getElementById("settingsModal");
     if (! settingsModal) {
         var div = document.createElement('div');
@@ -153,7 +153,7 @@
     settingsModal = document.getElementById("settingsModal");
     settingsModalContent = document.getElementById("settingsModalContent");
     settingsModalContent.innerHTML = "";
-    projects._settings.forEach(function(setting, index) {
+    projectUtils._settings.forEach(function(setting, index) {
         row = HTMLElementUtils.createRow();
         checkbox = HTMLElementUtils.inputTypeCheckbox({
             id: "settings-" + index,
@@ -166,20 +166,20 @@
             eventListeners: { click: function () { 
                 // TODO: Remove JQuery dependency here?
                 window[setting.module][setting.function] = this.checked;
-                projects._activeState.settings.forEach(function(settingSaved, index, object) {
+                projectUtils._activeState.settings.forEach(function(settingSaved, index, object) {
                     if (settingSaved.function == setting.function && settingSaved.function == setting.function) {
                         object.splice(index, 1);
                     }
                 });
-                console.dir(projects._activeState.settings);
-                projects._activeState.settings.push(
+                console.dir(projectUtils._activeState.settings);
+                projectUtils._activeState.settings.push(
                     {
                         "module":setting.module,
                         "function":setting.function,
                         "value":window[setting.module][setting.function]
                     }
                 );
-                console.dir(projects._activeState.settings);
+                console.dir(projectUtils._activeState.settings);
              } }
         });
         row.appendChild(checkbox);
@@ -192,7 +192,7 @@
 
 /**
  * This method is used to load the TissUUmaps state (gene expression, cell morphology, regions) */
- projects.loadProject = function(state) {
+ projectUtils.loadProject = function(state) {
     /*
     {
         markerFiles: [
@@ -238,7 +238,7 @@
     if (state.regionFile) {
         regionUtils.JSONToRegions(state.regionFile);
     }
-    projects._activeState = state;
+    projectUtils._activeState = state;
     tmapp.fixed_file = "";
     if (state.compositeMode) {
         filterUtils._compositeMode = state.compositeMode;
@@ -324,7 +324,7 @@
             window[setting.module][setting.function] = setting.value;
         });
     }
-    if (projects._hideCSVImport) {
+    if (projectUtils._hideCSVImport) {
         document.getElementById("ISS_data_panel").style.display="none";
         document.getElementById("CP_data_panel").style.display="none";
     }
@@ -358,7 +358,7 @@
  * @param {!Array<!layers>} strs
  * @returns {string}
  */
-projects.commonPath = function(strs) {
+projectUtils.commonPath = function(strs) {
     let prefix = ""
     if(strs === null || strs.length === 0) return prefix
 
