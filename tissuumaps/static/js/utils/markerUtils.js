@@ -418,7 +418,7 @@ markerUtils.markerUI = function (barObject,options) {
 
     var check = HTMLElementUtils.createElement({ type: "td" });
     var checkinput = HTMLElementUtils.inputTypeCheckbox({
-        id: barObject.key + "-checkbox-" + op,
+        id: barObject.key.replace(/\W/g, '') + "-checkbox-" + op,
         extraAttributes: { barcode: barObject.key },
         eventListeners: { click: function () {
             markerUtils.markerBoxToggle($(this));
@@ -432,14 +432,14 @@ markerUtils.markerUI = function (barObject,options) {
 
     if(options.drawGeneLetters){
         var barcodeLetters=barObject.values[0].letters;
-        var lettersrow = HTMLElementUtils.createElement({ type: "td", innerHTML: "<label style='cursor:pointer' for='" + barObject.key + "-checkbox-" + op + "'>"+barcodeLetters+" </label>",
+        var lettersrow = HTMLElementUtils.createElement({ type: "td", innerHTML: "<label style='cursor:pointer' for='" + barObject.key.replace(/\W/g, '') + "-checkbox-" + op + "'>"+barcodeLetters+" </label>",
             extraAttributes: { "title": barcodeLetters, "data-title":barcodeLetters } });
         row.appendChild(lettersrow);
     }
 
     if(options.drawGeneName){
         var gn=barObject.values[0].gene_name;
-        var name = HTMLElementUtils.createElement({ type: "td", innerHTML:  "<label style='cursor:pointer' for='" + barObject.key + "-checkbox-" + op + "'>"+gn+" </label>",
+        var name = HTMLElementUtils.createElement({ type: "td", innerHTML:  "<label style='cursor:pointer' for='" + barObject.key.replace(/\W/g, '') + "-checkbox-" + op + "'>"+gn+" </label>",
             extraAttributes: { "title": gn, "data-title":gn } });
         row.appendChild(name);
     }

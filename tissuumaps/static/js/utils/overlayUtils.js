@@ -26,7 +26,6 @@ overlayUtils.addAllLayers = function() {
     /* For backward compatibility with tmapp.fixed_file, but converted to a layer */
     if (tmapp.fixed_file && tmapp.fixed_file != "") {
         tmapp.layers.unshift({"name":tmapp.slideFilename, "tileSource":tmapp.fixed_file})
-        overlayUtils.addLayer(tmapp.slideFilename, tmapp._url_suffix +  tmapp.fixed_file, -1)
         tmapp.fixed_file = "";
     }
     tmapp.layers.forEach(function(layer, i) {
@@ -162,13 +161,13 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex) {
             var slider = $(channelRange)[0];
             channel = slider.value;
             $(".visible-layers").prop("checked",true);$(".visible-layers").click();$("#visible-layer-"+(channel- -1)).click();
-            channelName = tmapp.layers[channel- -1].name;
-            channelName = channelName.split('.').slice(0, -1).join('.')
+            channelName = tmapp.layers[channel- -1].name
+            channelId = channelName.replace(/\W/g, '');
             document.getElementById("channelValue").innerHTML = "Channel " + (channel - -2) + ": " + channelName;
             if (overlayUtils._linkMarkersToChannels) {
                 $("#ISS_table input[type=checkbox]").prop("checked",false);
-                if (document.getElementById(channelName+"-checkbox-ISS")) {
-                    $(document.getElementById(channelName +"-checkbox-ISS")).click();
+                if (document.getElementById(channelId+"-checkbox-ISS")) {
+                    $(document.getElementById(channelId +"-checkbox-ISS")).click();
                 }
                 else {
                     $("#AllMarkers-checkbox-ISS").click().click();
