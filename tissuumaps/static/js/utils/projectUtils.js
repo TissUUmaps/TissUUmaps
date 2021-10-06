@@ -321,7 +321,9 @@
     }
     if (state.settings) {
         state.settings.forEach(function(setting, i) {
-            window[setting.module][setting.function] = setting.value;
+            if (window[setting.module]) {
+                window[setting.module][setting.function] = setting.value;
+            }
         });
     }
     if (projectUtils._hideCSVImport) {

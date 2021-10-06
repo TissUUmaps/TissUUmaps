@@ -407,7 +407,9 @@ HTMLElementUtils.createDLSelectMarkers = function(innerText, dataURLs, comment, 
     callback = function(e, params){
         if (settings) {
             settings.forEach(function(setting, i) {
-                window[setting.module][setting.function] = setting.value;
+                if (window[setting.module]) {
+                    window[setting.module][setting.function] = setting.value;
+                }
             });
         }
         var dataURL = params.selected;
@@ -455,7 +457,9 @@ HTMLElementUtils.createDLButtonMarkers = function(innerText, dataURL, comment, e
     callback = function(e){
         if (settings) {
             settings.forEach(function(setting, i) {
-                window[setting.module][setting.function] = setting.value;
+                if (window[setting.module]) {
+                    window[setting.module][setting.function] = setting.value;
+                }
             });
         }
         if (expectedCSV !== undefined) dataUtils.setExpectedCSV(expectedCSV);
@@ -475,7 +479,9 @@ HTMLElementUtils.createDLButtonMarkersCP = function(innerText, dataURL, comment,
     callback = function(e){
         if (settings) {
             settings.forEach(function(setting, i) {
-                window[setting.module][setting.function] = setting.value;
+                if (window[setting.module]) {
+                    window[setting.module][setting.function] = setting.value;
+                }
             });
         }
         if (expectedCSV !== undefined) CPDataUtils.setExpectedCSV(expectedCSV);
@@ -495,7 +501,9 @@ HTMLElementUtils.createDLButtonRegions = function(innerText, dataURL, comment, a
     callback = function(e){
         if (settings) {
             settings.forEach(function(setting, i) {
-                window[setting.module][setting.function] = setting.value;
+                if (window[setting.module]) {
+                    window[setting.module][setting.function] = setting.value;
+                }
             });
         }
         regionUtils.JSONToRegions(dataURL)
