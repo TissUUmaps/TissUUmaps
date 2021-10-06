@@ -396,7 +396,7 @@ HTMLElementUtils.createDLSelect = function(downloadRow, innerText, callback, com
         id: "chosen-select-"+id_str
     }
     var DLSelect = HTMLElementUtils.selectTypeDropDown(paramSelect);
-    DLSelect.setAttribute("data-placeholder", "Choose a gene...")
+    DLSelect.setAttribute("data-placeholder", "Select from list")
     DLSelect.style.width = "100%";
     selectDiv.appendChild(DLSelect);
     
@@ -429,11 +429,11 @@ HTMLElementUtils.createDLSelectMarkers = function(innerText, dataURLs, comment, 
         if (expectedCSV !== undefined) dataUtils.setExpectedCSV(expectedCSV);
         dataUtils.XHRCSV(dataURL);
     }
-    options = [{"value":"","text":"Select a gene"}];
+    options = [{"value":"","text":"Select from list"}];
     dataURLs.forEach (function (dataURL) {
         options.push({
             "value": dataURL,
-            "text": dataURL.split('/').reverse()[0]
+            "text": dataURL.split('/').reverse()[0].replace(/\.[^/.]+$/, "")
         })
     });
     HTMLElementUtils.createDLSelect(downloadRow, innerText, callback, comment, options);
