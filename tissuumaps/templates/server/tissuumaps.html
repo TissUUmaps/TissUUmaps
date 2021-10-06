@@ -29,17 +29,7 @@
             <a class="navbar-brand" target="_blank" href="https://tissuumaps.research.it.uu.se/"><img style="height:50px; margin-top:-15px; overflow: visible; z-index: 9999;" src="{{ url_for( 'static', filename='misc/uulogowhitetuum.png' ) }}"> </a>
         </div>
         <div class="navbar-collapse collapse navbar-responsive-collapse">
-            <ul class="nav navbar-nav">
-                <li class="dropdown">
-                    <a style="visibility: hidden;display:none;" href="#" class="dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                        Projects
-                        <b class="caret"></b>
-                    </a>
-
-                    <ul class="dropdown-menu" style="visibility: hidden;">
-
-                    </ul>
-                </li>
+            <ul class="nav navbar-nav" id="topmenu-nav">
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     File
@@ -90,9 +80,6 @@
                             </a>
                         </li>
                     </ul>
-                </li>
-                <li class="nav-item dropdown">
-                    
                 </li>
                 <li class="nav-item dropdown" id="plugin-dropdown" style="display:none;">
                     <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">

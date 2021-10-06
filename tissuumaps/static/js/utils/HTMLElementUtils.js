@@ -363,6 +363,18 @@ HTMLElementUtils.getFirstChildByClass = function (e, c) {
     });
     return thisChild;
 }
+/**
+ * Add element to the top menu
+ */
+HTMLElementUtils.createMenuButton = function(text, url){
+    var liElt = document.createElement("li");
+    var aElt = document.createElement("a");
+    aElt.setAttribute("href", url);
+    aElt.text = text;
+    liElt.appendChild(aElt);
+    var menuTop = document.getElementById("topmenu-nav");
+    menuTop.appendChild(liElt);
+}
 
 HTMLElementUtils.createDLSelect = function(downloadRow, innerText, callback, comment, options) {
     var row = HTMLElementUtils.createRow(null);

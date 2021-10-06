@@ -326,6 +326,11 @@
             }
         });
     }
+    if (state.menuButtons) {
+        state.menuButtons.forEach(function(menuButton, i) {
+            HTMLElementUtils.createMenuButton(menuButton.text, menuButton.url);
+        });
+    }
     if (projectUtils._hideCSVImport) {
         document.getElementById("ISS_data_panel").style.display="none";
         document.getElementById("CP_data_panel").style.display="none";
