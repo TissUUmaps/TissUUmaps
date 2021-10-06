@@ -331,6 +331,9 @@
             HTMLElementUtils.createMenuButton(menuButton.text, menuButton.url);
         });
     }
+    if (state.hideFile) {
+        document.getElementById("navbarDropdownMenuLink").style.display = "None";
+    }
     if (projectUtils._hideCSVImport) {
         document.getElementById("ISS_data_panel").style.display="none";
         document.getElementById("CP_data_panel").style.display="none";
