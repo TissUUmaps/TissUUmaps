@@ -252,7 +252,7 @@
                     markerFile.comment,
                     markerFile.expectedCSV,
                     markerFile.settings
-                );        
+                );
             }
             else {
                 HTMLElementUtils.createDLButtonMarkers(
@@ -386,4 +386,45 @@ projectUtils.commonPath = function(strs) {
     }
     prefix = prefix.substring(0, prefix.lastIndexOf('/')+1);
     return prefix
+}
+
+/** Applying settings */
+projectUtils.applySettings = function (settings) {
+    if (settings) {
+        settings.forEach(function(setting, i) {
+            if (window[setting.module]) {
+                if (typeof window[setting.module][setting.function]  === 'function') {
+                    window[setting.module][setting.function](setting.value);
+                }
+                else {
+                    window[setting.module][setting.function] = setting.value;
+                }
+            }
+        });
+    }
+}
+
+/** Adding marker legend in the upper left corner */
+projectUtils.addLegend = function (htmlContent) {
+    if (! htmlContent) {
+        if (document.getElementById("markerLegend")) {
+            document.getElementById("markerLegend").style.display= "none";
+        }
+        return;
+    }
+    var op = tmapp["object_prefix"];
+    if (document.getElementById("markerLegend") == undefined) {
+        var elt = document.createElement('div');
+        elt.className = "piechartLegend"
+        elt.id = "markerLegend"
+        elt.style.zIndex = "100";
+        elt.style.paddingLeft = "5px";
+        elt.style.paddingBottom = "2px";
+        elt.style.overflowY = "auto";
+        elt.style.maxHeight = "Calc(100vh - 245px)";
+        tmapp['ISS_viewer'].addControl(elt,{anchor: OpenSeadragon.ControlAnchor.TOP_LEFT});
+    }
+    elt = document.getElementById("markerLegend");
+    elt.style.display="block";
+    elt.innerHTML = htmlContent;
 }

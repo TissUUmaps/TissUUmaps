@@ -417,13 +417,7 @@ HTMLElementUtils.createDLSelect = function(downloadRow, innerText, callback, com
 HTMLElementUtils.createDLSelectMarkers = function(innerText, dataURLs, comment, expectedCSV, settings) {
     var downloadRow = document.getElementById("ISS_rowDownloadMarkers");
     callback = function(e, params){
-        if (settings) {
-            settings.forEach(function(setting, i) {
-                if (window[setting.module]) {
-                    window[setting.module][setting.function] = setting.value;
-                }
-            });
-        }
+        projectUtils.applySettings(settings);
         var dataURL = params.selected;
         if (dataURL == "") return;
         if (expectedCSV !== undefined) dataUtils.setExpectedCSV(expectedCSV);
@@ -467,13 +461,7 @@ HTMLElementUtils.createDLButton = function(downloadRow, innerText, callback, com
 HTMLElementUtils.createDLButtonMarkers = function(innerText, dataURL, comment, expectedCSV, autoLoad, settings) {
     var downloadRow = document.getElementById("ISS_rowDownloadMarkers");
     callback = function(e){
-        if (settings) {
-            settings.forEach(function(setting, i) {
-                if (window[setting.module]) {
-                    window[setting.module][setting.function] = setting.value;
-                }
-            });
-        }
+        projectUtils.applySettings(settings);
         if (expectedCSV !== undefined) dataUtils.setExpectedCSV(expectedCSV);
         dataUtils.XHRCSV(dataURL);
     }
@@ -489,13 +477,7 @@ HTMLElementUtils.createDLButtonMarkers = function(innerText, dataURL, comment, e
 HTMLElementUtils.createDLButtonMarkersCP = function(innerText, dataURL, comment, expectedCSV, autoLoad, settings) {
     var downloadRow = document.getElementById("ISS_rowDownloadMarkersCP");
     callback = function(e){
-        if (settings) {
-            settings.forEach(function(setting, i) {
-                if (window[setting.module]) {
-                    window[setting.module][setting.function] = setting.value;
-                }
-            });
-        }
+        projectUtils.applySettings(settings);
         if (expectedCSV !== undefined) CPDataUtils.setExpectedCSV(expectedCSV);
         CPDataUtils.readCSV(dataURL)
     }
@@ -511,13 +493,7 @@ HTMLElementUtils.createDLButtonMarkersCP = function(innerText, dataURL, comment,
 HTMLElementUtils.createDLButtonRegions = function(innerText, dataURL, comment, autoLoad, settings) {
     var downloadRow = document.getElementById("ISS_rowDownloadRegions");
     callback = function(e){
-        if (settings) {
-            settings.forEach(function(setting, i) {
-                if (window[setting.module]) {
-                    window[setting.module][setting.function] = setting.value;
-                }
-            });
-        }
+        projectUtils.applySettings(settings);
         regionUtils.JSONToRegions(dataURL)
     }
     var buttonRow = HTMLElementUtils.createDLButton(downloadRow, innerText, callback, comment);
