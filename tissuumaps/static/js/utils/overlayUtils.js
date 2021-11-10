@@ -26,6 +26,7 @@ overlayUtils.addAllLayers = function() {
     /* For backward compatibility with tmapp.fixed_file, but converted to a layer */
     if (tmapp.fixed_file && tmapp.fixed_file != "") {
         tmapp.layers.unshift({"name":tmapp.slideFilename, "tileSource":tmapp.fixed_file})
+        /*overlayUtils.addLayer(tmapp.slideFilename, tmapp._url_suffix +  tmapp.fixed_file, -1)*/
         tmapp.fixed_file = "";
     }
     tmapp.layers.forEach(function(layer, i) {
@@ -47,7 +48,7 @@ overlayUtils.addAllLayersSettings = function() {
 
 /**
  * This method is used to add a layer */
-overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex) {
+overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, checked) {
     var settingsPanel = document.getElementById("image-overlay-panel");
     var layerTable = document.getElementById("image-overlay-tbody");
     if (!layerTable) {
@@ -57,9 +58,14 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex) {
         layerTable.style.marginBottom = "0px";
         filterHeaders = "";
         for (filterIndex = 0; filterIndex < filterUtils._filtersUsed.length; filterIndex++) {
-            filterHeaders += "<th style='text-align:center;'>" + filterUtils._filtersUsed[filterIndex] + "</th>";
+            filterHeaders += "<th class='text-center'>" + filterUtils._filtersUsed[filterIndex] + "</th>";
         }
-        layerTable.innerHTML = "<thead><th style='text-align:center;'>Name</th><th style='text-align:center;'>Visible</th><th style='text-align:center;'>Opacity</th>" + filterHeaders + "</thead><tbody id='image-overlay-tbody'></tbody>"
+        layerTable.innerHTML = `<thead>
+            <th class='text-center'>Name</th>
+            <th class='text-center'>Visible</th>
+            <th class='text-center'>Opacity</th>` +
+            filterHeaders +
+            "</thead><tbody id='image-overlay-tbody'></tbody>"
         settingsPanel.appendChild(layerTable);
     }
     layerTable = document.getElementById("image-overlay-tbody");
@@ -67,18 +73,19 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex) {
 
     var visible = document.createElement("input");
     visible.type = "checkbox";
-    if (layerIndex < 0)
+    if (layerIndex < 0 || checked)
         visible.checked = true; 
     visible.id = "visible-layer-" + (layerIndex + 1);
-    visible.className = "visible-layers";
+    visible.classList.add("visible-layers");
+    visible.classList.add("form-check-input")
     visible.setAttribute("layer", (layerIndex + 1));
     var td_visible = document.createElement("td");
     td_visible.appendChild(visible);
-    td_visible.style.textAlign = "center";
-    td_visible.style.padding = "6px";
-    td_visible.style.minWidth = "100px";
+    td_visible.classList.add("text-center");
 
     var opacity = document.createElement("input");
+    opacity.classList.add("overlay-slider");
+    opacity.classList.add("form-range");
     opacity.type = "range";
     opacity.setAttribute("min", "0");
     opacity.setAttribute("max", "1");
@@ -87,11 +94,9 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex) {
     opacity.id = "opacity-layer-" + (layerIndex + 1);
     var td_opacity = document.createElement("td");
     td_opacity.appendChild(opacity);
-    td_opacity.style.textAlign = "center";
-    td_opacity.style.padding = "6px";
-    td_opacity.style.minWidth = "100px";
+    td_opacity.classList.add("text-center");
     tileSource = tileSource.replace(/\\/g, '\\\\');
-    tr.innerHTML = "<td style='padding:6px;'>" + layerName + "</td>";
+    tr.innerHTML = "<td>" + layerName + "</td>";
     tr.appendChild(td_visible);
     tr.appendChild(td_opacity);
 
@@ -99,14 +104,14 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex) {
         filterName = filterUtils._filtersUsed[filterIndex];
         filterParams = filterUtils.getFilterParams(filterName)
         filterParams.layer = layerIndex + 1;
-        
+
         filterInput = filterUtils.createHTMLFilter(filterParams);
+        filterInput.classList.add("overlay-slider");
+        filterInput.classList.add("form-range");
         var td_filterInput = document.createElement("td");
-        td_filterInput.style.textAlign = "center";
-        td_filterInput.style.padding = "6px";
-        td_filterInput.style.minWidth = "100px";
+        td_filterInput.classList.add("text-center");
         td_filterInput.appendChild(filterInput);
-        
+
         tr.appendChild(td_filterInput);
     }
     layerTable.prepend(tr);
@@ -141,17 +146,16 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex) {
  overlayUtils.addLayerSlider = function() {
     if (document.getElementById("channelRangeInput") == undefined) {
         var elt = document.createElement('div');
-        elt.className = "channelRange"
+        elt.className = "channelRange px-1 mx-1 viewer-layer";
         elt.id = "channelRangeDiv"
         elt.style.zIndex = "100";
-        elt.style.paddingLeft = "5px";
-        elt.style.paddingBottom = "2px";
         var span = document.createElement('div');
         span.innerHTML = "Channel 1"
         span.id = "channelValue"
         span.style.maxWidth="200px";
         span.style.overflow="hidden";
         var channelRange = document.createElement("input");
+        channelRange.classList.add("form-range");
         channelRange.type = "range";
         channelRange.style.width = "200px";
         channelRange.id = "channelRangeInput";
@@ -190,10 +194,10 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex) {
                 //scroll up
                 $(channelRange).val(zoomLevel-1);
             }
-            
+
             // trigger the change event
             changeFun(e.originalEvent);
-            
+
             //prevent page fom scrolling
             return false;
         }
@@ -235,11 +239,11 @@ overlayUtils.addLayerFromSelect = function() {
 
 /**
  * This method is used to add a layer */
-overlayUtils.addLayer = function(layerName, tileSource, i) {
+overlayUtils.addLayer = function(layerName, tileSource, i, visible) {
     var op = tmapp["object_prefix"];
     var vname = op + "_viewer";
     var opacity = 1.0;
-    if (i >= 0) {
+    if (i >= 0 && !visible) {
         opacity = 0.0;
     }
     tmapp[vname].addTiledImage({
@@ -249,16 +253,11 @@ overlayUtils.addLayer = function(layerName, tileSource, i) {
         success: function(i) {
             layer0X = tmapp[op + "_viewer"].world.getItemAt(0).getContentSize().x;
             layerNX = tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).getContentSize().x;
-            if (tileSource.substring(tileSource.length - 4) == ".dzi") {
-                tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setWidth(layerNX/layer0X);
-            }
-            else {
-                tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setWidth(1 / 5);
-            }
+            tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setWidth(layerNX/layer0X);
         } 
     });
 }
- 
+
 
 /** 
  * @param {Number} item Index of an OSD tile source
@@ -296,7 +295,7 @@ overlayUtils.areAllFullyLoaded = function () {
 overlayUtils.setLayerOpacity= function(layerName,opacity){
     if(layerName in overlayUtils._d3nodes){
         var layer = overlayUtils._d3nodes[layerName];
-        layer._groups[0][0].style.opacity=opacity;    
+        layer._groups[0][0].style.opacity=opacity;
     }else{
         console.log("layer does not exist or is not a D3 node");
     }
@@ -360,7 +359,7 @@ overlayUtils.modifyDisplayIfAny = function () {
 
     if (xmin < 0) { xmin = 0; }; if (xmax > 1.0) { xmax = 1.0; };
     if (ymin < 0) { ymin = 0; }; if (ymax > imageHeight / imageWidth) { ymax = imageHeight / imageWidth; };
-    
+
     var total = imageWidth * imageHeight;
 
     //convert to global image coords
@@ -368,48 +367,6 @@ overlayUtils.modifyDisplayIfAny = function () {
 
     var portion = (xmax - xmin) * (ymax - ymin);
     var percentage = portion / total;
-
-    //get barcodes that are checked to draw
-    for (var barcode in markerUtils._checkBoxes) {
-        if (tmapp["hideSVGMarkers"]) continue;  // We are using WebGL instead for the drawing
-
-        if (markerUtils._checkBoxes[barcode].checked) {
-            var markersInViewportBounds = []
-            if (percentage < overlayUtils._percentageForSubsample) {
-                //console.log("percentage less than " + overlayUtils._percentageForSubsample);
-                markersInViewportBounds = markerUtils.arrayOfMarkersInBox(
-                    dataUtils[op + "_barcodeGarden"][barcode], xmin, ymin, xmax, ymax, { globalCoords: true }
-                );
-
-                //console.log(markersInViewportBounds.length);
-                var drawThese = dataUtils.randomSamplesFromList(markerUtils.startCullingAt, markersInViewportBounds);
-
-                //console.log(drawThese.length);
-                markerUtils.drawAllFromList(drawThese);
-
-            } else {
-                //if the percentage of image I see is bigger than a threshold then use the predownsampled markers
-                if (dataUtils._subsampledBarcodes[barcode]) {
-                    markerUtils.drawAllFromList(dataUtils._subsampledBarcodes[barcode]);
-                } else {
-                    markerUtils.drawAllFromBarcode(barcode);
-                }
-            }
-        } 
-    }
-
-    //if anything from cpdata exists
-    var cpop="CP";
-    if(CPDataUtils.hasOwnProperty(cpop+"_rawdata")){ //I need to put a button here to draw or remove
-        //Zoom of 1 means all image is visible so low res. Bigger than 1 means zooming in.
-        if (currentZoom > overlayUtils._zoomForSubsample) {            
-            markerUtils.drawCPdata({searchInTree:true,xmin:xmin, xmax:xmax, ymin:ymin, ymax:ymax});
-        } else {
-            console.log("subsample");
-            //I create the subsampled one already when I read de CP csv, in CPDataUtils[cpop + "_subsampled_data"]     
-            markerUtils.drawCPdata({searchInTree:false});            
-        }
-    }
 }
 
 /**
@@ -428,6 +385,9 @@ overlayUtils.saveSVG=function(){
     document.body.removeChild(downloadLink); 
 }
 
+/**
+ * Save the current canvas as a PNG image
+ */
 overlayUtils.savePNG=function() {
     // Create an empty canvas element
     $("#loadingModal").show();
@@ -458,9 +418,7 @@ overlayUtils.savePNG=function() {
     
         var a = document.createElement("a"); //Create <a>
         a.href = png; //Image Base64 Goes here
-        var rightNow = new Date();
-        var res = rightNow.toISOString().slice(0,19).replace(/-/g,"").replace(/:/g,"").replace(/\./g,"").replace(/T/g,"_");
-        a.download = "TissUUmaps_capture_" + res + ".png"; //File name Here
+        a.download = "TissUUmaps_capture.png"; //File name Here
         a.click(); //Downloaded file
         $("#loadingModal").hide();
         DOMURL.revokeObjectURL(png);

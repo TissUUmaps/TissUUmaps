@@ -16,165 +16,302 @@
  * @property {String}   regionUtils._drawingclass - String that accompanies the classes of the polygons in the interface"drawPoly", 
 */
 regionUtils = {
-	_isNewRegion: true,
-	_currentlyDrawing: false,
-	_currentRegionId: 0,
-	_currentPoints: null,
-	_colorInactiveHandle: "#cccccc",
-	_colorActiveHandle: "#ffff00",
-	_scaleHandle: 0.0025,
-	_polygonStrokeWidth: 0.0006,
-	_handleRadius: 0.1,
-	_epsilonDistance: 0.004,
-	_regions: {},
-	_drawingclass: "drawPoly"
+    _isNewRegion: true,
+    _currentlyDrawing: false,
+    _currentRegionId: 0,
+    _currentPoints: null,
+    _colorInactiveHandle: "#cccccc",
+    _colorActiveHandle: "#ffff00",
+    _scaleHandle: 0.0025,
+    _polygonStrokeWidth: 0.0006,
+    _handleRadius: 0.1,
+    _epsilonDistance: 0.004,
+    _regions: {},
+    _drawingclass: "drawPoly",
+    _maxRegionsInMenu: 200
 }
 
 /** 
  *  Reset the drawing of the regions */
 regionUtils.resetManager = function () {
-	var drawingclass = regionUtils._drawingclass;
-	d3.select("." + drawingclass).remove();
-	regionUtils._isNewRegion = true;
-	regionUtils._currentPoints = null;
+    var drawingclass = regionUtils._drawingclass;
+    d3.select("." + drawingclass).remove();
+    regionUtils._isNewRegion = true;
+    regionUtils._currentPoints = null;
 }
 /** 
  *  When a region is being drawn, this function takes care of the creation of the region */
 regionUtils.manager = function (event) {
-	//console.log(event);
-	var drawingclass = regionUtils._drawingclass;
-	//if we come here is because overlayUtils.drawRegions mode is on
-	// No matter what we have to get the normal coordinates so
-	//I am going to have to do a hack to get the right OSD viewer
-	//I will go two parents up to get the DOM id which will tell me the name
-	//and then I will look for it in tmapp... this is horrible, but will work
+    //console.log(event);
+    var drawingclass = regionUtils._drawingclass;
+    //if we come here is because overlayUtils.drawRegions mode is on
+    // No matter what we have to get the normal coordinates so
+    //I am going to have to do a hack to get the right OSD viewer
+    //I will go two parents up to get the DOM id which will tell me the name
+    //and then I will look for it in tmapp... this is horrible, but will work
 
-	/*var eventSource=event.eventSource;//this is a mouse tracker not a viewer
-	var OSDsvg=d3.select(eventSource.element).select("svg").select("g");
-	var stringOSDVname=eventSource.element.parentElement.parentElement.id;
-	var overlay=stringOSDVname.substr(0,stringOSDVname.indexOf('_'));*/
-	//console.log(overlay);
-	var OSDviewer = tmapp[tmapp["object_prefix"] + "_viewer"];
-	var normCoords = OSDviewer.viewport.pointFromPixel(event.position);
-	//var canvas=tmapp[tmapp["object_prefix"]+"_svgov"].node();
-	var canvas = overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
-	//console.log(normCoords);
-	var regionobj;
-	//console.log(d3.select(event.originalEvent.target).attr("is-handle"));
-	var strokeWstr = regionUtils._polygonStrokeWidth.toString();
+    /*var eventSource=event.eventSource;//this is a mouse tracker not a viewer
+    var OSDsvg=d3.select(eventSource.element).select("svg").select("g");
+    var stringOSDVname=eventSource.element.parentElement.parentElement.id;
+    var overlay=stringOSDVname.substr(0,stringOSDVname.indexOf('_'));*/
+    //console.log(overlay);
+    var OSDviewer = tmapp[tmapp["object_prefix"] + "_viewer"];
+    var normCoords = OSDviewer.viewport.pointFromPixel(event.position);
+    //var canvas=tmapp[tmapp["object_prefix"]+"_svgov"].node();
+    var canvas = overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
+    //console.log(normCoords);
+    var regionobj;
+    //console.log(d3.select(event.originalEvent.target).attr("is-handle"));
+    var strokeWstr = regionUtils._polygonStrokeWidth.toString();
 
-	if (regionUtils._isNewRegion) {
-		//if this region is new then there should be no points, create a new array of points
-		regionUtils._currentPoints = [];
-		//it is not a new region anymore
-		regionUtils._isNewRegion = false;
-		//give a new id
-		regionUtils._currentRegionId += 1;
-		var idregion = regionUtils._currentRegionId;
-		//this is out first point for this region
-		var startPoint = [normCoords.x, normCoords.y];
-		regionUtils._currentPoints.push(startPoint);
-		//create a group to store region
-		regionobj = d3.select(canvas).append('g').attr('class', drawingclass);
-		regionobj.append('circle').attr('r', regionUtils._handleRadius).attr('fill', regionUtils._colorActiveHandle).attr('stroke', '#aaaaaa')
-			.attr('stroke-width', strokeWstr).attr('class', 'region' + idregion).attr('id', 'handle-0-region' + idregion)
-			.attr('transform', 'translate(' + (startPoint[0].toString()) + ',' + (startPoint[1].toString()) + ') scale(' + regionUtils._scaleHandle + ')')
-			.attr('is-handle', 'true').style({ cursor: 'pointer' });
+    if (regionUtils._isNewRegion) {
+        //if this region is new then there should be no points, create a new array of points
+        regionUtils._currentPoints = [];
+        //it is not a new region anymore
+        regionUtils._isNewRegion = false;
+        //give a new id
+        regionUtils._currentRegionId += 1;
+        var idregion = regionUtils._currentRegionId;
+        //this is out first point for this region
+        var startPoint = [normCoords.x, normCoords.y];
+        regionUtils._currentPoints.push(startPoint);
+        //create a group to store region
+        regionobj = d3.select(canvas).append('g').attr('class', drawingclass);
+        regionobj.append('circle').attr('r', regionUtils._handleRadius).attr('fill', regionUtils._colorActiveHandle).attr('stroke', '#aaaaaa')
+            .attr('stroke-width', strokeWstr).attr('class', 'region' + idregion).attr('id', 'handle-0-region' + idregion)
+            .attr('transform', 'translate(' + (startPoint[0].toString()) + ',' + (startPoint[1].toString()) + ') scale(' + regionUtils._scaleHandle + ')')
+            .attr('is-handle', 'true').style({ cursor: 'pointer' });
 
-	} else {
-		var idregion = regionUtils._currentRegionId;
-		var nextpoint = [normCoords.x, normCoords.y];
-		var count = regionUtils._currentPoints.length - 1;
+    } else {
+        var idregion = regionUtils._currentRegionId;
+        var nextpoint = [normCoords.x, normCoords.y];
+        var count = regionUtils._currentPoints.length - 1;
 
-		//check if the distance is smaller than epsilonDistance if so, CLOSE POLYGON
+        //check if the distance is smaller than epsilonDistance if so, CLOSE POLYGON
 
-		if (regionUtils.distance(nextpoint, regionUtils._currentPoints[0]) < regionUtils._epsilonDistance && count >= 2) {
-			regionUtils.closePolygon();
-			return;
-		}
+        if (regionUtils.distance(nextpoint, regionUtils._currentPoints[0]) < regionUtils._epsilonDistance && count >= 2) {
+            regionUtils.closePolygon();
+            return;
+        }
 
-		regionUtils._currentPoints.push(nextpoint);
-		regionobj = d3.select("." + drawingclass);
+        regionUtils._currentPoints.push(nextpoint);
+        regionobj = d3.select("." + drawingclass);
 
-		regionobj.append('circle')
-			.attr('r', regionUtils._handleRadius).attr('fill', regionUtils._colorActiveHandle).attr('stroke', '#aaaaaa')
-			.attr('stroke-width', strokeWstr).attr('class', 'region' + idregion).attr('id', 'handle-' + count.toString() + '-region' + idregion)
-			.attr('transform', 'translate(' + (nextpoint[0].toString()) + ',' + (nextpoint[1].toString()) + ') scale(' + regionUtils._scaleHandle + ')')
-			.attr('is-handle', 'true').style({ cursor: 'pointer' });
+        regionobj.append('circle')
+            .attr('r', regionUtils._handleRadius).attr('fill', regionUtils._colorActiveHandle).attr('stroke', '#aaaaaa')
+            .attr('stroke-width', strokeWstr).attr('class', 'region' + idregion).attr('id', 'handle-' + count.toString() + '-region' + idregion)
+            .attr('transform', 'translate(' + (nextpoint[0].toString()) + ',' + (nextpoint[1].toString()) + ') scale(' + regionUtils._scaleHandle + ')')
+            .attr('is-handle', 'true').style({ cursor: 'pointer' });
 
-		regionobj.select('polyline').remove();
-		var polyline = regionobj.append('polyline').attr('points', regionUtils._currentPoints)
-			.style('fill', 'none')
-			.attr('stroke-width', strokeWstr)
-			.attr('stroke', '#aaaaaa').attr('class', "region" + idregion);
+        regionobj.select('polyline').remove();
+        var polyline = regionobj.append('polyline').attr('points', regionUtils._currentPoints)
+            .style('fill', 'none')
+            .attr('stroke-width', strokeWstr)
+            .attr('stroke', '#aaaaaa').attr('class', "region" + idregion);
 
 
-	}
+    }
 
 }
 /** 
  *  Close a polygon, adding a region to the viewer and an interface to it in the side panel */
 regionUtils.closePolygon = function () {
-	var canvas = overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
-	var drawingclass = regionUtils._drawingclass;
-	var regionid = 'region' + regionUtils._currentRegionId.toString();
-	d3.select("." + drawingclass).remove();
-	regionsobj = d3.select(canvas);
+    var canvas = overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
+    var drawingclass = regionUtils._drawingclass;
+    var regionid = 'region' + regionUtils._currentRegionId.toString();
+    d3.select("." + drawingclass).remove();
+    regionsobj = d3.select(canvas);
 
-	var hexcolor = overlayUtils.randomColor("hex");	
+    var hexcolor = overlayUtils.randomColor("hex");    
 
-	regionUtils._isNewRegion = true;
-	regionUtils.addRegion([[regionUtils._currentPoints]], regionid, hexcolor);
-	regionUtils._currentPoints = null;
-	regionsobj.append('path').attr("d", regionUtils.pointsToPath(regionUtils._regions[regionid].points)).attr("id", regionid + "poly")
-		.attr("class", "regionpoly").attr("polycolor", hexcolor).style('stroke-width', regionUtils._polygonStrokeWidth.toString())
-		.style("stroke", hexcolor).style("fill", "none");
-	
+    regionUtils._isNewRegion = true;
+    regionUtils.addRegion([[regionUtils._currentPoints]], regionid, hexcolor);
+    regionUtils._currentPoints = null;
+    regionsobj.append('path').attr("d", regionUtils.pointsToPath(regionUtils._regions[regionid].points)).attr("id", regionid + "_poly")
+        .attr("class", "regionpoly").attr("polycolor", hexcolor).style('stroke-width', regionUtils._polygonStrokeWidth.toString())
+        .style("stroke", hexcolor).style("fill", "none")
+        .append('title').text(regionid).attr("id","path-title-" + regionid);
+    regionUtils.updateAllRegionClassUI();
+    $(document.getElementById("regionClass-")).collapse("show");
+
 }
 
 /** 
- * @param {Object} JSON formatted region to import
- *  When regions are imported, create all objects for it from a region object */
-regionUtils.createImportedRegion = function (region) {
-	var canvas = overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
-	regionsobj = d3.select(canvas);
+ * @param {Object} JSON formatted region to convert to GeoJSON
+ *  This is only for backward compatibility */
+ regionUtils.oldRegions2GeoJSON = function (regionsObjects) {
+    try {
+        // Checking if json is in old format
+        if (Object.values(regionsObjects)[0].globalPoints) {
+            return regionUtils.regions2GeoJSON(regionsObjects)
+        }
+        else {
+            return regionsObjects;
+        }
+    } catch (error) {
+        return regionsObjects;
+    }
+ }
 
-	regionUtils._regions[region.id] = region;
-	var hexcolor = region.polycolor;
-	if(region.len==0){
-		console.log(region.id+" has length 0, recalculating length");
-		region.len=region.points.length;
-	}
-	regionsobj.append('path').attr("d", regionUtils.pointsToPath(region.points)).attr("id", region.id + "poly")
-		.attr("class", "regionpoly").attr("polycolor", hexcolor).style('stroke-width', regionUtils._polygonStrokeWidth.toString())
-		.style("stroke", hexcolor).style("fill", "none");
-	/*regionsobj.append('polygon').attr("points", tempointarray).attr("id", region.id + "poly")
-		.attr("class", "regionpoly").attr("polycolor", hexcolor).style('stroke-width', regionUtils._polygonStrokeWidth.toString())
-		.style("stroke", hexcolor).style("fill", "none");*/
-	regionUtils.regionUI(region.id);
-	if (region.filled) {
-		region.filled = false;
-		regionUtils.fillRegion(region.id)
-	}
+/** 
+ * @param {Object} GeoJSON formatted region to import
+ *  When regions are imported, create all objects for it from a region object */
+ regionUtils.regions2GeoJSON = function (regionsObjects) {
+    function HexToRGB(hex) {
+        var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return [ parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16) ];
+    }
+    function oldCoord2GeoJSONCoord(coordinates) {
+        // Check for older JSON format with only one list of coordinates
+        if (coordinates[0].x) {
+            return [[coordinates.map(function(x) {
+                return [x.x, x.y];
+            })]];
+        }
+        return coordinates.map (function(coordinateList, i) {
+            return coordinateList.map (function(coordinateList_i, index) {
+                return coordinateList_i.map(function(x) {
+                    return [x.x, x.y];
+                });
+                
+            });
+        })
+    }
+    geoJSONObjects = {
+        "type": "FeatureCollection",
+        "features": Object.values(regionsObjects).map (function(Region, i) {
+            return {
+                "type": "Feature",
+                "geometry": {
+                    "type": "MultiPolygon",
+                    "coordinates": oldCoord2GeoJSONCoord(Region.globalPoints)
+                },
+                "properties": {
+                    "name": Region.regionName,
+                    "classification": {
+                        "name": Region.regionClass
+                    },
+                    "color": HexToRGB(Region.polycolor),
+                    "isLocked": false
+                }
+            }
+        })
+    }
+    return geoJSONObjects;
+ }
+
+/** 
+ * @param {Object} GeoJSON formatted region to import
+ *  When regions are imported, create all objects for it from a region object */
+regionUtils.geoJSON2regions = function (geoJSONObjects) {
+    // Helper functions for converting colors to hexadecimal
+    var viewer = tmapp[tmapp["object_prefix"] + "_viewer"]
+    if (!viewer.world || !viewer.world.getItemAt(0)) {
+        setTimeout(function() {
+            regionUtils.geoJSON2regions(geoJSONObjects);
+        }, 100);
+        return;
+    }
+    function rgbToHex(rgb) {
+        return "#" + ((1 << 24) + (rgb[0] << 16) + (rgb[1] << 8) + rgb[2]).toString(16).slice(1);
+    }
+    function decimalToHex(number) {
+        if (number < 0){ number = 0xFFFFFFFF + number + 1; }
+        return "#" + number.toString(16).toUpperCase().substring(2, 8);
+    }
+    var canvas = overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
+    geoJSONObjects = regionUtils.oldRegions2GeoJSON(geoJSONObjects);
+    if (!Array.isArray(geoJSONObjects)) {
+        geoJSONObjects = [geoJSONObjects];
+    }
+    console.dir(geoJSONObjects);
+    geoJSONObjects.forEach(function(geoJSONObj, geoJSONObjIndex) {
+        if (geoJSONObj.type == "FeatureCollection") {
+            return regionUtils.geoJSON2regions(geoJSONObj.features);
+        }
+        if (geoJSONObj.type != "Feature") {
+            return;
+        }
+        var geometryType = geoJSONObj.geometry.type;
+        var coordinates;
+        if (geometryType=="Polygon") {
+            coordinates = [geoJSONObj.geometry.coordinates];
+        }
+        else if (geometryType=="MultiPolygon") {
+            coordinates = geoJSONObj.geometry.coordinates;
+        }
+        else {
+            coordinates = [];
+        }
+        var geoJSONObjClass = "";
+        var hexColor = "#ff0000";
+        if (geoJSONObj.properties.color) {
+            hexColor = rgbToHex(geoJSONObj.properties.color)
+        }
+        if (geoJSONObj.properties.name) {
+            regionName = geoJSONObj.properties.name;
+        }
+        else {
+            regionName = "Region_" + (geoJSONObjIndex - -1);
+        }
+        if (geoJSONObj.properties.object_type) {
+            geoJSONObjClass = geoJSONObj.properties.object_type;
+        }
+        if (geoJSONObj.properties.classification) {
+            geoJSONObjClass = geoJSONObj.properties.classification.name;
+            if (geoJSONObj.properties.classification.colorRGB) {
+                hexColor = decimalToHex(geoJSONObj.properties.classification.colorRGB);
+            }
+        }
+        coordinates = coordinates.map (function(coordinateList, i) {
+            return coordinateList.map (function(coordinateList_i, index) {
+                coordinateList_i = coordinateList_i.map(function(x) {
+                    xPoint = new OpenSeadragon.Point(x[0], x[1]);
+                    xPixel = viewer.world.getItemAt(0).imageToViewportCoordinates(xPoint);
+                    return [xPixel.x, xPixel.y];
+                });
+                return coordinateList_i.filter(function(value, index, Arr) {
+                    return index % 1 == 0;
+                });
+            });
+        })
+        var regionId = "Region_geoJSON_" + geoJSONObjIndex;
+        if (regionId in regionUtils._regions) {
+            regionId += "_" + (Math.random() + 1).toString(36).substring(7);
+        }
+        regionUtils.addRegion(coordinates, regionId, hexColor, geoJSONObjClass);
+        regionUtils._regions[regionId].regionName = regionName;
+        regionobj = d3.select(canvas).append('g').attr('class', "mydrawingclass");
+        regionobj.append('path').attr("d", regionUtils.pointsToPath(regionUtils._regions[regionId].points)).attr("id", regionId + "_poly")
+            .attr("class", "regionpoly").attr("polycolor", hexColor).style('stroke-width', regionUtils._polygonStrokeWidth.toString())
+            .style("stroke", hexColor).style("fill", "none")
+            .append('title').text(regionName).attr("id","path-title-" + regionId);
+        
+        if (document.getElementById(regionId + "_class_ta")) {
+            document.getElementById(regionId + "_class_ta").value = geoJSONObjClass;
+            document.getElementById(regionId + "_name_ta").value = regionName;
+            regionUtils.changeRegion(regionId);
+        }
+    });
 }
 
 /** 
  * @param {List} points List of list of list of points representing a path
  * Given points' coordinates, returns a path string */
 regionUtils.pointsToPath = function (points) {
-	var path = "";
-	points.forEach(function (subregions) {
-		subregions.forEach(function (polygons) {
-			var first = true
-			polygons.forEach(function (point) {
-				if (first) {path += " M ";first = false;}
-				else {path += " L "}
-				path += point.x + " " + point.y;
-			});
-			path += " Z"
-		});
-	});
-	return path;
+    var path = "";
+    points.forEach(function (subregions) {
+        subregions.forEach(function (polygons) {
+            var first = true
+            polygons.forEach(function (point) {
+                if (first) {path += " M ";first = false;}
+                else {path += " L "}
+                path += point.x + " " + point.y;
+            });
+            path += " Z"
+        });
+    });
+    return path;
 }
 
 /** 
@@ -182,128 +319,198 @@ regionUtils.pointsToPath = function (points) {
  * @param {Number[]} p2 Array with x and y coords
  *  Distance between two points represented as arrays [x1,y1] and [x2,y2] */
 regionUtils.distance = function (p1, p2) {
-	return Math.sqrt((p1[0] - p2[0]) * (p1[0] - p2[0]) + (p1[1] - p2[1]) * (p1[1] - p2[1]))
+    return Math.sqrt((p1[0] - p2[0]) * (p1[0] - p2[0]) + (p1[1] - p2[1]) * (p1[1] - p2[1]))
 }
 /** 
  *  @param {Number[]} points Array of 2D points in normalized coordinates
  *  Create a region object and store it in the regionUtils._regions container */
-regionUtils.addRegion = function (points, regionid, color) {
-	var op = tmapp["object_prefix"];
-	var imageWidth = OSDViewerUtils.getImageWidth();
-	var region = { "id": regionid, "points": [], "globalPoints": [], "regionName": regionid, "regionClass": null, "barcodeHistogram": [] };
-	region.len = points.length;
-	var _xmin = points[0][0][0][0], _xmax = points[0][0][0][0], _ymin = points[0][0][0][1], _ymax = points[0][0][0][1];
-	var objectPointsArray = [];
-	for (var i = 0; i < region.len; i++) {
-		subregion = [];
-		globalSubregion = [];
-		for (var j = 0; j < points[i].length; j++) {
-			polygon = [];
-			globalPolygon = [];
-			for (var k = 0; k < points[i][j].length; k++) {
-				if (points[i][j][k][0] > _xmax) _xmax = points[i][j][k][0];
-				if (points[i][j][k][0] < _xmin) _xmin = points[i][j][k][0];
-				if (points[i][j][k][1] > _ymax) _ymax = points[i][j][k][1];
-				if (points[i][j][k][1] < _ymin) _ymin = points[i][j][k][1];
-				polygon.push({ "x": points[i][j][k][0], "y": points[i][j][k][1] });
-				globalPolygon.push({ "x": points[i][j][k][0] * imageWidth, "y": points[i][j][k][1] * imageWidth });
-			}
-			subregion.push(polygon);
-			globalSubregion.push(globalPolygon);
-		}
-		region.points.push(subregion);
-		region.globalPoints.push(globalSubregion);
-	}
-	region._xmin = _xmin, region._xmax = _xmax, region._ymin = _ymin, region._ymax = _ymax;
-	region._gxmin = _xmin * imageWidth, region._gxmax = _xmax * imageWidth, region._gymin = _ymin * imageWidth, region._gymax = _ymax * imageWidth;
-	region.polycolor = color;
+regionUtils.addRegion = function (points, regionid, color, regionClass) {
+    var op = tmapp["object_prefix"];
+    var imageWidth = OSDViewerUtils.getImageWidth();
+    var region = { "id": regionid, "points": [], "globalPoints": [], "regionName": regionid, "regionClass": regionClass, "barcodeHistogram": [] };
+    region.len = points.length;
+    var _xmin = points[0][0][0][0], _xmax = points[0][0][0][0], _ymin = points[0][0][0][1], _ymax = points[0][0][0][1];
+    var objectPointsArray = [];
+    for (var i = 0; i < region.len; i++) {
+        subregion = [];
+        globalSubregion = [];
+        for (var j = 0; j < points[i].length; j++) {
+            polygon = [];
+            globalPolygon = [];
+            for (var k = 0; k < points[i][j].length; k++) {
+                if (points[i][j][k][0] > _xmax) _xmax = points[i][j][k][0];
+                if (points[i][j][k][0] < _xmin) _xmin = points[i][j][k][0];
+                if (points[i][j][k][1] > _ymax) _ymax = points[i][j][k][1];
+                if (points[i][j][k][1] < _ymin) _ymin = points[i][j][k][1];
+                polygon.push({ "x": points[i][j][k][0], "y": points[i][j][k][1] });
+                globalPolygon.push({ "x": points[i][j][k][0] * imageWidth, "y": points[i][j][k][1] * imageWidth });
+            }
+            subregion.push(polygon);
+            globalSubregion.push(globalPolygon);
+        }
+        region.points.push(subregion);
+        region.globalPoints.push(globalSubregion);
+    }
+    region._xmin = _xmin, region._xmax = _xmax, region._ymin = _ymin, region._ymax = _ymax;
+    region._gxmin = _xmin * imageWidth, region._gxmax = _xmax * imageWidth, region._gymin = _ymin * imageWidth, region._gymax = _ymax * imageWidth;
+    region.polycolor = color;
 
-	regionUtils._regions[regionid] = region;
-	regionUtils._regions[regionid].associatedPoints=[];
-	regionUtils.regionUI(regionid);
+    regionUtils._regions[regionid] = region;
+    regionUtils._regions[regionid].associatedPoints=[];
+    regionUtils.regionUI(regionid);
 }
 /** 
  *  @param {String} regionid Region identifier to be searched in regionUtils._regions
  *  Create the whole UI for a region in the side panel */
 regionUtils.regionUI = function (regionid) {
 
-	var op = tmapp["object_prefix"];
-	var regionsPanel = document.getElementById("markers-regions-panel");
+    var op = tmapp["object_prefix"];
+    regionClass = regionUtils._regions[regionid].regionClass;
+    if (regionClass) {
+        regionUtils.addRegionClassUI (regionClass)
+        regionClassID = HTMLElementUtils.stringToId(regionClass);
+        var regionsPanel = document.getElementById("markers-regions-panel-" + regionClassID);
+        numRegions = Object.values(regionUtils._regions).filter(x => x.regionClass==regionClass).length
+        if (numRegions > regionUtils._maxRegionsInMenu) {
+            spanEl = document.getElementById("regionGroupWarning-" + regionClassID)
+            if (spanEl) spanEl.innerHTML = "<i class='bi bi-exclamation-triangle'></i> Max "+regionUtils._maxRegionsInMenu+" regions displayed below";
+            return;
+        }
+    }
+    else {
+        regionUtils.addRegionClassUI (null)
+        var regionsPanel = document.getElementById("markers-regions-panel-");
+    }
+    var trPanel = HTMLElementUtils.createElement({
+        kind: "tr",
+        extraAttributes: {
+            class: "regiontr",
+            id: op + regionid + "_tr"
+        }
+    });
+    regionsPanel.appendChild(trPanel);
+    
+    // Get Class name and Region name
+    if (regionUtils._regions[regionid].regionClass) {
+        rClass = regionUtils._regions[regionid].regionClass;
+        //regionclasstext.value = rClass;
+    }
+    else {
+        rClass = "";
+    }
+    if (regionUtils._regions[regionid].regionName) {
+        rName = regionUtils._regions[regionid].regionName;
+        //if (regionUtils._regions[regionid].regionName != regionid)
+        //    regionnametext.value = rName;
+    } else {
+        rName = regionid;
+    }
+    var tdPanel = HTMLElementUtils.createElement({
+        kind: "td",
+    });
+    var checkinput = HTMLElementUtils.inputTypeCheckbox({
+        id: regionid + "_fill_ta",
+        class: "form-check-input",
+        value: regionUtils._regions[regionid].filled,
+        eventListeners: { click: function () {
+            regionUtils._regions[regionid].filled = this.checked;
+            regionUtils.fillRegion(regionid, regionUtils._regions[regionid].filled);
+        }}
+    });
+    tdPanel.appendChild(checkinput);
+    trPanel.appendChild(tdPanel);
+    
+    var tdPanel = HTMLElementUtils.createElement({
+        kind: "td",
+        id: op + regionid + "_name",
+    });
+    var regionnametext = HTMLElementUtils.inputTypeText({
+        id: regionid + "_name_ta",
+        extraAttributes: {
+            size:9,
+            placeholder: "name",
+            value: rName,
+            class: "col mx-1 input-sm form-control form-control-sm"
+        }
+    });
+    regionnametext.addEventListener('change', function () {
+        regionUtils.changeRegion(regionid);
+    });
+    tdPanel.appendChild(regionnametext);
+    trPanel.appendChild(tdPanel);
+    var tdPanel = HTMLElementUtils.createElement({
+        kind: "td",
+    });
+    var regionclasstext = HTMLElementUtils.inputTypeText({
+        id: regionid + "_class_ta",
+        extraAttributes: {
+            size: 9,
+            placeholder: "class",
+            value: rClass,
+            class: "col mx-1 input-sm form-control form-control-sm"
+        }
+    });
+    regionclasstext.addEventListener('change', function () {
+        regionUtils.changeRegion(regionid);
+    });
+    tdPanel.appendChild(regionclasstext);
+    trPanel.appendChild(tdPanel);
 
-	var rPanel = HTMLElementUtils.createPanel({ id: op + regionid + "panel", headingInnerText: regionid });
-	regionsPanel.appendChild(rPanel);
+    var regioncolorinput = HTMLElementUtils.inputTypeColor({
+        id: regionid + "_color_input",
+        extraAttributes: {
+            class: "mx-1 form-control form-control-sm form-control-color-sm"
+        }
+    });
+    regioncolorinput.addEventListener('change', function () {
+        regionUtils.changeRegion(regionid);
+    });
+    if (document.getElementById(regionid + "_poly")) {
+        var regionpoly = document.getElementById(regionid + "_poly");
+        regioncolorinput.setAttribute("value", regionpoly.getAttribute("polycolor"));
+    } else if (regionUtils._regions[regionid].polycolor) {
+        regioncolorinput.setAttribute("value", regionUtils._regions[regionid].polycolor);
+    }
+    var tdPanel = HTMLElementUtils.createElement({
+        kind: "td",
+    });
+    tdPanel.appendChild(regioncolorinput);
+    trPanel.appendChild(tdPanel);
 
-	var rpanelbody = HTMLElementUtils.getFirstChildByClass(rPanel, "panel-body");
-	rpanelbody.setAttribute("style", "padding-top: 0px;");
-	var rpanelheading = HTMLElementUtils.getFirstChildByClass(rPanel, "panel-heading");
-
-	var form=HTMLElementUtils.createForm({extraAttributes: { class:"form-inline", onsubmit:"return false;"} });
-	var formgroupcolor= HTMLElementUtils.createElement({type:"div",extraAttributes: {style:"max-width: 20%;", class:"form-group"} });
-	var formgroupname= HTMLElementUtils.createElement({type:"div",extraAttributes: {style:"max-width: 30%;  padding:0px 3px 0px 3px;", class:"form-group"} });
-	var formgroupclass= HTMLElementUtils.createElement({type:"div",extraAttributes: { style:"max-width: 30%;  padding:0px 3px 0px 3px;",class:"form-group"} });
-
-	var regioncolorinput = HTMLElementUtils.inputTypeColor({ id: regionid + "color_input" });
-	if (document.getElementById(regionid + "poly")) {
-		var regionpoly = document.getElementById(regionid + "poly");
-		regioncolorinput.setAttribute("value", regionpoly.getAttribute("polycolor"));
-	} else if (regionUtils._regions[regionid].polycolor) {
-		regioncolorinput.setAttribute("value", regionUtils._regions[regionid].polycolor);
-	}
-	formgroupcolor.appendChild(regioncolorinput);
-
-	var regionnametext = HTMLElementUtils.inputTypeText({ id: regionid + "name_ta", extraAttributes: { size:9, placeholder: "name",class:" input-sm form-control " } });
-	formgroupname.appendChild(regionnametext);
-
-	var regionclasstext = HTMLElementUtils.inputTypeText({ id: regionid + "class_ta", extraAttributes: {size:9, placeholder: "class",class:" input-sm form-control " } });
-	formgroupclass.appendChild(regionclasstext);
-	
-	form.appendChild(formgroupcolor);
-	form.appendChild(formgroupname);
-	form.appendChild(formgroupclass);
-
-	//button to set new features of region
-	var regionsetbutton = HTMLElementUtils.createButton({ id: regionid + "set_btn", innerText: "Set", extraAttributes: {style:"margin:0px 2px 0px 2px;", parentRegion: regionid,class:" btn btn-primary btn-sm form-control" } });
-	regionsetbutton.addEventListener('click', function () { interfaceUtils.changeRegionUI($(this)); });
-
-	//button to fill polygon
-	var regionsfillbutton = HTMLElementUtils.createButton({ id: regionid + "fill_btn", innerText: "Fill", extraAttributes: {style:"margin:0px 2px 0px 2px;", parentRegion: regionid,class:" btn btn-primary btn-sm form-control" } });
-	regionsfillbutton.addEventListener('click', function () { interfaceUtils.fillRegionUI($(this)); });
-
-	var regionanalyzebutton = HTMLElementUtils.createButton({ id: regionid + "analyze_btn", innerText: "Analyze", extraAttributes: {style:"margin:0px 2px 0px 2px;", parentRegion: regionid, class:" btn btn-primary btn-sm form-control"} });
-	regionanalyzebutton.addEventListener('click', function () { interfaceUtils.analyzeRegionUI($(this)); });
-	
-	//button to remove region
-	var regionsdeletebutton = HTMLElementUtils.createButton({ id: regionid + "delete_btn", innerText: "Delete region", extraAttributes: {style:"margin:0px 2px 0px 2px;", parentRegion: regionid,class:" btn btn-primary btn-sm form-control" } });
-	regionsdeletebutton.addEventListener('click', function () { interfaceUtils.deleteRegionUI($(this)); });
-
-	
-	form.appendChild(regionsetbutton);
-	form.appendChild(regionanalyzebutton);
-	form.appendChild(regionsfillbutton);
-	form.appendChild(regionsdeletebutton);
-	
-	rpanelbody.appendChild(form);
-
-	var regionText = "";
-	var rClass = null;
-	var rName = null;
-
-	if (regionUtils._regions[regionid].regionClass) {
-		rClass = regionUtils._regions[regionid].regionClass;
-		regionclasstext.value = rClass;
-	}
-	if (regionUtils._regions[regionid].regionName) {
-		rName = regionUtils._regions[regionid].regionName;
-		if (regionUtils._regions[regionid].regionName != regionid)
-			regionnametext.value = rName;
-	} else {
-		rName = regionid;
-	}
-	regionText = rName;
-
-	if (rClass) regionText = regionText + " (" + rClass + ")";
-
-	rpanelheading.innerHTML = regionText;
+    trPanel.appendChild(tdPanel);
+    var tdPanel = HTMLElementUtils.createElement({
+        kind: "td"
+    });
+    var regionsdeletebutton = HTMLElementUtils.createButton({
+        id: regionid + "_delete_btn",
+        innerText: "<i class='bi bi-trash'></i>",
+        extraAttributes: {
+            parentRegion: regionid,
+            class: "col btn btn-sm btn-primary form-control-sm mx-1"
+        }
+    });
+    regionsdeletebutton.addEventListener('click', function () {
+        regionUtils.deleteRegion(regionid);
+    });
+    tdPanel.appendChild(regionsdeletebutton);
+    trPanel.appendChild(tdPanel);
+    
+    var trPanelHist = HTMLElementUtils.createElement({
+        kind: "tr",
+        extraAttributes: {
+            id: op + regionid + "_tr_hist"
+        }
+    });
+    trPanelHist.style.display="none";
+    regionsPanel.appendChild(trPanelHist);
+    var row = HTMLElementUtils.createElement({
+        kind: "td",
+        extraAttributes: {
+            class: "region-histogram my-1",
+            colspan: "52"
+        }
+    });
+    trPanelHist.appendChild(row);
 }
 
 /**
@@ -313,9 +520,9 @@ regionUtils.regionUI = function (regionid) {
  * @param {*} tmpPoint Temporary point to check if in path. This is only for speed.
  */
  regionUtils.globalPointInPath=function(x,y,path,tmpPoint) {
-	tmpPoint.x = x;
-	tmpPoint.y = y;
-	return path.isPointInFill(tmpPoint);
+    tmpPoint.x = x;
+    tmpPoint.y = y;
+    return path.isPointInFill(tmpPoint);
 };
 
 /** 
@@ -326,357 +533,645 @@ regionUtils.regionUI = function (regionid) {
  *  @param {Number} y3 Y coordinate of diagonal point in a bounding box
  *  @param {Object} options Tell the function 
  *  Search for points inside a particular region */
-regionUtils.searchTreeForPointsInRegion = function (quadtree, x0, y0, x3, y3, regionid, options) {	
-	if (options.globalCoords) {
-		var pointInPath = regionUtils.globalPointInPath;
-		var xselector = "global_X_pos";
-		var yselector = "global_Y_pos";
-	}else{
-		throw {name : "NotImplementedError", message : "ViewerPointInPath not yet implemented."}; 
-
-	}
-	var imageWidth = OSDViewerUtils.getImageWidth();
-	var countsInsideRegion = 0;
-	var pointsInside=[];
-	regionPath=document.getElementById(regionid + "poly");
-	var svgovname = tmapp["object_prefix"] + "_svgov";
-	var svg = tmapp[svgovname]._svg;
-	tmpPoint = svg.createSVGPoint();
-	quadtree.visit(function (node, x1, y1, x2, y2) {
-		if (!node.length) {
-			do {
-				var d = node.data;
-				d.scanned = true;
-				var selected = (d[xselector] >= x0) && (d[xselector] < x3) && (d[yselector] >= y0) && (d[yselector] < y3);
-				if (selected) {
-					if (pointInPath(d[xselector] / imageWidth, d[yselector] / imageWidth, regionPath, tmpPoint)) {
-						countsInsideRegion += 1;
-						pointsInside.push(d);
-					}
-				}
-			} while (node = node.next);
-		}
-		return x1 >= x3 || y1 >= y3 || x2 < x0 || y2 < y0;
-	});
-	
-	if (countsInsideRegion) {
-		regionUtils._regions[regionid].barcodeHistogram.push({ "barcode": quadtree.treeName, "gene_name": quadtree.treeGeneName, "count": countsInsideRegion });
-	}
-	return pointsInside;
+ regionUtils.searchTreeForPointsInBbox = function (quadtree, x0, y0, x3, y3, options) {    
+    if (options.globalCoords) {
+        var xselector = options.xselector;
+        var yselector = options.yselector;
+    }else{
+        throw {name : "NotImplementedError", message : "ViewerPointInPath not yet implemented."}; 
+    }
+    var pointsInside=[];  
+    quadtree.visit(function (node, x1, y1, x2, y2) {
+        if (!node.length) {
+            do {
+                var d = node.data;
+                d.scanned = true;
+                var selected = (d[xselector] >= x0) && (d[xselector] < x3) && (d[yselector] >= y0) && (d[yselector] < y3);
+                if (selected) {
+                    pointsInside.push(d);
+                }
+            } while (node = node.next);
+        }
+        return x1 >= x3 || y1 >= y3 || x2 < x0 || y2 < y0;
+    });
+    return pointsInside;
+ }
+/** 
+ *  @param {Object} quadtree d3.quadtree where the points are stored
+ *  @param {Number} x0 X coordinate of one point in a bounding box
+ *  @param {Number} y0 Y coordinate of one point in a bounding box
+ *  @param {Number} x3 X coordinate of diagonal point in a bounding box
+ *  @param {Number} y3 Y coordinate of diagonal point in a bounding box
+ *  @param {Object} options Tell the function 
+ *  Search for points inside a particular region */
+regionUtils.searchTreeForPointsInRegion = function (quadtree, x0, y0, x3, y3, regionid, options) {    
+    if (options.globalCoords) {
+        var pointInPath = regionUtils.globalPointInPath;
+        var xselector = options.xselector;
+        var yselector = options.yselector;
+    }else{
+        throw {name : "NotImplementedError", message : "ViewerPointInPath not yet implemented."}; 
+    }
+    var imageWidth = OSDViewerUtils.getImageWidth();
+    var countsInsideRegion = 0;
+    var pointsInside=[];
+    regionPath=document.getElementById(regionid + "_poly");
+    var svgovname = tmapp["object_prefix"] + "_svgov";
+    var svg = tmapp[svgovname]._svg;
+    tmpPoint = svg.createSVGPoint();
+    pointInBbox = regionUtils.searchTreeForPointsInBbox(quadtree, x0, y0, x3, y3, options);
+    for (d of pointInBbox) {
+        if (pointInPath(d[xselector] / imageWidth, d[yselector] / imageWidth, regionPath, tmpPoint)) {
+            countsInsideRegion += 1;
+            pointsInside.push(d);
+        }
+    }
+    if (countsInsideRegion) {
+        regionUtils._regions[regionid].barcodeHistogram.push({ "key": quadtree.treeID, "name": quadtree.treeName, "count": countsInsideRegion });
+    }
+    return pointsInside;
 }
 
 /** Fill all regions  */
 regionUtils.fillAllRegions=function(){
-	for(var region in regionUtils._regions){
-		if (regionUtils._regions.hasOwnProperty(region)) {
-			regionUtils.fillRegion(region);
-		}
-	}
+    var allFilled = Object.values(regionUtils._regions).map(function(e) { return e.filled; }).includes(false);
+    for(var regionid in regionUtils._regions){
+        if (regionUtils._regions.hasOwnProperty(regionid)) {
+            regionUtils.fillRegion(regionid, allFilled);
+            if(document.getElementById(regionid + "_fill_ta"))
+                document.getElementById(regionid + "_fill_ta").checked = allFilled;
+        }
+    }
 }
 
 /** 
  * @param {String} regionid String id of region to fill
  * Given a region id, fill this region in the interface */
-regionUtils.fillRegion = function (regionid) {
-	if(regionUtils._regions[regionid].filled === 'undefined'){
-		regionUtils._regions[regionid].filled=true;
-	}else{
-		regionUtils._regions[regionid].filled=!regionUtils._regions[regionid].filled;
-	}
-	var newregioncolor = document.getElementById(regionid + "color_input").value;
-	var d3color = d3.rgb(newregioncolor);
-	var newStyle="";
-	if(regionUtils._regions[regionid].filled){
-		newStyle = "stroke-width: " + regionUtils._polygonStrokeWidth.toString()+ "; stroke: " + d3color.rgb().toString()+";";
-		d3color.opacity=0.5;
-		newStyle +="fill: "+d3color.rgb().toString()+";";
-	}else{
-		newStyle = "stroke-width: " + regionUtils._polygonStrokeWidth.toString() + "; stroke: " + d3color.rgb().toString() + "; fill: none;";
-	}
-	document.getElementById(regionid + "poly").setAttribute("style", newStyle);
+regionUtils.fillRegion = function (regionid, value) {
+    if (value === undefined) {
+        // we toggle
+        if(regionUtils._regions[regionid].filled === 'undefined'){
+            value = true;
+        }
+        else {
+            value = !regionUtils._regions[regionid].filled;
+        }
+    }
+    regionUtils._regions[regionid].filled=value;
+    var newregioncolor = regionUtils._regions[regionid].polycolor;
+    var d3color = d3.rgb(newregioncolor);
+    var newStyle="";
+    if(regionUtils._regions[regionid].filled){
+        newStyle = "stroke-width: " + regionUtils._polygonStrokeWidth.toString()+ "; stroke: " + d3color.rgb().toString()+";";
+        d3color.opacity=0.5;
+        newStyle +="fill: "+d3color.rgb().toString()+";";
+    }else{
+        newStyle = "stroke-width: " + regionUtils._polygonStrokeWidth.toString() + "; stroke: " + d3color.rgb().toString() + "; fill: none;";
+    }
+    document.getElementById(regionid + "_poly").setAttribute("style", newStyle);
 
 }
 /** 
  * @param {String} regionid String id of region to delete
  * Given a region id, deletes this region in the interface */
 regionUtils.deleteRegion = function (regionid) {
-	var regionPoly = document.getElementById(regionid + "poly")
-	regionPoly.parentElement.removeChild(regionPoly);
-	delete regionUtils._regions[regionid];
-	var op = tmapp["object_prefix"];
-	var rPanel = document.getElementById(op + regionid + "panel");
-	rPanel.parentElement.removeChild(rPanel);
+    var regionPoly = document.getElementById(regionid + "_poly")
+    regionPoly.parentElement.removeChild(regionPoly);
+    delete regionUtils._regions[regionid];
+    var op = tmapp["object_prefix"];
+    var rPanel = document.getElementById(op + regionid + "_tr");
+    if (rPanel) {
+        rPanel.parentElement.removeChild(rPanel);
+        var rPanelHist = document.getElementById(op + regionid + "_tr_hist");
+        rPanelHist.parentElement.removeChild(rPanelHist);
+    }
+    regionUtils.updateAllRegionClassUI();
 }
 /** 
- * 	@param {String} regionid Region identifier
+ * @param {String} regionid String id of region to delete
+ * Given a region id, deletes this region in the interface */
+regionUtils.deleteAllRegions = function () {
+    var canvas = overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
+    regionsobj = d3.select(canvas);
+    regionsobj.selectAll("*").remove();
+
+    var regionsPanel = document.getElementById("markers-regions-panel");
+    regionsPanel.innerText = "";
+    var regionsPanel = document.getElementById("regionAccordions");
+    regionsPanel.innerText = "";
+    regionUtils._regions = {};
+}
+regionUtils.updateAllRegionClassUI = function (regionClass) {
+    // get all region classes
+    var allRegionClasses = Object.values(regionUtils._regions).map(function(e) { return e.regionClass; })
+    // get only unique values
+    var singleRegionClasses = allRegionClasses.filter((v, i, a) => a.indexOf(v) === i);
+    singleRegionClasses.forEach(function (regionClass) {
+        regionClassID = HTMLElementUtils.stringToId(regionClass);
+        numRegions = allRegionClasses.filter(x => x==regionClass).length
+        spanEl = document.getElementById("numRegions-" + regionClassID)
+        if (spanEl) {
+            spanEl.innerText = numRegions;
+            spanElS = document.getElementById("numRegionsS-" + regionClassID)
+            if (numRegions > 1) spanElS.innerText = "s"; else spanElS.innerText = ""; 
+        }
+    })
+    Array.from(document.getElementsByClassName("region-accordion")).forEach(function(accordionItem) {
+        if (Array.from(accordionItem.getElementsByClassName("regiontr")).length == 0) {
+            accordionItem.remove();
+        }
+    });
+}
+/** 
+ *     @param {String} regionClass Region class
+ *  Add accordion for a new region class */
+regionUtils.addRegionClassUI = function (regionClass) {
+    var op = tmapp["object_prefix"];
+    var regionClassID = HTMLElementUtils.stringToId(regionClass);
+    var accordion_item = document.getElementById("regionClassItem-" + regionClassID);
+    if (!accordion_item) {
+        var regionAccordions = document.getElementById("regionAccordions");
+        var accordion_item = HTMLElementUtils.createElement({
+            kind: "div",
+            extraAttributes: {
+                class: "accordion-item region-accordion",
+                id: "regionClassItem-" + regionClassID
+            }
+        });
+        console.log(regionAccordions, accordion_item);
+        regionAccordions.appendChild(accordion_item);
+        var accordion_header = HTMLElementUtils.createElement({
+            kind: "h2",
+            extraAttributes: {
+                class: "accordion-header",
+                id: "regionClassHeading-" + regionClassID
+            }
+        });
+        accordion_item.appendChild(accordion_header);
+        if (!regionClass) regionClassName = "Unclassified"; else regionClassName = regionClass;
+        var accordion_header_button = HTMLElementUtils.createElement({
+            kind: "button",
+            innerHTML: "<i class='bi bi-pentagon'></i>&nbsp;" + regionClassName + " (<span id='numRegions-" + regionClassID + "'>1</span>&nbsp;region<span id='numRegionsS-" + regionClassID + "'></span>)&nbsp;<span class='text-warning' id='regionGroupWarning-" + regionClassID + "'></span>",
+            extraAttributes: {
+                "type": "button",
+                "class": "accordion-button collapsed",
+                "id": "regionClassHeading-" + regionClassID,
+                "data-bs-toggle": "collapse",
+                "data-bs-target": "#" + "regionClass-" + regionClassID,
+                "aria-expanded": "true",
+                "aria-controls": "collapseOne"
+            }
+        });
+        accordion_header.appendChild(accordion_header_button);
+        
+        var accordion_content = HTMLElementUtils.createElement({
+            kind: "div",
+            extraAttributes: {
+                class: "accordion-collapse collapse px-2",
+                id: "regionClass-" + regionClassID,
+                "aria-labelledby":"headingOne",
+                "data-bs-parent":"#regionAccordions"
+            }
+        });
+        accordion_item.appendChild(accordion_content);
+        var buttonRow = HTMLElementUtils.createElement({
+            kind: "div",
+            extraAttributes: {
+                class: "row my-1 mx-2"
+            }
+        });
+        accordion_content.appendChild(buttonRow);
+        
+        var regionTable = HTMLElementUtils.createElement({
+            kind: "table",
+            extraAttributes: {
+                class: "table regions_table",
+                id: "markers-regions-table-" + regionClassID
+            }
+        });
+        accordion_content.appendChild(regionTable);
+        var colg=document.createElement ("colgroup");
+        colg.innerHTML='<col width="5%"><col width="38%"><col width="37%"><col width="10%"><col width="10%">';
+        regionTable.appendChild(colg);
+        var tblHead = document.createElement("thead");
+        var tblHeadTr = document.createElement("tr");
+        tblHead.appendChild(tblHeadTr);
+        tblHeadTr.appendChild(HTMLElementUtils.createElement({kind:"th",innerText:"Fill"}));
+        tblHeadTr.appendChild(HTMLElementUtils.createElement({kind:"th",innerText:"Name"}));
+        tblHeadTr.appendChild(HTMLElementUtils.createElement({kind:"th",innerText:"Class"}));
+        tblHeadTr.appendChild(HTMLElementUtils.createElement({kind:"th",innerText:"Color"}));
+        tblHeadTr.appendChild(HTMLElementUtils.createElement({kind:"th",innerText:"Delete"}));
+        regionTable.appendChild(tblHead);
+        var regionTbody = HTMLElementUtils.createElement({
+            kind: "tbody",
+            id: "markers-regions-panel-" + regionClassID
+        });
+        regionTable.appendChild(regionTbody);
+            
+        var trPanel = HTMLElementUtils.createElement({
+            kind: "tr"
+        });
+        regionTbody.appendChild(trPanel);
+        
+        var tdPanel = HTMLElementUtils.createElement({
+            kind: "td",
+        });
+        var checkinput = HTMLElementUtils.inputTypeCheckbox({
+            class: "form-check-input",
+            id: regionClassID + "_group_fill_ta",
+            value: false,
+            eventListeners: { click: function () {
+                var newFill = this.checked;
+                groupRegions = Object.values(regionUtils._regions).filter(
+                    x => x.regionClass==regionClass
+                ).forEach(function (region) {
+                    region.filled = newFill;
+                    if (document.getElementById(region.id + "_fill_ta"))
+                        document.getElementById(region.id + "_fill_ta").checked = newFill;
+                    regionUtils.fillRegion(region.id, newFill);
+                });
+            }}
+        });
+        tdPanel.appendChild(checkinput);
+        trPanel.appendChild(tdPanel);
+        
+        var tdPanel = HTMLElementUtils.createElement({
+            kind: "td",
+            innerHTML: "<label style='cursor:pointer' for='"+regionClassID+"_group_fill_ta'>All</label>"
+        });
+        trPanel.appendChild(tdPanel);
+        var tdPanel = HTMLElementUtils.createElement({
+            kind: "td",
+        });
+        if (regionClass) rClass = regionClass; else rClass = "";
+        var regionclasstext = HTMLElementUtils.inputTypeText({
+            extraAttributes: {
+                size: 9,
+                placeholder: "class",
+                value: rClass,
+                class: "col mx-1 input-sm form-control form-control-sm"
+            }
+        });
+        regionclasstext.addEventListener('change', function () {
+            var newClass = this.value;
+            groupRegions = Object.values(regionUtils._regions).filter(
+                x => x.regionClass==regionClass
+            );
+            for (region of groupRegions) {
+                if (document.getElementById(region.id + "_class_ta"))
+                    document.getElementById(region.id + "_class_ta").value = newClass;
+                regionUtils.changeRegion(region.id);
+                region.regionClass = newClass;
+            };
+            regionUtils.updateAllRegionClassUI();
+        });
+        tdPanel.appendChild(regionclasstext);
+        trPanel.appendChild(tdPanel);
+    
+        var regioncolorinput = HTMLElementUtils.inputTypeColor({
+            extraAttributes: {
+                class: "mx-1 form-control form-control-sm form-control-color-sm"
+            }
+        });
+        regioncolorinput.addEventListener('change', function () {
+            var newColor = this.value;
+            groupRegions = Object.values(regionUtils._regions).filter(
+                x => x.regionClass==regionClass
+            )
+            for (region of groupRegions) {
+                region.polycolor = newColor;
+                if (document.getElementById(region.id + "_color_input"))
+                    document.getElementById(region.id + "_color_input").value = newColor;
+                regionUtils.changeRegion(region.id);
+            };
+        });
+        var tdPanel = HTMLElementUtils.createElement({
+            kind: "td",
+        });
+        tdPanel.appendChild(regioncolorinput);
+        trPanel.appendChild(tdPanel);
+    
+        trPanel.appendChild(tdPanel);
+        var tdPanel = HTMLElementUtils.createElement({
+            kind: "td"
+        });
+        var regionsdeletebutton = HTMLElementUtils.createButton({
+            innerText: "<i class='bi bi-trash'></i>",
+            extraAttributes: {
+                class: "col btn btn-sm btn-primary form-control-sm mx-1"
+            }
+        });
+        regionsdeletebutton.addEventListener('click', function () {
+            interfaceUtils.confirm('Are you sure you want to delete the whole '+regionClass+' group?')
+            .then(function(_confirm){
+                if (_confirm) {
+                    groupRegions = Object.values(regionUtils._regions).filter(
+                        x => x.regionClass==regionClass
+                    ).forEach(function (region) {
+                        regionUtils.deleteRegion(region.id);
+                    });
+                }
+            });
+        });
+        tdPanel.appendChild(regionsdeletebutton);
+        trPanel.appendChild(tdPanel);
+
+        var regionanalyzebutton = HTMLElementUtils.createButton({
+            id: regionClassID + "_analyze_btn",
+            innerText: "Analyze group",
+            extraAttributes: {
+                parentRegion: regionClassID,
+                class: "col btn btn-primary btn-sm form-control mx-1"
+            }
+        });
+        
+        regionanalyzebutton.addEventListener('click', function () {
+            if (Object.keys(dataUtils.data).length == 0) {
+                interfaceUtils.alert("Load markers first");
+                return;
+            }
+            Object.values(regionUtils._regions).filter(
+                x => x.regionClass==regionClass
+            ).forEach(function(region){
+                regionUtils.analyzeRegion(region.id);
+            });
+        });
+        buttonRow.appendChild(regionanalyzebutton);
+
+    }
+}
+
+/** 
+ *     @param {String} regionid Region identifier
  *  Change the region properties like color, class name or region name */
 regionUtils.changeRegion = function (regionid) {
-	var op = tmapp["object_prefix"];
-	var newregioncolor = document.getElementById(regionid + "color_input").value;
-	var d3color = d3.rgb(newregioncolor);
-	if (document.getElementById(regionid + "class_ta").value) {
-		regionUtils._regions[regionid].regionClass = document.getElementById(regionid + "class_ta").value;
-	} else {
-		regionUtils._regions[regionid].regionClass = null;
-	}
-	if (document.getElementById(regionid + "name_ta").value) {
-		regionUtils._regions[regionid].regionName = document.getElementById(regionid + "name_ta").value;
-	} else {
-		regionUtils._regions[regionid].regionName = regionid;
-	}
-	var rPanel = document.getElementById(op + regionid + "panel");
-	var regionClass = "";
-	if (regionUtils._regions[regionid].regionClass) regionClass = " (" + regionUtils._regions[regionid].regionClass + ")";
-	HTMLElementUtils.getFirstChildByClass(rPanel, "panel-heading").innerHTML = regionUtils._regions[regionid].regionName + regionClass;
-
-	var newStyle = "stroke-width: " + regionUtils._polygonStrokeWidth.toString() + "; stroke: " + d3color.rgb().toString() + "; fill: none;";
-	regionUtils._regions[regionid].polycolor = newregioncolor;
-	//console.log(newStyle);
-
-	document.getElementById(regionid + "poly").setAttribute("style", newStyle);
-
+    if (document.getElementById(regionid + "_name_ta")) {
+        var op = tmapp["object_prefix"];
+        var rPanel = document.getElementById(op + regionid + "_tr");
+        var rPanel_hist = document.getElementById(op + regionid + "_tr_hist");
+        if (regionUtils._regions[regionid].regionClass != document.getElementById(regionid + "_class_ta").value) {
+            if (document.getElementById(regionid + "_class_ta").value) {
+                regionUtils._regions[regionid].regionClass = document.getElementById(regionid + "_class_ta").value;
+                classID = HTMLElementUtils.stringToId(regionUtils._regions[regionid].regionClass);
+                regionUtils.addRegionClassUI (regionUtils._regions[regionid].regionClass)
+                $(rPanel).detach().appendTo('#markers-regions-panel-' + classID)
+                $(rPanel_hist).detach().appendTo('#markers-regions-panel-' + classID)
+            } else {
+                regionUtils._regions[regionid].regionClass = null;
+                regionUtils.addRegionClassUI (null)
+                classID = HTMLElementUtils.stringToId(regionUtils._regions[regionid].regionClass);
+                $(rPanel).detach().appendTo('#markers-regions-panel-')
+                $(rPanel_hist).detach().appendTo('#markers-regions-panel-')
+            }
+            regionUtils.updateAllRegionClassUI();
+        }
+        if (document.getElementById(regionid + "_name_ta").value) {
+            regionUtils._regions[regionid].regionName = document.getElementById(regionid + "_name_ta").value;
+        } else {
+            regionUtils._regions[regionid].regionName = regionid;
+        }
+        var newregioncolor = document.getElementById(regionid + "_color_input").value;
+        regionUtils._regions[regionid].polycolor = newregioncolor;
+    }
+    regionUtils.updateRegionDraw(regionid);
 }
 
 /** 
- * 	@param {String} regionid Region identifier
- *  Change the panel to match the region properties */
-regionUtils.loadTextRegionUI = function (regionid) {
-	var op = tmapp["object_prefix"];
-	var rPanel = document.getElementById(op + regionid + "panel");
-	var regionText = "";
-	var rClass = null;
-	var rName = null;
+ *     @param {String} regionid Region identifier
+ *  Change the region properties like color, class name or region name */
+ regionUtils.updateRegionDraw = function (regionid) {
+    var newregioncolor = regionUtils._regions[regionid].polycolor;
+    var d3color = d3.rgb(newregioncolor);
+    var newStyle = "stroke-width: " + regionUtils._polygonStrokeWidth.toString() + "; stroke: " + d3color.rgb().toString() + "; fill: none;";
+    document.getElementById(regionid + "_poly").setAttribute("style", newStyle);
+    if (regionUtils._regions[regionid].filled === undefined)
+        regionUtils._regions[regionid].filled = false;
+    regionUtils.fillRegion(regionid, regionUtils._regions[regionid].filled);
+    if (regionUtils._regions[regionid].regionName) {rName = regionUtils._regions[regionid].regionName;}
+    else {rName = regionid;}
+    document.getElementById("path-title-" + regionid).innerHTML = rName;
+ }
 
-	if (regionUtils._regions[regionid].regionClass) {
-		rClass = regionUtils._regions[regionid].regionClass;
-	}
-	if (regionUtils._regions[regionid].regionName) {
-		rName = regionUtils._regions[regionid].regionName;
-	} else {
-		rName = regionid;
-	}
-	regionText = rName;
-
-	if (rClass) regionText = regionText + " (" + rClass + ")";
-
-	console.log(rName + rClass + regionText);
-
-	HTMLElementUtils.getFirstChildByClass(rPanel, "panel-heading").innerHTML = regionText;
-
-
-}
 /** 
  *  regionUtils */
 regionUtils.analyzeRegion = function (regionid) {
-	var op = tmapp["object_prefix"];
+    var op = tmapp["object_prefix"];
 
-	function compare(a, b) {
-		if (a.count > b.count)
-			return -1;
-		if (a.count < b.count)
-			return 1;
-		return 0;
-	}
+    function compare(a, b) {
+        if (a.count > b.count)
+            return -1;
+        if (a.count < b.count)
+            return 1;
+        return 0;
+    }
 
-	function clone(obj) {
-		if (null == obj || "object" != typeof obj) return obj;
-		var copy = obj.constructor();
-		for (var attr in obj) {
-			if (obj.hasOwnProperty(attr)) copy[attr] = obj[attr];
-		}
-		return copy;
-	}
-	
-	regionUtils._regions[regionid].associatedPoints=[];
-	regionUtils._regions[regionid].barcodeHistogram=[];
-	
-	console.log("analyzing "+regionid);
-	var allkeys=Object.keys(dataUtils[op + "_barcodeGarden"]);
-	for (var codeIndex in allkeys) {
-		var code = allkeys[codeIndex];
-		var pointsInside=regionUtils.searchTreeForPointsInRegion(dataUtils[op + "_barcodeGarden"][code],
-		regionUtils._regions[regionid]._gxmin,regionUtils._regions[regionid]._gymin,
-		regionUtils._regions[regionid]._gxmax,regionUtils._regions[regionid]._gymax,
-			regionid, {"globalCoords":true});
-		if(pointsInside.length>0){
-			pointsInside.forEach(function(p){
-				var pin=clone(p);
-				pin.regionid=regionid;
-				regionUtils._regions[regionid].associatedPoints.push(pin)
-			});
-		}
-	}
-	regionUtils._regions[regionid].barcodeHistogram.sort(compare);
+    function clone(obj) {
+        if (null == obj || "object" != typeof obj) return obj;
+        var copy = obj.constructor();
+        for (var attr in obj) {
+            if (obj.hasOwnProperty(attr)) copy[attr] = obj[attr];
+        }
+        return copy;
+    }
 
-	var rPanel = document.getElementById(op + regionid + "panel");
-	var rpanelbody = HTMLElementUtils.getFirstChildByClass(rPanel, "panel-body");
-	histodiv = document.getElementById(regionid + "histogram");
-	if (histodiv) {
-		histodiv.parentNode.removeChild(histodiv);
-	}
+    regionUtils._regions[regionid].associatedPoints=[];
+    regionUtils._regions[regionid].barcodeHistogram=[];
 
-	rpanelbody.setAttribute("style", "padding-top: 0px; height: 230px;overflow-y:scroll;");
+    console.log("analyzing "+regionid);
+    allDatasets = Object.keys(dataUtils.data);
+    for (var dataset of allDatasets) {
+        var allkeys=Object.keys(dataUtils.data[dataset]["_groupgarden"]);
+        console.log(dataset, allkeys);
+        for (var codeIndex in allkeys) {
+            var code = allkeys[codeIndex];
+            console.log(code, dataUtils.data[dataset], dataUtils.data[dataset]["_groupgarden"][code]);
+            var pointsInside=regionUtils.searchTreeForPointsInRegion(dataUtils.data[dataset]["_groupgarden"][code],
+                regionUtils._regions[regionid]._gxmin,regionUtils._regions[regionid]._gymin,
+                regionUtils._regions[regionid]._gxmax,regionUtils._regions[regionid]._gymax,
+                regionid, {
+                    "globalCoords":true,
+                    "xselector":dataUtils.data[dataset]["_X"],
+                    "yselector":dataUtils.data[dataset]["_Y"],
+                    "dataset":  dataUtils.data[dataset]["_csv_path"]
+                });
+            console.log(dataset, code, pointsInside.length);
+            if(pointsInside.length>0){
+                pointsInside.forEach(function(p){
+                    var pin=clone(p);
+                    pin.regionid=regionid;
+                    pin.dataset=dataUtils.data[dataset]["_csv_path"];
+                    regionUtils._regions[regionid].associatedPoints.push(pin)
+                });
+            }
+        }
+    }
+    regionUtils._regions[regionid].barcodeHistogram.sort(compare);
 
-	var div = HTMLElementUtils.createElement({ type: "div", id: regionid + "histogram" });
-	var histogram = regionUtils._regions[regionid].barcodeHistogram;
-	var ul=div.appendChild(HTMLElementUtils.createElement({ type: "ul" }))
-	for (var i in histogram) {
-		var innerHTML = "<strong>" + histogram[i].gene_name + "," + histogram[i].barcode + ",</strong>" + histogram[i].count;
-		ul.appendChild(HTMLElementUtils.createElement({ type: "li", "innerHTML": innerHTML }))
-	}
-	rpanelbody.appendChild(div);
+    var rPanel = document.getElementById(op + regionid + "_tr_hist");
+    if (rPanel) {
+        var rpanelbody = rPanel.getElementsByClassName("region-histogram")[0];
+        histodiv = document.getElementById(regionid + "_histogram");
+        if (histodiv) {
+            histodiv.parentNode.removeChild(histodiv);
+        }
 
+        var div = HTMLElementUtils.createElement({ kind: "div", id: regionid + "_histogram" });
+        var histogram = regionUtils._regions[regionid].barcodeHistogram;
+        var table = div.appendChild(HTMLElementUtils.createElement({
+            kind: "table",
+            extraAttributes: {
+                class: "table table-striped",
+                style: "overflow-y: auto;"
+            }
+        }));
+        thead = HTMLElementUtils.createElement({kind: "thead"});
+        thead.innerHTML = `<tr>
+        <th scope="col">Key</th>
+        <th scope="col">Name</th>
+        <th scope="col">Count</th>
+        </tr>`;
+        tbody = HTMLElementUtils.createElement({kind: "tbody"});
+        table.appendChild(thead);
+        table.appendChild(tbody);
+
+        for (var i in histogram) {
+            var innerHTML = "";
+            innerHTML += "<td>" + histogram[i].key + "</td>";
+            innerHTML += "<td>" + histogram[i].name + "</td>";
+            innerHTML += "<td>" + histogram[i].count + "</td>";
+            tbody.appendChild(HTMLElementUtils.createElement({
+                kind: "tr",
+                "innerHTML": innerHTML
+            }));
+        }
+        rpanelbody.appendChild(div);
+        $(rPanel).show();
+    }
 }
 /** 
  *  regionUtils */
 regionUtils.regionsOnOff = function () {
-	overlayUtils._drawRegions = !overlayUtils._drawRegions;
-	var op = tmapp["object_prefix"];
-	if (overlayUtils._drawRegions) {
-		document.getElementById(op + '_drawregions_btn').setAttribute("class", "btn btn-primary")
-	} else {
-		regionUtils.resetManager();
-		document.getElementById(op + '_drawregions_btn').setAttribute("class", "btn btn-secondary")
-	}
+    overlayUtils._drawRegions = !overlayUtils._drawRegions;
+    var op = tmapp["object_prefix"];
+    let regionIcon = document.getElementById(op + '_drawregions_icon');
+    if (overlayUtils._drawRegions) {
+        regionIcon.classList.remove("bi-circle");
+        regionIcon.classList.add("bi-check-circle");
+    } else {
+        regionUtils.resetManager();
+        regionIcon.classList.remove("bi-check-circle");
+        regionIcon.classList.add("bi-circle");
+    }
 }
 /** 
  *  regionUtils */
 regionUtils.exportRegionsToJSON = function () {
-	regionUtils.regionsToJSON();
+    regionUtils.regionsToJSON();
 }
 /** 
  *  regionUtils */
 regionUtils.importRegionsFromJSON = function () {
-	var canvas = overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
-	regionsobj = d3.select(canvas);
-	regionsobj.selectAll("*").remove();
-	var regionsPanel = document.getElementById("markers-regions-panel");
-	regionsPanel.innerText = "";
-	regionUtils._regions = {};
-	regionUtils.JSONToRegions();
-
+    regionUtils.deleteAllRegions();
+    regionUtils.JSONToRegions();
 }
 
 regionUtils.pointsInRegionsToCSV=function(){
-	var alldata=[]
-	for (r in regionUtils._regions){
-		var regionPoints=regionUtils._regions[r].associatedPoints;
-		regionUtils._regions[r].associatedPoints.forEach(function(p){
-			p.regionName=regionUtils._regions[r].regionName
-			p.regionClass=regionUtils._regions[r].regionClass
-			alldata.push(p);
-		});
-		//console.log(alldata);	
-	}
-	var csvRows=[];
-	var possibleheaders=Object.keys(alldata[0]);
-	var headers=[];
+    var alldata=[]
+    for (r in regionUtils._regions){
+        var regionPoints=regionUtils._regions[r].associatedPoints;
+        regionUtils._regions[r].associatedPoints.forEach(function(p){
+            p.regionName=regionUtils._regions[r].regionName
+            p.regionClass=regionUtils._regions[r].regionClass
+            alldata.push(p);
+        });
+    }
+    var csvRows=[];
+    var headers=alldata.reduce(function(arr, o) {
+        return Object.keys(o).reduce(function(a, k) {
+          if (a.indexOf(k) == -1) a.push(k);
+          return a;
+        }, arr)
+      }, []);
+    
+    csvRows.push(headers.join(','));
+    
 
-	var datum=alldata[0];
-	possibleheaders.forEach(function(ph){
-		if(datum[ph]){
-			//this is not undefined or null so add header
-
-			headers.push(ph);
-		}
-	});
-
-	csvRows.push(headers.join(','));
-	
-
-	for(var row of alldata){
-		var values=[];
-		headers.forEach(function(header){
-			values.push(row[header]);
-		});
-		csvRows.push(values.join(","));
-	}
-	var theblobdata=csvRows.join('\n');
-	regionUtils.downloadPointsInRegionsCSV(theblobdata);
+    for(var row of alldata){
+        var values=[];
+        headers.forEach(function(header){
+            values.push(row[header]);
+        });
+        csvRows.push(values.join(","));
+    }
+    var theblobdata=csvRows.join('\n');
+    regionUtils.downloadPointsInRegionsCSV(theblobdata);
 
 }
 
 regionUtils.downloadPointsInRegionsCSV=function(data){
-	var blob = new Blob([data],{type:"text/csv"});
-	var url=window.URL.createObjectURL(blob);
-	var a=document.createElement("a");
-	a.setAttribute("hidden","");
-	a.setAttribute("href",url);
-	a.setAttribute("download","pointsinregions.csv");
-	document.body.appendChild(a);
-	a.click();
-	document.body.removeChild(a);
+    var blob = new Blob([data],{kind:"text/csv"});
+    var url=window.URL.createObjectURL(blob);
+    var a=document.createElement("a");
+    a.setAttribute("hidden","");
+    a.setAttribute("href",url);
+    a.setAttribute("download","pointsinregions.csv");
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 }
 
 
 regionUtils.regionsToJSON= function(){
-	if (window.Blob) {
-		var op=tmapp["object_prefix"];
-		var jsonse = JSON.stringify(regionUtils._regions);
-		var blob = new Blob([jsonse], {type: "application/json"});
-		var url  = URL.createObjectURL(blob);
-		var a=document.createElement("a");// document.getElementById("invisibleRegionJSON");
-		if(document.getElementById(op+"_region_file_name")){
-			var name=document.getElementById(op+"_region_file_name").value;
-		}else{
-			var name="regions.json";
-		}
-		a.href        = url;
-		a.download    = name;
-		a.textContent = "Download backup.json";
-		a.click();
-		  // Great success! The Blob API is supported.
-	} else {
-	  alert('The File APIs are not fully supported in this browser.');
-	}		
+    if (window.Blob) {
+        var op=tmapp["object_prefix"];
+        var jsonse = JSON.stringify(regionUtils.regions2GeoJSON(regionUtils._regions));
+        var blob = new Blob([jsonse], {kind: "application/json"});
+        var url  = URL.createObjectURL(blob);
+        var a=document.createElement("a");// document.getElementById("invisibleRegionJSON");
+        if(document.getElementById(op+"_region_file_name")){
+            var name=document.getElementById(op+"_region_file_name").value;
+        }else{
+            var name="regions.json";
+        }
+        a.href        = url;
+        a.download    = name;
+        a.textContent = "Download backup.json";
+        a.click();
+          // Great success! The Blob API is supported.
+    } else {
+        interfaceUtils.alert('The File APIs are not fully supported in this browser.');
+    }        
 }
 
 regionUtils.JSONToRegions= function(filepath){
-	regions={};
-	if(filepath!==undefined){
-		fetch(filepath)
-		.then((response) => {
-			return response.json();
-		})
-		.then((regionsobj) => {
-			var maxregionid=0;
-			for(i in regionsobj){
-				//console.log(regions[i]);
-				regionUtils.createImportedRegion(regionsobj[i]);
-				var numbers = regionsobj[i].id.match(/\d+/g).map(Number);
-				if(numbers[0]>maxregionid) maxregionid=numbers[0];
-			}
-			regionUtils._currentRegionId=maxregionid;		
-		});
-	}
-	else if(window.File && window.FileReader && window.FileList && window.Blob) {
-		var op=tmapp["object_prefix"];
-		var text=document.getElementById(op+"_region_files_import");
-		var file=text.files[0];
-		var currentrid=0;
-		if (file.type.match('json')) {	
-			var reader = new FileReader();
-			reader.onload=function(event) {
-				// The file's text will be printed here
-				regionUtils.JSONValToRegions(JSON.parse(event.target.result));
-			};
-			console.log(regionUtils._currentRegionId);
-			var result=reader.readAsText(file);
-		}
-	} else {
-	  alert('The File APIs are not fully supported in this browser.');
-	}
+    if(filepath!==undefined){
+        fetch(filepath)
+        .then((response) => {
+            return response.json();
+        })
+        .then((regionsobj) => {
+            regionUtils.JSONValToRegions(regionsobj);
+        });
+    }
+    else if(window.File && window.FileReader && window.FileList && window.Blob) {
+        var op=tmapp["object_prefix"];
+        var text=document.getElementById(op+"_region_files_import");
+        var file=text.files[0];
+        var reader = new FileReader();
+        reader.onload=function(event) {
+            // The file's text will be printed here
+            regionUtils.JSONValToRegions(JSON.parse(event.target.result));
+        };
+        reader.readAsText(file);
+    } else {
+        interfaceUtils.alert('The File APIs are not fully supported in this browser.');
+    }
 }
 
 regionUtils.JSONValToRegions= function(jsonVal){
-	// The file's text will be printed here
-	var maxregionid=0;
-var regions=jsonVal;
-	for(i in regions){
-		//console.log(regions[i]);
-		regionUtils.createImportedRegion(regions[i]);
-		var numbers = regions[i].id.match(/\d+/g).map(Number);
-		if(numbers[0]>maxregionid) maxregionid=numbers[0];
-	}
-	regionUtils._currentRegionId=maxregionid;
+    // The file's text will be printed here
+    var regions=jsonVal;
+    regionUtils.geoJSON2regions(regions);
+    regionUtils.updateAllRegionClassUI();
+    $('[data-bs-target="#markers-regions-project-gui"]').tab('show');
 }

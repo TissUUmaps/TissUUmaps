@@ -1,13 +1,15 @@
 
 from PyQt5.QtCore import *
 from PyQt5.QtWebEngineWidgets import *
-from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QPlainTextEdit, QDialog, QSplashScreen, QProgressDialog
+from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QPlainTextEdit, QDialog, QSplashScreen, QProgressDialog, QMainWindow, QToolBar, QAction, QStyle
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5 import QtGui 
 from PyQt5.QtGui import QDesktopServices
 from optparse import OptionParser
 
 from pathlib import Path
+from urllib.parse import urlparse
+from urllib.parse import parse_qs
 import subprocess
 
 import threading, time
@@ -17,6 +19,7 @@ import socket
 import urllib.parse
 import urllib.request
 import os
+import json
 
 from tissuumaps import views
 
@@ -29,9 +32,9 @@ class CustomWebEnginePage(QWebEnginePage):
             return False
         return True
     
-    #def javaScriptConsoleMessage(self, level, msg, line, sourceID):
-    #    print (level, msg, line, sourceID)
-
+    def javaScriptConsoleMessage(self, level, msg, line, sourceID):
+        print (level, msg, line, sourceID)
+    
 class textWindow(QDialog):
     def __init__(self, parent, title, message):
         QDialog.__init__(self, parent)
@@ -47,9 +50,57 @@ class textWindow(QDialog):
         self.b.move(10,10)
         self.b.resize(400,200)
 
+
+class MainWindow(QMainWindow):
+    def __init__(self, qt_app, app, *args, **kwargs):
+        super(MainWindow, self).__init__()
+        self.resize(1400,1000)
+
+        self.browser = webEngine(qt_app, app, self, *args)
+        
+        self.setCentralWidget(self.browser)
+  
+        #self.status = QStatusBar()
+        #self.setStatusBar(self.status)
+        
+        bar = self.menuBar()
+        file = bar.addMenu("File")
+
+        open = QAction(self.style().standardIcon(QStyle.SP_DialogOpenButton), "Open",self)
+        open.setShortcut("Ctrl+O")
+        file.addAction(open)
+        open.triggered.connect(self.browser.openImage)
+
+        save = QAction(self.style().standardIcon(QStyle.SP_DialogSaveButton), "Save project",self)
+        save.setShortcut("Ctrl+S")
+        file.addAction(save)
+        def trigger():
+            self.browser.page().runJavaScript("flask.standalone.saveProject();")
+        save.triggered.connect(trigger)
+
+        exit = QAction(self.style().standardIcon(QStyle.SP_DialogCancelButton), "Exit",self)
+        exit.setShortcut("Ctrl+Q")
+        file.addAction(exit)
+        exit.triggered.connect(self.close)
+
+        #edit = file.addMenu("Edit")
+        #edit.addAction("copy")
+        #edit.addAction("paste")
+        
+        plugins = bar.addMenu("Plugins")
+        for pluginName in app.config["PLUGINS"]:
+            plugin = QAction(pluginName,self)
+            plugins.addAction(plugin)
+            def trigger():
+                print ("Plugin triggered:", pluginName)
+                self.browser.page().runJavaScript("pluginUtils.startPlugin(\""+pluginName+"\");");
+            plugin.triggered.connect(trigger)
+        
+        self.showMaximized()
 class webEngine(QWebEngineView):
-    def __init__(self, qt_app, app, args):
+    def __init__(self, qt_app, app, mainWin, args):
         super().__init__()
+        self.setAcceptDrops(True)
         self.qt_app = qt_app
         self.app = views.app
         self.args = args
@@ -61,17 +112,48 @@ class webEngine(QWebEngineView):
         self.page().setWebChannel(self.webchannel)
         self.webchannel.registerObject('backend', self)
         self.location = None
-        
-        self.setWindowTitle("TissUUmaps")
-        self.resize(1024, 800)
+        self.mainWin = mainWin
+
+        self.mainWin.setWindowTitle("TissUUmaps")
+        self.mainWin.resize(1024, 800)
         self.setZoomFactor(1.0)
         self.page().profile().clearHttpCache()
         self.page().profile().downloadRequested.connect(
             self.on_downloadRequested
         )
-        self.setWindowIcon(QtGui.QIcon('static/misc/favicon.ico')) 
-        self.showMaximized()
+        self.mainWin.setWindowIcon(QtGui.QIcon('static/misc/favicon.ico')) 
+        #self.showMaximized()
     
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls:
+            event.accept()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasUrls:
+            event.setDropAction(Qt.CopyAction)
+            event.accept()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        if event.mimeData().hasUrls:
+            event.setDropAction(Qt.CopyAction)
+            event.accept()
+            links = []
+            for url in event.mimeData().urls():
+                links.append(str(url.toLocalFile()))
+            for link in links:
+                #link = link.replace("\\","/").replace(self.app.basedir.replace("\\","/"), "")
+                #print ("link",link, self.app.basedir)
+                if(".tmap") in link:
+                    self.openImagePath(link)
+                self.page().runJavaScript(f"flask.standalone.addLayer(\"{link}\");")
+            #self.emit(SIGNAL("dropped"), links)
+        else:
+            event.ignore()
+
     def on_downloadRequested(self, download):
         old_path = download.path()  # download.path()
         suffix = QFileInfo(old_path).suffix()
@@ -128,26 +210,62 @@ class webEngine(QWebEngineView):
         messageBox = textWindow(self,os.path.basename(path) + " properties", propString)
         messageBox.show()
         
-    @pyqtSlot()
     def openImage(self):
         folderpath = QFileDialog.getOpenFileName(self, 'Select a File',self.lastdir)[0]
         self.openImagePath(folderpath)
 
-    @pyqtSlot(result="QJsonObject")
-    def saveProject(self):
-        folderpath = QFileDialog.getSaveFileName(self, 'Save project as',self.lastdir)[0]
-        parts = Path(folderpath).parts
-        if (self.app.basedir != parts[0]):
-            QMessageBox.about(self, "Error", "All layers must be in the same drive")
-            returnDict = {"dzi":None,"name":None}
-            return returnDict
-        imgPath = os.path.join(*parts[1:])
-        imgPath = imgPath.replace("\\","/") 
-        returnDict = {
-            "path":imgPath
-        }
-        return returnDict
     
+
+
+    @pyqtSlot(str)
+    def saveProject(self, state):
+        def addRelativePath(state, relativePath):
+            def addRelativePath_aux (state, path):
+                if len(path) == 1:
+                    if isinstance(state[path[0]], list):
+                        state[path[0]] = [relativePath + "/" + s for s in state[path[0]]]
+                    else:
+                        state[path[0]] = relativePath + "/" + state[path[0]]
+                    return
+                if not path[0] in state.keys():
+                    return
+                else:
+                    if isinstance(state[path[0]], list):
+                        for state_ in state[path[0]]:
+                            addRelativePath_aux (state_, path[1:])
+                    else:
+                        addRelativePath_aux (state[path[0]], path[1:])
+            
+            try:
+                relativePath = relativePath.replace("\\","/")
+                paths = [
+                    ["layers","tileSource"],
+                    ["markerFiles","path"],
+                    ["regionFiles","path"],
+                    ["regionFile"]
+                ]
+                for path in paths:
+                    addRelativePath_aux (state, path)
+            except:
+                import traceback
+                print (traceback.format_exc())
+                
+            return state
+
+        parsed_url = urlparse(self.url().toString())
+        previouspath = parse_qs(parsed_url.query)['path'][0]
+        previouspath = os.path.abspath(os.path.join(self.app.basedir, previouspath))
+        print (previouspath)
+        
+        folderpath = QFileDialog.getSaveFileName(self, 'Save project as',self.lastdir)[0]
+        if (not folderpath):
+            return {}
+
+        relativePath = os.path.relpath(previouspath, os.path.dirname(folderpath))
+        state = addRelativePath(json.loads(state), relativePath)
+        with open(folderpath, "w") as f:
+            json.dump(state, f)
+
     def openImagePath (self, folderpath):
         print ("openImagePath",folderpath)
         try:
@@ -175,8 +293,11 @@ class webEngine(QWebEngineView):
 
             return False
         print ("Opening:", self.app.basedir, self.location + imgPath, QUrl(self.location + imgPath))
-        self.load(QUrl(self.location + imgPath))
-        self.setWindowTitle("TissUUmaps - " + os.path.basename(folderpath))
+
+        filename = os.path.basename(imgPath)
+        path = os.path.dirname(imgPath)
+        self.load(QUrl(self.location + filename + "?path=" + path))
+        self.mainWin.setWindowTitle("TissUUmaps - " + os.path.basename(folderpath))
         return True
 
     @pyqtSlot()
@@ -184,15 +305,23 @@ class webEngine(QWebEngineView):
         self.close()
         #sys.exit()
 
-    @pyqtSlot(result="QJsonObject")
-    def addLayer(self):
-        folderpath = QFileDialog.getOpenFileName(self, 'Select a File')[0]
+    @pyqtSlot(str, str, result="QJsonObject")
+    def addLayer(self, path, folderpath):
+        if (folderpath == ""):
+            folderpath = QFileDialog.getOpenFileName(self, 'Select a File')[0]
         if not folderpath:
             returnDict = {"dzi":None,"name":None}
             return returnDict
         parts = Path(folderpath).parts
+        print (self.app.basedir)
         if (self.app.basedir != parts[0]):
-            QMessageBox.about(self, "Error", "All layers must be in the same drive")
+            if (not self.app.basedir == "C:\mnt\data\shared"):
+                reply = QMessageBox.question(self, "Error", "All layers must be in the same drive. Would you like to open this image only?")
+                reply = reply == QMessageBox.Yes
+            else:
+                reply = True
+            if reply:
+                self.openImagePath(folderpath)
             returnDict = {"dzi":None,"name":None}
             return returnDict
         imgPath = os.path.join(*parts[1:])
@@ -204,8 +333,18 @@ class webEngine(QWebEngineView):
             QMessageBox.about(self, "Error", "TissUUmaps did not manage to open this image.")
             returnDict = {"dzi":None,"name":None}
             return returnDict
+        path = os.path.abspath(os.path.join(self.app.basedir, path))
+        imgPath = os.path.abspath(os.path.join(self.app.basedir, imgPath))
+        print (path, os.path.dirname(imgPath))
+        relativePath = os.path.relpath(os.path.dirname(imgPath), path) 
+        if ".." in relativePath:
+            reply = QMessageBox.question(self, "Error", "Impossible to add layers from a parent folder. Would you like to open this image only?")
+            if reply == QMessageBox.Yes:
+                self.openImagePath(folderpath)
+            returnDict = {"dzi":None,"name":None}
+            return returnDict
         returnDict = {
-            "dzi":"/"+imgPath + ".dzi",
+            "dzi":relativePath + "/" + os.path.basename(imgPath) + ".dzi",
             "name":os.path.basename(imgPath)
         }
         print ("returnDict", returnDict)
@@ -293,11 +432,11 @@ def main():
 
     threading.Thread(target=flaskThread,daemon=True).start()
 
-    ui = webEngine(qt_app, views.app, args)
-    ui.setLocation ("http://127.0.0.1:" + str(port) + "/")
+    ui = MainWindow(qt_app, views.app, args)
+    ui.browser.setLocation ("http://127.0.0.1:" + str(port) + "/")
 
     QTimer.singleShot(1000, splash.close)
-    ui.run()
+    ui.browser.run()
 
 if __name__ == '__main__':
     main ()

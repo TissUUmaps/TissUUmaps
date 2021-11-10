@@ -62,6 +62,7 @@ for module in glob.glob(plugins_folder + "/*.py"):
     if "__init__.py" in module:
         continue
     app.config["PLUGINS"].append(os.path.splitext(os.path.basename(module))[0])
+logging.info("Plugin list:",app.config["PLUGINS"])
 
 app.config["isStandalone"] = False
 

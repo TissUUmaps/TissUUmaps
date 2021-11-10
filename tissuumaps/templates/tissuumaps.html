@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>TissUUmaps</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta charset="utf-8"/>
+    <script src="static/vendor/d3/d3.v4.min.js"></script>
+    <script src="static/vendor/d3-plugins/d3-scale-chromaticV3.js"></script>
+    <script src="static/vendor/jquery-3.5.1/jquery-3.5.1.min.js"></script>
+    <script src="static/vendor/chosen/chosen.jquery.min.js"></script>
+    <link rel="stylesheet" href="static/vendor/chosen/chosen.min.css">
+    <link rel="stylesheet" href="static/vendor/bootstrap-5.1.1/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="static/vendor/bootstrap-icons-1.5.0/bootstrap-icons.css">
+    <link rel="stylesheet" href="static/css/style.css">
+    {% if isStandalone %}
+        <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    {% endif %}
+    <script src="{{ url_for('static', filename='js/flask.js') }}"></script>
+</head>
+
+<body>
+    <div id="main-ui" class="container-fluid px-0 d-flex flex-column vh-100 overflow-hidden">
+
+        <nav class="navbar navbar-expand-lg navbar-dark border-bottom border-dark flex-shrink-0 {% if isStandalone %}d-none{% endif %}">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="https://tissuumaps.research.it.uu.se/">
+                    <img src="static/misc/uulogowhitetuum.png" width="166" height="40" alt="Uppsala University Logotype">
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-menu" aria-controls="navbar-menu" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbar-menu">
+                    <ul class="navbar-nav">
+                        
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle active" id="a_menubar_File" href="#" id="navbarDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            File
+                            </a>
+                            <ul class="dropdown-menu" id="menubar_File" aria-labelledby="navbarDropdownMenuLink">
+                                <li id="menubar_File_Import">
+                                    <a class="dropdown-item" href="#" id="load_project_menu">
+                                        <span>Import TMAP project</span>
+                                    </a>
+                                </li>
+                                <li id="menubar_File_Export">
+                                    <a class="dropdown-item" href="#" id="save_project_menu">
+                                        <span>Export TMAP project</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="#" id="capture_viewport">
+                                        <span>Capture viewport</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="nav-item" id="nav-item-title">
+                            <a class="nav-link active" aria-current="page" id="project_title" href="#"> Default title</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <div class="row mx-0 flex-grow-1 overflow-hidden">
+            <!-- Row for viewer  -->
+            <div class="col px-0" id="ISS_viewer_container">
+                <!-- The id is what OSD will look for to draw the viewer, the class is our own css to stylize
+                The ID will give the prefix for all the objects related to the viewer in this case ISS-->
+                <div id="ISS_viewer" class="ISS_viewer h-100">
+                </div>
+                <!-- Global marker size slider -->
+                <div id="ISS_globalmarkersize" class="d-none px-1 mx-1 viewer-layer">
+                    <label class="form-label">Marker size: 
+                    <em class="form-label" id="ISS_globalmarkersize_label">100</em></label><br>
+                    <input class="form-range" type="range"
+                        id="ISS_globalmarkersize_text"
+                        value="100" min="0" max="500" step="10"
+                        oninput="document.getElementById('ISS_globalmarkersize_label').innerHTML = this.value;"/>
+                </div>
+            </div>
+
+            <div id="ISS_menu" class="ISS_menu col-xl-4 col-lg-5 col-md-6 col-sm-8 col-xs-12 mh-100 overflow-auto">
+                <div class="row pb-2">
+                    <!-- Level 0 tabs -->
+                    <ul id="main-tabs-menu" class="nav nav-tabs pt-1 sticky-top">
+                        <li class="nav-item">
+                            <button data-bs-target="#markers-iss-gui" data-bs-toggle="tab" aria-expanded="true" class="nav-link active" id="title-tab-markers">Markers</button>
+                        </li>
+                        <li>
+                            <button data-bs-target="#markers-regions-gui" data-bs-toggle="tab" aria-expanded="false" class="nav-link" id="title-tab-regions">Regions</button>
+                        </li>
+                        <li>
+                            <button data-bs-target="#image-gui" data-bs-toggle="tab" aria-expanded="false" class="nav-link" id="title-tab-image">Image layers</button>
+                        </li>
+                        <li>
+                            <button data-bs-target="#plugins-gui" data-bs-toggle="tab" aria-expanded="false" class="nav-link d-none" id="title-tab-plugins">Plugins</button>
+                        </li>
+                    </ul>
+
+                    <div id="TM-tabs" class="tab-content">
+                        <!-- TAB 1.1 ISS data  -------------------------------------------------------------------------------- -->
+                        <div class="tab-pane active" id="markers-iss-gui">
+                            <div class="panel panel-default">
+                                <div class="panel-body">
+                                    <div class="row" id="divMarkersDownloadButtons"></div>
+                                    <!-- 1.1 Row nav tabs -->
+                                    <ul class="nav nav-tabs mt-2" id="level-1-tabs" role="tablist">
+                                        <li class="nav-item" id="plus-1" role="presentation">
+                                            <button class="nav-link" id="plus-1-button" data-bs-toggle="tab" data-bs-target="#" 
+                                            type="button" role="tab" aria-controls="plus" aria-selected="false"><strong>+</strong></button>
+                                        </li>
+                                    </ul> 
+                                    <div class="tab-content" id="level-1-tabsContent">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- TAB 1.3 Region data ----------------------------------------------------------------------------- -->
+                        <div class="tab-pane" id="markers-regions-gui">
+                            <div class="panel panel-default">
+                                <div class="panel-body">
+                                    <div class="row">
+                                        <!-- Tabs 1.3.0 region subtabs -->
+                                        <ul class="nav nav-tabs mt-2">
+                                            <li class="nav-item">
+                                                <button class="nav-link active" data-bs-target="#markers-regions-project-gui" data-bs-toggle="tab" aria-expanded="true">Regions</button>
+                                            </li>
+                                            <li class="nav-item">
+                                                <button class="nav-link" data-bs-target="#markers-regions-import-gui" data-bs-toggle="tab" aria-expanded="false">Import</button>
+                                            </li>
+                                            <li class="nav-item">
+                                                <button class="nav-link" data-bs-target="#markers-regions-export-gui" data-bs-toggle="tab" aria-expanded="false">Export</button>
+                                            </li>
+                                        </ul>
+                                        <div id="markers-region-subtabs" class="tab-content">
+                                            <!-- Tabs 1.3.1 -->
+                                            <div class="tab-pane show active" id="markers-regions-project-gui">
+                                                <div class="panel panel-default">
+                                                    <div class="panel-body">
+                                                        <div id="divRegionsDownloadButtons">
+                                                        </div>
+                                                        <div class="row my-1">
+                                                            <button id="ISS_drawregions_btn" class="btn btn-primary col mx-1" type="button">
+                                                                <i id="ISS_drawregions_icon" class="bi bi-circle"></i>
+                                                                Draw regions
+                                                            </button>
+                                                            <button id="ISS_fillregions_btn" class="btn btn-primary col mx-1" type="button">Fill all regions</button>
+                                                        </div>
+                                                        <div id="regionAccordions">
+                                                        </div>
+                                                        <div id="markers-regions-div">
+                                                            <div class="my-1" id="markers-regions-panel">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <!-- Tabs 1.3.2 -->
+                                            <div class="tab-pane" id="markers-regions-import-gui">
+                                                <div class="panel panel-default">
+                                                    <div class="panel-body">
+                                                        <div class="row">
+                                                            <div class="col-9">
+                                                                <input
+                                                                    class="form-control-file form-control"
+                                                                    type="file" id="ISS_region_files_import"
+                                                                    name="files[]" />
+                                                            </div>
+                                                            <div class="col-3">
+                                                                <button id="ISS_import_regions"
+                                                                    class="btn btn-primary" type="button">
+                                                                    Import</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <!-- Tabs 1.3.3 -->
+                                            <div class="tab-pane" id="markers-regions-export-gui">
+                                                <div class="panel panel-default">
+                                                    <div class="panel-body">
+                                                        <label for="ISS_region_file_name">Download
+                                                            regions for later use</label>
+                                                        <div class="row">
+                                                            <div class="col-9">
+                                                                <input class="form-control"
+                                                                    type="text" id="ISS_region_file_name"
+                                                                    placeholder="regions.json"
+                                                                    value="regions.json">
+                                                            </div>
+                                                            <div class="col-3">
+                                                                <button id="ISS_export_regions"
+                                                                    class="btn btn-primary" type="button">
+                                                                    Export</button>
+                                                            </div>
+                                                        </div>
+                                                        <label for="ISS_region_csv_name">Download
+                                                            expression in regions</label>
+                                                        <div class="row">
+                                                            <div class="col-9">
+                                                                <input class="form-control"
+                                                                    type="text" id="ISS_region_csv_name"
+                                                                    placeholder="regions.csv"
+                                                                    value="regions.csv" />
+                                                            </div>
+                                                            <div class="col-3">
+                                                                <button id="ISS_export_regions_csv"
+                                                                    class="btn btn-primary" type="button">
+                                                                    Export</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- TAB 1.4 Overlay data ----------------------------------------------------------------------------- -->
+                        <div class="tab-pane" id="image-gui">
+                            <div class="panel panel-default">
+                                <div class="panel-body">
+                                    <div class="row overflow-auto mb-2" id="image-overlay-panel">
+                                    </div>
+                                    <div id="filterSettingsAccordions">
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header" id="filterSettingsHeaders">
+                                                <button type="button" class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#filterSettings" aria-expanded="false" aria-controls="filterSettings">
+                                                    <i class="bi bi-gear-fill"></i>&nbsp;Filter settings
+                                                </button>
+                                            </h2>
+                                            <div class="accordion-collapse p-2 collapse" id="filterSettings" aria-labelledby="filterSettingsHeaders" data-bs-parent="#filterSettingsAccordions">
+                                                <div class="col-12 px-1" id="filterSettings"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div> <!-- end of a main panel -->
+                        </div> <!-- end of image-gui-->
+                        <!-- TAB 1.4 Plugin data ----------------------------------------------------------------------------- -->
+                        <div class="tab-pane" id="plugins-gui">
+                            <div class="panel panel-default">
+                                <div class="panel-body">
+                                    <h6 class="my-2">List of plugins:</h6>
+                                    <div id="pluginsAccordions">
+                                    </div>
+                                </div>
+                            </div> <!-- end of a main panel -->
+                        </div> <!-- end of Plugin-gui-->
+                    </div> <!-- end of TM-tabs-->
+                </div> <!-- end of Level 0 tabs -->
+            </div> <!-- end of lateral panel -->
+
+            <div id="ISS_collapser" class="d-flex align-self-center justify-content-end px-0 position-absolute">
+                <div class="btn btn-primary" id="ISS_collapse_btn"><i class="bi bi-caret-right-fill"></i></div>
+            </div>
+        </div><!-- end of single row -->
+    </div><!-- end of container-fuild-->
+</body>
+<script src="static/vendor/bootstrap-5.1.1/dist/js/bootstrap.bundle.min.js"></script>
+<script src="static/vendor/openseadragon-bin-2.4.2/openseadragon.min.js"></script>
+<script src="static/vendor/openseadragon-plugins/openseadragon-filtering.js"></script>
+<script src="static/vendor/openseadragon-plugins/openseadragon-svg-overlay.js"></script>
+<script src="static/vendor/openseadragon-plugins/openseadragon-scalebar.js"></script>
+<script src="static/vendor/CamanJS-4.1.2/dist/caman.min.js"></script>
+<script src="static/vendor/sorttable/sorttable.js"></script>
+<script src="static/js/utils/interfaceUtils.js"></script>
+<script src="static/js/utils/dataUtils.js"></script>
+<script src="static/js/utils/markerUtils.js"></script>
+<script src="static/js/utils/OSDViewerUtils.js"></script>
+<script src="static/js/utils/HTMLElementUtils.js"></script>
+<script src="static/js/utils/regionUtils.js"></script>
+<script src="static/js/utils/overlayUtils.js"></script>
+<script src="static/js/utils/filterUtils.js"></script>
+<script src="static/js/utils/geometryUtils.js"></script>
+<script src="static/js/utils/glUtils.js"></script>
+<script src="static/js/utils/pluginUtils.js"></script>
+<script src="static/js/utils/projectUtils.js"></script>
+<script src="static/js/tmapp.js"></script>
+<script>
+
+    document.getElementById("project_title").innerText = "Project title";
+    // ----------
+    $(document).ready(function () {
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        const tmapFile = urlParams.get('tmap')
+        if (tmapFile != null) {
+            projectUtils.loadProjectFileFromServer(tmapFile);
+        }
+        else {
+            /*tmapp.layers =[
+                {name:"Fluo",tileSource:"data/breastcancer/fluo.dzi"},
+                {name:"HE",tileSource:"data/breastcancer/HE.dzi"}
+            ];*/
+        }
+        tmapp.registerActions();
+        tmapp.init();
+        
+        {% for plugin in plugins %}{% if plugin %}
+            interfaceUtils.addMenuItem(["Plugins","{{ plugin }}"],function() {
+                pluginUtils.startPlugin("{{ plugin }}");
+            });
+        {% endif %}{% endfor %}
+
+        {% if jsonProject %}
+            jsonState = {{jsonProject|tojson|safe}}
+            projectUtils.loadProject(jsonState);
+        {% endif %}
+        {% if isStandalone %}
+            flask.standalone.init();
+        {% else %}
+            flask.server.init();
+        {% endif %}
+    });
+
+
+</script>
+
+</html>

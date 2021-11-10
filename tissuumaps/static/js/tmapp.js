@@ -22,21 +22,23 @@ tmapp = {
 tmapp.registerActions = function () {
     tmapp["object_prefix"] = tmapp.options_osd.id.split("_")[0];
     var op = tmapp["object_prefix"];
-    var cpop="CP";
-
-    interfaceUtils.listen(op + '_add_layer_btn', 'click', function() { overlayUtils.addLayerFromSelect() }, false);
 
     interfaceUtils.listen(op + '_collapse_btn','click', function () { interfaceUtils.toggleRightPanel() },false);
-    interfaceUtils.listen(op + '_bringmarkers_btn','click', function () { dataUtils.processISSRawData(); },false);
-    interfaceUtils.listen(op + '_search','input', function () { markerUtils.hideRowsThatDontContain(); },false);
-    interfaceUtils.listen(op + '_drawall_btn','click', function () { markerUtils.drawAllToggle(); },false);
+    /*interfaceUtils.listen(op + '_search','input', function () { markerUtils.hideRowsThatDontContain(); },false);*/
     interfaceUtils.listen(op + '_drawregions_btn','click', function () { regionUtils.regionsOnOff() },false);
     interfaceUtils.listen(op + '_export_regions','click', function () { regionUtils.exportRegionsToJSON() },false);
     interfaceUtils.listen(op + '_import_regions','click', function () { regionUtils.importRegionsFromJSON() },false);
     interfaceUtils.listen(op + '_export_regions_csv','click', function () { regionUtils.pointsInRegionsToCSV() },false);
     interfaceUtils.listen(op + '_fillregions_btn','click', function () { regionUtils.fillAllRegions(); },false);
-    interfaceUtils.listen('capture_viewport', 'click', function() { overlayUtils.savePNG(); }, false);
-    interfaceUtils.listen(cpop + '_bringmarkers_btn','click', function () { CPDataUtils.processISSRawData() },false);
+    interfaceUtils.listen("capture_viewport","click",function(){overlayUtils.savePNG()},false)
+    interfaceUtils.listen("plus-1-button","click",function(){interfaceUtils.generateDataTabUI()},false)
+    interfaceUtils.listen('save_project_menu', 'click', function() { projectUtils.saveProjectWindow() }, false);
+    interfaceUtils.listen('load_project_menu', 'click', function() { projectUtils.loadProjectFile() }, false);
+    document.addEventListener("mousedown",function(){tmapp["ISS_viewer"].removeOverlay("ISS_marker_info");});
+
+    // dataUtils.processEventForCSV("morphology",cpop + '_csv');
+    //dataUtils.processEventForCSV("gene",op + '_csv');
+    
     var navtabs=document.getElementsByClassName("nav-tabs")[0];
     var uls=navtabs.getElementsByTagName("ul");
     for(var i=0;i<uls.length;i++){
@@ -45,8 +47,6 @@ tmapp.registerActions = function () {
             as[j].addEventListener("click",function(){interfaceUtils.hideTabsExcept($(this))});
         }
     }
-    //interfaceUtils.activateMainChildTabs("markers-gui");
-
 }
 /**
  * This method is called when the document is loaded. The tmapp object is built as an "app" and init is its main function.
@@ -66,6 +66,10 @@ tmapp.init = function () {
     tmapp[vname] = OpenSeadragon(tmapp.options_osd);
     //pixelate because we need the exact values of pixels
     tmapp[vname].addHandler("tile-drawn", OSDViewerUtils.pixelateAtMaximumZoomHandler);
+    // Disable keyboard hack
+    tmapp[vname].innerTracker.keyHandler = null;
+    tmapp[vname].innerTracker.keyDownHandler = null;
+    tmapp[vname].innerTracker.keyPressHandler = null;
 
     if(!tmapp.layers){
         tmapp.layers = [];
@@ -96,42 +100,23 @@ tmapp.init = function () {
                 regionUtils.manager(event);
             }
         } else { //if it is not quick then its panning
-            scroll_handler();
+            //scroll_handler();
         }
     };
-
-    //delay the scroll and the panning options so that there is a bit more time to calcualte which 
-    //markers to plot and where and how many
-    var isScrolling;
-    var scroll_handler = function (event) {
-
-        // Clear our timeout throughout the scroll
-        window.clearTimeout(isScrolling);
-        // Set a timeout to run after scrolling ends
-        isScrolling = setTimeout(function () {
-
-            // Run the callback
-            console.log('Scrolling has stopped.');
-            //
-            overlayUtils.modifyDisplayIfAny();
-
-        }, tmapp._scrollDelay);
-    }
-
 
     //OSD handlers are not registered manually they have to be registered
     //using MouseTracker OSD objects 
     var ISS_mouse_tracker = new OpenSeadragon.MouseTracker({
-        //element: this.fixed_svgov.node().parentNode, 
         element: tmapp[vname].canvas,
-        clickHandler: click_handler,
-        scrollHandler: scroll_handler
+        clickHandler: click_handler
     }).setTracking(true);
 
     elt = document.getElementById("ISS_globalmarkersize");
     if (elt) {
-        tmapp[vname].addControl(elt,{anchor: OpenSeadragon.ControlAnchor.TOP_RIGHT});
-        elt.style.display="None";
+        tmapp[vname].addControl(elt,{
+            anchor: OpenSeadragon.ControlAnchor.TOP_RIGHT
+        });
+        elt.classList.add("d-none");
     }
 
     if (tmapp.mpp != 0) {
@@ -155,7 +140,6 @@ tmapp.init = function () {
     } else {
         console.log("Using CPU-based marker drawing (SVG canvas)")
     }
-    projectUtils.registerActions();
 } //finish init
 
 /**
@@ -178,5 +162,78 @@ tmapp.options_osd = {
     visibilityRatio: 1,
     showNavigationControl: false,
     maxImageCacheCount:500,
-    imageSmoothingEnabled:false
+    imageSmoothingEnabled:false,
+    preserveImageSizeOnResize: true
 }
+
+function toggleFullscreen() {
+    let full_ui = document.getElementById("main-ui");
+    let bIsFullscreen = document.fullScreen || document.mozFullScreen || document.webkitIsFullScreen;
+    if (!bIsFullscreen) {
+        if (full_ui.requestFullscreen) {
+            full_ui.requestFullscreen();
+        } else if (full_ui.webkitRequestFullscreen) {
+            full_ui.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+        } else if (full_ui.msRequestFullscreen) {
+            full_ui.msRequestFullscreen();
+        } else if (full_ui.webkitRequestFullscreen) {
+            full_ui.mozRequestFullscreen();
+        }
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen()
+        } else if (document.webkitCancelFullScreen) {
+            document.webkitCancelFullScreen();
+        } else if (document.webkitCancelFullScreen) {
+            document.msCancelFullScreen();
+        } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen()
+        }
+    }
+}
+
+function toggleNavbar(turn_on = null) {
+    let main_navbar = document.getElementsByTagName("nav")[0];
+
+    if (turn_on === true) {
+        main_navbar.classList.remove("d-none");
+    } else if (turn_on === false) {
+        main_navbar.classList.add("d-none");
+    } else if (turn_on === null) {
+        if (main_navbar.classList.contains("d-none")) {
+            toggleNavbar(true);
+        } else {
+            toggleNavbar(false);
+        }
+    }
+}
+
+$( document ).ready(function() {
+    let ISS_viewer = document.getElementById("ISS_viewer");
+    let ISS_viewer_container = document.getElementById("ISS_viewer_container");
+
+    ISS_viewer.addEventListener('dblclick', function (e) {
+        // Open in fullscreen if double clicked
+        toggleFullscreen();
+    });
+
+    let full_ui = document.getElementById("main-ui");
+    full_ui.addEventListener('fullscreenchange', (event) => {
+        // document.fullscreenElement will point to the element that
+        // is in fullscreen mode if there is one. If not, the value
+        // of the property is null.
+        if (document.fullscreenElement) {
+            toggleNavbar(false);
+        } else {
+            toggleNavbar(true);
+        }
+    });
+
+    ISS_viewer_container.addEventListener("keypress", (event) => {
+        if (event.key === "0") {
+            interfaceUtils.toggleRightPanel();
+        } else if (event.key === "f") {
+            toggleFullscreen();
+        }
+    });
+});

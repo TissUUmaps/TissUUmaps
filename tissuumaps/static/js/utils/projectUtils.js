@@ -40,62 +40,29 @@
      ]
 }
 
-/** 
- * Get all the buttons from the interface and assign all the functions associated to them */
- projectUtils.registerActions = function () {
-    interfaceUtils.listen('save_project_menu', 'click', function() { projectUtils.saveProject() }, false);
-    interfaceUtils.listen('project_settings_menu', 'click', function() { projectUtils.editSettings() }, false);
-}
-
 /**
  * This method is used to save the TissUUmaps state (gene expression, cell morphology, regions) */
  projectUtils.saveProject = function(urlProject) {
-    $('#loadingModal').modal('show');
-    var op = tmapp["object_prefix"];
-    var cpop = "CP";
-    var relativeLayers = [];
-    var relativePaths = [];
-    if (urlProject == undefined) {
-        tmapp.layers.forEach(function(layer) {
-            relativePaths.push(layer.tileSource)
-        });
-        commonPath = projectUtils.commonPath(tmapp.layers);
-    }
-    else {
-        commonPath = urlProject.substring(0, urlProject.lastIndexOf('/')+2);
-    }
-    tmapp.layers.forEach(function(layer) {
-        var filename = layer.tileSource.substring(commonPath.length, layer.tileSource.length);
-        relativeLayers.push(
-            {name: layer.name, tileSource: filename}
-        )
-        relativePaths.push(layer.tileSource)
-    });
-    if (urlProject == undefined) {
-        filename = prompt("Save project under the name:","NewProject");
-        subfolder = window.location.pathname.substring(0, window.location.pathname.indexOf('/'));
-        subfolder = subfolder + commonPath
-        //subfolder = subfolder.replace(commonPath,"");
-        urlProject = subfolder + "/" + filename
-        console.log("urlProject.split('.').pop()", urlProject.split('.').pop());
-        if (urlProject.split('.').pop() != "tmap") {
-            urlProject = urlProject + ".tmap"
-        }
-        if (urlProject[0] == "/" && urlProject[1] == "/") urlProject = urlProject.substring(1, urlProject.length);
-        console.log(subfolder, filename, urlProject)
-    }
-    else {
-        urlProject = "/" + urlProject
-        if (! urlProject.split('.').pop() == "tmap") {
-            urlProject = urlProject + ".tmap"
-        }
-        filename = urlProject.substring( urlProject.lastIndexOf('/'),urlProject.length);
-    }
+    interfaceUtils.prompt("Save project under the name:","NewProject")
+    .then((filename) => {
+        state = projectUtils.getActiveProject();
+        state.filename = filename;
 
+        var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 4));
+        var dlAnchorElem=document.createElement("a");
+        dlAnchorElem.setAttribute("hidden","");
+        dlAnchorElem.setAttribute("href",     dataStr     );
+        dlAnchorElem.setAttribute("download", filename + ".tmap");
+        document.body.appendChild(dlAnchorElem);
+        dlAnchorElem.click();
+        document.body.removeChild(dlAnchorElem);
+    })
+}
+
+projectUtils.getActiveProject = function () {
     state = projectUtils._activeState;
     state.regions = regionUtils._regions;
-    state.layers = relativeLayers;
-    state.filename = filename;
+    state.layers = tmapp.layers;
     state.filters = filterUtils._filtersUsed;
     state.layerFilters = filterUtils._filterItems;
     state.compositeMode = filterUtils._compositeMode;
@@ -105,28 +72,176 @@
         state.layerOpacities[i] = $("#opacity-layer-"+i).val();
         state.layerVisibilities[i] = $("#visible-layer-"+i).is(":checked");
     });
-    
-    $.ajax({
-        type: "POST",
-        url: urlProject,
-        // The key needs to match your method's input parameter (case-sensitive).
-        data: JSON.stringify(state),
-        contentType: "application/json; charset=utf-8",
-        dataType: "json",
-        success: function(data) {
-            $('#loadingModal').modal('hide');
-        },
-        failure: function(errMsg) {
-            $('#loadingModal').modal('hide');
-            alert(errMsg);
+    return state;
+}
+
+
+/**
+ * This method is used to load the TissUUmaps state (gene expression, cell morphology, regions) */
+ projectUtils.makeButtonFromTab = function(dataset) {
+    csvFile = document.getElementById(dataset + "_csv").value.replace(/^.*[\\\/]/, '');
+    if (!csvFile) {
+        if (dataUtils.data[dataset]) {
+            csvFile = dataUtils.data[dataset]["_csv_path"];
         }
-    });
-    return true;
+        else {
+            interfaceUtils.alert("Select a csv file first!");
+            return;
+        }
+    }
+    var modalUID = "default";
+    button1=HTMLElementUtils.createButton({"id":generated+"_marker-tab-button","extraAttributes":{ "class":"btn btn-secondary mx-2", "data-bs-dismiss":"modal"}})
+    button1.innerText = "Cancel";
+    button2=HTMLElementUtils.createButton({"id":generated+"_marker-tab-button","extraAttributes":{ "class":"btn btn-primary mx-2"}})
+    button2.innerText = "Generate button";
+    buttons=divpane=HTMLElementUtils.createElement({"kind":"div"});
+    buttons.appendChild(button1);
+    buttons.appendChild(button2);
+
+    button1.addEventListener("click",function(event) {
+        $(`#${modalUID}_modal`).modal('hide');
+    })
+    button2.addEventListener("click",function(event) {
+        function UrlExists(url)
+        {
+            var http = new XMLHttpRequest();
+            http.open('HEAD', url, false);
+            http.send();
+            return http.status!=404;
+        }
+        path = document.getElementById("generateButtonPath").value
+        if (path.includes("[")) {path = JSON.parse(path)}
+        if( Object.prototype.toString.call( path ) === '[object Array]' ) {
+            _exists = path.every(UrlExists);
+        }
+        else {
+            _exists = UrlExists(path);
+        }
+        var title = document.getElementById("generateButtonTitle").value
+        var comment = document.getElementById("generateButtonComment").value
+        console.log(_exists);
+        if (!_exists) {
+            interfaceUtils.confirm("Warning, path doesn't seem accessible on the server.\n\nAre you sure you want to continue?")
+            .then(function(_confirm) {
+                if (_confirm) {
+                    projectUtils.makeButtonFromTabAux(dataset, path, title, comment);
+                    $(`#${modalUID}_modal`).modal('hide');
+                }
+            })
+            return;
+        }
+        projectUtils.makeButtonFromTabAux(dataset, path, title, comment);
+        $(`#${modalUID}_modal`).modal('hide');
+    })
+    
+    content=HTMLElementUtils.createElement({"kind":"div"});
+        row0=HTMLElementUtils.createElement({"kind":"p", "extraAttributes":{"class":"text-danger"}});
+        row0.innerText = "Warning, the csv file must be accessible on the server side."
+        row1=HTMLElementUtils.createRow({});
+            col11=HTMLElementUtils.createColumn({"width":12});
+                label111=HTMLElementUtils.createElement({"kind":"label", "extraAttributes":{ "for":"generateButtonPath" }});
+                label111.innerText="Relative path to the csv file (on the server side)"
+                file112=HTMLElementUtils.createElement({"kind":"input", "id":"generateButtonPath", "extraAttributes":{ "class":"form-text-input form-control", "type":"text", "value":csvFile}});
+
+        row2=HTMLElementUtils.createRow({});
+            col21=HTMLElementUtils.createColumn({"width":12});
+                label211=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":"generateButtonTitle" }});
+                label211.innerText="Button inner text";
+                select212=HTMLElementUtils.createElement({"kind":"input", "id":"generateButtonTitle", "extraAttributes":{ "class":"form-text-input form-control", "type":"text", "value":"Download data"} });
+
+        row3=HTMLElementUtils.createRow({});
+        col31=HTMLElementUtils.createColumn({"width":12});
+            label311=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":"generateButtonComment" }});
+            label311.innerText="Comment (will be displayed on the right of the button)";
+            select312=HTMLElementUtils.createElement({"kind":"input", "id":"generateButtonComment", "extraAttributes":{ "class":"form-text-input form-control", "type":"text", "value":""} });
+    
+    content.appendChild(row0);
+    content.appendChild(row1);
+        row1.appendChild(col11);
+            col11.appendChild(label111);
+            col11.appendChild(file112);
+    content.appendChild(row2);
+        row2.appendChild(col21);
+            col21.appendChild(label211);
+            col21.appendChild(select212);
+    content.appendChild(row3);
+        row3.appendChild(col31);
+            col31.appendChild(label311);
+            col31.appendChild(select312);
+
+    title = "Generate button from tab"
+    interfaceUtils.generateModal(title, content, buttons);
+ }
+
+
+projectUtils.makeButtonFromTabAux = function (dataset, csvFile, title, comment) {
+    buttonsDict = {};
+
+    if (!csvFile)
+        return;
+
+    markerFile = {
+        "path": csvFile,
+        "comment":comment,
+        "title":title,
+        "hideSettings":true,
+        "autoLoad":false,
+        "uid":dataset
+    };
+    tabName = document.getElementById(dataset + "_tab-name").value;
+    markerFile.name = tabName;
+    headers = interfaceUtils._mGenUIFuncs.getTabDropDowns(dataset);
+    markerFile.expectedHeader = Object.assign({}, ...Object.keys(headers).map((k) => ({[k]: headers[k].value})));
+    radios = interfaceUtils._mGenUIFuncs.getTabRadiosAndChecks(dataset);
+    markerFile.expectedRadios = Object.assign({}, ...Object.keys(radios).map((k) => ({[k]: radios[k].checked})));
+    if (!projectUtils._activeState.markerFiles) {
+        projectUtils._activeState.markerFiles = [];
+    }
+    projectUtils._activeState.markerFiles.push(markerFile);
+    if( Object.prototype.toString.call( markerFile.path ) === '[object Array]' ) {
+        interfaceUtils.createDownloadDropdownMarkers(markerFile);
+    }
+    else {
+        interfaceUtils.createDownloadButtonMarkers(markerFile);
+    }
+}
+
+projectUtils.loadProjectFile = function() {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.onchange = e => {
+        // getting a hold of the file reference
+        var file = e.target.files[0]; 
+
+        // setting up the reader
+        var reader = new FileReader();
+        reader.readAsText(file,'UTF-8');
+
+        // here we tell the reader what to do when it's done reading...
+        reader.onload = readerEvent => {
+            var content = readerEvent.target.result; // this is the content!
+            console.log( content );
+            projectUtils.loadProject(JSON.parse(content));
+        }
+    }
+    input.click();
+
+}
+
+projectUtils.loadProjectFileFromServer = function(path) {
+    $.getJSON(path, function(json) {
+        projectUtils.loadProject(json);
+    })
+    .fail(function(jqXHR, textStatus, errorThrown) { interfaceUtils.alert("error: " + textStatus); })
 }
 
 /**
  * This method is used to load the TissUUmaps state (gene expression, cell morphology, regions) */
- projectUtils.editSettings = function() {
+ projectUtils.saveProjectWindow = function() {
+    return projectUtils.saveProject();
+    
+    //TODO
+
     settingsModal = document.getElementById("settingsModal");
     if (! settingsModal) {
         var div = document.createElement('div');
@@ -135,13 +250,16 @@
                 <div class="modal-content">
                     
                     <div class="modal-header">
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="$('#settingsModal').hide();">
-                        <span aria-hidden="true">&times;</span>
-                        </button>
-                        <h4 class="modal-title" id="modalLabelSmall">Edit project settings</h4>
+                        <h5 class="modal-title" id="modalLabelSmall">Save TMAP project</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="$('#settingsModal').modal('hide');;"></button>
                     </div>
                     
                     <div class="modal-body" id="settingsModalContent">
+                    </div>
+
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                      <button type="button" class="btn btn-primary" onclick="projectUtils.saveProject();">Save project</button>
                     </div>
                 
                 </div>
@@ -150,6 +268,7 @@
         console.log(div)
         document.body.appendChild(div);
     }
+    
     settingsModal = document.getElementById("settingsModal");
     settingsModalContent = document.getElementById("settingsModalContent");
     settingsModalContent.innerHTML = "";
@@ -166,12 +285,13 @@
             eventListeners: { click: function () { 
                 // TODO: Remove JQuery dependency here?
                 window[setting.module][setting.function] = this.checked;
+                if (!projectUtils._activeState.settings)
+                    projectUtils._activeState.settings = [];
                 projectUtils._activeState.settings.forEach(function(settingSaved, index, object) {
                     if (settingSaved.function == setting.function && settingSaved.function == setting.function) {
                         object.splice(index, 1);
                     }
                 });
-                console.dir(projectUtils._activeState.settings);
                 projectUtils._activeState.settings.push(
                     {
                         "module":setting.module,
@@ -183,7 +303,7 @@
              } }
         });
         row.appendChild(checkbox);
-        desc = HTMLElementUtils.createElement({ type: "span", innerHTML:  "<label style='cursor:pointer' for='settings-" + index + "'>&nbsp;&nbsp;"+setting.desc+"</label>"});
+        desc = HTMLElementUtils.createElement({ kind: "span", innerHTML:  "<label style='cursor:pointer' for='settings-" + index + "'>&nbsp;&nbsp;"+setting.desc+"</label>"});
         row.appendChild(desc);
         settingsModalContent.appendChild(row);
     })
@@ -219,21 +339,15 @@
         compositeMode: ""
     }
     */
-    if (state.tabs) {
+    document.getElementById("divMarkersDownloadButtons").innerHTML = "";
+    /*if (state.tabs) {
         state.tabs.forEach(function(tab, i) {
             if (tab.title) {document.getElementById("title-tab-" + tab.name).innerHTML = tab.title}
             if (tab.visible === false) {document.getElementById("title-tab-" + tab.name).style.display="none"}
         });
-    }
+    }*/
     if (state.regions) {
-        var maxregionid=0;
-        for(i in state.regions){
-            //console.log(regions[i]);
-            regionUtils.createImportedRegion(state.regions[i]);
-            var numbers = state.regions[i].id.match(/\d+/g).map(Number);
-            if(numbers[0]>maxregionid) maxregionid=numbers[0];
-        }
-        regionUtils._currentRegionId=maxregionid;		
+        regionUtils.JSONValToRegions(state.regions);
     }
     if (state.regionFile) {
         regionUtils.JSONToRegions(state.regionFile);
@@ -245,41 +359,21 @@
     }
     if (state.markerFiles) {
         state.markerFiles.forEach(function(markerFile) {
+            if (markerFile.expectedCSV) {
+                projectUtils.convertOldMarkerFile(markerFile);
+                state.hideTabs = true;
+            }
             if( Object.prototype.toString.call( markerFile.path ) === '[object Array]' ) {
-                HTMLElementUtils.createDLSelectMarkers(
-                    markerFile.title,
-                    markerFile.path,
-                    markerFile.comment,
-                    markerFile.expectedCSV,
-                    markerFile.settings
-                );
+                interfaceUtils.createDownloadDropdownMarkers(markerFile);
             }
             else {
-                HTMLElementUtils.createDLButtonMarkers(
-                    markerFile.title,
-                    markerFile.path,
-                    markerFile.comment,
-                    markerFile.expectedCSV,
-                    markerFile.autoLoad,
-                    markerFile.settings
-                );
+                interfaceUtils.createDownloadButtonMarkers(markerFile);
             }
-        });
-    }
-    if (state.CPFiles) {
-        state.CPFiles.forEach(function(CPFile) {
-            HTMLElementUtils.createDLButtonMarkersCP(
-                CPFile.title,
-                CPFile.path,
-                CPFile.comment,
-                CPFile.expectedCSV,
-                CPFile.autoLoad
-            );
         });
     }
     if (state.regionFiles) {
         state.regionFiles.forEach(function(regionFile) {
-            HTMLElementUtils.createDLButtonRegions(
+            interfaceUtils.createDownloadButtonRegions(
                 regionFile.title,
                 regionFile.path,
                 regionFile.comment,
@@ -289,14 +383,18 @@
     }
     if (state.filename) {
         tmapp.slideFilename = state.filename;
-        document.getElementById("project_title").innerText = state.filename;
+        document.getElementById("project_title").innerHTML = state.filename;
+    }
+    if (state.link) {
+        document.getElementById("project_title").href = state.link;
+        document.getElementById("project_title").target = "_blank";
     }
     tmapp.layers = [];
     subfolder = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
     state.layers.forEach(function(layer) {
         pathname = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
         tmapp.layers.push(
-            {name: layer.name, tileSource: subfolder + "/" + layer.tileSource}
+            {name: layer.name, tileSource: layer.tileSource}
         )
     });
     if (state.filters) {
@@ -321,24 +419,24 @@
     }
     if (state.settings) {
         state.settings.forEach(function(setting, i) {
-            if (window[setting.module]) {
+            try{
                 window[setting.module][setting.function] = setting.value;
             }
+            catch (err) {}
         });
     }
-    if (state.menuButtons) {
-        state.menuButtons.forEach(function(menuButton, i) {
-            HTMLElementUtils.createMenuButton(menuButton.text, menuButton.url);
-        });
+    if (state.hideTabs) {
+        document.getElementById("level-1-tabs").classList.add("d-none");
     }
-    if (state.hideFile) {
-        document.getElementById("navbarDropdownMenuLink").style.display = "None";
-    }
-    if (projectUtils._hideCSVImport) {
+    /*if (projectUtils._hideCSVImport) {
         document.getElementById("ISS_data_panel").style.display="none";
-        document.getElementById("CP_data_panel").style.display="none";
-    }
+    }*/
     setTimeout(function(){
+        if (state.rotate) {
+            var op = tmapp["object_prefix"];
+            var vname = op + "_viewer";
+            tmapp[vname].viewport.setRotation(state.rotate);
+        }
         if (state.boundingBox) {
             setTimeout(function() {
                 tmapp[tmapp["object_prefix"] + "_viewer"].viewport.fitBounds(new OpenSeadragon.Rect(state.boundingBox.x, state.boundingBox.y, state.boundingBox.width, state.boundingBox.height), false);
@@ -361,6 +459,80 @@
     },300);
     
     //tmapp[tmapp["object_prefix"] + "_viewer"].world.resetItems()
+}
+
+projectUtils.convertOldMarkerFile = function(markerFile) {
+    if (!markerFile.expectedHeader)
+        markerFile.expectedHeader = {}
+    markerFile.expectedHeader.X = markerFile.expectedCSV.X_col;
+    markerFile.expectedHeader.Y = markerFile.expectedCSV.Y_col;
+    if (markerFile.expectedCSV.key == "letters") {
+        markerFile.expectedHeader.gb_col = markerFile.expectedCSV.group;
+        markerFile.expectedHeader.gb_name = markerFile.expectedCSV.name;
+    }
+    else {
+        markerFile.expectedHeader.gb_col = markerFile.expectedCSV.name;
+        markerFile.expectedHeader.gb_name = markerFile.expectedCSV.group;
+    }
+
+    if (!markerFile.expectedRadios)
+        markerFile.expectedRadios = {}
+    if (markerFile.expectedCSV.piechart) {
+        markerFile.expectedRadios.pie_check = true;
+        markerFile.expectedHeader.pie_col = markerFile.expectedCSV.piechart
+    } else {markerFile.expectedRadios.pie_check = false;}
+    if (markerFile.expectedCSV.color) {
+        markerFile.expectedRadios.cb_gr = false;
+        markerFile.expectedRadios.cb_col = true;
+        markerFile.expectedHeader.cb_col = markerFile.expectedCSV.color
+    } else {markerFile.expectedRadios.cb_col = false;}
+    if (markerFile.expectedCSV.scale) {
+        markerFile.expectedRadios.scale_check = true;
+        markerFile.expectedHeader.scale_col = markerFile.expectedCSV.scale
+    } else {markerFile.expectedRadios.scale_check = false;}
+    if (!markerFile.uid)
+        markerFile.uid = "uniquetab";
+    markerFile.name = markerFile.title.replace("Download","");
+    if (markerFile.settings) {
+        markerFile.expectedRadios.cb_gr = true;
+        markerFile.expectedRadios.cb_gr_dict = false;
+        markerFile.expectedRadios.cb_gr_rand = false;
+        markerFile.expectedRadios.cb_gr_key = true;
+        for (setting of markerFile.settings) {
+            if (setting.module == "glUtils" && setting.function == "_globalMarkerScale")
+                markerFile.expectedHeader.scale_factor = setting.value;
+            if (setting.module == "markerUtils" && setting.function == "_selectedShape"){
+                dictSymbol = {6:6}
+                if (dictSymbol[setting.value]) setting.value = dictSymbol[setting.value];
+                markerFile.expectedHeader.shape_fixed = markerUtils._symbolStrings[setting.value];
+            }
+            if (setting.module == "markerUtils" && setting.function == "_randomShape") {
+                markerFile.expectedRadios.shape_fixed = !setting.value;
+                if (!markerFile.expectedHeader.shape_fixed) {
+                    markerFile.expectedHeader.shape_fixed = markerUtils._symbolStrings[2];
+                }
+            }
+            if (setting.module == "markerUtils" && setting.function == "_colorsperkey") {
+                markerFile.expectedRadios.cb_gr = true;
+                markerFile.expectedRadios.cb_gr_rand = false;
+                markerFile.expectedRadios.cb_gr_key = false;
+                markerFile.expectedRadios.cb_gr_dict = true;
+                markerFile.expectedHeader.cb_gr_dict = JSON.stringify(setting.value);
+            }
+            if (setting.module == "glUtils" && setting.function == "_markerOpacity")
+                markerFile.expectedHeader.opacity = setting.value;
+            if (setting.module == "HTMLElementUtils" && setting.function == "_colorsperbarcode") {
+                markerFile.expectedRadios.cb_gr = true;
+                markerFile.expectedRadios.cb_gr_rand = false;
+                markerFile.expectedRadios.cb_gr_key = false;
+                markerFile.expectedRadios.cb_gr_dict = true;
+                markerFile.expectedHeader.cb_gr_dict = JSON.stringify(setting.value);
+            }
+        }
+    }
+    delete markerFile.expectedCSV;
+    markerFile["hideSettings"] = true;
+    console.log(markerFile);
 }
 
 /**
@@ -386,45 +558,4 @@ projectUtils.commonPath = function(strs) {
     }
     prefix = prefix.substring(0, prefix.lastIndexOf('/')+1);
     return prefix
-}
-
-/** Applying settings */
-projectUtils.applySettings = function (settings) {
-    if (settings) {
-        settings.forEach(function(setting, i) {
-            if (window[setting.module]) {
-                if (typeof window[setting.module][setting.function]  === 'function') {
-                    window[setting.module][setting.function](setting.value);
-                }
-                else {
-                    window[setting.module][setting.function] = setting.value;
-                }
-            }
-        });
-    }
-}
-
-/** Adding marker legend in the upper left corner */
-projectUtils.addLegend = function (htmlContent) {
-    if (! htmlContent) {
-        if (document.getElementById("markerLegend")) {
-            document.getElementById("markerLegend").style.display= "none";
-        }
-        return;
-    }
-    var op = tmapp["object_prefix"];
-    if (document.getElementById("markerLegend") == undefined) {
-        var elt = document.createElement('div');
-        elt.className = "piechartLegend"
-        elt.id = "markerLegend"
-        elt.style.zIndex = "100";
-        elt.style.paddingLeft = "5px";
-        elt.style.paddingBottom = "2px";
-        elt.style.overflowY = "auto";
-        elt.style.maxHeight = "Calc(100vh - 245px)";
-        tmapp['ISS_viewer'].addControl(elt,{anchor: OpenSeadragon.ControlAnchor.TOP_LEFT});
-    }
-    elt = document.getElementById("markerLegend");
-    elt.style.display="block";
-    elt.innerHTML = htmlContent;
 }

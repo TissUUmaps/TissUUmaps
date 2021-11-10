@@ -10,6 +10,9 @@ import threading
 from threading import Lock
 import time
 import logging
+from urllib.parse import urlparse
+from urllib.parse import parse_qs
+
 
 # External libraries
 import imghdr
@@ -31,8 +34,30 @@ from flask import (
     request,
     Response,
     send_from_directory,
+    redirect
 )
 
+from tissuumaps.flask_filetree import filetree
+def _fnfilter (filename):
+    filename = filename.lower()
+    print (imghdr.what(filename))
+    if OpenSlide.detect_format(filename):
+        return True
+    elif imghdr.what(filename):
+        return True
+    elif ".tmap" in filename:
+        return True
+    return False
+
+def _dfilter (filename):
+    if "private" in filename:
+        return False
+    if ".tissuumaps" in filename:
+        return False
+    return True
+
+ft = filetree.make_blueprint(app=app, register=False, dfilter=_dfilter, fnfilter=_fnfilter)
+app.register_blueprint(ft, url_prefix='/filetree')
 
 def check_auth(username, password):
     if username == "username" and password == "password":
@@ -256,14 +281,15 @@ def page_not_found(e):
             404,
         )
     else:
-        return (
-            render_template(
-                "server/files.html",
-                root_dir=_Directory(app.basedir, max_depth=app.config["FOLDER_DEPTH"]),
-                message="Impossible to load this file",
-            ),
-            404,
-        )
+        return redirect(url_for('filetree.test'))
+        #return (
+        #    render_template(
+        #        "server/files.html",
+        #        root_dir=_Directory(app.basedir, max_depth=app.config["FOLDER_DEPTH"]),
+        #        message="Impossible to load this file",
+        #    ),
+        #    404,
+        #)
 
 
 def _get_slide(path):
@@ -298,19 +324,15 @@ def _get_slide(path):
             logging.error(traceback.format_exc())
             abort(404)
 
-
 @app.route("/")
 @requires_auth
 def index():
-    # return render_template('files.html', root_dir=_Directory(app.basedir, max_depth=app.config['FOLDER_DEPTH']))
     if app.config["isStandalone"]:
-        return render_template("standalone/files.html")
+        root_dir=_Directory(app.basedir, max_depth=app.config["FOLDER_DEPTH"])
     else:
-        return render_template(
-            "server/files.html",
-            root_dir=_Directory(app.basedir, max_depth=app.config["FOLDER_DEPTH"]),
-        )
-
+        root_dir= []
+    
+    return render_template("tissuumaps.html", isStandalone=app.config["isStandalone"], root_dir=root_dir)
 
 @app.route("/web/<path:path>")
 @requires_auth
@@ -321,11 +343,16 @@ def base_static(path):
     return send_from_directory(directory, filename)
 
 
-@app.route("/<path:path>")
+@app.route("/<path:filename>")
 @requires_auth
-def slide(path):
+def slide(filename):
+    path = request.args.get('path')
+    if not path:
+        path = "./"
+    path = os.path.abspath(os.path.join(app.basedir, path, filename))
+    print ("Getting slide", path)
     slide = _get_slide(path)
-    slide_url = url_for("dzi", path=path)
+    slide_url = os.path.basename(path)+".dzi"#url_for("dzi", path=path)
     slide_properties = slide.properties
 
     associated_urls = dict(
@@ -335,38 +362,21 @@ def slide(path):
     # folder_dir = _Directory(os.path.abspath(app.basedir)+"/",
     #                        os.path.dirname(path))
     #
-    if app.config["isStandalone"]:
-        return render_template(
-            "standalone/tissuumaps.html",
-            plugins=app.config["PLUGINS"],
-            slide_url=slide_url,
-            slide_filename=slide.filename,
-            slide_mpp=slide.mpp,
-            properties=slide_properties,
-            associated=associated_urls,
-        )
-    else:
-        folder_dir = _Directory(
-            os.path.abspath(app.basedir) + "/", os.path.dirname(path)
-        )
-        if "private" in path:
-            root_dir = _Directory(
-                os.path.abspath(app.basedir) + "/",
-                os.path.dirname(path),
-                max_depth=app.config["FOLDER_DEPTH"],
-            )
-        else:
-            root_dir = _Directory(app.basedir, max_depth=app.config["FOLDER_DEPTH"])
-        return render_template(
-            "server/tissuumaps.html",
-            plugins=app.config["PLUGINS"],
-            slide_url=slide_url,
-            slide_filename=slide.filename,
-            slide_mpp=slide.mpp,
-            properties=slide_properties,
-            root_dir=root_dir,
-            folder_dir=folder_dir,
-            associated=associated_urls,
+    jsonProject={
+        "layers": [
+            {
+                "name": os.path.basename(path),
+                "tileSource": slide_url
+            }
+        ]
+    }
+    return render_template(
+        "tissuumaps.html",
+        plugins=app.config["PLUGINS"],
+        jsonProject=jsonProject,
+        slide_mpp=slide.mpp,
+        associated=associated_urls,
+        isStandalone=app.config["isStandalone"]
         )
 
 
@@ -375,11 +385,26 @@ def slide(path):
 def ping():
     return make_response("pong")
 
+def getPathFromReferer(request, filename):
+    try:
+        parsed_url = urlparse(request.referrer)
+        path = parse_qs(parsed_url.query)['path'][0]
+        path = os.path.abspath(os.path.join(app.basedir, path, filename))
+    except:
+        path = os.path.abspath(os.path.join(app.basedir, filename))
+    if not path:
+        path = os.path.abspath(os.path.join(app.basedir, filename))
+    return path
 
-@app.route("/<path:path>.tmap", methods=["GET", "POST"])
+
+@app.route("/<string:filename>.tmap", methods=["GET", "POST"])
 @requires_auth
-def tmapFile(path):
-    jsonFilename = os.path.abspath(os.path.join(app.basedir, path) + ".tmap")
+def tmapFile(filename):
+    path = request.args.get('path')
+    if not path:
+        path = "./"
+    jsonFilename = os.path.abspath(os.path.join(app.basedir, path, filename) + ".tmap")
+    print ("jsonFilename", jsonFilename)
     if request.method == "POST":
         state = request.get_json(silent=False)
         with open(jsonFilename, "w") as jsonFile:
@@ -400,41 +425,20 @@ def tmapFile(path):
         if "plugins" in state.keys():
             plugins = state["plugins"]
         else:
-            plugins = []
+            plugins = app.config["PLUGINS"]
 
-        if app.config["isStandalone"]:
-            return render_template(
-                "standalone/tissuumaps.html",
-                plugins=app.config["PLUGINS"],
-                jsonProject=state,
-            )
-        else:
-            folder_dir = _Directory(
-                os.path.abspath(app.basedir) + "/", os.path.dirname(path)
-            )
-            if "private" in path:
-                root_dir = _Directory(
-                    os.path.abspath(app.basedir) + "/",
-                    os.path.dirname(path),
-                    max_depth=app.config["FOLDER_DEPTH"],
-                    filter=".tmap",
-                )
-            else:
-                root_dir = _Directory(app.basedir, max_depth=app.config["FOLDER_DEPTH"])
-
-            return render_template(
-                "server/tissuumaps.html",
-                plugins=plugins,
-                jsonProject=state,
-                root_dir=root_dir,
-                folder_dir=folder_dir,
-            )
+        return render_template(
+            "tissuumaps.html",
+            plugins=plugins,
+            jsonProject=state,
+            isStandalone=app.config["isStandalone"]
+        )
 
 
-@app.route("/<path:path>.csv")
+@app.route("/<path:filename>.csv")
 @requires_auth
-def csvFile(path):
-    completePath = os.path.abspath(os.path.join(app.basedir, path) + ".csv")
+def csvFile(filename):
+    completePath = getPathFromReferer(request, filename) + ".csv"
     directory = os.path.dirname(completePath)
     filename = os.path.basename(completePath)
     if os.path.isfile(completePath):
@@ -466,10 +470,10 @@ def csvFile(path):
         abort(404)
 
 
-@app.route("/<path:path>.json")
+@app.route("/<path:filename>.json")
 @requires_auth
-def jsonFile(path):
-    completePath = os.path.abspath(os.path.join(app.basedir, path) + ".json")
+def jsonFile(filename):
+    completePath = getPathFromReferer(request, filename) + ".json"
     directory = os.path.dirname(completePath)
     filename = os.path.basename(completePath)
     if os.path.isfile(completePath):
@@ -478,9 +482,10 @@ def jsonFile(path):
         abort(404)
 
 
-@app.route("/<path:path>.dzi")
+@app.route("/<path:filename>.dzi")
 @requires_auth
-def dzi(path):
+def dzi(filename):
+    path = getPathFromReferer(request, filename)
     slide = _get_slide(path)
     format = app.config["DEEPZOOM_FORMAT"]
     resp = make_response(slide.get_dzi(format))
@@ -488,9 +493,10 @@ def dzi(path):
     return resp
 
 
-@app.route("/<path:path>.dzi/<path:associated_name>")
+@app.route("/<path:filename>.dzi/<path:associated_name>")
 @requires_auth
-def dzi_asso(path, associated_name):
+def dzi_asso(filename, associated_name):
+    path = getPathFromReferer(request, filename)
     slide = _get_slide(path)
     associated_image = slide.associated_images[associated_name]
     dzg = associated_image  # DeepZoomGenerator(ImageSlide(associated_image))
@@ -500,8 +506,9 @@ def dzi_asso(path, associated_name):
     return resp
 
 
-@app.route("/<path:path>_files/<int:level>/<int:col>_<int:row>.<format>")
-def tile(path, level, col, row, format):
+@app.route("/<path:filename>_files/<int:level>/<int:col>_<int:row>.<format>")
+def tile(filename, level, col, row, format):
+    path = getPathFromReferer(request, filename)
     slide = _get_slide(path)
     format = format.lower()
     # if format != 'jpeg' and format != 'png':
@@ -523,9 +530,10 @@ def tile(path, level, col, row, format):
 
 
 @app.route(
-    "/<path:path>.dzi/<path:associated_name>_files/<int:level>/<int:col>_<int:row>.<format>"
+    "/<path:filename>.dzi/<path:associated_name>_files/<int:level>/<int:col>_<int:row>.<format>"
 )
-def tile_asso(path, associated_name, level, col, row, format):
+def tile_asso(filename, associated_name, level, col, row, format):
+    path = getPathFromReferer(request, filename)
     slide = _get_slide(path).associated_images[associated_name]
     format = format.lower()
     if format != "jpeg" and format != "png":
@@ -551,7 +559,7 @@ def load_plugin(name):
     return mod
 
 
-@app.route("/plugin/<path:pluginName>.js")
+@app.route("/plugins/<path:pluginName>.js")
 def runPlugin(pluginName):
     directory = "plugins"
     filename = pluginName + ".js"
@@ -565,7 +573,7 @@ def runPlugin(pluginName):
         abort(404)
 
 
-@app.route("/plugin/<path:pluginName>/<path:method>", methods=["GET", "POST"])
+@app.route("/plugins/<path:pluginName>/<path:method>", methods=["GET", "POST"])
 def pluginJS(pluginName, method):
     logging.info("runPlugin", pluginName, method)
     logging.debug(request.method)

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="us">
+<head>
+	<meta charset="utf-8">
+    <title>jquery Filetree test</title>
+    <link href="{{ url_for('filetree.static', filename='css/jqueryFileTree.css') }}" rel="stylesheet"></link>
+    <script src="{{ url_for('filetree.static', filename='js/jquery-1.8.3.min.js') }}"></script>
+    <script src="{{ url_for('filetree.static', filename='js/jqueryFileTree.js') }}"></script>
+    <style>
+    </style>
+    <script>
+        $(function() {
+            $("#filetree").fileTree({
+                root: "",
+                script: "{{ url_for('filetree.sfiles') }}"
+            }, function(file) { 
+                var dirname = file.match(/(.*)[\/\\]/)[1]||'';
+                var filename = file.replace(/^.*[\\\/]/, '');
+                document.getElementById("filetree").innerHTML = "Loading, please wait...";
+                window.top.location = "/" + filename + "?path=" + dirname;
+             });
+        });
+    </script>
+</head>
+<body>
+    <div id="filetree">
+    </div>
+</body>
+</html>
