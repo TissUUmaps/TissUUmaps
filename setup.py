@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
      name='TissUUmaps',  
-     version='3.0.0',
+     version='3.0.1',
      author="Leslie Solorzano, Christophe Avenel, Fredrik Nysjö",
      author_email="christophe.avenel@it.uu.se",
      description="TissUUmaps is a lightweight viewer that uses basic web tools to visualize gene expression data or any kind of point data on top of whole slide images.",
