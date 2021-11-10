@@ -17,7 +17,7 @@
                 var dirname = file.match(/(.*)[\/\\]/)[1]||'';
                 var filename = file.replace(/^.*[\\\/]/, '');
                 document.getElementById("filetree").innerHTML = "Loading, please wait...";
-                window.top.location = "/" + filename + "?path=" + dirname;
+                window.parent.location = "/" + filename + "?path=" + dirname;
              });
         });
     </script>

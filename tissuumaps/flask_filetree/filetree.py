@@ -8,20 +8,26 @@ import flask
 
 
 def get_files(d, fnfilter, dfilter, rel=True):
-    d = os.path.expanduser(d)
-    dirs = []
-    fns = []
-    for fn in sorted(os.listdir(d)):
-        ffn = os.path.join(d, fn)
-        if not rel:
-            fn = ffn
-        if os.path.isdir(ffn):
-            if dfilter(ffn):
-                dirs.append(fn)
-        else:
-            if fnfilter(ffn):
-                fns.append(fn)
-    return fns, dirs
+    try:
+        d = os.path.expanduser(d)
+        dirs = []
+        fns = []
+        for fn in sorted(os.listdir(d)):
+            try:
+                ffn = os.path.join(d, fn)
+                if not rel:
+                    fn = ffn
+                if os.path.isdir(ffn):
+                    if dfilter(ffn):
+                        dirs.append(fn)
+                else:
+                    if fnfilter(ffn):
+                        fns.append(fn)
+            except:
+                pass
+        return fns, dirs
+    except:
+        return [],[]
 
 
 def make_blueprint(app=None, register=True, fnfilter=None, dfilter=None):

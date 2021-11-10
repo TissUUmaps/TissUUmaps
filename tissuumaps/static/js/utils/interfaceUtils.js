@@ -2108,7 +2108,7 @@ interfaceUtils.createDownloadDropdownMarkers = function(options, settings) {
     interfaceUtils.createDownloadDropdown(downloadRow, options.title, callback, options.comment, dropdownOptions);
     //var label = document.getElementById("label_ISS_csv");
     if (options.autoLoad) {
-        callback(null, {'selected':options["path"][0]});
+        setTimeout(function(){allback(null, {'selected':options["path"][0]})},500);
     }
     //else { label.innerHTML = "Or import gene expression from CSV file:"; }
 }
@@ -2152,7 +2152,7 @@ interfaceUtils.createDownloadButtonMarkers = function(options) {
     }
     var buttonRow = interfaceUtils.createDownloadButton(downloadRow, options.title, callback, options.comment);
     if (options.autoLoad) {
-        callback(null);
+        setTimeout(function(){callback(null)},500);
         buttonRow.style.display="none";
     }
 }
@@ -2169,7 +2169,7 @@ interfaceUtils.createDownloadButtonRegions = function(innerText, dataURL, commen
     }
     var buttonRow = interfaceUtils.createDownloadButton(downloadRow, innerText, callback, comment);
     if (autoLoad) {
-        callback(null);
+        setTimeout(function(){callback(null)},500);
         buttonRow.style.display="none";
     }
 }

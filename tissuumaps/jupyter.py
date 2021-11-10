@@ -3,9 +3,19 @@ from IPython.display import HTML, Javascript
 from IPython.core.display import display
 import threading
 import logging
+import click
 import warnings
 import os, time
+from pathlib import Path
 
+def secho(text, file=None, nl=None, err=None, color=None, **styles):
+    pass
+
+def echo(text, file=None, nl=None, err=None, color=None, **styles):
+    pass
+
+click.echo = echo
+click.secho = secho
 class TissUUmapsViewer ():
     def __init__(self, server, image, height=700):
         self.server = server
@@ -25,8 +35,10 @@ class TissUUmapsServer ():
         
         log = logging.getLogger('werkzeug')
         log.setLevel(logging.ERROR)
+        log = logging.getLogger('pyvips')
+        log.setLevel(logging.ERROR)
         warnings.filterwarnings('ignore')
-        
+
         self.started = False
         self.port = port
         self.slideDir = slideDir
@@ -36,7 +48,7 @@ class TissUUmapsServer ():
             views.app.run(host="0.0.0.0", port=self.port, threaded=True, debug=False)
         
         if TissUUmapsServer.is_port_in_use(self.port):
-            logging.error (f"Port {self.port} already in use. Impossible to start TissUUmaps server.")
+            log.warning (f"Port {self.port} already in use. Impossible to start TissUUmaps server.")
             return
 
         thread = threading.Thread(target = startServer)
@@ -55,8 +67,9 @@ class TissUUmapsServer ():
         return viewer
 
 def opentmap (path, port=5100, height=700):
-    server = TissUUmapsServer(slideDir=os.path.dirname(path), port=port)
-    server.viewer(os.path.basename(path), height)
+    parts = Path(path).parts
+    server = TissUUmapsServer(slideDir=parts[0], port=port)
+    server.viewer(parts[-1]+"?path="+os.path.join(*parts[1:-1]), height)
 
 if __name__ == '__main__':
     pass

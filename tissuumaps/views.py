@@ -13,7 +13,6 @@ import logging
 from urllib.parse import urlparse
 from urllib.parse import parse_qs
 
-
 # External libraries
 import imghdr
 import pyvips
@@ -40,7 +39,6 @@ from flask import (
 from tissuumaps.flask_filetree import filetree
 def _fnfilter (filename):
     filename = filename.lower()
-    print (imghdr.what(filename))
     if OpenSlide.detect_format(filename):
         return True
     elif imghdr.what(filename):
@@ -327,12 +325,7 @@ def _get_slide(path):
 @app.route("/")
 @requires_auth
 def index():
-    if app.config["isStandalone"]:
-        root_dir=_Directory(app.basedir, max_depth=app.config["FOLDER_DEPTH"])
-    else:
-        root_dir= []
-    
-    return render_template("tissuumaps.html", isStandalone=app.config["isStandalone"], root_dir=root_dir)
+    return render_template("tissuumaps.html", isStandalone=app.config["isStandalone"])
 
 @app.route("/web/<path:path>")
 @requires_auth
@@ -350,7 +343,6 @@ def slide(filename):
     if not path:
         path = "./"
     path = os.path.abspath(os.path.join(app.basedir, path, filename))
-    print ("Getting slide", path)
     slide = _get_slide(path)
     slide_url = os.path.basename(path)+".dzi"#url_for("dzi", path=path)
     slide_properties = slide.properties
@@ -404,7 +396,6 @@ def tmapFile(filename):
     if not path:
         path = "./"
     jsonFilename = os.path.abspath(os.path.join(app.basedir, path, filename) + ".tmap")
-    print ("jsonFilename", jsonFilename)
     if request.method == "POST":
         state = request.get_json(silent=False)
         with open(jsonFilename, "w") as jsonFile:
