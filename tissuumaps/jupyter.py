@@ -3,6 +3,7 @@ from IPython.display import HTML, Javascript
 from IPython.core.display import display
 import threading
 import logging
+import json
 import click
 import warnings
 import os, time
@@ -70,6 +71,75 @@ def opentmap (path, port=5100, height=700):
     parts = Path(path).parts
     server = TissUUmapsServer(slideDir=parts[0], port=port)
     server.viewer(parts[-1]+"?path="+os.path.join(*parts[1:-1]), height)
+
+def loaddata (images=[], csvFiles=[], xSelector="x", ySelector="y", keySelector=None, nameSelector=None, 
+              colorSelector=None, piechartSelector=None, shapeSelector=None, scaleSelector=None, 
+              fixedShape=None, scaleFactor=1,
+              colormap=None,
+              compositeMode="source-over",
+              port=5100, height=700):
+    rootPath = os.path.commonpath(
+        [os.path.dirname(f) for f in images] + [os.path.dirname(f) for f in csvFiles]
+    )
+    images = [os.path.relpath(f, rootPath) for f in images]
+    csvFiles = [os.path.relpath(f, rootPath) for f in csvFiles]
+    jsonTmap = {
+        "compositeMode": compositeMode,
+        "filename": "",
+        "layers": [
+            {
+                "name": os.path.basename(layer),
+                "tileSource": layer + ".dzi"
+            } for layer in images
+        ],
+        "markerFiles": []
+    }
+    if csvFiles:
+        expectedHeader = {
+                "X": xSelector,
+                "Y": ySelector,
+                "gb_col": keySelector,
+                "gb_name": nameSelector,
+                "cb_cmap": colormap,
+                "cb_col": colorSelector,
+                "scale_col": scaleSelector,
+                "scale_factor": scaleFactor,
+                "pie_col": piechartSelector,
+                "shape_col": shapeSelector,
+                "shape_fixed": fixedShape,
+                "cb_gr_dict": "",
+                "shape_gr_dict": "",
+                "opacity": 1
+            }
+        expectedRadios = {
+                "cb_col": colorSelector!=None,
+                "cb_gr": colorSelector==None,
+                "cb_gr_rand": True,
+                "cb_gr_dict": False,
+                "cb_gr_key": False,
+                "pie_check": piechartSelector!=None,
+                "scale_check": scaleSelector!=None,
+                "shape_gr": shapeSelector==None and fixedShape==None,
+                "shape_gr_rand": False,
+                "shape_gr_dict": False,
+                "shape_col": shapeSelector!=None,
+                "shape_fixed": fixedShape!=None
+            }
+        if len(csvFiles) == 1:
+            csvFiles = csvFiles[0]
+        jsonTmap["markerFiles"] = [{
+            "comment": "All markers",
+            "path": csvFiles,
+            "title": "Download markers",
+            "autoLoad": True,
+            "hideSettings": True,
+            "expectedHeader": expectedHeader,
+            "expectedRadios": expectedRadios,
+        }]
+    tmapFile = rootPath + "/_project.tmap"
+    with open(tmapFile, "w") as f:
+        json.dump(jsonTmap, f)
+    opentmap (os.path.abspath(tmapFile), port, height)
 
 if __name__ == '__main__':
     pass

@@ -39,12 +39,10 @@ if getattr(sys, 'frozen', False):
     template_folder=os.path.join(sys._MEIPASS, 'templates')
     static_folder=os.path.join(sys._MEIPASS, 'static')
     os.chdir(sys._MEIPASS)
-else: #if __file__:
-    #template_folder="templates_standalone"
+else:
     folderPath = os.path.dirname(pathlib.Path(__file__))
     template_folder=os.path.join(folderPath, 'templates')
     static_folder=os.path.join(folderPath, 'static')
-    os.chdir(folderPath)
 
 logging.info("template_folder: " + template_folder)
 logging.info("static_folder: " + static_folder)
