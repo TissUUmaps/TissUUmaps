@@ -2108,7 +2108,7 @@ interfaceUtils.createDownloadDropdownMarkers = function(options, settings) {
     interfaceUtils.createDownloadDropdown(downloadRow, options.title, callback, options.comment, dropdownOptions);
     //var label = document.getElementById("label_ISS_csv");
     if (options.autoLoad) {
-        setTimeout(function(){allback(null, {'selected':options["path"][0]})},500);
+        setTimeout(function(){callback(null, {'selected':options["path"][0]})},500);
     }
     //else { label.innerHTML = "Or import gene expression from CSV file:"; }
 }
