@@ -133,7 +133,7 @@ def loaddata (images=[], csvFiles=[], xSelector="x", ySelector="y", keySelector=
                 "pie_check": piechartSelector!=None,
                 "scale_check": scaleSelector!=None,
                 "shape_gr": shapeSelector==None and fixedShape==None,
-                "shape_gr_rand": False,
+                "shape_gr_rand": shapeSelector==None and fixedShape==None,
                 "shape_gr_dict": False,
                 "shape_col": shapeSelector!=None,
                 "shape_fixed": fixedShape!=None
