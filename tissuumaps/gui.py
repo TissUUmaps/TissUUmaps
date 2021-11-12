@@ -7,6 +7,7 @@ from PyQt5 import QtGui
 from PyQt5.QtGui import QDesktopServices
 from optparse import OptionParser
 
+import pathlib
 from pathlib import Path
 from urllib.parse import urlparse
 from urllib.parse import parse_qs
@@ -21,6 +22,18 @@ import urllib.request
 import os
 import json
 
+# determine if application is a script file or frozen exe
+if getattr(sys, 'frozen', False):
+    template_folder=os.path.join(sys._MEIPASS, 'templates')
+    static_folder=os.path.join(sys._MEIPASS, 'static')
+    os.chdir(sys._MEIPASS)
+else: #if __file__:
+    #template_folder="templates_standalone"
+    folderPath = os.path.dirname(pathlib.Path(__file__))
+    template_folder=os.path.join(folderPath, 'templates')
+    static_folder=os.path.join(folderPath, 'static')
+    os.chdir(folderPath)
+    
 from tissuumaps import views
 
 class CustomWebEnginePage(QWebEnginePage):
