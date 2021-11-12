@@ -1,0 +1,8 @@
+{% for associated_image in associated_images %}
+    <h3>{{ associated_image.name }}</h3>
+    <img src="data:image/png;base64,{{ associated_image.content }}" style="max-width:100%;max-height:400px;"/>
+{% endfor %}
+<h3>Properties</h3>
+{% for key, value in properties.items() %}
+    <small>{{key}}: {{value}}</small><br/>
+{% endfor %}

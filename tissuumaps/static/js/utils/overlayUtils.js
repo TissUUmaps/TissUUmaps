@@ -96,7 +96,9 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
     td_opacity.appendChild(opacity);
     td_opacity.classList.add("text-center");
     tileSource = tileSource.replace(/\\/g, '\\\\');
-    tr.innerHTML = "<td>" + layerName + "</td>";
+    var td_name = HTMLElementUtils.createElement({kind:"td",extraAttributes:{"data-source":tileSource, "class":"layerSettingButton"}});
+    td_name.innerHTML = layerName;
+    tr.appendChild(td_name);
     tr.appendChild(td_visible);
     tr.appendChild(td_opacity);
 

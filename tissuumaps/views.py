@@ -4,6 +4,7 @@ from functools import wraps
 import gzip
 import importlib
 import io
+import base64
 import json
 import os
 import threading
@@ -121,23 +122,23 @@ class ImageConverter:
             def convertThread():
                 try:
                     imgVips = pyvips.Image.new_from_file(self.inputImage)
-                    minVal = imgVips.percent(0)
-                    maxVal = imgVips.percent(99)
+                    minVal = imgVips.percent(0.5)
+                    maxVal = imgVips.percent(99.5)
                     if minVal == maxVal:
                         minVal = 0
                         maxVal = 255
-                    imgVips = (255.0 * (imgVips - minVal)) / (maxVal - minVal)
-                    imgVips = (imgVips < 0).ifthenelse(0, imgVips)
-                    imgVips = (imgVips > 255).ifthenelse(255, imgVips)
-                    imgVips = imgVips.scaleimage()
+                    if (imgVips.percent(0.01) < 0 or imgVips.percent(99.99) > 255):
+                        imgVips = (255.0 * (imgVips - minVal)) / (maxVal - minVal)
+                        imgVips = (imgVips < 0).ifthenelse(0, imgVips)
+                        imgVips = (imgVips > 255).ifthenelse(255, imgVips)
+                        imgVips = imgVips.scaleimage()
                     imgVips.tiffsave(
                         self.outputImage,
                         pyramid=True,
                         tile=True,
                         tile_width=256,
                         tile_height=256,
-                        properties=True,
-                        bitdepth=8,
+                        properties=True
                     )
                 except:
                     logging.error("Impossible to convert image using VIPS:")
@@ -160,7 +161,7 @@ class _SlideCache(object):
         self._lock = Lock()
         self._cache = OrderedDict()
 
-    def get(self, path):
+    def get(self, path, originalPath):
         with self._lock:
             if path in self._cache:
                 # Move to end of LRU
@@ -182,7 +183,7 @@ class _SlideCache(object):
 
         slide.associated_images = {}
         for name, image in slide.osr.associated_images.items():
-            slide.associated_images[name] = DeepZoomGenerator(ImageSlide(image))
+            slide.associated_images[name] = image
 
         try:
             mpp_x = osr.properties[openslide.PROPERTY_NAME_MPP_X]
@@ -206,45 +207,14 @@ class _SlideCache(object):
         except:
             slide.properties = osr.properties
         slide.tileLock = Lock()
+        if originalPath:
+            slide.properties = {"Path":originalPath}
         with self._lock:
             if path not in self._cache:
                 while len(self._cache) >= self.cache_size:
                     self._cache.popitem(last=False)
                 self._cache[path] = slide
         return slide
-
-
-class _Directory(object):
-    def __init__(self, basedir, relpath="", max_depth=4, filter=None):
-        self.name = os.path.basename(relpath)
-        self.children = []
-        if max_depth != 0:
-            try:
-                for name in sorted(os.listdir(os.path.join(basedir, relpath))):
-                    if ".tissuumaps" in name:
-                        continue
-                    if "private" in name:
-                        continue
-                    cur_relpath = os.path.join(relpath, name)
-                    cur_path = os.path.join(basedir, cur_relpath)
-                    if os.path.isdir(cur_path):
-                        cur_dir = _Directory(
-                            basedir, cur_relpath, max_depth=max_depth - 1, filter=filter
-                        )
-                        if cur_dir.children:
-                            self.children.append(cur_dir)
-                    elif filter != None and filter not in name:
-                        continue
-                    elif OpenSlide.detect_format(cur_path):
-                        self.children.append(_SlideFile(cur_relpath))
-                    elif imghdr.what(cur_path):
-                        self.children.append(_SlideFile(cur_relpath))
-                    elif ".tmap" in cur_path:
-                        self.children.append(_SlideFile(cur_relpath))
-
-            except:
-                pass
-
 
 class _SlideFile(object):
     def __init__(self, relpath):
@@ -290,7 +260,7 @@ def page_not_found(e):
         #)
 
 
-def _get_slide(path):
+def _get_slide(path, originalPath=None):
     path = os.path.abspath(os.path.join(app.basedir, path))
     if not path.startswith(app.basedir):
         # Directory traversal
@@ -298,7 +268,7 @@ def _get_slide(path):
     if not os.path.exists(path):
         abort(404)
     try:
-        slide = app.cache.get(path)
+        slide = app.cache.get(path, originalPath)
         slide.filename = os.path.basename(path)
         return slide
     except:
@@ -313,9 +283,8 @@ def _get_slide(path):
             )
             if not os.path.isdir(os.path.dirname(path) + "/.tissuumaps/"):
                 os.makedirs(os.path.dirname(path) + "/.tissuumaps/")
-            path = ImageConverter(path, newpath).convert()
-            # imgPath = imgPath.replace("\\","/")
-            return _get_slide(path)
+            tifpath = ImageConverter(path, newpath).convert()
+            return _get_slide(tifpath, path)
         except:
             import traceback
 
@@ -345,15 +314,7 @@ def slide(filename):
     path = os.path.abspath(os.path.join(app.basedir, path, filename))
     slide = _get_slide(path)
     slide_url = os.path.basename(path)+".dzi"#url_for("dzi", path=path)
-    slide_properties = slide.properties
-
-    associated_urls = dict(
-        (name, url_for("dzi_asso", path=path, associated_name=name))
-        for name in slide.associated_images.keys()
-    )
-    # folder_dir = _Directory(os.path.abspath(app.basedir)+"/",
-    #                        os.path.dirname(path))
-    #
+    
     jsonProject={
         "layers": [
             {
@@ -367,7 +328,6 @@ def slide(filename):
         plugins=app.config["PLUGINS"],
         jsonProject=jsonProject,
         slide_mpp=slide.mpp,
-        associated=associated_urls,
         isStandalone=app.config["isStandalone"]
         )
 
@@ -485,17 +445,25 @@ def dzi(filename):
     return resp
 
 
-@app.route("/<path:filename>.dzi/<path:associated_name>")
+@app.route("/<path:filename>.dzi/info")
 @requires_auth
-def dzi_asso(filename, associated_name):
+def dzi_asso(filename):
     path = getPathFromReferrer(request, filename)
     slide = _get_slide(path)
-    associated_image = slide.associated_images[associated_name]
-    dzg = associated_image  # DeepZoomGenerator(ImageSlide(associated_image))
-    format = app.config["DEEPZOOM_FORMAT"]
-    resp = make_response(dzg.get_dzi(format))
-    resp.mimetype = "application/xml"
+    associated_images = []
+    for key, im in slide.associated_images.items():
+        output = io.BytesIO ()
+        im.save(output, "PNG")
+        b64 = base64.b64encode(output.getvalue()).decode()
+        associated_images.append({"name":key,"content":b64})
+        output.close()
+    return render_template(
+            "slide_prop.html",
+            associated_images=associated_images,
+            properties=slide.properties,
+        )
     return resp
+
 
 
 @app.route("/<path:filename>_files/<int:level>/<int:col>_<int:row>.<format>")

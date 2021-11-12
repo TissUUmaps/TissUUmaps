@@ -2,6 +2,14 @@ flask = {}
 
 flask.init = function () {
     
+    $(document).on( "click", ".layerSettingButton", function(){
+
+        interfaceUtils.alert(
+            `
+            <iframe src='${$(this).data('source')}/info' style="width:100%;min-height:500px;"></iframe>
+            `
+        )
+    } );
 }
 
 flask.standalone = {}
