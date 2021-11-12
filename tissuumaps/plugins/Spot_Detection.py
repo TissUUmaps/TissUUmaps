@@ -218,6 +218,7 @@ class Plugin ():
             logging.error ("No arguments, aborting.")
             abort(500)
         relativepath = unquote(jsonParam["path"])
+        pathFormat = unquote(jsonParam["pathFormat"])
         logging.debug ('jsonParam["path"]', jsonParam["path"])
         if (relativepath != ""):
             if relativepath[0] == "/":
@@ -225,7 +226,7 @@ class Plugin ():
         path = os.path.abspath(os.path.join(self.app.basedir, relativepath))
         absoluteRoot = os.path.abspath(self.app.basedir)
         logging.debug ("path",relativepath, path, absoluteRoot)
-        tifFiles_ = glob.glob(path + "/*")
+        tifFiles_ = glob.glob(path + "/" + pathFormat)
         tifFiles = []
         for tifFile in tifFiles_:
             if tifFile in tifFiles:
@@ -240,9 +241,8 @@ class Plugin ():
         csvFiles = glob.glob(path + "/*.csv")
         csvFilesDesc = []
         for csvFile in csvFiles:
-            filePath = csvFile.replace(absoluteRoot,"")
-            if (filePath[0] != "/" and filePath[0] != "\\" ):
-                filePath = "\\" + filePath
+            filePath = os.path.relpath(csvFile, path)
+            filePath = filePath.replace("\\","/")
             csvFilesDesc.append({
                 "path": filePath,
                 "title":"Download " + os.path.basename(csvFile),
@@ -256,6 +256,7 @@ class Plugin ():
         channels = []
         colors = ["100,0,0","0,100,0","0,0,100","100,100,0","100,0,100","0,100,100"]
         for fileIndex, filename in enumerate(sorted(tifFiles)):
+            print (filename)
             basename = os.path.basename (filename)
             if "_" in basename:
                 channel = os.path.splitext (basename)[0].split("_")[1]
@@ -267,13 +268,14 @@ class Plugin ():
                 round = ""
             if channel not in channels:
                 channels.append(channel)
-            filePath = filename.replace(absoluteRoot,"")
+            filePath = os.path.relpath(filename, path)
             filePath = filePath.replace("\\","/")
+            print (filename, relativepath, filePath)
             if (filePath[0] != "/"):
                 filePath = "/" + filePath
             layer = {
                 "name":basename,
-                "path":filePath
+                "tileSource":filePath + ".dzi"
             }
             logging.debug (channels, channel)
             logging.debug (channels.index(channel)%len(colors))

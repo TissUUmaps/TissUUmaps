@@ -37,6 +37,7 @@
             input112=HTMLElementUtils.createElement({"kind":"input", "id":"Spot_Detection_bboxSize", "extraAttributes":{ "class":"form-text-input form-control", "type":"number", "value":Spot_Detection._bboxSize}});
             
     input112.addEventListener("change",(event)=>{
+        console.log(input112.value, parseInt(input112.value));
         Spot_Detection._bboxSize = parseInt(input112.value);
     });
 
@@ -71,6 +72,19 @@
         Spot_Detection._only_picked = input411.checked;
         console.log(input411.checked, Spot_Detection._only_picked);
     });
+
+    row5=HTMLElementUtils.createRow({});
+        col51=HTMLElementUtils.createColumn({"width":12});
+            button511=HTMLElementUtils.createButton({"extraAttributes":{ "class":"btn btn-primary mx-2"}})
+            button511.innerText = "Load images";
+
+    button511.addEventListener("click",(event)=>{
+        interfaceUtils.prompt("Give the path format of your images, use * for numbers:","Round*_*","Load images")
+        .then((pathFormat) => {
+            Spot_Detection.loadImages(pathFormat)
+        })
+    });
+
     container.innerHTML = "";
     // container.appendChild(row0);
     container.appendChild(row4);
@@ -89,16 +103,22 @@
         row3.appendChild(col31);
             col31.appendChild(label312);
             col31.appendChild(input312);
+    container.appendChild(row5);
+        row5.appendChild(col51);
+            col51.appendChild(button511);
      Spot_Detection.run();
  }
-Spot_Detection.loadImages = function () {
+
+Spot_Detection.loadImages = function (pathFormat) {
     console.log("Load Images");
     var op = tmapp["object_prefix"];
     var vname = op + "_viewer";
 
     subfolder = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
     //subfolder = subfolder.substring(0, subfolder.lastIndexOf('/') + 1);
-    $("#loadingModal").show();
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    const path = urlParams.get('path')
     $.ajax(
         {
             // Post select to url.
@@ -106,12 +126,17 @@ Spot_Detection.loadImages = function () {
             url : '/plugins/Spot_Detection/importFolder',
             contentType: 'application/json; charset=utf-8',
             data : JSON.stringify({
-                    'path' : subfolder
+                    'path' : path,
+                    'pathFormat': pathFormat
             }),
             success : function(data)
             {
-                $("#loadingModal").hide();
-                Spot_Detection.loadState(data);
+                projectUtils.loadProject(data);
+                setTimeout(function() {
+                    Spot_Detection.changeOrder(false);
+                    $("#Spot_Detection_order_rounds")[0].value = JSON.stringify(Spot_Detection._order_rounds);
+                    $("#Spot_Detection_order_channels")[0].value = JSON.stringify(Spot_Detection._order_channels);
+                }, 500);
             },
             complete : function(data)
             {
@@ -200,14 +225,6 @@ Spot_Detection.changeOrder = function (doPrompt) {
     });
     Spot_Detection._order_rounds = rounds;
     Spot_Detection._order_channels = channels;
-    if (doPrompt) {
-        Spot_Detection._order_rounds = prompt("Can you check order of rounds?",rounds.join(";")).split(";");
-        Spot_Detection._order_channels = prompt("Can you check order of channels?",channels.join(";")).split(";");
-    }
-}
-
-Spot_Detection.changeBboxSize = function (doPrompt) {
-    Spot_Detection._bboxSize = parseInt(prompt("Select the window region size:",Spot_Detection._bboxSize));
 }
 
 Spot_Detection.getMarkers = function (bbox) {
