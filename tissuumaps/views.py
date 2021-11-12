@@ -377,7 +377,7 @@ def slide(filename):
 def ping():
     return make_response("pong")
 
-def getPathFromReferer(request, filename):
+def getPathFromReferrer(request, filename):
     try:
         parsed_url = urlparse(request.referrer)
         path = parse_qs(parsed_url.query)['path'][0]
@@ -386,6 +386,7 @@ def getPathFromReferer(request, filename):
         path = os.path.abspath(os.path.join(app.basedir, filename))
     if not path:
         path = os.path.abspath(os.path.join(app.basedir, filename))
+    logging.debug(f"Path from referrer: {path}")
     return path
 
 
@@ -429,7 +430,7 @@ def tmapFile(filename):
 @app.route("/<path:filename>.csv")
 @requires_auth
 def csvFile(filename):
-    completePath = getPathFromReferer(request, filename) + ".csv"
+    completePath = getPathFromReferrer(request, filename) + ".csv"
     directory = os.path.dirname(completePath)
     filename = os.path.basename(completePath)
     if os.path.isfile(completePath):
@@ -464,7 +465,7 @@ def csvFile(filename):
 @app.route("/<path:filename>.json")
 @requires_auth
 def jsonFile(filename):
-    completePath = getPathFromReferer(request, filename) + ".json"
+    completePath = getPathFromReferrer(request, filename) + ".json"
     directory = os.path.dirname(completePath)
     filename = os.path.basename(completePath)
     if os.path.isfile(completePath):
@@ -476,7 +477,7 @@ def jsonFile(filename):
 @app.route("/<path:filename>.dzi")
 @requires_auth
 def dzi(filename):
-    path = getPathFromReferer(request, filename)
+    path = getPathFromReferrer(request, filename)
     slide = _get_slide(path)
     format = app.config["DEEPZOOM_FORMAT"]
     resp = make_response(slide.get_dzi(format))
@@ -487,7 +488,7 @@ def dzi(filename):
 @app.route("/<path:filename>.dzi/<path:associated_name>")
 @requires_auth
 def dzi_asso(filename, associated_name):
-    path = getPathFromReferer(request, filename)
+    path = getPathFromReferrer(request, filename)
     slide = _get_slide(path)
     associated_image = slide.associated_images[associated_name]
     dzg = associated_image  # DeepZoomGenerator(ImageSlide(associated_image))
@@ -499,7 +500,7 @@ def dzi_asso(filename, associated_name):
 
 @app.route("/<path:filename>_files/<int:level>/<int:col>_<int:row>.<format>")
 def tile(filename, level, col, row, format):
-    path = getPathFromReferer(request, filename)
+    path = getPathFromReferrer(request, filename)
     slide = _get_slide(path)
     format = format.lower()
     # if format != 'jpeg' and format != 'png':
@@ -524,7 +525,7 @@ def tile(filename, level, col, row, format):
     "/<path:filename>.dzi/<path:associated_name>_files/<int:level>/<int:col>_<int:row>.<format>"
 )
 def tile_asso(filename, associated_name, level, col, row, format):
-    path = getPathFromReferer(request, filename)
+    path = getPathFromReferrer(request, filename)
     slide = _get_slide(path).associated_images[associated_name]
     format = format.lower()
     if format != "jpeg" and format != "png":
