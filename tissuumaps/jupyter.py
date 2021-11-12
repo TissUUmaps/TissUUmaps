@@ -27,6 +27,7 @@ class TissUUmapsViewer ():
         src = "http://localhost:%d/%s" % (self.server.port, self.image)
         self.htmlIFrame = HTML(iframe.format(width="100%", height=str(height)+"px", src=src, id=self.id))
         display(self.htmlIFrame)
+        time.sleep(2)
     
     #def sendJavascript(self):
     #    display(Javascript("document.getElementById('"+self.id+"').contentWindow.postMessage({'module':'HelloWorkd'},'*');"))
@@ -68,6 +69,7 @@ class TissUUmapsServer ():
         return viewer
 
 def opentmap (path, port=5100, height=700):
+    path = os.path.abspath(path)
     parts = Path(path).parts
     server = TissUUmapsServer(slideDir=parts[0], port=port)
     server.viewer(parts[-1]+"?path="+os.path.join(*parts[1:-1]), height)
@@ -77,12 +79,20 @@ def loaddata (images=[], csvFiles=[], xSelector="x", ySelector="y", keySelector=
               fixedShape=None, scaleFactor=1,
               colormap=None,
               compositeMode="source-over",
-              port=5100, height=700):
+              boundingBox=None,
+              port=5100, height=700, tmapFilename="_project"):
+    # make all paths absolute:
+    images = [os.path.abspath(f) for f in images]
+    csvFiles = [os.path.abspath(f) for f in csvFiles]
+    
+    # make all paths relative to project file:
     rootPath = os.path.commonpath(
         [os.path.dirname(f) for f in images] + [os.path.dirname(f) for f in csvFiles]
     )
     images = [os.path.relpath(f, rootPath) for f in images]
     csvFiles = [os.path.relpath(f, rootPath) for f in csvFiles]
+
+    # Create json TMAP file:
     jsonTmap = {
         "compositeMode": compositeMode,
         "filename": "",
@@ -92,8 +102,11 @@ def loaddata (images=[], csvFiles=[], xSelector="x", ySelector="y", keySelector=
                 "tileSource": layer + ".dzi"
             } for layer in images
         ],
+        "hideTabs": True,
         "markerFiles": []
     }
+    if boundingBox:
+        jsonTmap["boundingBox"] = {"x":boundingBox[0],"y":boundingBox[1],"width":boundingBox[2],"height":boundingBox[3]}
     if csvFiles:
         expectedHeader = {
                 "X": xSelector,
@@ -114,9 +127,9 @@ def loaddata (images=[], csvFiles=[], xSelector="x", ySelector="y", keySelector=
         expectedRadios = {
                 "cb_col": colorSelector!=None,
                 "cb_gr": colorSelector==None,
-                "cb_gr_rand": True,
+                "cb_gr_rand": False,
                 "cb_gr_dict": False,
-                "cb_gr_key": False,
+                "cb_gr_key": True,
                 "pie_check": piechartSelector!=None,
                 "scale_check": scaleSelector!=None,
                 "shape_gr": shapeSelector==None and fixedShape==None,
@@ -135,8 +148,10 @@ def loaddata (images=[], csvFiles=[], xSelector="x", ySelector="y", keySelector=
             "hideSettings": True,
             "expectedHeader": expectedHeader,
             "expectedRadios": expectedRadios,
+            "uid": "uniquetab"
         }]
-    tmapFile = rootPath + "/_project.tmap"
+    tmapFile = os.path.join(rootPath,f"{tmapFilename}.tmap")
+    print ("Creating project file", tmapFile)
     with open(tmapFile, "w") as f:
         json.dump(jsonTmap, f)
     opentmap (os.path.abspath(tmapFile), port, height)
