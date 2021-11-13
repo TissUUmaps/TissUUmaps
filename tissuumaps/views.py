@@ -161,7 +161,6 @@ class _SlideCache(object):
         self._lock = Lock()
         self._cache = OrderedDict()
 
-    def get(self, path, originalPath):
     def get(self, path, originalPath=None):
         with self._lock:
             if path in self._cache:
