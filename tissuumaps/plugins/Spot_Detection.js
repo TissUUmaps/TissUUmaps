@@ -34,10 +34,10 @@
         col11=HTMLElementUtils.createColumn({"width":12});
             label112=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":"Spot_Detection_bboxSize"}});
             label112.innerHTML="Box size:";    
-            input112=HTMLElementUtils.createElement({"kind":"input", "id":"Spot_Detection_bboxSize", "extraAttributes":{ "class":"form-text-input form-control", "type":"number", "value":Spot_Detection._bboxSize}});
+            var input112=HTMLElementUtils.createElement({"kind":"input", "id":"Spot_Detection_bboxSize", "extraAttributes":{ "class":"form-text-input form-control", "type":"number", "value":Spot_Detection._bboxSize}});
             
     input112.addEventListener("change",(event)=>{
-        console.log(input112.value, parseInt(input112.value));
+        console.log("Spot_Detection._bboxSize", input112.value, parseInt(input112.value));
         Spot_Detection._bboxSize = parseInt(input112.value);
     });
 
@@ -45,7 +45,7 @@
         col21=HTMLElementUtils.createColumn({"width":12});
             label212=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":"Spot_Detection_order_rounds"}});
             label212.innerHTML="Round order:";    
-            input212=HTMLElementUtils.createElement({"kind":"input", "id":"Spot_Detection_order_rounds", "extraAttributes":{ "class":"form-text-input form-control", "type":"text", "value":JSON.stringify(Spot_Detection._order_rounds)}});
+            var input212=HTMLElementUtils.createElement({"kind":"input", "id":"Spot_Detection_order_rounds", "extraAttributes":{ "class":"form-text-input form-control", "type":"text", "value":JSON.stringify(Spot_Detection._order_rounds)}});
             
     input212.addEventListener("change",(event)=>{
         Spot_Detection._order_rounds = JSON.parse(input212.value);
@@ -55,7 +55,7 @@
         col31=HTMLElementUtils.createColumn({"width":12});
             label312=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":"Spot_Detection_order_channels"}});
             label312.innerHTML="Channel order:";    
-            input312=HTMLElementUtils.createElement({"kind":"input", "id":"Spot_Detection_order_channels", "extraAttributes":{ "class":"form-text-input form-control", "type":"text", "value":JSON.stringify(Spot_Detection._order_channels)}});
+            var input312=HTMLElementUtils.createElement({"kind":"input", "id":"Spot_Detection_order_channels", "extraAttributes":{ "class":"form-text-input form-control", "type":"text", "value":JSON.stringify(Spot_Detection._order_channels)}});
             
     input312.addEventListener("change",(event)=>{
         Spot_Detection._order_channels = JSON.parse(input312.value);
@@ -63,7 +63,7 @@
 
     row4=HTMLElementUtils.createRow({});
         col41=HTMLElementUtils.createColumn({"width":12});
-            input411=HTMLElementUtils.createElement({"kind":"input", "id":"Spot_Detection_only_picked","extraAttributes":{"class":"form-check-input","type":"checkbox"}});
+            var input411=HTMLElementUtils.createElement({"kind":"input", "id":"Spot_Detection_only_picked","extraAttributes":{"class":"form-check-input","type":"checkbox"}});
             label411=HTMLElementUtils.createElement({"kind":"label", "extraAttributes":{ "for":"Spot_Detection_only_picked" }});
             label411.innerHTML="&nbsp;Only show central selected marker"
 
@@ -235,6 +235,12 @@ Spot_Detection.getMarkers = function (bbox) {
 
     markersInViewportBounds = [];
     for (dataset in dataUtils.data) {
+        if (Spot_Detection._only_picked && glUtils._pickedMarker[0] != -1) {
+            pickedMarker = dataUtils.data[glUtils._pickedMarker[0]]["_processeddata"][glUtils._pickedMarker[1]]
+        }
+        else {
+            pickedMarker = null;
+        }
         var allkeys=Object.keys(dataUtils.data[dataset]["_groupgarden"]);
         for (var codeIndex in dataUtils.data[dataset]["_groupgarden"]) {
             var  inputs = interfaceUtils._mGenUIFuncs.getGroupInputs(dataset, codeIndex);
@@ -254,7 +260,9 @@ Spot_Detection.getMarkers = function (bbox) {
                     m.global_Y_pos = parseFloat(m[dataUtils.data[dataset]["_Y"]])
                 })
                 if (Spot_Detection._only_picked) {
-                    markersInViewportBounds = markersInViewportBounds.filter(function(p){return p[""] == glUtils._pickedMarker[1] && dataset==glUtils._pickedMarker[0]})
+                    console.log(glUtils._pickedMarker);
+                    console.log(markersInViewportBounds);
+                    markersInViewportBounds = markersInViewportBounds.filter(function(p){return p == pickedMarker})
                 }
                 markersInViewportBounds = markersInViewportBounds.concat(newMarkers)
             }

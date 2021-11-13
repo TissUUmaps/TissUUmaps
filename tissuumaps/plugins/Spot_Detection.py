@@ -57,7 +57,6 @@ class Plugin ():
     def _get_slide(self, path):
         path = os.path.abspath(os.path.join(self.app.basedir, path))
         logging.debug (path)
-        print (path)
         if not path.startswith(self.app.basedir):
             # Directory traversal
             logging.error ("Directory traversal, aborting.")
@@ -119,7 +118,6 @@ class Plugin ():
         singleHeight = tiles[rounds[0]][channels[0]].height
         
         im = self.getConcat(tiles, rounds, channels).convert("L")
-        print (im)
         fig = plt.figure(figsize=(5, 4), dpi=80)
         ax = fig.add_subplot(111)
         #plt.axis('off')
@@ -256,7 +254,6 @@ class Plugin ():
         channels = []
         colors = ["100,0,0","0,100,0","0,0,100","100,100,0","100,0,100","0,100,100"]
         for fileIndex, filename in enumerate(sorted(tifFiles)):
-            print (filename)
             basename = os.path.basename (filename)
             if "_" in basename:
                 channel = os.path.splitext (basename)[0].split("_")[1]
@@ -270,7 +267,7 @@ class Plugin ():
                 channels.append(channel)
             filePath = os.path.relpath(filename, path)
             filePath = filePath.replace("\\","/")
-            print (filename, relativepath, filePath)
+            logging.debug (filename, relativepath, filePath)
             if (filePath[0] != "/"):
                 filePath = "/" + filePath
             layer = {
