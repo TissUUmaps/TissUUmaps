@@ -162,6 +162,7 @@ class _SlideCache(object):
         self._cache = OrderedDict()
 
     def get(self, path, originalPath):
+    def get(self, path, originalPath=None):
         with self._lock:
             if path in self._cache:
                 # Move to end of LRU
@@ -521,7 +522,8 @@ def load_plugin(name):
 
 @app.route("/plugins/<path:pluginName>.js")
 def runPlugin(pluginName):
-    directory = "plugins"
+    directory = app.config["PLUGIN_FOLDER"]
+    
     filename = pluginName + ".js"
     completePath = os.path.abspath(os.path.join(directory, pluginName + ".js"))
     directory = os.path.dirname(completePath)

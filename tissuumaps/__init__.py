@@ -38,11 +38,13 @@ PLUGINS = []
 if getattr(sys, 'frozen', False):
     template_folder=os.path.join(sys._MEIPASS, 'templates')
     static_folder=os.path.join(sys._MEIPASS, 'static')
+    plugins_folder=os.path.join(sys._MEIPASS, 'plugins')
     os.chdir(sys._MEIPASS)
 else:
     folderPath = os.path.dirname(pathlib.Path(__file__))
     template_folder=os.path.join(folderPath, 'templates')
     static_folder=os.path.join(folderPath, 'static')
+    plugins_folder=os.path.join(folderPath, 'plugins')
 
 logging.info("template_folder: " + template_folder)
 logging.info("static_folder: " + static_folder)
@@ -50,13 +52,9 @@ logging.info("static_folder: " + static_folder)
 app = Flask(__name__,template_folder=template_folder,static_folder=static_folder)
 app.config.from_object(__name__)
 app.config.from_envvar('DEEPZOOM_MULTISERVER_SETTINGS', silent=True)
+app.config["PLUGIN_FOLDER"] = plugins_folder
 
-if getattr(sys, 'frozen', False):
-    plugins_folder=os.path.join(sys._MEIPASS, 'plugins')
-elif __file__:
-    plugins_folder="plugins"
-
-for module in glob.glob(plugins_folder + "/*.py"):
+for module in glob.glob(app.config["PLUGIN_FOLDER"] + "/*.py"):
     if "__init__.py" in module:
         continue
     app.config["PLUGINS"].append(os.path.splitext(os.path.basename(module))[0])
