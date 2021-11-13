@@ -148,7 +148,7 @@ def loaddata (images=[], csvFiles=[], xSelector="x", ySelector="y", keySelector=
             "hideSettings": True,
             "expectedHeader": expectedHeader,
             "expectedRadios": expectedRadios,
-            "uid": "uniquetab"
+            "uid": "markers"
         }]
     tmapFile = os.path.join(rootPath,f"{tmapFilename}.tmap")
     print ("Creating project file", tmapFile)
