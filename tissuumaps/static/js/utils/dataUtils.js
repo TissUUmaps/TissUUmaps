@@ -153,15 +153,30 @@ dataUtils.updateViewOptions = function(data_id){
     }
     console.log(tmapp["ISS_viewer"].world._items.length == 0, tmapp["ISS_viewer"].world._items);
     if (tmapp["ISS_viewer"].world._items.length == 0) {
-        width = Math.max.apply(Math, dataUtils.data[data_id]["_processeddata"].map(function(o) { return o[data_obj["_X"]]; }))
-        height = Math.max.apply(Math, dataUtils.data[data_id]["_processeddata"].map(function(o) { return o[data_obj["_Y"]]; }))
+        maxX = Math.max.apply(Math, dataUtils.data[data_id]["_processeddata"].map(function(o) { return o[data_obj["_X"]]; }))
+        maxY = Math.max.apply(Math, dataUtils.data[data_id]["_processeddata"].map(function(o) { return o[data_obj["_Y"]]; }))
+        minX = Math.min.apply(Math, dataUtils.data[data_id]["_processeddata"].map(function(o) { return o[data_obj["_X"]]; }))
+        minY = Math.min.apply(Math, dataUtils.data[data_id]["_processeddata"].map(function(o) { return o[data_obj["_Y"]]; }))
+        
+        if (minX <0 || maxX < 1000) {
+            for (o of dataUtils.data[data_id]["_processeddata"]) {
+                o[data_obj["_X"]] = 1200 * (o[data_obj["_X"]] - minX) / (maxX - minX);
+            }
+            maxX = Math.max.apply(Math, dataUtils.data[data_id]["_processeddata"].map(function(o) { return o[data_obj["_X"]]; }))
+        }
+        if (minY <0 || maxY < 1000) {
+            for (o of dataUtils.data[data_id]["_processeddata"]) {
+                o[data_obj["_Y"]] = 1200 * (o[data_obj["_Y"]] - minY) / (maxY - minY);
+            }
+            maxY = Math.max.apply(Math, dataUtils.data[data_id]["_processeddata"].map(function(o) { return o[data_obj["_Y"]]; }))
+        }
         // We load an empty image at the size of the data.
-        console.log(width , height);
+
         tmapp["ISS_viewer"].addTiledImage ({
             tileSource: {
                 getTileUrl: function(z, x, y){return null},
-                height: parseInt(height*1.06),
-                width:  parseInt(width*1.06),
+                height: parseInt(maxY*1.06),
+                width:  parseInt(maxX*1.06),
                 tileSize: 256,
             },
             opacity: 0,

@@ -65,10 +65,11 @@ glUtils._markersVS = `
     attribute vec4 a_position;
     attribute float a_index;
     attribute float a_scale;
+    attribute float a_shape;
 
     varying vec4 v_color;
     varying vec2 v_shapeOrigin;
-    varying float v_shapeSector;
+    varying vec2 v_shapeSector;
     varying float v_shapeSize;
 
     #define SHAPE_INDEX_CIRCLE 7.0
@@ -108,11 +109,12 @@ glUtils._markersVS = `
         }
 
         if (u_usePiechartFromMarker && v_color.a > 0.0) {
-            v_shapeSector = a_position.z / 16777215.0;
+            v_shapeSector[0] = mod(a_shape, 4096.0) / 4095.0;
+            v_shapeSector[1] = floor(a_shape / 4096.0) / 4095.0;
             v_color.rgb = hex_to_rgb(a_position.w);
             v_color.a = SHAPE_INDEX_CIRCLE_NOSTROKE / 255.0;
             if (u_pickedMarker == a_index) v_color.a = SHAPE_INDEX_CIRCLE / 255.0;
-            if (u_alphaPass) v_color.a *= float(v_shapeSector > 0.999);
+            if (u_alphaPass) v_color.a *= float(v_shapeSector[1] > 0.999);  // FIXME
         }
 
         gl_Position = vec4(ndcPos, 0.0, 1.0);
@@ -138,20 +140,20 @@ glUtils._markersFS = `
 
     varying vec4 v_color;
     varying vec2 v_shapeOrigin;
-    varying float v_shapeSector;
+    varying vec2 v_shapeSector;
     varying float v_shapeSize;
 
     #define UV_SCALE 0.7
     #define SHAPE_GRID_SIZE 4.0
 
-    float sectorToAlpha(float sector, vec2 uv)
+    float sectorToAlpha(vec2 sector, vec2 uv)
     {
         vec2 dir = normalize(uv - 0.5);
-        float theta = atan(dir.x, dir.y);
-        return float(theta < (sector * 2.0 - 1.0) * 3.141592);
+        float theta = (atan(dir.x, dir.y) / 3.141592) * 0.5 + 0.5;
+        return float(theta > sector[0] && theta < sector[1]);
     }
 
-    float sectorToAlphaAA(float sector, vec2 uv, float delta)
+    float sectorToAlphaAA(vec2 sector, vec2 uv, float delta)
     {
         // This workaround avoids the problem with small pixel-wide
         // gaps that can appear between the first and last sector
@@ -374,7 +376,7 @@ glUtils.loadMarkers = function(uid) {
     const markerOpacity = dataUtils.data[uid]["_opacity"];
 
     // Create vertex data for markers
-    const positions = [], indices = [], scales = [];
+    const positions = [], indices = [], scales = [], shapes = [];
     if (usePiechartFromMarker) {
         const numSectors = markerData[0][sectorsPropertyName].split(";").length;
         for (let i = 0; i < numPoints; ++i) {
@@ -385,12 +387,15 @@ glUtils.loadMarkers = function(uid) {
                 hexColor = piechartPalette[j % piechartPalette.length];
                 positions[4 * k + 0] = markerData[i][xPosName] / imageWidth;
                 positions[4 * k + 1] = markerData[i][yPosName] / imageHeight;
-                positions[4 * k + 2] = barcodeToLUTIndex[markerData[i][keyName]] +
-                                       Math.floor(piechartAngles[j] * 4095.0) * 4096.0;
+                positions[4 * k + 2] = barcodeToLUTIndex[markerData[i][keyName]];
                 positions[4 * k + 3] = Number("0x" + hexColor.substring(1,7));
                 indices[k] = i;  // Store index needed for picking
+
                 if (useScaleFromMarker) scales[k] = markerData[i][scalePropertyName];
                 else scales[k] = 1.0;  // Marker scale factor
+
+                shapes[k] = Math.floor((j < numSectors - 1 ? piechartAngles[j + 1] : 0.0) * 4095.0) +
+                            Math.floor(piechartAngles[j] * 4095.0) * 4096.0;
             }
         }
         numPoints *= numSectors;
@@ -436,7 +441,7 @@ glUtils.loadMarkers = function(uid) {
         glUtils._textures[uid + "_colorscale"] = glUtils._createColorScaleTexture(gl);
 
     // Upload vertex data to buffer
-    const bytedata = new Float32Array(positions.concat(indices.concat(scales)));
+    const bytedata = new Float32Array(positions.concat(indices.concat(scales.concat(shapes))));
     gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_markers"]);
     gl.bufferData(gl.ARRAY_BUFFER, bytedata, gl.STATIC_DRAW);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
@@ -780,6 +785,7 @@ glUtils.drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
     const POSITION = gl.getAttribLocation(program, "a_position");
     const INDEX = gl.getAttribLocation(program, "a_index");
     const SCALE = gl.getAttribLocation(program, "a_scale");
+    const SECTOR = gl.getAttribLocation(program, "a_shape");
 
     gl.uniform2fv(gl.getUniformLocation(program, "u_imageSize"), glUtils._imageSize);
     gl.uniform4fv(gl.getUniformLocation(program, "u_viewportRect"), glUtils._viewportRect);
@@ -799,6 +805,11 @@ glUtils.drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
         gl.vertexAttribPointer(INDEX, 1, gl.FLOAT, false, 0, numPoints * 16);
         gl.enableVertexAttribArray(SCALE);
         gl.vertexAttribPointer(SCALE, 1, gl.FLOAT, false, 0, numPoints * 20);
+        gl.disableVertexAttribArray(SECTOR);
+        if (glUtils._usePiechartFromMarker[uid]) {
+            gl.enableVertexAttribArray(SECTOR);
+            gl.vertexAttribPointer(SECTOR, 1, gl.FLOAT, false, 0, numPoints * 24);
+        }
 
         gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
         gl.uniform2fv(gl.getUniformLocation(program, "u_markerScalarRange"), glUtils._markerScalarRange[uid]);
@@ -867,6 +878,7 @@ glUtils.drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) {
         gl.vertexAttribPointer(INDEX, 1, gl.FLOAT, false, 0, numPoints * 16);
         gl.enableVertexAttribArray(SCALE);
         gl.vertexAttribPointer(SCALE, 1, gl.FLOAT, false, 0, numPoints * 20);
+        // Note: sectors for piecharts are currently not used in the picking
 
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorLUT"]);
