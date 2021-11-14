@@ -110,3 +110,7 @@ flask.server.init = function () {
     },true);
 
 }
+
+function toggleNavbar(turn_on = null) {
+    return false;
+}

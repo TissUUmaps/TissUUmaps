@@ -45,8 +45,8 @@ class CustomWebEnginePage(QWebEnginePage):
             return False
         return True
     
-    def javaScriptConsoleMessage(self, level, msg, line, sourceID):
-        print (level, msg, line, sourceID)
+    #def javaScriptConsoleMessage(self, level, msg, line, sourceID):
+    #    print (level, msg, line, sourceID)
     
 class textWindow(QDialog):
     def __init__(self, parent, title, message):
@@ -63,6 +63,9 @@ class textWindow(QDialog):
         self.b.move(10,10)
         self.b.resize(400,200)
 
+#DEBUG_PORT = '5588'
+#DEBUG_URL = 'http://127.0.0.1:%s' % DEBUG_PORT
+#os.environ['QTWEBENGINE_REMOTE_DEBUGGING'] = DEBUG_PORT
 
 class MainWindow(QMainWindow):
     def __init__(self, qt_app, app, *args, **kwargs):
@@ -76,8 +79,8 @@ class MainWindow(QMainWindow):
         #self.status = QStatusBar()
         #self.setStatusBar(self.status)
         
-        bar = self.menuBar()
-        file = bar.addMenu("File")
+        self.bar = self.menuBar()
+        file = self.bar.addMenu("File")
 
         open = QAction(self.style().standardIcon(QStyle.SP_DialogOpenButton), "Open",self)
         open.setShortcut("Ctrl+O")
@@ -96,11 +99,7 @@ class MainWindow(QMainWindow):
         file.addAction(exit)
         exit.triggered.connect(self.close)
 
-        #edit = file.addMenu("Edit")
-        #edit.addAction("copy")
-        #edit.addAction("paste")
-        
-        plugins = bar.addMenu("Plugins")
+        plugins = self.bar.addMenu("Plugins")
         for pluginName in app.config["PLUGINS"]:
             plugin = QAction(pluginName,self)
             plugins.addAction(plugin)
@@ -126,7 +125,7 @@ class webEngine(QWebEngineView):
         self.webchannel.registerObject('backend', self)
         self.location = None
         self.mainWin = mainWin
-
+        
         self.mainWin.setWindowTitle("TissUUmaps")
         self.mainWin.resize(1024, 800)
         self.setZoomFactor(1.0)
@@ -134,6 +133,17 @@ class webEngine(QWebEngineView):
         self.page().profile().downloadRequested.connect(
             self.on_downloadRequested
         )
+        self.settings().setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)
+        def setfullscreen (request):
+            if self.mainWin.windowState() & Qt.WindowFullScreen:
+                self.mainWin.showMaximized()
+                self.mainWin.bar.setVisible(True)
+            else:
+                self.mainWin.showFullScreen()
+                self.mainWin.bar.setVisible(False)
+            request.accept()
+        self.page().fullScreenRequested.connect(setfullscreen)
+
         self.mainWin.setWindowIcon(QtGui.QIcon('static/misc/favicon.ico')) 
         #self.showMaximized()
     
@@ -409,7 +419,9 @@ def main():
     qInstallMessageHandler(lambda x,y,z: None)
 
     fmt = QtGui.QSurfaceFormat()
+    fmt.setColorSpace(QtGui.QSurfaceFormat.sRGBColorSpace);
     fmt.setVersion(4, 1)
+
     fmt.setProfile(QtGui.QSurfaceFormat.CoreProfile)
     fmt.setSamples(4)
     QtGui.QSurfaceFormat.setDefaultFormat(fmt)

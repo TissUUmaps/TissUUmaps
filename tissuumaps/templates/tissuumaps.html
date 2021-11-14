@@ -16,7 +16,6 @@
     {% if isStandalone %}
         <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
     {% endif %}
-    <script src="{{ url_for('static', filename='js/flask.js') }}"></script>
 </head>
 
 <body>
@@ -281,6 +280,7 @@
 <script src="static/js/utils/pluginUtils.js"></script>
 <script src="static/js/utils/projectUtils.js"></script>
 <script src="static/js/tmapp.js"></script>
+<script src="{{ url_for('static', filename='js/flask.js') }}"></script>
 <script>
 
     document.getElementById("project_title").innerText = "Project title";
