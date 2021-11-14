@@ -195,8 +195,11 @@ glUtils._pickingVS = `
     uniform vec2 u_pickingLocation;
     uniform float u_markerScale;
     uniform float u_globalMarkerScale;
+    uniform bool u_usePiechartFromMarker;
+    uniform bool u_useShapeFromMarker;
     uniform int u_op;
     uniform sampler2D u_colorLUT;
+    uniform sampler2D u_shapeAtlas;
 
     attribute vec4 a_position;
     attribute float a_index;
@@ -207,6 +210,9 @@ glUtils._pickingVS = `
     #define OP_CLEAR 0
     #define OP_WRITE_INDEX 1
 
+    #define UV_SCALE 0.7
+    #define SHAPE_INDEX_CIRCLE_NOSTROKE 16.0
+    #define SHAPE_GRID_SIZE 4.0
     #define DISCARD_VERTEX { gl_Position = vec4(2.0, 2.0, 2.0, 0.0); return; }
 
     vec3 hex_to_rgb(float v)
@@ -230,15 +236,32 @@ glUtils._pickingVS = `
             float shapeID = texture2D(u_colorLUT, vec2(barcodeID / 4095.0, 0.5)).a;
             if (shapeID == 0.0) DISCARD_VERTEX;
 
+            if (u_useShapeFromMarker) {
+                // Add one to marker index and normalize, to make things consistent
+                // with how marker visibility and shape is stored in the LUT
+                shapeID = (floor(a_position.z / 4096.0) + 1.0) / 255.0;
+            }
+
+            if (u_usePiechartFromMarker) shapeID = SHAPE_INDEX_CIRCLE_NOSTROKE / 255.0;
+
             vec2 canvasPos = (ndcPos * 0.5 + 0.5) * u_canvasSize;
             canvasPos.y = (u_canvasSize.y - canvasPos.y);  // Y-axis is inverted
             float pointSize = max(2.0, min(256.0, a_scale * u_markerScale * u_globalMarkerScale / u_viewportRect.w));
-            
-            // TODO This test works as an inside/outside test for the special
-            // case where the marker shape is round; for the general case, we
-            // would need to sample the shape texture of each marker.
-            if (length(canvasPos - u_pickingLocation) > pointSize * 0.4) DISCARD_VERTEX;
 
+            // Do coarse inside/outside test against bounding box for marker
+            vec2 uv = (canvasPos - u_pickingLocation) / pointSize + 0.5;
+            uv.y = (1.0 - uv.y);  // Flip y-axis to match gl_PointCoord behaviour
+            if (abs(uv.x - 0.5) > 0.5 || abs(uv.y - 0.5) > 0.5) DISCARD_VERTEX;
+
+            // Do fine-grained inside/outside test by sampling the shape texture
+            vec2 shapeOrigin = vec2(0.0);
+            shapeOrigin.x = mod((shapeID + 0.00001) * 255.0 - 1.0, SHAPE_GRID_SIZE);
+            shapeOrigin.y = floor(((shapeID + 0.00001) * 255.0 - 1.0) / SHAPE_GRID_SIZE);
+            uv = (uv - 0.5) * UV_SCALE + 0.5;
+            uv = (uv + shapeOrigin) * (1.0 / SHAPE_GRID_SIZE);
+            if (texture2D(u_shapeAtlas, uv).r < 0.5) DISCARD_VERTEX;
+
+            // Output marker index encoded as hexadecimal color
             v_color.rgb = hex_to_rgb(a_index + float(u_op));
         }
 
@@ -865,11 +888,13 @@ glUtils.drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) {
     gl.uniform2fv(gl.getUniformLocation(program, "u_canvasSize"), [gl.canvas.width, gl.canvas.height]);
     gl.uniform2fv(gl.getUniformLocation(program, "u_pickingLocation"), glUtils._pickingLocation);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["shapeAtlas"]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_shapeAtlas"), 2);
 
     glUtils._pickedMarker = [-1, -1];  // Reset to no picked marker
     for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
         if (numPoints == 0) continue;
-        gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_markers"]);
         gl.enableVertexAttribArray(POSITION);
@@ -880,6 +905,9 @@ glUtils.drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) {
         gl.vertexAttribPointer(SCALE, 1, gl.FLOAT, false, 0, numPoints * 20);
         // Note: sectors for piecharts are currently not used in the picking
 
+        gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
+        gl.uniform1i(gl.getUniformLocation(program, "u_usePiechartFromMarker"), glUtils._usePiechartFromMarker[uid]);
+        gl.uniform1i(gl.getUniformLocation(program, "u_useShapeFromMarker"), glUtils._useShapeFromMarker[uid]);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorLUT"]);
         gl.uniform1i(gl.getUniformLocation(program, "u_colorLUT"), 0);
@@ -976,10 +1004,12 @@ glUtils.pick = function(event) {
             });
             interfaceUtils._mGenUIFuncs.ActivateTab(uid);
             var tr = document.querySelectorAll('[data-uid="'+uid+'"][data-key="'+groupName+'"]')[0];
-            tr.scrollIntoView({block: "center",inline: "nearest"});
-            tr.classList.remove("transition_background")
-            tr.classList.add("table-primary")
-            setTimeout(function(){tr.classList.add("transition_background");tr.classList.remove("table-primary");},400);
+            if (tr != null) {
+                tr.scrollIntoView({block: "center",inline: "nearest"});
+                tr.classList.remove("transition_background")
+                tr.classList.add("table-primary")
+                setTimeout(function(){tr.classList.add("transition_background");tr.classList.remove("table-primary");},400);
+            }
         }
     }
 }

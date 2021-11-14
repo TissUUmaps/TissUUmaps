@@ -1906,6 +1906,17 @@ interfaceUtils._mGenUIFuncs.getGroupInputs = function(uid, key) {
     return inputs;
 }
 
+interfaceUtils.loadingModal = function(text, title) {
+    if (!title) title = "Loading";
+    if (!text) text = "Please wait...";
+    var modalUID = "loading"
+    
+    buttons=divpane=HTMLElementUtils.createElement({"kind":"div"});
+    content=HTMLElementUtils.createElement({"kind":"p", "extraAttributes":{"class":""}});
+    content.innerHTML = text;
+    return interfaceUtils.generateModal(title, content, buttons, modalUID, true);
+}
+
 interfaceUtils.alert = function(text, title) {
     if (!title) title = "Alert";
     var modalUID = "messagebox"
@@ -1984,7 +1995,8 @@ interfaceUtils.prompt = function (text, value, title) {
     })
 }
 
-interfaceUtils.generateModal = function(title, content, buttons, uid) {
+interfaceUtils.generateModal = function(title, content, buttons, uid, noClose) {
+    if (!noClose) noClose = False;
     if (!uid) uid = "default";
     modalWindow = document.getElementById(uid + "_modal");
     if (! modalWindow) {
@@ -1994,7 +2006,7 @@ interfaceUtils.generateModal = function(title, content, buttons, uid) {
                 <div class="modal-content">
                     <div class="modal-header cursor-pointer">
                         <h5 class="modal-title" id="${uid}_modalTitle"></h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="$('#${uid}_modal').modal('hide');;"></button>
+                        <button type="button" id="${uid}_closeButton" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="$('#${uid}_modal').modal('hide');;"></button>
                     </div>
                     <div class="modal-body" id="${uid}_modalContent">
                     </div>
@@ -2005,7 +2017,12 @@ interfaceUtils.generateModal = function(title, content, buttons, uid) {
         console.log(div)
         document.body.appendChild(div);
     }
-    
+    if (noClose) { 
+        document.getElementById(`${uid}_closeButton`).classList.add("d-none");
+    }
+    else {
+        document.getElementById(`${uid}_closeButton`).classList.remove("d-none");
+    }
     document.getElementById(`${uid}_modalTitle`).innerHTML = title;
     modalWindowContent = document.getElementById(`${uid}_modalContent`)
     modalWindowContent.innerHTML = "";
@@ -2015,7 +2032,8 @@ interfaceUtils.generateModal = function(title, content, buttons, uid) {
     modalWindowButtons.appendChild(buttons);
 
     modalWindow = document.getElementById(`${uid}_modal`);
-    $(modalWindow).modal('show');
+    $(modalWindow).modal({backdrop: 'static',keyboard: false});
+    $(modalWindow).modal("show");
     modalWindow.getElementsByClassName("modal-dialog")[0].style.left = "0";
     modalWindow.getElementsByClassName("modal-dialog")[0].style.top = "0";
     $(".modal-header").on("mousedown", function(mousedownEvt) {
@@ -2035,7 +2053,7 @@ interfaceUtils.generateModal = function(title, content, buttons, uid) {
             $("body").off("mousemove.draggable");
         });
     });
-    return 
+    return modalWindow;
 }
 
 interfaceUtils.createDownloadDropdown = function(downloadRow, innerText, callback, comment, dropdownOptions) {
@@ -2190,7 +2208,7 @@ interfaceUtils.addMenuItem = function(itemTree, callback, before) {
                 rootElement.prepend(liItem);
             else
                 rootElement.append(liItem);
-
+            
             if (i == 0) {
                 aElement = HTMLElementUtils.createElement({"kind":"a", "id":"a_"+itemID, "extraAttributes":{"class":"nav-link dropdown-toggle active","href":"#", "data-bs-toggle":"dropdown", "aria-haspopup":"true", "aria-expanded":"false"}})
                 liItem.appendChild(aElement);

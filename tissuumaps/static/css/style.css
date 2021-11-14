@@ -3949,7 +3949,8 @@ textarea.form-control-lg {
   color: #fff;
   text-align: center;
   white-space: nowrap;
-  background-color: #ad1d28;}
+  background-color: #ad1d28;
+  transition: width 0.6s ease; }
   @media (prefers-reduced-motion: reduce) {
     .progress-bar {
       transition: none; } }
@@ -10228,7 +10229,7 @@ html {
 #messagebox_modal {
   z-index: 10000; }
 
-.progress-bar{
+.progress-bar {
   transition: width 0s ease !important; }
 
 /*# sourceMappingURL=style.css.map */
