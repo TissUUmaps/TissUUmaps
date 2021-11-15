@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "TissUUmaps"
-#define MyAppVersion "3.0.1.9"
+#define MyAppVersion "3.0.1.10"
 #define MyAppPublisher "Uppsala University"
 #define MyAppURL "https://tissuumaps.research.it.uu.se/"
 #define MyAppExeName "TissUUmaps.exe"
