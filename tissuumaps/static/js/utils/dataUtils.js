@@ -153,22 +153,35 @@ dataUtils.updateViewOptions = function(data_id){
     }
     console.log(tmapp["ISS_viewer"].world._items.length == 0, tmapp["ISS_viewer"].world._items);
     if (tmapp["ISS_viewer"].world._items.length == 0) {
-        maxX = Math.max.apply(Math, dataUtils.data[data_id]["_processeddata"].map(function(o) { return o[data_obj["_X"]]; }))
-        maxY = Math.max.apply(Math, dataUtils.data[data_id]["_processeddata"].map(function(o) { return o[data_obj["_Y"]]; }))
-        minX = Math.min.apply(Math, dataUtils.data[data_id]["_processeddata"].map(function(o) { return o[data_obj["_X"]]; }))
-        minY = Math.min.apply(Math, dataUtils.data[data_id]["_processeddata"].map(function(o) { return o[data_obj["_Y"]]; }))
-        
-        if (minX <0 || maxX < 1000) {
+        function getMax(arr) {
+            let len = arr.length; let max = -Infinity;
+            while (len--) { max = arr[len] > max ? arr[len] : max; }
+            return max;
+        }
+        function getMin(arr) {
+            let len = arr.length; let min = Infinity;
+            
+            while (len--) { min = arr[len] < min ? arr[len] : min; }
+            return min;
+        }
+        minX = getMin(dataUtils.data[data_id]["_processeddata"].map(function(o) { return parseFloat(o[data_obj["_X"]]); }));
+        maxX = getMax(dataUtils.data[data_id]["_processeddata"].map(function(o) { return parseFloat(o[data_obj["_X"]]); }));
+        minY = getMin(dataUtils.data[data_id]["_processeddata"].map(function(o) { return parseFloat(o[data_obj["_Y"]]); }));
+        maxY = getMax(dataUtils.data[data_id]["_processeddata"].map(function(o) { return parseFloat(o[data_obj["_Y"]]); }));
+        console.log(minX,maxX, minY,maxY);
+        if (minX <0 || maxX < 500) {
             for (o of dataUtils.data[data_id]["_processeddata"]) {
                 o[data_obj["_X"]] = 1200 * (o[data_obj["_X"]] - minX) / (maxX - minX);
             }
-            maxX = Math.max.apply(Math, dataUtils.data[data_id]["_processeddata"].map(function(o) { return o[data_obj["_X"]]; }))
+            maxX = getMax(dataUtils.data[data_id]["_processeddata"].map(function(o) { return o[data_obj["_X"]]; }))
+            console.log("new maxX,",maxX);
         }
-        if (minY <0 || maxY < 1000) {
+        if (minY <0 || maxY < 500) {
             for (o of dataUtils.data[data_id]["_processeddata"]) {
                 o[data_obj["_Y"]] = 1200 * (o[data_obj["_Y"]] - minY) / (maxY - minY);
             }
-            maxY = Math.max.apply(Math, dataUtils.data[data_id]["_processeddata"].map(function(o) { return o[data_obj["_Y"]]; }))
+            maxY = getMax(dataUtils.data[data_id]["_processeddata"].map(function(o) { return o[data_obj["_Y"]]; }))
+            console.log("new maxY,",maxY);
         }
         // We load an empty image at the size of the data.
 
