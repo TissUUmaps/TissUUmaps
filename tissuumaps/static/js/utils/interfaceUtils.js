@@ -1996,7 +1996,7 @@ interfaceUtils.prompt = function (text, value, title) {
 }
 
 interfaceUtils.generateModal = function(title, content, buttons, uid, noClose) {
-    if (!noClose) noClose = False;
+    if (!noClose) noClose = false;
     if (!uid) uid = "default";
     modalWindow = document.getElementById(uid + "_modal");
     if (! modalWindow) {
