@@ -81,6 +81,12 @@ def loaddata (images=[], csvFiles=[], xSelector="x", ySelector="y", keySelector=
               compositeMode="source-over",
               boundingBox=None,
               port=5100, height=700, tmapFilename="_project"):
+    # make str input to arrays:
+    if isinstance(images, str):
+        images = [images]
+    if isinstance(csvFiles, str):
+        csvFiles = [csvFiles]
+
     # make all paths absolute:
     images = [os.path.abspath(f) for f in images]
     csvFiles = [os.path.abspath(f) for f in csvFiles]
