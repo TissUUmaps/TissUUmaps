@@ -946,7 +946,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem1=function(){
 
     row2=HTMLElementUtils.createRow({"id":generated+"_row-2"});
         col21=HTMLElementUtils.createColumn({"width":6});
-            label211=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_x-label", "extraAttributes":{ "for":generated+"_x_value" }});
+            label211=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_x-label", "extraAttributes":{ "for":generated+"_x-value" }});
             label211.innerText="X coordinate"
             select212=HTMLElementUtils.createElement({"kind":"select", "id":generated+"_x-value", "extraAttributes":{ "class":"form-select form-select-sm", "aria-label":".form-select-sm"}});
 
@@ -1429,7 +1429,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
     //row 0
     row0=HTMLElementUtils.createRow({id:generated+"_opacity_0"});
         col00=HTMLElementUtils.createColumn({"width":6});
-            button000=HTMLElementUtils.createButton({"id":generated+"_update-view-button","innerText":"Generate button from tab","class":"btn btn-light my-1","eventListeners":{"click":(event)=> projectUtils.makeButtonFromTab(event.target.id.split("_")[0]) }});
+            button000=HTMLElementUtils.createButton({"id":generated+"_Generate-button-from-tab","innerText":"Generate button from tab","class":"btn btn-light my-1","eventListeners":{"click":(event)=> projectUtils.makeButtonFromTab(event.target.id.split("_")[0]) }});
             
     row0.appendChild(col00)
         col00.appendChild(button000);
@@ -2099,7 +2099,7 @@ interfaceUtils.createDownloadDropdownMarkers = function(options, settings) {
     interfaceUtils._mGenUIFuncs.generateUUID();
     if (!options.uid)
         options.uid=interfaceUtils._mGenUIFuncs.ctx.aUUID;
-    callback = function(e, params){
+    var callback = function(e, params){
         /*if (settings) {
             settings.forEach(function(setting, i) {
                 window[setting.module][setting.function] = setting.value;
@@ -2160,7 +2160,7 @@ interfaceUtils.createDownloadButtonMarkers = function(options) {
     interfaceUtils._mGenUIFuncs.generateUUID();
     if (!options.uid)
         options.uid=interfaceUtils._mGenUIFuncs.ctx.aUUID;
-    callback = function(e){
+    var callback = function(e){
         /*if (settings) {
             settings.forEach(function(setting, i) {
                 window[setting.module][setting.function] = setting.value;
@@ -2177,7 +2177,7 @@ interfaceUtils.createDownloadButtonMarkers = function(options) {
 
 interfaceUtils.createDownloadButtonRegions = function(innerText, dataURL, comment, autoLoad, settings) {
     var downloadRow = document.getElementById("divRegionsDownloadButtons");
-    callback = function(e){
+    var callback = function(e){
         if (settings) {
             settings.forEach(function(setting, i) {
                 window[setting.module][setting.function] = setting.value;

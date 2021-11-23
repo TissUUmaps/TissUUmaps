@@ -224,27 +224,35 @@ regionUtils.geoJSON2regions = function (geoJSONObjects) {
     if (!Array.isArray(geoJSONObjects)) {
         geoJSONObjects = [geoJSONObjects];
     }
-    console.dir(geoJSONObjects);
     geoJSONObjects.forEach(function(geoJSONObj, geoJSONObjIndex) {
         if (geoJSONObj.type == "FeatureCollection") {
             return regionUtils.geoJSON2regions(geoJSONObj.features);
         }
-        if (geoJSONObj.type != "Feature") {
-            return;
+        if (geoJSONObj.type == "GeometryCollection") {
+            return regionUtils.geoJSON2regions(geoJSONObj.geometries);
         }
-        var geometryType = geoJSONObj.geometry.type;
+        /*if (geoJSONObj.type != "Feature") {
+            return;
+        }*/
+        if (geoJSONObj.geometry === undefined)
+            geometry = geoJSONObj
+        else
+            geometry = geoJSONObj.geometry
+        var geometryType = geometry.type;
         var coordinates;
         if (geometryType=="Polygon") {
-            coordinates = [geoJSONObj.geometry.coordinates];
+            coordinates = [geometry.coordinates];
         }
         else if (geometryType=="MultiPolygon") {
-            coordinates = geoJSONObj.geometry.coordinates;
+            coordinates = geometry.coordinates;
         }
         else {
             coordinates = [];
         }
         var geoJSONObjClass = "";
         var hexColor = "#ff0000";
+        if (!geoJSONObj.properties)
+            geoJSONObj.properties = {};
         if (geoJSONObj.properties.color) {
             hexColor = rgbToHex(geoJSONObj.properties.color)
         }
@@ -379,7 +387,14 @@ regionUtils.regionUI = function (regionid) {
     }
     else {
         regionUtils.addRegionClassUI (null)
+        regionClassID = "";
         var regionsPanel = document.getElementById("markers-regions-panel-");
+        numRegions = Object.values(regionUtils._regions).filter(x => x.regionClass==regionClass).length
+        if (numRegions > regionUtils._maxRegionsInMenu) {
+            spanEl = document.getElementById("regionGroupWarning-" + regionClassID)
+            if (spanEl) spanEl.innerHTML = "<i class='bi bi-exclamation-triangle'></i> Max "+regionUtils._maxRegionsInMenu+" regions displayed below";
+            return;
+        }
     }
     var trPanel = HTMLElementUtils.createElement({
         kind: "tr",
@@ -686,6 +701,7 @@ regionUtils.updateAllRegionClassUI = function (regionClass) {
  *     @param {String} regionClass Region class
  *  Add accordion for a new region class */
 regionUtils.addRegionClassUI = function (regionClass) {
+    if (regionClass == null) regionClass = "";
     var op = tmapp["object_prefix"];
     var regionClassID = HTMLElementUtils.stringToId(regionClass);
     var accordion_item = document.getElementById("regionClassItem-" + regionClassID);
