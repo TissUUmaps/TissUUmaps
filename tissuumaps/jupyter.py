@@ -1,6 +1,7 @@
 from tissuumaps import views
-from IPython.display import HTML, Javascript
+from IPython.display import HTML, Javascript, clear_output
 from IPython.core.display import display
+
 import threading
 import logging
 import json
@@ -8,6 +9,8 @@ import click
 import warnings
 import os, time
 from pathlib import Path
+import uuid
+
 
 def secho(text, file=None, nl=None, err=None, color=None, **styles):
     pass
@@ -21,7 +24,7 @@ class TissUUmapsViewer ():
     def __init__(self, server, image, height=700):
         self.server = server
         self.image = image
-        self.id = "tissUUmapsViewer_1"
+        self.id = "tissUUmapsViewer_" + str(uuid.uuid1()).replace("-","")[0:10]
         iframe = ('<iframe src="{src}" style="width: {width}; '
                   'height: {height}; border: none" id="{id}" allowfullscreen></iframe>')
         src = "http://localhost:%d/%s" % (self.server.port, self.image)
@@ -29,8 +32,30 @@ class TissUUmapsViewer ():
         display(self.htmlIFrame)
         time.sleep(2)
     
-    #def sendJavascript(self):
-    #    display(Javascript("document.getElementById('"+self.id+"').contentWindow.postMessage({'module':'HelloWorkd'},'*');"))
+    def screenshot(self):
+        screenshot_id = self.id + "_" + str(uuid.uuid1()).replace("-","")[0:6]
+        display(Javascript("""
+            function listenToMessages_"""+screenshot_id+"""(evt){
+                if (evt.data.type != "screenshot") return;
+                window.removeEventListener("message", listenToMessages_"""+screenshot_id+""");
+                try {
+                    IPython.notebook.kernel.execute(`from IPython.display import update_display, HTML`)
+                    IPython.notebook.kernel.execute(`obj = HTML("<img src='`+evt.data.img+`'/>")`)
+                    IPython.notebook.kernel.execute(`update_display(obj, display_id="display_out_"""+screenshot_id+"""")`)
+                } catch (e) { // vscode or jupyterLab can not communicate back...
+                    if (e instanceof ReferenceError) {
+                        document.getElementById("img_out_"""+screenshot_id+"""").src = evt.data.img;
+                        let newNode = document.createElement("span");
+                        newNode.innerHTML = "Warning: run viewer.screenshot in a classical Jupyter Notebook if you want the screenshot to be saved.";
+                        document.getElementById("img_out_"""+screenshot_id+"""").parentElement.insertBefore(newNode, document.getElementById("img_out_"""+screenshot_id+""""));
+                    }
+                }
+            }
+            var iframe = document.getElementById('"""+self.id+"""');
+            window.addEventListener("message", listenToMessages_"""+screenshot_id+""");
+            iframe.contentWindow.postMessage({'module':'','function':'','arguments':'[]'},'*');
+        """))
+        display(HTML("<img src='' id='img_out_"+screenshot_id+"'/>"), display_id="display_out_"+screenshot_id)
 
 class TissUUmapsServer ():
     def __init__(self, slideDir, port=5000):
@@ -72,7 +97,7 @@ def opentmap (path, port=5100, height=700):
     path = os.path.abspath(path)
     parts = Path(path).parts
     server = TissUUmapsServer(slideDir=parts[0], port=port)
-    server.viewer(parts[-1]+"?path="+os.path.join(*parts[1:-1]), height)
+    return server.viewer(parts[-1]+"?path="+os.path.join(*parts[1:-1]), height)
 
 def loaddata (images=[], csvFiles=[], xSelector="x", ySelector="y", keySelector=None, nameSelector=None, 
               colorSelector=None, piechartSelector=None, shapeSelector=None, scaleSelector=None, 
@@ -160,7 +185,7 @@ def loaddata (images=[], csvFiles=[], xSelector="x", ySelector="y", keySelector=
     print ("Creating project file", tmapFile)
     with open(tmapFile, "w") as f:
         json.dump(jsonTmap, f)
-    opentmap (os.path.abspath(tmapFile), port, height)
+    return opentmap (os.path.abspath(tmapFile), port, height)
 
 if __name__ == '__main__':
     pass
