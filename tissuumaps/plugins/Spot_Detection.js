@@ -11,10 +11,12 @@
  Spot_Detection = {
      name:"Spot detection - Quality Control",
      _bboxSize:11,
+     _figureSize:7,
      _order_rounds:null,
      _order_channels:null,
-     _only_picked:false,
-     _started:false
+     _only_picked:true,
+     _started:false,
+     _cmap:'Greys_r'
   }
  
  /**
@@ -35,10 +37,20 @@
             label112=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":"Spot_Detection_bboxSize"}});
             label112.innerHTML="Box size:";    
             var input112=HTMLElementUtils.createElement({"kind":"input", "id":"Spot_Detection_bboxSize", "extraAttributes":{ "class":"form-text-input form-control", "type":"number", "value":Spot_Detection._bboxSize}});
-            
+
     input112.addEventListener("change",(event)=>{
         console.log("Spot_Detection._bboxSize", input112.value, parseInt(input112.value));
         Spot_Detection._bboxSize = parseInt(input112.value);
+    });
+
+    row7=HTMLElementUtils.createRow({});
+        col71=HTMLElementUtils.createColumn({"width":12});
+            label712=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":"Spot_Detection_bboxSize"}});
+            label712.innerHTML="Figure size:";    
+            var input712=HTMLElementUtils.createElement({"kind":"input", "id":"Spot_Detection_figureSize", "extraAttributes":{ "class":"form-text-input form-control", "type":"number", "value":Spot_Detection._figureSize}});
+         
+    input712.addEventListener("change",(event)=>{
+        Spot_Detection._figureSize = parseInt(input712.value);
     });
 
     row2=HTMLElementUtils.createRow({});
@@ -63,7 +75,7 @@
 
     row4=HTMLElementUtils.createRow({});
         col41=HTMLElementUtils.createColumn({"width":12});
-            var input411=HTMLElementUtils.createElement({"kind":"input", "id":"Spot_Detection_only_picked","extraAttributes":{"class":"form-check-input","type":"checkbox"}});
+            var input411=HTMLElementUtils.createElement({"kind":"input", "id":"Spot_Detection_only_picked","extraAttributes":{"class":"form-check-input","type":"checkbox","checked":true}});
             label411=HTMLElementUtils.createElement({"kind":"label", "extraAttributes":{ "for":"Spot_Detection_only_picked" }});
             label411.innerHTML="&nbsp;Only show central selected marker"
 
@@ -71,6 +83,16 @@
         console.log(input411.checked, Spot_Detection._only_picked);
         Spot_Detection._only_picked = input411.checked;
         console.log(input411.checked, Spot_Detection._only_picked);
+    });
+
+    row6=HTMLElementUtils.createRow({});
+        col61=HTMLElementUtils.createColumn({"width":12});
+            select611=HTMLElementUtils.createElement({"kind":"select","id":"Spot_Detection_colormap","extraAttributes":{"class":"form-select form-select-sm","aria-label":".form-select-sm"}});
+            label612=HTMLElementUtils.createElement({"kind":"label", "extraAttributes":{"for":"Spot_Detection_colormap"} });
+            label612.innerText="Select colormap";
+
+    select611.addEventListener("change",(event)=>{
+        Spot_Detection._cmap = select611.value;
     });
 
     row5=HTMLElementUtils.createRow({});
@@ -95,6 +117,10 @@
         row1.appendChild(col11);
             col11.appendChild(label112);
             col11.appendChild(input112);
+    container.appendChild(row7);
+        row7.appendChild(col71);
+            col71.appendChild(label712);
+            col71.appendChild(input712);
     container.appendChild(row2);
         row2.appendChild(col21);
             col21.appendChild(label212);
@@ -103,9 +129,16 @@
         row3.appendChild(col31);
             col31.appendChild(label312);
             col31.appendChild(input312);
+    container.appendChild(row6);
+        row6.appendChild(col61);
+            col61.appendChild(label612);
+            col61.appendChild(select611);
     container.appendChild(row5);
         row5.appendChild(col51);
             col51.appendChild(button511);
+    cmap = ['Greys_r', 'Greys', 'Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn', 'BuGn_r', 'BuPu', 'BuPu_r', 'CMRmap', 'CMRmap_r', 'Dark2', 'Dark2_r', 'GnBu', 'GnBu_r', 'Greens', 'Greens_r', 'OrRd', 'OrRd_r', 'Oranges', 'Oranges_r', 'PRGn', 'PRGn_r', 'Paired', 'Paired_r', 'Pastel1', 'Pastel1_r', 'Pastel2', 'Pastel2_r', 'PiYG', 'PiYG_r', 'PuBu', 'PuBuGn', 'PuBuGn_r', 'PuBu_r', 'PuOr', 'PuOr_r', 'PuRd', 'PuRd_r', 'Purples', 'Purples_r', 'RdBu', 'RdBu_r', 'RdGy', 'RdGy_r', 'RdPu', 'RdPu_r', 'RdYlBu', 'RdYlBu_r', 'RdYlGn', 'RdYlGn_r', 'Reds', 'Reds_r', 'Set1', 'Set1_r', 'Set2', 'Set2_r', 'Set3', 'Set3_r', 'Spectral', 'Spectral_r', 'Wistia', 'Wistia_r', 'YlGn', 'YlGnBu', 'YlGnBu_r', 'YlGn_r', 'YlOrBr', 'YlOrBr_r', 'YlOrRd', 'YlOrRd_r', 'afmhot', 'afmhot_r', 'autumn', 'autumn_r', 'binary', 'binary_r', 'bone', 'bone_r', 'brg', 'brg_r', 'bwr', 'bwr_r', 'cividis', 'cividis_r', 'cool', 'cool_r', 'coolwarm', 'coolwarm_r', 'copper', 'copper_r', 'cubehelix', 'cubehelix_r', 'flag', 'flag_r', 'gist_earth', 'gist_earth_r', 'gist_gray', 'gist_gray_r', 'gist_heat', 'gist_heat_r', 'gist_ncar', 'gist_ncar_r', 'gist_rainbow', 'gist_rainbow_r', 'gist_stern', 'gist_stern_r', 'gist_yarg', 'gist_yarg_r', 'gnuplot', 'gnuplot2', 'gnuplot2_r', 'gnuplot_r', 'gray', 'gray_r', 'hot', 'hot_r', 'hsv', 'hsv_r', 'inferno', 'inferno_r', 'jet', 'jet_r', 'magma', 'magma_r', 'nipy_spectral', 'nipy_spectral_r', 'ocean', 'ocean_r', 'pink', 'pink_r', 'plasma', 'plasma_r', 'prism', 'prism_r', 'rainbow', 'rainbow_r', 'seismic', 'seismic_r', 'spring', 'spring_r', 'summer', 'summer_r', 'tab10', 'tab10_r', 'tab20', 'tab20_r', 'tab20b', 'tab20b_r', 'tab20c', 'tab20c_r', 'terrain', 'terrain_r', 'turbo', 'turbo_r', 'twilight', 'twilight_r', 'twilight_shifted', 'twilight_shifted_r', 'viridis', 'viridis_r', 'winter', 'winter_r'];
+    interfaceUtils.addElementsToSelect("Spot_Detection_colormap", cmap);
+        
      Spot_Detection.run();
  }
 
@@ -305,11 +338,13 @@ Spot_Detection.getMatrix = function (bbox, layers, markers, order) {
             contentType: 'application/json; charset=utf-8',
             data : JSON.stringify({
                     'bbox' : bbox,
+                    'figureSize' : Spot_Detection._figureSize,
                     'layers' : layers,
                     'path' : path,
                     'markers' : markers,
                     'order_rounds': Spot_Detection._order_rounds,
                     'order_channels': Spot_Detection._order_channels,
+                    'cmap': Spot_Detection._cmap
             }),
             success : function(data)
             {

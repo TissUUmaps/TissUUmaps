@@ -118,10 +118,10 @@ class Plugin ():
         singleHeight = tiles[rounds[0]][channels[0]].height
         
         im = self.getConcat(tiles, rounds, channels).convert("L")
-        fig = plt.figure(figsize=(5, 4), dpi=80)
+        fig = plt.figure(figsize=(self.figureSize, self.figureSize*4/5), dpi=80)
         ax = fig.add_subplot(111)
         #plt.axis('off')
-        imcolor = plt.imshow(im, cmap='Greys_r')
+        imcolor = plt.imshow(im, cmap=plt.get_cmap(self.cmap), vmin=0, vmax=255)
         
         # create an axes on the right side of ax. The width of cax will be 5%
         # of ax and the padding between cax and ax will be fixed at 0.05 inch.
@@ -162,7 +162,7 @@ class Plugin ():
                 pass
         
         ax.set_xticks([i*singleWidth + singleWidth/2-0.5 for i,_ in enumerate(channels)])
-        ax.set_xticklabels(channels)
+        ax.set_xticklabels([c.replace(".tif","") for c in channels])
         ax.set_yticks([i*singleHeight + singleHeight/2-0.5 for i,_ in enumerate(rounds)])
         ax.set_yticklabels(rounds, rotation=90, va="center")
         ax.tick_params(axis=u'both', which=u'both',length=0)
@@ -183,6 +183,11 @@ class Plugin ():
         layers = jsonParam["layers"]
         path = jsonParam["path"]
         markers = jsonParam["markers"]
+        self.figureSize = jsonParam["figureSize"]
+        if "cmap" in jsonParam.keys():
+            self.cmap = jsonParam["cmap"]
+        else:
+            self.cmap = 'Greys_r'
         logging.debug ("getMatrix", bbox, layers, markers)
         tiles = {}
         rounds = jsonParam["order_rounds"]
