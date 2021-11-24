@@ -333,6 +333,7 @@ regionUtils.distance = function (p1, p2) {
  *  @param {Number[]} points Array of 2D points in normalized coordinates
  *  Create a region object and store it in the regionUtils._regions container */
 regionUtils.addRegion = function (points, regionid, color, regionClass) {
+    if (!regionClass) regionClass = "";
     var op = tmapp["object_prefix"];
     var imageWidth = OSDViewerUtils.getImageWidth();
     var region = { "id": regionid, "points": [], "globalPoints": [], "regionName": regionid, "regionClass": regionClass, "barcodeHistogram": [] };

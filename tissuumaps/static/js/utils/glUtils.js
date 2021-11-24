@@ -990,7 +990,12 @@ glUtils.pick = function(event) {
             if (glUtils._usePiechartFromMarker[uid]) {
                 div.innerHTML = markerUtils.makePiechartTable(markerData, markerIndex, piechartPropertyName);
             } else {
-                div.innerHTML = groupName;
+                if (groupName) {
+	            div.innerHTML = groupName;
+                }
+                else if (dataUtils.data[uid]["_cb_col"]) {
+                    div.innerHTML = markerData[markerIndex][dataUtils.data[uid]["_cb_col"]];
+                }
                 console.log("Marker clicked:",tabName, groupName, "index:", markerIndex);
             }
             div.classList.add("viewer-layer", "m-0", "p-1");
