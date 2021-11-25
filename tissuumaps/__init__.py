@@ -24,7 +24,7 @@ from optparse import OptionParser
 import logging
 
 SLIDE_DIR = "/mnt/data/shared/"
-SLIDE_CACHE_SIZE = 10
+SLIDE_CACHE_SIZE = 60
 DEEPZOOM_FORMAT = 'png'
 DEEPZOOM_TILE_SIZE = 254
 DEEPZOOM_OVERLAP = 1
