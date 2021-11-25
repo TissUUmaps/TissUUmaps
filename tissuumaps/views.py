@@ -241,23 +241,7 @@ def _setup():
 @app.errorhandler(404)
 def page_not_found(e):
     # note that we set the 404 status explicitly
-    if app.config["isStandalone"]:
-        return (
-            render_template(
-                "standalone/files.html", message="Impossible to load this file"
-            ),
-            404,
-        )
-    else:
-        return redirect(url_for('filetree.test'))
-        #return (
-        #    render_template(
-        #        "server/files.html",
-        #        root_dir=_Directory(app.basedir, max_depth=app.config["FOLDER_DEPTH"]),
-        #        message="Impossible to load this file",
-        #    ),
-        #    404,
-        #)
+    return render_template("tissuumaps.html", isStandalone=app.config["isStandalone"], message="Impossible to load this file")
 
 
 def _get_slide(path, originalPath=None):
