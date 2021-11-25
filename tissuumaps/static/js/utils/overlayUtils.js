@@ -249,6 +249,12 @@ overlayUtils.addLayer = function(layerName, tileSource, i, visible) {
     if (i >= 0 && !visible) {
         opacity = 0.0;
     }
+    var showModal = true;
+    var loadingModal = null;
+    setTimeout(function(){
+        if (showModal)
+            loadingModal = interfaceUtils.loadingModal("Converting image, please wait...");
+    },800);
     tmapp[vname].addTiledImage({
         index: i + 1,
         tileSource: tmapp._url_suffix + tileSource,
@@ -257,7 +263,18 @@ overlayUtils.addLayer = function(layerName, tileSource, i, visible) {
             layer0X = tmapp[op + "_viewer"].world.getItemAt(0).getContentSize().x;
             layerNX = tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).getContentSize().x;
             tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setWidth(layerNX/layer0X);
-        } 
+            if (loadingModal) {
+                setTimeout(function(){$(loadingModal).modal("hide");}, 500);
+            }
+            showModal = false;
+        },
+        error: function(i) {
+            if (loadingModal) {
+                setTimeout(function(){$(loadingModal).modal("hide");}, 500);
+            }
+            interfaceUtils.alert("Impossible to load file.")
+            showModal = false;
+        }
     });
 }
 

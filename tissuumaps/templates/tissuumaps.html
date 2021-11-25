@@ -316,6 +316,9 @@
         {% else %}
             flask.server.init();
         {% endif %}
+        {% if message %}
+            interfaceUtils.alert("{{message|safe}}");
+        {% endif %}
     });
 
 

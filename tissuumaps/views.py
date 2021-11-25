@@ -312,7 +312,7 @@ def slide(filename):
     if not path:
         path = "./"
     path = os.path.abspath(os.path.join(app.basedir, path, filename))
-    slide = _get_slide(path)
+    #slide = _get_slide(path)
     slide_url = os.path.basename(path)+".dzi"#url_for("dzi", path=path)
     
     jsonProject={
@@ -327,10 +327,8 @@ def slide(filename):
         "tissuumaps.html",
         plugins=app.config["PLUGINS"],
         jsonProject=jsonProject,
-        slide_mpp=slide.mpp,
         isStandalone=app.config["isStandalone"]
         )
-
 
 @app.route("/ping")
 @requires_auth
@@ -487,7 +485,6 @@ def tile(filename, level, col, row, format):
     resp.cache_control.max_age = 1209600
     resp.cache_control.public = True
     return resp
-
 
 @app.route(
     "/<path:filename>.dzi/<path:associated_name>_files/<int:level>/<int:col>_<int:row>.<format>"
