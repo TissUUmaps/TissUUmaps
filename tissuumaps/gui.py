@@ -90,32 +90,52 @@ class MainWindow(QMainWindow):
         self.bar = self.menuBar()
         file = self.bar.addMenu("File")
 
-        open = QAction(self.style().standardIcon(QStyle.SP_DialogOpenButton), "Open",self)
-        open.setShortcut("Ctrl+O")
-        file.addAction(open)
-        open.triggered.connect(self.browser.openImage)
+        _open = QAction(self.style().standardIcon(QStyle.SP_DialogOpenButton), "Open",self)
+        _open.setShortcut("Ctrl+O")
+        file.addAction(_open)
+        _open.triggered.connect(self.browser.openImage)
 
-        save = QAction(self.style().standardIcon(QStyle.SP_DialogSaveButton), "Save project",self)
-        save.setShortcut("Ctrl+S")
-        file.addAction(save)
+        _save = QAction(self.style().standardIcon(QStyle.SP_DialogSaveButton), "Save project",self)
+        _save.setShortcut("Ctrl+S")
+        file.addAction(_save)
         def trigger():
             self.browser.page().runJavaScript("flask.standalone.saveProject();")
-        save.triggered.connect(trigger)
+        _save.triggered.connect(trigger)
 
-        exit = QAction(self.style().standardIcon(QStyle.SP_DialogCancelButton), "Exit",self)
-        exit.setShortcut("Ctrl+Q")
-        file.addAction(exit)
-        exit.triggered.connect(self.close)
+        _exit = QAction(self.style().standardIcon(QStyle.SP_DialogCancelButton), "Exit",self)
+        _exit.setShortcut("Ctrl+Q")
+        file.addAction(_exit)
+        _exit.triggered.connect(self.close)
 
         plugins = self.bar.addMenu("Plugins")
         for pluginName in app.config["PLUGINS"]:
-            plugin = QAction(pluginName,self)
-            plugins.addAction(plugin)
+            _plugin = QAction(pluginName,self)
+            plugins.addAction(_plugin)
             def trigger():
                 print ("Plugin triggered:", pluginName)
                 self.browser.page().runJavaScript("pluginUtils.startPlugin(\""+pluginName+"\");");
-            plugin.triggered.connect(trigger)
+            _plugin.triggered.connect(trigger)
         
+        about = self.bar.addMenu("About")
+        _help = QAction("Help",self)
+        about.addAction(_help)
+        def trigger():
+            QDesktopServices.openUrl(QUrl("https://tissuumaps.github.io/"))
+        _help.triggered.connect(trigger)
+        _version = QAction("Version",self)
+        about.addAction(_version)
+        def trigger():
+            if getattr(sys, 'frozen', False):
+                folderPath = sys._MEIPASS
+            else:
+                folderPath = os.path.dirname(pathlib.Path(__file__))
+            print (os.path.join(folderPath,"VERSION"), os.path.isfile(os.path.join(folderPath,"VERSION")))
+            with open(os.path.join(folderPath,"VERSION"), "r") as fh:
+                version = fh.read()
+            
+            QMessageBox.about(self, "Information", "TissUUmaps version " + version)
+        _version.triggered.connect(trigger)
+
         self.showMaximized()
 class webEngine(QWebEngineView):
     def __init__(self, qt_app, app, mainWin, args):

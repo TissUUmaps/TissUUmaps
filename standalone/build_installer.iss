@@ -2,10 +2,14 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "TissUUmaps"
-#define MyAppVersion "3.0.2.1"
 #define MyAppPublisher "Uppsala University"
 #define MyAppURL "https://tissuumaps.research.it.uu.se/"
 #define MyAppExeName "TissUUmaps.exe"
+
+#define VerFile FileOpen("../tissuumaps/VERSION")
+#define MyAppVersion FileRead(VerFile)
+#expr FileClose(VerFile)
+#undef VerFile
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
