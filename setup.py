@@ -21,14 +21,19 @@ setuptools.setup(
         'Flask>=2.0.0',
         'openslide-python>=1.1.2',
         'Pillow>=8.2.0',
-        'pyvips>=2.1.14',
-        'PyQt5>=5.15.4',
-        'PyQtWebEngine>=5.15.4'
-    ],
-     extra_requires=[
-        'PyQt5>=5.15.4',
-        'PyQtWebEngine>=5.15.4'
-    ],
+        'ipython>=7.28.0',
+        'pyvips>=2.1.14'
+     ],
+     extras_require={
+        'pyqt5':[
+            'PyQt5>=5.15.4',
+            'PyQtWebEngine>=5.15.4'
+        ],
+        'full':[
+            'PyQt5>=5.15.4',
+            'PyQtWebEngine>=5.15.4'
+        ]
+     },
      classifiers=[
          "Programming Language :: Python :: 3",
          'Intended Audience :: Science/Research',

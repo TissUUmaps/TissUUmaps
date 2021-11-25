@@ -1,10 +1,18 @@
+import logging
+try:
+    from PyQt5.QtCore import *
+    from PyQt5.QtWebEngineWidgets import *
+    from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QPlainTextEdit, QDialog, QSplashScreen, QProgressDialog, QMainWindow, QToolBar, QAction, QStyle
+    from PyQt5.QtWebChannel import QWebChannel
+    from PyQt5 import QtGui 
+    from PyQt5.QtGui import QDesktopServices
 
-from PyQt5.QtCore import *
-from PyQt5.QtWebEngineWidgets import *
-from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QPlainTextEdit, QDialog, QSplashScreen, QProgressDialog, QMainWindow, QToolBar, QAction, QStyle
-from PyQt5.QtWebChannel import QWebChannel
-from PyQt5 import QtGui 
-from PyQt5.QtGui import QDesktopServices
+except ImportError:
+    # dependency missing, issue a warning
+    logging.error('dependency not found, please install PyQt5 to enable gui')
+    import sys
+    sys.exit()
+
 from optparse import OptionParser
 
 import pathlib
@@ -305,6 +313,16 @@ class webEngine(QWebEngineView):
         self.app.basedir = parts[0]
         imgPath = os.path.join(*parts[1:])
         imgPath = imgPath.replace("\\","/")
+        #try:
+        #    if not ".tmap" in imgPath:
+        #        views._get_slide(imgPath)
+        #except:
+        #    self.app.basedir = oldBaseDir
+        #    import traceback
+        #    print (traceback.format_exc())
+        #    QMessageBox.about(self, "Error", "TissUUmaps did not manage to open this image.")
+
+        #    return False
         print ("Opening:", self.app.basedir, self.location + imgPath, QUrl(self.location + imgPath))
 
         filename = os.path.basename(imgPath)
