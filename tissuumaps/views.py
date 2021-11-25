@@ -436,6 +436,11 @@ def jsonFile(filename):
 @requires_auth
 def dzi(filename):
     path = getPathFromReferrer(request, filename)
+    # Check if a .dzi file exists, else use OpenSlide:
+    if os.path.isfile(path + ".dzi"):
+        directory = os.path.dirname(path)
+        filename = os.path.basename(path) + ".dzi"
+        return send_from_directory(directory, filename)
     slide = _get_slide(path)
     format = app.config["DEEPZOOM_FORMAT"]
     resp = make_response(slide.get_dzi(format))
@@ -467,6 +472,10 @@ def dzi_asso(filename):
 @app.route("/<path:filename>_files/<int:level>/<int:col>_<int:row>.<format>")
 def tile(filename, level, col, row, format):
     path = getPathFromReferrer(request, filename)
+    if os.path.isfile( f"{path}_files/{level}/{col}_{row}.{format}"):
+        directory = os.path.dirname(f"{path}_files/{level}/{col}_{row}.{format}")
+        filename = os.path.basename(f"{path}_files/{level}/{col}_{row}.{format}")
+        return send_from_directory(directory, filename)
     slide = _get_slide(path)
     format = format.lower()
     # if format != 'jpeg' and format != 'png':
