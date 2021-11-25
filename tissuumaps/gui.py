@@ -88,6 +88,11 @@ class MainWindow(QMainWindow):
         #self.setStatusBar(self.status)
         
         self.bar = self.menuBar()
+        self.setStyleSheet("""
+        QMenuBar {
+            border-bottom: 1px solid #911821;
+        }
+    """)
         file = self.bar.addMenu("File")
 
         _open = QAction(self.style().standardIcon(QStyle.SP_DialogOpenButton), "Open",self)
