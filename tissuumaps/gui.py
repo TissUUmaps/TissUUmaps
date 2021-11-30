@@ -19,6 +19,7 @@ import pathlib
 from pathlib import Path
 from urllib.parse import urlparse
 from urllib.parse import parse_qs
+from shutil import copyfile
 import subprocess
 
 import threading, time
@@ -106,7 +107,14 @@ class MainWindow(QMainWindow):
         def trigger():
             self.browser.page().runJavaScript("flask.standalone.saveProject();")
         _save.triggered.connect(trigger)
+        file.addSeparator()
 
+        _export = QAction(self.style().standardIcon(QStyle.SP_DialogSaveButton), "Export to static webpage",self)
+        file.addAction(_export)
+        def trigger():
+            self.browser.page().runJavaScript("flask.standalone.exportToStatic();")
+        _export.triggered.connect(trigger)
+        
         _exit = QAction(self.style().standardIcon(QStyle.SP_DialogCancelButton), "Exit",self)
         _exit.setShortcut("Ctrl+Q")
         file.addAction(_exit)
@@ -270,8 +278,89 @@ class webEngine(QWebEngineView):
         folderpath = QFileDialog.getOpenFileName(self, 'Select a File',self.lastdir)[0]
         self.openImagePath(folderpath)
 
-    
+    @pyqtSlot(str)
+    def exportToStatic(self, state):
+        imgFiles = []
+        otherFiles = []
+        def addRelativePath(state, relativePath):
+            nonlocal imgFiles, otherFiles
+            def addRelativePath_aux (state, path, isImg):
+                nonlocal imgFiles, otherFiles
+                if len(path) == 1:
+                    if isinstance(state[path[0]], list):
+                        if isImg:
+                            imgFiles += [s for s in state[path[0]]]
+                            state[path[0]] = ["data/images/" + os.path.basename(s) for s in state[path[0]]]
+                        else: 
+                            otherFiles += [relativePath + "/" + s for s in state[path[0]]]
+                            state[path[0]] = ["data/files/" + os.path.basename(s) for s in state[path[0]]]
+                        
+                    else:
+                        if isImg:
+                            imgFiles += [state[path[0]]]
+                            state[path[0]] = "data/images/" + os.path.basename(state[path[0]])
+                        else: 
+                            otherFiles += [state[path[0]]]
+                            state[path[0]] = "data/files/" + os.path.basename(state[path[0]])
+                    return
+                if not path[0] in state.keys():
+                    return
+                else:
+                    if isinstance(state[path[0]], list):
+                        for state_ in state[path[0]]:
+                            addRelativePath_aux (state_, path[1:], isImg)
+                    else:
+                        addRelativePath_aux (state[path[0]], path[1:], isImg)
+            
+            try:
+                relativePath = relativePath.replace("\\","/")
+                paths = [
+                    ["layers","tileSource"],
+                    ["markerFiles","path"],
+                    ["regionFiles","path"],
+                    ["regionFile"]
+                ]
+                for path in paths:
+                    addRelativePath_aux (state, path, path[0] == "layers")
+            except:
+                import traceback
+                print (traceback.format_exc())
+                
+            return state
+        parsed_url = urlparse(self.url().toString())
+        previouspath = parse_qs(parsed_url.query)['path'][0]
+        previouspath = os.path.abspath(os.path.join(self.app.basedir, previouspath))
 
+        folderpath = QFileDialog.getExistingDirectory(self, 'Select webpage directory',self.lastdir,
+                                                     options=QFileDialog.ShowDirsOnly)
+        
+        if (not folderpath):
+            return {}
+        try:
+            relativePath = os.path.relpath(previouspath, os.path.dirname(folderpath))
+            state = addRelativePath(json.loads(state), relativePath)
+            
+            with open(folderpath + "/project.tmap", "w") as f:
+                json.dump(state, f)
+            os.makedirs(os.path.join(folderpath,"data/images"), exist_ok=True )
+            os.makedirs(os.path.join(folderpath,"data/files"), exist_ok=True )
+            for image in imgFiles:
+                image = image.replace(".dzi","")
+                views.ImageConverter(os.path.join(previouspath,image), os.path.join(folderpath,"data/images",os.path.basename(image))).convertToDZI()
+            for file in otherFiles:
+                copyfile(os.path.join(previouspath,file), os.path.join(folderpath,"data/files",os.path.basename(file)))
+            import zipfile
+            if getattr(sys, 'frozen', False):
+                folderPath = sys._MEIPASS
+            else:
+                folderPath = os.path.dirname(pathlib.Path(__file__))
+            with zipfile.ZipFile(os.path.join(folderPath,"web.zip"), 'r') as zip_ref:
+                zip_ref.extractall(folderpath)
+            print ("Convert Done!")
+            #QMessageBox.about(self, "Information", "Export done!")
+        except:
+            import traceback
+            print (traceback.format_exc())
 
     @pyqtSlot(str)
     def saveProject(self, state):

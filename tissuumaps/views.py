@@ -153,6 +153,45 @@ class ImageConverter:
                 time.sleep(0.02)
         return self.outputImage
 
+    def convertToDZI(self):
+        if not os.path.isfile(self.outputImage):
+
+            def convertThread():
+                try:
+                    imgVips = pyvips.Image.new_from_file(self.inputImage)
+                    minVal = imgVips.percent(0.5)
+                    maxVal = imgVips.percent(99.5)
+                    if minVal == maxVal:
+                        minVal = 0
+                        maxVal = 255
+                    if (imgVips.percent(0.01) < 0 or imgVips.percent(99.99) > 255):
+                        imgVips = (255.0 * (imgVips - minVal)) / (maxVal - minVal)
+                        imgVips = (imgVips < 0).ifthenelse(0, imgVips)
+                        imgVips = (imgVips > 255).ifthenelse(255, imgVips)
+                        imgVips = imgVips.scaleimage()
+                    imgVips.dzsave(
+                        os.path.basename(self.outputImage),
+                        dirname=os.path.dirname(self.outputImage),
+                        suffix='.jpg',
+                        background=0,
+                        depth='onepixel',
+                        overlap=0,
+                        tile_size=256
+                    )
+                    
+                except:
+                    logging.error("Impossible to convert image using VIPS:")
+                    import traceback
+
+                    logging.error(traceback.format_exc())
+                self.convertDone = True
+
+            self.convertDone = False
+            threading.Thread(target=convertThread, daemon=True).start()
+            while not self.convertDone:
+                time.sleep(0.02)
+        return self.outputImage
+
 
 class _SlideCache(object):
     def __init__(self, cache_size, dz_opts):
