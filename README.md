@@ -1,5 +1,11 @@
 # FlaskTissUUmaps
-FlaskTissUUmaps is a minimal python server for [TissUUmaps](https://tissuumaps.research.it.uu.se/) using Flask that comes with a standalone User Interface.
+FlaskTissUUmaps is a python server for [TissUUmaps](https://tissuumaps.research.it.uu.se/) using Flask that comes with a standalone User Interface.
+
+## Windows installation
+
+1. Download the Windows Installer from [the last release](https://github.com/wahlby-lab/FlaskTissUUmaps/releases/latest) and install it. Note that the installer is not signed yet and may trigger warnings from the browser and from the firewall. You can safely pass these warnings.
+
+2. Start TissUUmaps.
 
 ## Installation from PIP
 
@@ -23,7 +29,7 @@ FlaskTissUUmaps is a minimal python server for [TissUUmaps](https://tissuumaps.r
 
 1. Install the TissUUmaps library:
     ```bash
-	pip install TissUUmaps
+	pip install TissUUmaps[full]
     ```
 
 ### Option 1: Start the Graphical User Interface of TissUUmaps
@@ -43,12 +49,6 @@ FlaskTissUUmaps is a minimal python server for [TissUUmaps](https://tissuumaps.r
 1. Open http://127.0.0.1:5000/ in your favorite browser.
 
    > :warning: Remember that Flask is running on a built-in development server (`flask run`) and should not be used in production. If you want to deploy FlaskTissUUmaps on a production server, please read https://flask.palletsprojects.com/en/1.1.x/tutorial/deploy/ or any similar tutorial.
-
-## Windows installation
-
-1. Download the Windows Installer from [the last release](https://github.com/wahlby-lab/FlaskTissUUmaps/releases/latest) and install it. Note that the installer is not signed yet and may trigger warnings from the browser and from the firewall. You can safely pass these warnings.
-
-2. Start TissUUmaps.
 
 ## Image format
 FlaskTissUUmaps allows to visualize all images from a folder and sub-folders in TissUUmaps. By using a minimal deepzoom server, FlaskTissUUmaps removes the need for creating DZI files of every image.
