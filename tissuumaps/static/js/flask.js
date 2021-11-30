@@ -54,8 +54,23 @@ flask.standalone.addLayer = function (filename) {
 
 flask.standalone.saveProject = function () {
     state = projectUtils.getActiveProject();
-    console.log("backend:",flask.standalone.backend);
     flask.standalone.backend.saveProject(JSON.stringify(state));
+};
+
+flask.standalone.exportToStatic = function () {
+    var state = projectUtils.getActiveProject();
+    var loadingModal =null;
+    setTimeout(function() {
+        loadingModal=interfaceUtils.loadingModal("Exporting to static web page")
+    },0);
+    setTimeout(function() {
+        flask.standalone.backend.exportToStatic(JSON.stringify(state));
+        setTimeout(function() {
+            $(loadingModal).modal('hide');
+            interfaceUtils.alert("Exporting done.")
+        }, 500);
+    }, 500);
+
 };
 
 flask.server = {}
