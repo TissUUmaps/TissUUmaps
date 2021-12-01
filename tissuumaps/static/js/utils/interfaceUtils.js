@@ -2104,17 +2104,13 @@ interfaceUtils.createDownloadDropdown = function(downloadRow, innerText, callbac
     return row;
 }
 
-interfaceUtils.createDownloadDropdownMarkers = function(options, settings) {
+interfaceUtils.createDownloadDropdownMarkers = function(options) {
     var downloadRow = document.getElementById("divMarkersDownloadButtons");
     interfaceUtils._mGenUIFuncs.generateUUID();
     if (!options.uid)
         options.uid=interfaceUtils._mGenUIFuncs.ctx.aUUID;
     var callback = function(e, params){
-        /*if (settings) {
-            settings.forEach(function(setting, i) {
-                window[setting.module][setting.function] = setting.value;
-            });
-        }*/
+        projectUtils.applySettings(options.settings);
         var dataURL = params.selected;
         if (dataURL == "") return;
         optionsCopy = JSON.parse(JSON.stringify(options));
@@ -2171,11 +2167,7 @@ interfaceUtils.createDownloadButtonMarkers = function(options) {
     if (!options.uid)
         options.uid=interfaceUtils._mGenUIFuncs.ctx.aUUID;
     var callback = function(e){
-        /*if (settings) {
-            settings.forEach(function(setting, i) {
-                window[setting.module][setting.function] = setting.value;
-            });
-        }*/
+        projectUtils.applySettings(options.settings);
         interfaceUtils.generateDataTabUI(options);
     }
     var buttonRow = interfaceUtils.createDownloadButton(downloadRow, options.title, callback, options.comment);
@@ -2185,14 +2177,10 @@ interfaceUtils.createDownloadButtonMarkers = function(options) {
     }
 }
 
-interfaceUtils.createDownloadButtonRegions = function(innerText, dataURL, comment, autoLoad, settings) {
+interfaceUtils.createDownloadButtonRegions = function(innerText, dataURL, comment, autoLoad) {
     var downloadRow = document.getElementById("divRegionsDownloadButtons");
     var callback = function(e){
-        if (settings) {
-            settings.forEach(function(setting, i) {
-                window[setting.module][setting.function] = setting.value;
-            });
-        }
+        projectUtils.applySettings(options.settings);
         regionUtils.JSONToRegions(dataURL)
     }
     var buttonRow = interfaceUtils.createDownloadButton(downloadRow, innerText, callback, comment);
@@ -2219,7 +2207,15 @@ interfaceUtils.addMenuItem = function(itemTree, callback, before) {
             else
                 rootElement.append(liItem);
             
-            if (i == 0) {
+            if (i == 0 && i == itemTree.length -1) {
+                aElement = HTMLElementUtils.createElement({"kind":"a", "id":"a_"+itemID, "extraAttributes":{"class":"nav-link active","href":"#"}})
+                liItem.appendChild(aElement);
+                aElement.addEventListener("click",function (event) {
+                    callback();
+                });
+                spanMore = "";
+            }
+            else if (i == 0) {
                 aElement = HTMLElementUtils.createElement({"kind":"a", "id":"a_"+itemID, "extraAttributes":{"class":"nav-link dropdown-toggle active","href":"#", "data-bs-toggle":"dropdown", "aria-haspopup":"true", "aria-expanded":"false"}})
                 liItem.appendChild(aElement);
                 ulItem = HTMLElementUtils.createElement({"kind":"ul", "id":itemID, "extraAttributes":{"class":"dropdown-menu dropdown-submenu"}})
