@@ -51,7 +51,7 @@ logging.info("static_folder: " + static_folder)
 
 app = Flask(__name__,template_folder=template_folder,static_folder=static_folder)
 app.config.from_object(__name__)
-app.config.from_envvar('DEEPZOOM_MULTISERVER_SETTINGS', silent=True)
+app.config.from_envvar('TISSUUMAPS_CONF', silent=True)
 app.config["PLUGIN_FOLDER"] = plugins_folder
 
 for module in glob.glob(app.config["PLUGIN_FOLDER"] + "/*.py"):
