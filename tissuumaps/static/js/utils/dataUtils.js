@@ -263,11 +263,6 @@ dataUtils.updateViewOptions = function(data_id){
     menuui.innerText="";
 
     menuui.appendChild(table);
-    sorttable.makeSortable(table);
-    if(data_obj["_gb_col"]){
-        var myTH = table.getElementsByTagName("th")[1];
-        sorttable.innerSortFunction.apply(myTH, []);
-    }
     //shape UXXXX_grname_shape, color UXXXX_grname_color
 
     // Make sure that slider for global marker size is shown

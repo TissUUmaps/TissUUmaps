@@ -1538,6 +1538,10 @@ interfaceUtils._mGenUIFuncs.groupUI=function(uid){
 
     //I do this to know if I have name selected, and also to know where to draw the 
     //color from
+    var groupUI=HTMLElementUtils.createElement({"kind":"div"});
+    var filter=HTMLElementUtils.createElement({"kind":"input", "extraAttributes":{ "class":"form-text-input form-control", "type":"text", "placeholder":"Filter markers"}});
+
+    groupUI.appendChild(filter)
 
     var table=HTMLElementUtils.createElement({"kind":"table","extraAttributes":{"class":"table table-striped marker_table"}});
     var thead=HTMLElementUtils.createElement({"kind":"thead"});
@@ -1856,8 +1860,27 @@ interfaceUtils._mGenUIFuncs.groupUI=function(uid){
     table.appendChild(thead);
     table.appendChild(thead2);
     table.appendChild(tbody);
-
-    return table;
+    groupUI.appendChild(table);
+    filter.addEventListener("input",function(event) {
+        const trs = table.querySelectorAll('tbody tr')
+        const filter = this.value
+        const regex = new RegExp(filter, 'i')
+        const isFoundInTds = td => regex.test(td.innerText)
+        const isFound = childrenArr => childrenArr.some(isFoundInTds)
+        const setTrStyleDisplay = ({ style, children }) => {
+            style.display = isFound([
+            ...children // <-- All columns
+            ]) ? '' : 'none' 
+        }
+        trs.forEach(setTrStyleDisplay)
+    })
+    
+    sorttable.makeSortable(table);
+    if(data_obj["_gb_col"]){
+        var myTH = table.getElementsByTagName("th")[1];
+        sorttable.innerSortFunction.apply(myTH, []);
+    }
+    return groupUI;
 }
 
 interfaceUtils.updateColorDict = function(uid) {
