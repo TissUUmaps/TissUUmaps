@@ -7,8 +7,7 @@
  * @namespace Spot_Detection
  * @classdesc The root namespace for Spot_Detection.
  */
- var Spot_Detection;
- Spot_Detection = {
+var Spot_Detection = {
      name:"Spot detection - Quality Control",
      _bboxSize:11,
      _figureSize:7,
@@ -20,14 +19,8 @@
   }
  
  /**
-  * This method is called when the document is loaded. The tmapp object is built as an "app" and init is its main function.
-  * Creates the OpenSeadragon (OSD) viewer and adds the handlers for interaction.
-  * To know which data one is referring to, there are Object Prefixes (op). For In situ sequencing projects it can be "ISS" for
-  * Cell Profiler data it can be "CP".
-  * If there are images to be displayed on top of the main image, they are stored in the layers object and, if there are layers
-  * it will create the buttons to display them in the settings panel.
-  * The SVG overlays for the viewer are also initialized here 
-  * @summary After setting up the tmapp object, initialize it*/
+  * This method is called when the document is loaded.
+  * */
  Spot_Detection.init = function (container) {
      Spot_Detection.changeOrder(false);
      // row0=HTMLElementUtils.createElement({"kind":"h6", "extraAttributes":{"class":""}});
