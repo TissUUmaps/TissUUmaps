@@ -313,6 +313,8 @@
         {% endif %}
         {% if isStandalone %}
             flask.standalone.init();
+        {% elif readOnly %}
+            flask.init();
         {% else %}
             flask.server.init();
         {% endif %}

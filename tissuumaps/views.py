@@ -280,7 +280,7 @@ def _setup():
 @app.errorhandler(404)
 def page_not_found(e):
     # note that we set the 404 status explicitly
-    return render_template("tissuumaps.html", isStandalone=app.config["isStandalone"], message="Impossible to load this file")
+    return render_template("tissuumaps.html", isStandalone=app.config["isStandalone"], message="Impossible to load this file", readOnly=app.config["READ_ONLY"])
 
 
 def _get_slide(path, originalPath=None):
@@ -317,7 +317,7 @@ def _get_slide(path, originalPath=None):
 @app.route("/")
 @requires_auth
 def index():
-    return render_template("tissuumaps.html", isStandalone=app.config["isStandalone"])
+    return render_template("tissuumaps.html", isStandalone=app.config["isStandalone"], readOnly=app.config["READ_ONLY"])
 
 @app.route("/web/<path:path>")
 @requires_auth
@@ -337,7 +337,6 @@ def slide(filename):
     path = os.path.abspath(os.path.join(app.basedir, path, filename))
     #slide = _get_slide(path)
     slide_url = os.path.basename(path)+".dzi"#url_for("dzi", path=path)
-    
     jsonProject={
         "layers": [
             {
@@ -350,7 +349,8 @@ def slide(filename):
         "tissuumaps.html",
         plugins=app.config["PLUGINS"],
         jsonProject=jsonProject,
-        isStandalone=app.config["isStandalone"]
+        isStandalone=app.config["isStandalone"],
+        readOnly=app.config["READ_ONLY"]
         )
 
 @app.route("/ping")
@@ -378,7 +378,8 @@ def tmapFile(filename):
     if not path:
         path = "./"
     jsonFilename = os.path.abspath(os.path.join(app.basedir, path, filename) + ".tmap")
-    if request.method == "POST":
+
+    if request.method == "POST" and not app.config["READ_ONLY"]:
         state = request.get_json(silent=False)
         with open(jsonFilename, "w") as jsonFile:
             json.dump(state, jsonFile, indent=4, sort_keys=True)
@@ -404,7 +405,8 @@ def tmapFile(filename):
             "tissuumaps.html",
             plugins=plugins,
             jsonProject=state,
-            isStandalone=app.config["isStandalone"]
+            isStandalone=app.config["isStandalone"],
+            readOnly=app.config["READ_ONLY"]
         )
 
 

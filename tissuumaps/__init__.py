@@ -34,6 +34,8 @@ DEEPZOOM_TILE_QUALITY = 90
 FOLDER_DEPTH = 4
 PLUGINS = []
 
+READ_ONLY = False
+
 # determine if application is a script file or frozen exe
 if getattr(sys, 'frozen', False):
     template_folder=os.path.join(sys._MEIPASS, 'templates')
