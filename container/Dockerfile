@@ -6,12 +6,12 @@ RUN apt-get update && apt-get install bash nano openslide-tools libvips -y
 COPY ./container/requirements.txt /requirements.txt
 
 RUN pip3 install -r /requirements.txt
-RUN pip3 install gunicorn
+RUN pip3 install gunicorn gevent
 
 COPY ./tissuumaps/ /app/tissuumaps
 WORKDIR /app/
 ENV PYTHONPATH /app
 
-ENV GUNICORN_CMD_ARGS "--bind=0.0.0.0:80 --workers=4 --thread=4 --worker-class=gthread --forwarded-allow-ips='*' --access-logfile -"
+ENV GUNICORN_CMD_ARGS "--bind=0.0.0.0:80 --workers=8 --thread=8 --worker-class=gevent --forwarded-allow-ips='*' -"
 
 CMD ["gunicorn", "tissuumaps:app"]
