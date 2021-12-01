@@ -1,6 +1,7 @@
 name: Docker Image TissUUmaps
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - '*'
