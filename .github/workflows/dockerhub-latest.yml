@@ -1,13 +1,14 @@
 name: Docker Image TissUUmaps
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - '*'
 
 jobs:
   build:
-    if: github.repository == 'wahlby-lab/FlaskTissUUmaps'
+    if: github.repository == 'TissUUmaps/FlaskTissUUmaps'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
