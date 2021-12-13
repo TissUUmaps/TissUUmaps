@@ -34,7 +34,8 @@ from flask import (
     request,
     Response,
     send_from_directory,
-    redirect
+    redirect,
+    _request_ctx_stack
 )
 
 from tissuumaps.flask_filetree import filetree
@@ -77,9 +78,12 @@ def authenticate():
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not "path" in kwargs.keys():
-            return f(*args, **kwargs)
-        path = os.path.abspath(os.path.join(app.basedir, kwargs["path"]))
+        if _request_ctx_stack.top.request.args.get('path'):
+            path = os.path.abspath(os.path.join(app.basedir, _request_ctx_stack.top.request.args.get('path'), "fake"))
+        elif not "path" in kwargs.keys():
+            path = getPathFromReferrer(_request_ctx_stack.top.request, "")
+        else:
+            path = os.path.abspath(os.path.join(app.basedir, kwargs["path"]))
         activeFolder = os.path.dirname(path)
         while os.path.dirname(activeFolder) != activeFolder and not os.path.isfile(
             activeFolder + "/auth"
