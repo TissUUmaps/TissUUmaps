@@ -285,7 +285,8 @@ def _setup():
 @app.errorhandler(404)
 def page_not_found(e):
     # note that we set the 404 status explicitly
-    return render_template("tissuumaps.html", isStandalone=app.config["isStandalone"], message="Impossible to load this file", readOnly=app.config["READ_ONLY"])
+    #return render_template("tissuumaps.html", isStandalone=app.config["isStandalone"], message="Impossible to load this file", readOnly=app.config["READ_ONLY"])
+    return redirect("/404"), 404, {"Refresh": "1; url=/404"}
 
 
 def _get_slide(path, originalPath=None):
@@ -423,8 +424,10 @@ def tmapFile(filename):
 @app.route("/<path:completePath>.csv")
 @requires_auth
 def csvFile(completePath):
+    completePath = os.path.join(app.basedir, completePath + ".csv")
     directory = os.path.dirname(completePath)
     filename = os.path.basename(completePath)
+    print ("completePath", completePath, directory, filename, os.path.isfile(completePath))
     if os.path.isfile(completePath):
         # Temporary fix for gz files without csv
         if os.path.isfile(completePath + ".gz"):
@@ -457,6 +460,7 @@ def csvFile(completePath):
 @app.route("/<path:completePath>.json")
 @requires_auth
 def jsonFile(completePath):
+    completePath = os.path.join(app.basedir, completePath + ".json")
     directory = os.path.dirname(completePath)
     filename = os.path.basename(completePath)
     if os.path.isfile(completePath):

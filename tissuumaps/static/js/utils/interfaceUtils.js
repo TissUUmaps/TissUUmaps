@@ -2128,6 +2128,16 @@ interfaceUtils.createDownloadDropdown = function(downloadRow, innerText, callbac
 }
 
 interfaceUtils.createDownloadDropdownMarkers = function(options) {
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    const path = urlParams.get('path')
+    if (path != null) {
+        console.log('options["path"]', options["path"])
+        options["path"] = options["path"].map(function (filename) {
+            return path + "/" + filename
+        })
+        console.log('options["path"]', options["path"])
+    }
     var downloadRow = document.getElementById("divMarkersDownloadButtons");
     interfaceUtils._mGenUIFuncs.generateUUID();
     if (!options.uid)
@@ -2186,6 +2196,12 @@ interfaceUtils.createDownloadButton = function(downloadRow, innerText, callback,
 }
 
 interfaceUtils.createDownloadButtonMarkers = function(options) {
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    const path = urlParams.get('path')
+    if (path != null) {
+        options["path"] = path + "/" + options["path"]
+    }
     var downloadRow = document.getElementById("divMarkersDownloadButtons");
     interfaceUtils._mGenUIFuncs.generateUUID();
     if (!options.uid)
@@ -2202,6 +2218,14 @@ interfaceUtils.createDownloadButtonMarkers = function(options) {
 }
 
 interfaceUtils.createDownloadDropdownRegions = function(options) {
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    const path = urlParams.get('path')
+    if (path != null) {
+        options["path"] = options["path"].map(function (filename) {
+            return path + "/" + filename
+        })
+    }
     var downloadRow = document.getElementById("divRegionsDownloadButtons");
     var callback = function(e, params){
         projectUtils.applySettings(options.settings);
