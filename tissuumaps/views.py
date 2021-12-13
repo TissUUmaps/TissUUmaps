@@ -142,6 +142,7 @@ class ImageConverter:
                         tile=True,
                         tile_width=256,
                         tile_height=256,
+                        compression='jpeg',
                         properties=True
                     )
                 except:
