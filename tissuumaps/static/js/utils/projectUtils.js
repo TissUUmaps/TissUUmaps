@@ -351,7 +351,12 @@ projectUtils.loadProjectFileFromServer = function(path) {
         regionUtils.JSONValToRegions(state.regions);
     }
     if (state.regionFile) {
-        regionUtils.JSONToRegions(state.regionFile);
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        const path = urlParams.get('path')
+        if (path != null) {
+            regionUtils.JSONToRegions(path + "/" + state.regionFile);
+        }
     }
     projectUtils._activeState = state;
     tmapp.fixed_file = "";
