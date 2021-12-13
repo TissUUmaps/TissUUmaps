@@ -374,12 +374,12 @@ projectUtils.loadProjectFileFromServer = function(path) {
     }
     if (state.regionFiles) {
         state.regionFiles.forEach(function(regionFile) {
-            interfaceUtils.createDownloadButtonRegions(
-                regionFile.title,
-                regionFile.path,
-                regionFile.comment,
-                regionFile.autoLoad
-            );
+            if( Object.prototype.toString.call( regionFile.path ) === '[object Array]' ) {
+                interfaceUtils.createDownloadDropdownRegions(regionFile);
+            }
+            else {
+                interfaceUtils.createDownloadButtonRegions(regionFile);
+            }
         });
     }
     if (state.filename) {

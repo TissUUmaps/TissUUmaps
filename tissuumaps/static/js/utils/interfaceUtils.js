@@ -2120,7 +2120,7 @@ interfaceUtils.createDownloadDropdown = function(downloadRow, innerText, callbac
 
     downloadRow.appendChild(row);
 
-    $(".chosen-select_" + random_chosen_id).chosen({disable_search_threshold: 10, search_contains: true});
+    $(".chosen-select_" + random_chosen_id).chosen({disable_search_threshold: 10, search_contains: true, width: "100%"});
     $(".chosen-select_" + random_chosen_id).on('change', function(evt, params) {
         callback(evt, params);
     });
@@ -2140,6 +2140,7 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
         optionsCopy["path"] = dataURL;
         interfaceUtils.generateDataTabUI(optionsCopy);
     }
+    var dropdownOptions;
     if (options.autoLoad) {
         dropdownOptions = [];
     }
@@ -2200,14 +2201,43 @@ interfaceUtils.createDownloadButtonMarkers = function(options) {
     }
 }
 
-interfaceUtils.createDownloadButtonRegions = function(innerText, dataURL, comment, autoLoad) {
+interfaceUtils.createDownloadDropdownRegions = function(options) {
+    var downloadRow = document.getElementById("divRegionsDownloadButtons");
+    var callback = function(e, params){
+        projectUtils.applySettings(options.settings);
+        var dataURL = params.selected;
+        if (dataURL == "") return;
+        regionUtils.JSONToRegions(dataURL)
+    }
+    var dropdownOptions;
+    if (options.autoLoad) {
+        dropdownOptions = [];
+    }
+    else {
+        dropdownOptions = [{"value":"","text":"Select from list"}];
+    }
+    options["path"].forEach (function (dataURL) {
+        dropdownOptions.push({
+            "value": dataURL,
+            "text": dataURL.split('/').reverse()[0].replace(/_/g, '').replace('.json', '')
+        })
+    });
+    interfaceUtils.createDownloadDropdown(downloadRow, options.title, callback, options.comment, dropdownOptions);
+    //var label = document.getElementById("label_ISS_csv");
+    if (options.autoLoad) {
+        setTimeout(function(){callback(null, {'selected':options["path"][0]})},500);
+    }
+    //else { label.innerHTML = "Or import gene expression from CSV file:"; }
+}
+
+interfaceUtils.createDownloadButtonRegions = function(options) {
     var downloadRow = document.getElementById("divRegionsDownloadButtons");
     var callback = function(e){
         projectUtils.applySettings(options.settings);
-        regionUtils.JSONToRegions(dataURL)
+        regionUtils.JSONToRegions(options.path)
     }
-    var buttonRow = interfaceUtils.createDownloadButton(downloadRow, innerText, callback, comment);
-    if (autoLoad) {
+    var buttonRow = interfaceUtils.createDownloadButton(downloadRow, options.title, callback, options.comment);
+    if (options.autoLoad) {
         setTimeout(function(){callback(null)},500);
         buttonRow.style.display="none";
     }
