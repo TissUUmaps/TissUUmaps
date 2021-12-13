@@ -14,7 +14,10 @@
                 root: "",
                 script: "{{ url_for('filetree.sfiles') }}"
             }, function(file) { 
-                var dirname = file.match(/(.*)[\/\\]/)[1]||'';
+                var dirname = "";
+                if (file.match(/(.*)[\/\\]/)) {
+                    dirname = file.match(/(.*)[\/\\]/)[1]||'';
+                }
                 var filename = file.replace(/^.*[\\\/]/, '');
                 document.getElementById("filetree").innerHTML = "Loading, please wait...";
                 window.parent.location = "/" + filename + "?path=" + dirname;

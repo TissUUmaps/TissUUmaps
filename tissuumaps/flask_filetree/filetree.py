@@ -63,6 +63,7 @@ def make_blueprint(app=None, register=True, fnfilter=None, dfilter=None):
             d = urllib.parse.unquote(flask.request.form.get('dir', './'))
             if d == "":
                 d = app.config["SLIDE_DIR"]
+            print ("d", d)
             fns, dirs = get_files(d, fnfilter, dfilter, rel=True)
             r = ['<ul class="jqueryFileTree" style="display: none;">']
             for f in dirs:
@@ -71,6 +72,8 @@ def make_blueprint(app=None, register=True, fnfilter=None, dfilter=None):
                         '<a href="#" rel="%s/">%s</a></li>' % (ff, f))
             for f in fns:
                 ff = os.path.join(d, f)
+                if ff.startswith(app.config["SLIDE_DIR"]):
+                    ff= ff[len(app.config["SLIDE_DIR"]):]
                 e = os.path.splitext(f)[1][1:]  # get .ext and remove dot
                 r.append('<li class="file ext_%s">' \
                 '<a href="#" rel="%s">%s</a></li>' % (e, ff, f))
