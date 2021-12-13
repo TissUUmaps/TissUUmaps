@@ -375,6 +375,11 @@ def getPathFromReferrer(request, filename):
     return path
 
 
+@app.route("/<path:path>/<string:filename>.tmap", methods=["GET", "POST"])
+@requires_auth
+def tmapFile_old(path, filename):
+    return redirect(url_for("tmapFile", filename=filename) + "?path=" + path)
+
 @app.route("/<string:filename>.tmap", methods=["GET", "POST"])
 @requires_auth
 def tmapFile(filename):
@@ -414,10 +419,9 @@ def tmapFile(filename):
         )
 
 
-@app.route("/<path:filename>.csv")
+@app.route("/<path:completePath>.csv")
 @requires_auth
-def csvFile(filename):
-    completePath = getPathFromReferrer(request, filename) + ".csv"
+def csvFile(completePath):
     directory = os.path.dirname(completePath)
     filename = os.path.basename(completePath)
     if os.path.isfile(completePath):
@@ -449,10 +453,9 @@ def csvFile(filename):
         abort(404)
 
 
-@app.route("/<path:filename>.json")
+@app.route("/<path:completePath>.json")
 @requires_auth
-def jsonFile(filename):
-    completePath = getPathFromReferrer(request, filename) + ".json"
+def jsonFile(completePath):
     directory = os.path.dirname(completePath)
     filename = os.path.basename(completePath)
     if os.path.isfile(completePath):
@@ -461,10 +464,9 @@ def jsonFile(filename):
         abort(404)
 
 
-@app.route("/<path:filename>.dzi")
+@app.route("/<path:path>.dzi")
 @requires_auth
-def dzi(filename):
-    path = getPathFromReferrer(request, filename)
+def dzi(path):
     # Check if a .dzi file exists, else use OpenSlide:
     if os.path.isfile(path + ".dzi"):
         directory = os.path.dirname(path)
@@ -477,10 +479,9 @@ def dzi(filename):
     return resp
 
 
-@app.route("/<path:filename>.dzi/info")
+@app.route("/<path:path>.dzi/info")
 @requires_auth
-def dzi_asso(filename):
-    path = getPathFromReferrer(request, filename)
+def dzi_asso(path):
     slide = _get_slide(path)
     associated_images = []
     for key, im in slide.associated_images.items():
@@ -498,9 +499,8 @@ def dzi_asso(filename):
 
 
 
-@app.route("/<path:filename>_files/<int:level>/<int:col>_<int:row>.<format>")
-def tile(filename, level, col, row, format):
-    path = getPathFromReferrer(request, filename)
+@app.route("/<path:path>_files/<int:level>/<int:col>_<int:row>.<format>")
+def tile(path, level, col, row, format):
     if os.path.isfile( f"{path}_files/{level}/{col}_{row}.{format}"):
         directory = os.path.dirname(f"{path}_files/{level}/{col}_{row}.{format}")
         filename = os.path.basename(f"{path}_files/{level}/{col}_{row}.{format}")
@@ -525,10 +525,9 @@ def tile(filename, level, col, row, format):
     return resp
 
 @app.route(
-    "/<path:filename>.dzi/<path:associated_name>_files/<int:level>/<int:col>_<int:row>.<format>"
+    "/<path:path>.dzi/<path:associated_name>_files/<int:level>/<int:col>_<int:row>.<format>"
 )
-def tile_asso(filename, associated_name, level, col, row, format):
-    path = getPathFromReferrer(request, filename)
+def tile_asso(path, associated_name, level, col, row, format):
     slide = _get_slide(path).associated_images[associated_name]
     format = format.lower()
     if format != "jpeg" and format != "png":

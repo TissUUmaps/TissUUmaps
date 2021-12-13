@@ -243,6 +243,12 @@ overlayUtils.addLayerFromSelect = function() {
 /**
  * This method is used to add a layer */
 overlayUtils.addLayer = function(layerName, tileSource, i, visible) {
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    const path = urlParams.get('path')
+    if (path != null) {
+        tileSource = path + "/" + tileSource
+    }
     var op = tmapp["object_prefix"];
     var vname = op + "_viewer";
     var opacity = 1.0;
