@@ -286,6 +286,8 @@ class webEngine(QWebEngineView):
             nonlocal imgFiles, otherFiles
             def addRelativePath_aux (state, path, isImg):
                 nonlocal imgFiles, otherFiles
+                if not path[0] in state.keys():
+                    return
                 if len(path) == 1:
                     if isinstance(state[path[0]], list):
                         if isImg:
@@ -302,8 +304,6 @@ class webEngine(QWebEngineView):
                         else: 
                             otherFiles += [state[path[0]]]
                             state[path[0]] = "data/files/" + os.path.basename(state[path[0]])
-                    return
-                if not path[0] in state.keys():
                     return
                 else:
                     if isinstance(state[path[0]], list):
