@@ -23,6 +23,9 @@ from flask import Flask
 from optparse import OptionParser
 import logging
 
+log = logging.getLogger()
+log.setLevel(logging.INFO)
+
 SLIDE_DIR = "/mnt/data/shared/"
 SLIDE_CACHE_SIZE = 60
 DEEPZOOM_FORMAT = 'png'
@@ -41,15 +44,19 @@ if getattr(sys, 'frozen', False):
     template_folder=os.path.join(sys._MEIPASS, 'templates')
     static_folder=os.path.join(sys._MEIPASS, 'static')
     plugins_folder=os.path.join(sys._MEIPASS, 'plugins')
+    version_file=os.path.join(sys._MEIPASS, 'VERSION')
     os.chdir(sys._MEIPASS)
 else:
     folderPath = os.path.dirname(pathlib.Path(__file__))
     template_folder=os.path.join(folderPath, 'templates')
     static_folder=os.path.join(folderPath, 'static')
     plugins_folder=os.path.join(folderPath, 'plugins')
+    version_file=os.path.join(folderPath, 'VERSION')
 
-logging.info("template_folder: " + template_folder)
-logging.info("static_folder: " + static_folder)
+logging.debug("template_folder: " + template_folder)
+logging.debug("static_folder: " + static_folder)
+with open(version_file) as f:
+    logging.info(" * TissUUmaps version: " + f.read())
 
 app = Flask(__name__,template_folder=template_folder,static_folder=static_folder)
 app.config.from_object(__name__)
@@ -60,7 +67,7 @@ for module in glob.glob(app.config["PLUGIN_FOLDER"] + "/*.py"):
     if "__init__.py" in module:
         continue
     app.config["PLUGINS"].append(os.path.splitext(os.path.basename(module))[0])
-logging.info("Plugin list:",app.config["PLUGINS"])
+logging.debug("Plugin list:",app.config["PLUGINS"])
 
 app.config["isStandalone"] = False
 
