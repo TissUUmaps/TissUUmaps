@@ -1,6 +1,7 @@
 name: PyInstaller
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - '*'
@@ -23,13 +24,14 @@ jobs:
       run: |
         pip install -r requirements.txt
         python -m pip install --upgrade pip
-        pip install pyinstaller
+        pip install pyinstaller==4.7
+        cp -force dep/bootloader/* $pythonLocation/Lib/site-packages/PyInstaller/bootloader/Windows-64bit/
     - name: build with pyinstaller
       run: |
         pyinstaller TissUUmaps.spec
     - name: copy vips bin files
       run: |
-        cp vips-dev-8.10/bin/* dist/TissUUmaps/
+        cp dep/vips-dev-8.10/bin/* dist/TissUUmaps/
         
     - name: Checkout fred
       uses: actions/checkout@v2
