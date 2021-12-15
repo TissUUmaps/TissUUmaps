@@ -1,4 +1,5 @@
 from optparse import OptionParser
+import os
 
 from . import views
 
@@ -48,7 +49,7 @@ def main ():
     views.app.config.from_object(opts)
 
     try:
-        views.app.config['SLIDE_DIR'] = args[0]
+        views.app.config['SLIDE_DIR'] = os.path.abspath(args[0]) + "/"
     except IndexError:
         pass
 

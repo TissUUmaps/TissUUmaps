@@ -256,7 +256,7 @@ class webEngine(QWebEngineView):
             time.sleep(0.1)
         #print ("loading page ", self.location)
         if (len(self.args) > 0):
-            if not self.openImagePath(self.args[0]):
+            if not self.openImagePath(os.path.abspath(self.args[0])):
                 self.load(QUrl(self.location))
         else:
             self.load(QUrl(self.location))
