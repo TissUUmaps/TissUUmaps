@@ -27,7 +27,8 @@ exe = EXE(pyz,
           strip=False,
           upx=True,
           console=False,
-          icon='../tissuumaps/static/misc/favicon.ico')
+          #icon='../tissuumaps/static/misc/favicon.ico'
+          )
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
