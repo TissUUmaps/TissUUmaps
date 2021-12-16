@@ -3,7 +3,7 @@
 
 ## Windows installation
 
-1. Download the Windows Installer from [the last release](https://github.com/wahlby-lab/FlaskTissUUmaps/releases/latest) and install it. Note that the installer is not signed yet and may trigger warnings from the browser and from the firewall. You can safely pass these warnings.
+1. Download the Windows Installer from [the last release](https://github.com/TissUUmaps/TissUUmaps/releases/latest) and install it. Note that the installer is not signed yet and may trigger warnings from the browser and from the firewall. You can safely pass these warnings.
 
 2. Start TissUUmaps.
 
