@@ -1,5 +1,5 @@
-# FlaskTissUUmaps
-FlaskTissUUmaps is a python server for [TissUUmaps](https://tissuumaps.research.it.uu.se/) using Flask that comes with a standalone User Interface.
+# TissUUmaps - UU is for Uppsala University ;)
+TissUUmaps is a python server for [TissUUmapsCore](https://github.com/TissUUmaps/TissUUmapsCore) using Flask that comes with a standalone User Interface.
 
 ## Windows installation
 
