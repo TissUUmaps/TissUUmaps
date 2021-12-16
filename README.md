@@ -1,5 +1,5 @@
 # TissUUmaps - UU is for Uppsala University ;)
-TissUUmaps is a python server for [TissUUmapsCore](https://github.com/TissUUmaps/TissUUmapsCore) using Flask that comes with a standalone User Interface.
+[TissUUmaps](https://tissuumaps.github.io/) is a browser-based tool for fast visualization and exploration of millions of data points overlaying a tissue sample. TissUUmaps can be used as a web service or locally in your computer, and allows users to share regions of interest and local statistics.
 
 ## Windows installation
 
@@ -51,9 +51,9 @@ TissUUmaps is a python server for [TissUUmapsCore](https://github.com/TissUUmaps
    > :warning: Remember that Flask is running on a built-in development server (`flask run`) and should not be used in production. If you want to deploy FlaskTissUUmaps on a production server, please read https://flask.palletsprojects.com/en/1.1.x/tutorial/deploy/ or any similar tutorial.
 
 ## Image format
-FlaskTissUUmaps allows to visualize all images from a folder and sub-folders in TissUUmaps. By using a minimal deepzoom server, FlaskTissUUmaps removes the need for creating DZI files of every image.
+TissUUmaps allows to visualize all images from a folder and sub-folders in the TissUUmaps viewer. By using a minimal deepzoom server, TissUUmaps removes the need for creating DZI files of every image.
 
-FlaskTissUUmaps can read whole slide images in any format recognized by the [OpenSlide library](https://openslide.org/api/python/#openslide-python):
+TissUUmaps can read whole slide images in any format recognized by the [OpenSlide library](https://openslide.org/api/python/#openslide-python):
  * Aperio (.svs, .tif)
  * Hamamatsu (.ndpi, .vms, .vmu)
  * Leica (.scn)
@@ -64,4 +64,4 @@ FlaskTissUUmaps can read whole slide images in any format recognized by the [Ope
  * Ventana (.bif, .tif)
  * Generic tiled TIFF (.tif)
 
-FlaskTissUUmaps will convert any other format into a pyramidal tiff (in a temporary .tissuumaps folder) using [vips](https://github.com/libvips/libvips).
+TissUUmaps will convert any other format into a pyramidal tiff (in a temporary .tissuumaps folder) using [vips](https://github.com/libvips/libvips).
