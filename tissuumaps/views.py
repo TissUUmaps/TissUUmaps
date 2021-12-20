@@ -310,8 +310,7 @@ def _get_slide(path, originalPath=None):
                 + os.path.splitext(os.path.basename(path))[0]
                 + ".tif"
             )
-            if not os.path.isdir(os.path.dirname(path) + "/.tissuumaps/"):
-                os.makedirs(os.path.dirname(path) + "/.tissuumaps/")
+            os.makedirs(os.path.dirname(path) + "/.tissuumaps/",exist_ok=True)
             tifpath = ImageConverter(path, newpath).convert()
             return _get_slide(tifpath, path)
         except:
@@ -429,6 +428,7 @@ def csvFile(completePath):
     filename = os.path.basename(completePath)
     print ("completePath", completePath, directory, filename, os.path.isfile(completePath))
     if os.path.isfile(completePath):
+        return send_from_directory(directory, filename)
         # Temporary fix for gz files without csv
         if os.path.isfile(completePath + ".gz"):
             os.rename(completePath + ".gz", completePath + ".cgz")
