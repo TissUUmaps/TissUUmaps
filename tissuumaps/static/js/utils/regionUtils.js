@@ -559,14 +559,22 @@ regionUtils.regionUI = function (regionid) {
     var pointsInside=[];  
     quadtree.visit(function (node, x1, y1, x2, y2) {
         if (!node.length) {
-            do {
-                var d = node.data;
-                d.scanned = true;
-                var selected = (d[xselector] >= x0) && (d[xselector] < x3) && (d[yselector] >= y0) && (d[yselector] < y3);
-                if (selected) {
-                    pointsInside.push(d);
+            const markerData = dataUtils.data[options.dataset]["_processeddata"];
+            const columns = dataUtils.data[options.dataset]["_csv_header"];
+            for (const d of node.data) {
+                const x = markerData[xselector][d];
+                const y = markerData[yselector][d];
+                if (x >= x0 && x < x3 && y >= y0 && y < y3) {
+                    // Note: expanding each point into a full object will be
+                    // very inefficient memory-wise for large datasets, so
+                    // should return points as array of indices instead (TODO)
+                    let p = {};
+                    for (const key of columns) {
+                        p[key] = markerData[key][d];
                 }
-            } while (node = node.next);
+                    pointsInside.push(p);
+                }
+            }
         }
         return x1 >= x3 || y1 >= y3 || x2 < x0 || y2 < y0;
     });
@@ -1001,7 +1009,7 @@ regionUtils.analyzeRegion = function (regionid) {
         console.log(dataset, allkeys);
         for (var codeIndex in allkeys) {
             var code = allkeys[codeIndex];
-            console.log(code, dataUtils.data[dataset], dataUtils.data[dataset]["_groupgarden"][code]);
+
             var pointsInside=regionUtils.searchTreeForPointsInRegion(dataUtils.data[dataset]["_groupgarden"][code],
                 regionUtils._regions[regionid]._gxmin,regionUtils._regions[regionid]._gymin,
                 regionUtils._regions[regionid]._gxmax,regionUtils._regions[regionid]._gymax,
@@ -1009,7 +1017,7 @@ regionUtils.analyzeRegion = function (regionid) {
                     "globalCoords":true,
                     "xselector":dataUtils.data[dataset]["_X"],
                     "yselector":dataUtils.data[dataset]["_Y"],
-                    "dataset":  dataUtils.data[dataset]["_csv_path"]
+                    "dataset":dataset
                 });
             console.log(dataset, code, pointsInside.length);
             if(pointsInside.length>0){

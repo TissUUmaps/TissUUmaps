@@ -174,6 +174,17 @@ projectUtils.getActiveProject = function () {
  }
 
 
+projectUtils.updateMarkerButton = function(dataset) {
+    var data_obj = dataUtils.data[dataset];
+    console.log("projectUtils.updateMarkerButton", data_obj);
+    var markerFile = projectUtils._activeState.markerFiles[data_obj["fromButton"]];
+    var headers = interfaceUtils._mGenUIFuncs.getTabDropDowns(dataset);
+    markerFile.expectedHeader = Object.assign({}, ...Object.keys(headers).map((k) => ({[k]: headers[k].value})));
+    var radios = interfaceUtils._mGenUIFuncs.getTabRadiosAndChecks(dataset);
+    markerFile.expectedRadios = Object.assign({}, ...Object.keys(radios).map((k) => ({[k]: radios[k].checked})));
+    console.log("projectUtils.updateMarkerButton markerFile", markerFile);
+}
+
 projectUtils.makeButtonFromTabAux = function (dataset, csvFile, title, comment) {
     buttonsDict = {};
 
@@ -346,7 +357,7 @@ projectUtils.loadProjectFileFromServer = function(path) {
             if (tab.visible === false) {document.getElementById("title-tab-" + tab.name).style.display="none"}
         });
     }*/
-    console.log("state.regions, state.regions != {}", state.regions, state.regions != {})
+
     if (state.regions && Object.keys(state.regions).length > 0) {
         regionUtils.JSONValToRegions(state.regions);
     }
@@ -364,7 +375,8 @@ projectUtils.loadProjectFileFromServer = function(path) {
         filterUtils._compositeMode = state.compositeMode;
     }
     if (state.markerFiles) {
-        state.markerFiles.forEach(function(markerFile) {
+        state.markerFiles.forEach(function(markerFile, buttonIndex) {
+            markerFile["fromButton"] = buttonIndex;
             if (markerFile.expectedCSV) {
                 projectUtils.convertOldMarkerFile(markerFile);
                 state.hideTabs = true;

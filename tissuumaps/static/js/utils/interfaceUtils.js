@@ -570,14 +570,14 @@ interfaceUtils.generateDataTabUI = function(options){
         menurow=interfaceUtils._mGenUIFuncs.rowForMarkerUI();
 
         togglerow=HTMLElementUtils.createElement({"kind":"div", "extraAttributes":{"class":"row"}});
-        divpane_settings_toggle = HTMLElementUtils.createElement({"kind":"div", "id":generated+"_marker-tab-settings-toggle", "extraAttributes":{"class":"d-none w-auto ms-auto btn btn-light btn-sm mx-3"}});
+        var divpane_settings_toggle = HTMLElementUtils.createElement({"kind":"div", "id":generated+"_marker-tab-settings-toggle", "extraAttributes":{"class":"d-none w-auto ms-auto btn btn-light btn-sm mx-3"}});
         divpane_settings_toggle.innerHTML = "<i class='bi bi-sliders'></i>";
         divpane_settings_toggle.addEventListener("click",function(event) {
-            divpane_settings = interfaceUtils.getElementById(generated+"_marker-tab-settings")
+            var divpane_settings = interfaceUtils.getElementById(generated+"_marker-tab-settings")
             divpane_settings.classList.remove("d-none");
             divpane_settings_toggle.classList.add("d-none");
         })
-        divpane_settings = HTMLElementUtils.createElement({"kind":"div", "id":generated+"_marker-tab-settings"});
+        var divpane_settings = HTMLElementUtils.createElement({"kind":"div", "id":generated+"_marker-tab-settings"});
         divpane_settings.appendChild(accordion.divaccordion);
         divpane_settings.appendChild(buttonrow);
         togglerow.append(divpane_settings_toggle)
@@ -649,8 +649,8 @@ interfaceUtils._mGenUIFuncs.deleteTab=function(uid){
 
 /** 
 * @param {HTMLEvent} event event that triggered function
-* @param {Array string} array domid suffixes within group
-* @param {Array Number} option this option will be shown while all others are hidden
+* @param {Array.String} array domid suffixes within group
+* @param {Array.Number} option this option will be shown while all others are hidden
 * This function takes options within one specific tab and hide all except the one marked by option */
 interfaceUtils._mGenUIFuncs.hideShow=function(event,array,options){
     uid=event.target.id.split("_")[0]
@@ -669,7 +669,7 @@ interfaceUtils._mGenUIFuncs.hideShow=function(event,array,options){
 
 /** 
 * @param {HTMLEvent} event event that triggered function
-* @param {Array string} array domid suffixes within group
+* @param {Array.String} array domid suffixes within group
 * @param {Number} option this option will be selected while all others are unselected
 * This function takes options within one specific tab and deselects all except the one marked by option */
 interfaceUtils._mGenUIFuncs.selectDeselect=function(event,array,options){
@@ -689,7 +689,7 @@ interfaceUtils._mGenUIFuncs.selectDeselect=function(event,array,options){
 
 /** 
 * @param {HTMLEvent} event event that triggered function
-* @param {Array string} array domid suffixes within group
+* @param {Array.String} array domid suffixes within group
 * @param {Number} option this option will be enabled while all others are disabled
 * This function takes options within one specific tab and disables all except the one marked by option */
 interfaceUtils._mGenUIFuncs.enableDisable=function(event,array,options){
@@ -1623,7 +1623,8 @@ interfaceUtils._mGenUIFuncs.groupUI=function(uid){
         }
 
         var label17=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":uid+"_all_check","class":"cursor-pointer"}});
-        label17.innerText=data_obj["_processeddata"].length;    
+        //label17.innerText=data_obj["_processeddata"].length;    
+        label17.innerText=data_obj["_processeddata"][data_obj["_X"]].length;  // FIXME
         td17.appendChild(label17);        
         tr.appendChild(td17);
 
@@ -1677,55 +1678,6 @@ interfaceUtils._mGenUIFuncs.groupUI=function(uid){
         var label1=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":uid+"_"+escapedID+"_check","class":"cursor-pointer"}});
         label1.innerText=tree["treeID"];
         td1.appendChild(label1);
-        
-        
-        /*tr.onmouseleave = function(event) {
-            this.setAttribute("data-hover","false");
-            
-            hidden_inputs = interfaceUtils.getElementsByClassName("marker-hidden");
-            for(var i = 0; i < hidden_inputs.length; i++){
-                hidden_inputs[i].checked = false;
-            }
-            glUtils.updateColorLUTTextures();
-            glUtils.draw();
-        };
-        tr.onmousemove = function(event) {
-            var tr = this;
-            var uid = this.getAttribute("data-uid");
-            var escapedID = this.getAttribute("data-escapedID");
-            var random_string = (Math.random() + 1).toString(36).substring(7);
-            if (tr.getAttribute("data-highlighted") == "true") {
-                tr.setAttribute("data-highlighted","false");
-                tr.classList.remove("table-primary");
-                hidden_inputs = interfaceUtils.getElementsByClassName("marker-hidden");
-                for(var i = 0; i < hidden_inputs.length; i++){
-                    hidden_inputs[i].checked = false;
-                }
-                glUtils.updateColorLUTTextures();
-                glUtils.draw();
-            }
-            console.log(random_string);
-            this.setAttribute("data-hover",random_string);
-            setTimeout(function () {
-                console.log(tr.getAttribute("data-hover"), random_string);
-                if (tr.getAttribute("data-hover") == random_string) {
-                    tr.setAttribute("data-highlighted","true");
-                    tr.classList.add("table-primary");
-                    hidden_inputs = interfaceUtils.getElementsByClassName("marker-hidden");
-                    for(var i = 0; i < hidden_inputs.length; i++){
-                        hidden_inputs[i].checked = true;
-                    }
-                    hoverElement = interfaceUtils.getElementById(uid+"_"+escapedID+"_hidden");
-                    if (interfaceUtils.getElementById(uid+"_"+escapedID+"_check").checked) {
-                        console.log("onmouseover",uid,escapedID);
-                        
-                        hoverElement.checked = false;
-                    }
-                    glUtils.updateColorLUTTextures();
-                    glUtils.draw();
-                }
-            },500);
-        };*/
 
         if(usename){
             var td15=HTMLElementUtils.createElement({"kind":"td"});
@@ -1736,7 +1688,8 @@ interfaceUtils._mGenUIFuncs.groupUI=function(uid){
         }
 
         var label17=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":uid+"_"+escapedID+"_check","class":"cursor-pointer"}});
-        label17.innerText=tree.size();    
+        //label17.innerText=tree.size();    
+        label17.innerText=dataUtils._quadtreeSize(tree);
         td17.appendChild(label17);        
         tr.appendChild(td17);
 
@@ -2128,16 +2081,6 @@ interfaceUtils.createDownloadDropdown = function(downloadRow, innerText, callbac
 }
 
 interfaceUtils.createDownloadDropdownMarkers = function(options) {
-    const queryString = window.location.search;
-    const urlParams = new URLSearchParams(queryString);
-    const path = urlParams.get('path')
-    if (path != null) {
-        console.log('options["path"]', options["path"])
-        options["path"] = options["path"].map(function (filename) {
-            return path + "/" + filename
-        })
-        console.log('options["path"]', options["path"])
-    }
     var downloadRow = document.getElementById("divMarkersDownloadButtons");
     interfaceUtils._mGenUIFuncs.generateUUID();
     if (!options.uid)
@@ -2195,13 +2138,8 @@ interfaceUtils.createDownloadButton = function(downloadRow, innerText, callback,
     return row;
 }
 
+
 interfaceUtils.createDownloadButtonMarkers = function(options) {
-    const queryString = window.location.search;
-    const urlParams = new URLSearchParams(queryString);
-    const path = urlParams.get('path')
-    if (path != null) {
-        options["path"] = path + "/" + options["path"]
-    }
     var downloadRow = document.getElementById("divMarkersDownloadButtons");
     interfaceUtils._mGenUIFuncs.generateUUID();
     if (!options.uid)
@@ -2218,14 +2156,6 @@ interfaceUtils.createDownloadButtonMarkers = function(options) {
 }
 
 interfaceUtils.createDownloadDropdownRegions = function(options) {
-    const queryString = window.location.search;
-    const urlParams = new URLSearchParams(queryString);
-    const path = urlParams.get('path')
-    if (path != null) {
-        options["path"] = options["path"].map(function (filename) {
-            return path + "/" + filename
-        })
-    }
     var downloadRow = document.getElementById("divRegionsDownloadButtons");
     var callback = function(e, params){
         projectUtils.applySettings(options.settings);

@@ -11,13 +11,6 @@
  */
 dataUtils = {
     data:{
-        /*"gene":{
-            _type: "GENE_DATA"
-        },
-        "morphology":{
-            _type: "MORPHOLOGY_DATA",
-            _name:""
-        },*/
         /*
         "U23423R":{
             _type: "GENERIC_DATA",
@@ -44,17 +37,12 @@ dataUtils = {
     "interpolatePuBuGn", "interpolatePuOr", "interpolatePuRd", "interpolatePurples", "interpolateRdBu", "interpolateRdGy", "interpolateRdPu", "interpolateRdYlBu", 
     "interpolateRdYlGn", "interpolateReds", "interpolateSinebow", "interpolateSpectral", "interpolateTurbo", "interpolateYlGn", "interpolateYlGnBu", "interpolateYlOrBr", 
     "interpolateYlOrRd"],
+
+    _quadtreesEnabled: true,    // If false, only generate fake empty trees
+    _quadtreesMethod: 2,        // 0: D3 quadtrees; 1: depth-limited; 2: depth-limited (array version)
+    _quadtreesMaxDepth: 8,      // Only used for depth-limited trees
+    _quadtreesLastInputs: {},  // Store some info to avoid recomputing a quadtree if not necessary
 }
-/**
- * BIG CHANGE
- * TODO: implemente createDataset so that Fredrik can draw
- * load data as usual, object format
- * trees only when user selects it, keep processeddata
- * how to close 
- * 
- * deterministic shapes
- * 
-*/
 
 /** 
 * @param {String} uid The id of the data group
@@ -86,14 +74,15 @@ dataUtils.createDataset = function(uid,options){
 dataUtils.startCSVcascade= function(event){
     var data_id=event.target.id.split("_")[0];
     var file = event.target.files[0];
-    if (file) {
+    dataUtils.readCSV(data_id, file);
+    /*if (file) {
         var reader = new FileReader();
         reader.onloadend = function (evt) {
             var dataUrl = evt.target.result;
             dataUtils.readCSV(data_id,dataUrl);
         };
         reader.readAsDataURL(file);
-    }
+    }*/
 }
 
 /**
@@ -106,15 +95,31 @@ CPDataUtils={};
 * @param {Array} data data coming from d3 after parsing the csv
 * created the _processeddata list to be used in rendering
 */
-dataUtils.processRawData = function(data_id,data) {
+dataUtils.processRawData = function(data_id, rawdata) {
     let data_obj = dataUtils.data[data_id];
 
-    data_obj["_processeddata"]=data;
+    data_obj["_processeddata"].columns = rawdata.columns;
+    for (let i = 0; i < rawdata.columns.length; ++i) {
+        // Convert chunks of column into a single large array
+        if (rawdata.isnan[i]) {
+            data_obj["_processeddata"][rawdata.columns[i]] = rawdata.data[i].flat();
+        } else {
+            const numRows = rawdata.data[i].reduce((x, y) => x + y.length, 0);
+            data_obj["_processeddata"][rawdata.columns[i]] = new Float64Array(numRows);
+
+            let offset = 0;
+            for (chunk of rawdata.data[i]) {
+                data_obj["_processeddata"][rawdata.columns[i]].set(chunk, offset);
+                offset += chunk.length;
+            }
+        }
+        delete rawdata.data[i];  // Clean up memory
+    }
 
     //this function is in case we need to standardize the data column names somehow,
     //so that the processseddata has some desired structure, but for now maybe no
 
-    dataUtils.createMenuFromCSV(data_id,data[0]);
+    dataUtils.createMenuFromCSV(data_id, rawdata.columns);
 
 }
 
@@ -125,7 +130,7 @@ dataUtils.processRawData = function(data_id,data) {
 */
 dataUtils.updateViewOptions = function(data_id){
 
-    var data_obj = dataUtils.data[data_id];
+var data_obj = dataUtils.data[data_id];
     
     if(data_obj === undefined){
         message="Load data first";
@@ -155,33 +160,31 @@ dataUtils.updateViewOptions = function(data_id){
     if (tmapp["ISS_viewer"].world._items.length == 0) {
         function getMax(arr) {
             let len = arr.length; let max = -Infinity;
-            while (len--) { max = arr[len] > max ? arr[len] : max; }
+            while (len--) { max = +arr[len] > max ? +arr[len] : max; }
             return max;
         }
         function getMin(arr) {
-            let len = arr.length; let min = Infinity;
-            
-            while (len--) { min = arr[len] < min ? arr[len] : min; }
+            let len = arr.length; let min = Infinity; 
+            while (len--) { min = +arr[len] < min ? +arr[len] : min; }
             return min;
         }
-        minX = getMin(dataUtils.data[data_id]["_processeddata"].map(function(o) { return parseFloat(o[data_obj["_X"]]); }));
-        maxX = getMax(dataUtils.data[data_id]["_processeddata"].map(function(o) { return parseFloat(o[data_obj["_X"]]); }));
-        minY = getMin(dataUtils.data[data_id]["_processeddata"].map(function(o) { return parseFloat(o[data_obj["_Y"]]); }));
-        maxY = getMax(dataUtils.data[data_id]["_processeddata"].map(function(o) { return parseFloat(o[data_obj["_Y"]]); }));
-        console.log(minX,maxX, minY,maxY);
+        minX = getMin(data_obj["_processeddata"][data_obj["_X"]]);
+        maxX = getMax(data_obj["_processeddata"][data_obj["_X"]]);
+        minY = getMin(data_obj["_processeddata"][data_obj["_Y"]]);
+        maxY = getMax(data_obj["_processeddata"][data_obj["_Y"]]);
         if (minX <0 || maxX < 500) {
-            for (o of dataUtils.data[data_id]["_processeddata"]) {
-                o[data_obj["_X"]] = 5000 * (o[data_obj["_X"]] - minX) / (maxX - minX);
+            let arr = data_obj["_processeddata"][data_obj["_X"]];
+            for (let i = 0; i < arr.length; ++i) {
+                arr[i] = 5000 * (arr[i] - minX) / (maxX - minX);
             }
-            maxX = getMax(dataUtils.data[data_id]["_processeddata"].map(function(o) { return o[data_obj["_X"]]; }))
-            console.log("new maxX,",maxX);
+            maxX = getMax(arr);
         }
         if (minY <0 || maxY < 500) {
-            for (o of dataUtils.data[data_id]["_processeddata"]) {
-                o[data_obj["_Y"]] = 5000 * (o[data_obj["_Y"]] - minY) / (maxY - minY);
+            let arr = data_obj["_processeddata"][data_obj["_Y"]];
+            for (let i = 0; i < arr.length; ++i) {
+                arr[i] = 5000 * (arr[i] - minY) / (maxY - minY);
             }
-            maxY = getMax(dataUtils.data[data_id]["_processeddata"].map(function(o) { return o[data_obj["_Y"]]; }))
-            console.log("new maxY,",maxY);
+            maxY = getMax(arr);
         }
         // We load an empty image at the size of the data.
 
@@ -269,6 +272,10 @@ dataUtils.updateViewOptions = function(data_id){
     if (interfaceUtils.getElementById("ISS_globalmarkersize"))
         interfaceUtils.getElementById("ISS_globalmarkersize").classList.remove("d-none");
 
+    if (data_obj["fromButton"] !== undefined) {
+        projectUtils.updateMarkerButton(data_id);
+    }
+
     glUtils.loadMarkers(data_id);
     glUtils.draw();
 }
@@ -281,7 +288,8 @@ dataUtils.updateViewOptions = function(data_id){
 dataUtils.createMenuFromCSV = function(data_id,datumExample) {
     var data_obj = dataUtils.data[data_id];
 
-    var csvheaders = Object.keys(datumExample);
+    //var csvheaders = Object.keys(datumExample);
+    var csvheaders = datumExample;
     data_obj["_csv_header"] = csvheaders;
 
     //fill dropdowns
@@ -315,113 +323,135 @@ dataUtils.createMenuFromCSV = function(data_id,datumExample) {
 * Calls dataUtils.createDataset and loads and parses the csv using D3. 
 * then calls dataUtils.createMenuFromCSV to modify the interface in its own tab
 */
-dataUtils.readCSV = function(data_id, thecsv) {
-    
+dataUtils.readCSV = function(data_id, thecsv, options) { 
     dataUtils.createDataset(data_id,{"name":data_id});
 
     let data_obj = dataUtils.data[data_id];
-
-    data_obj["_rawdata"] = {};
+    data_obj["_processeddata"] = {};
+    data_obj["_isnan"] = {};
     data_obj["_csv_header"] = null;
     data_obj["_csv_path"] = thecsv;
+    if (options != undefined) {
+        data_obj["expectedHeader"] = options.expectedHeader;
+        data_obj["expectedRadios"] = options.expectedRadios;
+        data_obj["fromButton"] = options.fromButton;
+        // Hide download button?
+        let panel = interfaceUtils.getElementById(data_id+"_input_csv_col");
+        panel.classList.add("d-none");
+    }
 
-    var progressParent=interfaceUtils.getElementById(data_id+"_csv_progress_parent");
+    let progressParent=interfaceUtils.getElementById(data_id+"_csv_progress_parent");
     progressParent.classList.remove("d-none");
-    var progressBar=interfaceUtils.getElementById(data_id+"_csv_progress");
-
-    var fakeProgress = 0;
-
-    var request = d3.csv(
-        thecsv,
-        function (d) { return d; } //here you can modify the datum 
-    ).on("progress", function(pe){
-        //update progress bar
-        if (pe.lengthComputable) {
-            var maxsize = pe.total;
-            var prog=pe.loaded;
-            var perc=prog/maxsize*100;
-            perc=perc.toString()+"%"
-            progressBar.style.width = perc;
+    let progressBar=interfaceUtils.getElementById(data_id+"_csv_progress");
+    let fakeProgress = 0;
+    function getFileSize(url)
+    {
+      var fileSize = '';
+      var http = new XMLHttpRequest();
+      http.open('HEAD', url, false); // false = Synchronous
+  
+      http.send(null); // it will stop here until this http request is complete
+  
+      // when we are here, we already have a response, b/c we used Synchronous XHR
+  
+      if (http.status === 200) {
+          fileSize = http.getResponseHeader('content-length');
+          console.log('fileSize = ' + fileSize);
+      }
+  
+      return fileSize;
+    }
+    var totalSize = undefined;
+    if (options != undefined) {
+        totalSize = getFileSize(thecsv);
+    }
+    let updateProgressBar = function(op, progress) {
+        if (op == "progress") {
+            if (totalSize == undefined) {
+                fakeProgress += 1;
+                let perc=Math.min(100, 100*(1-Math.exp(-fakeProgress/100.)));
+                perc=perc.toString()+"%";
+                progressBar.style.width = perc;
+            }
+            else {
+                var perc= Math.round(progress / totalSize * 100);
+                perc=perc.toString()+"%";
+                progressBar.style.width = perc;
+            }
         }
-        else {
-            fakeProgress += 1;
-            var perc=Math.min(100, 100*(1-Math.exp(-fakeProgress/50.)));
-            perc=perc.toString()+"%"
-            progressBar.style.width = perc;
+        if (op == "load") {
+            // Hide progress bar
+            progressBar.style.width="100%";
+            progressParent.classList.add("d-none");
         }
-    }).on("load",function(xhr){
-        progressBar.style.width="100%"
-        progressParent.classList.add("d-none");
-        dataUtils.processRawData(data_id,xhr)
+    };
+    
+    let rawdata = { columns: [], isnan: [], data: [], tmp: [] };
+
+    console.time("Load CSV");
+    Papa.parse(thecsv, {
+        download: (options != undefined),
+        delimiter: ",",
+        header: false,
+   	    worker: false,
+        step: function(row) {
+            if (rawdata.columns.length == 0) {
+                const header = row.data;
+                for (let i = 0; i < header.length; ++i) {
+                    rawdata.columns[i] = header[i];
+                    rawdata.isnan[i] = false;
+                    rawdata.data[i] = [];
+                }
+                rawdata.tmp = rawdata.columns.map(x => []);
+            } else {
+                for (let i = 0; i < row.data.length; ++i) {
+                    const value = row.data[i];
+                    // Update type flag of column and push value to temporary buffer
+                    rawdata.isnan[i] = rawdata.isnan[i] || isNaN(value);
+                    rawdata.tmp[i].push(rawdata.isnan[i] ? value : +value);
+                }
+                if (rawdata.tmp[0].length >= 10000) {
+                    // Push content of temporary buffers to output arrays
+                    for (let i = 0; i < rawdata.columns.length; ++i) {
+                        rawdata.data[i].push(rawdata.isnan[i] ? rawdata.tmp[i]
+                                                              : new Float64Array(rawdata.tmp[i]));
+                    }
+                    rawdata.tmp = rawdata.columns.map(x => []);  // Clear buffers
+                    updateProgressBar("progress", row.meta.cursor);
+                }
+            }
+        },
+        complete: function(result) {
+            if (rawdata.tmp.length > 0 && rawdata.tmp[0].length > 0) {
+                // Push content of temporary buffers to output arrays
+                for (let i = 0; i < rawdata.columns.length; ++i) {
+                    rawdata.data[i].push(rawdata.isnan[i] ? rawdata.tmp[i]
+                                                          : new Float64Array(rawdata.tmp[i]));
+                }
+                rawdata.tmp = rawdata.columns.map(x => []);  // Clear buffers
+            }
+            updateProgressBar("load");
+            console.timeEnd("Load CSV");
+            dataUtils._quadtreesLastInputs = {};  // Clear to make sure quadtrees are generated
+            dataUtils.processRawData(data_id, rawdata);
+        }
     });
 }
 
 /** 
 * @param {Object} thecsv csv file path
 * This is a function to deal with the request of a csv from a server as opposed to local.
-* It creates an XMLHttpRequest. In the future someone should implement it with Fetch to comply with the W3 API
-* Its not yet compatible with the new dataUtils.....
 */
 dataUtils.XHRCSV = function(data_id, options) {
     console.log(data_id, options, options.path, options["path"]);
-    dataUtils.createDataset(data_id,{"name":data_id});
-    
-    let data_obj = dataUtils.data[data_id];
-    data_obj["expectedHeader"] = options.expectedHeader
-    data_obj["expectedRadios"] = options.expectedRadios
-    data_obj["_csv_path"] = options["path"];
-    var op = tmapp["object_prefix"];
-
-    var panel = interfaceUtils.getElementById(data_id+"_input_csv_col");
-    panel.classList.add("d-none");
-
-    var xhr = new XMLHttpRequest();
-
-    var progressParent=interfaceUtils.getElementById(data_id+"_csv_progress_parent");
-    progressParent.classList.remove("d-none");
-    var progressBar=interfaceUtils.getElementById(data_id+"_csv_progress");
-    
-    var fakeProgress = 0;
-    
-    // Setup our listener to process compeleted requests
-    xhr.onreadystatechange = function () {        
-        // Only run if the request is complete
-        if (xhr.readyState !== 4) return;        
-        // Process our return data
-        if (xhr.status >= 200 && xhr.status < 300) {
-            // What do when the request is successful
-            progressBar.style.width = "100%";
-            progressParent.classList.add("d-none");
-            console.log(xhr);
-            dataUtils.processRawData(data_id,d3.csvParse(xhr.responseText));
-        }else{
-            console.log("dataUtils.XHRCSV responded with "+xhr.status);
-            progressParent.classList.add("d-none");
-            interfaceUtils.alert ("Impossible to load data")
-        }     
-    };
-    
-    xhr.onprogress = function (pe) {
-        if (pe.lengthComputable) {
-            var maxsize = pe.total;
-            var prog=pe.loaded;
-            var perc=prog/maxsize*100;
-            perc=perc.toString()+"%"
-            progressBar.style.width = perc;
-            //console.log(perc);
-        }
-        else {
-            fakeProgress += 1;
-            console.log(fakeProgress, Math.min(100, 100*(1-Math.exp(-fakeProgress/50.))))
-            var perc=Math.min(100, 100*(1-Math.exp(-fakeProgress/50.)));
-            perc=perc.toString()+"%"
-            progressBar.style.width = perc;
-        }
+    var csvFile = options["path"]
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    const path = urlParams.get('path')
+    if (path != null) {
+        csvFile = path + "/" + csvFile;
     }
-
-    xhr.open('GET', options["path"]);
-    xhr.send();
-    
+    dataUtils.readCSV(data_id, csvFile, options);
 }
 
 /**
@@ -440,79 +470,177 @@ dataUtils.makeQuadTrees = function(data_id) {
     var yselector=data_obj["_Y"]
     var groupByCol=data_obj["_gb_col"]
     var groupByColsName=data_obj["_gb_name"]
+    var markerData=data_obj["_processeddata"];
 
-    //console.log(xselector,yselector,groupByCol,groupByColsName)
+    // Check if we can skip recomputing the last generated quadtree
+    const lastInputs = dataUtils._quadtreesLastInputs;
+    const newInputs = {
+        "uid": data_id, "_X": xselector, "_Y": yselector,
+        "_gb_col": groupByCol, "_gb_name": groupByColsName,
+        "_quadtreesEnabled": dataUtils._quadtreesEnabled,
+        "_quadtreesMaxDepth": dataUtils._quadtreesMaxDepth,
+        "_quadtreesMethod": dataUtils._quadtreesMethod,
+    };
+    if (JSON.stringify(lastInputs) == JSON.stringify(newInputs)) return;  // Nothing more to do!
+    dataUtils._quadtreesLastInputs = newInputs;
 
-    //little optimization to not redoo the tree if we have it
-    /*if(inputs["gb_col"].value==data_obj["_gb_col"]){
-        if(Object.keys(data_obj["_groupgarden"]).length > 0){
-            message="Group garden exists, dont waste time recreating it";
-            //interfaceUtils.alert(message); 
-            console.log(message);
-            
-            return; //because graden exists
-        }
-    }*/
+    const numMarkers = markerData[xselector].length + 0;
+    let indexData = new Uint32Array(numMarkers);
+    for (let i = 0; i < numMarkers; ++i) indexData[i] = i;
 
     var x = function (d) {
-        return d[xselector];
+        return markerData[xselector][d];
     };
     var y = function (d) {
-        return d[yselector];
+        return markerData[yselector][d];
     };
     console.log("groupByCol", groupByCol);
+    if (dataUtils._quadtreesEnabled) console.time("Generate quadtrees");
     if (groupByCol) {
-        var allgroups = d3.nest().key(function (d) { return d[groupByCol]; }).entries(data_obj["_processeddata"]);
+        var allgroups = d3.nest().key(function (d) { return markerData[groupByCol][d]; }).entries(indexData);
 
         data_obj["_groupgarden"] = {};
         for (var i = 0; i < allgroups.length; i++) {
-            var treeKey = allgroups[i].values[0][groupByCol];
-            data_obj["_groupgarden"][treeKey] = d3.quadtree().x(x).y(y).addAll(allgroups[i].values);
+            const treeKey = allgroups[i].key;
+            if (dataUtils._quadtreesEnabled) {
+                allgroups[i].values = new Uint32Array(allgroups[i].values);
+                if (dataUtils._quadtreesMethod == 0) {
+                    data_obj["_groupgarden"][treeKey] = d3.quadtree().x(x).y(y).addAll(allgroups[i].values);
+                } else {
+                    const maxDepth = dataUtils._quadtreesMaxDepth;
+                    const useArrayLeaves = dataUtils._quadtreesMethod == 2;
+                    data_obj["_groupgarden"][treeKey] = d3.quadtree().x(x).y(y);
+                    dataUtils._quadtreeAddAll(data_obj["_groupgarden"][treeKey], allgroups[i].values, maxDepth, useArrayLeaves);
+                }
+            } else {
+                const groupSize = allgroups[i].values.length + 0;
+                data_obj["_groupgarden"][treeKey] = {"size" : function() { return groupSize; }};
+            }
             data_obj["_groupgarden"][treeKey]["treeID"] = treeKey; // this is also the key in the groupgarden but just in case
             
-            if(groupByColsName){
-                var treeName = allgroups[i].values[0][groupByColsName] || "";
+            if (groupByColsName) {
+                const treeName = data_obj["_processeddata"][groupByColsName][allgroups[i].values[0]] || "";
                 data_obj["_groupgarden"][treeKey]["treeName"] = treeName;
             }
-            //create the subsampled for all those that need it
         }
     }
     else {
         console.log("No group, we take everything!");
         treeKey = "All";
         data_obj["_groupgarden"] = {};
-        data_obj["_groupgarden"][treeKey] = d3.quadtree().x(x).y(y).addAll(data_obj["_processeddata"]);
+        if (dataUtils._quadtreesEnabled) {
+            if (dataUtils._quadtreesMethod == 0) {
+                data_obj["_groupgarden"][treeKey] = d3.quadtree().x(x).y(y).addAll(indexData);
+            } else {
+                const maxDepth = dataUtils._quadtreesMaxDepth;
+                const useArrayLeaves = dataUtils._quadtreesMethod == 2;
+                data_obj["_groupgarden"][treeKey] = d3.quadtree().x(x).y(y);
+                dataUtils._quadtreeAddAll(data_obj["_groupgarden"][treeKey], indexData, maxDepth, useArrayLeaves);
+            }
+        } else {
+            data_obj["_groupgarden"][treeKey] = {"size" : function() { return numMarkers; }};
+        }
         data_obj["_groupgarden"][treeKey]["treeID"] = treeKey; // this is also the key in the groupgarden but just in case
         
-        if(groupByColsName){
-            var treeName = data_obj["_processeddata"][0][groupByColsName] || "";
+        if (groupByColsName) {
+            const treeName = data_obj["_processeddata"][groupByColsName][0] || "";
             data_obj["_groupgarden"][treeKey]["treeName"] = treeName;
         }
     }
-    //print UIs that are only for groups
-    //markerUtils.printBarcodeUIs(data_obj._drawOptions);
-    
+    if (dataUtils._quadtreesEnabled) console.timeEnd("Generate quadtrees");
 }
 
-/** 
- * @deprecated
- * Take the HTML input and read the file when it is changed, take the data 
- * type and the html dom id
-*/
-dataUtils.processEventForCSV = function(data_id, dom_id) {
-    //the dom id has to be of an input type 
-    if(!dom_id.includes("#"))
-        dom_id="#"+dom_id
-        d3.select(dom_id)
-        .on("change", function () {
-            var file = d3.event.target.files[0];
-            if (file) {
-                var reader = new FileReader();
-                reader.onloadend = function (evt) {
-                    var dataUrl = evt.target.result;
-                    dataUtils.readCSV(data_id,dataUrl);
-                };
-                reader.readAsDataURL(file);
-            }
+/**
+ * Helper function for dataUtils._quadTreeAddAll(), and should therefore not be
+ * called directly outside of that function.
+ */
+dataUtils._quadtreeAdd = function(tree, x, y, d, maxDepth, useArrayLeaves) {
+    if (isNaN(x) || isNaN(y)) return;  // Ignore invalid points
+
+    let parent,
+        node = tree._root,
+        leaf = {data: d},
+        x0 = tree._x0, y0 = tree._y0,
+        x1 = tree._x1, y1 = tree._y1,
+        xm, ym, xp, yp,
+        right, bottom, i;
+
+    // If the tree is empty, initialize the root
+    if (!node) {
+        node = tree._root = new Array(4);
+    }
+
+    // Find leaf node location at maxDepth level and allocate new nodes
+    // for the path in the tree
+    for (let depth = 0; depth < maxDepth; ++depth) {
+        if (right = x >= (xm = (x0 + x1) / 2)) x0 = xm; else x1 = xm;
+        if (bottom = y >= (ym = (y0 + y1) / 2)) y0 = ym; else y1 = ym;
+        i = bottom << 1 | right;
+
+        if (depth < (maxDepth - 1) && !node[i]) {
+            // Allocate new node
+            node[i] = new Array(4);
+        }
+        parent = node, node = node[i];
+    }
+
+    if (useArrayLeaves) {
+        // Insert point into leaf node's data array
+        parent[i] = !parent[i] ? {data: []} : parent[i];
+        parent[i].data.push(leaf.data);
+    } else {
+        // Insert point into linked list of leaf nodes
+        leaf.next = node;
+        parent[i] = leaf;
+    }
+}
+
+/**
+ * Generate a tree of a fixed depth for better memory efficiency when used with
+ * large point datasets. Use instead of d3.quadtree.addAll().
+ */
+dataUtils._quadtreeAddAll = function(tree, indices, maxDepth, useArrayLeaves) {
+    const n = indices.length;
+    let x0 = Infinity, y0 = x0, x1 = -x0, y1 = x1;
+
+    // Compute the points and their extent
+    for (let i = 0, d, x, y; i < n; ++i) {
+        if (isNaN(x = +tree._x.call(null, d = indices[i])) || isNaN(y = +tree._y.call(null, d))) continue;
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+    }
+
+    // If there were no (valid) points, abort
+    if (x0 > x1 || y0 > y1) return tree;
+
+    // Expand the tree to cover the new points
+    tree.cover(x0, y0).cover(x1, y1);
+
+    // Allocate nodes for depth limited tree and insert points at leaf level
+    for (let i = 0; i < n; ++i) {
+        const d = indices[i];
+        const x = +tree._x.call(null, d);
+        const y = +tree._y.call(null, d);
+        dataUtils._quadtreeAdd(tree, x, y, d, maxDepth, useArrayLeaves);
+    }
+    return tree;
+}
+
+/**
+ * Get the number of points in the tree. Use instead of d3.quadtree.size().
+ */
+dataUtils._quadtreeSize = function(tree) {
+    //console.time("Get quadtree size");
+    let size = 0;
+    if (dataUtils._quadtreesEnabled && dataUtils._quadtreesMethod == 2) {
+        tree.visit(function(node) {
+            if (!node.length) do size += node.data.length; while (node = node.next)
         });
+    } else {
+        size = tree.size();
+    }
+    //console.timeEnd("Get quadtree size");
+    return size;
 }
