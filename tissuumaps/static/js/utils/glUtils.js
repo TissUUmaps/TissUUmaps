@@ -92,8 +92,8 @@ glUtils._markersVS = `
         ndcPos.y = -ndcPos.y;
         ndcPos = u_viewportTransform * ndcPos;
 
-        float barcodeID = mod(a_position.z, 4096.0);
-        v_color = texture2D(u_colorLUT, vec2(barcodeID / 4095.0, 0.5));
+        float lutIndex = mod(a_position.z, 4096.0);
+        v_color = texture2D(u_colorLUT, vec2(lutIndex / 4095.0, 0.5));
 
         if (u_useColorFromMarker || u_useColorFromColormap) {
             vec2 range = u_markerScalarRange;
@@ -114,7 +114,10 @@ glUtils._markersVS = `
             v_color.rgb = hex_to_rgb(a_position.w);
             v_color.a = SHAPE_INDEX_CIRCLE_NOSTROKE / 255.0;
             if (u_pickedMarker == a_index) v_color.a = SHAPE_INDEX_CIRCLE / 255.0;
-            if (u_alphaPass) v_color.a *= float(v_shapeSector[1] > 0.999);  // FIXME
+
+            // For the alpha pass, we only want to draw the marker once
+            float sectorIndex = floor(a_position.z / 4096.0);
+            if (u_alphaPass) v_color.a *= float(sectorIndex == 0.0);
         }
 
         gl_Position = vec4(ndcPos, 0.0, 1.0);
@@ -232,8 +235,8 @@ glUtils._pickingVS = `
 
         v_color = vec4(0.0);
         if (u_op == OP_WRITE_INDEX) {
-            float barcodeID = mod(a_position.z, 4096.0);
-            float shapeID = texture2D(u_colorLUT, vec2(barcodeID / 4095.0, 0.5)).a;
+            float lutIndex = mod(a_position.z, 4096.0);
+            float shapeID = texture2D(u_colorLUT, vec2(lutIndex / 4095.0, 0.5)).a;
             if (shapeID == 0.0) DISCARD_VERTEX;
 
             if (u_useShapeFromMarker) {
@@ -242,7 +245,13 @@ glUtils._pickingVS = `
                 shapeID = (floor(a_position.z / 4096.0) + 1.0) / 255.0;
             }
 
-            if (u_usePiechartFromMarker) shapeID = SHAPE_INDEX_CIRCLE_NOSTROKE / 255.0;
+            if (u_usePiechartFromMarker) {
+                shapeID = SHAPE_INDEX_CIRCLE_NOSTROKE / 255.0;
+
+                // For the picking pass, we only want to draw the marker once
+                float sectorIndex = floor(a_position.z / 4096.0);
+                if (sectorIndex > 0.0) DISCARD_VERTEX;
+            }
 
             vec2 canvasPos = (ndcPos * 0.5 + 0.5) * u_canvasSize;
             canvasPos.y = (u_canvasSize.y - canvasPos.y);  // Y-axis is inverted
@@ -427,11 +436,12 @@ glUtils.loadMarkers = function(uid) {
 
                 for (let j = 0; j < numSectors; ++j) {
                     const k = (i * numSectors + j);
+                    const sectorIndex = j;
                     hexColor = piechartPalette[j % piechartPalette.length];
 
                     bytedata_point[4 * k + 0] = markerData[xPosName][markerIndex] / imageWidth;
                     bytedata_point[4 * k + 1] = markerData[yPosName][markerIndex] / imageHeight;
-                    bytedata_point[4 * k + 2] = lutIndex;
+                    bytedata_point[4 * k + 2] = lutIndex + sectorIndex * 4096.0;
                     bytedata_point[4 * k + 3] = Number("0x" + hexColor.substring(1,7));
                     bytedata_index[k] = markerIndex;  // Store index needed for picking
                     bytedata_scale[k] = useScaleFromMarker ? markerData[scalePropertyName][markerIndex] : 1.0;

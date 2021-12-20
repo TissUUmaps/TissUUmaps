@@ -404,6 +404,9 @@ dataUtils.readCSV = function(data_id, thecsv, options) {
                 }
                 rawdata.tmp = rawdata.columns.map(x => []);
             } else {
+                // Check so that we are not processing an incomplete row
+                if (row.data.length != rawdata.columns.length) return;
+
                 for (let i = 0; i < row.data.length; ++i) {
                     const value = row.data[i];
                     // Update type flag of column and push value to temporary buffer
