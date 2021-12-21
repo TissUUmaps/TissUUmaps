@@ -7,7 +7,7 @@
 
 2. Start TissUUmaps.
 
-3. (Optional) add plugins to TissUUmaps by placing plugin files in the plugin folder. Default path is `C:\Program Files (x86)\TissUUmaps\plugins`. See [here](tissuumaps/plugins_available) for available plugis. 
+3. (Optional) add plugins to TissUUmaps by placing plugin files in the plugin folder. Default path is `C:\Program Files (x86)\TissUUmaps\plugins`. See [here](tissuumaps/plugins_available) for available plugins. 
 
 
 ## Installation from PIP
