@@ -31,6 +31,17 @@ import urllib.request
 import os
 import json
 
+# Don't remove this line.  The idna encoding
+# is used by getaddrinfo when dealing with unicode hostnames,
+# and in some cases, there appears to be a race condition
+# where threads will get a LookupError on getaddrinfo() saying
+# that the encoding doesn't exist.  Using the idna encoding before
+# running any CLI code (and any threads it may create) ensures that
+# the encodings.idna is imported and registered in the codecs registry,
+# which will stop the LookupErrors from happening.
+# See: https://bugs.python.org/issue29288
+u''.encode('idna')
+
 # determine if application is a script file or frozen exe
 if getattr(sys, 'frozen', False):
     template_folder=os.path.join(sys._MEIPASS, 'templates')
