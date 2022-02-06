@@ -17,7 +17,6 @@ interfaceUtils={}
 * Listen to an event of an element, if the element doesnçt exist get a warning. */
 interfaceUtils.listen= function(domid,event,handler,debug){
     var dbg=debug || false;
-    //console.log(dbg)
     var elem= document.getElementById(domid);
     if(elem){
         elem.addEventListener(event, handler);
@@ -455,7 +454,6 @@ interfaceUtils.hideTabsExcept = function (a) {
     
     //find href to know which id to look for and which to hide
     var elid = a[0].href.split("#")[1]
-    console.log(elid,":")
     interfaceUtils.activateMainChildTabs(elid);
 
     //check for this ul's classes to see if any matches regex
@@ -480,12 +478,9 @@ interfaceUtils.hideTabsExcept = function (a) {
     var as = [];
 
     for (var i = 0; i < uls.length; i++) {
-        console.log(uls[i])
         var ulsas = uls[i].getElementsByTagName("a");
         for (var j = 0; j < ulsas.length; j++) {
             ana=ulsas[j].href.split("#")[1];
-            //console.log(ana)
-            //console.log("!ana.includes(elid)", !ana.includes(elid))
             if(!ana.includes(elid)){
                 //only turn non elids
                 as.push(ana)
@@ -496,7 +491,6 @@ interfaceUtils.hideTabsExcept = function (a) {
 
     for(var i=0;i<as.length;i++){
         //find elements with this id and deactivate them
-        //console.log(as[i]);
         var el=document.getElementById(as[i]);
         
         if(el!==null && el.classList.length>0){
@@ -758,7 +752,6 @@ interfaceUtils._mGenUIFuncs.getTabDropDowns = function(uid){
     allinputs["shape_gr_dict"]=interfaceUtils.getElementById(uid+"_shape-bygroup-dict-val");
     allinputs["opacity"]=interfaceUtils.getElementById(uid+"_opacity");
     
-    console.log(allinputs);
     return allinputs;
 }
 
@@ -1492,7 +1485,6 @@ interfaceUtils._mGenUIFuncs.fillDropDownsIfExpectedCSV=function(uid,expectedHead
                 else {
                     for(var i=0;i<opts.length;i++){
                         var o=opts[i];
-                        //console.log(o.value,);
                         proceed=o.value.includes(needle) 
                         if(proceed){
                             dropdowns[d].value=needle
@@ -1738,9 +1730,7 @@ interfaceUtils._mGenUIFuncs.groupUI=function(uid){
             }else if(_selectedOptions["cb_gr_dict"]){
                 try {
                     colorObject = JSON.parse(_selectedDropDown["cb_gr_dict"].value)
-                    console.log("colorObject", colorObject, Array.isArray(colorObject),typeof colorObject, typeof colorObject === "object")
                     if (Array.isArray(colorObject)) {
-                        console.log(i, colorObject[countColor % colorObject.length])
                         thecolor=colorObject[countColor % colorObject.length];
                         countColor += 1;
                     }
@@ -1785,8 +1775,6 @@ interfaceUtils._mGenUIFuncs.groupUI=function(uid){
             }
             hoverElement = interfaceUtils.getElementById(uid+"_"+escapedID+"_hidden");
             if (interfaceUtils.getElementById(uid+"_"+escapedID+"_check").checked) {
-                console.log("onmouseover",uid,escapedID);
-                
                 hoverElement.checked = false;
             }
             glUtils.updateColorLUTTextures();
@@ -1930,7 +1918,6 @@ interfaceUtils.confirm = function (text, title) {
         buttons.appendChild(button1);
         buttons.appendChild(button2);
         button1.addEventListener("click",function(event) {
-            console.log($(`#${modalUID}_modal`));
             $(`#${modalUID}_modal`).modal('hide');;
             resolve(true);
         })
@@ -2000,7 +1987,6 @@ interfaceUtils.generateModal = function(title, content, buttons, uid, noClose) {
                     </div>
                 </div>
             </div>`;
-        console.log(div)
         document.body.appendChild(div);
     }
     if (noClose) { 
@@ -2138,7 +2124,6 @@ interfaceUtils.createDownloadButton = function(downloadRow, innerText, callback,
     return row;
 }
 
-
 interfaceUtils.createDownloadButtonMarkers = function(options) {
     var downloadRow = document.getElementById("divMarkersDownloadButtons");
     interfaceUtils._mGenUIFuncs.generateUUID();
@@ -2200,11 +2185,8 @@ interfaceUtils.createDownloadButtonRegions = function(options) {
 interfaceUtils.addMenuItem = function(itemTree, callback, before) {
     itemID = "menubar";
     rootElement = document.querySelector("#navbar-menu .navbar-nav");
-    console.log(itemTree.length, rootElement);
     for (var i = 0; i<itemTree.length; i++) {
-        console.log(rootElement);
         itemID += "_" + HTMLElementUtils.stringToId(itemTree[i]);
-        console.log(itemID, document.getElementById(itemID));
         if (!document.getElementById(itemID)) {
             liItem = HTMLElementUtils.createElement({"kind":"li", "extraAttributes":{"class":"nav-item dropdown"}})
             if (i == 0)

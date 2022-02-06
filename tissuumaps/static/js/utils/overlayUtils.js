@@ -187,8 +187,6 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
         $(elt).bind(mousewheelevt, moveSlider);
         function moveSlider(e){
             var zoomLevel = parseInt($(channelRange).val()); 
-            console.log("Mouse wheel!", zoomLevel, zoomLevel+1, zoomLevel-1)
-            console.log(e.originalEvent.wheelDelta);
             // detect positive or negative scrolling
             if ( e.originalEvent.wheelDelta < 0 ) {
                 //scroll down
@@ -234,7 +232,6 @@ overlayUtils.addLayerFromSelect = function() {
         name: layerName,
         tileSource: tileSource
     });
-    console.log("tileSource", tileSource);
     i = tmapp.layers.length - 1;
     overlayUtils.addLayer(layerName, tileSource, i);
     overlayUtils.addAllLayersSettings();
@@ -428,7 +425,6 @@ overlayUtils.savePNG=function() {
     
     ctx.drawImage(ctx_osd.canvas, 0, 0);
     ctx.drawImage(ctx_webgl.canvas, 0, 0);
-    console.log(canvas.width,canvas.height);
     var dataURL = canvas.toDataURL("image/png");
     
     var svgString = new XMLSerializer().serializeToString(document.querySelector('.openseadragon-canvas svg'));

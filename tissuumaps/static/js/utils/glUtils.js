@@ -618,7 +618,6 @@ glUtils._updateColorLUTTexture = function(gl, uid, texture) {
     const colors = new Array(4096 * 4);
     for (let [barcode, index] of Object.entries(glUtils._barcodeToLUTIndex[uid])) {
         const key = (barcode != "undefined" ? glUtils._barcodeToKey[uid][barcode] : "All");
-        //console.log("key",key, barcode);
         const inputs = interfaceUtils._mGenUIFuncs.getGroupInputs(uid, key);
         const hexColor = "color" in inputs ? inputs["color"] : "#ffff00";
         const shape = "shape" in inputs ? inputs["shape"] : "circle";

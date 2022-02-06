@@ -723,7 +723,6 @@ regionUtils.addRegionClassUI = function (regionClass) {
                 id: "regionClassItem-" + regionClassID
             }
         });
-        console.log(regionAccordions, accordion_item);
         regionAccordions.appendChild(accordion_item);
         var accordion_header = HTMLElementUtils.createElement({
             kind: "h2",
@@ -1002,11 +1001,9 @@ regionUtils.analyzeRegion = function (regionid) {
     regionUtils._regions[regionid].associatedPoints=[];
     regionUtils._regions[regionid].barcodeHistogram=[];
 
-    console.log("analyzing "+regionid);
     allDatasets = Object.keys(dataUtils.data);
     for (var dataset of allDatasets) {
         var allkeys=Object.keys(dataUtils.data[dataset]["_groupgarden"]);
-        console.log(dataset, allkeys);
         for (var codeIndex in allkeys) {
             var code = allkeys[codeIndex];
 
@@ -1019,7 +1016,6 @@ regionUtils.analyzeRegion = function (regionid) {
                     "yselector":dataUtils.data[dataset]["_Y"],
                     "dataset":dataset
                 });
-            console.log(dataset, code, pointsInside.length);
             if(pointsInside.length>0){
                 pointsInside.forEach(function(p){
                     var pin=clone(p);

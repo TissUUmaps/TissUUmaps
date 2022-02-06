@@ -119,7 +119,6 @@ projectUtils.getActiveProject = function () {
         }
         var title = document.getElementById("generateButtonTitle").value
         var comment = document.getElementById("generateButtonComment").value
-        console.log(_exists);
         if (!_exists) {
             interfaceUtils.confirm("Warning, path doesn't seem accessible on the server.\n\nAre you sure you want to continue?")
             .then(function(_confirm) {
@@ -176,13 +175,11 @@ projectUtils.getActiveProject = function () {
 
 projectUtils.updateMarkerButton = function(dataset) {
     var data_obj = dataUtils.data[dataset];
-    console.log("projectUtils.updateMarkerButton", data_obj);
     var markerFile = projectUtils._activeState.markerFiles[data_obj["fromButton"]];
     var headers = interfaceUtils._mGenUIFuncs.getTabDropDowns(dataset);
     markerFile.expectedHeader = Object.assign({}, ...Object.keys(headers).map((k) => ({[k]: headers[k].value})));
     var radios = interfaceUtils._mGenUIFuncs.getTabRadiosAndChecks(dataset);
     markerFile.expectedRadios = Object.assign({}, ...Object.keys(radios).map((k) => ({[k]: radios[k].checked})));
-    console.log("projectUtils.updateMarkerButton markerFile", markerFile);
 }
 
 projectUtils.makeButtonFromTabAux = function (dataset, csvFile, title, comment) {
@@ -231,7 +228,6 @@ projectUtils.loadProjectFile = function() {
         // here we tell the reader what to do when it's done reading...
         reader.onload = readerEvent => {
             var content = readerEvent.target.result; // this is the content!
-            console.log( content );
             projectUtils.loadProject(JSON.parse(content));
         }
     }
@@ -276,7 +272,6 @@ projectUtils.loadProjectFileFromServer = function(path) {
                 </div>
             </div>
         </div>`;
-        console.log(div)
         document.body.appendChild(div);
     }
     
@@ -419,7 +414,6 @@ projectUtils.loadProjectFileFromServer = function(path) {
         filterUtils._filtersUsed = state.filters;
         $(".filterSelection").prop("checked",false);
         state.filters.forEach(function(filterused, i) {
-            console.log("#filterCheck_" + filterused, $("#filterCheck_" + filterused));
             $("#filterCheck_" + filterused).prop("checked",true);
         });
     }
@@ -463,7 +457,6 @@ projectUtils.loadProjectFileFromServer = function(path) {
         if (state.boundingBox) {
             setTimeout(function() {
                 tmapp[tmapp["object_prefix"] + "_viewer"].viewport.fitBounds(new OpenSeadragon.Rect(state.boundingBox.x, state.boundingBox.y, state.boundingBox.width, state.boundingBox.height), false);
-                console.log("Changing BBox")
             },1000);
         }
         if (state.compositeMode) {
@@ -472,7 +465,6 @@ projectUtils.loadProjectFileFromServer = function(path) {
         }
         if (state.layerOpacities && state.layerVisibilities) {
             tmapp.layers.forEach(function(layer, i) {
-                console.log("state.layerOpacities[i]",i,state.layerOpacities[i])
                 $("#opacity-layer-"+i).val(state.layerOpacities[i]);
                 if (state.layerVisibilities[i] != 0) {
                     $("#visible-layer-"+i).click();
@@ -562,7 +554,6 @@ projectUtils.convertOldMarkerFile = function(markerFile) {
     }
     delete markerFile.expectedCSV;
     markerFile["hideSettings"] = true;
-    console.log(markerFile);
 }
 
 /**

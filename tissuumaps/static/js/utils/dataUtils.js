@@ -156,7 +156,6 @@ var data_obj = dataUtils.data[data_id];
         data_obj["_X"]=inputs["X"].value;
         data_obj["_Y"]=inputs["Y"].value;
     }
-    console.log(tmapp["ISS_viewer"].world._items.length == 0, tmapp["ISS_viewer"].world._items);
     if (tmapp["ISS_viewer"].world._items.length == 0) {
         function getMax(arr) {
             let len = arr.length; let max = -Infinity;
@@ -260,7 +259,6 @@ var data_obj = dataUtils.data[data_id];
     dataUtils.makeQuadTrees(data_id);
     //print a menu in the interface for the groups
     table=interfaceUtils._mGenUIFuncs.groupUI(data_id);
-    console.log(table);
     menuui=interfaceUtils.getElementById(data_id+"_menu-UI");
     menuui.classList.remove("d-none")
     menuui.innerText="";
@@ -446,7 +444,6 @@ dataUtils.readCSV = function(data_id, thecsv, options) {
 * This is a function to deal with the request of a csv from a server as opposed to local.
 */
 dataUtils.XHRCSV = function(data_id, options) {
-    console.log(data_id, options, options.path, options["path"]);
     var csvFile = options["path"]
     const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString);
@@ -497,7 +494,6 @@ dataUtils.makeQuadTrees = function(data_id) {
     var y = function (d) {
         return markerData[yselector][d];
     };
-    console.log("groupByCol", groupByCol);
     if (dataUtils._quadtreesEnabled) console.time("Generate quadtrees");
     if (groupByCol) {
         var allgroups = d3.nest().key(function (d) { return markerData[groupByCol][d]; }).entries(indexData);
