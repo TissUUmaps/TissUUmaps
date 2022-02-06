@@ -10168,7 +10168,7 @@ html {
   display: inline-block; }
 
 .openseadragon-canvas svg {
-  z-index: 11; }
+  z-index: 13; }
 
 .navigator {
   z-index: 12; }
