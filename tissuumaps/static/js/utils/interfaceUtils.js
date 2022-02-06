@@ -1504,13 +1504,17 @@ interfaceUtils._mGenUIFuncs.fillDropDownsIfExpectedCSV=function(uid,expectedHead
 interfaceUtils._mGenUIFuncs.fillRadiosAndChecksIfExpectedCSV=function(uid,expectedRadios){
     //expected headr is an object that has these keys, other will be ignored;
     //"X","Y","gb_sr","gb_col","gb_name","cb_cmap","cb_col"
+
     if(expectedRadios){
-        radios=interfaceUtils._mGenUIFuncs.getTabRadiosAndChecks(uid);
-        for(d in expectedRadios){
-            console.log(d, radios[d], radios);
+        var radios=interfaceUtils._mGenUIFuncs.getTabRadiosAndChecks(uid);
+        for(var d in expectedRadios){
             if(radios[d]){
                 needle=expectedRadios[d];
                 radios[d].checked=needle;
+                if (needle) {
+                    var event = new Event('change');
+                    radios[d].dispatchEvent(event);
+                }
             }
         }
     }
