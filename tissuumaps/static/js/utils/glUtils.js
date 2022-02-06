@@ -1030,7 +1030,7 @@ glUtils.pick = function(event) {
 	            div.innerHTML = groupName;
                 }
                 else if (dataUtils.data[uid]["_cb_col"]) {
-                    div.innerHTML = markerData[markerIndex][dataUtils.data[uid]["_cb_col"]];
+                    div.innerHTML = markerData[dataUtils.data[uid]["_cb_col"]][markerIndex];
                 }
                 console.log("Marker clicked:",tabName, groupName, "index:", markerIndex);
             }
