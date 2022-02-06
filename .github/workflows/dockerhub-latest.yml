@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    if: github.repository == 'TissUUmaps/FlaskTissUUmaps'
+    if: github.repository == 'TissUUmaps/TissUUmaps'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
