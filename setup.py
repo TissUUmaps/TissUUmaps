@@ -47,8 +47,8 @@ setuptools.setup(
             'tissuumaps_server = tissuumaps.__main__:main',
             'tissuumaps = tissuumaps.gui:main'
         ]
-    },
-    data_files=[
-        ('tissuumaps',['tissuumaps/VERSION','tissuumaps/web.zip']),
-    ],
+    }#,
+    #data_files=[
+    #    ('tissuumaps',['tissuumaps/VERSION','tissuumaps/web.zip']),
+    #],
  )
