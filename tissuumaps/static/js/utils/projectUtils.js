@@ -402,6 +402,30 @@ projectUtils.loadProjectFileFromServer = function(path) {
         document.getElementById("project_title").href = state.link;
         document.getElementById("project_title").target = "_blank";
     }
+    if (state.settings) {
+        state.settings.forEach(function(setting, i) {
+            try{
+                window[setting.module][setting.function] = setting.value;
+            }
+            catch (err) {}
+        });
+    }
+    if (state.hideTabs) {
+        document.getElementById("level-1-tabs").classList.add("d-none");
+    }
+    if (state.menuButtons) {
+        state.menuButtons.forEach(function(menuButton, i) {
+            interfaceUtils.addMenuItem([menuButton.text], function(){ window.open(menuButton.url, '_self').focus();});
+        });
+    }
+    projectUtils.loadLayers(state);
+    
+    //tmapp[tmapp["object_prefix"] + "_viewer"].world.resetItems()
+}
+
+/**
+ * This method is used to load the TissUUmaps layers from state */
+ projectUtils.loadLayers = function(state) {
     tmapp.layers = [];
     subfolder = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
     state.layers.forEach(function(layer) {
@@ -428,22 +452,6 @@ projectUtils.loadProjectFileFromServer = function(path) {
     if (state.compositeMode) {
         filterUtils._compositeMode = state.compositeMode;
         filterUtils.setCompositeOperation();
-    }
-    if (state.settings) {
-        state.settings.forEach(function(setting, i) {
-            try{
-                window[setting.module][setting.function] = setting.value;
-            }
-            catch (err) {}
-        });
-    }
-    if (state.hideTabs) {
-        document.getElementById("level-1-tabs").classList.add("d-none");
-    }
-    if (state.menuButtons) {
-        state.menuButtons.forEach(function(menuButton, i) {
-            interfaceUtils.addMenuItem([menuButton.text], function(){ window.open(menuButton.url, '_self').focus();});
-        });
     }
     /*if (projectUtils._hideCSVImport) {
         document.getElementById("ISS_data_panel").style.display="none";
@@ -472,8 +480,6 @@ projectUtils.loadProjectFileFromServer = function(path) {
             });
         }
     },300);
-    
-    //tmapp[tmapp["object_prefix"] + "_viewer"].world.resetItems()
 }
 
 projectUtils.convertOldMarkerFile = function(markerFile) {

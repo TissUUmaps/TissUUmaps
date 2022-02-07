@@ -241,17 +241,17 @@ class Plugin ():
                 logging.error ("impossible to read", tifFile,". Abort this file.")
                 continue
         logging.debug (tifFiles)
-        csvFiles = glob.glob(path + "/*.csv")
+        # csvFiles = glob.glob(path + "/*.csv")
         csvFilesDesc = []
-        for csvFile in csvFiles:
-            filePath = os.path.relpath(csvFile, path)
-            filePath = filePath.replace("\\","/")
-            csvFilesDesc.append({
-                "path": filePath,
-                "title":"Download " + os.path.basename(csvFile),
-                "comment":"",
-                "expectedCSV":{ "group": "target", "name": "gene", "X_col": "x", "Y_col": "y", "key": "letters" }
-            })
+        #for csvFile in csvFiles:
+        #    filePath = os.path.relpath(csvFile, path)
+        #    filePath = filePath.replace("\\","/")
+        #    csvFilesDesc.append({
+        #        "path": filePath,
+        #        "title":"Download " + os.path.basename(csvFile),
+        #        "comment":"",
+        #        "expectedCSV":{ "group": "target", "name": "gene", "X_col": "x", "Y_col": "y", "key": "letters" }
+        #    })
         
         layers = []
         layerFilters = {}

@@ -164,7 +164,10 @@ Spot_Inspector.loadImages = function (pathFormat) {
             }),
             success : function(data)
             {
-                projectUtils.loadProject(data);
+                if (projectUtils.loadLayers)
+                    projectUtils.loadLayers(data);
+                else
+                    projectUtils.loadProject(data);
                 setTimeout(function() {
                     Spot_Inspector.changeOrder(false);
                     $("#Spot_Inspector_order_rounds")[0].value = JSON.stringify(Spot_Inspector._order_rounds);
@@ -268,12 +271,6 @@ Spot_Inspector.getMarkers = function (bbox) {
 
     markersInViewportBounds = [];
     for (dataset in dataUtils.data) {
-        if (Spot_Inspector._only_picked && glUtils._pickedMarker[0] != -1) {
-            pickedMarker = dataUtils.data[glUtils._pickedMarker[0]]["_processeddata"][glUtils._pickedMarker[1]]
-        }
-        else {
-            pickedMarker = null;
-        }
         var allkeys=Object.keys(dataUtils.data[dataset]["_groupgarden"]);
         for (var codeIndex in dataUtils.data[dataset]["_groupgarden"]) {
             var  inputs = interfaceUtils._mGenUIFuncs.getGroupInputs(dataset, codeIndex);
@@ -293,10 +290,9 @@ Spot_Inspector.getMarkers = function (bbox) {
                     m.global_X_pos = parseFloat(m[dataUtils.data[dataset]["_X"]]),
                     m.global_Y_pos = parseFloat(m[dataUtils.data[dataset]["_Y"]])
                 })
-                if (Spot_Inspector._only_picked) {
+                if (Spot_Inspector._only_picked && newMarkers.length > 0) {
                     console.log(glUtils._pickedMarker);
-                    console.log(markersInViewportBounds);
-                    markersInViewportBounds = markersInViewportBounds.filter(function(p){return p == pickedMarker})
+                    newMarkers = newMarkers.filter(function(p){return p[""] == glUtils._pickedMarker[1] && dataset == glUtils._pickedMarker[0]})
                 }
                 markersInViewportBounds = markersInViewportBounds.concat(newMarkers)
             }
@@ -376,109 +372,4 @@ Spot_Inspector.getMatrix = function (bbox, layers, markers, order) {
             }
         }
     );
-}
-
-/**
- * This method is used to load the TissUUmaps state (gene expression, cell morphology, regions) */
- Spot_Inspector.loadState = function(state) {
-    /*
-    {
-        markerFiles: [
-            {
-                path: "my/server/path.csv",
-                title: "",
-                comment: ""
-            }
-        ],
-        CPFiles: [],
-        regionFiles: [],
-        layers: [
-            {
-                name:"",
-                path:""
-            }
-        ],
-        filters: [
-            {
-                name:"",
-                default:"",
-            }
-        ],
-        compositeMode: ""
-    }
-    */
-    tmapp.fixed_file = "";
-    if (state.markerFiles) {
-        state.markerFiles.forEach(function(markerFile) {
-            HTMLElementUtils.createDLButtonMarkers(
-                markerFile.title,
-                markerFile.path,
-                markerFile.comment,
-                markerFile.expectedCSV
-            );
-        });
-    }
-    if (state.CPFiles) {
-        state.CPFiles.forEach(function(CPFile) {
-            HTMLElementUtils.createDLButtonMarkersCP(
-                CPFile.title,
-                CPFile.path,
-                CPFile.comment,
-                CPFile.expectedCSV
-            );
-        });
-    }
-    if (state.regionFiles) {
-        state.regionFiles.forEach(function(regionFile) {
-            HTMLElementUtils.createDLButtonRegions(
-                regionFile.title,
-                regionFile.path,
-                regionFile.comment
-            );
-        });
-    }
-    if (state.slideFilename) {
-        tmapp.slideFilename = state.slideFilename;
-        document.getElementById("project_title").innerText = state.slideFilename;
-    }
-    tmapp.layers = [];
-    state.layers.forEach(function(layer) {
-        pathname = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
-        //if (tmapp.fixed_file == "") {
-        //    tmapp.fixed_file = pathname + layer.path + ".dzi";
-        //    tmapp.slideFilename = layer.name;
-        //}
-        //else {
-            tmapp.layers.push(
-                {name: layer.name, tileSource: layer.path + ".dzi"}
-            )
-        //}
-    });
-    if (state.filters) {
-        filterUtils._filtersUsed = state.filters;
-    }
-    if (state.layerFilters) {
-        filterUtils._filterItems = state.layerFilters;
-    }
-    if (state.compositeMode) {
-        filterUtils._compositeMode = state.compositeMode;
-    }
-    tmapp[tmapp["object_prefix"] + "_viewer"].world.removeAll();
-    overlayUtils.addAllLayers();
-    filterUtils.setCompositeOperation(filterUtils._compositeMode);
-    filterUtils.getFilterItems();
-    $(".visible-layers").prop("checked",true);$(".visible-layers").click();
-    firstRound = null;
-    tmapp.layers.forEach(function(layer, i) {
-        round = layer.name.split("_")[0];
-        console.log(round, i)
-        if (!firstRound)
-            firstRound = round;
-        if (firstRound == round) {
-            console.log(round, i)
-            $("#visible-layer-"+i).click();
-        }
-    });
-    
-    //tmapp[tmapp["object_prefix"] + "_viewer"].world.resetItems()
 }
