@@ -403,12 +403,7 @@ projectUtils.loadProjectFileFromServer = function(path) {
         document.getElementById("project_title").target = "_blank";
     }
     if (state.settings) {
-        state.settings.forEach(function(setting, i) {
-            try{
-                window[setting.module][setting.function] = setting.value;
-            }
-            catch (err) {}
-        });
+        projectUtils.applySettings(state.settings);
     }
     if (state.hideTabs) {
         document.getElementById("level-1-tabs").classList.add("d-none");
