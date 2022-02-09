@@ -46,6 +46,7 @@ HTMLElementUtils.inputTypeColor = function (params) {
     var color = document.createElement("input");
     color.setAttribute("type", "color");
     (params.id || null ? color.setAttribute("id", params.id) : null);
+    (params["class"] || null ? color.setAttribute("class", params["class"]) : null);
     var extraAttributes = params.extraAttributes || null;
     if (extraAttributes) {
         for (var attr in extraAttributes) {
