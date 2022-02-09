@@ -395,7 +395,6 @@ filterUtils.getFilterItems = function() {
         }, 100);
         return;
     }
-    console.log("getFilterItems");
     filterInputsRanges = document.getElementsByClassName("filterInput");
     items = {};
     for (i = 0; i < filterInputsRanges.length; i++) {
