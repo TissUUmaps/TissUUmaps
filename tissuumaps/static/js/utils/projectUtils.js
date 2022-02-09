@@ -547,8 +547,10 @@ projectUtils.convertOldMarkerFile = function(markerFile) {
                 markerFile.expectedRadios.cb_gr_dict = true;
                 markerFile.expectedHeader.cb_gr_dict = JSON.stringify(setting.value);
             }
-            if (setting.module == "glUtils" && setting.function == "_markerOpacity")
+            if (setting.module == "glUtils" && setting.function == "_markerOpacity") {
                 markerFile.expectedHeader.opacity = setting.value;
+                setting.function = "_markerOpacityOld"
+            }
             if (setting.module == "HTMLElementUtils" && setting.function == "_colorsperbarcode") {
                 markerFile.expectedRadios.cb_gr = true;
                 markerFile.expectedRadios.cb_gr_rand = false;
