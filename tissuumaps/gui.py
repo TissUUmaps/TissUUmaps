@@ -118,14 +118,23 @@ class MainWindow(QMainWindow):
         def trigger():
             self.browser.page().runJavaScript("flask.standalone.saveProject();")
         _save.triggered.connect(trigger)
+
         file.addSeparator()
 
-        _export = QAction(self.style().standardIcon(QStyle.SP_DialogSaveButton), "Export to static webpage",self)
+        _export = QAction(self.style().standardIcon(QStyle.SP_FileDialogListView), "Capture viewport",self)
+        file.addAction(_export)
+        def trigger():
+            self.browser.page().runJavaScript("flask.savePNG();")
+        _export.triggered.connect(trigger)
+        
+        _export = QAction(self.style().standardIcon(QStyle.SP_DirLinkIcon), "Export to static webpage",self)
         file.addAction(_export)
         def trigger():
             self.browser.page().runJavaScript("flask.standalone.exportToStatic();")
         _export.triggered.connect(trigger)
         
+        file.addSeparator()
+
         _exit = QAction(self.style().standardIcon(QStyle.SP_DialogCancelButton), "Exit",self)
         _exit.setShortcut("Ctrl+Q")
         file.addAction(_exit)
@@ -141,12 +150,12 @@ class MainWindow(QMainWindow):
             _plugin.triggered.connect(trigger)
         
         about = self.bar.addMenu("About")
-        _help = QAction("Help",self)
+        _help = QAction(self.style().standardIcon(QStyle.SP_DialogHelpButton), "Help",self)
         about.addAction(_help)
         def trigger():
             QDesktopServices.openUrl(QUrl("https://tissuumaps.github.io/"))
         _help.triggered.connect(trigger)
-        _version = QAction("Version",self)
+        _version = QAction(self.style().standardIcon(QStyle.SP_FileDialogInfoView), "Version",self)
         about.addAction(_version)
         def trigger():
             if getattr(sys, 'frozen', False):
