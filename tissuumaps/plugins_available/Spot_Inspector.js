@@ -292,6 +292,7 @@ Spot_Inspector.getMarkers = function (bbox) {
                 })
                 if (Spot_Inspector._only_picked && newMarkers.length > 0) {
                     console.log(glUtils._pickedMarker);
+                    console.log(newMarkers);
                     newMarkers = newMarkers.filter(function(p){return p[""] == glUtils._pickedMarker[1] && dataset == glUtils._pickedMarker[0]})
                 }
                 markersInViewportBounds = markersInViewportBounds.concat(newMarkers)

@@ -179,6 +179,7 @@ class Plugin ():
         if (not jsonParam):
             logging.error ("No arguments, aborting.")
             abort(500)
+        print (jsonParam)
         bbox = jsonParam["bbox"]
         layers = jsonParam["layers"]
         path = jsonParam["path"]
