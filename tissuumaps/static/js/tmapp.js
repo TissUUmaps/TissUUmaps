@@ -159,7 +159,7 @@ tmapp.options_osd = {
     maxZoomPixelRatio: 30,
     zoomPerClick: 1.0,
     constrainDuringPan: true,
-    visibilityRatio: 1,
+    visibilityRatio: 0.85,
     showNavigationControl: false,
     maxImageCacheCount:500,
     imageSmoothingEnabled:false,
