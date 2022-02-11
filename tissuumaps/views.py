@@ -472,10 +472,11 @@ def jsonFile(completePath):
 @app.route("/<path:path>.dzi")
 @requires_auth
 def dzi(path):
+    completePath = os.path.join(app.basedir, path)
     # Check if a .dzi file exists, else use OpenSlide:
-    if os.path.isfile(path + ".dzi"):
-        directory = os.path.dirname(path)
-        filename = os.path.basename(path) + ".dzi"
+    if os.path.isfile(completePath + ".dzi"):
+        directory = os.path.dirname(completePath)
+        filename = os.path.basename(completePath) + ".dzi"
         return send_from_directory(directory, filename)
     slide = _get_slide(path)
     format = app.config["DEEPZOOM_FORMAT"]
@@ -506,9 +507,10 @@ def dzi_asso(path):
 
 @app.route("/<path:path>_files/<int:level>/<int:col>_<int:row>.<format>")
 def tile(path, level, col, row, format):
-    if os.path.isfile( f"{path}_files/{level}/{col}_{row}.{format}"):
-        directory = os.path.dirname(f"{path}_files/{level}/{col}_{row}.{format}")
-        filename = os.path.basename(f"{path}_files/{level}/{col}_{row}.{format}")
+    completePath = os.path.join(app.basedir, path)
+    if os.path.isfile( f"{completePath}_files/{level}/{col}_{row}.{format}"):
+        directory = os.path.dirname(f"{completePath}_files/{level}/{col}_{row}.{format}")
+        filename = os.path.basename(f"{completePath}_files/{level}/{col}_{row}.{format}")
         return send_from_directory(directory, filename)
     slide = _get_slide(path)
     format = format.lower()
