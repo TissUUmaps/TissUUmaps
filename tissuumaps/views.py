@@ -131,11 +131,12 @@ class ImageConverter:
                     if minVal == maxVal:
                         minVal = 0
                         maxVal = 255
-                    if (imgVips.percent(0.01) < 0 or imgVips.percent(99.99) > 255):
+                    if (imgVips.percent(1) < 0 or imgVips.percent(99) > 255):
                         imgVips = (255.0 * (imgVips - minVal)) / (maxVal - minVal)
                         imgVips = (imgVips < 0).ifthenelse(0, imgVips)
                         imgVips = (imgVips > 255).ifthenelse(255, imgVips)
                         imgVips = imgVips.scaleimage()
+                        imgVips = imgVips.cast('uint')
                     imgVips.tiffsave(
                         self.outputImage,
                         pyramid=True,
@@ -143,6 +144,7 @@ class ImageConverter:
                         tile_width=256,
                         tile_height=256,
                         compression='jpeg',
+                        Q=95,
                         properties=True
                     )
                 except:
