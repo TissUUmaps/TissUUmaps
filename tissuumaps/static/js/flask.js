@@ -110,6 +110,7 @@ flask.server.init = function () {
         })
     },true);
 
+
     interfaceUtils.addMenuItem(["File","Open"],function(){
         var modalUID = "messagebox"
         button1=HTMLElementUtils.createButton({"extraAttributes":{ "class":"btn btn-primary mx-2"}})
@@ -124,6 +125,51 @@ flask.server.init = function () {
         interfaceUtils.generateModal ("Open file", content, buttons, modalUID);
     },true);
 
+    // Add layer button
+    div = HTMLElementUtils.createElement({"kind":"div", extraAttributes:{"class":"px-3 my-2"}});
+    button = HTMLElementUtils.createElement({"kind":"div", extraAttributes:{"class":"btn btn-primary btn-sm"}});
+    button.innerHTML = "Add image layer";
+    div.append(button)
+    document.getElementById("image-overlay-panel").append(div)
+    button.addEventListener("click", function(){
+        var modalUID = "messagebox"
+        button1=HTMLElementUtils.createButton({"extraAttributes":{ "class":"btn btn-primary mx-2"}})
+        button1.innerText = "Cancel";
+        button1.addEventListener("click",function(event) {
+            $(`#${modalUID}_modal`).modal('hide');
+        })
+        buttons=divpane=HTMLElementUtils.createElement({"kind":"div"});
+        buttons.appendChild(button1);
+        content=HTMLElementUtils.createElement({"kind":"div"});
+        content.innerHTML = "<iframe src='/filetree?addlayer=1' width='100%' height='300px'></iframe>";
+        interfaceUtils.generateModal ("Open file", content, buttons, modalUID);
+    });
+}
+
+flask.server.addLayer = function (filename) {
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    const path = urlParams.get('path')
+    console.log(filename, path);
+    if (filename.startsWith(path)) {
+        filename = filename.slice(path.length);
+    }
+    else {
+        interfaceUtils.alert("All layers must be in the same folder");
+        return;
+    }
+
+    var layerName = filename.split('/').reverse()[0];;
+    var tileSource = filename;
+    tmapp.layers.push({
+        name: layerName,
+        tileSource: tileSource
+    });
+    i = tmapp.layers.length - 2;
+    overlayUtils.addLayer(layerName, tileSource, i, true);
+    overlayUtils.addLayerSettings(layerName, tileSource, i, true);
+    var modalUID = "messagebox";
+    $(`#${modalUID}_modal`).modal('hide');
 }
 
 function toggleNavbar(turn_on = null) {

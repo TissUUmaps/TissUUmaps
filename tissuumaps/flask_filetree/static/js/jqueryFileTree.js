@@ -77,7 +77,16 @@ if(jQuery) (function($){
 								$(this).parent().removeClass('expanded').addClass('collapsed');
 							}
 						} else {
-							h($(this).attr('rel'));
+							const queryString = window.location.search;
+							const urlParams = new URLSearchParams(queryString);
+							const addLayer = urlParams.get('addlayer')
+							console.log("addLayer", addLayer);
+							if (addLayer) {
+								window.parent.flask.server.addLayer($(this).attr('rel')+".dzi");
+							}
+							else {
+								h($(this).attr('rel'));
+							}
 						}
 						return false;
 					});
