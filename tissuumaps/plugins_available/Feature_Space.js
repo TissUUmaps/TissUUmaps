@@ -265,15 +265,23 @@ Feature_Space.releaseHandler = function (event) {
     Feature_Space._newwin.dataUtils.data[Feature_Space._dataset]["_scale_col"] = scalePropertyName;
     dataUtils.data[Feature_Space._dataset]["_scale_col"] = scalePropertyName;
     var markerData = Feature_Space._newwin.dataUtils.data[Feature_Space._dataset]["_processeddata"];
-    markerData[scalePropertyName] = new Float64Array(markerData[""].length);
-    if (pointsIn.length == 0) pointsIn = markerData[""]
+    markerData[scalePropertyName] = new Float64Array(markerData[Feature_Space._newwin.dataUtils.data[Feature_Space._dataset]["_X"]].length);
+    if (pointsIn.length == 0) {
+        markerData[scalePropertyName] = markerData[scalePropertyName].map(function() {return 1;});
+    }
+    // TODO: speed up by not searching for each point.
+    for (var d of pointsIn) {
+        markerData[scalePropertyName][d] = 1;
+    }
+    /*for (var scale in markerData[scalePropertyName]) {
+        scale = 0
     for (var index of markerData[scalePropertyName].keys()) {
         index_ = markerData[""][index];
         if (pointsIn.indexOf(index_) == -1)
             markerData[scalePropertyName][index] = 0;
         else
             markerData[scalePropertyName][index] = 1;
-    }
+    }*/
     
     Feature_Space._newwin.glUtils.loadMarkers(Feature_Space._dataset);
     Feature_Space._newwin.glUtils.draw();
@@ -342,10 +350,10 @@ Feature_Space.analyzeRegion = function (points) {
             
             var quadtree = Feature_Space._newwin.dataUtils.data[dataset]["_groupgarden"][code]
             var imageWidth = Feature_Space._newwin.OSDViewerUtils.getImageWidth();
-            var x0 = 0;//Math.min(...points.map(function(x){return x.x})) * imageWidth;
-            var y0 = 0;//Math.min(...points.map(function(x){return x.y})) * imageWidth;
-            var x3 = imageWidth;//Math.max(...points.map(function(x){return x.x})) * imageWidth;
-            var y3 = imageWidth;//Math.max(...points.map(function(x){return x.y})) * imageWidth;
+            var x0 = Math.min(...points.map(function(x){return x.x})) * imageWidth;
+            var y0 = Math.min(...points.map(function(x){return x.y})) * imageWidth;
+            var x3 = Math.max(...points.map(function(x){return x.x})) * imageWidth;
+            var y3 = Math.max(...points.map(function(x){return x.y})) * imageWidth;
             var options = {
                 "globalCoords":true,
                 "xselector":Feature_Space._newwin.dataUtils.data[dataset]["_X"],
@@ -360,14 +368,54 @@ Feature_Space.analyzeRegion = function (points) {
             var svgovname = Feature_Space._newwin.tmapp["object_prefix"] + "_svgov";
             var svg = Feature_Space._newwin.tmapp[svgovname]._svg;
             tmpPoint = svg.createSVGPoint();
-            pointInBbox = Feature_Space._newwin.regionUtils.searchTreeForPointsInBbox(quadtree, x0, y0, x3, y3, options);
-            for (d of pointInBbox) {
-                if (Feature_Space._newwin.regionUtils.globalPointInPath(d[xselector] / imageWidth, d[yselector] / imageWidth, regionPath, tmpPoint)) {
+            pointInBbox = Feature_Space.searchTreeForPointsInBbox(quadtree, x0, y0, x3, y3, options);
+            markerData = Feature_Space._newwin.dataUtils.data[dataset]["_processeddata"];
+            for (var d of pointInBbox) {
+                var x = markerData[xselector][d];
+                var y = markerData[yselector][d];
+                if (Feature_Space._newwin.regionUtils.globalPointInPath(x / imageWidth, y / imageWidth, regionPath, tmpPoint)) {
                     countsInsideRegion += 1;
-                    pointsInside.push(d[""]);
+                    pointsInside.push(d);
                 }
             }
         }
     }
     return pointsInside;
 }
+
+
+/** 
+ *  @param {Object} quadtree d3.quadtree where the points are stored
+ *  @param {Number} x0 X coordinate of one point in a bounding box
+ *  @param {Number} y0 Y coordinate of one point in a bounding box
+ *  @param {Number} x3 X coordinate of diagonal point in a bounding box
+ *  @param {Number} y3 Y coordinate of diagonal point in a bounding box
+ *  @param {Object} options Tell the function 
+ *  Search for points inside a particular region */
+ Feature_Space.searchTreeForPointsInBbox = function (quadtree, x0, y0, x3, y3, options) {    
+    if (options.globalCoords) {
+        var xselector = options.xselector;
+        var yselector = options.yselector;
+    }else{
+        throw {name : "NotImplementedError", message : "ViewerPointInPath not yet implemented."}; 
+    }
+    var pointsInside=[];  
+    quadtree.visit(function (node, x1, y1, x2, y2) {
+        if (!node.length) {
+            const markerData = dataUtils.data[options.dataset]["_processeddata"];
+            const columns = dataUtils.data[options.dataset]["_csv_header"];
+            for (const d of node.data) {
+                const x = markerData[xselector][d];
+                const y = markerData[yselector][d];
+                if (x >= x0 && x < x3 && y >= y0 && y < y3) {
+                    // Note: expanding each point into a full object will be
+                    // very inefficient memory-wise for large datasets, so
+                    // should return points as array of indices instead (TODO)
+                    pointsInside.push(d);
+                }
+            }
+        }
+        return x1 >= x3 || y1 >= y3 || x2 < x0 || y2 < y0;
+    });
+    return pointsInside;
+ }
