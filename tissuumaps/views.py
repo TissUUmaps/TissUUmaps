@@ -428,7 +428,6 @@ def csvFile(completePath):
     completePath = os.path.join(app.basedir, completePath + ".csv")
     directory = os.path.dirname(completePath)
     filename = os.path.basename(completePath)
-    print ("completePath", completePath, directory, filename, os.path.isfile(completePath))
     if os.path.isfile(completePath):
         return send_from_directory(directory, filename)
         # Temporary fix for gz files without csv
