@@ -63,6 +63,7 @@
 
     select211.addEventListener("change",(event)=>{
         Feature_Space._dataset = select211.value;
+        if (!dataUtils.data[Feature_Space._dataset]) return;
         interfaceUtils.cleanSelect("UMAP1");
         interfaceUtils.addElementsToSelect("UMAP1", dataUtils.data[Feature_Space._dataset]._csv_header);
         interfaceUtils.cleanSelect("UMAP2");
@@ -165,16 +166,20 @@ Feature_Space.run = function () {
                 else {return;}
                 new Feature_Space._newwin.OpenSeadragon.MouseTracker({
                     element: Feature_Space._newwin.tmapp[vname].canvas,
+                    moveHandler: Feature_Space.moveHandler/*,
                     pressHandler: Feature_Space.pressHandler,
-                    moveHandler: Feature_Space.moveHandler,
-                    releaseHandler: Feature_Space.releaseHandler,
-                    exitHandler: Feature_Space.releaseHandler
+                    releaseHandler: Feature_Space.releaseHandler*/
                 }).setTracking(true);
-                            
-                Feature_Space._newwin.tmapp["ISS_viewer"].addHandler('canvas-drag', (event) => {
-                    event.preventDefaultAction = true;
-                });
                 
+                Feature_Space._newwin.tmapp["ISS_viewer"].addHandler('canvas-press', (event) => {
+                    Feature_Space.pressHandler(event)
+                });
+                Feature_Space._newwin.tmapp["ISS_viewer"].addHandler('canvas-release', (event) => {
+                    Feature_Space.releaseHandler(event)
+                });
+                Feature_Space._newwin.tmapp["ISS_viewer"].addHandler('canvas-drag', (event) => {
+                    if (!event.originalEvent.shiftKey) event.preventDefaultAction = true;
+                });
                 newwin.projectUtils._activeState = projectUtils._activeState;
                 try {
                     newwin.interfaceUtils.generateDataTabUI({uid:Feature_Space._dataset,name:"UMAP"})
@@ -228,15 +233,20 @@ Feature_Space.run = function () {
 }
 
 Feature_Space.pressHandler = function (event) {
+    console.log(event, event.originalEvent, event.originalEvent.shiftKey);
     var OSDviewer = Feature_Space._newwin.tmapp[tmapp["object_prefix"] + "_viewer"];
 
-    //if (event.shift) {
+    if (! event.originalEvent.shiftKey) {
         Feature_Space._newwin.tmapp.ISS_viewer.gestureSettingsMouse.dragToPan = false;
         var normCoords = OSDviewer.viewport.pointFromPixel(event.position);
         var nextpoint = [normCoords.x, normCoords.y];
         Feature_Space._region = [normCoords];
         Feature_Space._regionPixels = [event.position];
-    //
+    }
+    else {
+        Feature_Space._newwin.tmapp.ISS_viewer.gestureSettingsMouse.dragToPan = true;
+        Feature_Space._region == []
+    }
     return
 };
 
@@ -244,6 +254,7 @@ Feature_Space.releaseHandler = function (event) {
     if (Feature_Space._region == []) {
         return;
     }
+    if (event.originalEvent.shiftKey) { return; }
     var OSDviewer = Feature_Space._newwin.tmapp[tmapp["object_prefix"] + "_viewer"];
 
     var canvas = Feature_Space._newwin.overlayUtils._d3nodes[Feature_Space._newwin.tmapp["object_prefix"] + "_regions_svgnode"].node();
@@ -298,6 +309,7 @@ Feature_Space.moveHandler = function (event) {
         //Feature_Space._newwin.tmapp.ISS_viewer.setMouseNavEnabled(true);
         return;
     }
+    if (event.originalEvent.shiftKey) { return; }
     var OSDviewer = Feature_Space._newwin.tmapp[tmapp["object_prefix"] + "_viewer"];
 
     var normCoords = OSDviewer.viewport.pointFromPixel(event.position);
