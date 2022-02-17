@@ -14,6 +14,7 @@ except ImportError:
     sys.exit()
 
 from optparse import OptionParser
+from functools import partial
 
 import pathlib
 from pathlib import Path
@@ -144,10 +145,8 @@ class MainWindow(QMainWindow):
         for pluginName in app.config["PLUGINS"]:
             _plugin = QAction(pluginName,self)
             plugins.addAction(_plugin)
-            def trigger():
-                print ("Plugin triggered:", pluginName)
-                self.browser.page().runJavaScript("pluginUtils.startPlugin(\""+pluginName+"\");");
-            _plugin.triggered.connect(trigger)
+
+            _plugin.triggered.connect(partial(self.triggerPlugin,pluginName))
         
         about = self.bar.addMenu("About")
         _help = QAction(self.style().standardIcon(QStyle.SP_DialogHelpButton), "Help",self)
@@ -170,6 +169,10 @@ class MainWindow(QMainWindow):
         _version.triggered.connect(trigger)
 
         self.showMaximized()
+    
+    def triggerPlugin(self, pName):
+        print ("Plugin triggered:", pName)
+        self.browser.page().runJavaScript("pluginUtils.startPlugin(\""+pName+"\");");
 class webEngine(QWebEngineView):
     def __init__(self, qt_app, app, mainWin, args):
         super().__init__()

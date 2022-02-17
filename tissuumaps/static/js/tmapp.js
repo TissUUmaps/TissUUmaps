@@ -236,4 +236,12 @@ $( document ).ready(function() {
             toggleFullscreen();
         }
     });
+    document.addEventListener("keypress", (event) => {
+        if (event.key === "m") {
+            for (const [key, value] of Object.entries(dataUtils.data)) {
+                $("#"+key+"_all_check").click();
+                $("#"+key+"_All_check").click();
+            }
+        }
+    });
 });
