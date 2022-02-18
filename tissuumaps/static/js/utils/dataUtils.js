@@ -186,8 +186,6 @@ var data_obj = dataUtils.data[data_id];
             maxY = getMax(arr);
         }
         // We load an empty image at the size of the data.
-
-        console.log("maxX, maxY", maxX, maxY);
         tmapp["ISS_viewer"].addTiledImage ({
             tileSource: {
                 getTileUrl: function(z, x, y){return null},

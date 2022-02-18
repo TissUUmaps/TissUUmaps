@@ -578,9 +578,6 @@ def runPlugin(pluginName):
 
 @app.route("/plugins/<path:pluginName>/<path:method>", methods=["GET", "POST"])
 def pluginJS(pluginName, method):
-    logging.info("runPlugin", pluginName, method)
-    logging.debug(request.method)
-
     pluginModule = load_plugin(pluginName)
     pluginInstance = pluginModule.Plugin(app)
     pluginMethod = getattr(pluginInstance, method)
