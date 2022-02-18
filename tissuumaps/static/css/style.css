@@ -10232,4 +10232,9 @@ html {
 .progress-bar {
   transition: width 0s ease !important; }
 
+.layerSettingButton:after {
+  content: '\f431';
+  font-family: 'bootstrap-icons';
+  margin: 0px 0px 0px 5px; }
+
 /*# sourceMappingURL=style.css.map */

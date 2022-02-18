@@ -1,12 +1,13 @@
 flask = {}
 
 flask.init = function () {
-    
     $(document).on( "click", ".layerSettingButton", function(){
-
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        const path = urlParams.get('path')
         interfaceUtils.alert(
             `
-            <iframe src='${$(this).data('source')}/info' style="width:100%;min-height:500px;"></iframe>
+            <iframe src='${path}/${$(this).data('source')}/info' style="width:100%;min-height:500px;"></iframe>
             `
         )
     } );
