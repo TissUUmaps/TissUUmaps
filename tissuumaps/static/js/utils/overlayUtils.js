@@ -258,6 +258,11 @@ overlayUtils.addLayer = function(layerName, tileSource, i, visible) {
         if (showModal)
             loadingModal = interfaceUtils.loadingModal("Converting image, please wait...");
     },800);
+    if (tmapp["ISS_viewer"].world.getItemCount() != 0) {
+        if (tmapp["ISS_viewer"].world.getItemAt(0).source.getTileUrl(0,0,0) == null) {
+            tmapp["ISS_viewer"].close();
+        }
+    }
     tmapp[vname].addTiledImage({
         index: i + 1,
         tileSource: tmapp._url_suffix + tileSource,

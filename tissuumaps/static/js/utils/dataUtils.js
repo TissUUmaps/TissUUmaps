@@ -156,7 +156,17 @@ var data_obj = dataUtils.data[data_id];
         data_obj["_X"]=inputs["X"].value;
         data_obj["_Y"]=inputs["Y"].value;
     }
-    if (tmapp["ISS_viewer"].world._items.length == 0) {
+    // Check if image is already fake:
+    var recompute_background_img = false;
+    if (tmapp["ISS_viewer"].world.getItemCount() == 0) {
+        recompute_background_img = true;
+    }
+    else {
+        if (tmapp["ISS_viewer"].world.getItemAt(0).source.getTileUrl(0,0,0) == null) {
+            var recompute_background_img = true;
+        }
+    }
+    if (recompute_background_img) {
         function getMax(arr) {
             let len = arr.length; let max = -Infinity;
             while (len--) { max = +arr[len] > max ? +arr[len] : max; }
@@ -186,19 +196,28 @@ var data_obj = dataUtils.data[data_id];
             maxY = getMax(arr);
         }
         // We load an empty image at the size of the data.
-        tmapp["ISS_viewer"].addTiledImage ({
-            tileSource: {
-                getTileUrl: function(z, x, y){return null},
-                height: parseInt(maxY*1.06),
-                width:  parseInt(maxX*1.06),
-                tileSize: 256,
-            },
-            opacity: 0,
-            x: -0.02,
-            y: -0.02
-        })
-        setTimeout (function() {dataUtils.updateViewOptions(data_id)},50);
-        return;
+        if (tmapp["ISS_viewer"].world.getItemCount() > 0) {
+            if (tmapp["ISS_viewer"].world.getItemAt(0).source.height != parseInt(maxY*1.06) || tmapp["ISS_viewer"].world.getItemAt(0).source.width != parseInt(maxX*1.06)){
+                tmapp["ISS_viewer"].close();
+                setTimeout (function() {dataUtils.updateViewOptions(data_id)},50);
+                return;
+            }
+        }
+        else {
+            tmapp["ISS_viewer"].addTiledImage ({
+                tileSource: {
+                    getTileUrl: function(z, x, y){return null},
+                    height: parseInt(maxY*1.06),
+                    width:  parseInt(maxX*1.06),
+                    tileSize: 256,
+                },
+                opacity: 0,
+                x: -0.02,
+                y: -0.02
+            })
+            setTimeout (function() {dataUtils.updateViewOptions(data_id)},50);
+            return;
+        }
     }
     //this will be trickier since trees need to be made and also a menu
     
