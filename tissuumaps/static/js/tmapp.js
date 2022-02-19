@@ -106,10 +106,12 @@ tmapp.init = function () {
 
     //OSD handlers are not registered manually they have to be registered
     //using MouseTracker OSD objects 
-    var ISS_mouse_tracker = new OpenSeadragon.MouseTracker({
+    /*var ISS_mouse_tracker = new OpenSeadragon.MouseTracker({
         element: tmapp[vname].canvas,
         clickHandler: click_handler
-    }).setTracking(true);
+    }).setTracking(true);*/
+    
+    tmapp["ISS_viewer"].addHandler('canvas-click', click_handler);
 
     elt = document.getElementById("ISS_globalmarkersize");
     if (elt) {
