@@ -31,6 +31,8 @@ import urllib.parse
 import urllib.request
 import os
 import json
+import random
+import string
 
 # Don't remove this line.  The idna encoding
 # is used by getaddrinfo when dealing with unicode hostnames,
@@ -232,11 +234,14 @@ class webEngine(QWebEngineView):
             for url in event.mimeData().urls():
                 links.append(str(url.toLocalFile()))
             for link in links:
-                #link = link.replace("\\","/").replace(self.app.basedir.replace("\\","/"), "")
-                #print ("link",link, self.app.basedir)
-                if(".tmap") in link:
+                filename, file_extension = os.path.splitext(link)
+                print ("file_extension", file_extension)
+                if(file_extension == ".tmap"):
                     self.openImagePath(link)
-                self.page().runJavaScript(f"flask.standalone.addLayer(\"{link}\");")
+                elif(file_extension == ".csv"):
+                    self.page().runJavaScript(f"flask.standalone.addCSV(\"{link}\");")
+                else:
+                    self.page().runJavaScript(f"flask.standalone.addLayer(\"{link}\");")
             #self.emit(SIGNAL("dropped"), links)
         else:
             event.ignore()
@@ -474,6 +479,44 @@ class webEngine(QWebEngineView):
         #sys.exit()
 
     @pyqtSlot(str, str, result="QJsonObject")
+    def addCSV(self, path, folderpath):
+        print ("gui.addCSV", path, folderpath)
+        if (folderpath == ""):
+            folderpath = QFileDialog.getOpenFileName(self, 'Select a File')[0]
+        if not folderpath:
+            returnDict = {"dzi":None,"name":None}
+            return returnDict
+        parts = Path(folderpath).parts
+        if (self.app.basedir != parts[0]):
+            if (not self.app.basedir == "C:\mnt\data\shared"):
+                reply = QMessageBox.alert(self, "Error", "All files must be in the same drive.")
+                returnDict = {"markerFile":None}
+                return returnDict
+            else:
+                self.app.basedir = parts[0]
+        imgPath = os.path.join(*parts[1:])
+        
+        path = os.path.abspath(os.path.join(self.app.basedir, path))
+        imgPath = os.path.abspath(os.path.join(self.app.basedir, imgPath))
+        
+        relativePath = os.path.relpath(os.path.dirname(imgPath), path) 
+        if ".." in relativePath:
+            reply = QMessageBox.question(self, "Error", "Impossible to add files from a parent folder.")
+            if reply == QMessageBox.Yes:
+                self.openImagePath(folderpath)
+            returnDict = {"dzi":None,"name":None}
+            return returnDict
+        returnDict = {
+            "markerFile":{
+                        "name": os.path.basename(imgPath),
+                        "path": relativePath + "/" + os.path.basename(imgPath),
+                        "uid": ''.join(random.choice(string.ascii_uppercase) for _ in range(6))
+                    }
+        }
+        print ("returnDict", returnDict)
+        return returnDict
+    
+    @pyqtSlot(str, str, result="QJsonObject")
     def addLayer(self, path, folderpath):
         if (folderpath == ""):
             folderpath = QFileDialog.getOpenFileName(self, 'Select a File')[0]
@@ -486,12 +529,12 @@ class webEngine(QWebEngineView):
             if (not self.app.basedir == "C:\mnt\data\shared"):
                 reply = QMessageBox.question(self, "Error", "All layers must be in the same drive. Would you like to open this image only?")
                 reply = reply == QMessageBox.Yes
+                if reply:
+                    self.openImagePath(folderpath)
+                returnDict = {"dzi":None,"name":None}
+                return returnDict
             else:
-                reply = True
-            if reply:
-                self.openImagePath(folderpath)
-            returnDict = {"dzi":None,"name":None}
-            return returnDict
+                self.app.basedir = parts[0]
         imgPath = os.path.join(*parts[1:])
         try:
             views._get_slide(imgPath)

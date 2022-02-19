@@ -4,7 +4,10 @@ flask.init = function () {
     $(document).on( "click", ".layerSettingButton", function(){
         const queryString = window.location.search;
         const urlParams = new URLSearchParams(queryString);
-        const path = urlParams.get('path')
+        var path = urlParams.get('path');
+        if (path == null) {
+            path = "";
+        }
         interfaceUtils.alert(
             `
             <iframe src='${path}/${$(this).data('source')}/info' style="width:100%;min-height:500px;"></iframe>
@@ -33,6 +36,18 @@ flask.standalone.init = function () {
         flask.standalone.addLayer("");
     });
 };
+
+flask.standalone.addCSV = function (filename) {
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    const path = urlParams.get('path')
+    console.log("Loading csv file:", path, filename);
+    flask.standalone.backend.addCSV(path, filename, function(csvJSON) {
+        if (csvJSON["markerFile"]!=null) {
+            interfaceUtils.generateDataTabUI(csvJSON["markerFile"]);
+        }
+    });
+}
 
 flask.standalone.addLayer = function (filename) {
     const queryString = window.location.search;
