@@ -1000,7 +1000,6 @@ regionUtils.analyzeRegion = function (regionid) {
 
     regionUtils._regions[regionid].associatedPoints=[];
     regionUtils._regions[regionid].barcodeHistogram=[];
-
     allDatasets = Object.keys(dataUtils.data);
     for (var dataset of allDatasets) {
         var allkeys=Object.keys(dataUtils.data[dataset]["_groupgarden"]);

@@ -828,6 +828,7 @@ glUtils._loadTextureFromImageURL = function(gl, src) {
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
         gl.generateMipmap(gl.TEXTURE_2D);  // Requires power-of-two size images
         gl.bindTexture(gl.TEXTURE_2D, null);
+        glUtils.draw();  // Force redraw to avoid black shapes after context loss
     };
     image.src = src;
     return texture;
@@ -1081,11 +1082,35 @@ glUtils.updateMarkerScale = function() {
 }
 
 
+glUtils._restoreLostContext = function(event) {
+    console.log("Restoring WebGL objects after context loss");
+    let canvas = document.getElementById("gl_canvas");
+    const gl = canvas.getContext("webgl", glUtils._options);
+
+    // Restore shared WebGL objects
+    glUtils._programs["markers"] = glUtils._loadShaderProgram(gl, glUtils._markersVS, glUtils._markersFS);
+    glUtils._programs["picking"] = glUtils._loadShaderProgram(gl, glUtils._pickingVS, glUtils._pickingFS);
+    glUtils._textures["shapeAtlas"] = glUtils._loadTextureFromImageURL(gl, "misc/markershapes.png");
+
+    // Restore per-markers WebGL objects
+    for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
+        delete glUtils._buffers[uid + "_markers"];
+        delete glUtils._textures[uid + "_colorLUT"];
+        delete glUtils._textures[uid + "_colorscale"];
+        glUtils.loadMarkers(uid);
+    }
+
+    glUtils.draw();  // Make sure markers are redrawn
+}
+
+
 glUtils.init = function() {
     if (glUtils._initialized) return;
 
     let canvas = document.getElementById("gl_canvas");
     if (!canvas) canvas = this._createMarkerWebGLCanvas();
+    canvas.addEventListener("webglcontextlost", function(e) { e.preventDefault(); }, false);
+    canvas.addEventListener("webglcontextrestored", glUtils._restoreLostContext, false);
     const gl = canvas.getContext("webgl", glUtils._options);
 
     // Place marker canvas under the OSD canvas. Doing this also enables proper

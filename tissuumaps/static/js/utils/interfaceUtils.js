@@ -1764,34 +1764,39 @@ interfaceUtils._mGenUIFuncs.groupUI=function(uid){
         
         button1 = HTMLElementUtils.createElement({"kind":"div", extraAttributes:{"data-uid":uid,"data-escapedID":escapedID, "class":"btn btn-light btn-sm mx-1"}});
         button1.innerHTML = "<i class='bi bi-eye'></i>";
+        button1.checkVisible = check0;
+        button1.checkHidden = check1;
+        // Store this state so that we can also "preview" unchecked marker groups
+        button1.lastCheckedState = check0.checked;
         td4.appendChild(button1);
         tr.appendChild(td4);
-        
-        button1.addEventListener("mousedown",function(event) {
-            var uid = this.getAttribute("data-uid");
-            var escapedID = this.getAttribute("data-escapedID");
-            tr = this.parentElement.parentElement
-            tr.classList.add("table-primary");
-            hidden_inputs = interfaceUtils.getElementsByClassName("marker-hidden");
-            for(var i = 0; i < hidden_inputs.length; i++){
-                hidden_inputs[i].checked = true;
-            }
-            hoverElement = interfaceUtils.getElementById(uid+"_"+escapedID+"_hidden");
-            if (interfaceUtils.getElementById(uid+"_"+escapedID+"_check").checked) {
-                hoverElement.checked = false;
-            }
-            glUtils.updateColorLUTTextures();
-            glUtils.draw();
+               
+        eventnames = ["mouseenter"];
+        eventnames.forEach(function(eventname) {
+            button1.addEventListener("mouseenter",function(event) {
+                tr = this.parentElement.parentElement;
+                tr.classList.add("table-primary");
+                hidden_inputs = interfaceUtils.getElementsByClassName("marker-hidden");
+                for(var i = 0; i < hidden_inputs.length; i++){
+                    hidden_inputs[i].checked = true;
+                }
+                this.lastCheckedState = this.checkVisible.checked;
+                this.checkVisible.checked = true;
+                this.checkHidden.checked = false;
+                glUtils.updateColorLUTTextures();
+                glUtils.draw();
+            })
         })
-        eventnames = ['mouseup', 'mouseleave'];
+        eventnames = ["mouseleave"];
         eventnames.forEach(function(eventname){
             button1.addEventListener(eventname,function(event) {
-                tr = this.parentElement.parentElement
+                tr = this.parentElement.parentElement;
                 tr.classList.remove("table-primary");
                 hidden_inputs = interfaceUtils.getElementsByClassName("marker-hidden");
                 for(var i = 0; i < hidden_inputs.length; i++){
                     hidden_inputs[i].checked = false;
                 }
+                this.checkVisible.checked = this.lastCheckedState;  // Restore visible checkbox
                 glUtils.updateColorLUTTextures();
                 glUtils.draw();
             })
