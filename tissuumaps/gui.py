@@ -122,6 +122,10 @@ class MainWindow(QMainWindow):
             self.browser.page().runJavaScript("flask.standalone.saveProject();")
         _save.triggered.connect(trigger)
 
+        _close = QAction(self.style().standardIcon(QStyle.SP_DockWidgetCloseButton), "Close file",self)
+        file.addAction(_close)
+        _close.triggered.connect(self.browser.closeImage)
+
         file.addSeparator()
 
         _export = QAction(self.style().standardIcon(QStyle.SP_FileDialogListView), "Capture viewport",self)
@@ -305,6 +309,10 @@ class webEngine(QWebEngineView):
     def openImage(self):
         folderpath = QFileDialog.getOpenFileName(self, 'Select a File',self.lastdir)[0]
         self.openImagePath(folderpath)
+
+    def closeImage(self):
+        self.load(QUrl(self.location))
+        self.mainWin.setWindowTitle("TissUUmaps")
 
     @pyqtSlot(str)
     def exportToStatic(self, state):
