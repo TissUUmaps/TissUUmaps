@@ -448,7 +448,7 @@ class webEngine(QWebEngineView):
             previouspath = self.app.basedir
         state = addRelativePath(json.loads(state), previouspath, os.path.dirname(folderpath))
         with open(folderpath, "w") as f:
-            json.dump(state, f)
+            json.dump(state, f, indent=4)
 
     def openImagePath (self, folderpath):
         print ("openImagePath",folderpath)
