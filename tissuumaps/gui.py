@@ -400,13 +400,18 @@ class webEngine(QWebEngineView):
 
     @pyqtSlot(str)
     def saveProject(self, state):
-        def addRelativePath(state, relativePath):
+        def getRel(previouspath, file, newpath):
+            completepath = os.path.dirname(os.path.join(previouspath, file))
+            relPath = os.path.relpath(completepath, newpath)
+            return os.path.join(relPath, os.path.basename(file)).replace("\\","/")
+
+        def addRelativePath(state, previouspath, newpath):
             def addRelativePath_aux (state, path):
                 if len(path) == 1:
                     if isinstance(state[path[0]], list):
-                        state[path[0]] = [relativePath + "/" + s for s in state[path[0]]]
+                        state[path[0]] = [getRel(previouspath, s, newpath) for s in state[path[0]]]
                     else:
-                        state[path[0]] = relativePath + "/" + state[path[0]]
+                        state[path[0]] = getRel(previouspath, state[path[0]], newpath)
                     return
                 if not path[0] in state.keys():
                     return
@@ -418,7 +423,6 @@ class webEngine(QWebEngineView):
                         addRelativePath_aux (state[path[0]], path[1:])
             
             try:
-                relativePath = relativePath.replace("\\","/")
                 paths = [
                     ["layers","tileSource"],
                     ["markerFiles","path"],
@@ -432,18 +436,17 @@ class webEngine(QWebEngineView):
                 print (traceback.format_exc())
                 
             return state
-
-        parsed_url = urlparse(self.url().toString())
-        previouspath = parse_qs(parsed_url.query)['path'][0]
-        previouspath = os.path.abspath(os.path.join(self.app.basedir, previouspath))
-        print (previouspath)
-        
         folderpath = QFileDialog.getSaveFileName(self, 'Save project as',self.lastdir)[0]
         if (not folderpath):
             return {}
-
-        relativePath = os.path.relpath(previouspath, os.path.dirname(folderpath))
-        state = addRelativePath(json.loads(state), relativePath)
+        try:
+            parsed_url = urlparse(self.url().toString())
+            previouspath = parse_qs(parsed_url.query)['path'][0]
+            previouspath = os.path.abspath(os.path.join(self.app.basedir, previouspath))
+            print (previouspath)
+        except:
+            previouspath = self.app.basedir
+        state = addRelativePath(json.loads(state), previouspath, os.path.dirname(folderpath))
         with open(folderpath, "w") as f:
             json.dump(state, f)
 
