@@ -199,31 +199,21 @@ Feature_Space.run = function () {
                 Feature_Space_Control.classList.remove("d-none");
                 newwin.document.getElementsByClassName("navigator ")[0].classList.add("d-none");
                 setTimeout(function() {
-                    $(document).mouseup(function(e) {
-                        setTimeout(function(){
-                            copyDataset(dataUtils.data[Feature_Space._dataset], newwin.dataUtils.data[Feature_Space._dataset]);
-                            $("."+Feature_Space._dataset + "-marker-input, ."+Feature_Space._dataset + "-marker-hidden, ."+Feature_Space._dataset + "-marker-color, ."+Feature_Space._dataset + "-marker-shape").each(function(i, elt) {
-                                newwin.document.getElementById(elt.id).value = elt.value;
-                                newwin.document.getElementById(elt.id).checked = elt.checked;
-                            }).promise().done(function(){
-                                newwin.glUtils.loadMarkers(Feature_Space._dataset);
-                                newwin.glUtils.draw();
-                            });
-                        },100);
-                    });
-                    $(document).mousedown(function(e) {
-                        setTimeout(function(){
-                            copyDataset(dataUtils.data[Feature_Space._dataset], newwin.dataUtils.data[Feature_Space._dataset]);
-                            $("."+Feature_Space._dataset + "-marker-input, ."+Feature_Space._dataset + "-marker-hidden, ."+Feature_Space._dataset + "-marker-color, ."+Feature_Space._dataset + "-marker-shape").each(function(i, elt) {
-                                newwin.document.getElementById(elt.id).value = elt.value;
-                                newwin.document.getElementById(elt.id).checked = elt.checked;
-                            }).promise().done(function(){
-                                newwin.glUtils.loadMarkers(Feature_Space._dataset);
-                                newwin.glUtils.draw();
-                            });
-                        },100);
-                    });
+                    var tempfunc = glUtils.draw();;
 
+                    glUtils.draw = function() {
+                        tempfunc();
+                        setTimeout(function(){
+                            copyDataset(dataUtils.data[Feature_Space._dataset], newwin.dataUtils.data[Feature_Space._dataset]);
+                            $("."+Feature_Space._dataset + "-marker-input, ."+Feature_Space._dataset + "-marker-hidden, ."+Feature_Space._dataset + "-marker-color, ."+Feature_Space._dataset + "-marker-shape").each(function(i, elt) {
+                                newwin.document.getElementById(elt.id).value = elt.value;
+                                newwin.document.getElementById(elt.id).checked = elt.checked;
+                            }).promise().done(function(){
+                                newwin.glUtils.loadMarkers(Feature_Space._dataset);
+                                newwin.glUtils.draw();
+                            });
+                        },100);
+                    }
                 },200);
             }, 200);
         });
@@ -280,7 +270,6 @@ Feature_Space.releaseHandler = function (event) {
     if (pointsIn.length == 0) {
         markerData[scalePropertyName] = markerData[scalePropertyName].map(function() {return 1;});
     }
-    // TODO: speed up by not searching for each point.
     for (var d of pointsIn) {
         markerData[scalePropertyName][d] = 1;
     }
@@ -420,9 +409,6 @@ Feature_Space.analyzeRegion = function (points) {
                 const x = markerData[xselector][d];
                 const y = markerData[yselector][d];
                 if (x >= x0 && x < x3 && y >= y0 && y < y3) {
-                    // Note: expanding each point into a full object will be
-                    // very inefficient memory-wise for large datasets, so
-                    // should return points as array of indices instead (TODO)
                     pointsInside.push(d);
                 }
             }
