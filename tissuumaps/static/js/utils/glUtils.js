@@ -775,7 +775,7 @@ glUtils._updateColorbarCanvas = function() {
         if (propertyMax.length > 9) propertyMax = propertyRange[1].toExponential(5);
         // Get marker tab name to show together with property name
         const tabName = interfaceUtils.getElementById(uid + "_marker-tab-name").textContent;
-        let label = tabName + "." + propertyName;
+        let label = tabName.substring(0, 15) + "." + propertyName.substring(0, 15);
 
         // Draw annotations (with drop shadow)
         ctx.font = "16px Segoe UI";
