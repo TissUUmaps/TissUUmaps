@@ -429,8 +429,11 @@ def csvFile(completePath):
     directory = os.path.dirname(completePath)
     filename = os.path.basename(completePath)
     if os.path.isfile(completePath):
+        # We can not gzip csv files with the PapaParse library
         return send_from_directory(directory, filename)
-        # Temporary fix for gz files without csv
+        
+        # We keep the old gzip code anyway:
+        # gz files have to be names cgz for some browser
         if os.path.isfile(completePath + ".gz"):
             os.rename(completePath + ".gz", completePath + ".cgz")
 
