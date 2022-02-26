@@ -182,3 +182,37 @@ markerUtils.makePiechartTable = function(markerData, markerIndex, sectorsPropert
     })
     return outText;
 }
+
+/** Get tooltip format on pickup */
+markerUtils.getMarkerTooltip = function(uid, markerIndex) {
+    // "{tab}","{key}","{name}","{index}","{color}", "{col_...}"
+    const formatString = dataUtils.data[uid]["_tooltip_fmt"];
+    const tabName = interfaceUtils.getElementById(uid + "_marker-tab-name").textContent;
+    const markerData = dataUtils.data[uid]["_processeddata"];
+    const keyName = dataUtils.data[uid]["_gb_col"];
+    const keyVal = (keyName != null) ? markerData[keyName][markerIndex] : undefined;
+    const nameName = dataUtils.data[uid]["_gb_name"];
+    const nameVal = (nameName != null) ? markerData[nameName][markerIndex] : undefined;
+    const colName = dataUtils.data[uid]["_cb_col"];
+    const colVal = (colName != null) ? markerData[colName][markerIndex] : undefined;
+    
+    var returnString = formatString;
+    if (returnString == "") {
+        if (keyVal !== undefined) {
+            return keyVal;
+        }
+        else if (colName !== undefined) {
+            return colVal;
+        }
+    }
+    returnString=returnString.replace('{index}', markerIndex);
+    returnString=returnString.replace('{tab}', tabName);
+    returnString=returnString.replace('{key}', keyVal);
+    returnString=returnString.replace('{name}', nameVal);
+    returnString=returnString.replace('{color}', colVal);
+    for (var header of dataUtils.data[uid]["_csv_header"]) {
+        var headerVal = markerData[header][markerIndex];
+        returnString=returnString.replace('{col_'+header+'}', headerVal);
+    }
+    return returnString;
+}

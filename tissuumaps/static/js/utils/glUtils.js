@@ -1035,12 +1035,7 @@ glUtils.pick = function(event) {
             if (glUtils._usePiechartFromMarker[uid]) {
                 div.innerHTML = markerUtils.makePiechartTable(markerData, markerIndex, piechartPropertyName);
             } else {
-                if (groupName !== undefined) {
-	                div.innerHTML = groupName;
-                }
-                else if (dataUtils.data[uid]["_cb_col"]) {
-                    div.innerHTML = markerData[dataUtils.data[uid]["_cb_col"]][markerIndex];
-                }
+                div.innerHTML = markerUtils.getMarkerTooltip(uid, markerIndex);
                 console.log("Marker clicked:",tabName, groupName, "index:", markerIndex);
             }
             div.classList.add("viewer-layer", "m-0", "p-1");

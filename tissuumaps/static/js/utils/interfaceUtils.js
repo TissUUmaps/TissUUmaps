@@ -752,6 +752,7 @@ interfaceUtils._mGenUIFuncs.getTabDropDowns = function(uid){
     allinputs["shape_fixed"]=interfaceUtils.getElementById(uid+"_shape-fixed-value");
     allinputs["shape_gr_dict"]=interfaceUtils.getElementById(uid+"_shape-bygroup-dict-val");
     allinputs["opacity"]=interfaceUtils.getElementById(uid+"_opacity");
+    allinputs["tooltip_fmt"]=interfaceUtils.getElementById(uid+"_tooltip_fmt");
 
     return allinputs;
 }
@@ -1160,9 +1161,10 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
     row2=interfaceUtils._mGenUIFuncs.generateAdvancedPiechartAccordion3();
     row3=interfaceUtils._mGenUIFuncs.generateAdvancedShapeAccordion3();
     row4=interfaceUtils._mGenUIFuncs.generateAdvancedOpacityAccordion3();
-    row5=interfaceUtils._mGenUIFuncs.generateAdvancedMakeButtonAccordion3();
+    row5=interfaceUtils._mGenUIFuncs.generateAdvancedTooltipAccordion3();
+    row6=interfaceUtils._mGenUIFuncs.generateAdvancedMakeButtonAccordion3();
     
-    return [row1,row2,row3,row4, row5];
+    return [row1,row2,row3,row4, row5, row6];
  }
 
  /**
@@ -1409,6 +1411,34 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
             label0002=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":generated+"_opacity"}});
             label0002.innerHTML="Opacity value:&nbsp;";
             inputsizefactor=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_opacity","extraAttributes":{ "class":"form-text-input", "type":"number", "value":1, "step":0.05, "min":0, "max":1}});
+            
+    row0.appendChild(collab)
+        collab.appendChild(labellab)
+
+    row0.appendChild(col00)
+        col00.appendChild(label0002);
+        col00.appendChild(inputsizefactor);
+
+    return row0;
+}
+
+ /**
+ *  Creates the forms to scale by
+ * @returns {array} a single rows
+ */
+  interfaceUtils._mGenUIFuncs.generateAdvancedTooltipAccordion3= function(){
+    generated=interfaceUtils._mGenUIFuncs.ctx.aUUID;
+
+    //row 0
+    row0=HTMLElementUtils.createRow({id:generated+"_tooltip_0"});
+        collab=HTMLElementUtils.createColumn({"width":12});
+            labellab=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_cb-label"});
+            labellab.innerHTML="<strong>Marker tooltip</strong>";
+
+        col00=HTMLElementUtils.createColumn({"width":6});
+            label0002=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":generated+"_tooltip_fmt"}});
+            label0002.innerHTML="Format:&nbsp;";
+            inputsizefactor=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_tooltip_fmt","extraAttributes":{ "class":"form-text-input", "type":"text", "value":""}});
             
     row0.appendChild(collab)
         collab.appendChild(labellab)

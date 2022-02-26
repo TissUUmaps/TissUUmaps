@@ -274,6 +274,7 @@ var data_obj = dataUtils.data[data_id];
     }
     // Marker opacity
     data_obj["_opacity"]=inputs["opacity"].value;
+    data_obj["_tooltip_fmt"]=inputs["tooltip_fmt"].value;
     
     //this function veryfies if a tree with these features exist and doesnt recreate it
     dataUtils.makeQuadTrees(data_id);
@@ -316,7 +317,7 @@ dataUtils.createMenuFromCSV = function(data_id,datumExample) {
     namesymbols.forEach((drop)=>{
         if(drop=="cb_cmap") return; //if its colormaps dont fill it with csv but with d3 luts which are already there
         if(drop=="shape_fixed") return; //if its shapes dont fill it with csv but with shape symbols which are already there
-        if(drop=="scale_factor" || drop=="shape_gr_dict" || drop=="cb_gr_dict" || drop=="opacity") return; //not dropdowns
+        if(drop=="scale_factor" || drop=="shape_gr_dict" || drop=="cb_gr_dict" || drop=="opacity" || drop=="pie_dict" || drop=="tooltip_fmt") return; //not dropdowns
         if (!alldrops[drop]) return;
         alldrops[drop].innerHTML = "";
         var option = document.createElement("option");
