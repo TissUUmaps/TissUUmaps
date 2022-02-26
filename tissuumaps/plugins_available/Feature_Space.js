@@ -199,10 +199,7 @@ Feature_Space.run = function () {
                 Feature_Space_Control.classList.remove("d-none");
                 newwin.document.getElementsByClassName("navigator ")[0].classList.add("d-none");
                 setTimeout(function() {
-                    var tempfunc = glUtils.draw();;
-
-                    glUtils.draw = function() {
-                        tempfunc();
+                    var copySettings = function() {
                         setTimeout(function(){
                             copyDataset(dataUtils.data[Feature_Space._dataset], newwin.dataUtils.data[Feature_Space._dataset]);
                             $("."+Feature_Space._dataset + "-marker-input, ."+Feature_Space._dataset + "-marker-hidden, ."+Feature_Space._dataset + "-marker-color, ."+Feature_Space._dataset + "-marker-shape").each(function(i, elt) {
@@ -213,6 +210,25 @@ Feature_Space.run = function () {
                                 newwin.glUtils.draw();
                             });
                         },100);
+                    }
+                    if (glUtils.temp_draw === undefined) {
+                        glUtils.temp_draw = glUtils.draw;
+                        glUtils.draw = function() {
+                            glUtils.temp_draw();
+                            copySettings();
+                        }
+                        glUtils.temp_updateColorLUTTexture = glUtils._updateColorLUTTexture;
+                        glUtils._updateColorLUTTexture = function(gl, uid, texture) {
+                            glUtils.temp_updateColorLUTTexture(gl, uid, texture);
+                            copySettings();
+                        }
+                        dataUtils.temp_updateViewOptions = dataUtils.updateViewOptions;
+                        dataUtils.updateViewOptions = function(data_id){
+                            dataUtils.temp_updateViewOptions(data_id);
+                            copyDataset(dataUtils.data[Feature_Space._dataset], newwin.dataUtils.data[Feature_Space._dataset]);
+                            newwin.dataUtils.createMenuFromCSV(Feature_Space._dataset, newwin.dataUtils.data[Feature_Space._dataset]["_processeddata"].columns);
+                        }
+
                     }
                 },200);
             }, 200);
