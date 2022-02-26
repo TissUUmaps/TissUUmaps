@@ -386,6 +386,14 @@ glUtils.loadMarkers = function(uid) {
     
     const sectorsPropertyName = dataUtils.data[uid]["_pie_col"];
     const usePiechartFromMarker = dataUtils.data[uid]["_pie_col"] != null;
+    if (dataUtils.data[uid]["_pie_dict"] && sectorsPropertyName) {
+        glUtils._piechartPalette = JSON.parse(dataUtils.data[uid]["_pie_dict"])
+        if (typeof glUtils._piechartPalette === "object") {
+            glUtils._piechartPalette = sectorsPropertyName.split(";").map(function(sector) {
+                return glUtils._piechartPalette[sector];
+            })
+        }
+    }
     const piechartPalette = glUtils._piechartPalette;
     let numSectors = 1;
 

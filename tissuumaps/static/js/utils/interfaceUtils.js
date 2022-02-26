@@ -653,9 +653,9 @@ interfaceUtils._mGenUIFuncs.hideShow=function(event,array,options){
         domelement=interfaceUtils.getElementById(newdomid);
         if(domelement){
             if(options.includes(index)){
-                domelement.removeAttribute("style");
+                domelement.classList.remove("d-none");
             }else{
-                domelement.setAttribute("style",'visibility:hidden;display:none;');
+                domelement.classList.add("d-none");
             }
         }
     });
@@ -747,6 +747,7 @@ interfaceUtils._mGenUIFuncs.getTabDropDowns = function(uid){
     allinputs["scale_col"]=interfaceUtils.getElementById(uid+"_scale-col");   
     allinputs["scale_factor"]=interfaceUtils.getElementById(uid+"_scale-factor");
     allinputs["pie_col"]=interfaceUtils.getElementById(uid+"_piechart-col");
+    allinputs["pie_dict"]=interfaceUtils.getElementById(uid+"_piechart-dict-val");
     allinputs["shape_col"]=interfaceUtils.getElementById(uid+"_shape-col-value");
     allinputs["shape_fixed"]=interfaceUtils.getElementById(uid+"_shape-fixed-value");
     allinputs["shape_gr_dict"]=interfaceUtils.getElementById(uid+"_shape-bygroup-dict-val");
@@ -1035,11 +1036,11 @@ interfaceUtils._mGenUIFuncs.generateColorByAccordion2= function(){
                 inputtextcbgrdict=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_cb-bygroup-dict-val","extraAttributes":{ "class":"form-text-input", "type":"text", "placeholder":"{'key1':''#FFFFFF',...}"}});
                 inputtextcbgrdict.disabled=true
 
-        divoptionscol=HTMLElementUtils.createElement({"kind":"div","id":generated+"_cb-col-options","extraAttributes":{"class": "renderOptionContainer","style":"visibility:hidden;display:none;"}});
+        divoptionscol=HTMLElementUtils.createElement({"kind":"div","id":generated+"_cb-col-options","extraAttributes":{"class": "renderOptionContainer d-none"}});
             selectcbcol=HTMLElementUtils.createElement({"kind":"select","id":generated+"_cb-col-value","extraAttributes":{"class":"form-select form-select-sm","aria-label":".form-select-sm"}});
             labelcbcol=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_cb_col-colname-label","extraAttributes":{"for":generated+"_cb-col-value"} });
             labelcbcol.innerText="Select color column";
-        divoptionscmap=HTMLElementUtils.createElement({"kind":"div", "id":generated+"_cb-cmap-options","extraAttributes":{"class": "renderOptionContainer","style":"visibility:hidden;display:none;"}});
+        divoptionscmap=HTMLElementUtils.createElement({"kind":"div", "id":generated+"_cb-cmap-options","extraAttributes":{"class": "renderOptionContainer d-none"}});
             labelcbcmapvalue=HTMLElementUtils.createElement({"kind":"label","id":generated+"_cb-cmap-label","extraAttributes":{"for":generated+"_cb-cmap-value"}});
             labelcbcmapvalue.innerText="Color map (only if color column is numeral)";
             cmapoptions=[{"text":"None","value":""}];
@@ -1268,12 +1269,12 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
                     inputtextshapegrdict=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_shape-bygroup-dict-val","extraAttributes":{ "class":"form-text-input", "type":"text", "placeholder":"{'key1':''#FFFFFF',...}"}});
                     inputtextshapegrdict.disabled=true
     
-            divoptionscol=HTMLElementUtils.createElement({"kind":"div","id":generated+"_shape-col-options","extraAttributes":{"class": "renderOptionContainer","style":"visibility:hidden;display:none;"}});
+            divoptionscol=HTMLElementUtils.createElement({"kind":"div","id":generated+"_shape-col-options","extraAttributes":{"class": "renderOptionContainer d-none"}});
                 selectshapecol=HTMLElementUtils.createElement({"kind":"select","id":generated+"_shape-col-value","extraAttributes":{"class":"form-select form-select-sm","aria-label":".form-select-sm"}});
                 labelshapecol=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_shape_col-colname-label","extraAttributes":{"for":generated+"_shape-col-value"} });
                 labelshapecol.innerText="Select shape column";
             
-            divoptionsfixed=HTMLElementUtils.createElement({"kind":"div","id":generated+"_shape-fixed-options","extraAttributes":{"class": "renderOptionContainer","style":"visibility:hidden;display:none;"}});
+            divoptionsfixed=HTMLElementUtils.createElement({"kind":"div","id":generated+"_shape-fixed-options","extraAttributes":{"class": "renderOptionContainer d-none"}});
                 labelfixedshapevalue=HTMLElementUtils.createElement({"kind":"label","id":generated+"_shape-fixed-label","extraAttributes":{"for":generated+"_shape-fixed-value"}});
                 labelfixedshapevalue.innerText="Select shape";
                 shapeoptions=[];
@@ -1352,20 +1353,26 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
                 label0001.innerText="Use pie-charts"
                 
         col01=HTMLElementUtils.createColumn({"width":6});
-            label010=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_piechart-col-label", "extraAttributes":{ "for":generated+"_piechart-col" }});
+            label010=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_piechart-col-label", "extraAttributes":{ "class":"d-none", "for":generated+"_piechart-col" }});
             label010.innerText="Pie-chart column"
-            select011=HTMLElementUtils.createElement({"kind":"select", "id":generated+"_piechart-col", "extraAttributes":{ "class":"form-select form-select-sm", "aria-label":".form-select-sm"}});
+            select011=HTMLElementUtils.createElement({"kind":"select", "id":generated+"_piechart-col", "extraAttributes":{ "class":"d-none form-select form-select-sm", "aria-label":".form-select-sm"}});
             select011.disabled=true
+            label012=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_piechart-dict-label", "extraAttributes":{ "class":"d-none", "for":generated+"_piechart-dict" }});
+            label012.innerText="Pie-chart colors"
+            input013=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_piechart-dict-val","extraAttributes":{ "class":"d-none form-text-input", "type":"text", "placeholder":"{'key1':''#FFFFFF',...}"}});            
 
     inputcheck0000.addEventListener("change", (event)=>{
         var value=event.target.checked;
         //var doms=["_gb-single","_gb-col","_gb-feature-value","_cb-colormap","_cb-bypoint","_cb-bygroup","_gb-feature-value",
         //          "_gb-col-value","_gb-col-name","_cb-cmap-value","_cb-col-value","_cb-bygroup-rand","_cb-bygroup-gene","_cb-bygroup-name" ]
         if(value){
-            interfaceUtils._mGenUIFuncs.enableDisable(event, ["_piechart-col","_cb-bygroup","_cb-bypoint","_shape-bygroup","_shape-bypoint","_shape-fixed","_shape-bygroup-rand","_shape-bygroup-dict","_shape-col-value","_shape-fixed-value","_shape-col","_cb-bygroup-key","_cb-bygroup-rand","_cb-bygroup-dict"],[0]);
+            interfaceUtils._mGenUIFuncs.enableDisable(event, ["_piechart-col","_piechart-dict-val","_cb-bygroup","_cb-bypoint","_shape-bygroup","_shape-bypoint","_shape-fixed","_shape-bygroup-rand","_shape-bygroup-dict","_shape-col-value","_shape-fixed-value","_shape-col","_cb-bygroup-key","_cb-bygroup-rand","_cb-bygroup-dict"],[0,1]);
+            interfaceUtils._mGenUIFuncs.hideShow(event, ["_piechart-col-label","_piechart-col","_piechart-dict-label","_piechart-dict-val"],[0,1,2,3]);
         }
-        else 
-            interfaceUtils._mGenUIFuncs.enableDisable(event, ["_piechart-col","_cb-bygroup","_cb-bypoint","_shape-bygroup","_shape-bypoint","_shape-fixed","_shape-bygroup-rand","_shape-bygroup-dict","_shape-col-value","_shape-fixed-value","_cb-bygroup-key","_cb-bygroup-rand","_cb-bygroup-dict"],[1,2,3,4,5,6,7,8,9,10,11,12]);
+        else {
+            interfaceUtils._mGenUIFuncs.enableDisable(event, ["_piechart-col","_piechart-dict-val","_cb-bygroup","_cb-bypoint","_shape-bygroup","_shape-bypoint","_shape-fixed","_shape-bygroup-rand","_shape-bygroup-dict","_shape-col-value","_shape-fixed-value","_cb-bygroup-key","_cb-bygroup-rand","_cb-bygroup-dict"],[2,3,4,5,6,7,8,9,10,11,12,13]);
+            interfaceUtils._mGenUIFuncs.hideShow(event, ["_piechart-col-label","_piechart-col","_piechart-dict-label","_piechart-dict-val"],[]);
+        }
     })
 
     row0.appendChild(collab)
@@ -1379,7 +1386,8 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
     row0.appendChild(col01);
         col01.appendChild(label010);
         col01.appendChild(select011);
-
+        col01.appendChild(label012);
+        col01.appendChild(input013);
 
     return row0;
 }

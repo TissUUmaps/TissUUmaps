@@ -239,6 +239,7 @@ var data_obj = dataUtils.data[data_id];
     if (radios["cb_gr"].checked) { // Color by group
         data_obj["_cb_col"]=null;
         data_obj["_cb_cmap"]=null;
+        data_obj["_cb_gr_dict"]=inputs["cb_gr_dict"].value;
     }
     else if (radios["cb_col"].checked) { // Color by marker
         if (inputs["cb_col"].value != "null") {
@@ -256,6 +257,7 @@ var data_obj = dataUtils.data[data_id];
     }
     // Use piecharts column
     data_obj["_pie_col"]=(radios["pie_check"].checked ? inputs["pie_col"].value : null);
+    data_obj["_pie_dict"]=inputs["pie_dict"].value;
     if (data_obj["_pie_col"]=="null") {
         interfaceUtils.alert("No piechart column selected. Impossible to update view.");return;
     }
