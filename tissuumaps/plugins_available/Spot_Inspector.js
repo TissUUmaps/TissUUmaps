@@ -234,11 +234,15 @@ Spot_Inspector.run = function () {
     //OSD handlers are not registered manually they have to be registered
     //using MouseTracker OSD objects 
     if (Spot_Inspector.ISS_mouse_tracker == undefined) {
-        Spot_Inspector.ISS_mouse_tracker = new OpenSeadragon.MouseTracker({
+        /*Spot_Inspector.ISS_mouse_tracker = new OpenSeadragon.MouseTracker({
             //element: this.fixed_svgov.node().parentNode, 
             element: tmapp[vname].canvas,
             clickHandler: click_handler
-        }).setTracking(true);
+        }).setTracking(true);*/
+        
+        Spot_Inspector.ISS_mouse_tracker = tmapp["ISS_viewer"].addHandler('canvas-click', (event) => {
+            click_handler(event)
+        });
     }
 }
 
