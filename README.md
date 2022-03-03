@@ -34,6 +34,12 @@
     ```bash
 	pip install TissUUmaps[full]
     ```
+1. (Optional) add plugins to TissUUmaps by placing plugin files in the plugin folder. Path (depending on your Anaconda installation) is: 
+    ```bash
+	{ANACONDA_INSTALL_PATH}\envs\tissuumaps\Lib\site-packages\tissuumaps\plugins` 
+    ```
+    See [here](tissuumaps/plugins_available) for available plugins.
+
 
 ### Option 1: Start the Graphical User Interface of TissUUmaps
 
