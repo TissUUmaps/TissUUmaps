@@ -2,8 +2,6 @@ name: Generate plugins-site
 on:
   workflow_dispatch:
   push:
-    tags:
-      - '*'
 
 jobs:
   build-and-deploy:
