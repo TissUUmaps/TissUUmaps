@@ -566,17 +566,16 @@ def load_plugin(name):
 
 @app.route("/plugins/<path:pluginName>.js")
 def runPlugin(pluginName):
-    directory = app.config["PLUGIN_FOLDER"]
+    for directory in [app.config["PLUGIN_FOLDER_USER"],app.config["PLUGIN_FOLDER"]]:        
+        filename = pluginName + ".js"
+        completePath = os.path.abspath(os.path.join(directory, pluginName + ".js"))
+        directory = os.path.dirname(completePath)
+        filename = os.path.basename(completePath)
+        if os.path.isfile(completePath):
+            return send_from_directory(directory, filename)
     
-    filename = pluginName + ".js"
-    completePath = os.path.abspath(os.path.join(directory, pluginName + ".js"))
-    directory = os.path.dirname(completePath)
-    filename = os.path.basename(completePath)
-    if os.path.isfile(completePath):
-        return send_from_directory(directory, filename)
-    else:
-        logging.error(completePath, "is not an existing file.")
-        abort(404)
+    logging.error(completePath, "is not an existing file.")
+    abort(404)
 
 
 @app.route("/plugins/<path:pluginName>/<path:method>", methods=["GET", "POST"])

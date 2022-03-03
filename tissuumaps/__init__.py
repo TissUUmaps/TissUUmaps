@@ -62,8 +62,9 @@ app = Flask(__name__,template_folder=template_folder,static_folder=static_folder
 app.config.from_object(__name__)
 app.config.from_envvar('TISSUUMAPS_CONF', silent=True)
 app.config["PLUGIN_FOLDER"] = plugins_folder
+app.config["PLUGIN_FOLDER_USER"] = os.path.join(os.path.expanduser("~"), '.tissuumaps', 'plugins')
 
-for module in glob.glob(app.config["PLUGIN_FOLDER"] + "/*.py"):
+for module in glob.glob(app.config["PLUGIN_FOLDER"] + "/*.py") + glob.glob(app.config["PLUGIN_FOLDER_USER"] + "/*.py"):
     if "__init__.py" in module:
         continue
     app.config["PLUGINS"].append(os.path.splitext(os.path.basename(module))[0])

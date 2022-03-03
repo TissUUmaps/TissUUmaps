@@ -2,10 +2,13 @@ import logging
 try:
     from PyQt5.QtCore import *
     from PyQt5.QtWebEngineWidgets import *
-    from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QPlainTextEdit, QDialog, QSplashScreen, QProgressDialog, QMainWindow, QToolBar, QAction, QStyle
+    from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QPlainTextEdit, QDialog, QSplashScreen, \
+        QProgressDialog, QMainWindow, QToolBar, QAction, QStyle, \
+        QDialogButtonBox, QFormLayout, \
+        QLabel, QListView, QPushButton
     from PyQt5.QtWebChannel import QWebChannel
     from PyQt5 import QtGui 
-    from PyQt5.QtGui import QDesktopServices
+    from PyQt5.QtGui import QDesktopServices, QStandardItem, QStandardItemModel 
 
 except ImportError:
     # dependency missing, issue a warning
@@ -90,11 +93,48 @@ class textWindow(QDialog):
 #DEBUG_URL = 'http://127.0.0.1:%s' % DEBUG_PORT
 #os.environ['QTWEBENGINE_REMOTE_DEBUGGING'] = DEBUG_PORT
 
+
+class SelectPluginWindow(QDialog):
+    def __init__(self,  title, message, items, parent=None):
+        try:
+            super(SelectPluginWindow, self).__init__(parent=parent)
+            self.items = items
+            form = QFormLayout(self)
+            form.addRow(QLabel(message))
+            self.listView = QListView(self)
+            form.addRow(self.listView)
+            model = QStandardItemModel(self.listView)
+            self.setWindowTitle(title)
+            for item in self.items:
+                # create an item with a caption
+                standardItem = QStandardItem(item["name"])
+                standardItem.setCheckState(Qt.Checked if item["installed"] else Qt.Unchecked)
+                standardItem.setCheckable(True)
+                model.appendRow(standardItem)
+            self.listView.setModel(model)
+
+            buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, Qt.Horizontal, self)
+            form.addRow(buttonBox)
+            buttonBox.accepted.connect(self.accept)
+            buttonBox.rejected.connect(self.reject)
+        except:
+            import traceback
+            print (traceback.format_exc())
+
+    def itemsSelected(self):
+        selected = []
+        model = self.listView.model()
+        i = 0
+        while model.item(i):
+            if model.item(i).checkState():
+                selected.append(self.items[i])
+            i += 1
+        return selected
 class MainWindow(QMainWindow):
     def __init__(self, qt_app, app, *args, **kwargs):
         super(MainWindow, self).__init__()
         self.resize(1400,1000)
-
+        self.app = app
         self.browser = webEngine(qt_app, app, self, *args)
         
         self.setCentralWidget(self.browser)
@@ -148,11 +188,17 @@ class MainWindow(QMainWindow):
         _exit.triggered.connect(self.close)
 
         plugins = self.bar.addMenu("Plugins")
-        for pluginName in app.config["PLUGINS"]:
+        for pluginName in self.app.config["PLUGINS"]:
             _plugin = QAction(pluginName,self)
             plugins.addAction(_plugin)
 
             _plugin.triggered.connect(partial(self.triggerPlugin,pluginName))
+    
+        plugins.addSeparator()
+        _plugin = QAction("Add plugin",self)
+        plugins.addAction(_plugin)
+
+        _plugin.triggered.connect(self.addPlugin)
         
         about = self.bar.addMenu("About")
         _help = QAction(self.style().standardIcon(QStyle.SP_DialogHelpButton), "Help",self)
@@ -179,6 +225,36 @@ class MainWindow(QMainWindow):
     def triggerPlugin(self, pName):
         print ("Plugin triggered:", pName)
         self.browser.page().runJavaScript("pluginUtils.startPlugin(\""+pName+"\");");
+
+    def addPlugin(self):
+        print ("Adding plugins")
+        try:
+            url = "https://tissuumaps.github.io/TissUUmaps/plugins/"
+            response = urllib.request.urlopen(url + "pluginList.json")
+            pluginsOnline = json.loads(response.read())
+            for plugin in pluginsOnline:
+                if plugin["py"].replace(".py","") in self.app.config["PLUGINS"]:
+                    plugin["installed"] = True
+                else:
+                    plugin["installed"] = False
+            dial = SelectPluginWindow("Select Plugins", "Available plugins", pluginsOnline, self)
+            if dial.exec_() == QDialog.Accepted:
+                changed = False
+                for plugin in dial.itemsSelected():
+                    if not plugin["py"].replace(".py","") in self.app.config["PLUGINS"]:
+                        changed = True
+                        for type in ["py","js"]:
+                            if type in plugin.keys():
+                                urlFile = url + plugin[type]
+                                localFile = os.path.join(self.app.config["PLUGIN_FOLDER_USER"],plugin[type])
+                                os.makedirs(self.app.config["PLUGIN_FOLDER_USER"], exist_ok=True)
+                                urllib.request.urlretrieve(urlFile, localFile)
+                if changed:
+                    messageBox = textWindow(self,"Restart TissUUmaps", "The new plugins will only be available after restarting TissUUmaps.")
+                    messageBox.show()
+        except:
+            import traceback
+            print (traceback.format_exc())
 class webEngine(QWebEngineView):
     def __init__(self, qt_app, app, mainWin, args):
         super().__init__()
