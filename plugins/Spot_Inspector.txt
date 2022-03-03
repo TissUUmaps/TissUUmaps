@@ -1,16 +1,4 @@
-
-<h1>TissUUmaps plugins</h1>
-    <h2>transform</h2>
-    
-    
-    <h2>Feature Space</h2>
-            <img src="Feature_Space.gif" width="500px" style="max-height:500px;"/><br/>
-    
-    
-    <h2>Spot Inspector</h2>
-            <img src="Spot_Inspector.png" width="500px" style="max-height:500px;"/><br/>
-    
-            <b>Description:</b> The Spot Inspector plugin is implemented using Python with a Javascript interface for interacting with the main module.
+The Spot Inspector plugin is implemented using Python with a Javascript interface for interacting with the main module.
 The plugin allows the user to interactively visualize content from multiple staining rounds and channels by clicking on the currently displayed image in TissUUmaps. The plugin works for TissUUmaps Windows version and is demonstrated through a short video (<a href="https://tissuumaps.github.io/tutorials/#spot_inspector">spot inspector video</a>).
 <br/>
 <br/>
@@ -19,5 +7,3 @@ The In Situ Transcriptomic (IST) quality control plugin Spot Inspection allows t
 <br/>
 <br/>
 The source code of the plugin is available under <a href="https://github.com/TissUUmaps/TissUUmaps/tree/master/tissuumaps/plugins_available">https://github.com/TissUUmaps/TissUUmaps/tree/master/tissuumaps/plugins_available</a>.
-    
-<table>
