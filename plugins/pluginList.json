@@ -1,8 +1,7 @@
 [
     {
         "py": "transform.py",
-        "name": "transform",
-        "js": "transform.js"
+        "name": "transform"
     },
     {
         "py": "Feature_Space.py",
