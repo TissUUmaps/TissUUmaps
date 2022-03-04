@@ -1,0 +1,1 @@
+Copy these plugin files to create your own plugin.
