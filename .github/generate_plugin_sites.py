@@ -4,17 +4,70 @@ import os
 import json
 
 t = Template("""
-<h1>TissUUmaps plugins</h1>
-{% for plugin in pluginList %}\
-    <h2>{{plugin.name}}</h2>
-    {% if plugin.img %}\
-        <img src="{{plugin.img}}" width="500px" style="max-height:500px;"/><br/>
-    {% endif %}
-    {% if plugin.txt %}\
-        <b>Description:</b> {{plugin.txt}}
-    {% endif %}
-{% endfor %}\
-<table>
+<html>
+    <head>
+        <title>TissUUmaps plugins</title>
+        <style>
+            table {  
+                color: #333; /* Lighten up font color */
+                font-family: Helvetica, Arial, sans-serif; /* Nicer font */
+                width: 100%; 
+                border-collapse: 
+                collapse; border-spacing: 0; 
+            }
+
+            td, th { border: 1px solid #CCC; height: 30px; } /* Make cells a bit taller */
+
+            th {  
+                background: #F3F3F3; /* Light grey background */
+                font-weight: bold; /* Make sure they're bold */
+            }
+
+            td {  
+                background: #FAFAFA; /* Lighter grey background */
+                text-align: left; /* Center our text */
+                vertical-align: top;
+                padding: 10px;
+            }
+            td.thumb {
+                width: 20%;
+                white-space: nowrap;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>TissUUmaps plugins</h1>
+        {% for plugin in pluginList %}\
+            <h2>{{plugin.name}}</h2>
+            <table>
+                <tr>
+                    {% if plugin.img %}\
+                        <td class="thumb">
+                            <img src="{{plugin.img}}" style="max-height:500px;width:100%;"/><br/>
+                        </td>
+                    {% endif %}
+                    <td>
+                        {% if plugin.txt %}\
+                            <h3>Description</h3>
+                            {{plugin.txt}}
+                        {% endif %}
+                        <h3>Plugin Files</h3>
+                        <ul>
+                            {% if plugin.py %}
+                                <li><a href="{{plugin.py}}">{{plugin.py}}</a></li>
+                            {% endif %}
+                            {% if plugin.js %}
+                                <li><a href="{{plugin.js}}">{{plugin.js}}</a></li>
+                            {% endif %}
+                        </ul>
+                    </td>
+                </tr>
+            </table>
+            <hr/>
+        {% endfor %}\
+        <table>
+    </body>
+</html>
 """)
 
 pluginList = []

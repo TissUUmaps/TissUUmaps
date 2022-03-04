@@ -11,3 +11,5 @@ TissUUmaps.egg-info
 tests
 .tissuumaps
 .ipynb_checkpoints
+tissuumaps/plugins_available/index.html
+tissuumaps/plugins_available/pluginList.json
