@@ -3,7 +3,7 @@
         "py": "Feature_Space.py",
         "name": "Feature Space",
         "img": "Feature_Space.gif",
-        "txt": "",
+        "txt": "The Feature Space plugin allows to display markers in any feature space - such as UMAP, t-SNE or PCA - next to markers with spatial coordinates. You can interactively select markers in the Feature Space viewport and instantaneously see the corresponding markers in the Spatial viewport.",
         "js": "Feature_Space.js"
     },
     {
