@@ -1,5 +1,11 @@
 [
     {
+        "py": "Plugin_template.py",
+        "name": "Plugin template",
+        "txt": "Copy these plugin files to create your own plugin.",
+        "js": "Plugin_template.js"
+    },
+    {
         "py": "Feature_Space.py",
         "name": "Feature Space",
         "img": "Feature_Space.gif",
