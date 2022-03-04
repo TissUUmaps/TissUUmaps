@@ -1,9 +1,5 @@
 [
     {
-        "py": "transform.py",
-        "name": "transform"
-    },
-    {
         "py": "Feature_Space.py",
         "name": "Feature Space",
         "img": "Feature_Space.gif",
