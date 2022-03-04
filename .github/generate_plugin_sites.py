@@ -38,7 +38,7 @@ t = Template("""
     <body>
         <h1>TissUUmaps plugins</h1>
         {% for plugin in pluginList %}\
-            <h2>{{plugin.name}}</h2>
+            <h2>{{plugin.name}}:</h2>
             <table>
                 <tr>
                     {% if plugin.img %}\
@@ -65,6 +65,8 @@ t = Template("""
             </table>
             <hr/>
         {% endfor %}\
+        <h2>Files needed by TissUUmaps for plugin installation:</h2>
+        <ul><li><a href="pluginList.json">pluginList.json</a></li></ul>
         <table>
     </body>
 </html>
