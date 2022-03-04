@@ -213,7 +213,6 @@ class MainWindow(QMainWindow):
                 folderPath = sys._MEIPASS
             else:
                 folderPath = os.path.dirname(pathlib.Path(__file__))
-            print (os.path.join(folderPath,"VERSION"), os.path.isfile(os.path.join(folderPath,"VERSION")))
             with open(os.path.join(folderPath,"VERSION"), "r") as fh:
                 version = fh.read()
             
