@@ -3,9 +3,9 @@ try:
     from PyQt5.QtCore import *
     from PyQt5.QtWebEngineWidgets import *
     from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QPlainTextEdit, QDialog, QSplashScreen, \
-        QProgressDialog, QMainWindow, QToolBar, QAction, QStyle, \
+        QMainWindow, QAction, QStyle, \
         QDialogButtonBox, QFormLayout, \
-        QLabel, QListView, QPushButton
+        QLabel, QListView, QPushButton, QLineEdit
     from PyQt5.QtWebChannel import QWebChannel
     from PyQt5 import QtGui 
     from PyQt5.QtGui import QDesktopServices, QStandardItem, QStandardItemModel 
@@ -95,31 +95,66 @@ class textWindow(QDialog):
 
 
 class SelectPluginWindow(QDialog):
-    def __init__(self,  title, message, items, parent=None):
+    def __init__(self, app, parent=None):
         try:
             super(SelectPluginWindow, self).__init__(parent=parent)
-            self.items = items
+            self.app = app
+            self.setWindowTitle("Select Plugins")
             form = QFormLayout(self)
-            form.addRow(QLabel(message))
+            form.addRow(QLabel("Plugin site:"))
+            self.textbox = QLineEdit(self)
+            self.textbox.setText("https://tissuumaps.github.io/TissUUmaps/plugins/")
+            form.addRow(self.textbox)
+
+            # Create a button in the window
+            self.button = QPushButton('Get plugins from site', self)
+            self.button.move(20,80)
+            form.addRow(self.button)
+            
+            # connect button to function on_click
+            self.button.clicked.connect(self.getPlugins)
+            form.addRow(QLabel("Available plugins:"))
             self.listView = QListView(self)
             form.addRow(self.listView)
-            model = QStandardItemModel(self.listView)
-            self.setWindowTitle(title)
-            for item in self.items:
-                # create an item with a caption
-                standardItem = QStandardItem(item["name"])
-                standardItem.setCheckState(Qt.Checked if item["installed"] else Qt.Unchecked)
-                standardItem.setCheckable(True)
-                model.appendRow(standardItem)
-            self.listView.setModel(model)
-
+            
             buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, Qt.Horizontal, self)
             form.addRow(buttonBox)
             buttonBox.accepted.connect(self.accept)
             buttonBox.rejected.connect(self.reject)
+
+            self.getPlugins()
         except:
             import traceback
             print (traceback.format_exc())
+
+    def getPlugins(self):
+        self.url = self.textbox.text()
+        try:
+            response = urllib.request.urlopen(self.url + "pluginList.json")
+            self.items = json.loads(response.read())
+            for plugin in self.items:
+                if plugin["py"].replace(".py","") in self.app.config["PLUGINS"]:
+                    plugin["installed"] = True
+                else:
+                    plugin["installed"] = False
+            
+            model = QStandardItemModel(self.listView)
+            for item in self.items:
+                # create an item with a caption
+                standardItem = QStandardItem(item["name"])
+                standardItem.setCheckState(Qt.Checked if item["installed"] else Qt.Unchecked)
+                if not item["installed"]:
+                    standardItem.setCheckable(True)
+                standardItem.setEditable(False)
+
+                model.appendRow(standardItem)
+            self.listView.setModel(model)
+        except:
+            import traceback
+            try:
+                QMessageBox.warning(self, "Error", traceback.format_exc())
+            except:
+                print (traceback.format_exc())
 
     def itemsSelected(self):
         selected = []
@@ -130,6 +165,7 @@ class SelectPluginWindow(QDialog):
                 selected.append(self.items[i])
             i += 1
         return selected
+
 class MainWindow(QMainWindow):
     def __init__(self, qt_app, app, *args, **kwargs):
         super(MainWindow, self).__init__()
@@ -228,15 +264,7 @@ class MainWindow(QMainWindow):
     def addPlugin(self):
         print ("Adding plugins")
         try:
-            url = "https://tissuumaps.github.io/TissUUmaps/plugins/"
-            response = urllib.request.urlopen(url + "pluginList.json")
-            pluginsOnline = json.loads(response.read())
-            for plugin in pluginsOnline:
-                if plugin["py"].replace(".py","") in self.app.config["PLUGINS"]:
-                    plugin["installed"] = True
-                else:
-                    plugin["installed"] = False
-            dial = SelectPluginWindow("Select Plugins", "Available plugins", pluginsOnline, self)
+            dial = SelectPluginWindow(self.app, self)
             if dial.exec_() == QDialog.Accepted:
                 changed = False
                 for plugin in dial.itemsSelected():
@@ -244,13 +272,12 @@ class MainWindow(QMainWindow):
                         changed = True
                         for type in ["py","js"]:
                             if type in plugin.keys():
-                                urlFile = url + plugin[type]
+                                urlFile = dial.url + plugin[type]
                                 localFile = os.path.join(self.app.config["PLUGIN_FOLDER_USER"],plugin[type])
                                 os.makedirs(self.app.config["PLUGIN_FOLDER_USER"], exist_ok=True)
                                 urllib.request.urlretrieve(urlFile, localFile)
                 if changed:
-                    messageBox = textWindow(self,"Restart TissUUmaps", "The new plugins will only be available after restarting TissUUmaps.")
-                    messageBox.show()
+                    QMessageBox.warning(self, "Restart TissUUmaps", "The new plugins will only be available after restarting TissUUmaps.")
         except:
             import traceback
             print (traceback.format_exc())
@@ -575,7 +602,7 @@ class webEngine(QWebEngineView):
         parts = Path(folderpath).parts
         if (self.app.basedir != parts[0]):
             if (not self.app.basedir == "C:\mnt\data\shared"):
-                reply = QMessageBox.alert(self, "Error", "All files must be in the same drive.")
+                reply = QMessageBox.warning(self, "Error", "All files must be in the same drive.")
                 returnDict = {"markerFile":None}
                 return returnDict
             else:
