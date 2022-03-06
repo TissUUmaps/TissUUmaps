@@ -272,8 +272,13 @@ var data_obj = dataUtils.data[data_id];
     if (data_obj["_shape_col"]=="null") {
         interfaceUtils.alert("No shape column selected. Impossible to update view.");return;
     }
-    // Marker opacity
+    // Use opacity column
+    data_obj["_opacity_col"]=(radios["opacity_check"].checked ? inputs["opacity_col"].value : null);
+    if (data_obj["_opacity_col"]=="null") {
+        interfaceUtils.alert("No opacity column selected. Impossible to update view.");return;
+    }
     data_obj["_opacity"]=inputs["opacity"].value;
+    // Tooltip
     data_obj["_tooltip_fmt"]=inputs["tooltip_fmt"].value;
     
     //this function veryfies if a tree with these features exist and doesnt recreate it

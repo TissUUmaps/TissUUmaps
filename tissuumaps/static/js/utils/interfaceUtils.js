@@ -281,14 +281,15 @@ interfaceUtils.setAttributeForElement=function(domid,attr, value){
 }
 /** 
 * @param {String} domid The id of the element
+* @param {Boolean} debug Print warnings if true
 * @return {HTMLelement | null} HTMl element
 * Get the an element and warn if none exists */
-interfaceUtils.getElementById=function(domid){
+interfaceUtils.getElementById=function(domid, debug=true){
     var elem= document.getElementById(domid);
     if(elem){
         return elem;
     }else{
-        console.log("Element with id "+domid+" doesn't exist");
+        if (debug) console.log("Element with id "+domid+" doesn't exist");
         return null;
     }
 }
@@ -751,6 +752,7 @@ interfaceUtils._mGenUIFuncs.getTabDropDowns = function(uid){
     allinputs["shape_col"]=interfaceUtils.getElementById(uid+"_shape-col-value");
     allinputs["shape_fixed"]=interfaceUtils.getElementById(uid+"_shape-fixed-value");
     allinputs["shape_gr_dict"]=interfaceUtils.getElementById(uid+"_shape-bygroup-dict-val");
+    allinputs["opacity_col"]=interfaceUtils.getElementById(uid+"_opacity-col");
     allinputs["opacity"]=interfaceUtils.getElementById(uid+"_opacity");
     allinputs["tooltip_fmt"]=interfaceUtils.getElementById(uid+"_tooltip_fmt");
 
@@ -780,7 +782,7 @@ interfaceUtils._mGenUIFuncs.getTabRadiosAndChecks= function(uid){
     allradios["shape_gr_dict"]=interfaceUtils.getElementById(uid+"_shape-bygroup-dict");
     allradios["shape_col"]=interfaceUtils.getElementById(uid+"_shape-bypoint");
     allradios["shape_fixed"]=interfaceUtils.getElementById(uid+"_shape-fixed");
-    
+    allradios["opacity_check"]=interfaceUtils.getElementById(uid+"_use-opacity");
     
     
     return allradios;
@@ -1411,6 +1413,24 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
             label0002=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":generated+"_opacity"}});
             label0002.innerHTML="Opacity value:&nbsp;";
             inputsizefactor=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_opacity","extraAttributes":{ "class":"form-text-input", "type":"number", "value":1, "step":0.05, "min":0, "max":1}});
+            divformcheck000=HTMLElementUtils.createElement({ "kind":"div", "extraAttributes":{"class":"form-check"}});
+                inputcheck0000=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_use-opacity","extraAttributes":{"class":"form-check-input","type":"checkbox" }});
+                label0001=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_use-opacity-label", "extraAttributes":{ "for":generated+"_use-opacity" }});
+                label0001.innerText="Use different opacity per marker"
+
+        col01=HTMLElementUtils.createColumn({"width":6});
+            label010=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_opacity-col-label", "extraAttributes":{ "for":generated+"_opacity-col" }});
+            label010.innerText="Opacity column"
+            select011=HTMLElementUtils.createElement({"kind":"select", "id":generated+"_opacity-col", "extraAttributes":{ "class":"form-select form-select-sm", "aria-label":".form-select-sm"}});
+            select011.disabled=true
+
+    inputcheck0000.addEventListener("change", (event)=>{
+        var value=event.target.checked;
+        if(value)
+            interfaceUtils._mGenUIFuncs.enableDisable(event, ["_opacity-col"],[0])
+        else
+            interfaceUtils._mGenUIFuncs.enableDisable(event, ["_opacity-col"],[])
+    })
             
     row0.appendChild(collab)
         collab.appendChild(labellab)
@@ -1418,6 +1438,13 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
     row0.appendChild(col00)
         col00.appendChild(label0002);
         col00.appendChild(inputsizefactor);
+        col00.appendChild(divformcheck000)
+            divformcheck000.appendChild(inputcheck0000);
+            divformcheck000.appendChild(label0001);
+
+    row0.appendChild(col01);
+        col01.appendChild(label010);
+        col01.appendChild(select011);
 
     return row0;
 }
@@ -1636,8 +1663,11 @@ interfaceUtils._mGenUIFuncs.groupUI=function(uid){
         tr.appendChild(td0);
         tr.appendChild(td1);
 
+        // Get previous "All" checkbox element so that we can re-use its old state
+        const lastCheckAll = interfaceUtils.getElementById(uid+"_all_check", false);
+
         var check0=HTMLElementUtils.createElement({"kind":"input", "id":uid+"_all_check","extraAttributes":{"class":"form-check-input","type":"checkbox" }});
-        check0.checked = true; 
+        check0.checked = lastCheckAll != null ? lastCheckAll.checked : true;
         td0.appendChild(check0);
         check0.addEventListener("input",(event)=>{
             clist = interfaceUtils.getElementsByClassName(uid+"-marker-input");
@@ -1700,12 +1730,16 @@ interfaceUtils._mGenUIFuncs.groupUI=function(uid){
         tr.appendChild(td0);
         tr.appendChild(td1);
 
+        // Get previous group checkbox elements so that we can re-use their old state
+        const lastCheck0 = interfaceUtils.getElementById(uid+"_"+escapedID+"_check", false);
+        const lastCheck1 = interfaceUtils.getElementById(uid+"_"+escapedID+"_hidden", false);
+
         var check0=HTMLElementUtils.createElement({"kind":"input", "id":uid+"_"+escapedID+"_check","extraAttributes":{"class":"form-check-input "+uid+"-marker-input","type":"checkbox" }});
-        check0.checked = true; 
+        check0.checked = lastCheck0 != null ? lastCheck0.checked : true;
         td0.appendChild(check0);
         
         var check1=HTMLElementUtils.createElement({"kind":"input", "id":uid+"_"+escapedID+"_hidden","extraAttributes":{"class":"form-check-input marker-hidden d-none "+uid+"-marker-hidden","type":"checkbox" }});
-        check1.checked = false; 
+        check1.checked = lastCheck1 != null ? lastCheck1.checked : false;
         td0.appendChild(check1);
         
         var label1=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":uid+"_"+escapedID+"_check","class":"cursor-pointer"}});
@@ -1917,9 +1951,9 @@ interfaceUtils._mGenUIFuncs.getGroupInputs = function(uid, key) {
         if (hasGroupUI) {
             inputs["visible"] = interfaceUtils.getElementById(uid + "_" + escapedID + "_check").checked;
             inputs["hidden"] = interfaceUtils.getElementById(uid + "_" + escapedID + "_hidden").checked;
-            if (interfaceUtils.getElementById(uid + "_" + escapedID + "_shape"))
+            if (interfaceUtils.getElementById(uid + "_" + escapedID + "_shape", false))
                 inputs["shape"] = interfaceUtils.getElementById(uid + "_" + escapedID + "_shape").value;
-            if (interfaceUtils.getElementById(uid + "_" + escapedID + "_color"))
+            if (interfaceUtils.getElementById(uid + "_" + escapedID + "_color", false))
                 inputs["color"] = interfaceUtils.getElementById(uid + "_" + escapedID + "_color").value;
         }
     }
