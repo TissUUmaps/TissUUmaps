@@ -278,26 +278,25 @@ Feature_Space.releaseHandler = function (event) {
         .style("stroke", '#aaaaaa').style("fill", "none")
     
     var pointsIn = Feature_Space.analyzeRegion(Feature_Space._region);
-    var scalePropertyName = "UMAP_Region"
+    var scalePropertyName = "UMAP_Region_scale"
     Feature_Space._newwin.dataUtils.data[Feature_Space._dataset]["_scale_col"] = scalePropertyName;
     dataUtils.data[Feature_Space._dataset]["_scale_col"] = scalePropertyName;
     var markerData = Feature_Space._newwin.dataUtils.data[Feature_Space._dataset]["_processeddata"];
     markerData[scalePropertyName] = new Float64Array(markerData[Feature_Space._newwin.dataUtils.data[Feature_Space._dataset]["_X"]].length);
+    var opacityPropertyName = "UMAP_Region_opacity"
+    Feature_Space._newwin.dataUtils.data[Feature_Space._dataset]["_opacity_col"] = opacityPropertyName;
+    dataUtils.data[Feature_Space._dataset]["_opacity_col"] = opacityPropertyName;
+    markerData[opacityPropertyName] = new Float64Array(markerData[Feature_Space._newwin.dataUtils.data[Feature_Space._dataset]["_X"]].length);
+    markerData[opacityPropertyName] = markerData[opacityPropertyName].map(function() {return 0.15;});
+    markerData[scalePropertyName] = markerData[scalePropertyName].map(function() {return 0;});
     if (pointsIn.length == 0) {
         markerData[scalePropertyName] = markerData[scalePropertyName].map(function() {return 1;});
+        markerData[opacityPropertyName] = markerData[opacityPropertyName].map(function() {return 1;});
     }
     for (var d of pointsIn) {
         markerData[scalePropertyName][d] = 1;
+        markerData[opacityPropertyName][d] = 1;
     }
-    /*for (var scale in markerData[scalePropertyName]) {
-        scale = 0
-    for (var index of markerData[scalePropertyName].keys()) {
-        index_ = markerData[""][index];
-        if (pointsIn.indexOf(index_) == -1)
-            markerData[scalePropertyName][index] = 0;
-        else
-            markerData[scalePropertyName][index] = 1;
-    }*/
     
     Feature_Space._newwin.glUtils.loadMarkers(Feature_Space._dataset);
     Feature_Space._newwin.glUtils.draw();
