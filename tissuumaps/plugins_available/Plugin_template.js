@@ -9,7 +9,7 @@
  */
  var Plugin_template;
  Plugin_template = {
-     name:"Spot Inspector Plugin"
+     name:"Template Plugin"
   }
  
  /**
