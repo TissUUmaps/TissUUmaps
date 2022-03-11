@@ -370,8 +370,13 @@ class webEngine(QWebEngineView):
                     time.sleep(0.1)
                 else:
                     return
-                os.startfile(os.path.normpath(path))
-            
+                
+                if hasattr(os, 'startfile'):
+                    os.startfile(os.path.normpath(path))
+                else:
+                    opener = "open" if sys.platform == "darwin" else "xdg-open"
+                    subprocess.call([opener, os.path.normpath(path)])
+
             threading.Thread(target=openImageThread,daemon=True).start()
         
     def run (self):
