@@ -27,7 +27,7 @@ class TissUUmapsViewer ():
         self.id = "tissUUmapsViewer_" + str(uuid.uuid1()).replace("-","")[0:10]
         iframe = ('<iframe src="{src}" style="width: {width}; '
                   'height: {height}; border: none" id="{id}" allowfullscreen></iframe>')
-        src = "http://localhost:%d/%s" % (self.server.port, self.image)
+        src = f"http://{self.server.host}:{self.server.port}/{self.image}"
         self.htmlIFrame = HTML(iframe.format(width="100%", height=str(height)+"px", src=src, id=self.id))
         display(self.htmlIFrame)
         time.sleep(2)
@@ -58,7 +58,7 @@ class TissUUmapsViewer ():
         display(HTML("<img src='' id='img_out_"+screenshot_id+"'/>"), display_id="display_out_"+screenshot_id)
 
 class TissUUmapsServer ():
-    def __init__(self, slideDir, port=5000):
+    def __init__(self, slideDir, port=5000, host="0.0.0.0"):
         
         log = logging.getLogger('werkzeug')
         log.setLevel(logging.ERROR)
@@ -68,6 +68,7 @@ class TissUUmapsServer ():
 
         self.started = False
         self.port = port
+        self.host = host
         self.slideDir = slideDir
         views.app.config['SLIDE_DIR'] = slideDir
 
@@ -93,10 +94,10 @@ class TissUUmapsServer ():
         viewer = TissUUmapsViewer(self,image,height)
         return viewer
 
-def opentmap (path, port=5100, height=700):
+def opentmap (path, port=5100, host="localhost", height=700):
     path = os.path.abspath(path)
     parts = Path(path).parts
-    server = TissUUmapsServer(slideDir=parts[0], port=port)
+    server = TissUUmapsServer(slideDir=parts[0], port=port, host=host)
     return server.viewer(parts[-1]+"?path="+os.path.join(*parts[1:-1]), height)
 
 def loaddata (images=[], csvFiles=[], xSelector="x", ySelector="y", keySelector=None, nameSelector=None, 
@@ -105,7 +106,9 @@ def loaddata (images=[], csvFiles=[], xSelector="x", ySelector="y", keySelector=
               colormap=None,
               compositeMode="source-over",
               boundingBox=None,
-              port=5100, height=700, tmapFilename="_project"):
+              port=5100, 
+              host="localhost",
+              height=700, tmapFilename="_project", plugins=[]):
     # make str input to arrays:
     if isinstance(images, str):
         images = [images]
@@ -134,7 +137,8 @@ def loaddata (images=[], csvFiles=[], xSelector="x", ySelector="y", keySelector=
             } for layer in images
         ],
         "hideTabs": True,
-        "markerFiles": []
+        "markerFiles": [],
+        "plugins": plugins
     }
     if boundingBox:
         jsonTmap["boundingBox"] = {"x":boundingBox[0],"y":boundingBox[1],"width":boundingBox[2],"height":boundingBox[3]}
@@ -185,7 +189,7 @@ def loaddata (images=[], csvFiles=[], xSelector="x", ySelector="y", keySelector=
     print ("Creating project file", tmapFile)
     with open(tmapFile, "w") as f:
         json.dump(jsonTmap, f)
-    return opentmap (os.path.abspath(tmapFile), port, height)
+    return opentmap (os.path.abspath(tmapFile), port=port, host=host, height=height)
 
 if __name__ == '__main__':
     pass
