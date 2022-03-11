@@ -63,7 +63,6 @@ def make_blueprint(app=None, register=True, fnfilter=None, dfilter=None):
             d = urllib.parse.unquote(flask.request.form.get('dir', './'))
             if d == "":
                 d = app.config["SLIDE_DIR"]
-            print ("d", d)
             fns, dirs = get_files(d, fnfilter, dfilter, rel=True)
             r = ['<ul class="jqueryFileTree" style="display: none;">']
             for f in dirs:
