@@ -136,7 +136,6 @@ class ImageConverter:
                         imgVips = (imgVips < 0).ifthenelse(0, imgVips)
                         imgVips = (imgVips > 255).ifthenelse(255, imgVips)
                         imgVips = imgVips.scaleimage()
-                        imgVips = imgVips.cast('uint')
                     imgVips.tiffsave(
                         self.outputImage,
                         pyramid=True,
