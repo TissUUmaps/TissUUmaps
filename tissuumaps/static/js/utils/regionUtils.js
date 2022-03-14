@@ -62,7 +62,7 @@ regionUtils.manager = function (event) {
     //console.log(normCoords);
     var regionobj;
     //console.log(d3.select(event.originalEvent.target).attr("is-handle"));
-    var strokeWstr = regionUtils._polygonStrokeWidth.toString();
+    var strokeWstr = 5* regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
 
     if (regionUtils._isNewRegion) {
         //if this region is new then there should be no points, create a new array of points
@@ -77,7 +77,7 @@ regionUtils.manager = function (event) {
         regionUtils._currentPoints.push(startPoint);
         //create a group to store region
         regionobj = d3.select(canvas).append('g').attr('class', drawingclass);
-        regionobj.append('circle').attr('r', regionUtils._handleRadius).attr('fill', regionUtils._colorActiveHandle).attr('stroke', '#aaaaaa')
+        regionobj.append('circle').attr('r', 10* regionUtils._handleRadius / tmapp["ISS_viewer"].viewport.getZoom()).attr('fill', regionUtils._colorActiveHandle).attr('stroke', '#ff0000')
             .attr('stroke-width', strokeWstr).attr('class', 'region' + idregion).attr('id', 'handle-0-region' + idregion)
             .attr('transform', 'translate(' + (startPoint[0].toString()) + ',' + (startPoint[1].toString()) + ') scale(' + regionUtils._scaleHandle + ')')
             .attr('is-handle', 'true').style({ cursor: 'pointer' });
@@ -89,7 +89,7 @@ regionUtils.manager = function (event) {
 
         //check if the distance is smaller than epsilonDistance if so, CLOSE POLYGON
 
-        if (regionUtils.distance(nextpoint, regionUtils._currentPoints[0]) < regionUtils._epsilonDistance && count >= 2) {
+        if (regionUtils.distance(nextpoint, regionUtils._currentPoints[0]) < 2* regionUtils._epsilonDistance / tmapp["ISS_viewer"].viewport.getZoom() && count >= 2) {
             regionUtils.closePolygon();
             return;
         }
@@ -98,7 +98,7 @@ regionUtils.manager = function (event) {
         regionobj = d3.select("." + drawingclass);
 
         regionobj.append('circle')
-            .attr('r', regionUtils._handleRadius).attr('fill', regionUtils._colorActiveHandle).attr('stroke', '#aaaaaa')
+            .attr('r', 10* regionUtils._handleRadius / tmapp["ISS_viewer"].viewport.getZoom()).attr('fill', regionUtils._colorActiveHandle).attr('stroke', '#ff0000')
             .attr('stroke-width', strokeWstr).attr('class', 'region' + idregion).attr('id', 'handle-' + count.toString() + '-region' + idregion)
             .attr('transform', 'translate(' + (nextpoint[0].toString()) + ',' + (nextpoint[1].toString()) + ') scale(' + regionUtils._scaleHandle + ')')
             .attr('is-handle', 'true').style({ cursor: 'pointer' });
@@ -107,7 +107,7 @@ regionUtils.manager = function (event) {
         var polyline = regionobj.append('polyline').attr('points', regionUtils._currentPoints)
             .style('fill', 'none')
             .attr('stroke-width', strokeWstr)
-            .attr('stroke', '#aaaaaa').attr('class', "region" + idregion);
+            .attr('stroke', '#ff0000').attr('class', "region" + idregion);
 
 
     }
@@ -127,8 +127,9 @@ regionUtils.closePolygon = function () {
     regionUtils._isNewRegion = true;
     regionUtils.addRegion([[regionUtils._currentPoints]], regionid, hexcolor);
     regionUtils._currentPoints = null;
+    var strokeWstr = 5* regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
     regionsobj.append('path').attr("d", regionUtils.pointsToPath(regionUtils._regions[regionid].points)).attr("id", regionid + "_poly")
-        .attr("class", "regionpoly").attr("polycolor", hexcolor).style('stroke-width', regionUtils._polygonStrokeWidth.toString())
+        .attr("class", "regionpoly").attr("polycolor", hexcolor).attr('stroke-width', strokeWstr)
         .style("stroke", hexcolor).style("fill", "none")
         .append('title').text(regionid).attr("id","path-title-" + regionid);
     regionUtils.updateAllRegionClassUI();
@@ -290,8 +291,9 @@ regionUtils.geoJSON2regions = function (geoJSONObjects) {
         regionUtils.addRegion(coordinates, regionId, hexColor, geoJSONObjClass);
         regionUtils._regions[regionId].regionName = regionName;
         regionobj = d3.select(canvas).append('g').attr('class', "mydrawingclass");
+        var strokeWstr = 5* regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
         regionobj.append('path').attr("d", regionUtils.pointsToPath(regionUtils._regions[regionId].points)).attr("id", regionId + "_poly")
-            .attr("class", "regionpoly").attr("polycolor", hexColor).style('stroke-width', regionUtils._polygonStrokeWidth.toString())
+            .attr("class", "regionpoly").attr("polycolor", hexColor).attr('stroke-width', strokeWstr)
             .style("stroke", hexColor).style("fill", "none")
             .append('title').text(regionName).attr("id","path-title-" + regionId);
         
@@ -646,11 +648,11 @@ regionUtils.fillRegion = function (regionid, value) {
     var d3color = d3.rgb(newregioncolor);
     var newStyle="";
     if(regionUtils._regions[regionid].filled){
-        newStyle = "stroke-width: " + regionUtils._polygonStrokeWidth.toString()+ "; stroke: " + d3color.rgb().toString()+";";
+        newStyle = "stroke: " + d3color.rgb().toString()+";";
         d3color.opacity=0.5;
         newStyle +="fill: "+d3color.rgb().toString()+";";
     }else{
-        newStyle = "stroke-width: " + regionUtils._polygonStrokeWidth.toString() + "; stroke: " + d3color.rgb().toString() + "; fill: none;";
+        newStyle = "stroke: " + d3color.rgb().toString() + "; fill: none;";
     }
     document.getElementById(regionid + "_poly").setAttribute("style", newStyle);
 
@@ -966,7 +968,7 @@ regionUtils.changeRegion = function (regionid) {
  regionUtils.updateRegionDraw = function (regionid) {
     var newregioncolor = regionUtils._regions[regionid].polycolor;
     var d3color = d3.rgb(newregioncolor);
-    var newStyle = "stroke-width: " + regionUtils._polygonStrokeWidth.toString() + "; stroke: " + d3color.rgb().toString() + "; fill: none;";
+    var newStyle = "stroke: " + d3color.rgb().toString() + "; fill: none;";
     document.getElementById(regionid + "_poly").setAttribute("style", newStyle);
     if (regionUtils._regions[regionid].filled === undefined)
         regionUtils._regions[regionid].filled = false;

@@ -113,6 +113,21 @@ tmapp.init = function () {
     
     tmapp["ISS_viewer"].addHandler('canvas-click', click_handler);
 
+    tmapp["ISS_viewer"].addHandler("animation-finish", function animationFinishHandler(event){
+        console.log("animation-finish");
+            d3.selectAll("." + regionUtils._drawingclass).selectAll('polyline').each(function(el) {
+                console.log(tmapp["ISS_viewer"].viewport.getZoom());
+                $(this).attr('stroke-width', 5* regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
+            });
+            d3.selectAll("." + regionUtils._drawingclass).selectAll('circle').each(function(el) {
+                console.log(tmapp["ISS_viewer"].viewport.getZoom());
+                $(this).attr('r', 10* regionUtils._handleRadius / tmapp["ISS_viewer"].viewport.getZoom());
+            });
+            d3.selectAll(".regionpoly").each(function(el) {
+                $(this).attr('stroke-width', 5* regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
+            });
+    });
+    
     elt = document.getElementById("ISS_globalmarkersize");
     if (elt) {
         tmapp[vname].addControl(elt,{
