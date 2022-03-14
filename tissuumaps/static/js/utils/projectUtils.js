@@ -413,6 +413,21 @@ projectUtils.loadProjectFileFromServer = function(path) {
             interfaceUtils.addMenuItem([menuButton.text], function(){ window.open(menuButton.url, '_self').focus();});
         });
     }
+    if (state.mpp) {
+        var op = tmapp["object_prefix"];
+        var vname = op + "_viewer";
+        tmapp[vname].scalebar({
+            pixelsPerMeter: state.mpp ? (1e6 / state.mpp) : 0,
+            xOffset: 200,
+            yOffset: 10,
+            barThickness: 3,
+            color: '#555555',
+            fontColor: '#333333',
+            backgroundColor: 'rgba(255, 255, 255, 0.5)',
+            sizeAndTextRenderer: OpenSeadragon.ScalebarSizeAndTextRenderer.METRIC_LENGTH,
+            location: OpenSeadragon.ScalebarLocation.BOTTOM_RIGHT
+        });
+    }
     projectUtils.loadLayers(state);
     
     //tmapp[tmapp["object_prefix"] + "_viewer"].world.resetItems()
