@@ -563,7 +563,6 @@ def load_plugin(name):
             spec.loader.exec_module(mod)
     return mod
 
-
 @app.route("/plugins/<path:pluginName>.js")
 def runPlugin(pluginName):
     for directory in [app.config["PLUGIN_FOLDER_USER"],app.config["PLUGIN_FOLDER"]]:        
