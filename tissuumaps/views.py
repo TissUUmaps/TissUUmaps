@@ -556,10 +556,11 @@ def tile_asso(path, associated_name, level, col, row, format):
 
 
 def load_plugin(name):
-    try:
-        mod = importlib.import_module("." + name, package="tissuumaps.plugins")
-    except:
-        mod = importlib.import_module("." + name, package="plugins")
+    for directory in [app.config["PLUGIN_FOLDER_USER"],app.config["PLUGIN_FOLDER"]]:
+        if os.path.isfile(os.path.join(directory, name + ".py")):
+            spec = importlib.util.spec_from_file_location(name, os.path.join(directory, name + ".py"))
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
     return mod
 
 
