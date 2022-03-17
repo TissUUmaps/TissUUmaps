@@ -1711,7 +1711,7 @@ interfaceUtils._mGenUIFuncs.groupUI=function(uid){
         var tree = data_obj["_groupgarden"][i]
         
         //remove space just in case
-        var escapedID=tree["treeID"].replace(" ","_");
+        var escapedID=tree["treeID"].replace(/ /g,"_");
         var escapedName="";
         if(usename)
             escapedName=tree["treeName"];
@@ -1909,7 +1909,7 @@ interfaceUtils.updateColorDict = function(uid) {
     jsonDict = {};
     for(i in data_obj["_groupgarden"]){
         var tree = data_obj["_groupgarden"][i]
-        var escapedID=tree["treeID"].replace(" ","_");
+        var escapedID=tree["treeID"].replace(/ /g,"_");
         var colorInput = interfaceUtils.getElementById(uid+"_"+escapedID+"_color");
         jsonDict[tree["treeID"]] = colorInput.value;
     }
@@ -1925,7 +1925,7 @@ interfaceUtils.updateShapeDict = function(uid) {
     jsonDict = {};
     for(i in data_obj["_groupgarden"]){
         var tree = data_obj["_groupgarden"][i]
-        var escapedID=tree["treeID"].replace(" ","_");
+        var escapedID=tree["treeID"].replace(/ /g,"_");
         var shapeInput = interfaceUtils.getElementById(uid+"_"+escapedID+"_shape");
         jsonDict[tree["treeID"]] = shapeInput.value;
     }
@@ -1944,7 +1944,7 @@ interfaceUtils._mGenUIFuncs.getGroupInputs = function(uid, key) {
     let inputs = {};
     if (data_obj["_groupgarden"].hasOwnProperty(key)) {
         const tree = data_obj["_groupgarden"][key];
-        const escapedID = tree["treeID"].replace(" ","_");
+        const escapedID = tree["treeID"].replace(/ /g,"_");
         // Assume that element for visibility checkbox always exists in the UI
         const hasGroupUI = interfaceUtils.getElementById(uid + "_" + escapedID + "_check");
 
