@@ -15,12 +15,16 @@
      _UMAP2:null,
      _region:null,
      _regionPixels:null,
-     _newwin:null
+     _newwin:null,
+     _showHisto:true
   }
  
  /**
   * @summary */
  Feature_Space.init = function (container) {
+    var script = document.createElement('script');
+    script.src = "https://cdn.plot.ly/plotly-2.9.0.min.js";
+    document.head.appendChild(script);
     row1=HTMLElementUtils.createRow({});
         col11=HTMLElementUtils.createColumn({"width":12});
             button111=HTMLElementUtils.createButton({"extraAttributes":{ "class":"btn btn-primary mx-2"}})
@@ -44,6 +48,26 @@
             label412=HTMLElementUtils.createElement({"kind":"label", "extraAttributes":{"for":"UMAP2"} });
             label412.innerText="Select Feature Space Y";
 
+    row6=HTMLElementUtils.createRow({});
+        col61=HTMLElementUtils.createColumn({"width":12});
+            var input611=HTMLElementUtils.createElement({"kind":"input", "id":"Feature_Space_showHisto","extraAttributes":{"class":"form-check-input","type":"checkbox","checked":true}});
+            label611=HTMLElementUtils.createElement({"kind":"label", "extraAttributes":{ "for":"Feature_Space_showHisto" }});
+            label611.innerHTML="&nbsp;Show histogram of selected markers"
+    
+    input611.addEventListener("change",(event)=>{
+        Feature_Space._showHisto = input611.checked;
+        if (Feature_Space._showHisto) {
+            Feature_Space.getHisto();
+        }
+        else {
+            Feature_Space_Control.style.height= "100%";
+            histoView = document.getElementById("histoView");
+            if (histoView) {
+                histoView.parentNode.parentNode.removeChild(histoView.parentNode);
+            }
+        }
+    });
+     
     row5=HTMLElementUtils.createRow({});
         col51=HTMLElementUtils.createColumn({"width":12});
             button511=HTMLElementUtils.createButton({"extraAttributes":{ "class":"btn btn-primary mx-2"}})
@@ -107,6 +131,10 @@
         row4.appendChild(col41);
             col41.appendChild(label412);
             col41.appendChild(select411);
+    container.appendChild(row6);
+        row6.appendChild(col61);
+            col61.appendChild(input611);
+            col61.appendChild(label611);
     container.appendChild(row5);
         row5.appendChild(col51);
             col51.appendChild(button511);
@@ -144,26 +172,30 @@ Feature_Space.run = function () {
         Feature_Space_Control.style.width= "100%";
         Feature_Space_Control.style.height= "100%";
         Feature_Space_Control.style.borderLeft= "1px solid #aaa";
+        Feature_Space_Control.style.display = "inline-block";
         var elt = document.createElement("div");
         elt.style.width= "40%";
         elt.style.height= "100%";
-        elt.style.display = "inline-flex";
+        elt.style.display = "inline-block";
+        elt.style.verticalAlign = "top";
         elt.appendChild(Feature_Space_Control);
         document.getElementById("ISS_viewer").appendChild(elt);
         $(".openseadragon-container")[0].style.display = "inline-flex";
         $(".openseadragon-container")[0].style.width= "60%";
-            
+
         Feature_Space_Control.addEventListener("load", ev => {
             Feature_Space_Control.classList.add("d-none");
             var timeout = setTimeout(function() {
                 var newwin = Feature_Space_Control.contentWindow;
                 Feature_Space._newwin = newwin;
+                Feature_Space._newwin.tmapp.options_osd["preserveImageSizeOnResize"] = false;
                 //OSD handlers are not registered manually they have to be registered
                 //using MouseTracker OSD objects 
                 if (newwin.tmapp.ISS_viewer) {
                     clearInterval(timeout);
                 }
                 else {return;}
+                Feature_Space.getHisto();
                 new Feature_Space._newwin.OpenSeadragon.MouseTracker({
                     element: Feature_Space._newwin.tmapp[vname].canvas,
                     moveHandler: Feature_Space.moveHandler/*,
@@ -228,7 +260,13 @@ Feature_Space.run = function () {
                             copyDataset(dataUtils.data[Feature_Space._dataset], newwin.dataUtils.data[Feature_Space._dataset]);
                             newwin.dataUtils.createMenuFromCSV(Feature_Space._dataset, newwin.dataUtils.data[Feature_Space._dataset]["_processeddata"].columns);
                         }
-
+                    }
+                    if ( interfaceUtils.temp_toggleRightPanel === undefined) {
+                        interfaceUtils.temp_toggleRightPanel = interfaceUtils.toggleRightPanel;
+                        interfaceUtils.toggleRightPanel = function() {
+                            interfaceUtils.temp_toggleRightPanel();
+                            Plotly.Plots.resize(document.getElementById("histoView"));;
+                        }
                     }
                 },200);
             }, 200);
@@ -297,7 +335,16 @@ Feature_Space.releaseHandler = function (event) {
         markerData[scalePropertyName][d] = 1;
         markerData[opacityPropertyName][d] = 1;
     }
-    
+    if (Feature_Space._showHisto) {
+        Feature_Space.getHisto();
+    }
+    else {
+        Feature_Space_Control.style.height= "100%";
+        histoView = document.getElementById("histoView");
+        if (histoView) {
+            histoView.parentNode.parentNode.removeChild(histoView.parentNode);
+        }
+    }
     Feature_Space._newwin.glUtils.loadMarkers(Feature_Space._dataset);
     Feature_Space._newwin.glUtils.draw();
     glUtils.loadMarkers(Feature_Space._dataset);
@@ -357,6 +404,7 @@ Feature_Space.analyzeRegion = function (points) {
     }
 
     associatedPoints=[];
+    Feature_Space._newwin._histogram = [];
     allDatasets = Object.keys(Feature_Space._newwin.dataUtils.data);
     var pointsInside=[];
     for (var dataset of allDatasets) {
@@ -384,18 +432,32 @@ Feature_Space.analyzeRegion = function (points) {
             var svgovname = Feature_Space._newwin.tmapp["object_prefix"] + "_svgov";
             var svg = Feature_Space._newwin.tmapp[svgovname]._svg;
             tmpPoint = svg.createSVGPoint();
-            pointInBbox = Feature_Space.searchTreeForPointsInBbox(quadtree, x0, y0, x3, y3, options);
-            markerData = Feature_Space._newwin.dataUtils.data[dataset]["_processeddata"];
-            for (var d of pointInBbox) {
-                var x = markerData[xselector][d];
-                var y = markerData[yselector][d];
-                if (Feature_Space._newwin.regionUtils.globalPointInPath(x / imageWidth, y / imageWidth, regionPath, tmpPoint)) {
-                    countsInsideRegion += 1;
-                    pointsInside.push(d);
+            var  inputs = interfaceUtils._mGenUIFuncs.getGroupInputs(dataset, code);
+            var hexColor = "color" in inputs ? inputs["color"] : "#ffff00";
+            var visible = "visible" in inputs ? inputs["visible"] : true;
+            if (visible) {
+                pointInBbox = Feature_Space.searchTreeForPointsInBbox(quadtree, x0, y0, x3, y3, options);
+                markerData = Feature_Space._newwin.dataUtils.data[dataset]["_processeddata"];
+                for (var d of pointInBbox) {
+                    var x = markerData[xselector][d];
+                    var y = markerData[yselector][d];
+                    if (Feature_Space._newwin.regionUtils.globalPointInPath(x / imageWidth, y / imageWidth, regionPath, tmpPoint)) {
+                        countsInsideRegion += 1;
+                        pointsInside.push(d);
+                    }
                 }
+                Feature_Space._newwin._histogram.push({ "key": quadtree.treeID, "name": quadtree.treeName, "count": countsInsideRegion, "color": hexColor});
             }
         }
     }
+    function compare(a, b) {
+        if (a.count > b.count)
+            return -1;
+        if (a.count < b.count)
+            return 1;
+        return 0;
+    }
+    Feature_Space._newwin._histogram.sort(compare);
     return pointsInside;
 }
 
@@ -432,3 +494,57 @@ Feature_Space.analyzeRegion = function (points) {
     });
     return pointsInside;
  }
+ 
+Feature_Space.getHisto = function () {
+    var op = tmapp["object_prefix"];
+    var vname = op + "_viewer";
+    
+    histoView = document.getElementById("histoView");
+    if (!histoView) {
+        var histoView = document.createElement("div");
+        histoView.id = "histoView";
+        var elt = document.createElement("div");
+        /*elt.classList.add("viewer-layer")
+        elt.classList.add("px-1")
+        elt.classList.add("mx-1")*/
+        elt.style.display = "inline-block";
+        elt.appendChild(histoView);
+        
+        var Feature_Space_Control = document.getElementById("Feature_Space_Control");
+        Feature_Space_Control.style.height= "50%";
+        Feature_Space_Control.parentNode.appendChild(elt);
+        elt.style.height= "45%";
+        elt.style.width= "100%";
+    }
+    if (Feature_Space._newwin._histogram === undefined){
+        histoView.innerHTML = "";
+        return;
+    }
+    if (Feature_Space._newwin._histogram[0].count == 0){
+        histoView.innerHTML = "";
+        return;
+    }
+    var histogram = Feature_Space._newwin._histogram.slice(0, 20).reverse();
+    Feature_Space._plot = Plotly.newPlot( histoView,
+        [
+            {
+                y: histogram.map(function(x){return x.key + " -"}),
+                x: histogram.map(function(x){return x.count}),
+                type: 'bar',
+                orientation: 'h',
+                marker:{
+                    color: histogram.map(function(x){return x.color})
+                }
+            }
+        ],
+        {
+            margin: { t:0,r:0,b:0,l:20} ,
+            title: 'Bar Chart',
+            yaxis: {
+                  automargin: true
+            }
+        }, {responsive: true,displayModeBar: false
+        }
+        );
+}
+
