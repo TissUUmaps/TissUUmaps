@@ -188,7 +188,6 @@ Feature_Space.run = function () {
             var timeout = setTimeout(function() {
                 var newwin = Feature_Space_Control.contentWindow;
                 Feature_Space._newwin = newwin;
-                Feature_Space._newwin.tmapp.options_osd["preserveImageSizeOnResize"] = false;
                 //OSD handlers are not registered manually they have to be registered
                 //using MouseTracker OSD objects 
                 if (newwin.tmapp.ISS_viewer) {
@@ -196,6 +195,8 @@ Feature_Space.run = function () {
                 }
                 else {return;}
                 Feature_Space.getHisto();
+                Feature_Space._newwin.tmapp[vname].viewport.preserveImageSizeOnResize = false;
+                Feature_Space._newwin.tmapp[vname].viewport.visibilityRatio=1.0;
                 new Feature_Space._newwin.OpenSeadragon.MouseTracker({
                     element: Feature_Space._newwin.tmapp[vname].canvas,
                     moveHandler: Feature_Space.moveHandler/*,
