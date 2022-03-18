@@ -1,0 +1,1 @@
+The Feature Space 3D plugin allows to display markers in 3D in any feature space - such as UMAP, t-SNE or PCA - next to markers with spatial coordinates. Note that this plugin doesn't allow marker selection in the Feature Space.

@@ -1,5 +1,11 @@
 [
     {
+        "py": "Feature_Space_3D.py",
+        "name": "Feature Space 3D",
+        "txt": "The Feature Space 3D plugin allows to display markers in 3D in any feature space - such as UMAP, t-SNE or PCA - next to markers with spatial coordinates. Note that this plugin doesn't allow marker selection in the Feature Space.",
+        "js": "Feature_Space_3D.js"
+    },
+    {
         "py": "Plugin_template.py",
         "name": "Plugin template",
         "txt": "Copy these plugin files to create your own plugin.",
