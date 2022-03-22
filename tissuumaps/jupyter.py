@@ -28,6 +28,8 @@ class TissUUmapsViewer ():
         iframe = ('<iframe src="{src}" style="width: {width}; '
                   'height: {height}; border: none" id="{id}" allowfullscreen></iframe>')
         src = f"http://{self.server.host}:{self.server.port}/{self.image}"
+        
+        print ("Loading url: ", src)
         self.htmlIFrame = HTML(iframe.format(width="100%", height=str(height)+"px", src=src, id=self.id))
         display(self.htmlIFrame)
         time.sleep(2)
