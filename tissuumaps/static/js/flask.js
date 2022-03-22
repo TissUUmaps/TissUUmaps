@@ -35,6 +35,17 @@ flask.standalone.init = function () {
     button.addEventListener("click", function(){
         flask.standalone.addLayer("");
     });
+    flask.standalone.pixelFlickering = HTMLElementUtils.createElement({"kind":"div", extraAttributes:{"style":"position:absolute;right:0px;bottom:0px;width:1px;height:1px;line-height:1px;background-color:#FFFFFF"}});
+    document.body.append(flask.standalone.pixelFlickering)
+    setInterval(
+        function() {
+            if (flask.standalone.pixelFlickering.style.backgroundColor=="rgb(255, 255, 255)")
+                flask.standalone.pixelFlickering.style.backgroundColor="rgb(255, 255, 254)";
+            else 
+                flask.standalone.pixelFlickering.style.backgroundColor="rgb(255, 255, 255)";
+        },
+        200
+    )
 };
 
 flask.standalone.addCSV = function (filename) {
