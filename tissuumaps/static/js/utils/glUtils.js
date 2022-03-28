@@ -1117,7 +1117,7 @@ glUtils._restoreLostContext = function(event) {
     // Restore shared WebGL objects
     glUtils._programs["markers"] = glUtils._loadShaderProgram(gl, glUtils._markersVS, glUtils._markersFS);
     glUtils._programs["picking"] = glUtils._loadShaderProgram(gl, glUtils._pickingVS, glUtils._pickingFS);
-    glUtils._textures["shapeAtlas"] = glUtils._loadTextureFromImageURL(gl, "misc/markershapes.png");
+    glUtils._textures["shapeAtlas"] = glUtils._loadTextureFromImageURL(gl, "/static/misc/markershapes.png");
 
     // Restore per-markers WebGL objects
     for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
