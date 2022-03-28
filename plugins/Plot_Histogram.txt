@@ -1,0 +1,1 @@
+The Plot_Histogram plugin allows to display histograms of markers from any hand drawn selection in the image, in real time.
