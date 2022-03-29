@@ -432,6 +432,8 @@ class webEngine(QWebEngineView):
                 if not path[0] in state.keys():
                     return
                 if len(path) == 1:
+                    if path[0] not in state.keys():
+                        return
                     if isinstance(state[path[0]], list):
                         if isImg:
                             imgFiles += [s for s in state[path[0]]]
@@ -449,6 +451,8 @@ class webEngine(QWebEngineView):
                             state[path[0]] = "data/files/" + os.path.basename(state[path[0]])
                     return
                 else:
+                    if path[0] not in state.keys():
+                        return
                     if isinstance(state[path[0]], list):
                         for state_ in state[path[0]]:
                             addRelativePath_aux (state_, path[1:], isImg)
@@ -515,6 +519,8 @@ class webEngine(QWebEngineView):
         def addRelativePath(state, previouspath, newpath):
             def addRelativePath_aux (state, path):
                 if len(path) == 1:
+                    if path[0] not in state.keys():
+                        return
                     if isinstance(state[path[0]], list):
                         state[path[0]] = [getRel(previouspath, s, newpath) for s in state[path[0]]]
                     else:
