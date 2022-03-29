@@ -604,7 +604,7 @@ interfaceUtils.generateDataTabUI = function(options){
     interfaceUtils._mGenUIFuncs.ActivateTab(generated);
     if (options) {
         console.log("options are here:");
-        console.dir(options);
+        console.log(JSON.stringify(options));
         if (options.hideSettings) {
             divpane_settings = interfaceUtils.getElementById(generated+"_marker-tab-settings");
             divpane_settings.classList.add("d-none");
@@ -935,7 +935,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem1=function(){
         div121=HTMLElementUtils.createElement({"kind":"div","id":"input-group"});
             label1221=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":generated+"_tab-name"}});
             label1221.innerText="Tab name";
-            input1222=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_tab-name", "extraAttributes":{ "name":generated+"_tab-name", "class":"form-control","type":"text", "placeholder":"New dataset", "value":"New dataset","aria-label":"Tab name" }});
+            input1222=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_tab-name", "extraAttributes":{ "name":generated+"_tab-name", "class":"form-control","type":"text", "placeholder":"New markers", "value":"New markers","aria-label":"Tab name" }});
             input1222.innerText=generated; 
             input1222.addEventListener("change",(event)=>{interfaceUtils._mGenUIFuncs.ChangeTabName(event.target.name.split("_")[0], event.target.value);})
 
@@ -2169,7 +2169,7 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
     options["path"].forEach (function (dataURL) {
         dropdownOptions.push({
             "value": dataURL,
-            "text": dataURL.split('/').reverse()[0].replace(/_/g, '').replace('.csv', '')
+            "text": dataURL.split('/').reverse()[0].replace(/_/g, ' ').replace('.csv', '')
         })
     });
     interfaceUtils.createDownloadDropdown(downloadRow, options.title, callback, options.comment, dropdownOptions);
