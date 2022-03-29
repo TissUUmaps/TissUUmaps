@@ -80,24 +80,27 @@ flask.standalone.addLayer = function (filename) {
 }
 
 flask.standalone.saveProject = function () {
-    state = projectUtils.getActiveProject();
-    flask.standalone.backend.saveProject(JSON.stringify(state));
+    projectUtils.getActiveProject().then((state) => {
+        setTimeout(function() {
+            flask.standalone.backend.saveProject(JSON.stringify(state))
+        }, 300);
+    });
 };
 
 flask.standalone.exportToStatic = function () {
-    var state = projectUtils.getActiveProject();
-    var loadingModal =null;
-    setTimeout(function() {
-        loadingModal=interfaceUtils.loadingModal("Exporting to static web page")
-    },0);
-    setTimeout(function() {
-        flask.standalone.backend.exportToStatic(JSON.stringify(state));
+    projectUtils.getActiveProject().then((state) => {
+        var loadingModal =null;
         setTimeout(function() {
-            $(loadingModal).modal('hide');
-            interfaceUtils.alert("Exporting done.")
+            loadingModal=interfaceUtils.loadingModal("Exporting to static web page")
+        },0);
+        setTimeout(function() {
+            flask.standalone.backend.exportToStatic(JSON.stringify(state));
+            setTimeout(function() {
+                $(loadingModal).modal('hide');
+                interfaceUtils.alert("Exporting done.")
+            }, 500);
         }, 500);
-    }, 500);
-
+    })
 };
 
 flask.server = {}
@@ -109,31 +112,32 @@ flask.server.init = function () {
 
     interfaceUtils.addMenuItem(["File","Save project"],function(){
         var modalUID = "messagebox";
-        interfaceUtils.prompt("<b>Warning: only marker datasets converted into buttons will be saved.</b><br/><br/>Save project under the name:","NewProject","Save project")
-        .then((filename) => {
-            state = projectUtils.getActiveProject();
-            state.filename = filename;
-            if (filename.split('.').pop() != "tmap") {
-                filename = filename + ".tmap"
-            }
-            const queryString = window.location.search;
-            const urlParams = new URLSearchParams(queryString);
-            const path = urlParams.get('path')
-            $.ajax({
-                type: "POST",
-                url: "/" + filename + "?path=" + path,
-                // The key needs to match your method's input parameter (case-sensitive).
-                data: JSON.stringify(state),
-                contentType: "application/json; charset=utf-8",
-                dataType: "json",
-                success: function(data) {
-                    $('#loadingModal').modal('hide');
-                },
-                failure: function(errMsg) {
-                    $('#loadingModal').modal('hide');
-                    alert(errMsg);
+        projectUtils.getActiveProject().then((state) => {
+            interfaceUtils.prompt("Save project under the name:","NewProject","Save project")
+            .then((filename) => {
+                state.filename = filename;
+                if (filename.split('.').pop() != "tmap") {
+                    filename = filename + ".tmap"
                 }
-            });
+                const queryString = window.location.search;
+                const urlParams = new URLSearchParams(queryString);
+                const path = urlParams.get('path')
+                $.ajax({
+                    type: "POST",
+                    url: "/" + filename + "?path=" + path,
+                    // The key needs to match your method's input parameter (case-sensitive).
+                    data: JSON.stringify(state),
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    success: function(data) {
+                        $('#loadingModal').modal('hide');
+                    },
+                    failure: function(errMsg) {
+                        $('#loadingModal').modal('hide');
+                        alert(errMsg);
+                    }
+                });
+            })
         })
     },true);
 

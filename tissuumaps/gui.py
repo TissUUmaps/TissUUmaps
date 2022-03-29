@@ -597,17 +597,17 @@ class webEngine(QWebEngineView):
         #sys.exit()
 
     @pyqtSlot(str, str, result="QJsonObject")
-    def addCSV(self, path, folderpath):
-        print ("gui.addCSV", path, folderpath)
-        if (folderpath == ""):
-            folderpath = QFileDialog.getOpenFileName(self, 'Select a File')[0]
-        if not folderpath:
+    def addCSV(self, path, csvpath):
+        print ("gui.addCSV", path, csvpath)
+        if (csvpath == ""):
+            csvpath = QFileDialog.getOpenFileName(self, 'Select a File')[0]
+        if not csvpath:
             returnDict = {"dzi":None,"name":None}
             return returnDict
-        parts = Path(folderpath).parts
+        parts = Path(csvpath).parts
         if (self.app.basedir != parts[0]):
             if (not self.app.basedir == "C:\mnt\data\shared"):
-                reply = QMessageBox.warning(self, "Error", "All files must be in the same drive.")
+                QMessageBox.warning(self, "Error", "All files must be in the same drive.")
                 returnDict = {"markerFile":None}
                 return returnDict
             else:
@@ -618,12 +618,18 @@ class webEngine(QWebEngineView):
         imgPath = os.path.abspath(os.path.join(self.app.basedir, imgPath))
         
         relativePath = os.path.relpath(os.path.dirname(imgPath), path) 
+
+        print ("imgPath", imgPath)
+        print ("relativePath", relativePath)
+        print ("self.app.basedir", self.app.basedir)
+        print ("csvpath", csvpath)
+        print ("path", path)
+
         if ".." in relativePath:
-            reply = QMessageBox.question(self, "Error", "Impossible to add files from a parent folder.")
-            if reply == QMessageBox.Yes:
-                self.openImagePath(folderpath)
-            returnDict = {"dzi":None,"name":None}
+            QMessageBox.warning(self, "Error", "Impossible to add files from a parent folder.")
+            returnDict = {"markerFile":None}
             return returnDict
+
         returnDict = {
             "markerFile":{
                         "name": os.path.basename(imgPath),
@@ -635,20 +641,20 @@ class webEngine(QWebEngineView):
         return returnDict
     
     @pyqtSlot(str, str, result="QJsonObject")
-    def addLayer(self, path, folderpath):
-        if (folderpath == ""):
-            folderpath = QFileDialog.getOpenFileName(self, 'Select a File')[0]
-        if not folderpath:
+    def addLayer(self, path, layerpath):
+        if (layerpath == ""):
+            layerpath = QFileDialog.getOpenFileName(self, 'Select a File')[0]
+        if not layerpath:
             returnDict = {"dzi":None,"name":None}
             return returnDict
-        parts = Path(folderpath).parts
+        parts = Path(layerpath).parts
         print (self.app.basedir)
         if (self.app.basedir != parts[0]):
             if (not self.app.basedir == "C:\mnt\data\shared"):
                 reply = QMessageBox.question(self, "Error", "All layers must be in the same drive. Would you like to open this image only?")
                 reply = reply == QMessageBox.Yes
                 if reply:
-                    self.openImagePath(folderpath)
+                    self.openImagePath(layerpath)
                 returnDict = {"dzi":None,"name":None}
                 return returnDict
             else:
@@ -669,7 +675,7 @@ class webEngine(QWebEngineView):
         if ".." in relativePath:
             reply = QMessageBox.question(self, "Error", "Impossible to add layers from a parent folder. Would you like to open this image only?")
             if reply == QMessageBox.Yes:
-                self.openImagePath(folderpath)
+                self.openImagePath(layerpath)
             returnDict = {"dzi":None,"name":None}
             return returnDict
         returnDict = {

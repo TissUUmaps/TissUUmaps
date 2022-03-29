@@ -356,6 +356,7 @@ dataUtils.readCSV = function(data_id, thecsv, options) {
     data_obj["_csv_header"] = null;
     data_obj["_csv_path"] = thecsv;
     if (options != undefined) {
+        data_obj["_csv_path"] = options.path;
         data_obj["expectedHeader"] = options.expectedHeader;
         data_obj["expectedRadios"] = options.expectedRadios;
         data_obj["fromButton"] = options.fromButton;

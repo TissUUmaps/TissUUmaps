@@ -42,10 +42,10 @@ var projectUtils = {
 
 /**
  * This method is used to save the TissUUmaps state (gene expression, cell morphology, regions) */
- projectUtils.saveProject = function(urlProject) {
+ projectUtils.saveProject = function() {
+    var state = projectUtils.getActiveProject();
     interfaceUtils.prompt("Save project under the name:","NewProject")
     .then((filename) => {
-        var state = projectUtils.getActiveProject();
         state.filename = filename;
 
         var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 4));
@@ -60,116 +60,150 @@ var projectUtils = {
 }
 
 projectUtils.getActiveProject = function () {
-    state = projectUtils._activeState;
-    state.regions = regionUtils._regions;
-    state.layers = tmapp.layers;
-    state.filters = filterUtils._filtersUsed;
-    state.layerFilters = filterUtils._filterItems;
-    state.compositeMode = filterUtils._compositeMode;
-    state.layerOpacities = {}
-    state.layerVisibilities = {}
-    tmapp.layers.forEach(function(layer, i) {
-        state.layerOpacities[i] = $("#opacity-layer-"+i).val();
-        state.layerVisibilities[i] = $("#visible-layer-"+i).is(":checked");
-    });
-    return state;
+    return new Promise((resolve, reject) => {
+        var state = projectUtils._activeState;
+        var tabsNotSaved = [];
+        for (const uid in dataUtils.data) {
+            if (dataUtils.data[uid]["fromButton"] === undefined) {
+                tabsNotSaved.push(uid);
+            }
+        }
+        function makeButtons (callback) {
+            uid = tabsNotSaved.pop();
+            console.log("uid:", uid, tabsNotSaved)
+            if (uid === undefined) {
+                return callback();
+            }
+            tabName = document.getElementById(uid + "_tab-name").value;
+            projectUtils.makeButtonFromTab(uid, "The tab "+tabName+" is not saved as a button yet","modalButton_" + uid)
+            .then(() => makeButtons(callback));
+        }
+        function callback () {
+            state.regions = regionUtils._regions;
+            state.layers = tmapp.layers;
+            state.filters = filterUtils._filtersUsed;
+            state.layerFilters = filterUtils._filterItems;
+            state.compositeMode = filterUtils._compositeMode;
+            state.layerOpacities = {}
+            state.layerVisibilities = {}
+            tmapp.layers.forEach(function(layer, i) {
+                state.layerOpacities[i] = $("#opacity-layer-"+i).val();
+                state.layerVisibilities[i] = $("#visible-layer-"+i).is(":checked");
+            });
+            resolve(state);
+        }
+        makeButtons(callback)
+    })
 }
 
 
 /**
  * This method is used to load the TissUUmaps state (gene expression, cell morphology, regions) */
- projectUtils.makeButtonFromTab = function(dataset) {
-    csvFile = document.getElementById(dataset + "_csv").value.replace(/^.*[\\\/]/, '');
-    if (!csvFile) {
-        if (dataUtils.data[dataset]) {
-            csvFile = dataUtils.data[dataset]["_csv_path"];
+ projectUtils.makeButtonFromTab = function(dataset, title, modalUID) {
+    return new Promise((resolve, reject) => {
+        csvFile = document.getElementById(dataset + "_csv").value.replace(/^.*[\\\/]/, '');
+        if (!csvFile) {
+            if (dataUtils.data[dataset]) {
+                csvFile = dataUtils.data[dataset]["_csv_path"];
+            }
+            else {
+                interfaceUtils.alert("Select a csv file first!");
+                resolve();
+            }
         }
-        else {
-            interfaceUtils.alert("Select a csv file first!");
-            return;
-        }
-    }
-    var modalUID = "default";
-    button1=HTMLElementUtils.createButton({"id":generated+"_marker-tab-button","extraAttributes":{ "class":"btn btn-secondary mx-2", "data-bs-dismiss":"modal"}})
-    button1.innerText = "Cancel";
-    button2=HTMLElementUtils.createButton({"id":generated+"_marker-tab-button","extraAttributes":{ "class":"btn btn-primary mx-2"}})
-    button2.innerText = "Generate button";
-    buttons=divpane=HTMLElementUtils.createElement({"kind":"div"});
-    buttons.appendChild(button1);
-    buttons.appendChild(button2);
+        if (modalUID === undefined) modalUID = "default";
+        button1=HTMLElementUtils.createButton({"id":generated+"_marker-tab-button","extraAttributes":{ "class":"btn btn-secondary mx-2", "data-bs-dismiss":"modal"}})
+        button1.innerText = "Cancel";
+        button2=HTMLElementUtils.createButton({"id":generated+"_marker-tab-button","extraAttributes":{ "class":"btn btn-primary mx-2"}})
+        button2.innerText = "Generate button";
+        buttons=divpane=HTMLElementUtils.createElement({"kind":"div"});
+        buttons.appendChild(button1);
+        buttons.appendChild(button2);
 
-    button1.addEventListener("click",function(event) {
-        $(`#${modalUID}_modal`).modal('hide');
-    })
-    button2.addEventListener("click",function(event) {
-        function UrlExists(url)
-        {
-            var http = new XMLHttpRequest();
-            http.open('HEAD', url, false);
-            http.send();
-            return http.status!=404;
-        }
-        path = document.getElementById("generateButtonPath").value
-        if (path.includes("[")) {path = JSON.parse(path)}
-        if( Object.prototype.toString.call( path ) === '[object Array]' ) {
-            _exists = path.every(UrlExists);
-        }
-        else {
-            _exists = UrlExists(path);
-        }
-        var title = document.getElementById("generateButtonTitle").value
-        var comment = document.getElementById("generateButtonComment").value
-        if (!_exists) {
-            interfaceUtils.confirm("Warning, path doesn't seem accessible on the server.\n\nAre you sure you want to continue?")
-            .then(function(_confirm) {
-                if (_confirm) {
-                    projectUtils.makeButtonFromTabAux(dataset, path, title, comment);
-                    $(`#${modalUID}_modal`).modal('hide');
+        button1.addEventListener("click",function(event) {
+            $(`#${modalUID}_modal`).modal('hide');
+            resolve();
+        })
+        button2.addEventListener("click",function(event) {
+            function UrlExists(url)
+            {
+                const queryString = window.location.search;
+                const urlParams = new URLSearchParams(queryString);
+                const path = urlParams.get('path')
+                if (path != null) {
+                    url = path + "/" + url
                 }
-            })
-            return;
-        }
-        projectUtils.makeButtonFromTabAux(dataset, path, title, comment);
-        $(`#${modalUID}_modal`).modal('hide');
+                var http = new XMLHttpRequest();
+                http.open('HEAD', url, false);
+                http.send();
+                return http.status!=404;
+            }
+            path = document.getElementById("generateButtonPath_" + modalUID).value
+            if (path.includes("[")) {path = JSON.parse(path)}
+            if( Object.prototype.toString.call( path ) === '[object Array]' ) {
+                _exists = path.every(UrlExists);
+            }
+            else {
+                _exists = UrlExists(path);
+            }
+            var title = document.getElementById("generateButtonTitle_" + modalUID).value
+            var comment = document.getElementById("generateButtonComment_" + modalUID).value
+            if (!_exists) {
+                interfaceUtils.confirm("Warning, path doesn't seem reachable from the server. Check that all files are in the same folder.<br/><br/>Are you sure you want to continue?")
+                .then(function(_confirm) {
+                    if (_confirm) {
+                        projectUtils.makeButtonFromTabAux(dataset, path, title, comment);
+                        $(`#${modalUID}_modal`).modal('hide');
+                        resolve();
+                    }
+                    else {
+                    }
+                })
+            }
+            else {
+                projectUtils.makeButtonFromTabAux(dataset, path, title, comment);
+                $(`#${modalUID}_modal`).modal('hide');
+                resolve();
+            }
+        })
+        
+        content=HTMLElementUtils.createElement({"kind":"div"});
+            row0=HTMLElementUtils.createElement({"kind":"p", "extraAttributes":{"class":"text-danger"}});
+            row0.innerText = "Warning, the csv file must be in the same folder as the saved project or as the images."
+            row1=HTMLElementUtils.createRow({});
+                col11=HTMLElementUtils.createColumn({"width":12});
+                    label111=HTMLElementUtils.createElement({"kind":"label", "extraAttributes":{ "for":"generateButtonPath_" + modalUID }});
+                    label111.innerText="Relative path to the csv file (on the server side)"
+                    file112=HTMLElementUtils.createElement({"kind":"input", "id":"generateButtonPath_" + modalUID, "extraAttributes":{ "class":"form-text-input form-control", "type":"text", "value":csvFile}});
+
+            row2=HTMLElementUtils.createRow({});
+                col21=HTMLElementUtils.createColumn({"width":12});
+                    label211=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":"generateButtonTitle_" + modalUID }});
+                    label211.innerText="Button inner text";
+                    select212=HTMLElementUtils.createElement({"kind":"input", "id":"generateButtonTitle_" + modalUID, "extraAttributes":{ "class":"form-text-input form-control", "type":"text", "value":"Download data"} });
+
+            row3=HTMLElementUtils.createRow({});
+            col31=HTMLElementUtils.createColumn({"width":12});
+                label311=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":"generateButtonComment_" + modalUID }});
+                label311.innerText="Comment (will be displayed on the right of the button)";
+                select312=HTMLElementUtils.createElement({"kind":"input", "id":"generateButtonComment_" + modalUID, "extraAttributes":{ "class":"form-text-input form-control", "type":"text", "value":""} });
+        
+        content.appendChild(row0);
+        content.appendChild(row1);
+            row1.appendChild(col11);
+                col11.appendChild(label111);
+                col11.appendChild(file112);
+        content.appendChild(row2);
+            row2.appendChild(col21);
+                col21.appendChild(label211);
+                col21.appendChild(select212);
+        content.appendChild(row3);
+            row3.appendChild(col31);
+                col31.appendChild(label311);
+                col31.appendChild(select312);
+        if (! title) title = "Generate button from tab"
+        interfaceUtils.generateModal(title, content, buttons, modalUID);
     })
-    
-    content=HTMLElementUtils.createElement({"kind":"div"});
-        row0=HTMLElementUtils.createElement({"kind":"p", "extraAttributes":{"class":"text-danger"}});
-        row0.innerText = "Warning, the csv file must be accessible on the server side."
-        row1=HTMLElementUtils.createRow({});
-            col11=HTMLElementUtils.createColumn({"width":12});
-                label111=HTMLElementUtils.createElement({"kind":"label", "extraAttributes":{ "for":"generateButtonPath" }});
-                label111.innerText="Relative path to the csv file (on the server side)"
-                file112=HTMLElementUtils.createElement({"kind":"input", "id":"generateButtonPath", "extraAttributes":{ "class":"form-text-input form-control", "type":"text", "value":csvFile}});
-
-        row2=HTMLElementUtils.createRow({});
-            col21=HTMLElementUtils.createColumn({"width":12});
-                label211=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":"generateButtonTitle" }});
-                label211.innerText="Button inner text";
-                select212=HTMLElementUtils.createElement({"kind":"input", "id":"generateButtonTitle", "extraAttributes":{ "class":"form-text-input form-control", "type":"text", "value":"Download data"} });
-
-        row3=HTMLElementUtils.createRow({});
-        col31=HTMLElementUtils.createColumn({"width":12});
-            label311=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":"generateButtonComment" }});
-            label311.innerText="Comment (will be displayed on the right of the button)";
-            select312=HTMLElementUtils.createElement({"kind":"input", "id":"generateButtonComment", "extraAttributes":{ "class":"form-text-input form-control", "type":"text", "value":""} });
-    
-    content.appendChild(row0);
-    content.appendChild(row1);
-        row1.appendChild(col11);
-            col11.appendChild(label111);
-            col11.appendChild(file112);
-    content.appendChild(row2);
-        row2.appendChild(col21);
-            col21.appendChild(label211);
-            col21.appendChild(select212);
-    content.appendChild(row3);
-        row3.appendChild(col31);
-            col31.appendChild(label311);
-            col31.appendChild(select312);
-
-    title = "Generate button from tab"
-    interfaceUtils.generateModal(title, content, buttons);
  }
 
 
@@ -206,6 +240,9 @@ projectUtils.makeButtonFromTabAux = function (dataset, csvFile, title, comment) 
         projectUtils._activeState.markerFiles = [];
     }
     projectUtils._activeState.markerFiles.push(markerFile);
+    markerFile.fromButton = projectUtils._activeState.markerFiles.length;
+    dataUtils.data[dataset].fromButton = projectUtils._activeState.markerFiles.length;
+    
     if( Object.prototype.toString.call( markerFile.path ) === '[object Array]' ) {
         interfaceUtils.createDownloadDropdownMarkers(markerFile);
     }
