@@ -9,6 +9,9 @@
                 width: 100%; 
                 border-collapse: 
                 collapse; border-spacing: 0; 
+                max-width:1600px;
+                margin-left:auto;
+                margin-right:auto;
             }
 
             td, th { border: 1px solid #CCC; height: 30px; } /* Make cells a bit taller */
@@ -25,65 +28,27 @@
                 padding: 10px;
             }
             td.thumb {
-                width: 20%;
+                width: 33%;
                 white-space: nowrap;
             }
         </style>
     </head>
     <body>
         <h1>TissUUmaps plugins</h1>
-                    <h2>Feature Space 3D:</h2>
-            <table>
-                <tr>
-                                            <td class="thumb">
-                            <img src="Feature_Space_3D.gif" style="max-height:500px;width:100%;"/><br/>
-                        </td>
-                    
+        <table>
+                        <tr>
                     <td>
+                        <h2>Feature Space:</h2>
+                                                    <p><i>Author: Christophe Avenel </i></p>
+                        
+                                                    <p><i>Version: 1.0</i></p>
+                        
+                                                    <h3>Description</h3>
+                            The Feature Space plugin allows to display markers in any feature space - such as UMAP, t-SNE or PCA - next to markers with spatial coordinates. You can interactively select markers in the Feature Space viewport and instantaneously see the corresponding markers in the Spatial viewport.
                         
                         <h3>Plugin Files</h3>
                         <ul>
-                            
-                                <li><a href="Feature_Space_3D.py">Feature_Space_3D.py</a></li>
-                            
-                            
-                                <li><a href="Feature_Space_3D.js">Feature_Space_3D.js</a></li>
-                            
-                        </ul>
-                    </td>
-                </tr>
-            </table>
-            <hr/>
-                    <h2>Plugin template:</h2>
-            <table>
-                <tr>
-                    
-                    <td>
-                        
-                        <h3>Plugin Files</h3>
-                        <ul>
-                            
-                                <li><a href="Plugin_template.py">Plugin_template.py</a></li>
-                            
-                            
-                                <li><a href="Plugin_template.js">Plugin_template.js</a></li>
-                            
-                        </ul>
-                    </td>
-                </tr>
-            </table>
-            <hr/>
-                    <h2>Feature Space:</h2>
-            <table>
-                <tr>
-                                            <td class="thumb">
-                            <img src="Feature_Space.gif" style="max-height:500px;width:100%;"/><br/>
-                        </td>
-                    
-                    <td>
-                        
-                        <h3>Plugin Files</h3>
-                        <ul>
+                            <li><a href="Feature_Space.yml">Feature_Space.yml</a></li>
                             
                                 <li><a href="Feature_Space.py">Feature_Space.py</a></li>
                             
@@ -92,42 +57,50 @@
                             
                         </ul>
                     </td>
+                    <td class="thumb">
+                                                    <img src="Feature_Space.gif" style="max-height:500px;width:100%;"/><br/>
+                        
+                    </td>
                 </tr>
-            </table>
-            <hr/>
-                    <h2>Spot Inspector:</h2>
-            <table>
-                <tr>
-                                            <td class="thumb">
-                            <img src="Spot_Inspector.png" style="max-height:500px;width:100%;"/><br/>
-                        </td>
-                    
+                        <tr>
                     <td>
+                        <h2>Feature Space 3D:</h2>
+                                                    <p><i>Author: Christophe Avenel </i></p>
+                        
+                                                    <p><i>Version: 1.2</i></p>
+                        
+                                                    <h3>Description</h3>
+                            The Feature Space 3D plugin allows to display markers in 3D in any feature space - such as UMAP, t-SNE or PCA - next to markers with spatial coordinates. Note that this plugin doesn't allow marker selection in the Feature Space.
                         
                         <h3>Plugin Files</h3>
                         <ul>
+                            <li><a href="Feature_Space_3D.yml">Feature_Space_3D.yml</a></li>
                             
-                                <li><a href="Spot_Inspector.py">Spot_Inspector.py</a></li>
+                                <li><a href="Feature_Space_3D.py">Feature_Space_3D.py</a></li>
                             
                             
-                                <li><a href="Spot_Inspector.js">Spot_Inspector.js</a></li>
+                                <li><a href="Feature_Space_3D.js">Feature_Space_3D.js</a></li>
                             
                         </ul>
                     </td>
+                    <td class="thumb">
+                                                    <img src="Feature_Space_3D.gif" style="max-height:500px;width:100%;"/><br/>
+                        
+                    </td>
                 </tr>
-            </table>
-            <hr/>
-                    <h2>Plot Histogram:</h2>
-            <table>
-                <tr>
-                                            <td class="thumb">
-                            <img src="Plot_Histogram.gif" style="max-height:500px;width:100%;"/><br/>
-                        </td>
-                    
+                        <tr>
                     <td>
+                        <h2>Plot Histogram:</h2>
+                                                    <p><i>Author: Christophe Avenel </i></p>
+                        
+                                                    <p><i>Version: 1.0</i></p>
+                        
+                                                    <h3>Description</h3>
+                            The Plot_Histogram plugin allows to display histograms of markers from any hand drawn selection in the image, in real time.
                         
                         <h3>Plugin Files</h3>
                         <ul>
+                            <li><a href="Plot_Histogram.yml">Plot_Histogram.yml</a></li>
                             
                                 <li><a href="Plot_Histogram.py">Plot_Histogram.py</a></li>
                             
@@ -136,10 +109,65 @@
                             
                         </ul>
                     </td>
+                    <td class="thumb">
+                                                    <img src="Plot_Histogram.gif" style="max-height:500px;width:100%;"/><br/>
+                        
+                    </td>
                 </tr>
-            </table>
-            <hr/>
-                <h2>Files needed by TissUUmaps for plugin installation:</h2>
+                        <tr>
+                    <td>
+                        <h2>Spot Inspector:</h2>
+                                                    <p><i>Author: Christophe Avenel - Axel Andersson </i></p>
+                        
+                                                    <p><i>Version: 1.3</i></p>
+                        
+                                                    <h3>Description</h3>
+                            The Spot Inspector plugin is implemented using Python with a Javascript interface for interacting with the main module. The plugin allows the user to interactively visualize content from multiple staining rounds and channels by clicking on the currently displayed image in TissUUmaps. The plugin works for TissUUmaps Windows version and is demonstrated through a short video (<a href="https://tissuumaps.github.io/tutorials/#spot_inspector">spot inspector video</a>). <br/> <br/>
+The In Situ Transcriptomic (IST) quality control plugin Spot Inspection allows the user to interactively click anywhere on an image displayed in TissUUmaps. This interaction opens a gridded figure displaying image content from multiple image rounds and channels as well as traces indicating the barcoded labels. The plugin enables an effective and interactive way for visualizing and interpreting errors introduced in IST pipelines. The Spot Inspector plugin is available for the TissUUmaps desktop client. It is implemented using Python with a JavaScript interface for communicating with the main TissUUmaps module. <br/> <br/> The source code of the plugin is available under <a href="https://github.com/TissUUmaps/TissUUmaps/tree/master/tissuumaps/plugins_available">https://github.com/TissUUmaps/TissUUmaps/tree/master/tissuumaps/plugins_available</a>.
+                        
+                        <h3>Plugin Files</h3>
+                        <ul>
+                            <li><a href="Spot_Inspector.yml">Spot_Inspector.yml</a></li>
+                            
+                                <li><a href="Spot_Inspector.py">Spot_Inspector.py</a></li>
+                            
+                            
+                                <li><a href="Spot_Inspector.js">Spot_Inspector.js</a></li>
+                            
+                        </ul>
+                    </td>
+                    <td class="thumb">
+                                                    <img src="Spot_Inspector.png" style="max-height:500px;width:100%;"/><br/>
+                        
+                    </td>
+                </tr>
+                        <tr>
+                    <td>
+                        <h2>Plugin Template:</h2>
+                                                    <p><i>Author: Christophe Avenel </i></p>
+                        
+                                                    <p><i>Version: 1.0</i></p>
+                        
+                                                    <h3>Description</h3>
+                            Copy these plugin files to create your own plugin.
+                        
+                        <h3>Plugin Files</h3>
+                        <ul>
+                            <li><a href="Plugin_template.yml">Plugin_template.yml</a></li>
+                            
+                                <li><a href="Plugin_template.py">Plugin_template.py</a></li>
+                            
+                            
+                                <li><a href="Plugin_template.js">Plugin_template.js</a></li>
+                            
+                        </ul>
+                    </td>
+                    <td class="thumb">
+                        
+                    </td>
+                </tr>
+                </table>
+        <h2>Files needed by TissUUmaps for plugin installation:</h2>
         <ul><li><a href="pluginList.json">pluginList.json</a></li></ul>
         <table>
     </body>
