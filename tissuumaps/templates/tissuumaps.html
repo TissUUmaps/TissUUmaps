@@ -302,9 +302,7 @@
         tmapp.init();
         
         {% for plugin in plugins %}{% if plugin %}
-            interfaceUtils.addMenuItem(["Plugins","{{ plugin }}"],function() {
-                pluginUtils.startPlugin("{{ plugin }}");
-            });
+            pluginUtils.addPlugin("{{ plugin }}");
         {% endif %}{% endfor %}
 
         {% if jsonProject %}

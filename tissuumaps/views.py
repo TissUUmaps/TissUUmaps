@@ -408,7 +408,7 @@ def tmapFile(filename):
         else:
             abort(404)
         if "plugins" in state.keys():
-            plugins = state["plugins"]
+            plugins = []
         else:
             plugins = app.config["PLUGINS"]
 

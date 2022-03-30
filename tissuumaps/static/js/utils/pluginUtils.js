@@ -10,7 +10,18 @@
  * @classdesc The root namespace for projectUtils.
  */
  pluginUtils = {
+    _pluginList: []
  }
+
+pluginUtils.addPlugin = function (pluginID) {
+    if (pluginUtils._pluginList.includes(pluginID)) {
+        return;
+    }
+    pluginUtils._pluginList.push(pluginID);
+    interfaceUtils.addMenuItem(["Plugins",pluginID],function() {
+        pluginUtils.startPlugin(pluginID);
+    });
+}
 
 pluginUtils.startPlugin = function (pluginID) {
     var script = document.createElement('script');

@@ -390,6 +390,11 @@ projectUtils.loadProjectFileFromServer = function(path) {
         });
     }*/
 
+    if (state.plugins) {
+        state.plugins.forEach(function(pluginName) {
+            pluginUtils.addPlugin(pluginName);
+        });
+    }
     if (state.regions && Object.keys(state.regions).length > 0) {
         regionUtils.JSONValToRegions(state.regions);
     }
