@@ -15,8 +15,10 @@
      _UMAP2:null,
      _region:null,
      _regionPixels:null,
+     _regionWin:null,
      _newwin:null,
-     _showHisto:true
+     _showHisto:true,
+     _histoKey:false
   }
  
  /**
@@ -53,6 +55,12 @@
             var input611=HTMLElementUtils.createElement({"kind":"input", "id":"Feature_Space_showHisto","extraAttributes":{"class":"form-check-input","type":"checkbox","checked":true}});
             label611=HTMLElementUtils.createElement({"kind":"label", "extraAttributes":{ "for":"Feature_Space_showHisto" }});
             label611.innerHTML="&nbsp;Show histogram of selected markers"
+
+    row7=HTMLElementUtils.createRow({});
+        col71=HTMLElementUtils.createColumn({"width":12});
+            select711=HTMLElementUtils.createElement({"kind":"select","id":"Feature_Space_histoKey","extraAttributes":{"class":"form-select form-select-sm","aria-label":".form-select-sm"}});
+            label712=HTMLElementUtils.createElement({"kind":"label", "extraAttributes":{"for":"Feature_Space_histoKey"} });
+            label712.innerText="Select Histogram Key";
     
     input611.addEventListener("change",(event)=>{
         Feature_Space._showHisto = input611.checked;
@@ -77,6 +85,8 @@
         interfaceUtils.cleanSelect("Feature_Space_dataset");
         interfaceUtils.cleanSelect("UMAP1");
         interfaceUtils.cleanSelect("UMAP2");
+        interfaceUtils.cleanSelect("Feature_Space_histoKey");
+        
         var datasets = Object.keys(dataUtils.data).map(function(e, i) {
             return {value:e, innerHTML:document.getElementById(e + "_tab-name").value};
         });
@@ -92,6 +102,8 @@
         interfaceUtils.addElementsToSelect("UMAP1", dataUtils.data[Feature_Space._dataset]._csv_header);
         interfaceUtils.cleanSelect("UMAP2");
         interfaceUtils.addElementsToSelect("UMAP2", dataUtils.data[Feature_Space._dataset]._csv_header);
+        interfaceUtils.cleanSelect("Feature_Space_histoKey");
+        interfaceUtils.addElementsToSelect("Feature_Space_histoKey", dataUtils.data[Feature_Space._dataset]._csv_header);
         if (dataUtils.data[Feature_Space._dataset]._csv_header.indexOf("UMAP1") > 0) {
             interfaceUtils.getElementById("UMAP1").value = "UMAP1";
             var event = new Event('change');
@@ -102,12 +114,22 @@
             var event = new Event('change');
             interfaceUtils.getElementById("UMAP2").dispatchEvent(event);
         }
+        if (dataUtils.data[Feature_Space._dataset]._csv_header.indexOf(dataUtils.data[Feature_Space._dataset]._gb_col) > 0) {
+            interfaceUtils.getElementById("Feature_Space_histoKey").value = dataUtils.data[Feature_Space._dataset]._gb_col;
+            var event = new Event('change');
+            interfaceUtils.getElementById("Feature_Space_histoKey").dispatchEvent(event);
+        }
     });
     select311.addEventListener("change",(event)=>{
         Feature_Space._UMAP1 = select311.value;
     });
     select411.addEventListener("change",(event)=>{
         Feature_Space._UMAP2 = select411.value;
+    });
+    select711.addEventListener("change",(event)=>{
+        Feature_Space._histoKey = select711.value;
+        var pointsIn = Feature_Space.analyzeRegion(Feature_Space._region, Feature_Space._regionWin);
+        Feature_Space.getHisto();
     });
 
     button511.addEventListener("click",(event)=>{
@@ -135,11 +157,20 @@
         row6.appendChild(col61);
             col61.appendChild(input611);
             col61.appendChild(label611);
+    container.appendChild(row7);
+        row7.appendChild(col71);
+            col71.appendChild(label712);
+            col71.appendChild(select711);
     container.appendChild(row5);
         row5.appendChild(col51);
             col51.appendChild(button511);
     var event = new Event('click');
     button111.dispatchEvent(event);
+
+    var textInfo = document.createElement("div");
+    textInfo.style.marginTop = "10px"
+    textInfo.innerHTML = "Hold shift to draw a region around markers"
+    container.appendChild(textInfo);
  }
 
 function copyDataset(dataIn, dataOut) {
@@ -160,6 +191,9 @@ function copyDataset(dataIn, dataOut) {
             dataOut[key] = Feature_Space._UMAP2;
         }
     }
+    console.log("dataIn","dataOut");
+    console.log(JSON.stringify(dataIn["expectedHeader"]));
+    console.log(JSON.stringify(dataOut["expectedHeader"]));
 }
 
 Feature_Space.run = function () {
@@ -199,21 +233,58 @@ Feature_Space.run = function () {
                 Feature_Space._newwin.tmapp[vname].viewport.visibilityRatio=1.0;
                 new Feature_Space._newwin.OpenSeadragon.MouseTracker({
                     element: Feature_Space._newwin.tmapp[vname].canvas,
-                    moveHandler: Feature_Space.moveHandler/*,
-                    pressHandler: Feature_Space.pressHandler,
-                    releaseHandler: Feature_Space.releaseHandler*/
+                    moveHandler: (event) => Feature_Space.moveHandler(event, Feature_Space._newwin, window)
                 }).setTracking(true);
                 
                 Feature_Space._newwin.tmapp["ISS_viewer"].addHandler('canvas-press', (event) => {
-                    Feature_Space.pressHandler(event)
+                    Feature_Space.pressHandler(event, Feature_Space._newwin, window)
                 });
                 Feature_Space._newwin.tmapp["ISS_viewer"].addHandler('canvas-release', (event) => {
-                    Feature_Space.releaseHandler(event)
+                    Feature_Space.releaseHandler(event, Feature_Space._newwin, window)
                 });
                 Feature_Space._newwin.tmapp["ISS_viewer"].addHandler('canvas-drag', (event) => {
-                    if (!event.originalEvent.shiftKey) event.preventDefaultAction = true;
+                    if (event.originalEvent.shiftKey) event.preventDefaultAction = true;
                 });
-                newwin.projectUtils._activeState = projectUtils._activeState;
+                Feature_Space._newwin.tmapp["ISS_viewer"].addHandler("animation-finish", function animationFinishHandler(event){
+                    Feature_Space._newwin.d3.selectAll(".region_UMAP").selectAll('polyline').each(function(el) {
+                        $(this).attr('stroke-width', 2*regionUtils._polygonStrokeWidth / Feature_Space._newwin.tmapp["ISS_viewer"].viewport.getZoom());
+                    });
+                    Feature_Space._newwin.d3.selectAll(".region_UMAP").selectAll('circle').each(function(el) {
+                        $(this).attr('r', 10* regionUtils._handleRadius / Feature_Space._newwin.tmapp["ISS_viewer"].viewport.getZoom());
+                    });
+                    Feature_Space._newwin.d3.selectAll(".region_UMAP").each(function(el) {
+                        $(this).attr('stroke-width', 2*regionUtils._polygonStrokeWidth / Feature_Space._newwin.tmapp["ISS_viewer"].viewport.getZoom());
+                    });
+                });
+
+                new OpenSeadragon.MouseTracker({
+                    element: tmapp[vname].canvas,
+                    moveHandler: (event) => Feature_Space.moveHandler(event, window, Feature_Space._newwin)
+                }).setTracking(true);
+                
+               tmapp["ISS_viewer"].addHandler('canvas-press', (event) => {
+                    Feature_Space.pressHandler(event, window, Feature_Space._newwin)
+                });
+                tmapp["ISS_viewer"].addHandler('canvas-release', (event) => {
+                    Feature_Space.releaseHandler(event, window, Feature_Space._newwin)
+                });
+                tmapp["ISS_viewer"].addHandler('canvas-drag', (event) => {
+                    if (event.originalEvent.shiftKey) event.preventDefaultAction = true;
+                });
+                tmapp["ISS_viewer"].addHandler("animation-finish", function animationFinishHandler(event){
+                    d3.selectAll(".region_UMAP").selectAll('polyline').each(function(el) {
+                        $(this).attr('stroke-width', 2*regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
+                    });
+                    d3.selectAll(".region_UMAP").selectAll('circle').each(function(el) {
+                        $(this).attr('r', 10* regionUtils._handleRadius / tmapp["ISS_viewer"].viewport.getZoom());
+                    });
+                    d3.selectAll(".region_UMAP").each(function(el) {
+                        $(this).attr('stroke-width', 2*regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
+                    });
+                });
+                
+
+                newwin.projectUtils._activeState = JSON.parse(JSON.stringify(projectUtils._activeState));
                 try {
                     newwin.interfaceUtils.generateDataTabUI({uid:Feature_Space._dataset,name:"UMAP"})
                 } catch (error) {
@@ -277,57 +348,59 @@ Feature_Space.run = function () {
     Feature_Space_Control.setAttribute("src", "/");
 }
 
-Feature_Space.pressHandler = function (event) {
-    console.log(event, event.originalEvent, event.originalEvent.shiftKey);
-    var OSDviewer = Feature_Space._newwin.tmapp[tmapp["object_prefix"] + "_viewer"];
+Feature_Space.pressHandler = function (event, win, mainwin) {
+    var OSDviewer = win.tmapp[tmapp["object_prefix"] + "_viewer"];
 
-    if (! event.originalEvent.shiftKey) {
-        Feature_Space._newwin.tmapp.ISS_viewer.gestureSettingsMouse.dragToPan = false;
+    if (event.originalEvent.shiftKey) {
+        win.tmapp.ISS_viewer.gestureSettingsMouse.dragToPan = false;
         var normCoords = OSDviewer.viewport.pointFromPixel(event.position);
         var nextpoint = [normCoords.x, normCoords.y];
         Feature_Space._region = [normCoords];
         Feature_Space._regionPixels = [event.position];
+        Feature_Space._regionWin = win;
     }
     else {
-        Feature_Space._newwin.tmapp.ISS_viewer.gestureSettingsMouse.dragToPan = true;
+        win.tmapp.ISS_viewer.gestureSettingsMouse.dragToPan = true;
         Feature_Space._region == []
     }
     return
 };
 
-Feature_Space.releaseHandler = function (event) {
+Feature_Space.releaseHandler = function (event, win, mainwin) {
     if (Feature_Space._region == []) {
         return;
     }
-    if (event.originalEvent.shiftKey) { return; }
-    var OSDviewer = Feature_Space._newwin.tmapp[tmapp["object_prefix"] + "_viewer"];
+    if (!event.originalEvent.shiftKey) { return; }
+    var OSDviewer = win.tmapp[tmapp["object_prefix"] + "_viewer"];
 
-    var canvas = Feature_Space._newwin.overlayUtils._d3nodes[Feature_Space._newwin.tmapp["object_prefix"] + "_regions_svgnode"].node();
+    var canvas = win.overlayUtils._d3nodes[win.tmapp["object_prefix"] + "_regions_svgnode"].node();
     var regionobj = d3.select(canvas).append('g').attr('class', "_UMAP_region");
-    var elements = Feature_Space._newwin.document.getElementsByClassName("region_UMAP")
-    if (elements.length > 0)
-        elements[0].parentNode.removeChild(elements[0]);
-
+    var elements = win.document.getElementsByClassName("region_UMAP")
+    for (var element of elements)
+        element.parentNode.removeChild(element);
+    var elements = mainwin.document.getElementsByClassName("region_UMAP")
+    for (var element of elements)
+        element.parentNode.removeChild(element);
     Feature_Space._region.push(Feature_Space._region[0]);
 
-    regionobj.append('path').attr("d", regionUtils.pointsToPath([[Feature_Space._region]]))
+    regionobj.append('path').attr("d", win.regionUtils.pointsToPath([[Feature_Space._region]]))
         .attr("id", "path_UMAP")
         .attr('class', "region_UMAP")
-        .style('stroke-width', 0.005)
-        .style("stroke", '#aaaaaa').style("fill", "none")
+        .attr('stroke-width', 2*regionUtils._polygonStrokeWidth / win.tmapp["ISS_viewer"].viewport.getZoom())
+        .style("stroke", '#ff0000').style("fill", "none")
     
-    var pointsIn = Feature_Space.analyzeRegion(Feature_Space._region);
+    var pointsIn = Feature_Space.analyzeRegion(Feature_Space._region, win);
     var scalePropertyName = "UMAP_Region_scale"
-    Feature_Space._newwin.dataUtils.data[Feature_Space._dataset]["_scale_col"] = scalePropertyName;
+    win.dataUtils.data[Feature_Space._dataset]["_scale_col"] = scalePropertyName;
     dataUtils.data[Feature_Space._dataset]["_scale_col"] = scalePropertyName;
-    var markerData = Feature_Space._newwin.dataUtils.data[Feature_Space._dataset]["_processeddata"];
-    markerData[scalePropertyName] = new Float64Array(markerData[Feature_Space._newwin.dataUtils.data[Feature_Space._dataset]["_X"]].length);
+    var markerData = win.dataUtils.data[Feature_Space._dataset]["_processeddata"];
+    markerData[scalePropertyName] = new Float64Array(markerData[win.dataUtils.data[Feature_Space._dataset]["_X"]].length);
     var opacityPropertyName = "UMAP_Region_opacity"
-    Feature_Space._newwin.dataUtils.data[Feature_Space._dataset]["_opacity_col"] = opacityPropertyName;
+    win.dataUtils.data[Feature_Space._dataset]["_opacity_col"] = opacityPropertyName;
     dataUtils.data[Feature_Space._dataset]["_opacity_col"] = opacityPropertyName;
-    markerData[opacityPropertyName] = new Float64Array(markerData[Feature_Space._newwin.dataUtils.data[Feature_Space._dataset]["_X"]].length);
-    markerData[opacityPropertyName] = markerData[opacityPropertyName].map(function() {return 0.15;});
-    markerData[scalePropertyName] = markerData[scalePropertyName].map(function() {return 0;});
+    markerData[opacityPropertyName] = new Float64Array(markerData[win.dataUtils.data[Feature_Space._dataset]["_X"]].length);
+    markerData[opacityPropertyName] = markerData[opacityPropertyName].map(function() {return 0.3;});
+    markerData[scalePropertyName] = markerData[scalePropertyName].map(function() {return 0.3;});
     if (pointsIn.length == 0) {
         markerData[scalePropertyName] = markerData[scalePropertyName].map(function() {return 1;});
         markerData[opacityPropertyName] = markerData[opacityPropertyName].map(function() {return 1;});
@@ -346,23 +419,23 @@ Feature_Space.releaseHandler = function (event) {
             histoView.parentNode.parentNode.removeChild(histoView.parentNode);
         }
     }
-    Feature_Space._newwin.glUtils.loadMarkers(Feature_Space._dataset);
-    Feature_Space._newwin.glUtils.draw();
+    win.glUtils.loadMarkers(Feature_Space._dataset);
+    win.glUtils.draw();
     glUtils.loadMarkers(Feature_Space._dataset);
     glUtils.draw();
-    Feature_Space._region = [];
     return
 };
 
-Feature_Space.moveHandler = function (event) {
+Feature_Space.moveHandler = function (event, win, mainwin) {
     if (event.buttons != 1 || Feature_Space._region == []){ //|| !event.shift) {
         //Feature_Space._region = [];
         //Feature_Space._regionPixels = [];
-        //Feature_Space._newwin.tmapp.ISS_viewer.setMouseNavEnabled(true);
+        //win.tmapp.ISS_viewer.setMouseNavEnabled(true);
         return;
     }
-    if (event.originalEvent.shiftKey) { return; }
-    var OSDviewer = Feature_Space._newwin.tmapp[tmapp["object_prefix"] + "_viewer"];
+    if (win !== Feature_Space._regionWin) { return; }
+    if (!event.originalEvent.shiftKey) { return; }
+    var OSDviewer = win.tmapp[tmapp["object_prefix"] + "_viewer"];
 
     var normCoords = OSDviewer.viewport.pointFromPixel(event.position);
     
@@ -379,77 +452,86 @@ Feature_Space.moveHandler = function (event) {
         }
     }
     Feature_Space._region.push(nextpoint);
-    var canvas = Feature_Space._newwin.overlayUtils._d3nodes[Feature_Space._newwin.tmapp["object_prefix"] + "_regions_svgnode"].node();
+    var canvas = win.overlayUtils._d3nodes[win.tmapp["object_prefix"] + "_regions_svgnode"].node();
     var regionobj = d3.select(canvas).append('g').attr('class', "_UMAP_region");
-    var elements = Feature_Space._newwin.document.getElementsByClassName("region_UMAP")
+    var elements = win.document.getElementsByClassName("region_UMAP")
     for (var element of elements)
         element.parentNode.removeChild(element);
-
+    var elements = mainwin.document.getElementsByClassName("region_UMAP")
+    for (var element of elements)
+        element.parentNode.removeChild(element);
+    
     var polyline = regionobj.append('polyline').attr('points', Feature_Space._region.map(function(x){return [x.x,x.y];}))
         .style('fill', 'none')
-        .attr('stroke-width', 0.005)
-        .attr('stroke', '#aaaaaa').attr('class', "region_UMAP");
+        .attr('stroke-width', 2*regionUtils._polygonStrokeWidth / win.tmapp["ISS_viewer"].viewport.getZoom())
+        .attr('stroke', '#ff0000').attr('class', "region_UMAP");
     return;
 };
 
-Feature_Space.analyzeRegion = function (points) {
-    var op = Feature_Space._newwin.tmapp["object_prefix"];
-
-    function clone(obj) {
-        if (null == obj || "object" != typeof obj) return obj;
-        var copy = obj.constructor();
-        for (var attr in obj) {
-            if (obj.hasOwnProperty(attr)) copy[attr] = obj[attr];
-        }
-        return copy;
-    }
-
-    associatedPoints=[];
-    Feature_Space._newwin._histogram = [];
-    allDatasets = Object.keys(Feature_Space._newwin.dataUtils.data);
+Feature_Space.analyzeRegion = function (points, win) {
+    var associatedPoints=[];
+    Feature_Space._histogram = [];
     var pointsInside=[];
-    for (var dataset of allDatasets) {
-        var allkeys=Object.keys(Feature_Space._newwin.dataUtils.data[dataset]["_groupgarden"]);
-        for (var codeIndex in allkeys) {
-            var code = allkeys[codeIndex];
-            
-            var quadtree = Feature_Space._newwin.dataUtils.data[dataset]["_groupgarden"][code]
-            var imageWidth = Feature_Space._newwin.OSDViewerUtils.getImageWidth();
-            var x0 = Math.min(...points.map(function(x){return x.x})) * imageWidth;
-            var y0 = Math.min(...points.map(function(x){return x.y})) * imageWidth;
-            var x3 = Math.max(...points.map(function(x){return x.x})) * imageWidth;
-            var y3 = Math.max(...points.map(function(x){return x.y})) * imageWidth;
-            var options = {
-                "globalCoords":true,
-                "xselector":Feature_Space._newwin.dataUtils.data[dataset]["_X"],
-                "yselector":Feature_Space._newwin.dataUtils.data[dataset]["_Y"],
-                "dataset":dataset
-            }
-            var xselector = options.xselector;
-            var yselector = options.yselector;
-            var imageWidth = Feature_Space._newwin.OSDViewerUtils.getImageWidth();
-            var countsInsideRegion = 0;
-            regionPath=Feature_Space._newwin.document.getElementById("path_UMAP");
-            var svgovname = Feature_Space._newwin.tmapp["object_prefix"] + "_svgov";
-            var svg = Feature_Space._newwin.tmapp[svgovname]._svg;
-            tmpPoint = svg.createSVGPoint();
-            var  inputs = interfaceUtils._mGenUIFuncs.getGroupInputs(dataset, code);
-            var hexColor = "color" in inputs ? inputs["color"] : "#ffff00";
-            var visible = "visible" in inputs ? inputs["visible"] : true;
-            if (visible) {
-                pointInBbox = Feature_Space.searchTreeForPointsInBbox(quadtree, x0, y0, x3, y3, options);
-                markerData = Feature_Space._newwin.dataUtils.data[dataset]["_processeddata"];
-                for (var d of pointInBbox) {
-                    var x = markerData[xselector][d];
-                    var y = markerData[yselector][d];
-                    if (Feature_Space._newwin.regionUtils.globalPointInPath(x / imageWidth, y / imageWidth, regionPath, tmpPoint)) {
-                        countsInsideRegion += 1;
-                        pointsInside.push(d);
+    var dataset = Feature_Space._dataset;
+    var allkeys=Object.keys(win.dataUtils.data[dataset]["_groupgarden"]);
+    var countsInsideRegion = {}
+    for (var codeIndex in allkeys) {
+        var code = allkeys[codeIndex];
+        
+        var quadtree = win.dataUtils.data[dataset]["_groupgarden"][code]
+        var imageWidth = win.OSDViewerUtils.getImageWidth();
+        var x0 = Math.min(...points.map(function(x){return x.x})) * imageWidth;
+        var y0 = Math.min(...points.map(function(x){return x.y})) * imageWidth;
+        var x3 = Math.max(...points.map(function(x){return x.x})) * imageWidth;
+        var y3 = Math.max(...points.map(function(x){return x.y})) * imageWidth;
+        var options = {
+            "globalCoords":true,
+            "xselector":win.dataUtils.data[dataset]["_X"],
+            "yselector":win.dataUtils.data[dataset]["_Y"],
+            "dataset":dataset
+        }
+        var xselector = options.xselector;
+        var yselector = options.yselector;
+        var imageWidth = win.OSDViewerUtils.getImageWidth();
+        var regionPath=win.document.getElementById("path_UMAP");
+        var svgovname = win.tmapp["object_prefix"] + "_svgov";
+        var svg = win.tmapp[svgovname]._svg;
+        var tmpPoint = svg.createSVGPoint();
+        var  inputs = interfaceUtils._mGenUIFuncs.getGroupInputs(dataset, code);
+        var visible = "visible" in inputs ? inputs["visible"] : true;
+        if (visible) {
+            var pointInBbox = Feature_Space.searchTreeForPointsInBbox(quadtree, x0, y0, x3, y3, options);
+            var markerData = win.dataUtils.data[dataset]["_processeddata"];
+            for (var d of pointInBbox) {
+                var x = markerData[xselector][d];
+                var y = markerData[yselector][d];
+                var key;
+                if (win.regionUtils.globalPointInPath(x / imageWidth, y / imageWidth, regionPath, tmpPoint)) {
+                    if (Feature_Space._histoKey) {
+                        key = markerData[Feature_Space._histoKey][d]
                     }
+                    else {
+                        key = quadtree.treeName
+                    }
+                    if (countsInsideRegion[key] === undefined) {
+                        countsInsideRegion[key] = 0;
+                    }
+                    countsInsideRegion[key] += 1;
+                    pointsInside.push(d);
                 }
-                Feature_Space._newwin._histogram.push({ "key": quadtree.treeID, "name": quadtree.treeName, "count": countsInsideRegion, "color": hexColor});
             }
         }
+    }
+    for (var key in countsInsideRegion) {
+        var hexColor;
+        if (!Feature_Space._histoKey || Feature_Space._histoKey == win.dataUtils.data[dataset]._gb_col) {
+            var inputs = interfaceUtils._mGenUIFuncs.getGroupInputs(dataset, key);
+            hexColor = "color" in inputs ? inputs["color"] : "#ff0000";
+        }
+        else {
+            hexColor = "#ff0000";
+        }
+        Feature_Space._histogram.push({ "key": key, "name": key, "count": countsInsideRegion[key], "color": hexColor});
     }
     function compare(a, b) {
         if (a.count > b.count)
@@ -458,7 +540,7 @@ Feature_Space.analyzeRegion = function (points) {
             return 1;
         return 0;
     }
-    Feature_Space._newwin._histogram.sort(compare);
+    Feature_Space._histogram.sort(compare);
     return pointsInside;
 }
 
@@ -517,15 +599,19 @@ Feature_Space.getHisto = function () {
         elt.style.height= "45%";
         elt.style.width= "100%";
     }
-    if (Feature_Space._newwin._histogram === undefined){
+    if (Feature_Space._histogram === undefined){
         histoView.innerHTML = "";
         return;
     }
-    if (Feature_Space._newwin._histogram[0].count == 0){
+    if (Object.keys(Feature_Space._histogram).length == 0){
         histoView.innerHTML = "";
         return;
     }
-    var histogram = Feature_Space._newwin._histogram.slice(0, 20).reverse();
+    if (Feature_Space._histogram[0].count == 0){
+        histoView.innerHTML = "";
+        return;
+    }
+    var histogram = Feature_Space._histogram.slice(0, 20).reverse();
     Feature_Space._plot = Plotly.newPlot( histoView,
         [
             {
@@ -539,8 +625,7 @@ Feature_Space.getHisto = function () {
             }
         ],
         {
-            margin: { t:0,r:0,b:0,l:20} ,
-            title: 'Bar Chart',
+            margin: { t:0,r:0,b:20,l:20} ,
             yaxis: {
                   automargin: true
             }

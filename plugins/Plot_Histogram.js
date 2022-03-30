@@ -379,7 +379,7 @@ Plot_Histogram.getHisto = function () {
         ],
         {
             margin: { t:0,r:0,b:20,l:20} ,
-            height: 18*histogram.length,
+            height: 18*(histogram.length+1),
             yaxis: {
                   automargin: true
             }
