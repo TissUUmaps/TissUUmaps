@@ -488,7 +488,7 @@ class webEngine(QWebEngineView):
             state = addRelativePath(json.loads(state), relativePath)
             
             with open(folderpath + "/project.tmap", "w") as f:
-                json.dump(state, f)
+                json.dump(state, f, indent=4)
             os.makedirs(os.path.join(folderpath,"data/images"), exist_ok=True )
             os.makedirs(os.path.join(folderpath,"data/files"), exist_ok=True )
             for image in imgFiles:
@@ -608,7 +608,7 @@ class webEngine(QWebEngineView):
         if (csvpath == ""):
             csvpath = QFileDialog.getOpenFileName(self, 'Select a File')[0]
         if not csvpath:
-            returnDict = {"dzi":None,"name":None}
+            returnDict = {"markerFile":None}
             return returnDict
         parts = Path(csvpath).parts
         if (self.app.basedir != parts[0]):
