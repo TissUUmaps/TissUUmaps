@@ -18,7 +18,7 @@ jobs:
           python-version: '3.6'
       - name: generate json and html
         run: |
-          pip install jinja2
+          pip install jinja2 pyyaml
           python generate_plugin_sites.py
 
       - name: Deploy 🚀
