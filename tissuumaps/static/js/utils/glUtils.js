@@ -8,7 +8,7 @@ glUtils = {
     _imageSize: [1, 1],
     _viewportRect: [0, 0, 1, 1],
     _options: {antialias: false, premultipliedAlpha: false, preserveDrawingBuffer: true},
-
+    _markershapes: "misc/markershapes.png",
     // WebGL resources
     _programs: {},
     _buffers: {},
@@ -1117,7 +1117,7 @@ glUtils._restoreLostContext = function(event) {
     // Restore shared WebGL objects
     glUtils._programs["markers"] = glUtils._loadShaderProgram(gl, glUtils._markersVS, glUtils._markersFS);
     glUtils._programs["picking"] = glUtils._loadShaderProgram(gl, glUtils._pickingVS, glUtils._pickingFS);
-    glUtils._textures["shapeAtlas"] = glUtils._loadTextureFromImageURL(gl, "/static/misc/markershapes.png");
+    glUtils._textures["shapeAtlas"] = glUtils._loadTextureFromImageURL(gl, glUtils._markershapes);
 
     // Restore per-markers WebGL objects
     for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
@@ -1147,7 +1147,7 @@ glUtils.init = function() {
 
     this._programs["markers"] = this._loadShaderProgram(gl, this._markersVS, this._markersFS);
     this._programs["picking"] = this._loadShaderProgram(gl, this._pickingVS, this._pickingFS);
-    this._textures["shapeAtlas"] = this._loadTextureFromImageURL(gl, "/static/misc/markershapes.png");
+    this._textures["shapeAtlas"] = this._loadTextureFromImageURL(gl, glUtils._markershapes);
 
     this._createColorbarCanvas();  // The colorbar is drawn separately in a 2D-canvas
 
