@@ -1282,7 +1282,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
                 labelfixedshapevalue=HTMLElementUtils.createElement({"kind":"label","id":generated+"_shape-fixed-label","extraAttributes":{"for":generated+"_shape-fixed-value"}});
                 labelfixedshapevalue.innerText="Select shape";
                 shapeoptions=[];
-                markerUtils._symbolStrings.forEach((sho)=>{ shapeoptions.push({"text":sho,"value":sho}) })
+                markerUtils._symbolStrings.forEach((sho, shoIndex)=>{ shapeoptions.push({"text":markerUtils._symbolUnicodes[shoIndex],"value":sho}) })
                 shapeinput2=HTMLElementUtils.selectTypeDropDown({ "id":generated+"_shape-fixed-value","class":"form-select form-select-sm","options":shapeoptions,"extraAttributes":{"aria-label":".form-select-sm"}})
                 shapeinput2.value=markerUtils._symbolStrings[0]
 
