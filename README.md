@@ -12,7 +12,7 @@
 
 1. Install `libvips` for your system: [https://www.libvips.org/install.html](https://www.libvips.org/install.html)
 
-    An easy way to install `libvips` is to use an [Anaconda](https://docs.anaconda.com/anaconda/install/index.html){:target="_blank"} environment with `libvips`:
+    An easy way to install `libvips` is to use an [Anaconda](https://docs.anaconda.com/anaconda/install/index.html) environment with `libvips`:
     ```bash
     conda create -y -n tissuumaps_env -c conda-forge python=3.9 libvips
     conda activate tissuumaps_env
@@ -32,7 +32,7 @@
     ```bash
     tissuumaps_server path_to_your_images
     ```
-    And open [http://127.0.0.1:5000/](http://127.0.0.1:5000/){:target="_blank"} in your favorite browser.
+    And open [http://127.0.0.1:5000/](http://127.0.0.1:5000/) in your favorite browser.
 
 ## Plugins
 You can add plugins to TissUUmaps from the application menu, or by placing plugin files in the folder `[USER_FOLDER]/.tissuumaps/plugins/`. See [here](https://tissuumaps.github.io/TissUUmaps/plugins/) for available plugins. 
