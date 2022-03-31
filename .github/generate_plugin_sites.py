@@ -88,7 +88,7 @@ def alphaSort (key):
     return key
 
 pluginList = []
-ymlFiles = glob.glob(r"../tissuumaps/plugins_available/*.yml")
+ymlFiles = glob.glob(r"../plugins_repo/*.yml")
 ymlFiles.sort(key=alphaSort)
 for ymlFile in ymlFiles:
     try:
@@ -105,8 +105,8 @@ for ymlFile in ymlFiles:
     except:
         pass
 
-with open("../tissuumaps/plugins_available/pluginList.json","w") as f:
+with open("../plugins_repo/pluginList.json","w") as f:
     json.dump(pluginList, f, indent=4, sort_keys=True, default=str)
 
-with open("../tissuumaps/plugins_available/index.html","w") as f:
+with open("../plugins_repo/index.html","w") as f:
     f.write(t.render(pluginList=pluginList))
