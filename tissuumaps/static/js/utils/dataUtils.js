@@ -128,7 +128,7 @@ dataUtils.processRawData = function(data_id, rawdata) {
 * Make sure that the options selected are correct an call the necessary functions to process the data so
 * its ready to be displayed.
 */
-dataUtils.updateViewOptions = function(data_id){
+dataUtils.updateViewOptions = function(data_id, force_reload_all){
 
 var data_obj = dataUtils.data[data_id];
     
@@ -197,7 +197,7 @@ var data_obj = dataUtils.data[data_id];
         }
         // We load an empty image at the size of the data.
         if (tmapp["ISS_viewer"].world.getItemCount() > 0) {
-            if (tmapp["ISS_viewer"].world.getItemAt(0).source.height != parseInt(maxY*1.06) || tmapp["ISS_viewer"].world.getItemAt(0).source.width != parseInt(maxX*1.06)){
+            if (tmapp["ISS_viewer"].world.getItemAt(0).source.height < parseInt(maxY*1.06) || tmapp["ISS_viewer"].world.getItemAt(0).source.width < parseInt(maxX*1.06)){
                 tmapp["ISS_viewer"].close();
                 setTimeout (function() {dataUtils.updateViewOptions(data_id)},50);
                 return;
@@ -215,7 +215,7 @@ var data_obj = dataUtils.data[data_id];
                 x: -0.02,
                 y: -0.02
             })
-            setTimeout (function() {dataUtils.updateViewOptions(data_id)},50);
+            setTimeout (function() {dataUtils.updateViewOptions(data_id, true)},50);
             return;
         }
     }
@@ -299,8 +299,15 @@ var data_obj = dataUtils.data[data_id];
     if (data_obj["fromButton"] !== undefined) {
         projectUtils.updateMarkerButton(data_id);
     }
-
-    glUtils.loadMarkers(data_id);
+    // If we need to reload all markers from all datasets after new image size:
+    if(force_reload_all !== undefined) {
+        for (var uid in dataUtils.data) {
+            glUtils.loadMarkers(uid);
+        }
+    }
+    else {
+        glUtils.loadMarkers(data_id);
+    }
     glUtils.draw();
 }
 

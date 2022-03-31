@@ -24,7 +24,6 @@ tmapp.registerActions = function () {
     var op = tmapp["object_prefix"];
 
     interfaceUtils.listen(op + '_collapse_btn','click', function () { interfaceUtils.toggleRightPanel() },false);
-    /*interfaceUtils.listen(op + '_search','input', function () { markerUtils.hideRowsThatDontContain(); },false);*/
     interfaceUtils.listen(op + '_drawregions_btn','click', function () { regionUtils.regionsOnOff() },false);
     interfaceUtils.listen(op + '_export_regions','click', function () { regionUtils.exportRegionsToJSON() },false);
     interfaceUtils.listen(op + '_import_regions','click', function () { regionUtils.importRegionsFromJSON() },false);
@@ -64,8 +63,6 @@ tmapp.init = function () {
     var vname = op + "_viewer";
     //init OSD viewer
     tmapp[vname] = OpenSeadragon(tmapp.options_osd);
-    //pixelate because we need the exact values of pixels
-    tmapp[vname].addHandler("tile-drawn", OSDViewerUtils.pixelateAtMaximumZoomHandler);
     // Disable keyboard hack
     tmapp[vname].innerTracker.keyHandler = null;
     tmapp[vname].innerTracker.keyDownHandler = null;
@@ -116,11 +113,9 @@ tmapp.init = function () {
     tmapp["ISS_viewer"].addHandler("animation-finish", function animationFinishHandler(event){
         console.log("animation-finish");
             d3.selectAll("." + regionUtils._drawingclass).selectAll('polyline').each(function(el) {
-                console.log(tmapp["ISS_viewer"].viewport.getZoom());
                 $(this).attr('stroke-width', 5* regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
             });
             d3.selectAll("." + regionUtils._drawingclass).selectAll('circle').each(function(el) {
-                console.log(tmapp["ISS_viewer"].viewport.getZoom());
                 $(this).attr('r', 10* regionUtils._handleRadius / tmapp["ISS_viewer"].viewport.getZoom());
             });
             d3.selectAll(".regionpoly").each(function(el) {
@@ -135,7 +130,7 @@ tmapp.init = function () {
         });
         elt.classList.add("d-none");
     }
-
+    
     if (tmapp.mpp != 0) {
         tmapp[vname].scalebar({
             pixelsPerMeter: tmapp.mpp ? (1e6 / tmapp.mpp) : 0,
@@ -149,7 +144,6 @@ tmapp.init = function () {
             location: OpenSeadragon.ScalebarLocation.BOTTOM_RIGHT
         });
     }
-    //document.getElementById('cancelsearch-moving-button').addEventListener('click', function(){ markerUtils.showAllRows("moving");}); 
     filterUtils.initFilters();
     if (window.hasOwnProperty("glUtils")) {
         console.log("Using GPU-based marker drawing (WebGL canvas)")

@@ -13,20 +13,6 @@ OSDViewerUtils={
 }
 
 /** 
- * Handler to ensure that at maximum zoom, the ima WILL pixelate */
-OSDViewerUtils.pixelateAtMaximumZoomHandler=function(data){
-  var viewer = data.eventSource;
-  var drawer = viewer.drawer;
-  var canvas = drawer.canvas;
-  var context = canvas.getContext("2d");
-
-  context.mozImageSmoothingEnabled = false;
-  context.webkitImageSmoothingEnabled = false;
-  context.msImageSmoothingEnabled = false;
-  context.imageSmoothingEnabled = false;
-}
-
-/** 
  * Get viewport maximum zoom
  * @param {string} overlay Object prefix identifying the desired viewport in case there is more than one.
  * Established at {@link tmapp} but can be called directly, for example @example OSDViewerUtils.getMaxZoom("ISS");  */

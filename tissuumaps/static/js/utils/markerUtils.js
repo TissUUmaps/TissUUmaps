@@ -2,96 +2,16 @@
  * @namespace markerUtils
  * @classdesc Work with anything that has to do with markers, take options from the interface
   about markers, and create markers  
-   * @property {Bool}   markerUtils._drawPaths -draw D3 symbols (true)  or a D3 rect (false)
-   * @property {Number} markerUtils._globalMarkerSize - 
-   * @property {Number} markerUtils._uniqueColor - Keep then number of drawn regions and also let them be the id, 
-   * @property {String} markerUtils._uniqueColorSelector - 
-   * @property {Bool}   markerUtils._uniqueScale -
-   * @property {String} markerUtils._uniqueScaleSelector -
-   * @property {Bool}   markerUtils._uniquePiechart -
-   * @property {String} markerUtils._uniquePiechartSelector -
-   * @property {Number} markerUtils._startCullingAt - 
-   * @property {Obj}    markerUtils._checkBoxes - 
    * @property {Array(String)}   markerUtils._d3Symbols -  
    * @property {Array(String)}   markerUtils._d3SymbolStrings - 
-   * * @property {Object}  markerUtils._colorsperkey - load colors per key if known previously 
    * 
 */
 
 markerUtils = {
     //type must be like d3.symbolVoss
-    _drawPaths: true,
-    _globalMarkerSize: 1,
-    _showSizeColumn: false,
-    _uniqueColor:false, //if this and selector are true, it will try to find a color unique to each spot
-    _uniqueColorSelector:null, //is a string of the type "[float,float,float]" that gets converted to a string "rgb(uint8,uint8,uint8)"
-    _uniqueScale:false, //if this and selector are true, it will try to find a color unique to each spot
-    _uniqueScaleSelector:null, //is a string of the type "[float,float,float]" that gets converted to a string "rgb(uint8,uint8,uint8)"
-    _uniquePiechart:false, //if this and selector are true, it will try to show a unique piechart for each spot
-    _uniquePiechartSelector:null, //a string with the name of the piechart data field in the CSV
-    _startCullingAt: 9000,
-    _checkBoxes: {},
     _d3Symbols: [d3.symbolCross, d3.symbolDiamond, d3.symbolSquare, d3.symbolTriangle, d3.symbolStar, d3.symbolWye, d3.symbolCircle],  // Not used
     _symbolStrings: ["cross", "diamond", "square", "triangle up", "star", "clobber", "disc", "hbar", "vbar", "tailed arrow", "triangle down", "ring", "x", "arrow"],
     _symbolUnicodes: ["＋ cross", "◆ diamond", "■ square", "▲ triangle up", "★ star", "✇ clobber", "● disc", "▬ hbar", "▮ vbar", "➔ tailed arrow", "▼ triangle down", "○ ring", "⨯ x", "> arrow"],
-    _colorsperkey:null,
-    _startMarkersOn:false,
-    _randomShape:true,
-    _selectedShape:0,
-    _headerNames:{"Barcode":"Barcode","Gene":"Gene"}
-}
-
-/** In the markers interface, hide all the rows that do not contain the search string 
- *  specified in the interface in the textarea
-*/
-markerUtils.hideRowsThatDontContain = function () {
-    var op = tmapp["object_prefix"];
-    var contains = function (row, searchFor) {
-        var v = row.textContent.toLowerCase();
-        var v2 = searchFor;
-        if (v2) {
-            v2 = v2.toLowerCase();
-        }
-        return v.indexOf(v2) > -1;
-    };
-
-    var aneedle = document.getElementById(op + "_search").value;
-    var rows = document.getElementById(op + "_table").rows;
-
-    //make it so that the needle can be a list separated by comma, no spaces
-
-    console.log(aneedle);
-
-    var needles=[];
-
-    if (aneedle.indexOf(',') > -1) { 
-        needles=aneedle.split(',');
-    }else{
-        needles.push(aneedle)
-    }
-
-    
-    for (var i = 2; i < rows.length; i++) {
-        var show=false;
-        needles.forEach(function(needle){
-            if (contains(rows[i], needle)) {
-                show=true;
-            }
-        });
-        if (!show) {
-            rows[i].setAttribute("style", "display:none;");
-        } else { rows[i].setAttribute("style", ""); }
-    }
-}
-
-/** Show all rows from the markers UI again */
-markerUtils.showAllRows = function () {
-    var op = tmapp["object_prefix"];
-    var rows = document.getElementById(op + "_table").rows;
-
-    for (var i = 0; i < rows.length; i++) {
-        rows[i].setAttribute("style", "");
-    }
 }
 
 /** Adding piechart legend in the upper left corner */
