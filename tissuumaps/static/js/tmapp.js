@@ -113,13 +113,13 @@ tmapp.init = function () {
     tmapp["ISS_viewer"].addHandler("animation-finish", function animationFinishHandler(event){
         console.log("animation-finish");
             d3.selectAll("." + regionUtils._drawingclass).selectAll('polyline').each(function(el) {
-                $(this).attr('stroke-width', 5* regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
+                $(this).attr('stroke-width', regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
             });
             d3.selectAll("." + regionUtils._drawingclass).selectAll('circle').each(function(el) {
                 $(this).attr('r', 10* regionUtils._handleRadius / tmapp["ISS_viewer"].viewport.getZoom());
             });
             d3.selectAll(".regionpoly").each(function(el) {
-                $(this).attr('stroke-width', 5* regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
+                $(this).attr('stroke-width', regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
             });
     });
     

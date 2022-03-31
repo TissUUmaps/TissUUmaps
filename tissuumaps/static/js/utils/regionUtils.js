@@ -23,7 +23,7 @@ regionUtils = {
     _colorInactiveHandle: "#cccccc",
     _colorActiveHandle: "#ffff00",
     _scaleHandle: 0.0025,
-    _polygonStrokeWidth: 0.0006,
+    _polygonStrokeWidth: 0.0015,
     _handleRadius: 0.1,
     _epsilonDistance: 0.004,
     _regions: {},
@@ -62,7 +62,7 @@ regionUtils.manager = function (event) {
     //console.log(normCoords);
     var regionobj;
     //console.log(d3.select(event.originalEvent.target).attr("is-handle"));
-    var strokeWstr = 5* regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
+    var strokeWstr = regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
 
     if (regionUtils._isNewRegion) {
         //if this region is new then there should be no points, create a new array of points
@@ -127,7 +127,7 @@ regionUtils.closePolygon = function () {
     regionUtils._isNewRegion = true;
     regionUtils.addRegion([[regionUtils._currentPoints]], regionid, hexcolor);
     regionUtils._currentPoints = null;
-    var strokeWstr = 5* regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
+    var strokeWstr = regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
     regionsobj.append('path').attr("d", regionUtils.pointsToPath(regionUtils._regions[regionid].points)).attr("id", regionid + "_poly")
         .attr("class", "regionpoly").attr("polycolor", hexcolor).attr('stroke-width', strokeWstr)
         .style("stroke", hexcolor).style("fill", "none")
@@ -291,7 +291,7 @@ regionUtils.geoJSON2regions = function (geoJSONObjects) {
         regionUtils.addRegion(coordinates, regionId, hexColor, geoJSONObjClass);
         regionUtils._regions[regionId].regionName = regionName;
         regionobj = d3.select(canvas).append('g').attr('class', "mydrawingclass");
-        var strokeWstr = 5* regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
+        var strokeWstr = regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
         regionobj.append('path').attr("d", regionUtils.pointsToPath(regionUtils._regions[regionId].points)).attr("id", regionId + "_poly")
             .attr("class", "regionpoly").attr("polycolor", hexColor).attr('stroke-width', strokeWstr)
             .style("stroke", hexColor).style("fill", "none")
