@@ -447,14 +447,14 @@ overlayUtils.savePNG=function() {
         var canvas = document.createElement("canvas");
         var ctx_osd = document.querySelector(".openseadragon-canvas canvas").getContext("2d");
         var ctx_webgl = document.querySelector("#gl_canvas").getContext("webgl");
-        canvas.width = ctx_osd.canvas.width;
-        canvas.height = ctx_osd.canvas.height;
-        
+        canvas.width = Math.min(ctx_osd.canvas.width, ctx_webgl.canvas.width);
+        canvas.height = Math.min(ctx_osd.canvas.height, ctx_webgl.canvas.height);
+        console.log(ctx_webgl.canvas.width, ctx_osd.canvas.height, window.devicePixelRatio);
         // Copy the image contents to the canvas
         var ctx = canvas.getContext("2d");
         
-        ctx.drawImage(ctx_osd.canvas, 0, 0);
-        ctx.drawImage(ctx_webgl.canvas, 0, 0);
+        ctx.drawImage(ctx_osd.canvas, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(ctx_webgl.canvas, 0, 0, canvas.width, canvas.height);
         var dataURL = canvas.toDataURL("image/png");
         
         var svgString = new XMLSerializer().serializeToString(document.querySelector('.openseadragon-canvas svg'));
