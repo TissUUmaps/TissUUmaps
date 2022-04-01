@@ -22,6 +22,7 @@ glUtils = {
     _markerScaleFactor: {},      // {uid: float}
     _markerScalarPropertyName: {},  // {uid: string, ...}
     _markerOpacity: {},          // {uid: alpha, ...}
+    _markerOutline: {},          // {uid: boolean, ...}
     _useColorFromMarker: {},     // {uid: boolean, ...}
     _useColorFromColormap: {},   // {uid: boolean, ...}
     _useScaleFromMarker: {},     // {uid: boolean, ...}
@@ -139,6 +140,7 @@ glUtils._markersVS = `
 glUtils._markersFS = `
     precision mediump float;
 
+    uniform bool u_markerOutline;
     uniform bool u_usePiechartFromMarker;
     uniform bool u_alphaPass;
     uniform sampler2D u_shapeAtlas;
@@ -177,7 +179,13 @@ glUtils._markersFS = `
         vec2 uv = (gl_PointCoord.xy - 0.5) * UV_SCALE + 0.5;
         uv = (uv + v_shapeOrigin) * (1.0 / SHAPE_GRID_SIZE);
 
+        // Sample shape texture in which the blue channel encodes alpha and the
+        // red and green channels encode grayscale for marker shape with and
+        // without outline, respectively
         vec4 shapeColor = texture2D(u_shapeAtlas, uv, -0.5);
+        shapeColor = u_markerOutline ? shapeColor.rrrb : shapeColor.gggb;
+
+        // This bias avoids minified markers with outline becoming too dark
         float shapeColorBias = max(0.0, 1.0 - v_shapeSize * 0.2);
         shapeColor.rgb = clamp(shapeColor.rgb + shapeColorBias, 0.0, 1.0);
 
@@ -267,12 +275,13 @@ glUtils._pickingVS = `
             if (abs(uv.x - 0.5) > 0.5 || abs(uv.y - 0.5) > 0.5) DISCARD_VERTEX;
 
             // Do fine-grained inside/outside test by sampling the shape texture
+            // with alpha encoded in the blue channel
             vec2 shapeOrigin = vec2(0.0);
             shapeOrigin.x = mod((shapeID + 0.00001) * 255.0 - 1.0, SHAPE_GRID_SIZE);
             shapeOrigin.y = floor(((shapeID + 0.00001) * 255.0 - 1.0) / SHAPE_GRID_SIZE);
             uv = (uv - 0.5) * UV_SCALE + 0.5;
             uv = (uv + shapeOrigin) * (1.0 / SHAPE_GRID_SIZE);
-            if (texture2D(u_shapeAtlas, uv).r < 0.5) DISCARD_VERTEX;
+            if (texture2D(u_shapeAtlas, uv).b < 0.5) DISCARD_VERTEX;
 
             // Also do a quick alpha-test to avoid picking non-visible markers
             if (a_opacity * u_markerOpacity <= 0.0) DISCARD_VERTEX
@@ -407,10 +416,14 @@ glUtils.loadMarkers = function(uid) {
     const useShapeFromMarker = dataUtils.data[uid]["_shape_col"] != null;
     const numShapes = Object.keys(markerUtils._symbolStrings).length;
     let shapeIndex = 0;
-    
+
     const opacityPropertyName = dataUtils.data[uid]["_opacity_col"];
     const useOpacityFromMarker = dataUtils.data[uid]["_opacity_col"] != null;
     const markerOpacityFactor = dataUtils.data[uid]["_opacity"];
+
+    // TODO This value should be obtained from the GUI instead
+    let markerOutline = true;
+    if (uid in glUtils._markerOutline) markerOutline = glUtils._markerOutline[uid];
 
     // Additional info about the vertex format
     const NUM_COMPONENTS_PER_MARKER = 8;
@@ -533,17 +546,18 @@ glUtils.loadMarkers = function(uid) {
 
     // Update marker info and LUT + colormap textures
     glUtils._numPoints[uid] = numPoints * numSectors;
-    glUtils._markerOpacity[uid] = markerOpacityFactor;
     glUtils._markerScalarRange[uid] = scalarRange;
     glUtils._markerScalarPropertyName[uid] = scalarPropertyName;
     glUtils._markerScaleFactor[uid] = markerScaleFactor;
-    glUtils._colorscaleName[uid] = colorscaleName;
+    glUtils._markerOpacity[uid] = markerOpacityFactor;
+    glUtils._markerOutline[uid] = markerOutline;
     glUtils._useColorFromMarker[uid] = useColorFromMarker;
     glUtils._useColorFromColormap[uid] = useColorFromColormap;
     glUtils._useScaleFromMarker[uid] = useScaleFromMarker;
     glUtils._useOpacityFromMarker[uid] = useOpacityFromMarker;
     glUtils._usePiechartFromMarker[uid] = usePiechartFromMarker;
     glUtils._useShapeFromMarker[uid] = useShapeFromMarker;
+    glUtils._colorscaleName[uid] = colorscaleName;
     if (useColorFromColormap) {
         glUtils._updateColorScaleTexture(gl, uid, glUtils._textures[uid + "_colorscale"]);
     }
@@ -564,7 +578,9 @@ glUtils.deleteMarkers = function(uid) {
     delete glUtils._numPoints[uid];
     delete glUtils._markerScaleFactor[uid];
     delete glUtils._markerScalarRange[uid];
+    delete glUtils._markerScalarPropertyName[uid];
     delete glUtils._markerOpacity[uid];
+    delete glUtils._markerOutline[uid];
     delete glUtils._useColorFromMarker[uid];
     delete glUtils._useColorFromColormap[uid];
     delete glUtils._useScaleFromMarker[uid];
@@ -902,6 +918,7 @@ glUtils.drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
         gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
         gl.uniform2fv(gl.getUniformLocation(program, "u_markerScalarRange"), glUtils._markerScalarRange[uid]);
         gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
+        gl.uniform1i(gl.getUniformLocation(program, "u_markerOutline"), glUtils._markerOutline[uid]);
         gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromMarker"), glUtils._useColorFromMarker[uid]);
         gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromColormap"), glUtils._useColorFromColormap[uid]);
         gl.uniform1i(gl.getUniformLocation(program, "u_usePiechartFromMarker"), glUtils._usePiechartFromMarker[uid]);
@@ -1021,7 +1038,9 @@ glUtils.draw = function() {
     let markerScaleAdjusted = glUtils._markerScale;
     if (glUtils._useMarkerScaleFix) markerScaleAdjusted *= (gl.canvas.height / 900.0);
 
-    gl.clearColor(0.5, 0.5, 0.5, 0.0);
+    // Clear background to a perceptual 50% gray, as a workaround to make
+    // compositing against both light and dark image content look good
+    gl.clearColor(0.73, 0.73, 0.73, 0.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
