@@ -207,7 +207,7 @@ class MainWindow(QMainWindow):
         _export = QAction(self.style().standardIcon(QStyle.SP_FileDialogListView), "Capture viewport",self)
         file.addAction(_export)
         def trigger():
-            self.browser.page().runJavaScript("flask.savePNG();")
+            self.browser.page().runJavaScript("overlayUtils.savePNG();")
         _export.triggered.connect(trigger)
         
         _export = QAction(self.style().standardIcon(QStyle.SP_DirLinkIcon), "Export to static webpage",self)

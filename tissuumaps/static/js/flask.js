@@ -211,42 +211,6 @@ function toggleNavbar(turn_on = null) {
 /**
  * Save the current canvas as a PNG image
  */
- flask.savePNG=function() {
-    // Create an empty canvas element
-    var loading=interfaceUtils.loadingModal();
-    var canvas = document.createElement("canvas");
-    var ctx_osd = document.querySelector(".openseadragon-canvas canvas").getContext("2d");
-    var ctx_webgl = document.querySelector("#gl_canvas").getContext("webgl");
-    canvas.width = ctx_osd.canvas.width;
-    canvas.height = ctx_osd.canvas.height;
-    
-    // Copy the image contents to the canvas
-    var ctx = canvas.getContext("2d");
-    
-    ctx.drawImage(ctx_osd.canvas, 0, 0);
-    ctx.drawImage(ctx_webgl.canvas, 0, 0);
-    console.log(canvas.width,canvas.height);
-    var dataURL = canvas.toDataURL("image/png");
-    
-    var svgString = new XMLSerializer().serializeToString(document.querySelector('.openseadragon-canvas svg'));
-
-    var DOMURL = self.URL || self.webkitURL || self;
-    var img = new Image();
-    var svg = new Blob([svgString], {type: "image/svg+xml;charset=utf-8"});
-    var url = DOMURL.createObjectURL(svg);
-    img.onload = function() {
-        ctx.drawImage(img, 0, 0);
-        var png = canvas.toDataURL("image/png");
-           
-        var a = document.createElement("a"); //Create <a>
-        a.href = png; //Image Base64 Goes here
-        a.download = "TissUUmaps_capture.png"; //File name Here
-        a.click(); //Downloaded file
-        setTimeout(function(){$(loading).modal("hide");},500);
-        DOMURL.revokeObjectURL(png);
-    };
-    img.src = url;
-}
 
 // Child website:
 window.addEventListener("message", evt => {

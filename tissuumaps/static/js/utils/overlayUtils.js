@@ -417,37 +417,63 @@ overlayUtils.saveSVG=function(){
  * Save the current canvas as a PNG image
  */
 overlayUtils.savePNG=function() {
-    // Create an empty canvas element
-    var loading=interfaceUtils.loadingModal();
-    var canvas = document.createElement("canvas");
-    var ctx_osd = document.querySelector(".openseadragon-canvas canvas").getContext("2d");
-    var ctx_webgl = document.querySelector("#gl_canvas").getContext("webgl");
-    canvas.width = ctx_osd.canvas.width;
-    canvas.height = ctx_osd.canvas.height;
-    
-    // Copy the image contents to the canvas
-    var ctx = canvas.getContext("2d");
-    
-    ctx.drawImage(ctx_osd.canvas, 0, 0);
-    ctx.drawImage(ctx_webgl.canvas, 0, 0);
-    var dataURL = canvas.toDataURL("image/png");
-    
-    var svgString = new XMLSerializer().serializeToString(document.querySelector('.openseadragon-canvas svg'));
+    interfaceUtils.prompt("Resolution for export (1 = screen resolution):","5","Capture viewport")
+    .then((resolution) => {
+        var bounds = tmapp.ISS_viewer.viewport.getBounds();
+        var loading=interfaceUtils.loadingModal();
+        document.getElementById("ISS_viewer").style.zoom=1./resolution;
+        setTimeout(function () {
+            tmapp.ISS_viewer.viewport.fitBounds(bounds, true);
+            setTimeout(function () {
+                overlayUtils.getCanvasPNG()
+                .then (() => {
+                    $(loading).modal("hide");
+                    document.getElementById("ISS_viewer").style.zoom=1;
+                    setTimeout(function () {
+                        tmapp.ISS_viewer.viewport.fitBounds(bounds, true);
+                    },300);
+                })
+            },300);
+        },300);
+    })
+}
 
-    var DOMURL = self.URL || self.webkitURL || self;
-    var img = new Image();
-    var svg = new Blob([svgString], {type: "image/svg+xml;charset=utf-8"});
-    var url = DOMURL.createObjectURL(svg);
-    img.onload = function() {
-        ctx.drawImage(img, 0, 0);
-        var png = canvas.toDataURL("image/png");
-           
-        var a = document.createElement("a"); //Create <a>
-        a.href = png; //Image Base64 Goes here
-        a.download = "TissUUmaps_capture.png"; //File name Here
-        a.click(); //Downloaded file
-        setTimeout(function(){$(loading).modal("hide");},500);
-        DOMURL.revokeObjectURL(png);
-    };
-    img.src = url;
+/**
+ * Get the current canvas as a PNG image
+ */
+ overlayUtils.getCanvasPNG=function() {
+    return new Promise((resolve, reject) => {
+        // Create an empty canvas element
+        var canvas = document.createElement("canvas");
+        var ctx_osd = document.querySelector(".openseadragon-canvas canvas").getContext("2d");
+        var ctx_webgl = document.querySelector("#gl_canvas").getContext("webgl");
+        canvas.width = ctx_osd.canvas.width;
+        canvas.height = ctx_osd.canvas.height;
+        
+        // Copy the image contents to the canvas
+        var ctx = canvas.getContext("2d");
+        
+        ctx.drawImage(ctx_osd.canvas, 0, 0);
+        ctx.drawImage(ctx_webgl.canvas, 0, 0);
+        var dataURL = canvas.toDataURL("image/png");
+        
+        var svgString = new XMLSerializer().serializeToString(document.querySelector('.openseadragon-canvas svg'));
+
+        var DOMURL = self.URL || self.webkitURL || self;
+        var img = new Image();
+        var svg = new Blob([svgString], {type: "image/svg+xml;charset=utf-8"});
+        var url = DOMURL.createObjectURL(svg);
+        img.onload = function() {
+            ctx.drawImage(img, 0, 0);
+            var png = canvas.toDataURL("image/png");
+            
+            var a = document.createElement("a"); //Create <a>
+            a.href = png; //Image Base64 Goes here
+            a.download = "TissUUmaps_capture.png"; //File name Here
+            a.click(); //Downloaded file
+            DOMURL.revokeObjectURL(png);
+            resolve();
+        };
+        img.src = url;
+    })
 }
