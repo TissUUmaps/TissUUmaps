@@ -1194,19 +1194,23 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
             
                 
         col01=HTMLElementUtils.createColumn({"width":6});
-            label010=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_scale-col-label", "extraAttributes":{ "for":generated+"_scale-col" }});
+            label010=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_scale-col-label", "extraAttributes":{ "for":generated+"_scale-col", "class":"d-none" }});
             label010.innerText="Size column"
-            select011=HTMLElementUtils.createElement({"kind":"select", "id":generated+"_scale-col", "extraAttributes":{ "class":"form-select form-select-sm", "aria-label":".form-select-sm"}});
+            select011=HTMLElementUtils.createElement({"kind":"select", "id":generated+"_scale-col", "extraAttributes":{ "class":"form-select form-select-sm d-none", "aria-label":".form-select-sm"}});
             select011.disabled=true
 
     inputcheck0000.addEventListener("change", (event)=>{
         var value=event.target.checked;
         //var doms=["_gb-single","_gb-col","_gb-feature-value","_cb-colormap","_cb-bypoint","_cb-bygroup","_gb-feature-value",
         //          "_gb-col-value","_gb-col-name","_cb-cmap-value","_cb-col-value","_cb-bygroup-rand","_cb-bygroup-gene","_cb-bygroup-name" ]
-        if(value)
+        if(value) {
             interfaceUtils._mGenUIFuncs.enableDisable(event, ["_scale-col"],[0])
-        else 
+            interfaceUtils._mGenUIFuncs.hideShow(event, ["_scale-col","_scale-col-label"],[0,1])
+        }
+        else { 
             interfaceUtils._mGenUIFuncs.enableDisable(event, ["_scale-col"],[])
+            interfaceUtils._mGenUIFuncs.hideShow(event, ["_scale-col","_scale-col-label"],[])
+        }
     })
 
     row0.appendChild(collab)
@@ -1427,17 +1431,21 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
                 label0001.innerText="Use different opacity per marker"
 
         col01=HTMLElementUtils.createColumn({"width":6});
-            label010=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_opacity-col-label", "extraAttributes":{ "for":generated+"_opacity-col" }});
+            label010=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_opacity-col-label", "extraAttributes":{ "for":generated+"_opacity-col", "class":"d-none" }});
             label010.innerText="Opacity column"
-            select011=HTMLElementUtils.createElement({"kind":"select", "id":generated+"_opacity-col", "extraAttributes":{ "class":"form-select form-select-sm", "aria-label":".form-select-sm"}});
+            select011=HTMLElementUtils.createElement({"kind":"select", "id":generated+"_opacity-col", "extraAttributes":{ "class":"form-select form-select-sm d-none", "aria-label":".form-select-sm"}});
             select011.disabled=true
 
     inputcheck0000.addEventListener("change", (event)=>{
         var value=event.target.checked;
-        if(value)
+        if(value) {
             interfaceUtils._mGenUIFuncs.enableDisable(event, ["_opacity-col"],[0])
-        else
+            interfaceUtils._mGenUIFuncs.hideShow(event, ["_opacity-col","_opacity-col-label"],[0,1])
+        }
+        else {
             interfaceUtils._mGenUIFuncs.enableDisable(event, ["_opacity-col"],[])
+            interfaceUtils._mGenUIFuncs.hideShow(event, ["_opacity-col","_opacity-col-label"],[])
+        }
     })
             
     row0.appendChild(collab)
