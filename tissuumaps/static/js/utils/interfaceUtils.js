@@ -2011,7 +2011,7 @@ interfaceUtils.confirm = function (text, title) {
     })
 }
 
-interfaceUtils.prompt = function (text, value, title) {
+interfaceUtils.prompt = function (text, value, title, type) {
     return new Promise((resolve, reject) => {
         if (!title) title = "Prompt";
         var modalUID = "messagebox"
@@ -2036,7 +2036,12 @@ interfaceUtils.prompt = function (text, value, title) {
         row0.innerHTML = text
         row1=HTMLElementUtils.createRow({});
             col11=HTMLElementUtils.createColumn({"width":12});
-                input112=HTMLElementUtils.createElement({"kind":"input", "id":"confirmModalValue", "extraAttributes":{ "class":"form-text-input form-control", "type":"text", "value":value}});
+                if (type === undefined) {
+                    input112=HTMLElementUtils.createElement({"kind":"input", "id":"confirmModalValue", "extraAttributes":{ "class":"form-text-input form-control", "type":"text", "value":value}});
+                }
+                else {
+                    input112=HTMLElementUtils.createElement({"kind":"input", "id":"confirmModalValue", "extraAttributes":{ "class":"form-text-input form-control", "type":type, "value":value}});
+                }
 
         content.appendChild(row0);
         content.appendChild(row1);

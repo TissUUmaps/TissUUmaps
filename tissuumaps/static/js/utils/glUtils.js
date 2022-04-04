@@ -43,6 +43,8 @@ glUtils = {
     _pickedMarker: [-1, -1],
     _showColorbar: true,
     _showMarkerInfo: true,
+    _resolutionScale: 1.0,        // If this is set to below 1.0, the WebGL output will be upscaled
+    _resolutionScaleActual: 1.0,  // Automatic scaling factor computed from glUtils._resolutionScale
     _piechartPalette: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
 
@@ -852,7 +854,7 @@ glUtils._createMarkerWebGLCanvas = function() {
     const canvas = document.createElement("canvas");
     canvas.id = "gl_canvas";
     canvas.width = "1"; canvas.height = "1";
-    canvas.style = "position:relative; pointer-events:none; z-index: 12;";
+    canvas.style = "position:relative; pointer-events:none; z-index: 12; width: 100%; height: 100%";
     return canvas;
 }
 
@@ -1056,7 +1058,8 @@ glUtils.draw = function() {
 glUtils.pick = function(event) {
     if (event.quick) {
         glUtils._pickingEnabled = true;
-        glUtils._pickingLocation = [event.position.x, event.position.y];
+        glUtils._pickingLocation = [event.position.x * glUtils._resolutionScaleActual,
+                                    event.position.y * glUtils._resolutionScaleActual];
         glUtils.draw();  // This will update the value of glUtils._pickedMarker
 
         const pickedMarker = glUtils._pickedMarker;
@@ -1108,9 +1111,19 @@ glUtils.resize = function() {
     const gl = canvas.getContext("webgl", glUtils._options);
 
     const op = tmapp["object_prefix"];
-    const newSize = tmapp[op + "_viewer"].viewport.containerSize;
-    gl.canvas.width = newSize.x;
-    gl.canvas.height = newSize.y;
+    const width = tmapp[op + "_viewer"].viewport.containerSize.x;
+    const height = tmapp[op + "_viewer"].viewport.containerSize.y;
+
+    glUtils._resolutionScaleActual = glUtils._resolutionScale;
+    if (Math.max(width, height) * glUtils._resolutionScale >= 4096.0) {
+        // A too large WebGL canvas can lead to misalignment between the WebGL
+        // markers and the OSD image layers, so here the resolution scaling
+        // factor is adjusted to restrict the canvas size to a safe value
+        glUtils._resolutionScaleActual *= 4096.0 / (Math.max(width, height) * glUtils._resolutionScale);
+    }
+
+    gl.canvas.width = width * glUtils._resolutionScaleActual;
+    gl.canvas.height = height * glUtils._resolutionScaleActual;
 }
 
 

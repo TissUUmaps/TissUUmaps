@@ -316,6 +316,24 @@ overlayUtils.areAllFullyLoaded = function () {
     return true;
   }
 
+overlayUtils.waitFullyLoaded = function () {
+    function sleep (time) {
+        return new Promise((resolve) => setTimeout(resolve, time));
+    }
+    return new Promise((resolve, reject) => {
+        sleep(200).then (()=>{
+            if (overlayUtils.areAllFullyLoaded()) {
+                resolve();
+            }
+            else {
+                overlayUtils.waitFullyLoaded().then(()=>{
+                    resolve();
+                });
+            }    
+        });
+    });
+}
+
 /** 
  * @param {String} layerName name of an existing d3 node
  * @param {Number} opacity desired opacity
@@ -417,23 +435,36 @@ overlayUtils.saveSVG=function(){
  * Save the current canvas as a PNG image
  */
 overlayUtils.savePNG=function() {
-    interfaceUtils.prompt("Resolution for export (1 = screen resolution):","5","Capture viewport")
+    interfaceUtils.prompt("Resolution for export (1 = screen resolution):<br/><small><i>Max output size: 4096x4096 pixels</i></small><br/><br/><small>High resolution can take time to load!</small>","5","Capture viewport","number")
     .then((resolution) => {
+        resolution = Math.min (
+            resolution,
+            4096 / tmapp.ISS_viewer.viewport.containerSize.x,
+            4096 / tmapp.ISS_viewer.viewport.containerSize.y
+        );
         var bounds = tmapp.ISS_viewer.viewport.getBounds();
         var loading=interfaceUtils.loadingModal();
-        document.getElementById("ISS_viewer").style.zoom=1./resolution;
-        setTimeout(function () {
+        // We change the size of viewport to allow for higher resolution:
+        document.getElementById("ISS_viewer").style.setProperty("visibility", "hidden");
+        document.getElementById("ISS_viewer").style.setProperty("height", "Calc("+resolution.toString()+"*100%)", "important")
+        document.getElementById("ISS_viewer").style.setProperty("width", "Calc("+resolution.toString()+"*100%)", "important")
+        tmapp.ISS_viewer.immediateRender = true
+        setTimeout(() => {
             tmapp.ISS_viewer.viewport.fitBounds(bounds, true);
-            setTimeout(function () {
+            overlayUtils.waitFullyLoaded().then(() => {
                 overlayUtils.getCanvasPNG()
                 .then (() => {
-                    $(loading).modal("hide");
-                    document.getElementById("ISS_viewer").style.zoom=1;
-                    setTimeout(function () {
+                    // We go back to original size:
+                    document.getElementById("ISS_viewer").style.setProperty("height", "100%", "important")
+                    document.getElementById("ISS_viewer").style.setProperty("width", "100%", "important")
+                    tmapp.ISS_viewer.immediateRender = false
+                    setTimeout(() => {
                         tmapp.ISS_viewer.viewport.fitBounds(bounds, true);
+                        $(loading).modal("hide");
+                        document.getElementById("ISS_viewer").style.setProperty("visibility", "unset");
                     },300);
                 })
-            },300);
+            });
         },300);
     })
 }
@@ -447,9 +478,9 @@ overlayUtils.savePNG=function() {
         var canvas = document.createElement("canvas");
         var ctx_osd = document.querySelector(".openseadragon-canvas canvas").getContext("2d");
         var ctx_webgl = document.querySelector("#gl_canvas").getContext("webgl");
-        canvas.width = Math.min(ctx_osd.canvas.width, ctx_webgl.canvas.width);
-        canvas.height = Math.min(ctx_osd.canvas.height, ctx_webgl.canvas.height);
-        console.log(ctx_webgl.canvas.width, ctx_osd.canvas.height, window.devicePixelRatio);
+        canvas.width = Math.max(ctx_osd.canvas.width, ctx_webgl.canvas.width);
+        canvas.height = Math.max(ctx_osd.canvas.height, ctx_webgl.canvas.height);
+
         // Copy the image contents to the canvas
         var ctx = canvas.getContext("2d");
         
