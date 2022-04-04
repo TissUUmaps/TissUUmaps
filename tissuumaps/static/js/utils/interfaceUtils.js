@@ -783,6 +783,7 @@ interfaceUtils._mGenUIFuncs.getTabRadiosAndChecks= function(uid){
     allradios["shape_col"]=interfaceUtils.getElementById(uid+"_shape-bypoint");
     allradios["shape_fixed"]=interfaceUtils.getElementById(uid+"_shape-fixed");
     allradios["opacity_check"]=interfaceUtils.getElementById(uid+"_use-opacity");
+    allradios["_no_outline"]=interfaceUtils.getElementById(uid+"__no-outline");
     
     
     return allradios;
@@ -1255,6 +1256,10 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
                 labelshapefixed=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":generated+"_shape-fixed"}});
                 labelshapefixed.innerText="Use a fixed shape";
         
+            divformcheck4shape=HTMLElementUtils.createElement({ "kind":"div", "extraAttributes":{"class":"form-check"}});
+                inputcheck4shape=HTMLElementUtils.createElement({"kind":"input", "id":generated+"__no-outline","extraAttributes":{"class":"form-check-input","type":"checkbox" }});
+                label4shape=HTMLElementUtils.createElement({"kind":"label", "id":generated+"__no-outline-label", "extraAttributes":{ "for":generated+"__no-outline" }});
+                label4shape.innerText="Remove Outline"
         //------------------------
     
         colshape3=HTMLElementUtils.createColumn({"width":6});
@@ -1318,6 +1323,9 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
         colshape2.appendChild(divformcheck3shape);
             divformcheck3shape.appendChild(inputradio3shape);
             divformcheck3shape.appendChild(labelshapefixed);
+        colshape2.appendChild(divformcheck4shape);
+            divformcheck4shape.appendChild(inputcheck4shape);
+            divformcheck4shape.appendChild(label4shape);
     row0.appendChild(colshape3);
         colshape3.appendChild(divoptionscolgroup);    
             divoptionscolgroup.appendChild(rowrand);

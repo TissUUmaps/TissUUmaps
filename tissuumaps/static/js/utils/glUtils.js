@@ -423,9 +423,7 @@ glUtils.loadMarkers = function(uid) {
     const useOpacityFromMarker = dataUtils.data[uid]["_opacity_col"] != null;
     const markerOpacityFactor = dataUtils.data[uid]["_opacity"];
 
-    // TODO This value should be obtained from the GUI instead
-    let markerOutline = true;
-    if (uid in glUtils._markerOutline) markerOutline = glUtils._markerOutline[uid];
+    const markerOutline = !dataUtils.data[uid]["_no_outline"];
 
     // Additional info about the vertex format
     const NUM_COMPONENTS_PER_MARKER = 8;
