@@ -36,3 +36,13 @@
  - Add drag and drop to open CSV files and images
  - Add "Add layer" button for flask version
  - Add viewport capture
+
+## 3.0.5
+
+ - Move csv loading to Papa Parse streaming, to allow better memory management
+
+## 3.0.4
+ - Add filtering of markers
+
+## 3.0
+ - Add tissuumaps.jupyter module
