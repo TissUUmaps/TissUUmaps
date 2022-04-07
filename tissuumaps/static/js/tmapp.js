@@ -145,11 +145,10 @@ tmapp.init = function () {
 tmapp.options_osd = {
     id: "ISS_viewer",
     prefixUrl: "js/openseadragon/images/",
-    navigatorSizeRatio: 1,
+    navigatorSizeRatio: 0.15,
     wrapHorizontal: false,
     showNavigator: true,
     navigatorPosition: "BOTTOM_LEFT",
-    navigatorSizeRatio: 0.15,
     animationTime: 0.0,
     blendTime: 0,
     minZoomImageRatio: 1,
