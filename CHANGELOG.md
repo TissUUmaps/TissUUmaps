@@ -1,8 +1,15 @@
 # Changelog
 
+## 3.0.8.4
+
+ - Add tiling to viewport capture for higher resolution output
+ - Increase resolution of markers on high resolution devices
+ - Fix jumps on pan with mouse gesture (mobile)
+ - Add fix for bright image canvas on Safari
+ - Add an option to remove markers' outlines.
+
 ## 3.0.8.3
 
- - Add an option to remove markers' outlines.
  - Fix png artifact in Firefox, by generating jpg tiles.
 
 ## 3.0.8.2
