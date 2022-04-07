@@ -13,7 +13,6 @@ tmapp = {
     _url_suffix: "",
     _scrollDelay: 900,
     fixed_file: "",
-    mpp:0,
     slideFilename:"Main"
 }
 
@@ -31,7 +30,7 @@ tmapp.registerActions = function () {
     interfaceUtils.listen(op + '_fillregions_btn','click', function () { regionUtils.fillAllRegions(); },false);
     interfaceUtils.listen("capture_viewport","click",function(){overlayUtils.savePNG()},false)
     interfaceUtils.listen("plus-1-button","click",function(){interfaceUtils.generateDataTabUI()},false)
-    interfaceUtils.listen('save_project_menu', 'click', function() { projectUtils.saveProjectWindow() }, false);
+    interfaceUtils.listen('save_project_menu', 'click', function() { projectUtils.saveProject() }, false);
     interfaceUtils.listen('load_project_menu', 'click', function() { projectUtils.loadProjectFile() }, false);
     document.addEventListener("mousedown",function(){tmapp["ISS_viewer"].removeOverlay("ISS_marker_info");});
 
@@ -131,19 +130,6 @@ tmapp.init = function () {
         elt.classList.add("d-none");
     }
     
-    if (tmapp.mpp != 0) {
-        tmapp[vname].scalebar({
-            pixelsPerMeter: tmapp.mpp ? (1e6 / tmapp.mpp) : 0,
-            xOffset: 200,
-            yOffset: 10,
-            barThickness: 3,
-            color: '#555555',
-            fontColor: '#333333',
-            backgroundColor: 'rgba(255, 255, 255, 0.5)',
-            sizeAndTextRenderer: OpenSeadragon.ScalebarSizeAndTextRenderer.METRIC_LENGTH,
-            location: OpenSeadragon.ScalebarLocation.BOTTOM_RIGHT
-        });
-    }
     filterUtils.initFilters();
     if (window.hasOwnProperty("glUtils")) {
         console.log("Using GPU-based marker drawing (WebGL canvas)")
@@ -172,9 +158,18 @@ tmapp.options_osd = {
     constrainDuringPan: true,
     visibilityRatio: 0.85,
     showNavigationControl: false,
-    maxImageCacheCount:500,
+    maxImageCacheCount:2000,
     imageSmoothingEnabled:false,
-    preserveImageSizeOnResize: true
+    preserveImageSizeOnResize: true,
+    gestureSettingsUnknown: {
+        flickEnabled: false
+    },
+    gestureSettingsTouch: {
+        flickEnabled: false
+    },
+    gestureSettingsPen: {
+        flickEnabled: false
+    }
 }
 
 function toggleFullscreen() {

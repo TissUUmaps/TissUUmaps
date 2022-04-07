@@ -63,6 +63,8 @@
      * default: 5
      * @param {Integer} options.yOffset Offset location of the scale bar along y.
      * default: 5
+     * @param {Integer} options.zIndex z-index of the scale bar.
+     * default: 1
      * @param {Boolean} options.stayInsideImage When set to true, keep the 
      * scale bar inside the image when zooming out. default: true
      * @param {String} options.color The color of the scale bar using a color
@@ -88,7 +90,8 @@
 
         this.divElt = document.createElement("div");
         this.viewer.container.appendChild(this.divElt);
-        this.divElt.style.position = "relative";
+        this.divElt.style.zIndex = options.zIndex || 1;
+        this.divElt.style.position = "absolute";
         this.divElt.style.margin = "0";
         this.divElt.style.pointerEvents = "none";
 

@@ -324,10 +324,12 @@ overlayUtils.waitFullyLoaded = function () {
         sleep(200).then (()=>{
             if (overlayUtils.areAllFullyLoaded()) {
                 resolve();
+                return;
             }
             else {
                 overlayUtils.waitFullyLoaded().then(()=>{
                     resolve();
+                    return;
                 });
             }    
         });
@@ -437,56 +439,119 @@ overlayUtils.saveSVG=function(){
 overlayUtils.savePNG=function() {
     interfaceUtils.prompt("Resolution for export (1 = screen resolution):<br/><small><i>Max output size: 4096x4096 pixels</i></small><br/><br/><small>High resolution can take time to load!</small>","5","Capture viewport","number")
     .then((resolution) => {
-        resolution = Math.min (
-            resolution,
-            4096 / tmapp.ISS_viewer.viewport.containerSize.x,
-            4096 / tmapp.ISS_viewer.viewport.containerSize.y
-        );
         var bounds = tmapp.ISS_viewer.viewport.getBounds();
         var loading=interfaceUtils.loadingModal();
-        // We change the size of viewport to allow for higher resolution:
-        document.getElementById("ISS_viewer").style.setProperty("visibility", "hidden");
-        document.getElementById("ISS_viewer").style.setProperty("height", "Calc("+resolution.toString()+"*100%)", "important")
-        document.getElementById("ISS_viewer").style.setProperty("width", "Calc("+resolution.toString()+"*100%)", "important")
-        tmapp.ISS_viewer.immediateRender = true
-        setTimeout(() => {
-            tmapp.ISS_viewer.viewport.fitBounds(bounds, true);
-            overlayUtils.waitFullyLoaded().then(() => {
-                overlayUtils.getCanvasPNG()
-                .then (() => {
-                    // We go back to original size:
-                    document.getElementById("ISS_viewer").style.setProperty("height", "100%", "important")
-                    document.getElementById("ISS_viewer").style.setProperty("width", "100%", "important")
-                    tmapp.ISS_viewer.immediateRender = false
-                    setTimeout(() => {
-                        tmapp.ISS_viewer.viewport.fitBounds(bounds, true);
-                        $(loading).modal("hide");
-                        document.getElementById("ISS_viewer").style.setProperty("visibility", "unset");
-                    },300);
-                })
-            });
-        },300);
+        tmapp.ISS_viewer.world.getItemAt(0).immediateRender = true
+        overlayUtils.waitFullyLoaded().then(() => {
+            overlayUtils.getCanvasPNG(resolution)
+            .then (() => {
+                // We go back to original size:
+                tmapp.ISS_viewer.world.getItemAt(0).immediateRender = false
+                tmapp.ISS_viewer.viewport.fitBounds(bounds, true);
+                setTimeout(()=>{$(loading).modal("hide");}, 300);
+                
+                document.getElementById("ISS_viewer").style.setProperty("visibility", "unset");
+            })
+        });
     })
 }
 
 /**
  * Get the current canvas as a PNG image
  */
- overlayUtils.getCanvasPNG=function() {
+ overlayUtils.getCanvasPNG=function(tiling) {
+    tiling = tiling ? tiling : 1;
+    function sleep (time) {
+        return new Promise((resolve) => setTimeout(resolve, time));
+    }
+    function getCanvasCtx_aux (index, size, ctx, bounds) {
+        return new Promise((resolve, reject) => {
+            if (index == size*size) {
+                resolve(ctx);
+                return;
+            }
+            var index_x = index % size;
+            var index_y = Math.floor(index/size);
+            var newBounds = new OpenSeadragon.Rect(
+                bounds.x+index_x*bounds.width/size,
+                bounds.y+index_y*bounds.height/size,
+                bounds.width/size,
+                bounds.height/size,
+                0
+            );
+            console.log(bounds, newBounds);
+            tmapp.ISS_viewer.viewport.fitBounds(newBounds, true);
+            overlayUtils.waitFullyLoaded().then(() => {
+                overlayUtils.getCanvasCtx().then ((ctx_offset) => {
+                    ctx.drawImage(
+                        ctx_offset.canvas, 
+                        ctx_offset.canvas.width * index_x, 
+                        ctx_offset.canvas.height * index_y, 
+                        ctx_offset.canvas.width,
+                        ctx_offset.canvas.height
+                    );
+                    getCanvasCtx_aux(index+1, size, ctx, bounds).then(
+                        (ctx)=>{
+                            resolve(ctx);
+                            return;
+                        }
+                        
+                    )
+                });
+            });
+        });
+    }
+
+    return new Promise((resolve, reject) => {
+        if (tiling > 1) {
+            var canvas = document.createElement("canvas");
+            var ctx = canvas.getContext("2d");
+            var ctx_osd = document.querySelector(".openseadragon-canvas canvas").getContext("2d");
+            var ctx_webgl = document.querySelector("#gl_canvas").getContext("webgl");
+            canvas.width = tiling * Math.min(ctx_osd.canvas.width, ctx_webgl.canvas.width);
+            canvas.height = tiling * Math.min(ctx_osd.canvas.height, ctx_webgl.canvas.height);
+            var bounds = tmapp.ISS_viewer.viewport.getBounds();
+            getCanvasCtx_aux(0, tiling, ctx, bounds).then((ctx_tiling) => {
+                var png = ctx_tiling.canvas.toDataURL("image/png");
+                
+                var a = document.createElement("a"); //Create <a>
+                a.href = png; //Image Base64 Goes here
+                a.download = "TissUUmaps_capture.png"; //File name Here
+                a.click(); //Downloaded file
+                resolve(png);
+            })
+        }
+        else {
+            overlayUtils.getCanvasCtx().then((ctx)  =>{
+                var png = ctx.canvas.toDataURL("image/png");
+                
+                var a = document.createElement("a"); //Create <a>
+                a.href = png; //Image Base64 Goes here
+                a.download = "TissUUmaps_capture.png"; //File name Here
+                a.click(); //Downloaded file
+                resolve(png);
+            })
+        }
+    })
+}
+
+/**
+ * Get the current canvas as a 2d context
+ */
+ overlayUtils.getCanvasCtx=function() {
     return new Promise((resolve, reject) => {
         // Create an empty canvas element
         var canvas = document.createElement("canvas");
         var ctx_osd = document.querySelector(".openseadragon-canvas canvas").getContext("2d");
         var ctx_webgl = document.querySelector("#gl_canvas").getContext("webgl");
-        canvas.width = Math.max(ctx_osd.canvas.width, ctx_webgl.canvas.width);
-        canvas.height = Math.max(ctx_osd.canvas.height, ctx_webgl.canvas.height);
+        canvas.width = Math.min(ctx_osd.canvas.width, ctx_webgl.canvas.width);
+        canvas.height = Math.min(ctx_osd.canvas.height, ctx_webgl.canvas.height);
 
         // Copy the image contents to the canvas
         var ctx = canvas.getContext("2d");
         
         ctx.drawImage(ctx_osd.canvas, 0, 0, canvas.width, canvas.height);
         ctx.drawImage(ctx_webgl.canvas, 0, 0, canvas.width, canvas.height);
-        var dataURL = canvas.toDataURL("image/png");
         
         var svgString = new XMLSerializer().serializeToString(document.querySelector('.openseadragon-canvas svg'));
 
@@ -496,14 +561,8 @@ overlayUtils.savePNG=function() {
         var url = DOMURL.createObjectURL(svg);
         img.onload = function() {
             ctx.drawImage(img, 0, 0);
-            var png = canvas.toDataURL("image/png");
-            
-            var a = document.createElement("a"); //Create <a>
-            a.href = png; //Image Base64 Goes here
-            a.download = "TissUUmaps_capture.png"; //File name Here
-            a.click(); //Downloaded file
-            DOMURL.revokeObjectURL(png);
-            resolve();
+            resolve(ctx);
+            DOMURL.revokeObjectURL(url);
         };
         img.src = url;
     })

@@ -43,19 +43,20 @@ var projectUtils = {
 /**
  * This method is used to save the TissUUmaps state (gene expression, cell morphology, regions) */
  projectUtils.saveProject = function() {
-    var state = projectUtils.getActiveProject();
-    interfaceUtils.prompt("Save project under the name:","NewProject")
-    .then((filename) => {
-        state.filename = filename;
+    projectUtils.getActiveProject().then((state) => {
+        interfaceUtils.prompt("Save project under the name:","NewProject")
+        .then((filename) => {
+            state.filename = filename;
 
-        var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 4));
-        var dlAnchorElem=document.createElement("a");
-        dlAnchorElem.setAttribute("hidden","");
-        dlAnchorElem.setAttribute("href",     dataStr     );
-        dlAnchorElem.setAttribute("download", filename + ".tmap");
-        document.body.appendChild(dlAnchorElem);
-        dlAnchorElem.click();
-        document.body.removeChild(dlAnchorElem);
+            var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 4));
+            var dlAnchorElem=document.createElement("a");
+            dlAnchorElem.setAttribute("hidden","");
+            dlAnchorElem.setAttribute("href",     dataStr     );
+            dlAnchorElem.setAttribute("download", filename + ".tmap");
+            document.body.appendChild(dlAnchorElem);
+            dlAnchorElem.click();
+            document.body.removeChild(dlAnchorElem);
+        })
     })
 }
 
@@ -281,80 +282,6 @@ projectUtils.loadProjectFileFromServer = function(path) {
 
 /**
  * This method is used to load the TissUUmaps state (gene expression, cell morphology, regions) */
- projectUtils.saveProjectWindow = function() {
-    return projectUtils.saveProject();
-    
-    //TODO
-
-    settingsModal = document.getElementById("settingsModal");
-    if (! settingsModal) {
-        var div = document.createElement('div');
-        div.innerHTML = `<div class="modal in" id="settingsModal" tabindex="-1" role="dialog" aria-labelledby="modalLabelSmall" aria-hidden="true" style="display:None;">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="modalLabelSmall">Save TMAP project</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="$('#settingsModal').modal('hide');;"></button>
-                    </div>
-                    
-                    <div class="modal-body" id="settingsModalContent">
-                    </div>
-
-                    <div class="modal-footer">
-                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                      <button type="button" class="btn btn-primary" onclick="projectUtils.saveProject();">Save project</button>
-                    </div>
-                
-                </div>
-            </div>
-        </div>`;
-        document.body.appendChild(div);
-    }
-    
-    settingsModal = document.getElementById("settingsModal");
-    settingsModalContent = document.getElementById("settingsModalContent");
-    settingsModalContent.innerHTML = "";
-    projectUtils._settings.forEach(function(setting, index) {
-        row = HTMLElementUtils.createRow();
-        checkbox = HTMLElementUtils.inputTypeCheckbox({
-            id: "settings-" + index,
-            class: "setting-value",
-            checked: window[setting.module][setting.function],
-            extraAttributes: {
-                module: setting.module,
-                function: setting.function
-            },
-            eventListeners: { click: function () { 
-                // TODO: Remove JQuery dependency here?
-                window[setting.module][setting.function] = this.checked;
-                if (!projectUtils._activeState.settings)
-                    projectUtils._activeState.settings = [];
-                projectUtils._activeState.settings.forEach(function(settingSaved, index, object) {
-                    if (settingSaved.function == setting.function && settingSaved.function == setting.function) {
-                        object.splice(index, 1);
-                    }
-                });
-                projectUtils._activeState.settings.push(
-                    {
-                        "module":setting.module,
-                        "function":setting.function,
-                        "value":window[setting.module][setting.function]
-                    }
-                );
-                console.dir(projectUtils._activeState.settings);
-             } }
-        });
-        row.appendChild(checkbox);
-        desc = HTMLElementUtils.createElement({ kind: "span", innerHTML:  "<label style='cursor:pointer' for='settings-" + index + "'>&nbsp;&nbsp;"+setting.desc+"</label>"});
-        row.appendChild(desc);
-        settingsModalContent.appendChild(row);
-    })
-    settingsModal.style.display="block";
- }
-
-/**
- * This method is used to load the TissUUmaps state (gene expression, cell morphology, regions) */
  projectUtils.loadProject = function(state) {
     /*
     {
@@ -383,12 +310,6 @@ projectUtils.loadProjectFileFromServer = function(path) {
     }
     */
     document.getElementById("divMarkersDownloadButtons").innerHTML = "";
-    /*if (state.tabs) {
-        state.tabs.forEach(function(tab, i) {
-            if (tab.title) {document.getElementById("title-tab-" + tab.name).innerHTML = tab.title}
-            if (tab.visible === false) {document.getElementById("title-tab-" + tab.name).style.display="none"}
-        });
-    }*/
 
     if (state.plugins) {
         state.plugins.forEach(function(pluginName) {
@@ -455,18 +376,24 @@ projectUtils.loadProjectFileFromServer = function(path) {
             interfaceUtils.addMenuItem([menuButton.text], function(){ window.open(menuButton.url, '_self').focus();});
         });
     }
-    if (state.mpp) {
+    if (state.mpp !== undefined) {
+        // If ppm == 0, we display pixel size
+        // If ppm != 0, we display scale bar with metric length
+        var PIXEL_LENGTH = function(ppm, minSize) {
+            return OpenSeadragon.ScalebarSizeAndTextRenderer.METRIC_GENERIC(ppm, minSize, "pixels")
+        }
         var op = tmapp["object_prefix"];
         var vname = op + "_viewer";
         tmapp[vname].scalebar({
-            pixelsPerMeter: state.mpp ? (1e6 / state.mpp) : 0,
+            pixelsPerMeter: state.mpp ? (1e6 / state.mpp) : 1,
             xOffset: 200,
             yOffset: 10,
+            zIndex: 12,
             barThickness: 3,
             color: '#555555',
             fontColor: '#333333',
             backgroundColor: 'rgba(255, 255, 255, 0.5)',
-            sizeAndTextRenderer: OpenSeadragon.ScalebarSizeAndTextRenderer.METRIC_LENGTH,
+            sizeAndTextRenderer: state.mpp ? OpenSeadragon.ScalebarSizeAndTextRenderer.METRIC_LENGTH : PIXEL_LENGTH,
             location: OpenSeadragon.ScalebarLocation.BOTTOM_RIGHT
         });
     }
