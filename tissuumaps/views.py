@@ -512,8 +512,8 @@ def dzi_asso(path):
 def tile(path, level, col, row, format):
     completePath = os.path.join(app.basedir, path)
     if os.path.isfile( f"{completePath}_files/{level}/{col}_{row}.{format}"):
-        directory = os.path.dirname(f"{completePath}_files/{level}/{col}_{row}.{format}")
-        filename = os.path.basename(f"{completePath}_files/{level}/{col}_{row}.{format}")
+        directory = f"{completePath}_files/{level}/"
+        filename = f"{col}_{row}.{format}"
         return send_from_directory(directory, filename)
     slide = _get_slide(path)
     format = format.lower()
