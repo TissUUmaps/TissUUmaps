@@ -437,7 +437,7 @@ overlayUtils.saveSVG=function(){
  * Save the current canvas as a PNG image
  */
 overlayUtils.savePNG=function() {
-    interfaceUtils.prompt("Resolution for export (1 = screen resolution):<br/><small><i>Max output size: 4096x4096 pixels</i></small><br/><br/><small>High resolution can take time to load!</small>","5","Capture viewport","number")
+    interfaceUtils.prompt("Resolution for export (1 = screen resolution):<br/>High resolution can take time to load!</small>","4","Capture viewport","number")
     .then((resolution) => {
         var bounds = tmapp.ISS_viewer.viewport.getBounds();
         var loading=interfaceUtils.loadingModal();
