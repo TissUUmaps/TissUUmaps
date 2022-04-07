@@ -234,7 +234,7 @@ class _SlideCache(object):
             mpp_x = osr.properties[openslide.PROPERTY_NAME_MPP_X]
             mpp_y = osr.properties[openslide.PROPERTY_NAME_MPP_Y]
             slide.properties = osr.properties
-            slide.mpp = (float(mpp_x) + float(mpp_y)) / 2
+            slide.mpp = float(mpp_x)
         except (KeyError, ValueError):
             try:
                 if osr.properties["tiff.ResolutionUnit"] == "centimetre":
