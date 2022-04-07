@@ -460,7 +460,7 @@ overlayUtils.savePNG=function() {
  * Get the current canvas as a PNG image
  */
  overlayUtils.getCanvasPNG=function(tiling) {
-    tiling = tiling ? tiling : 1;
+    tiling = tiling ? Math.ceil(tiling) : 1;
     function sleep (time) {
         return new Promise((resolve) => setTimeout(resolve, time));
     }
