@@ -442,10 +442,13 @@ overlayUtils.savePNG=function() {
         var bounds = tmapp.ISS_viewer.viewport.getBounds();
         var loading=interfaceUtils.loadingModal();
         tmapp.ISS_viewer.world.getItemAt(0).immediateRender = true
+        var strokeWidth = regionUtils._polygonStrokeWidth
+        regionUtils._polygonStrokeWidth *= resolution
         overlayUtils.waitFullyLoaded().then(() => {
             overlayUtils.getCanvasPNG(resolution)
             .then (() => {
                 // We go back to original size:
+                regionUtils._polygonStrokeWidth = strokeWidth;
                 tmapp.ISS_viewer.world.getItemAt(0).immediateRender = false
                 tmapp.ISS_viewer.viewport.fitBounds(bounds, true);
                 setTimeout(()=>{$(loading).modal("hide");}, 300);
