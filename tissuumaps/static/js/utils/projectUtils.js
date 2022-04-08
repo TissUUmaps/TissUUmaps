@@ -241,8 +241,8 @@ projectUtils.makeButtonFromTabAux = function (dataset, csvFile, title, comment) 
         projectUtils._activeState.markerFiles = [];
     }
     projectUtils._activeState.markerFiles.push(markerFile);
-    markerFile.fromButton = projectUtils._activeState.markerFiles.length;
-    dataUtils.data[dataset].fromButton = projectUtils._activeState.markerFiles.length;
+    markerFile.fromButton = projectUtils._activeState.markerFiles.length - 1;
+    dataUtils.data[dataset].fromButton = projectUtils._activeState.markerFiles.length - 1;
     
     if( Object.prototype.toString.call( markerFile.path ) === '[object Array]' ) {
         interfaceUtils.createDownloadDropdownMarkers(markerFile);
