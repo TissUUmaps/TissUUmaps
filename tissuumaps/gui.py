@@ -1,4 +1,5 @@
 import logging
+import warnings
 try:
     from PyQt5.QtCore import *
     from PyQt5.QtWebEngineWidgets import *
@@ -341,7 +342,6 @@ class webEngine(QWebEngineView):
                 links.append(str(url.toLocalFile()))
             for link in links:
                 filename, file_extension = os.path.splitext(link)
-                print ("file_extension", file_extension)
                 if(file_extension == ".tmap"):
                     self.openImagePath(link)
                 elif(file_extension == ".csv"):
@@ -355,7 +355,6 @@ class webEngine(QWebEngineView):
     def on_downloadRequested(self, download):
         old_path = download.path()  # download.path()
         suffix = QFileInfo(old_path).suffix()
-        print (suffix)
         path, _ = QFileDialog.getSaveFileName(
             self, "Save File", old_path, "*." + suffix
         )
@@ -393,7 +392,6 @@ class webEngine(QWebEngineView):
             
             print ("Impossible to load",self.location)
             time.sleep(0.1)
-        #print ("loading page ", self.location)
         if (len(self.args) > 0):
             if not self.openImagePath(os.path.abspath(self.args[0])):
                 self.load(QUrl(self.location))
@@ -404,7 +402,6 @@ class webEngine(QWebEngineView):
     def getProperties(self, path):
         try:
             path = urllib.parse.unquote(path)[:-4]
-            print (path)
             slide = views._get_slide(path)
             propString = "\n".join([n + ": " + v for n,v in slide.properties.items()])
         except:
@@ -503,7 +500,6 @@ class webEngine(QWebEngineView):
                 folderPath = os.path.dirname(pathlib.Path(__file__))
             with zipfile.ZipFile(os.path.join(folderPath,"web.zip"), 'r') as zip_ref:
                 zip_ref.extractall(folderpath)
-            print ("Convert Done!")
             #QMessageBox.about(self, "Information", "Export done!")
         except:
             import traceback
@@ -556,7 +552,6 @@ class webEngine(QWebEngineView):
             parsed_url = urlparse(self.url().toString())
             previouspath = parse_qs(parsed_url.query)['path'][0]
             previouspath = os.path.abspath(os.path.join(self.app.basedir, previouspath))
-            print (previouspath)
         except:
             previouspath = self.app.basedir
         state = addRelativePath(json.loads(state), previouspath, os.path.dirname(folderpath))
@@ -564,7 +559,6 @@ class webEngine(QWebEngineView):
             json.dump(state, f, indent=4)
 
     def openImagePath (self, folderpath):
-        print ("openImagePath",folderpath)
         try:
             oldBaseDir = self.app.basedir
         except AttributeError:
@@ -572,7 +566,6 @@ class webEngine(QWebEngineView):
         self.lastdir = os.path.dirname(folderpath)
         if not folderpath:
             return
-        print ("openImagePath",oldBaseDir, folderpath)
         parts = Path(folderpath).parts
         if (not hasattr(self.app, 'cache')):
             setup(self.app)
@@ -604,7 +597,6 @@ class webEngine(QWebEngineView):
 
     @pyqtSlot(str, str, result="QJsonObject")
     def addCSV(self, path, csvpath):
-        print ("gui.addCSV", path, csvpath)
         if (csvpath == ""):
             csvpath = QFileDialog.getOpenFileName(self, 'Select a File')[0]
         if not csvpath:
@@ -625,12 +617,6 @@ class webEngine(QWebEngineView):
         
         relativePath = os.path.relpath(os.path.dirname(imgPath), path) 
 
-        print ("imgPath", imgPath)
-        print ("relativePath", relativePath)
-        print ("self.app.basedir", self.app.basedir)
-        print ("csvpath", csvpath)
-        print ("path", path)
-
         if ".." in relativePath:
             QMessageBox.warning(self, "Error", "Impossible to add files from a parent folder.")
             returnDict = {"markerFile":None}
@@ -643,7 +629,6 @@ class webEngine(QWebEngineView):
                         "uid": ''.join(random.choice(string.ascii_uppercase) for _ in range(6))
                     }
         }
-        print ("returnDict", returnDict)
         return returnDict
     
     @pyqtSlot(str, str, result="QJsonObject")
@@ -654,7 +639,6 @@ class webEngine(QWebEngineView):
             returnDict = {"dzi":None,"name":None}
             return returnDict
         parts = Path(layerpath).parts
-        print (self.app.basedir)
         if (self.app.basedir != parts[0]):
             if (not self.app.basedir == "C:\mnt\data\shared"):
                 reply = QMessageBox.question(self, "Error", "All layers must be in the same drive. Would you like to open this image only?")
@@ -676,7 +660,6 @@ class webEngine(QWebEngineView):
             return returnDict
         path = os.path.abspath(os.path.join(self.app.basedir, path))
         imgPath = os.path.abspath(os.path.join(self.app.basedir, imgPath))
-        print (path, os.path.dirname(imgPath))
         relativePath = os.path.relpath(os.path.dirname(imgPath), path) 
         if ".." in relativePath:
             reply = QMessageBox.question(self, "Error", "Impossible to add layers from a parent folder. Would you like to open this image only?")
@@ -725,6 +708,12 @@ def main():
     parser.add_option('-D', '--depth', metavar='LEVELS',
                 dest='FOLDER_DEPTH', type='int',
                 help='folder depth search for opening files [4]')
+
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
+    log = logging.getLogger('pyvips')
+    log.setLevel(logging.ERROR)
+    warnings.filterwarnings('ignore')
 
     (opts, args) = parser.parse_args()
     # Overwrite only those settings specified on the command line
