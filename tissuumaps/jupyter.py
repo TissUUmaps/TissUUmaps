@@ -1,3 +1,9 @@
+"""
+tissuumaps.jupyter
+====================================
+Module used to run TissUUmaps from a Jupyter Notebook or from Jupyter Lab.
+"""
+
 from tissuumaps import views
 from IPython.display import HTML, Javascript, clear_output
 from IPython.core.display import display
@@ -11,7 +17,6 @@ import os, time
 from pathlib import Path
 import uuid
 
-
 def secho(text, file=None, nl=None, err=None, color=None, **styles):
     pass
 
@@ -20,83 +25,20 @@ def echo(text, file=None, nl=None, err=None, color=None, **styles):
 
 click.echo = echo
 click.secho = secho
-class TissUUmapsViewer ():
-    def __init__(self, server, image, height=700):
-        self.server = server
-        self.image = image
-        self.id = "tissUUmapsViewer_" + str(uuid.uuid1()).replace("-","")[0:10]
-        iframe = ('<iframe src="{src}" style="width: {width}; '
-                  'height: {height}; border: none" id="{id}" allowfullscreen></iframe>')
-        src = f"http://{self.server.host}:{self.server.port}/{self.image}"
-        
-        print ("Loading url: ", src)
-        self.htmlIFrame = HTML(iframe.format(width="100%", height=str(height)+"px", src=src, id=self.id))
-        display(self.htmlIFrame)
-        time.sleep(2)
-    
-    def screenshot(self):
-        screenshot_id = self.id + "_" + str(uuid.uuid1()).replace("-","")[0:6]
-        display(Javascript("""
-            function listenToMessages_"""+screenshot_id+"""(evt){
-                if (evt.data.type != "screenshot") return;
-                window.removeEventListener("message", listenToMessages_"""+screenshot_id+""");
-                try {
-                    IPython.notebook.kernel.execute(`from IPython.display import update_display, HTML`)
-                    IPython.notebook.kernel.execute(`obj = HTML("<img src='`+evt.data.img+`'/>")`)
-                    IPython.notebook.kernel.execute(`update_display(obj, display_id="display_out_"""+screenshot_id+"""")`)
-                } catch (e) { // vscode or jupyterLab can not communicate back...
-                    if (e instanceof ReferenceError) {
-                        document.getElementById("img_out_"""+screenshot_id+"""").src = evt.data.img;
-                        let newNode = document.createElement("span");
-                        newNode.innerHTML = "Warning: run viewer.screenshot in a classical Jupyter Notebook if you want the screenshot to be saved.";
-                        document.getElementById("img_out_"""+screenshot_id+"""").parentElement.insertBefore(newNode, document.getElementById("img_out_"""+screenshot_id+""""));
-                    }
-                }
-            }
-            var iframe = document.getElementById('"""+self.id+"""');
-            window.addEventListener("message", listenToMessages_"""+screenshot_id+""");
-            iframe.contentWindow.postMessage({'module':'','function':'','arguments':'[]'},'*');
-        """))
-        display(HTML("<img src='' id='img_out_"+screenshot_id+"'/>"), display_id="display_out_"+screenshot_id)
-
-class TissUUmapsServer ():
-    def __init__(self, slideDir, port=5000, host="0.0.0.0"):
-        
-        log = logging.getLogger('werkzeug')
-        log.setLevel(logging.ERROR)
-        log = logging.getLogger('pyvips')
-        log.setLevel(logging.ERROR)
-        warnings.filterwarnings('ignore')
-
-        self.started = False
-        self.port = port
-        self.host = host
-        self.slideDir = slideDir
-        views.app.config['SLIDE_DIR'] = slideDir
-
-        def startServer ():
-            views.app.run(host="0.0.0.0", port=self.port, threaded=True, debug=False)
-        
-        if TissUUmapsServer.is_port_in_use(self.port):
-            log.warning (f"Port {self.port} already in use. Impossible to start TissUUmaps server.")
-            return
-
-        thread = threading.Thread(target = startServer)
-        thread.setdaemon = False
-        thread.start()
-        self.started = True
-
-    @staticmethod
-    def is_port_in_use(port):
-        import socket
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            return s.connect_ex(('localhost', port)) == 0
-
-    def viewer (self,image, height=700):
-        viewer = TissUUmapsViewer(self,image,height)
-        return viewer
 
 def opentmap (path, port=5100, host="localhost", height=700):
+    """
+    Open a tmap project
+
+    Args:
+        path (str): The path to a tmap file
+        port (int): The port to run the TissUUmaps server
+        host (str): The host to run the TissUUmaps server
+        height (int): The height of the jupyter iframe
+
+    Returns:
+        TissUUmapsViewer: The TissUUmaps viewer
+    """
     path = os.path.abspath(path)
     parts = Path(path).parts
     server = TissUUmapsServer(slideDir=parts[0], port=port, host=host)
@@ -111,6 +53,34 @@ def loaddata (images=[], csvFiles=[], xSelector="x", ySelector="y", keySelector=
               port=5100, 
               host="localhost",
               height=700, tmapFilename="_project", plugins=[]):
+    """
+    Load data in TissUUmaps
+
+    Args:
+        images (list | str): List of images or single image to display 
+        csvFiles (list |str): List of csv files or single csv file to display
+        xSelector (str): Name of the csv column defining the X coordinates
+        ySelector (str): Name of the csv column defining the Y coordinates
+        keySelector (str): Name of the csv column defining the grouping key
+        nameSelector (str): Name of the csv column defining the group name
+        colorSelector (str): Name of the csv column defining the group color
+        piechartSelector (str): Name of the csv column defining pie-charts
+        shapeSelector (str): Name of the csv column defining markers' shape
+        scaleSelector (str): Name of the csv column defining markers' scale
+        fixedShape (int): Name of the markers' shape
+        scaleFactor (int): Global scale of markers
+        colormap (str): Name of the colormap used if colorSelector is set
+        compositeMode: (str): Composite mode used for images
+        boundingBox (list): [X,Y,W,H] of the bounding box to display
+        port (int): The port to run the TissUUmaps server
+        host (str): The host to run the TissUUmaps server
+        height (int): The height of the jupyter iframe
+        tmapFilename (str): Name of the project file that will be created
+        plugins (list): List of plugins to add to the tmap project
+
+    Returns:
+        TissUUmapsViewer: The TissUUmaps viewer
+    """
     # make str input to arrays:
     if isinstance(images, str):
         images = [images]
@@ -192,6 +162,91 @@ def loaddata (images=[], csvFiles=[], xSelector="x", ySelector="y", keySelector=
     with open(tmapFile, "w") as f:
         json.dump(jsonTmap, f)
     return opentmap (os.path.abspath(tmapFile), port=port, host=host, height=height)
+
+class TissUUmapsViewer ():
+    """
+    Class representing a TissUUmaps viewer instance
+    """
+    def __init__(self, server, image, height=700):
+        self.server = server
+        self.image = image
+        self.id = "tissUUmapsViewer_" + str(uuid.uuid1()).replace("-","")[0:10]
+        iframe = ('<iframe src="{src}" style="width: {width}; '
+                  'height: {height}; border: none" id="{id}" allowfullscreen></iframe>')
+        src = f"http://{self.server.host}:{self.server.port}/{self.image}"
+        
+        print ("Loading url: ", src)
+        self.htmlIFrame = HTML(iframe.format(width="100%", height=str(height)+"px", src=src, id=self.id))
+        display(self.htmlIFrame)
+        time.sleep(2)
+    
+    def screenshot(self):
+        """
+        Capture the TissUUmaps viewport and display image in the Notebook.
+        """
+        screenshot_id = self.id + "_" + str(uuid.uuid1()).replace("-","")[0:6]
+        display(Javascript("""
+            function listenToMessages_"""+screenshot_id+"""(evt){
+                if (evt.data.type != "screenshot") return;
+                window.removeEventListener("message", listenToMessages_"""+screenshot_id+""");
+                try {
+                    IPython.notebook.kernel.execute(`from IPython.display import update_display, HTML`)
+                    IPython.notebook.kernel.execute(`obj = HTML("<img src='`+evt.data.img+`'/>")`)
+                    IPython.notebook.kernel.execute(`update_display(obj, display_id="display_out_"""+screenshot_id+"""")`)
+                } catch (e) { // vscode or jupyterLab can not communicate back...
+                    if (e instanceof ReferenceError) {
+                        document.getElementById("img_out_"""+screenshot_id+"""").src = evt.data.img;
+                        let newNode = document.createElement("span");
+                        newNode.innerHTML = "Warning: run viewer.screenshot in a classical Jupyter Notebook if you want the screenshot to be saved.";
+                        document.getElementById("img_out_"""+screenshot_id+"""").parentElement.insertBefore(newNode, document.getElementById("img_out_"""+screenshot_id+""""));
+                    }
+                }
+            }
+            var iframe = document.getElementById('"""+self.id+"""');
+            window.addEventListener("message", listenToMessages_"""+screenshot_id+""");
+            iframe.contentWindow.postMessage({'module':'','function':'','arguments':'[]'},'*');
+        """))
+        display(HTML("<img src='' id='img_out_"+screenshot_id+"'/>"), display_id="display_out_"+screenshot_id)
+
+class TissUUmapsServer ():
+    """
+    Class representing a TissUUmaps server instance
+    """
+    def __init__(self, slideDir, port=5000, host="0.0.0.0"):
+        
+        log = logging.getLogger('werkzeug')
+        log.setLevel(logging.ERROR)
+        log = logging.getLogger('pyvips')
+        log.setLevel(logging.ERROR)
+        warnings.filterwarnings('ignore')
+
+        self.started = False
+        self.port = port
+        self.host = host
+        self.slideDir = slideDir
+        views.app.config['SLIDE_DIR'] = slideDir
+
+        def startServer ():
+            views.app.run(host="0.0.0.0", port=self.port, threaded=True, debug=False)
+        
+        if TissUUmapsServer.is_port_in_use(self.port):
+            log.warning (f"Port {self.port} already in use. Impossible to start TissUUmaps server.")
+            return
+
+        thread = threading.Thread(target = startServer)
+        thread.setdaemon = False
+        thread.start()
+        self.started = True
+
+    @staticmethod
+    def is_port_in_use(port):
+        import socket
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            return s.connect_ex(('localhost', port)) == 0
+
+    def viewer (self,image, height=700):
+        viewer = TissUUmapsViewer(self,image,height)
+        return viewer
 
 if __name__ == '__main__':
     pass
