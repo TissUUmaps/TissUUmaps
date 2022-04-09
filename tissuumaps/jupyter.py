@@ -58,7 +58,7 @@ def loaddata (images=[], csvFiles=[], xSelector="x", ySelector="y", keySelector=
 
     Args:
         images (list | str): List of images or single image to display 
-        csvFiles (list |str): List of csv files or single csv file to display
+        csvFiles (list | str): List of csv files or single csv file to display
         xSelector (str): Name of the csv column defining the X coordinates
         ySelector (str): Name of the csv column defining the Y coordinates
         keySelector (str): Name of the csv column defining the grouping key
