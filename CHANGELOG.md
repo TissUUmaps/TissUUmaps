@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.8.5
+
+ - Minor fixes.
+
 ## 3.0.8.4
 
  - Add tiling to viewport capture for higher resolution output
