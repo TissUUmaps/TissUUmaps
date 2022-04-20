@@ -45,9 +45,10 @@ dataUtils = {
 }
 
 /** 
+* Creates an object inside dataUtils.data so that all options can be grouped by csv
 * @param {String} uid The id of the data group
 * @param {Object} options options that could be used inside, only holds name currently
-* Creates an object inside dataUtils.data so that all options can be grouped by csv */
+ */
 dataUtils.createDataset = function(uid,options){
     if(!options) options={};
     dataUtils.data[uid]={
@@ -67,9 +68,9 @@ dataUtils.createDataset = function(uid,options){
 }
 
 /** 
-* @param {HTMLEvent} event the event arries the file picker. which MUST have the data id in the begining separated by an "_"
 * Selects a data object and reads a csv and starts the whole process to add it in datautils and the interface. 
 * It can only be associated to a filepicker. It is atomatically listened when created in the interfaceUtils in the change event
+* @param {HTMLEvent} event the event arries the file picker. which MUST have the data id in the begining separated by an "_"
 */
 dataUtils.startCSVcascade= function(event){
     var data_id=event.target.id.split("_")[0];
@@ -91,9 +92,9 @@ dataUtils.startCSVcascade= function(event){
 CPDataUtils={};
 
 /** 
+* created the _processeddata list to be used in rendering
 * @param {String} data_id The id of the data group like "U234345"
 * @param {Array} data data coming from d3 after parsing the csv
-* created the _processeddata list to be used in rendering
 */
 dataUtils.processRawData = function(data_id, rawdata) {
     let data_obj = dataUtils.data[data_id];
@@ -124,13 +125,13 @@ dataUtils.processRawData = function(data_id, rawdata) {
 }
 
 /** 
-* @param {String} data_id The id of the data group like "U234345"
 * Make sure that the options selected are correct an call the necessary functions to process the data so
 * its ready to be displayed.
+* @param {String} data_id The id of the data group like "U234345"
 */
 dataUtils.updateViewOptions = function(data_id, force_reload_all){
 
-var data_obj = dataUtils.data[data_id];
+    var data_obj = dataUtils.data[data_id];
     
     if(data_obj === undefined){
         message="Load data first";
@@ -314,9 +315,9 @@ var data_obj = dataUtils.data[data_id];
 }
 
 /** 
+* Fills the necessary input dropdowns with the csv headers so that user can choose them
 * @param {String} data_id The id of the data group like "U234345"
 * @param {Object} datumExample example datum that contains the headers of the csv
-* Fills the necessary input dropdowns with the csv headers so that user can choose them
 */
 dataUtils.createMenuFromCSV = function(data_id,datumExample) {
     var data_obj = dataUtils.data[data_id];
@@ -351,10 +352,10 @@ dataUtils.createMenuFromCSV = function(data_id,datumExample) {
 }
 
 /** 
-* @param {String} data_id The id of the data group like "U234345"
-* @param {Object} thecsv csv file path
 * Calls dataUtils.createDataset and loads and parses the csv using D3. 
 * then calls dataUtils.createMenuFromCSV to modify the interface in its own tab
+* @param {String} data_id The id of the data group like "U234345"
+* @param {Object} thecsv csv file path
 */
 dataUtils.readCSV = function(data_id, thecsv, options) { 
     dataUtils.createDataset(data_id,{"name":data_id});
@@ -476,8 +477,8 @@ dataUtils.readCSV = function(data_id, thecsv, options) {
 }
 
 /** 
-* @param {Object} thecsv csv file path
 * This is a function to deal with the request of a csv from a server as opposed to local.
+* @param {Object} thecsv csv file path
 */
 dataUtils.XHRCSV = function(data_id, options) {
     var csvFile = options["path"]
@@ -491,7 +492,7 @@ dataUtils.XHRCSV = function(data_id, options) {
 }
 
 /**
- * Creeate the data_obj[op + "_barcodeGarden"] ("Garden" as opposed to "forest")
+ * Create the data_obj[op + "_barcodeGarden"] ("Garden" as opposed to "forest")
  * To save all the trees per barcode or per key. It is an object so that it is easy to just call
  * the right tree given the key. It will be created every time the user wants to group by something different, 
  * replacing the previous garden. It might date some time with big datasets, use at your own discretion.

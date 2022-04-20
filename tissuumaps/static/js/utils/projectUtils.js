@@ -546,7 +546,7 @@ projectUtils.convertOldMarkerFile = function(markerFile) {
 }
 
 /**
- * Given an array of layers, return the longest common path
+ * @summary Given an array of layers, return the longest common path
  * @param {!Array<!layers>} strs
  * @returns {string}
  */

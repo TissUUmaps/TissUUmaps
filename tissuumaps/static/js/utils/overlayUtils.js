@@ -282,14 +282,14 @@ overlayUtils.addLayer = function(layerName, tileSource, i, visible) {
             }
             interfaceUtils.alert("Impossible to load file.")
             showModal = false;
-        }
+        } 
     });
 }
 
 
 /** 
  * @param {Number} item Index of an OSD tile source
- * Set the opacity of a tile source */
+ * @summary Set the opacity of a tile source */
 overlayUtils.setItemOpacity = function(item) {
     opacity = overlayUtils._layerOpacities[item];
 
@@ -339,7 +339,7 @@ overlayUtils.waitFullyLoaded = function () {
 /** 
  * @param {String} layerName name of an existing d3 node
  * @param {Number} opacity desired opacity
- * Set the opacity of a tile source */
+ * @summary Set the opacity of a tile source */
 overlayUtils.setLayerOpacity= function(layerName,opacity){
     if(layerName in overlayUtils._d3nodes){
         var layer = overlayUtils._d3nodes[layerName];
@@ -351,7 +351,7 @@ overlayUtils.setLayerOpacity= function(layerName,opacity){
 
 /**
  * @param {String} colortype A string from [hex,hsl,rgb]
- * Get a random color in the desired format
+ * @summary Get a random color in the desired format
  */
 overlayUtils.randomColor = function (colortype) {
     if (!colortype) {

@@ -14,7 +14,7 @@ interfaceUtils={}
 * @param {String} event The event to listen for
 * @param {String} handler Function to answer with
 * @param {Bool} debug If true will print to console
-* Listen to an event of an element, if the element doesnçt exist get a warning. */
+* @summary Listen to an event of an element, if the element doesnçt exist get a warning. */
 interfaceUtils.listen= function(domid,event,handler,debug){
     var dbg=debug || false;
     var elem= document.getElementById(domid);
@@ -58,7 +58,7 @@ interfaceUtils.deleteRegionUI = function(callingbutton) {
 
 /**
  * @param {HTMLelement} callingbutton Button element containing parent region information
- *  Get the info of the region that has to be changed */
+ * @summary Get the info of the region that has to be changed */
 interfaceUtils.changeRegionUI = function (callingbutton) {
     var regionid = callingbutton[0].getAttribute("parentRegion");
     regionUtils.changeRegion(regionid);
@@ -66,8 +66,8 @@ interfaceUtils.changeRegionUI = function (callingbutton) {
 
 /** 
 * @param {String} domid The id of the select element
-* @param {String[]} Array of strings containing elements to add to the select
-* Add options to a select element */
+* @param {String[]} elemlist Array of strings containing elements to add to the select
+* @summary Add options to a select element */
 interfaceUtils.addElementsToSelect=function(domid,elemlist){
     var select= document.getElementById(domid);
     if(select){
@@ -86,7 +86,7 @@ interfaceUtils.addElementsToSelect=function(domid,elemlist){
 /** 
 * @param {String} domid The id of the select element
 * @param {Object[]} Array of objects containing elements to add to the select
-* Add options to a select element using Objects with the keys: "value* and "innerHTML" */
+* @summary Add options to a select element using Objects with the keys: "value* and "innerHTML" */
 interfaceUtils.addObjectsToSelect=function(domid,objlist){
     var select= document.getElementById(domid);
     if(select){
@@ -120,7 +120,7 @@ interfaceUtils.addSingleElementToSelect=function(domid,element,options){
 
 /** 
 * @param {String} domid The id of the select element
-* Erase all options in a select element */
+* @summary Erase all options in a select element */
 interfaceUtils.cleanSelect=function(domid){
     var select= document.getElementById(domid);
     if(select){       
@@ -133,7 +133,7 @@ interfaceUtils.cleanSelect=function(domid){
 
 /** 
 * @param {String} domid The id of the element
-* Make an element invisible */
+* @summary Make an element invisible */
 interfaceUtils.makeInvisible=function(domid){
     var elem= document.getElementById(domid);
     if(elem){
@@ -146,7 +146,7 @@ interfaceUtils.makeInvisible=function(domid){
 
 /** 
 * @param {String} domid The id of the element
-* Make an element visible */
+* @summary Make an element visible */
 interfaceUtils.makeVisible=function(domid){
     var elem= document.getElementById(domid);
     if(elem){
@@ -159,7 +159,7 @@ interfaceUtils.makeVisible=function(domid){
 
 /** 
 * @param {String} domid The id of the element
-* Disable an element */
+* @summary Disable an element */
 interfaceUtils.disableElement=function(domid){
     var elem= document.getElementById(domid);
     if(elem){
@@ -173,7 +173,7 @@ interfaceUtils.disableElement=function(domid){
 
 /** 
 * @param {String} domid The id of the element
-* Enable an element */
+* @summary Enable an element */
 interfaceUtils.enableElement=function(domid){
     var elem= document.getElementById(domid);
     if(elem){
@@ -187,7 +187,7 @@ interfaceUtils.enableElement=function(domid){
 /** 
 * @param {String} domid The id of the element
 * @return {Bool | null}
-* Ask if an element is enabled */
+* @summary Ask if an element is enabled */
 interfaceUtils.isEnabled=function(domid){
     var elem= document.getElementById(domid);
     if(elem){
@@ -203,7 +203,7 @@ interfaceUtils.isEnabled=function(domid){
 /** 
 * @param {String} domid The id of the element
 * @return {Object | null} Object with a "key" and a "value"
-* Get the selected option in a sleect element */
+* @summary Get the selected option in a sleect element */
 interfaceUtils.getSelectedIndexValue=function(domid){
     var selector= document.getElementById(domid);
     if(selector){
@@ -221,7 +221,7 @@ interfaceUtils.getSelectedIndexValue=function(domid){
 /** 
 * @param {String} classname The class of the elements
 * @return {HTMLelements[] | null} array of HTMl elements
-* Call the main dom.getElementsByClassName function with a warning if no elements exist */
+* @summary Call the main dom.getElementsByClassName function with a warning if no elements exist */
 interfaceUtils.getElementsByClassName=function(classname){
     var elems= document.getElementsByClassName(classname);
     if(elems){
@@ -236,7 +236,7 @@ interfaceUtils.getElementsByClassName=function(classname){
 /** 
 * @param {String} classname The class of the elements
 * @return {HTMLelements[] | null} array of HTMl elements
-* Call the main dom.getElementsByTagName function with a warning if no elements exist */
+* @summary Call the main dom.getElementsByTagName function with a warning if no elements exist */
 interfaceUtils.getElementsByTagName=function(tagname){
     var elems= document.getElementsByTagName(tagname);
     if(elems){
@@ -252,7 +252,7 @@ interfaceUtils.getElementsByTagName=function(tagname){
 * @param {String} choice thing to change
 * @param {String} value to change it to
 * @return {HTMLelement | null} HTMl element
-* Get the an element and warn if none exists */
+* @summary Get the an element and warn if none exists */
 interfaceUtils.setValueForElement=function(domid,choice, value){
     var elem= document.getElementById(domid);
     if(elem){
@@ -269,7 +269,7 @@ interfaceUtils.setValueForElement=function(domid,choice, value){
 * @param {String} attr thing to change
 * @param {String} value to change it to
 * @return {HTMLelement | null} HTMl element
-* Get the an element and warn if none exists */
+* @summary Get the an element and warn if none exists */
 interfaceUtils.setAttributeForElement=function(domid,attr, value){
     var elem= document.getElementById(domid);
     if(elem){
@@ -283,7 +283,7 @@ interfaceUtils.setAttributeForElement=function(domid,attr, value){
 * @param {String} domid The id of the element
 * @param {Boolean} debug Print warnings if true
 * @return {HTMLelement | null} HTMl element
-* Get the an element and warn if none exists */
+* @summary Get the an element and warn if none exists */
 interfaceUtils.getElementById=function(domid, debug=true){
     var elem= document.getElementById(domid);
     if(elem){
@@ -297,7 +297,7 @@ interfaceUtils.getElementById=function(domid, debug=true){
 /** 
 * @param {String} domid The id of the element
 * @return {String | null} HTMl element
-* Get the value of a dom element and warn if element does not exist*/
+* @summary Get the value of a dom element and warn if element does not exist*/
 interfaceUtils.getValueFromDOM=function(domid){
     var elem= document.getElementById(domid);
     if(elem){
@@ -312,7 +312,7 @@ interfaceUtils.getValueFromDOM=function(domid){
 /** 
 * @param {String} domid The id of the element
 * @return {String | null} innerHTMl
-* Get the innerHTML of a dom element and warn if element does not exist*/
+* @summary Get the innerHTML of a dom element and warn if element does not exist*/
 interfaceUtils.getInnerHTMLFromDOM=function(domid){
     var elem= document.getElementById(domid);
     if(elem){
@@ -352,7 +352,7 @@ interfaceUtils.emptyViewers = function (options) {
 /** 
 * @param {String} dzi Path and name of the DZI file
 * @param {String} viewer String that identifies a viewer and its 
-* associated components. For a single viewer the default is "ISS", 
+* @summary associated components. For a single viewer the default is "ISS", 
 * resulting in "ISS_viewer" as an identifier
 * Open a DZI in a specific viewer. If a main location for images 
 * is specified previously using the "url_prefix" variable, 
@@ -368,7 +368,7 @@ interfaceUtils.openDZI=function(dzi,viewer){
 
 /** 
 * @param {String} domid The id of the element
-* See if a dom is checked (mostly a checkbox) */
+* @summary See if a dom is checked (mostly a checkbox) */
 interfaceUtils.isChecked=function(domid){
     var check= document.getElementById(domid);
     if(check){
@@ -382,7 +382,7 @@ interfaceUtils.isChecked=function(domid){
 
 /** 
 * @param {String} domid The id of the element
-* checl if an input has o has not its first options sslected */
+* @summary check if an input has o has not its first options sslected */
 interfaceUtils.checkSelectNotZero=function(domid){
     var selector= document.getElementById(domid);
     if(selector){
@@ -400,7 +400,7 @@ interfaceUtils.checkSelectNotZero=function(domid){
 
 /** 
  * @param {object} ul dom object of the a tag 
- * find and actiate main tabs */
+ * @summary find and actiate main tabs */
 interfaceUtils.activateMainChildTabs=function(elid){
     if (!document.getElementById(elid)) {
         return;
@@ -443,7 +443,7 @@ interfaceUtils.activateMainChildTabs=function(elid){
 
 /** 
  * @param {object} a dom object of the a tag 
- * hides all the tabs that should not he  displayed except a itself */
+ * @summary hides all the tabs that should not he  displayed except a itself */
 interfaceUtils.hideTabsExcept = function (a) {
     //get a tag, get it's closes ul check the level, deactivate all but this
     const regex1 = RegExp("L([0-9]+)-tabs", 'g');
@@ -504,7 +504,7 @@ interfaceUtils.hideTabsExcept = function (a) {
 
 /** 
  * @param {object} a dom object of the a tag 
- * hides all the tabs that should not he  displayed except a itself */
+ * @summary hides all the tabs that should not he  displayed except a itself */
  interfaceUtils.toggleRightPanel = function (a) {
     var op = tmapp["object_prefix"];
     var menu=document.getElementById(op + "_menu");
@@ -531,7 +531,7 @@ interfaceUtils.hideTabsExcept = function (a) {
 
 /** 
 * @param {Object} options The id of the element
-* Create a complete new tab with all the UI, accordion and buttons. 
+* @summary Create a complete new tab with all the UI, accordion and buttons. 
 * Options are not implemented but are there if needed in the future 
 */
 interfaceUtils.generateDataTabUI = function(options){
@@ -617,14 +617,14 @@ interfaceUtils.generateDataTabUI = function(options){
 }
 
 /**
- * To not fill interfaceUtils with a lot of things, there is the _mGenUIFuncs
+ * @summary To not fill interfaceUtils with a lot of things, there is the _mGenUIFuncs
  * object encapsulating all the functions pertaining creation of tabs
  */
 interfaceUtils._mGenUIFuncs={ctx:{aUUID:0}}
 
 /** 
 * @param {HTMLEvent} event event that triggered function
-* Delete all trace of a tab including datautils.data.key*/
+* @summary Delete all trace of a tab including datautils.data.key*/
 interfaceUtils._mGenUIFuncs.deleteTab=function(uid){
     tabbutton=interfaceUtils.getElementById(uid+"_li-tab")
     tabbutton.remove();
@@ -646,7 +646,7 @@ interfaceUtils._mGenUIFuncs.deleteTab=function(uid){
 * @param {HTMLEvent} event event that triggered function
 * @param {Array.String} array domid suffixes within group
 * @param {Array.Number} option this option will be shown while all others are hidden
-* This function takes options within one specific tab and hide all except the one marked by option */
+* @summary This function takes options within one specific tab and hide all except the one marked by option */
 interfaceUtils._mGenUIFuncs.hideShow=function(event,array,options){
     uid=event.target.id.split("_")[0]
     array.forEach((domid, index)=>{
@@ -666,7 +666,7 @@ interfaceUtils._mGenUIFuncs.hideShow=function(event,array,options){
 * @param {HTMLEvent} event event that triggered function
 * @param {Array.String} array domid suffixes within group
 * @param {Number} option this option will be selected while all others are unselected
-* This function takes options within one specific tab and deselects all except the one marked by option */
+* @summary This function takes options within one specific tab and deselects all except the one marked by option */
 interfaceUtils._mGenUIFuncs.selectDeselect=function(event,array,options){
     uid=event.target.id.split("_")[0]
     array.forEach((domid, index)=>{
@@ -686,7 +686,7 @@ interfaceUtils._mGenUIFuncs.selectDeselect=function(event,array,options){
 * @param {HTMLEvent} event event that triggered function
 * @param {Array.String} array domid suffixes within group
 * @param {Number} option this option will be enabled while all others are disabled
-* This function takes options within one specific tab and disables all except the one marked by option */
+* @summary This function takes options within one specific tab and disables all except the one marked by option */
 interfaceUtils._mGenUIFuncs.enableDisable=function(event,array,options){
     uid=event.target.id.split("_")[0];
     array.forEach((domid, index)=>{
@@ -705,7 +705,7 @@ interfaceUtils._mGenUIFuncs.enableDisable=function(event,array,options){
 
 /** 
 * @param {HTMLEvent} event event that triggered function
-* Chages the name of the tab if this text in the form has changed */
+* @summary Chages the name of the tab if this text in the form has changed */
 interfaceUtils._mGenUIFuncs.ChangeTabName=function(uid, value){
     domelement=interfaceUtils.getElementById(uid+"_marker-tab-name");
     if(domelement){
@@ -719,7 +719,7 @@ interfaceUtils._mGenUIFuncs.ChangeTabName=function(uid, value){
 
 /** 
 * @param {HTMLEvent} event event that triggered function
-* Chages the name of the tab if this text in the form has changed */
+* @summary Chages the name of the tab if this text in the form has changed */
 interfaceUtils._mGenUIFuncs.ActivateTab=function(uid){
     domelement=interfaceUtils.getElementById(uid+"_marker-tab-button");
     if(domelement){
@@ -729,7 +729,7 @@ interfaceUtils._mGenUIFuncs.ActivateTab=function(uid){
 
 /**
  * @param {string} uid the data id
- * Returns an object full with inputs for a tab named as: 
+ * @summary Returns an object full with inputs for a tab named as: 
  * "X","Y","gb_sr","gb_col","gb_name","cb_cmap","cb_col"
  * @returns {Object} allinputs
  */
@@ -761,7 +761,7 @@ interfaceUtils._mGenUIFuncs.getTabDropDowns = function(uid){
 
 /**
  * @param {string} uid the data id
- * Returns an object full with inputs for a tab named as: 
+ * @summary Returns an object full with inputs for a tab named as: 
  * "gb_sr", "gb_col", "cb_cmap", "cb_col", "cb_gr", "cb_gr_rand", "cb_gr_gene", "cb_gr_name"
  * @returns {Object} allinputs
  */
@@ -791,7 +791,7 @@ interfaceUtils._mGenUIFuncs.getTabRadiosAndChecks= function(uid){
 
 /**
  * @param {string} uid the data id
- * Returns an object full with bools for checks and radios to see if they are checked
+ * @summary Returns an object full with bools for checks and radios to see if they are checked
  * @returns {Object} allinputs
  */
  interfaceUtils._mGenUIFuncs.areRadiosAndChecksChecked = function(uid){
@@ -822,7 +822,7 @@ interfaceUtils._mGenUIFuncs.generateUUID=function(){
 }
    
 /**
- * Creates a bootstrap tab to put on the top of the menu and it's pane, 
+ * @summary Creates a bootstrap tab to put on the top of the menu and it's pane, 
  * the pane is returned so it can be added to the corresponding existing parent o all panes
  * @returns {HTMLElement} divpane
  */
@@ -872,7 +872,7 @@ interfaceUtils._mGenUIFuncs.generateTab=function(){
 }
 
 /**
- * Generate the scaffold of the accordion. if you want more parts for the accordion, do it here.
+ * @summary Generate the scaffold of the accordion. if you want more parts for the accordion, do it here.
  * Returns an object with two elements: Pointers to the accordion contents so that we can fill them with the correct forms
  * @returns {Object} divpane={divaccordion:_,contents:_}
  */
@@ -912,7 +912,7 @@ interfaceUtils._mGenUIFuncs.generateAccordion=function(){
 }
 
  /**
- *  Creates progrwss bar, input file picker, tab name, X and Y and returns rows to append to the accordion
+ * @summary Creates progrwss bar, input file picker, tab name, X and Y and returns rows to append to the accordion
  * @returns {array} array of rows
  */
 interfaceUtils._mGenUIFuncs.generateAccordionItem1=function(){
@@ -986,7 +986,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem1=function(){
 }
 
  /**
- *  Creates the forms to color by
+ * @summary Creates the forms to color by
  * @returns {array} array of rows
  */
 interfaceUtils._mGenUIFuncs.generateColorByAccordion2= function(){
@@ -1102,7 +1102,7 @@ interfaceUtils._mGenUIFuncs.generateColorByAccordion2= function(){
 }
 
  /**
- *  Creates the forms to group by
+ * @summary Creates the forms to group by
  * @returns {array} a single rows
  */
   interfaceUtils._mGenUIFuncs.generateKeyColAccordion2= function(){
@@ -1139,7 +1139,7 @@ interfaceUtils._mGenUIFuncs.generateColorByAccordion2= function(){
 }
 
  /**
- *  Creates the whole options section
+ * @summary Creates the whole options section
  * @returns {array} array of rows
  */
 interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
@@ -1153,7 +1153,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
 }
 
 /**
- *  Creates piechart options
+ * @summary Creates piechart options
  * @returns {array} array of rows
  */
  interfaceUtils._mGenUIFuncs.generateAccordionItem3=function(){
@@ -1171,7 +1171,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
  }
 
  /**
- *  Creates the forms to scale by
+ * @summary Creates the forms to scale by
  * @returns {array} a single rows
  */
     interfaceUtils._mGenUIFuncs.generateAdvancedScaleAccordion3= function(){
@@ -1232,7 +1232,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
 }
 
  /**
- *  Creates the forms to shape by
+ * @summary Creates the forms to shape by
  * @returns {array} a single rows
  */
   interfaceUtils._mGenUIFuncs.generateAdvancedShapeAccordion3= function(){
@@ -1350,7 +1350,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
 }
 
  /**
- *  Creates the forms for piecharts
+ * @summary Creates the forms for piecharts
  * @returns {array} a single rows
  */
   interfaceUtils._mGenUIFuncs.generateAdvancedPiechartAccordion3= function(){
@@ -1409,7 +1409,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
 }
 
  /**
- *  Creates the forms to scale by
+ * @summary Creates the forms to scale by
  * @returns {array} a single rows
  */
   interfaceUtils._mGenUIFuncs.generateAdvancedOpacityAccordion3= function(){
@@ -1466,7 +1466,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
 }
 
  /**
- *  Creates the forms to scale by
+ * @summary Creates the forms to scale by
  * @returns {array} a single rows
  */
   interfaceUtils._mGenUIFuncs.generateAdvancedTooltipAccordion3= function(){
@@ -1494,7 +1494,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
 }
 
  /**
- *  Creates the forms to scale by
+ * @summary Creates the forms to scale by
  * @returns {array} a single rows
  */
   interfaceUtils._mGenUIFuncs.generateAdvancedMakeButtonAccordion3= function(){
@@ -1512,7 +1512,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
 }
 
  /**
- *  Creates the forms to color by
+ * @summary Creates the forms to color by
  * @returns {HTMLElement} row
  */
 interfaceUtils._mGenUIFuncs.generateRowOptionsButtons=function(){
@@ -1547,7 +1547,7 @@ interfaceUtils._mGenUIFuncs.rowForMarkerUI=function(){
 /**
  * @param {string} uid id in datautils.data
  * @param {object} expectedHeader object of the type {input:expectedHeaderFromCSV}
- * If somehow there is an expect CSV this will help you del with that
+ * @summary If somehow there is an expect CSV this will help you del with that
 */
 interfaceUtils._mGenUIFuncs.fillDropDownsIfExpectedCSV=function(uid,expectedHeader){
     //expected headr is an object that has these keys, other will be ignored;
@@ -1580,7 +1580,7 @@ interfaceUtils._mGenUIFuncs.fillDropDownsIfExpectedCSV=function(uid,expectedHead
 /**
  * @param {string} uid id in datautils.data
  * @param {object} expectedRadios object of the type {input:expectedHeaderFromCSV}
- * If somehow there is an expect CSV this will help you del with that
+ * @summary If somehow there is an expect CSV this will help you del with that
 */
 interfaceUtils._mGenUIFuncs.fillRadiosAndChecksIfExpectedCSV=function(uid,expectedRadios){
     //expected headr is an object that has these keys, other will be ignored;
@@ -1602,7 +1602,7 @@ interfaceUtils._mGenUIFuncs.fillRadiosAndChecksIfExpectedCSV=function(uid,expect
 
 /**
  * @param {string} uid id in datautils.data
- * Create the menu with the options to select marker, select shape and color to draw
+ * @summary Create the menu with the options to select marker, select shape and color to draw
 */
 interfaceUtils._mGenUIFuncs.groupUI=function(uid){
     //if we arrive here it's because  agroupgarden exists, all the information is there, 

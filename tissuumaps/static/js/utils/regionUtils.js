@@ -139,7 +139,7 @@ regionUtils.closePolygon = function () {
 
 /** 
  * @param {Object} JSON formatted region to convert to GeoJSON
- *  This is only for backward compatibility */
+ * @summary This is only for backward compatibility */
  regionUtils.oldRegions2GeoJSON = function (regionsObjects) {
     try {
         // Checking if json is in old format
@@ -156,7 +156,7 @@ regionUtils.closePolygon = function () {
 
 /** 
  * @param {Object} GeoJSON formatted region to import
- *  When regions are imported, create all objects for it from a region object */
+ * @summary When regions are imported, create all objects for it from a region object */
  regionUtils.regions2GeoJSON = function (regionsObjects) {
     function HexToRGB(hex) {
         var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -203,7 +203,7 @@ regionUtils.closePolygon = function () {
 
 /** 
  * @param {Object} GeoJSON formatted region to import
- *  When regions are imported, create all objects for it from a region object */
+ * @summary When regions are imported, create all objects for it from a region object */
 regionUtils.geoJSON2regions = function (geoJSONObjects) {
     // Helper functions for converting colors to hexadecimal
     var viewer = tmapp[tmapp["object_prefix"] + "_viewer"]
@@ -307,7 +307,7 @@ regionUtils.geoJSON2regions = function (geoJSONObjects) {
 
 /** 
  * @param {List} points List of list of list of points representing a path
- * Given points' coordinates, returns a path string */
+ * @summary Given points' coordinates, returns a path string */
 regionUtils.pointsToPath = function (points) {
     var path = "";
     points.forEach(function (subregions) {
@@ -327,13 +327,13 @@ regionUtils.pointsToPath = function (points) {
 /** 
  * @param {Number[]} p1 Array with x and y coords
  * @param {Number[]} p2 Array with x and y coords
- *  Distance between two points represented as arrays [x1,y1] and [x2,y2] */
+ * @summary Distance between two points represented as arrays [x1,y1] and [x2,y2] */
 regionUtils.distance = function (p1, p2) {
     return Math.sqrt((p1[0] - p2[0]) * (p1[0] - p2[0]) + (p1[1] - p2[1]) * (p1[1] - p2[1]))
 }
 /** 
  *  @param {Number[]} points Array of 2D points in normalized coordinates
- *  Create a region object and store it in the regionUtils._regions container */
+ *  @summary Create a region object and store it in the regionUtils._regions container */
 regionUtils.addRegion = function (points, regionid, color, regionClass) {
     if (!regionClass) regionClass = "";
     var op = tmapp["object_prefix"];
@@ -372,7 +372,7 @@ regionUtils.addRegion = function (points, regionid, color, regionClass) {
 }
 /** 
  *  @param {String} regionid Region identifier to be searched in regionUtils._regions
- *  Create the whole UI for a region in the side panel */
+ *  @summary Create the whole UI for a region in the side panel */
 regionUtils.regionUI = function (regionid) {
 
     var op = tmapp["object_prefix"];
@@ -550,7 +550,7 @@ regionUtils.regionUI = function (regionid) {
  *  @param {Number} x3 X coordinate of diagonal point in a bounding box
  *  @param {Number} y3 Y coordinate of diagonal point in a bounding box
  *  @param {Object} options Tell the function 
- *  Search for points inside a particular region */
+ *  @summary Search for points inside a particular region */
  regionUtils.searchTreeForPointsInBbox = function (quadtree, x0, y0, x3, y3, options) {    
     if (options.globalCoords) {
         var xselector = options.xselector;
@@ -558,7 +558,7 @@ regionUtils.regionUI = function (regionid) {
     }else{
         throw {name : "NotImplementedError", message : "ViewerPointInPath not yet implemented."}; 
     }
-    var pointsInside=[];  
+    var pointsInside=[];
     quadtree.visit(function (node, x1, y1, x2, y2) {
         if (!node.length) {
             const markerData = dataUtils.data[options.dataset]["_processeddata"];
@@ -573,7 +573,7 @@ regionUtils.regionUI = function (regionid) {
                     let p = {};
                     for (const key of columns) {
                         p[key] = markerData[key][d];
-                }
+                    }
                     pointsInside.push(p);
                 }
             }
@@ -589,7 +589,7 @@ regionUtils.regionUI = function (regionid) {
  *  @param {Number} x3 X coordinate of diagonal point in a bounding box
  *  @param {Number} y3 Y coordinate of diagonal point in a bounding box
  *  @param {Object} options Tell the function 
- *  Search for points inside a particular region */
+ *  @summary Search for points inside a particular region */
 regionUtils.searchTreeForPointsInRegion = function (quadtree, x0, y0, x3, y3, regionid, options) {    
     if (options.globalCoords) {
         var pointInPath = regionUtils.globalPointInPath;
@@ -632,7 +632,7 @@ regionUtils.fillAllRegions=function(){
 
 /** 
  * @param {String} regionid String id of region to fill
- * Given a region id, fill this region in the interface */
+ * @summary Given a region id, fill this region in the interface */
 regionUtils.fillRegion = function (regionid, value) {
     if (value === undefined) {
         // we toggle
@@ -659,7 +659,7 @@ regionUtils.fillRegion = function (regionid, value) {
 }
 /** 
  * @param {String} regionid String id of region to delete
- * Given a region id, deletes this region in the interface */
+ * @summary Given a region id, deletes this region in the interface */
 regionUtils.deleteRegion = function (regionid) {
     var regionPoly = document.getElementById(regionid + "_poly")
     regionPoly.parentElement.removeChild(regionPoly);
@@ -675,7 +675,7 @@ regionUtils.deleteRegion = function (regionid) {
 }
 /** 
  * @param {String} regionid String id of region to delete
- * Given a region id, deletes this region in the interface */
+ * @summary Given a region id, deletes this region in the interface */
 regionUtils.deleteAllRegions = function () {
     var canvas = overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
     regionsobj = d3.select(canvas);
@@ -709,8 +709,8 @@ regionUtils.updateAllRegionClassUI = function (regionClass) {
     });
 }
 /** 
- *     @param {String} regionClass Region class
- *  Add accordion for a new region class */
+ *  @param {String} regionClass Region class
+ *  @summary Add accordion for a new region class */
 regionUtils.addRegionClassUI = function (regionClass) {
     if (regionClass == null) regionClass = "";
     var op = tmapp["object_prefix"];
@@ -928,8 +928,8 @@ regionUtils.addRegionClassUI = function (regionClass) {
 }
 
 /** 
- *     @param {String} regionid Region identifier
- *  Change the region properties like color, class name or region name */
+ *  @param {String} regionid Region identifier
+ *  @summary Change the region properties like color, class name or region name */
 regionUtils.changeRegion = function (regionid) {
     if (document.getElementById(regionid + "_name_ta")) {
         var op = tmapp["object_prefix"];
@@ -963,8 +963,8 @@ regionUtils.changeRegion = function (regionid) {
 }
 
 /** 
- *     @param {String} regionid Region identifier
- *  Change the region properties like color, class name or region name */
+ *  @param {String} regionid Region identifier
+ *  @summary Change the region properties like color, class name or region name */
  regionUtils.updateRegionDraw = function (regionid) {
     var newregioncolor = regionUtils._regions[regionid].polycolor;
     var d3color = d3.rgb(newregioncolor);

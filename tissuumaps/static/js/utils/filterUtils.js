@@ -242,8 +242,8 @@
 }
 
 /** 
- * 
- * Init list of filters */
+ * Initialize list of filters
+ *  */
  filterUtils.initFilters = function() {
     var settingsPanel = document.getElementById("filterSettings");
     if (!settingsPanel) return;
@@ -310,8 +310,9 @@
 }
 
 /**
+ * Get params for a given filter
  * @param {Number} filterName
- * Get params for a given filter */
+ **/
 filterUtils.getFilterParams = function(filterName) {
     filterParams = filterUtils._filters[filterName].params;
     filterParams.eventListeners = {
@@ -323,8 +324,9 @@ filterUtils.getFilterParams = function(filterName) {
 }
 
 /** 
+ * Get function for a given filter 
  * @param {Number} filterName Index of an OSD tile source
- * Get function for a given filter */
+ **/
 filterUtils.getFilterFunction = function(filterName) {
     return filterUtils._filters[filterName].filterFunction;
 }
@@ -425,8 +427,6 @@ filterUtils.getFilterItems = function() {
 }
 
 filterUtils.setCompositeOperation = function(restart) {
-
-
     var op = tmapp["object_prefix"];
     if (!tmapp[op + "_viewer"].world || !tmapp[op + "_viewer"].world.getItemAt(Object.keys(filterUtils._filterItems).length-1)) {
         setTimeout(function() {
