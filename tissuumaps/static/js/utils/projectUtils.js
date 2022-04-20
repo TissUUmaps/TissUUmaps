@@ -91,7 +91,9 @@ projectUtils.getActiveProject = function () {
                 state.layerOpacities[i] = $("#opacity-layer-"+i).val();
                 state.layerVisibilities[i] = $("#visible-layer-"+i).is(":checked");
             });
-            resolve(state);
+            setTimeout(function() {
+                resolve(state);
+            },300);
         }
         makeButtons(callback)
     })
