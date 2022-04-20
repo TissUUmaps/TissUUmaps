@@ -24,7 +24,8 @@ setuptools.setup(
         'openslide-python>=1.1.2',
         'Pillow>=8.2.0',
         'ipython>=7.28.0',
-        'pyvips>=2.1.14'
+        'pyvips>=2.1.14',
+        'pyyaml>=6.0'
      ],
      extras_require={
         'pyqt5':[

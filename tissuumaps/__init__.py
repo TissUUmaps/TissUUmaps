@@ -22,6 +22,7 @@ import sys
 from flask import Flask
 from optparse import OptionParser
 import logging
+import yaml
 
 log = logging.getLogger()
 log.setLevel(logging.INFO)
@@ -64,11 +65,31 @@ app.config.from_envvar('TISSUUMAPS_CONF', silent=True)
 app.config["PLUGIN_FOLDER"] = plugins_folder
 app.config["PLUGIN_FOLDER_USER"] = os.path.join(os.path.expanduser("~"), '.tissuumaps', 'plugins')
 
-for module in glob.glob(app.config["PLUGIN_FOLDER"] + "/*.py") + glob.glob(app.config["PLUGIN_FOLDER_USER"] + "/*.py"):
-    if "__init__.py" in module:
-        continue
-    app.config["PLUGINS"].append(os.path.splitext(os.path.basename(module))[0])
-logging.debug("Plugin list:",app.config["PLUGINS"])
+def getPluginInFolder (folder):
+    pluginNames = [
+        os.path.splitext(os.path.basename(module))[0]
+        for module in glob.glob(os.path.join(folder, "*.py"))
+        if not "__init__.py" in module
+    ]
+    for pluginName in pluginNames:
+        if pluginName in [p["module"] for p in app.config["PLUGINS"]]:
+            continue
+        yml = os.path.join(folder,pluginName + ".yml")
+        if os.path.isfile(yml):
+            with open(yml) as file:
+                # The FullLoader parameter handles the conversion from YAML
+                # scalar values to Python the dictionary format
+                pluginInfo = yaml.load(file, Loader=yaml.FullLoader)
+        else:
+            pluginInfo = {
+                "version": "0.0",
+                "name": pluginName.replace("_"," ")
+            }
+        pluginInfo["module"] = pluginName
+        app.config["PLUGINS"].append (pluginInfo)
+    
+getPluginInFolder (app.config["PLUGIN_FOLDER_USER"])
+getPluginInFolder (app.config["PLUGIN_FOLDER"])
 
 app.config["isStandalone"] = False
 

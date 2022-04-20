@@ -353,7 +353,7 @@ def slide(filename):
     }
     return render_template(
         "tissuumaps.html",
-        plugins=app.config["PLUGINS"],
+        plugins=[p["module"] for p in app.config["PLUGINS"]],
         jsonProject=jsonProject,
         isStandalone=app.config["isStandalone"],
         readOnly=app.config["READ_ONLY"]
@@ -410,7 +410,7 @@ def tmapFile(filename):
         if "plugins" in state.keys():
             plugins = []
         else:
-            plugins = app.config["PLUGINS"]
+            plugins = [p["module"] for p in app.config["PLUGINS"]]
 
         return render_template(
             "tissuumaps.html",

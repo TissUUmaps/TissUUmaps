@@ -134,17 +134,26 @@ class SelectPluginWindow(QDialog):
             response = urllib.request.urlopen(self.url + "pluginList.json")
             self.items = json.loads(response.read())
             for plugin in self.items:
-                if plugin["py"].replace(".py","") in self.app.config["PLUGINS"]:
-                    plugin["installed"] = True
+                installedPlugins = [p for p in self.app.config["PLUGINS"] if p["module"] == plugin["py"].replace(".py","")]
+                if len(installedPlugins) > 0:
+                    plugin["old_version"] = installedPlugins[0]["version"]
                 else:
-                    plugin["installed"] = False
+                    plugin["old_version"] = "0.0"
             
             model = QStandardItemModel(self.listView)
             for item in self.items:
                 # create an item with a caption
-                standardItem = QStandardItem(item["name"])
-                standardItem.setCheckState(Qt.Checked if item["installed"] else Qt.Unchecked)
-                if not item["installed"]:
+                updateAvailable = False
+                if str(item["old_version"]).split(".") < str(item["version"]).split("."):
+                    updateAvailable = True
+                item["updateAvailable"] = updateAvailable
+                if updateAvailable:
+                    standardItem = QStandardItem(item["name"] + " - v." + str(item["version"]) + " available")
+                else:
+                    standardItem = QStandardItem(item["name"])
+
+                standardItem.setCheckState(Qt.Checked if not updateAvailable else Qt.Unchecked)
+                if updateAvailable:
                     standardItem.setCheckable(True)
                 standardItem.setEditable(False)
 
@@ -225,7 +234,7 @@ class MainWindow(QMainWindow):
         _exit.triggered.connect(self.close)
 
         plugins = self.bar.addMenu("Plugins")
-        for pluginName in self.app.config["PLUGINS"]:
+        for pluginName in [p["module"] for p in app.config["PLUGINS"]]:
             _plugin = QAction(pluginName,self)
             plugins.addAction(_plugin)
 
@@ -269,9 +278,9 @@ class MainWindow(QMainWindow):
             if dial.exec_() == QDialog.Accepted:
                 changed = False
                 for plugin in dial.itemsSelected():
-                    if not plugin["py"].replace(".py","") in self.app.config["PLUGINS"]:
+                    if plugin["updateAvailable"]:
                         changed = True
-                        for type in ["py","js"]:
+                        for type in ["py","js","yml"]:
                             if type in plugin.keys():
                                 urlFile = dial.url + plugin[type]
                                 localFile = os.path.join(self.app.config["PLUGIN_FOLDER_USER"],plugin[type])
