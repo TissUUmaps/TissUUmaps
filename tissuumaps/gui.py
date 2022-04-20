@@ -72,8 +72,8 @@ class CustomWebEnginePage(QWebEnginePage):
             return False
         return True
     
-    #def javaScriptConsoleMessage(self, level, msg, line, sourceID):
-    #    print (level, msg, line, sourceID)
+    def javaScriptConsoleMessage(self, level, msg, line, sourceID):
+        logging.debug ("Javascript console: "+" ; ".join([str(level), str(msg), str(line), str(sourceID)]))
     
 class textWindow(QDialog):
     def __init__(self, parent, title, message):
@@ -126,7 +126,7 @@ class SelectPluginWindow(QDialog):
             self.getPlugins()
         except:
             import traceback
-            print (traceback.format_exc())
+            logging.error (traceback.format_exc())
 
     def getPlugins(self):
         self.url = self.textbox.text()
@@ -164,7 +164,7 @@ class SelectPluginWindow(QDialog):
             try:
                 QMessageBox.warning(self, "Error", traceback.format_exc())
             except:
-                print (traceback.format_exc())
+                logging.error (traceback.format_exc())
 
     def itemsSelected(self):
         selected = []
@@ -268,11 +268,11 @@ class MainWindow(QMainWindow):
         self.showMaximized()
     
     def triggerPlugin(self, pName):
-        print ("Plugin triggered:", pName)
+        logging.debug ("Plugin triggered: " + pName)
         self.browser.page().runJavaScript("pluginUtils.startPlugin(\""+pName+"\");");
 
     def addPlugin(self):
-        print ("Adding plugins")
+        logging.debug ("Adding plugins")
         try:
             dial = SelectPluginWindow(self.app, self)
             if dial.exec_() == QDialog.Accepted:
@@ -290,7 +290,7 @@ class MainWindow(QMainWindow):
                     QMessageBox.warning(self, "Restart TissUUmaps", "The new plugins will only be available after restarting TissUUmaps.")
         except:
             import traceback
-            print (traceback.format_exc())
+            logging.error (traceback.format_exc())
 class webEngine(QWebEngineView):
     def __init__(self, qt_app, app, mainWin, args):
         super().__init__()
@@ -301,7 +301,9 @@ class webEngine(QWebEngineView):
         self.setMinimumSize(800,400)
         self.setContextMenuPolicy(Qt.NoContextMenu)
         self.lastdir = str(Path.home())
-        self.setPage(CustomWebEnginePage(self))
+        profile = QWebEngineProfile().defaultProfile()
+        profile.setHttpCacheType(QWebEngineProfile.DiskHttpCache)
+        self.setPage(CustomWebEnginePage(profile, self))
         self.webchannel = QWebChannel()
         self.page().setWebChannel(self.webchannel)
         self.webchannel.registerObject('backend', self)
@@ -311,8 +313,8 @@ class webEngine(QWebEngineView):
         self.mainWin.setWindowTitle("TissUUmaps")
         self.mainWin.resize(1024, 800)
         self.setZoomFactor(1.0)
-        self.page().profile().clearHttpCache()
-        self.page().profile().downloadRequested.connect(
+        profile.clearHttpCache()
+        profile.downloadRequested.connect(
             self.on_downloadRequested
         )
         self.settings().setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)
@@ -399,7 +401,7 @@ class webEngine(QWebEngineView):
             except:
                 pass
             
-            print ("Impossible to load",self.location)
+            logging.error ("Impossible to load",self.location)
             time.sleep(0.1)
         if (len(self.args) > 0):
             if not self.openImagePath(os.path.abspath(self.args[0])):
@@ -477,7 +479,7 @@ class webEngine(QWebEngineView):
                     addRelativePath_aux (state, path, path[0] == "layers")
             except:
                 import traceback
-                print (traceback.format_exc())
+                logging.error (traceback.format_exc())
                 
             return state
         parsed_url = urlparse(self.url().toString())
@@ -512,7 +514,7 @@ class webEngine(QWebEngineView):
             #QMessageBox.about(self, "Information", "Export done!")
         except:
             import traceback
-            print (traceback.format_exc())
+            logging.error (traceback.format_exc())
 
     @pyqtSlot(str)
     def saveProject(self, state):
@@ -551,7 +553,7 @@ class webEngine(QWebEngineView):
                     addRelativePath_aux (state, path)
             except:
                 import traceback
-                print (traceback.format_exc())
+                logging.error (traceback.format_exc())
                 
             return state
         folderpath = QFileDialog.getSaveFileName(self, 'Save project as',self.lastdir)[0]
@@ -587,11 +589,11 @@ class webEngine(QWebEngineView):
         #except:
         #    self.app.basedir = oldBaseDir
         #    import traceback
-        #    print (traceback.format_exc())
+        #    logging.error (traceback.format_exc())
         #    QMessageBox.about(self, "Error", "TissUUmaps did not manage to open this image.")
 
         #    return False
-        print ("Opening:", self.app.basedir, self.location + imgPath, QUrl(self.location + imgPath))
+        logging.debug (" ".join(["Opening image:", str(self.app.basedir), str(self.location + imgPath), str(QUrl(self.location + imgPath))]))
 
         filename = os.path.basename(imgPath)
         path = os.path.dirname(imgPath)
@@ -663,7 +665,7 @@ class webEngine(QWebEngineView):
             views._get_slide(imgPath)
         except:
             import traceback
-            print (traceback.format_exc())
+            logging.error (traceback.format_exc())
             QMessageBox.about(self, "Error", "TissUUmaps did not manage to open this image.")
             returnDict = {"dzi":None,"name":None}
             return returnDict
@@ -680,7 +682,6 @@ class webEngine(QWebEngineView):
             "dzi":relativePath + "/" + os.path.basename(imgPath) + ".dzi",
             "name":os.path.basename(imgPath)
         }
-        print ("returnDict", returnDict)
         return returnDict
     
 def is_port_in_use(port):
@@ -718,13 +719,28 @@ def main():
                 dest='FOLDER_DEPTH', type='int',
                 help='folder depth search for opening files [4]')
 
-    log = logging.getLogger('werkzeug')
-    log.setLevel(logging.ERROR)
-    log = logging.getLogger('pyvips')
-    log.setLevel(logging.ERROR)
-    warnings.filterwarnings('ignore')
-
     (opts, args) = parser.parse_args()
+    
+    if (opts.DEBUG):
+        log = logging.getLogger('werkzeug')
+        log.setLevel(logging.DEBUG)
+        log = logging.getLogger('pyvips')
+        log.setLevel(logging.DEBUG)
+        log = logging.getLogger()
+        log.setLevel(logging.DEBUG)
+        warnings.filterwarnings('default')
+        logging.debug ("Debug mode")
+        os.environ['WERKZEUG_RUN_MAIN'] = 'false'
+    else:
+        log = logging.getLogger('werkzeug')
+        log.setLevel(logging.ERROR)
+        log = logging.getLogger('pyvips')
+        log.setLevel(logging.ERROR)
+        log = logging.getLogger()
+        log.setLevel(logging.ERROR)
+        warnings.filterwarnings('ignore')
+        os.environ['WERKZEUG_RUN_MAIN'] = 'true'
+
     # Overwrite only those settings specified on the command line
     for k in dir(opts):
         if not k.startswith('_') and getattr(opts, k) is None:
@@ -761,12 +777,12 @@ def main():
     qt_app.processEvents()
 
     port = 5000
-    print ("Starting port detection")
+    logging.info ("Starting port detection")
     while (is_port_in_use(port)):
         port += 1
         if port == 6000:
             exit(0)
-    print ("Ending port detection", port)
+    logging.info ("Ending port detection " + str(port))
 
     def flaskThread():
         views.app.run(host="127.0.0.1", port=port, threaded=True, debug=False)

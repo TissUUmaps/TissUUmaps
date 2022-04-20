@@ -1,3 +1,5 @@
+import logging
+import warnings
 from optparse import OptionParser
 import os
 
@@ -52,8 +54,29 @@ def main ():
         views.app.config['SLIDE_DIR'] = os.path.abspath(args[0]) + "/"
     except IndexError:
         pass
-
-    views.app.run(host=opts.host, port=opts.port, threaded=True, debug=opts.DEBUG)
+    
+    if (opts.DEBUG):
+        log = logging.getLogger('werkzeug')
+        log.setLevel(logging.DEBUG)
+        log = logging.getLogger('pyvips')
+        log.setLevel(logging.DEBUG)
+        log = logging.getLogger()
+        log.setLevel(logging.DEBUG)
+        warnings.filterwarnings('default')
+        logging.debug ("Debug mode")
+        os.environ['WERKZEUG_RUN_MAIN'] = 'false'
+    else:
+        logging.info(f" * Starting TissUUmaps server on http://{opts.host}:{opts.port}")
+        log = logging.getLogger('werkzeug')
+        log.setLevel(logging.ERROR)
+        log = logging.getLogger('pyvips')
+        log.setLevel(logging.ERROR)
+        log = logging.getLogger()
+        log.setLevel(logging.ERROR)
+        warnings.filterwarnings('ignore')
+        os.environ['WERKZEUG_RUN_MAIN'] = 'true'
+    
+    views.app.run(host=opts.host, port=opts.port, threaded=True, debug=opts.DEBUG, use_reloader=False)
 
 if __name__ == '__main__':
     main ()
