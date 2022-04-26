@@ -2,7 +2,8 @@ name: Generate plugins-site
 on:
   workflow_dispatch:
   push:
-
+    paths:
+    - 'plugins_repo/**'
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
