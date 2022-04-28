@@ -1104,7 +1104,7 @@ glUtils.pick = function(event) {
             div.id = "ISS_marker_info";
             div.width = "1px"; div.height = "1px";
             if (glUtils._usePiechartFromMarker[uid]) {
-                div.innerHTML = markerUtils.makePiechartTable(markerData, markerIndex, piechartPropertyName);
+                div.innerHTML = markerUtils.makePiechartTable(uid, markerData, markerIndex, piechartPropertyName);
             } else {
                 div.innerHTML = markerUtils.getMarkerTooltip(uid, markerIndex);
                 console.log("Marker clicked:",tabName, groupName, "index:", markerIndex);

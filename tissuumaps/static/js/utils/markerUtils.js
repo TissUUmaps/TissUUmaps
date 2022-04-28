@@ -72,7 +72,7 @@ markerUtils.updatePiechartLegend = function() {
 }
 
 /** Adding piechart table on pickup */
-markerUtils.makePiechartTable = function(markerData, markerIndex, sectorsPropertyName) {
+markerUtils.makePiechartTable = function(uid, markerData, markerIndex, sectorsPropertyName) {
 
     let sectors = [];
     const numSectors = markerData[sectorsPropertyName][markerIndex].split(";").length;
@@ -85,6 +85,9 @@ markerUtils.makePiechartTable = function(markerData, markerIndex, sectorsPropert
     }
 
     let outText = "";
+    if (dataUtils.data[uid]["_tooltip_fmt"]) {
+        outText += "<b>" + markerUtils.getMarkerTooltip(uid, markerIndex) + ":</b><br/>";
+    }
     let sectorValues = markerData[sectorsPropertyName][markerIndex].split(";");
     let sortedSectors = [];
     sectors.forEach(function (sector, index) {
