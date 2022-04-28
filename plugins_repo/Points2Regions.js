@@ -12,7 +12,7 @@
      name:"Points2Regions Plugin",
      _dataset:null,
      _clusterKey:false,
-     _nclusters: 8,
+     _nclusters: 4,
      _expression_threshold: 3,
      _normalize_order: 1,
      _sigma:40,
