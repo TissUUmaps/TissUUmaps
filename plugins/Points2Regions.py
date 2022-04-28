@@ -7,6 +7,7 @@ import numpy as np
 from scipy.spatial import cKDTree
 from scipy.sparse import csc_matrix
 from sklearn.cluster import MiniBatchKMeans as KMeans
+from scipy.ndimage import gaussian_filter
 from skimage.measure import regionprops, approximate_polygon, find_contours
 import hashlib, tempfile
 
@@ -130,7 +131,7 @@ def binary_mask_to_polygon(binary_mask, tolerance=0, offset=None, scale=None):
     polygons = []
     # pad mask to close contours of shapes which start and end at an edge
     padded_binary_mask = np.pad(binary_mask, pad_width=1, mode='constant', constant_values=0)
-    contours = find_contours(padded_binary_mask, 0.5)
+    contours = find_contours(padded_binary_mask, 0)
     contours = np.subtract(contours, 1)
     for contour in contours:
         contour = approximate_polygon(contour, tolerance)
@@ -181,7 +182,7 @@ def create_gene_signatures(
             Coord       (#genes x 2) spatial coordinate of each vector.
     '''
 
-    ok_bin_types = ['gaussian_grid', 'gaussian_per_point']
+    ok_bin_types = ['gaussian_grid', 'gaussian_per_point', 'gaussian_grid_fast']
 
     if bin_type not in ok_bin_types:
         raise ValueError(f'bin_type must be one of the following: {ok_bin_types}')
@@ -201,7 +202,7 @@ def create_gene_signatures(
     n_pts = gene_position_xy.shape[0]
     if bin_type == 'gaussian_grid':
         # Compute grid start and stop
-        start = gene_position_xy.min(axis=0); stop = gene_position_xy.max(axis=0)
+        start = gene_position_xy.min(axis=0); stop = gene_position_xy.max(axis=0) + 0.5*bin_stride
         # Compute location of each bin
         y,x = np.meshgrid(np.arange(start[1],stop[1], bin_stride),
                 np.arange(start[0],stop[0], bin_stride))         
@@ -218,6 +219,22 @@ def create_gene_signatures(
         # Sum neighbours   
         gene_each_point_one_hot = np.array([vectors[:,gene_labels_numeric[i]] for i in range(n_pts)])
         gene_vectors = csc_matrix((aff, (q, p)), shape=(bin_coords.shape[0], n_pts)) @ gene_each_point_one_hot
+    elif bin_type == 'gaussian_grid_fast':
+        # Bin each marker onto a 2D grid
+        m = gene_position_xy.min(axis=0)
+        k = bin_stride
+        xy_downsamples = np.array((gene_position_xy - m) // k, dtype='int')
+        dim = np.append(xy_downsamples.max(axis=0)+1, n_genes)
+        linearind = np.ravel_multi_index((xy_downsamples[:,0], xy_downsamples[:,1], gene_labels_numeric),  dim)
+        linearind_unique, counts = np.unique(linearind, return_counts=True)
+        x,y,c = np.unravel_index(linearind_unique, dim)
+        gene_vectors = np.zeros(dim); gene_vectors[x,y,c]=counts
+        alpha = spatial_scale/bin_stride*2*np.pi
+        for l in gene_labels_numeric_unqiue:
+            gene_vectors[:,:,l] = alpha * gaussian_filter(gene_vectors[:,:,l], spatial_scale/bin_stride)
+        gene_vectors = gene_vectors.reshape((-1,len(gene_labels_numeric_unqiue)), order='F')
+        x,y = np.meshgrid(np.arange(dim[0]),np.arange(dim[1]))
+        bin_coords = k * (np.array([x.ravel(), y.ravel()]).T) + m
     elif bin_type == 'gaussian_per_point':
         bin_coords = gene_position_xy.copy()
         vectors = np.eye(n_genes)
@@ -284,13 +301,11 @@ def makejson(regionname: str, labels_numeric_unique, labels: np.array, xy:np.arr
     return json
 
 
-def points2geojson(xy: np.array, labels: np.array, sigma: float, stride: int, region_name: str = 'My regions', nclusters: int = 8, normalize_order: int = 1, expression_threshold: float = 3):
+def points2geojson(xy: np.array, labels: np.array, sigma: float, stride: int, region_name: str = 'My regions', nclusters: int = 4, normalize_order: int = 1, expression_threshold: float = 3):
     colors = [COLORS[k % len(COLORS)] for k in range(nclusters)]
-    print (colors)
 
     # Create neighbourhood vectors
-    gene_vectors, gene_vector_coords, gene_labels_unique = create_gene_signatures(labels, xy, sigma, bin_stride=stride, bin_type='gaussian_grid')
-
+    gene_vectors, gene_vector_coords, gene_labels_unique = create_gene_signatures(labels, xy, sigma, bin_stride=stride, bin_type='gaussian_grid_fast')
     # Filter genes
     gene_vectors, gene_vector_coords = preprocess_vectors(gene_vectors, gene_vector_coords, threshold=expression_threshold, logtform=False, normalize=True, ord=normalize_order)
 
