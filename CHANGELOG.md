@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.0.8.8
+## 3.0.8.9
 
  - Make it possible to update to newer version of plugins
  - Fully support --debug option in command line
