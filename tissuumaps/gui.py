@@ -730,7 +730,7 @@ def main():
         log.setLevel(logging.DEBUG)
         warnings.filterwarnings('default')
         logging.debug ("Debug mode")
-        os.environ['WERKZEUG_RUN_MAIN'] = 'false'
+        #os.environ['WERKZEUG_RUN_MAIN'] = 'true'
     else:
         log = logging.getLogger('werkzeug')
         log.setLevel(logging.ERROR)
@@ -739,7 +739,7 @@ def main():
         log = logging.getLogger()
         log.setLevel(logging.ERROR)
         warnings.filterwarnings('ignore')
-        os.environ['WERKZEUG_RUN_MAIN'] = 'true'
+        #os.environ['WERKZEUG_RUN_MAIN'] = 'true'
 
     # Overwrite only those settings specified on the command line
     for k in dir(opts):
