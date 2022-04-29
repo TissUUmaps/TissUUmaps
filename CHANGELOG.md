@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.0.8.6
+
+ - Make it possible to update to newer version of plugins
+ - Fully support --debug option in command line
+ - Add tooltip title for piecharts
+ - Add documentation https://tissuumaps.github.io/TissUUmaps-docs/
+ - Fix marker picking when pixel ratio != 1
+ - Other minor fixes and cleaning
 ## 3.0.8.5
 
  - Minor fixes.
