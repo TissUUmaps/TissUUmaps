@@ -72,7 +72,8 @@ markerUtils.updatePiechartLegend = function() {
 }
 
 /** Adding piechart table on pickup */
-markerUtils.makePiechartTable = function(uid, markerData, markerIndex, sectorsPropertyName) {
+markerUtils.makePiechartTable = function(uid, markerIndex, sectorsPropertyName) {
+    const markerData = dataUtils.data[uid]["_processeddata"];
 
     let sectors = [];
     const numSectors = markerData[sectorsPropertyName][markerIndex].split(";").length;

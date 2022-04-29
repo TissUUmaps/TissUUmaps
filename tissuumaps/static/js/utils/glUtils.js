@@ -1104,7 +1104,7 @@ glUtils.pick = function(event) {
             div.id = "ISS_marker_info";
             div.width = "1px"; div.height = "1px";
             if (glUtils._usePiechartFromMarker[uid]) {
-                div.innerHTML = markerUtils.makePiechartTable(uid, markerData, markerIndex, piechartPropertyName);
+                div.innerHTML = markerUtils.makePiechartTable(uid, markerIndex, piechartPropertyName);
             } else {
                 div.innerHTML = markerUtils.getMarkerTooltip(uid, markerIndex);
                 console.log("Marker clicked:",tabName, groupName, "index:", markerIndex);
@@ -1142,10 +1142,10 @@ glUtils.resize = function() {
     const gl = canvas.getContext("webgl", glUtils._options);
 
     const op = tmapp["object_prefix"];
-    const width = tmapp[op + "_viewer"].viewport.containerSize.x * window.devicePixelRatio;
-    const height = tmapp[op + "_viewer"].viewport.containerSize.y * window.devicePixelRatio;
+    const width = tmapp[op + "_viewer"].viewport.containerSize.x;
+    const height = tmapp[op + "_viewer"].viewport.containerSize.y;
 
-    glUtils._resolutionScaleActual = glUtils._resolutionScale;
+    glUtils._resolutionScaleActual = glUtils._resolutionScale * window.devicePixelRatio;
     if (Math.max(width, height) * glUtils._resolutionScale >= 4096.0) {
         // A too large WebGL canvas can lead to misalignment between the WebGL
         // markers and the OSD image layers, so here the resolution scaling
