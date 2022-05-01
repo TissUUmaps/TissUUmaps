@@ -64,7 +64,6 @@ def main ():
         log.setLevel(logging.DEBUG)
         warnings.filterwarnings('default')
         logging.debug ("Debug mode")
-        os.environ['WERKZEUG_RUN_MAIN'] = 'false'
     else:
         logging.info(f" * Starting TissUUmaps server on http://{opts.host}:{opts.port}")
         log = logging.getLogger('werkzeug')
@@ -74,9 +73,8 @@ def main ():
         log = logging.getLogger()
         log.setLevel(logging.ERROR)
         warnings.filterwarnings('ignore')
-        os.environ['WERKZEUG_RUN_MAIN'] = 'true'
     
-    views.app.run(host=opts.host, port=opts.port, threaded=True, debug=opts.DEBUG, use_reloader=False)
+    views.app.run(host=opts.host, port=opts.port, threaded=True, debug=False, use_reloader=False)
 
 if __name__ == '__main__':
     main ()
