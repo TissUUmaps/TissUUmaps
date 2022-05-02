@@ -40,12 +40,11 @@ from flask import (
 
 from tissuumaps.flask_filetree import filetree
 def _fnfilter (filename):
-    filename = filename.lower()
     if OpenSlide.detect_format(filename):
         return True
     elif imghdr.what(filename):
         return True
-    elif ".tmap" in filename:
+    elif ".tmap" in filename.lower():
         return True
     return False
 
