@@ -62,10 +62,6 @@ class Plugin ():
         resp = make_response(strRegions)
         return resp
 
-    def getRegions (self, df):
-        return {"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"MultiPolygon","coordinates":[[[[11836.1875,2616.4374999999995],[13668.887499999999,2425.5312499999995],[14680.690625000001,6243.656249999999],[11244.378125,7026.371875],[9850.7625,3780.965625]]]]},"properties":{"name":"region1","classification":{"name":"Clusters"},"color":[54,8,104],"isLocked":False}},{"type":"Feature","geometry":{"type":"MultiPolygon","coordinates":[[[[16303.393750000001,4353.684375],[18594.26875,5842.753124999999],[17487.0125,7255.459375],[16513.390625,6759.103125]]]]},"properties":{"name":"region2","classification":{"name":"Clusters"},"color":[115,151,33],"isLocked":False}},{"type":"Feature","geometry":{"type":"MultiPolygon","coordinates":[[[[18327,3380.0624999999995],[20407.878125,3170.0656249999997],[21037.86875,4888.221874999999],[19090.625,5632.75625]]]]},"properties":{"name":"region3","classification":{"name":"Clusters"},"color":[55,139,119],"isLocked":False}}]}
-
-
 #COLORS = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', '#ffffff', '#000000']
 
 COLORS = [
@@ -131,7 +127,7 @@ def binary_mask_to_polygon(binary_mask, tolerance=0, offset=None, scale=None):
     polygons = []
     # pad mask to close contours of shapes which start and end at an edge
     padded_binary_mask = np.pad(binary_mask, pad_width=1, mode='constant', constant_values=0)
-    contours = find_contours(padded_binary_mask, 0)
+    contours = find_contours(padded_binary_mask, 0.5)
     contours = np.subtract(contours, 1)
     for contour in contours:
         contour = approximate_polygon(contour, tolerance)
@@ -274,7 +270,7 @@ def cluster_signatures(gene_vectors, n_clusters=6, threshold=None, logtform=True
     '''
         Cluster gene vectors (#ngenes x #gene types).
     '''
-    kmeans =  KMeans(n_clusters).fit(gene_vectors)
+    kmeans =  KMeans(n_clusters, random_state=42).fit(gene_vectors)
     labels = kmeans.labels_
     cluster_centers = kmeans.cluster_centers_
     return labels, cluster_centers

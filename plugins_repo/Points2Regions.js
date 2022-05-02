@@ -224,6 +224,8 @@ Points2Regions.run = function () {
 }
 
 Points2Regions.loadRegions = function (data) {
+    // Change stroke width for computation reasons:
+    regionUtils._polygonStrokeWidth = 0.0005;
     groupRegions = Object.values(regionUtils._regions).filter(
         x => x.regionClass==Points2Regions._region_name
     ).forEach(function (region) {
