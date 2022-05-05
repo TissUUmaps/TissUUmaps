@@ -630,6 +630,12 @@ class webEngine(QWebEngineView):
         self.app.basedir = parts[0]
         imgPath = os.path.join(*parts[1:])
         imgPath = imgPath.replace("\\","/")
+
+        _, file_extension = os.path.splitext(folderpath)
+        if file_extension == ".csv":
+            logging.debug (" ".join(["Opening csv:", str(self.app.basedir), str(self.location + imgPath)]))
+            self.page().runJavaScript(f"flask.standalone.addCSV(\"{folderpath}\");")
+            return True
         logging.debug (" ".join(["Opening image:", str(self.app.basedir), str(self.location + imgPath), str(QUrl(self.location + imgPath))]))
 
         filename = os.path.basename(imgPath)
