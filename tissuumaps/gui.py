@@ -620,10 +620,6 @@ class webEngine(QWebEngineView):
         self.addRecent (folderpath)
 
     def openImagePath (self, folderpath):
-        try:
-            oldBaseDir = self.app.basedir
-        except AttributeError:
-            oldBaseDir = ""
         self.lastdir = os.path.dirname(folderpath)
         if not folderpath:
             return
@@ -634,16 +630,6 @@ class webEngine(QWebEngineView):
         self.app.basedir = parts[0]
         imgPath = os.path.join(*parts[1:])
         imgPath = imgPath.replace("\\","/")
-        #try:
-        #    if not ".tmap" in imgPath:
-        #        views._get_slide(imgPath)
-        #except:
-        #    self.app.basedir = oldBaseDir
-        #    import traceback
-        #    logging.error (traceback.format_exc())
-        #    QMessageBox.about(self, "Error", "TissUUmaps did not manage to open this image.")
-
-        #    return False
         logging.debug (" ".join(["Opening image:", str(self.app.basedir), str(self.location + imgPath), str(QUrl(self.location + imgPath))]))
 
         filename = os.path.basename(imgPath)
