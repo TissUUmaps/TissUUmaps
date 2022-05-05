@@ -11,9 +11,20 @@ flask.init = function () {
         interfaceUtils.alert(
             `
             <iframe src='${path}/${$(this).data('source')}/info' style="width:100%;min-height:500px;"></iframe>
-            `
+            `, "Image information"
         )
     } );
+    $("head").append('<style id="flask-css" type="text/css"></style>');
+    var sheet = $("#flask-css").get(0).sheet;
+    var styles = ".layerSettingButton:after {";
+    styles += "content: '\\f431';";
+    styles += "font-family: 'bootstrap-icons';";
+    styles += "margin: 0px 0px 0px 5px;";
+    styles += "}";
+    // Add the first CSS rule to the stylesheet
+    sheet.insertRule(styles, 0);
+    console.log(styles);
+    console.log(sheet);
 }
 
 flask.standalone = {}
