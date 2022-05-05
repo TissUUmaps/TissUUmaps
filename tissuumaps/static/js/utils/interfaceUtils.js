@@ -613,6 +613,12 @@ interfaceUtils.generateDataTabUI = function(options){
         }
         interfaceUtils._mGenUIFuncs.ChangeTabName(generated, options.name);
         dataUtils.XHRCSV(generated,options);
+        if (options.expectedHeader === undefined) {
+            $('#'+generated+'_flush-collapse0').collapse("show");
+        }
+    }
+    else {
+        $('#'+generated+'_flush-collapse0').collapse("show");
     }
 }
 

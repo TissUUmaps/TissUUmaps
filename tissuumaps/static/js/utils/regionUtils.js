@@ -277,7 +277,7 @@ regionUtils.geoJSON2regions = function (geoJSONObjects) {
                 coordinateList_i = coordinateList_i.map(function(x) {
                     xPoint = new OpenSeadragon.Point(x[0], x[1]);
                     xPixel = viewer.world.getItemAt(0).imageToViewportCoordinates(xPoint);
-                    return [xPixel.x, xPixel.y];
+                    return [xPixel.x.toFixed(5), xPixel.y.toFixed(5)];
                 });
                 return coordinateList_i.filter(function(value, index, Arr) {
                     return index % 1 == 0;
@@ -314,11 +314,11 @@ regionUtils.pointsToPath = function (points) {
         subregions.forEach(function (polygons) {
             var first = true
             polygons.forEach(function (point) {
-                if (first) {path += " M ";first = false;}
-                else {path += " L "}
+                if (first) {path += "M";first = false;}
+                else {path += "L"}
                 path += point.x + " " + point.y;
             });
-            path += " Z"
+            path += "Z"
         });
     });
     return path;

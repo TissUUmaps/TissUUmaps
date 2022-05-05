@@ -94,7 +94,6 @@ markerUtils.makePiechartTable = function(uid, markerIndex, sectorsPropertyName) 
     sectors.forEach(function (sector, index) {
         sortedSectors.push([parseFloat(sectorValues[index]), sector, index])
     });
-    console.dir(sortedSectors);
     sortedSectors.sort(
         function cmp(a, b) {
             return b[0]-a[0];
