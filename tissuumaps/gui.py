@@ -189,6 +189,7 @@ class MainWindow(QMainWindow):
         #self.setStatusBar(self.status)
         
         self.bar = self.menuBar()
+        self.recentActions = []
         self.setStyleSheet("""
         QMenuBar {
             border-bottom: 1px solid #911821;
@@ -200,6 +201,17 @@ class MainWindow(QMainWindow):
         _open.setShortcut("Ctrl+O")
         file.addAction(_open)
         _open.triggered.connect(self.browser.openImage)
+
+        recentFilesMenu = file.addMenu("Open Recent")
+        recentFilesMenu.setToolTipsVisible(True)
+        for _ in range(self.browser.maxRecent):
+            _recentAction = QAction("",self)
+            _recentAction.setVisible(False)
+            _recentAction.triggered.connect(self.browser.openRecent);
+            recentFilesMenu.addAction(_recentAction)
+            self.recentActions.append(_recentAction)
+
+        self.browser.updateRecent()
 
         _save = QAction(self.style().standardIcon(QStyle.SP_DialogSaveButton), "Save project",self)
         _save.setShortcut("Ctrl+S")
@@ -298,6 +310,7 @@ class webEngine(QWebEngineView):
         self.qt_app = qt_app
         self.app = views.app
         self.args = args
+        self.maxRecent = 25
         self.setMinimumSize(800,400)
         self.setContextMenuPolicy(Qt.NoContextMenu)
         self.lastdir = str(Path.home())
@@ -331,6 +344,42 @@ class webEngine(QWebEngineView):
         self.mainWin.setWindowIcon(QtGui.QIcon('static/misc/favicon.ico')) 
         #self.showMaximized()
     
+    def addRecent (self, path):
+        recentFile = os.path.join(os.path.expanduser("~"), '.tissuumaps', 'recents.json')
+        if os.path.isfile (recentFile):
+            with open(recentFile) as f:
+                recentFiles = json.load(f)
+        else:
+            recentFiles = []
+        if path in recentFiles:
+            recentFiles.remove(path)
+        recentFiles.insert(0,path)
+        recentFiles = recentFiles[:self.maxRecent]
+        with open(recentFile, "w") as f:
+            json.dump(recentFiles, f)
+        self.updateRecent()
+
+    def updateRecent (self):
+        recentFile = os.path.join(os.path.expanduser("~"), '.tissuumaps', 'recents.json')
+        if os.path.isfile (recentFile):
+            with open(recentFile) as f:
+                recentFiles = json.load(f)
+        else:
+            recentFiles = []
+        
+        for auto in range(self.maxRecent):
+            if len(recentFiles) > auto:
+                self.mainWin.recentActions[auto].setText(os.path.basename(recentFiles[auto]))
+                self.mainWin.recentActions[auto].setData(recentFiles[auto])
+                self.mainWin.recentActions[auto].setVisible(True)
+                self.mainWin.recentActions[auto].setToolTip(recentFiles[auto])
+            else:
+                self.mainWin.recentActions[auto].setVisible(False)
+        
+    def openRecent(self):
+        sender = self.sender()
+        self.openImagePath (sender.data())
+
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls:
             event.accept()
@@ -568,6 +617,7 @@ class webEngine(QWebEngineView):
         state = addRelativePath(json.loads(state), previouspath, os.path.dirname(folderpath))
         with open(folderpath, "w") as f:
             json.dump(state, f, indent=4)
+        self.addRecent (folderpath)
 
     def openImagePath (self, folderpath):
         try:
@@ -577,6 +627,7 @@ class webEngine(QWebEngineView):
         self.lastdir = os.path.dirname(folderpath)
         if not folderpath:
             return
+        self.addRecent(folderpath)
         parts = Path(folderpath).parts
         if (not hasattr(self.app, 'cache')):
             setup(self.app)
