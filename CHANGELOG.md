@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.9
+ - Move to webgl2
+ - Add Open Recent sub menu in File menu
+ - Fix path for linux and mac in server mode
+ - Minor fixes
+
 ## 3.0.8.9
 
  - Make it possible to update to newer version of plugins
