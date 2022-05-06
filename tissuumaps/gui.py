@@ -702,7 +702,9 @@ class webEngine(QWebEngineView):
                 returnDict = {"dzi":None,"name":None}
                 return returnDict
             else:
-                self.app.basedir = parts[0]
+                self.openImagePath(layerpath) #self.app.basedir = parts[0]
+                returnDict = {"dzi":None,"name":None}
+                return returnDict
         imgPath = os.path.join(*parts[1:])
         try:
             views._get_slide(imgPath)
