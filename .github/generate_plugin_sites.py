@@ -4,7 +4,8 @@ import yaml
 import os
 import json
 
-t = Template("""
+t = Template(
+    """
 <html>
     <head>
         <title>TissUUmaps plugins</title>
@@ -80,33 +81,36 @@ t = Template("""
         <table>
     </body>
 </html>
-""")
+"""
+)
 
-def alphaSort (key):
-    if ("Plugin_template" in key):
+
+def alphaSort(key):
+    if "Plugin_template" in key:
         return "ZZZ"
     return key
+
 
 pluginList = []
 ymlFiles = glob.glob(r"../plugins_repo/*.yml")
 ymlFiles.sort(key=alphaSort)
 for ymlFile in ymlFiles:
     try:
-        with open(ymlFile, 'r') as stream:
+        with open(ymlFile, "r") as stream:
             pluginObject = yaml.safe_load(stream)
         pluginObject["yml"] = os.path.basename(ymlFile)
-        pyFile = ymlFile.replace(".yml",".py")
+        pyFile = ymlFile.replace(".yml", ".py")
         if os.path.isfile(pyFile):
             pluginObject["py"] = os.path.basename(pyFile)
-        jsFile = ymlFile.replace(".yml",".js")
+        jsFile = ymlFile.replace(".yml", ".js")
         if os.path.isfile(jsFile):
             pluginObject["js"] = os.path.basename(jsFile)
         pluginList.append(pluginObject)
     except:
         pass
 
-with open("../plugins_repo/pluginList.json","w") as f:
+with open("../plugins_repo/pluginList.json", "w") as f:
     json.dump(pluginList, f, indent=4, sort_keys=True, default=str)
 
-with open("../plugins_repo/index.html","w") as f:
+with open("../plugins_repo/index.html", "w") as f:
     f.write(t.render(pluginList=pluginList))

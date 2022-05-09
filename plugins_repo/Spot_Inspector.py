@@ -5,29 +5,32 @@ from io import BytesIO
 from PIL import Image
 
 import matplotlib
-matplotlib.use('Agg')
+
+matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 import pyvips
 from urllib.parse import unquote
 import logging
 
-#from mpl_toolkits.axes_grid1 import make_axes_locatable
-#import importlib
-#importlib.import_module('mpl_toolkits.axes_grid1').make_axes_locatable
+# from mpl_toolkits.axes_grid1 import make_axes_locatable
+# import importlib
+# importlib.import_module('mpl_toolkits.axes_grid1').make_axes_locatable
 import base64
+
 
 class PILBytesIO(BytesIO):
     def fileno(self):
-        '''Classic PIL doesn't understand io.UnsupportedOperation.'''
-        raise AttributeError('Not supported')
+        """Classic PIL doesn't understand io.UnsupportedOperation."""
+        raise AttributeError("Not supported")
 
-class ImageConverter():
+
+class ImageConverter:
     def __init__(self, inputImage, outputImage):
         self.inputImage = inputImage
         self.outputImage = outputImage
-    
-    def convert (self):
+
+    def convert(self):
         if not os.path.isfile(self.outputImage):
             try:
                 imgVips = pyvips.Image.new_from_file(self.inputImage)
@@ -36,33 +39,43 @@ class ImageConverter():
                 if minVal == maxVal:
                     minVal = 0
                     maxVal = 255
-                logging.debug ("minVal, maxVal", minVal, maxVal)
-                imgVips = (255.* (imgVips - minVal)) / (maxVal - minVal)
+                logging.debug("minVal, maxVal", minVal, maxVal)
+                imgVips = (255.0 * (imgVips - minVal)) / (maxVal - minVal)
                 imgVips = (imgVips < 0).ifthenelse(0, imgVips)
                 imgVips = (imgVips > 255).ifthenelse(255, imgVips)
-                logging.debug ("minVal, maxVal", imgVips.min(), imgVips.max())
+                logging.debug("minVal, maxVal", imgVips.min(), imgVips.max())
                 imgVips = imgVips.scaleimage()
-                imgVips.tiffsave(self.outputImage, pyramid=True, tile=True, tile_width=256, tile_height=256, properties=True, bitdepth=8)
-            except: 
-                logging.error ("Impossible to convert image using VIPS:")
+                imgVips.tiffsave(
+                    self.outputImage,
+                    pyramid=True,
+                    tile=True,
+                    tile_width=256,
+                    tile_height=256,
+                    properties=True,
+                    bitdepth=8,
+                )
+            except:
+                logging.error("Impossible to convert image using VIPS:")
                 import traceback
-                logging.error (traceback.format_exc())
+
+                logging.error(traceback.format_exc())
             self.convertDone = True
         return self.outputImage
 
-class Plugin ():
+
+class Plugin:
     def __init__(self, app):
         self.app = app
 
     def _get_slide(self, path):
         path = os.path.abspath(os.path.join(self.app.basedir, path))
-        logging.debug (path)
+        logging.debug(path)
         if not path.startswith(self.app.basedir):
             # Directory traversal
-            logging.error ("Directory traversal, aborting.")
+            logging.error("Directory traversal, aborting.")
             abort(500)
         if not os.path.exists(path):
-            logging.error ("not os.path.exists, aborting.")
+            logging.error("not os.path.exists, aborting.")
             abort(500)
         try:
             slide = self.app.cache.get(path)
@@ -71,70 +84,75 @@ class Plugin ():
             if ".tissuumaps" in path:
                 abort(500)
             try:
-                newpath = os.path.dirname(path) + "/.tissuumaps/" + os.path.basename(path)
+                newpath = (
+                    os.path.dirname(path) + "/.tissuumaps/" + os.path.basename(path)
+                )
                 if not os.path.isdir(os.path.dirname(path) + "/.tissuumaps/"):
                     os.makedirs(os.path.dirname(path) + "/.tissuumaps/")
-                path = ImageConverter(path,newpath).convert()
-                #imgPath = imgPath.replace("\\","/")
+                path = ImageConverter(path, newpath).convert()
+                # imgPath = imgPath.replace("\\","/")
                 return self._get_slide(path)
             except:
                 import traceback
-                logging.error (traceback.format_exc())
-                logging.error ("OpenSlideError, aborting.")
+
+                logging.error(traceback.format_exc())
+                logging.error("OpenSlideError, aborting.")
                 abort(500)
-    
-    def getTile (self, path, bbox):
-        path = path.replace(".dzi","")
+
+    def getTile(self, path, bbox):
+        path = path.replace(".dzi", "")
         if path[0] == "\\" or path[0] == "/":
             path = path[1:]
         slide = self._get_slide(path)
         try:
             with slide.tileLock:
-                tile = slide.osr.read_region((bbox[0],bbox[1]), 0, (bbox[2], bbox[3]))
+                tile = slide.osr.read_region((bbox[0], bbox[1]), 0, (bbox[2], bbox[3]))
         except ValueError:
             # Invalid level or coordinates
-            logging.error ("ValueError, aborting.")
+            logging.error("ValueError, aborting.")
             abort(500)
         return tile
 
     def getConcat(self, tiles, rounds, channels):
         singleWidth = tiles[rounds[0]][channels[0]].width
         singleHeight = tiles[rounds[0]][channels[0]].height
-        
+
         width = len(channels) * singleWidth
         height = len(rounds) * singleHeight
 
-        dst = Image.new('RGB', (width, height))
+        dst = Image.new("RGB", (width, height))
         for row, round in enumerate(rounds):
             for col, channel in enumerate(channels):
                 try:
-                    dst.paste(tiles[round][channel], (col * singleWidth, row * singleHeight))
+                    dst.paste(
+                        tiles[round][channel], (col * singleWidth, row * singleHeight)
+                    )
                 except:
                     pass
         return dst
-        
-    def getPlot (self, tiles, rounds, channels, markers, bbox):
+
+    def getPlot(self, tiles, rounds, channels, markers, bbox):
         singleWidth = tiles[rounds[0]][channels[0]].width
         singleHeight = tiles[rounds[0]][channels[0]].height
-        
+
         im = self.getConcat(tiles, rounds, channels).convert("L")
-        fig = plt.figure(figsize=(self.figureSize, self.figureSize*4/5), dpi=80)
+        fig = plt.figure(figsize=(self.figureSize, self.figureSize * 4 / 5), dpi=80)
         ax = fig.add_subplot(111)
-        #plt.axis('off')
+        # plt.axis('off')
         imcolor = plt.imshow(im, cmap=plt.get_cmap(self.cmap), vmin=0, vmax=255)
-        
+
         # create an axes on the right side of ax. The width of cax will be 5%
         # of ax and the padding between cax and ax will be fixed at 0.05 inch.
-        #divider = make_axes_locatable(ax)
-        #cax = divider.append_axes("right", size="5%", pad=0.05)
+        # divider = make_axes_locatable(ax)
+        # cax = divider.append_axes("right", size="5%", pad=0.05)
 
-        plt.colorbar(imcolor, fraction=0.036, pad=0.05)#, cax=cax)
+        plt.colorbar(imcolor, fraction=0.036, pad=0.05)  # , cax=cax)
 
-        for xIndex in range(len(channels)+1):
+        for xIndex in range(len(channels) + 1):
             ax.axvline(x=singleWidth * xIndex - 0.5, color="red", linewidth=1)
-        for yIndex in range(len(rounds)+1):
+        for yIndex in range(len(rounds) + 1):
             ax.axhline(y=singleHeight * yIndex - 0.5, color="red", linewidth=1)
-        
+
         for marker in markers:
             try:
                 x, y = [], []
@@ -148,38 +166,56 @@ class Plugin ():
                     markerchannels = [channels[int(m)] for m in markerchannels]
                 else:
                     markerchannels = marker["letters"]
-                
-                offset = marker["global_X_pos"] - bbox[0]-0.5, marker["global_Y_pos"] - bbox[1]-0.5
-                for yIndex, (markerchannel, markerRound) in enumerate(zip(markerchannels, markerRounds)):
+
+                offset = (
+                    marker["global_X_pos"] - bbox[0] - 0.5,
+                    marker["global_Y_pos"] - bbox[1] - 0.5,
+                )
+                for yIndex, (markerchannel, markerRound) in enumerate(
+                    zip(markerchannels, markerRounds)
+                ):
                     xIndex = channels.index(markerchannel)
                     x.append(offset[0] + singleWidth * xIndex)
                     y.append(offset[1] + singleWidth * yIndex)
-                ax.plot(x, y, 'o-', label=markerchannels, color=marker["color"], markersize=5, marker="x")
+                ax.plot(
+                    x,
+                    y,
+                    "o-",
+                    label=markerchannels,
+                    color=marker["color"],
+                    markersize=5,
+                    marker="x",
+                )
             except:
                 import traceback
                 import traceback
-                logging.error (traceback.format_exc())
+
+                logging.error(traceback.format_exc())
                 pass
-        
-        ax.set_xticks([i*singleWidth + singleWidth/2-0.5 for i,_ in enumerate(channels)])
-        ax.set_xticklabels([c.replace(".tif","") for c in channels])
-        ax.set_yticks([i*singleHeight + singleHeight/2-0.5 for i,_ in enumerate(rounds)])
+
+        ax.set_xticks(
+            [i * singleWidth + singleWidth / 2 - 0.5 for i, _ in enumerate(channels)]
+        )
+        ax.set_xticklabels([c.replace(".tif", "") for c in channels])
+        ax.set_yticks(
+            [i * singleHeight + singleHeight / 2 - 0.5 for i, _ in enumerate(rounds)]
+        )
         ax.set_yticklabels(rounds, rotation=90, va="center")
-        ax.tick_params(axis=u'both', which=u'both',length=0)
+        ax.tick_params(axis="both", which="both", length=0)
         plt.tight_layout()
 
         buf = PILBytesIO()
         fig.savefig(buf)
         fig.clf()
         plt.close()
-        #plt.close(fig)
+        # plt.close(fig)
         return buf
-        
-    def getMatrix (self, jsonParam):
-        if (not jsonParam):
-            logging.error ("No arguments, aborting.")
+
+    def getMatrix(self, jsonParam):
+        if not jsonParam:
+            logging.error("No arguments, aborting.")
             abort(500)
-        print (jsonParam)
+        print(jsonParam)
         bbox = jsonParam["bbox"]
         layers = jsonParam["layers"]
         path = jsonParam["path"]
@@ -188,8 +224,8 @@ class Plugin ():
         if "cmap" in jsonParam.keys():
             self.cmap = jsonParam["cmap"]
         else:
-            self.cmap = 'Greys_r'
-        logging.debug ("getMatrix", bbox, layers, markers)
+            self.cmap = "Greys_r"
+        logging.debug("getMatrix", bbox, layers, markers)
         tiles = {}
         rounds = jsonParam["order_rounds"]
         channels = jsonParam["order_channels"]
@@ -212,24 +248,24 @@ class Plugin ():
         format = "png"
         img_str = base64.b64encode(plot.getvalue())
         resp = make_response(img_str)
-        #resp.mimetype = 'image/%s' % format
-        #resp.cache_control.max_age = 0
-        #resp.cache_control.public = True
+        # resp.mimetype = 'image/%s' % format
+        # resp.cache_control.max_age = 0
+        # resp.cache_control.public = True
         return resp
 
-    def importFolder (self, jsonParam):
-        if (not jsonParam):
-            logging.error ("No arguments, aborting.")
+    def importFolder(self, jsonParam):
+        if not jsonParam:
+            logging.error("No arguments, aborting.")
             abort(500)
         relativepath = unquote(jsonParam["path"])
         pathFormat = unquote(jsonParam["pathFormat"])
-        logging.debug ('jsonParam["path"]', jsonParam["path"])
-        if (relativepath != ""):
+        logging.debug('jsonParam["path"]', jsonParam["path"])
+        if relativepath != "":
             if relativepath[0] == "/":
                 relativepath = relativepath[1:]
         path = os.path.abspath(os.path.join(self.app.basedir, relativepath))
         absoluteRoot = os.path.abspath(self.app.basedir)
-        logging.debug ("path",relativepath, path, absoluteRoot)
+        logging.debug("path", relativepath, path, absoluteRoot)
         tifFiles_ = glob.glob(path + "/" + pathFormat)
         tifFiles = []
         for tifFile in tifFiles_:
@@ -239,12 +275,12 @@ class Plugin ():
                 self._get_slide(tifFile)
                 tifFiles.append(tifFile)
             except:
-                logging.error ("impossible to read", tifFile,". Abort this file.")
+                logging.error("impossible to read", tifFile, ". Abort this file.")
                 continue
-        logging.debug (tifFiles)
+        logging.debug(tifFiles)
         # csvFiles = glob.glob(path + "/*.csv")
         csvFilesDesc = []
-        #for csvFile in csvFiles:
+        # for csvFile in csvFiles:
         #    filePath = os.path.relpath(csvFile, path)
         #    filePath = filePath.replace("\\","/")
         #    csvFilesDesc.append({
@@ -253,36 +289,45 @@ class Plugin ():
         #        "comment":"",
         #        "expectedCSV":{ "group": "target", "name": "gene", "X_col": "x", "Y_col": "y", "key": "letters" }
         #    })
-        
+
         layers = []
         layerFilters = {}
         rounds = []
         channels = []
-        colors = ["100,0,0","0,100,0","0,0,100","100,100,0","100,0,100","0,100,100"]
+        colors = [
+            "100,0,0",
+            "0,100,0",
+            "0,0,100",
+            "100,100,0",
+            "100,0,100",
+            "0,100,100",
+        ]
         for fileIndex, filename in enumerate(sorted(tifFiles)):
-            basename = os.path.basename (filename)
+            basename = os.path.basename(filename)
             if "_" in basename:
-                channel = os.path.splitext (basename)[0].split("_")[1]
-                #round = os.path.basename (os.path.dirname (filename))
-                round = os.path.splitext (basename)[0].split("_")[0]
+                channel = os.path.splitext(basename)[0].split("_")[1]
+                # round = os.path.basename (os.path.dirname (filename))
+                round = os.path.splitext(basename)[0].split("_")[0]
             else:
-                channel = os.path.splitext (basename)[0]
-                #round = os.path.basename (os.path.dirname (filename))
+                channel = os.path.splitext(basename)[0]
+                # round = os.path.basename (os.path.dirname (filename))
                 round = ""
             if channel not in channels:
                 channels.append(channel)
             filePath = os.path.relpath(filename, path)
-            filePath = filePath.replace("\\","/")
-            logging.debug (filename, relativepath, filePath)
-            if (filePath[0] != "/"):
+            filePath = filePath.replace("\\", "/")
+            logging.debug(filename, relativepath, filePath)
+            if filePath[0] != "/":
                 filePath = "/" + filePath
-            layer = {
-                "name":basename,
-                "tileSource":filePath + ".dzi"
-            }
-            logging.debug (channels, channel)
-            logging.debug (channels.index(channel)%len(colors))
-            layerFilter = [{"value": colors[channels.index(channel)%len(colors)],"name": "Color"}]
+            layer = {"name": basename, "tileSource": filePath + ".dzi"}
+            logging.debug(channels, channel)
+            logging.debug(channels.index(channel) % len(colors))
+            layerFilter = [
+                {
+                    "value": colors[channels.index(channel) % len(colors)],
+                    "name": "Color",
+                }
+            ]
             layerFilters[fileIndex] = layerFilter
             layers.append(layer)
         jsonFile = {
@@ -292,7 +337,7 @@ class Plugin ():
             "layers": layers,
             "layerFilters": layerFilters,
             "slideFilename": os.path.basename(path),
-            "compositeMode": "lighter"
+            "compositeMode": "lighter",
         }
         return jsonFile
         # {
@@ -319,4 +364,3 @@ class Plugin ():
         #     ],
         #     compositeMode: ""
         # }
-    
