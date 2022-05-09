@@ -35,11 +35,13 @@ from flask import (
     Response,
     send_from_directory,
     redirect,
-    _request_ctx_stack
+    _request_ctx_stack,
 )
 
 from tissuumaps.flask_filetree import filetree
-def _fnfilter (filename):
+
+
+def _fnfilter(filename):
     if OpenSlide.detect_format(filename):
         return True
     elif imghdr.what(filename):
@@ -48,15 +50,20 @@ def _fnfilter (filename):
         return True
     return False
 
-def _dfilter (filename):
+
+def _dfilter(filename):
     if "private" in filename:
         return False
     if ".tissuumaps" in filename:
         return False
     return True
 
-ft = filetree.make_blueprint(app=app, register=False, dfilter=_dfilter, fnfilter=_fnfilter)
-app.register_blueprint(ft, url_prefix='/filetree')
+
+ft = filetree.make_blueprint(
+    app=app, register=False, dfilter=_dfilter, fnfilter=_fnfilter
+)
+app.register_blueprint(ft, url_prefix="/filetree")
+
 
 def check_auth(username, password):
     if username == "username" and password == "password":
@@ -77,8 +84,12 @@ def authenticate():
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if _request_ctx_stack.top.request.args.get('path'):
-            path = os.path.abspath(os.path.join(app.basedir, _request_ctx_stack.top.request.args.get('path'), "fake"))
+        if _request_ctx_stack.top.request.args.get("path"):
+            path = os.path.abspath(
+                os.path.join(
+                    app.basedir, _request_ctx_stack.top.request.args.get("path"), "fake"
+                )
+            )
         elif not "path" in kwargs.keys():
             path = getPathFromReferrer(_request_ctx_stack.top.request, "")
         else:
@@ -130,7 +141,7 @@ class ImageConverter:
                     if minVal == maxVal:
                         minVal = 0
                         maxVal = 255
-                    if (imgVips.percent(1) < 0 or imgVips.percent(99) > 255):
+                    if imgVips.percent(1) < 0 or imgVips.percent(99) > 255:
                         imgVips = (255.0 * (imgVips - minVal)) / (maxVal - minVal)
                         imgVips = (imgVips < 0).ifthenelse(0, imgVips)
                         imgVips = (imgVips > 255).ifthenelse(255, imgVips)
@@ -141,9 +152,9 @@ class ImageConverter:
                         tile=True,
                         tile_width=256,
                         tile_height=256,
-                        compression='jpeg',
+                        compression="jpeg",
                         Q=95,
-                        properties=True
+                        properties=True,
                     )
                 except:
                     logging.error("Impossible to convert image using VIPS:")
@@ -169,7 +180,7 @@ class ImageConverter:
                     if minVal == maxVal:
                         minVal = 0
                         maxVal = 255
-                    if (imgVips.percent(0.01) < 0 or imgVips.percent(99.99) > 255):
+                    if imgVips.percent(0.01) < 0 or imgVips.percent(99.99) > 255:
                         imgVips = (255.0 * (imgVips - minVal)) / (maxVal - minVal)
                         imgVips = (imgVips < 0).ifthenelse(0, imgVips)
                         imgVips = (imgVips > 255).ifthenelse(255, imgVips)
@@ -177,13 +188,13 @@ class ImageConverter:
                     imgVips.dzsave(
                         os.path.basename(self.outputImage),
                         dirname=os.path.dirname(self.outputImage),
-                        suffix='.jpg',
+                        suffix=".jpg",
                         background=0,
-                        depth='onepixel',
+                        depth="onepixel",
                         overlap=0,
-                        tile_size=256
+                        tile_size=256,
                     )
-                    
+
                 except:
                     logging.error("Impossible to convert image using VIPS:")
                     import traceback
@@ -252,13 +263,14 @@ class _SlideCache(object):
             slide.properties = osr.properties
         slide.tileLock = Lock()
         if originalPath:
-            slide.properties = {"Path":originalPath}
+            slide.properties = {"Path": originalPath}
         with self._lock:
             if path not in self._cache:
                 while len(self._cache) >= self.cache_size:
                     self._cache.popitem(last=False)
                 self._cache[path] = slide
         return slide
+
 
 class _SlideFile(object):
     def __init__(self, relpath):
@@ -285,7 +297,7 @@ def _setup():
 @app.errorhandler(404)
 def page_not_found(e):
     # note that we set the 404 status explicitly
-    #return render_template("tissuumaps.html", isStandalone=app.config["isStandalone"], message="Impossible to load this file", readOnly=app.config["READ_ONLY"])
+    # return render_template("tissuumaps.html", isStandalone=app.config["isStandalone"], message="Impossible to load this file", readOnly=app.config["READ_ONLY"])
     return redirect("/404"), 404, {"Refresh": "1; url=/404"}
 
 
@@ -310,7 +322,7 @@ def _get_slide(path, originalPath=None):
                 + os.path.splitext(os.path.basename(path))[0]
                 + ".tif"
             )
-            os.makedirs(os.path.dirname(path) + "/.tissuumaps/",exist_ok=True)
+            os.makedirs(os.path.dirname(path) + "/.tissuumaps/", exist_ok=True)
             tifpath = ImageConverter(path, newpath).convert()
             return _get_slide(tifpath, path)
         except:
@@ -319,10 +331,16 @@ def _get_slide(path, originalPath=None):
             logging.error(traceback.format_exc())
             abort(404)
 
+
 @app.route("/")
 @requires_auth
 def index():
-    return render_template("tissuumaps.html", isStandalone=app.config["isStandalone"], readOnly=app.config["READ_ONLY"])
+    return render_template(
+        "tissuumaps.html",
+        isStandalone=app.config["isStandalone"],
+        readOnly=app.config["READ_ONLY"],
+    )
+
 
 @app.route("/web/<path:path>")
 @requires_auth
@@ -336,37 +354,34 @@ def base_static(path):
 @app.route("/<path:filename>")
 @requires_auth
 def slide(filename):
-    path = request.args.get('path')
+    path = request.args.get("path")
     if not path:
         path = "./"
     path = os.path.abspath(os.path.join(app.basedir, path, filename))
-    #slide = _get_slide(path)
-    slide_url = os.path.basename(path)+".dzi"#url_for("dzi", path=path)
-    jsonProject={
-        "layers": [
-            {
-                "name": os.path.basename(path),
-                "tileSource": slide_url
-            }
-        ]
+    # slide = _get_slide(path)
+    slide_url = os.path.basename(path) + ".dzi"  # url_for("dzi", path=path)
+    jsonProject = {
+        "layers": [{"name": os.path.basename(path), "tileSource": slide_url}]
     }
     return render_template(
         "tissuumaps.html",
         plugins=[p["module"] for p in app.config["PLUGINS"]],
         jsonProject=jsonProject,
         isStandalone=app.config["isStandalone"],
-        readOnly=app.config["READ_ONLY"]
-        )
+        readOnly=app.config["READ_ONLY"],
+    )
+
 
 @app.route("/ping")
 @requires_auth
 def ping():
     return make_response("pong")
 
+
 def getPathFromReferrer(request, filename):
     try:
         parsed_url = urlparse(request.referrer)
-        path = parse_qs(parsed_url.query)['path'][0]
+        path = parse_qs(parsed_url.query)["path"][0]
         path = os.path.abspath(os.path.join(app.basedir, path, filename))
     except:
         path = os.path.abspath(os.path.join(app.basedir, filename))
@@ -381,10 +396,11 @@ def getPathFromReferrer(request, filename):
 def tmapFile_old(path, filename):
     return redirect(url_for("tmapFile", filename=filename) + "?path=" + path)
 
+
 @app.route("/<string:filename>.tmap", methods=["GET", "POST"])
 @requires_auth
 def tmapFile(filename):
-    path = request.args.get('path')
+    path = request.args.get("path")
     if not path:
         path = "./"
     jsonFilename = os.path.abspath(os.path.join(app.basedir, path, filename) + ".tmap")
@@ -416,7 +432,7 @@ def tmapFile(filename):
             plugins=plugins,
             jsonProject=state,
             isStandalone=app.config["isStandalone"],
-            readOnly=app.config["READ_ONLY"]
+            readOnly=app.config["READ_ONLY"],
         )
 
 
@@ -429,7 +445,7 @@ def csvFile(completePath):
     if os.path.isfile(completePath):
         # We can not gzip csv files with the PapaParse library
         return send_from_directory(directory, filename)
-        
+
         # We keep the old gzip code anyway:
         # gz files have to be names cgz for some browser
         if os.path.isfile(completePath + ".gz"):
@@ -493,24 +509,23 @@ def dzi_asso(path):
     slide = _get_slide(path)
     associated_images = []
     for key, im in slide.associated_images.items():
-        output = io.BytesIO ()
+        output = io.BytesIO()
         im.save(output, "PNG")
         b64 = base64.b64encode(output.getvalue()).decode()
-        associated_images.append({"name":key,"content":b64})
+        associated_images.append({"name": key, "content": b64})
         output.close()
     return render_template(
-            "slide_prop.html",
-            associated_images=associated_images,
-            properties=slide.properties,
-        )
+        "slide_prop.html",
+        associated_images=associated_images,
+        properties=slide.properties,
+    )
     return resp
-
 
 
 @app.route("/<path:path>_files/<int:level>/<int:col>_<int:row>.<format>")
 def tile(path, level, col, row, format):
     completePath = os.path.join(app.basedir, path)
-    if os.path.isfile( f"{completePath}_files/{level}/{col}_{row}.{format}"):
+    if os.path.isfile(f"{completePath}_files/{level}/{col}_{row}.{format}"):
         directory = f"{completePath}_files/{level}/"
         filename = f"{col}_{row}.{format}"
         return send_from_directory(directory, filename)
@@ -532,6 +547,7 @@ def tile(path, level, col, row, format):
     resp.cache_control.max_age = 1209600
     resp.cache_control.public = True
     return resp
+
 
 @app.route(
     "/<path:path>.dzi/<path:associated_name>_files/<int:level>/<int:col>_<int:row>.<format>"
@@ -555,9 +571,11 @@ def tile_asso(path, associated_name, level, col, row, format):
 
 
 def load_plugin(name):
-    for directory in [app.config["PLUGIN_FOLDER_USER"],app.config["PLUGIN_FOLDER"]]:
+    for directory in [app.config["PLUGIN_FOLDER_USER"], app.config["PLUGIN_FOLDER"]]:
         if os.path.isfile(os.path.join(directory, name + ".py")):
-            spec = importlib.util.spec_from_file_location(name, os.path.join(directory, name + ".py"))
+            spec = importlib.util.spec_from_file_location(
+                name, os.path.join(directory, name + ".py")
+            )
             mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mod)
     return mod
@@ -565,14 +583,14 @@ def load_plugin(name):
 
 @app.route("/plugins/<path:pluginName>.js")
 def runPlugin(pluginName):
-    for directory in [app.config["PLUGIN_FOLDER_USER"],app.config["PLUGIN_FOLDER"]]:        
+    for directory in [app.config["PLUGIN_FOLDER_USER"], app.config["PLUGIN_FOLDER"]]:
         filename = pluginName + ".js"
         completePath = os.path.abspath(os.path.join(directory, pluginName + ".js"))
         directory = os.path.dirname(completePath)
         filename = os.path.basename(completePath)
         if os.path.isfile(completePath):
             return send_from_directory(directory, filename)
-    
+
     logging.error(completePath, "is not an existing file.")
     abort(404)
 
