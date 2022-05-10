@@ -469,40 +469,41 @@
 
     // ----------
     $(document).ready(function () {
-        const queryString = window.location.search;
-        const urlParams = new URLSearchParams(queryString);
-        const tmapFile = urlParams.get('tmap')
-        if (tmapFile != null) {
-            projectUtils.loadProjectFileFromServer(tmapFile);
-        }
-        else {
-            /*tmapp.layers =[
-                {name:"Fluo",tileSource:"data/breastcancer/fluo.dzi"},
-                {name:"HE",tileSource:"data/breastcancer/HE.dzi"}
-            ];*/
-        }
-        glUtils._markershapes = "/static/misc/markershapes.png"
-        tmapp.registerActions();
-        tmapp.init();
+      const queryString = window.location.search;
+      const urlParams = new URLSearchParams(queryString);
+      const tmapFile = urlParams.get('tmap')
+      if (tmapFile != null) {
+        projectUtils.loadProjectFileFromServer(tmapFile);
+      }
+      else {
+        /*tmapp.layers =[
+            {name:"Fluo",tileSource:"data/breastcancer/fluo.dzi"},
+            {name:"HE",tileSource:"data/breastcancer/HE.dzi"}
+        ];*/
+      }
+      glUtils._markershapes = "/static/misc/markershapes.png"
+      tmapp.registerActions();
+      tmapp.init();
 
-        {% for plugin in plugins %}{% if plugin %}
-            pluginUtils.addPlugin("{{ plugin }}");
-        {% endif %}{% endfor %}
+      {% for plugin in plugins %} {% if plugin %}
+      pluginUtils.addPlugin("{{ plugin }}");
+      {% endif %} {% endfor %}
 
-        {% if jsonProject %}
-            jsonState = {{jsonProject|tojson|safe}}
-            projectUtils.loadProject(jsonState);
-        {% endif %}
-        {% if isStandalone %}
-            flask.standalone.init();
-        {% elif readOnly %}
-            flask.init();
-        {% else %}
-            flask.server.init();
-        {% endif %}
-        {% if message %}
-            interfaceUtils.alert("{{message|safe}}");
-        {% endif %}
-    });
+      {% if jsonProject %}
+      jsonState = {{ jsonProject | tojson | safe }
+    }
+              projectUtils.loadProject(jsonState);
+    {% endif %}
+    {% if isStandalone %}
+    flask.standalone.init();
+    {% elif readOnly %}
+    flask.init();
+    {% else %}
+    flask.server.init();
+    {% endif %}
+    {% if message %}
+    interfaceUtils.alert("{{message|safe}}");
+    {% endif %}
+      });
   </script>
 </html>
