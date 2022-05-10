@@ -1,6 +1,7 @@
-from flask import abort, make_response
 import logging
 import time
+
+from flask import abort, make_response
 
 
 class Plugin:
