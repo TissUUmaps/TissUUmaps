@@ -1,15 +1,18 @@
-from flask import abort, make_response
+import hashlib
+import json
 import logging
 import os
-import pandas as pd
-import json
+import tempfile
+
 import numpy as np
-from scipy.spatial import cKDTree
-from scipy.sparse import csc_matrix
-from sklearn.cluster import MiniBatchKMeans as KMeans
+import pandas as pd
 from scipy.ndimage import gaussian_filter
-from skimage.measure import regionprops, approximate_polygon, find_contours
-import hashlib, tempfile
+from scipy.sparse import csc_matrix
+from scipy.spatial import cKDTree
+from skimage.measure import approximate_polygon, find_contours, regionprops
+from sklearn.cluster import MiniBatchKMeans as KMeans
+
+from flask import abort, make_response
 
 
 class Plugin:
@@ -391,8 +394,9 @@ def points2geojson(
 
 
 def test():
-    import pandas as pd
     import json
+
+    import pandas as pd
 
     data = pd.read_csv("example_data.csv")
     xy = data[["x", "y"]].to_numpy()

@@ -1,23 +1,23 @@
-""" Functions for matching only and creating a csv 
-with the new global coords and if they are 
+""" Functions for matching only and creating a csv
+with the new global coords and if they are
 to be erased ----------------------------------Relabel2 """
+import os
+
 # nb2
 import sqlite3
-import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib.patches import Circle
-import numpy as np
+import sys
+
 import IPython.display
-import os
-from skimage import io
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from matplotlib.patches import Circle
 
 # nb 3
 from scipy import ndimage as ndi
-from skimage.morphology import watershed
-from skimage.morphology import dilation
-from skimage.morphology import erosion
+from skimage import io
 from skimage.feature import peak_local_max
-import sys
+from skimage.morphology import dilation, erosion, watershed
 
 filenamecolumn = "Image_FileName_DNA"
 po_x_location = "Nuclei_Location_Center_X"
@@ -483,8 +483,8 @@ def matchObjectsInBorders(
             hasNeighbor[n] = True
 
 
-""" Functions for matching only and creating a csv 
-with the new global coords and if they are 
+""" Functions for matching only and creating a csv
+with the new global coords and if they are
 to be erased ----------------------------------Relabel3 """
 
 

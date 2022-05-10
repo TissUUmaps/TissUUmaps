@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-    - 'plugins_repo/**'
+      - "plugins_repo/**"
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -16,7 +16,7 @@ jobs:
       - name: Set up Python 3.6
         uses: actions/setup-python@v2
         with:
-          python-version: '3.6'
+          python-version: "3.6"
       - name: generate json and html
         run: |
           pip install jinja2 pyyaml

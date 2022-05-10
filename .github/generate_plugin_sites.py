@@ -1,8 +1,9 @@
 import glob
-from jinja2 import Template
-import yaml
-import os
 import json
+import os
+
+import yaml
+from jinja2 import Template
 
 t = Template(
     """
@@ -10,12 +11,12 @@ t = Template(
     <head>
         <title>TissUUmaps plugins</title>
         <style>
-            table {  
+            table {
                 color: #333; /* Lighten up font color */
                 font-family: Helvetica, Arial, sans-serif; /* Nicer font */
-                width: 100%; 
-                border-collapse: 
-                collapse; border-spacing: 0; 
+                width: 100%;
+                border-collapse:
+                collapse; border-spacing: 0;
                 max-width:1600px;
                 margin-left:auto;
                 margin-right:auto;
@@ -23,12 +24,12 @@ t = Template(
 
             td, th { border: 1px solid #CCC; height: 30px; } /* Make cells a bit taller */
 
-            th {  
+            th {
                 background: #F3F3F3; /* Light grey background */
                 font-weight: bold; /* Make sure they're bold */
             }
 
-            td {  
+            td {
                 background: #FAFAFA; /* Lighter grey background */
                 text-align: left; /* Center our text */
                 vertical-align: top;

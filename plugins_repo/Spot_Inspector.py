@@ -1,22 +1,24 @@
-from flask import Flask, abort, make_response, render_template
-from openslide import OpenSlideError
-import os, glob
+import glob
+import os
 from io import BytesIO
-from PIL import Image
 
 import matplotlib
+from openslide import OpenSlideError
+from PIL import Image
+
+from flask import Flask, abort, make_response, render_template
 
 matplotlib.use("Agg")
-
-import matplotlib.pyplot as plt
-import pyvips
-from urllib.parse import unquote
-import logging
 
 # from mpl_toolkits.axes_grid1 import make_axes_locatable
 # import importlib
 # importlib.import_module('mpl_toolkits.axes_grid1').make_axes_locatable
 import base64
+import logging
+from urllib.parse import unquote
+
+import matplotlib.pyplot as plt
+import pyvips
 
 
 class PILBytesIO(BytesIO):
@@ -187,7 +189,6 @@ class Plugin:
                     marker="x",
                 )
             except:
-                import traceback
                 import traceback
 
                 logging.error(traceback.format_exc())

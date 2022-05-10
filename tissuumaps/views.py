@@ -1,44 +1,41 @@
 # Python default library
-from collections import OrderedDict
-from functools import wraps
-import gzip
-import importlib
-import io
 import base64
-import json
-import os
-import threading
-from threading import Lock
-import time
-import logging
-from urllib.parse import urlparse
-from urllib.parse import parse_qs
+import gzip
 
 # External libraries
 import imghdr
+import importlib
+import io
+import json
+import logging
+import os
+import threading
+import time
+from collections import OrderedDict
+from functools import wraps
+from threading import Lock
+from urllib.parse import parse_qs, urlparse
+
 import pyvips
-import openslide
-from openslide import (
-    ImageSlide,
-    OpenSlide,
-)
+from openslide import ImageSlide, OpenSlide
 from openslide.deepzoom import DeepZoomGenerator
-from tissuumaps import app
 
 # Flask dependencies
 from flask import (
+    Response,
+    _request_ctx_stack,
     abort,
     make_response,
-    render_template,
-    url_for,
-    request,
-    Response,
-    send_from_directory,
     redirect,
-    _request_ctx_stack,
+    render_template,
+    request,
+    send_from_directory,
+    url_for,
 )
-
+from tissuumaps import app
 from tissuumaps.flask_filetree import filetree
+
+import openslide  # isort: skip
 
 
 def _fnfilter(filename):

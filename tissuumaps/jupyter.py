@@ -4,18 +4,20 @@ tissuumaps.jupyter
 Module used to run TissUUmaps from a Jupyter Notebook or from Jupyter Lab.
 """
 
-from tissuumaps import views
-from IPython.display import HTML, Javascript, clear_output
-from IPython.core.display import display
-
-import threading
-import logging
 import json
-import click
-import warnings
-import os, time
-from pathlib import Path
+import logging
+import os
+import threading
+import time
 import uuid
+import warnings
+from pathlib import Path
+
+import click
+from IPython.core.display import display
+from IPython.display import HTML, Javascript, clear_output
+
+from tissuumaps import views
 
 
 def secho(text, file=None, nl=None, err=None, color=None, **styles):

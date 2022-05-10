@@ -13,7 +13,7 @@
             $("#filetree").fileTree({
                 root: "",
                 script: "{{ url_for('filetree.sfiles') }}"
-            }, function(file) { 
+            }, function(file) {
                 var dirname = "";
                 if (file.match(/(.*)[\/\\]/)) {
                     dirname = file.match(/(.*)[\/\\]/)[1]||'';

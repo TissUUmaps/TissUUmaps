@@ -24,19 +24,20 @@
 # @ Integer (label="Signal quality threshold", value="30") qualityThreshold
 
 
+import csv
+
+# Python imports
+import glob
+import json
+import os
+import urllib
+from shutil import copyfile
+
 # ImageJ imports
 from ij import IJ, ImagePlus, ImageStack
 
 # Fiji plugins
 from register_virtual_stack import Register_Virtual_Stack_MT, Transform_Virtual_Stack_MT
-
-# Python imports
-import glob
-import os
-import csv
-import json
-from shutil import copyfile
-import urllib
 
 print("Automatic alignment for staining and destaining")
 IJ.log("Automatic alignment for staining and destaining")
@@ -173,21 +174,18 @@ class alignImages:
         return minimum, maximum
 
 
-from fiji.plugin.trackmate import Model
-from fiji.plugin.trackmate import Settings
-from fiji.plugin.trackmate import TrackMate
-from fiji.plugin.trackmate import SelectionModel
-from fiji.plugin.trackmate import Logger
+import fiji.plugin.trackmate.features.FeatureFilter as FeatureFilter
+import fiji.plugin.trackmate.features.spot.SpotIntensityMultiCAnalyzerFactory as SpotIntensityMultiCAnalyzerFactory
+import fiji.plugin.trackmate.visualization.hyperstack.HyperStackDisplayer as HyperStackDisplayer
+from fiji.plugin.trackmate import Logger, Model, SelectionModel, Settings, TrackMate
 from fiji.plugin.trackmate.detection import LogDetectorFactory
+from fiji.plugin.trackmate.providers import (
+    EdgeAnalyzerProvider,
+    SpotAnalyzerProvider,
+    TrackAnalyzerProvider,
+)
 from fiji.plugin.trackmate.tracking import LAPUtils
 from fiji.plugin.trackmate.tracking.sparselap import SparseLAPTrackerFactory
-from fiji.plugin.trackmate.providers import SpotAnalyzerProvider
-from fiji.plugin.trackmate.providers import EdgeAnalyzerProvider
-from fiji.plugin.trackmate.providers import TrackAnalyzerProvider
-import fiji.plugin.trackmate.visualization.hyperstack.HyperStackDisplayer as HyperStackDisplayer
-import fiji.plugin.trackmate.features.FeatureFilter as FeatureFilter
-
-import fiji.plugin.trackmate.features.spot.SpotIntensityMultiCAnalyzerFactory as SpotIntensityMultiCAnalyzerFactory
 from ij.plugin import ImageCalculator
 
 

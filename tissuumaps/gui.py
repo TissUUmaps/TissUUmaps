@@ -2,28 +2,28 @@ import logging
 import warnings
 
 try:
+    from PyQt5 import QtGui
     from PyQt5.QtCore import *
+    from PyQt5.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
+    from PyQt5.QtWebChannel import QWebChannel
     from PyQt5.QtWebEngineWidgets import *
     from PyQt5.QtWidgets import (
-        QApplication,
-        QFileDialog,
-        QMessageBox,
-        QPlainTextEdit,
-        QDialog,
-        QSplashScreen,
-        QMainWindow,
         QAction,
-        QStyle,
+        QApplication,
+        QDialog,
         QDialogButtonBox,
+        QFileDialog,
         QFormLayout,
         QLabel,
-        QListView,
-        QPushButton,
         QLineEdit,
+        QListView,
+        QMainWindow,
+        QMessageBox,
+        QPlainTextEdit,
+        QPushButton,
+        QSplashScreen,
+        QStyle,
     )
-    from PyQt5.QtWebChannel import QWebChannel
-    from PyQt5 import QtGui
-    from PyQt5.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
 
 except ImportError:
     # dependency missing, issue a warning
@@ -32,26 +32,23 @@ except ImportError:
 
     sys.exit()
 
-from optparse import OptionParser
-from functools import partial
-
+import json
+import os
 import pathlib
-from pathlib import Path
-from urllib.parse import urlparse
-from urllib.parse import parse_qs
-from shutil import copyfile
-import subprocess
-
-import threading, time
-import sys
+import random
 import socket
-
+import string
+import subprocess
+import sys
+import threading
+import time
 import urllib.parse
 import urllib.request
-import os
-import json
-import random
-import string
+from functools import partial
+from optparse import OptionParser
+from pathlib import Path
+from shutil import copyfile
+from urllib.parse import parse_qs, urlparse
 
 # Don't remove this line.  The idna encoding
 # is used by getaddrinfo when dealing with unicode hostnames,

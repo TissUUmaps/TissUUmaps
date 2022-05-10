@@ -16,13 +16,15 @@
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 import glob
+import logging
 import os
 import pathlib
 import sys
-from flask import Flask
 from optparse import OptionParser
-import logging
+
 import yaml
+
+from flask import Flask
 
 log = logging.getLogger()
 log.setLevel(logging.INFO)

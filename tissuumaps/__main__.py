@@ -1,7 +1,7 @@
 import logging
+import os
 import warnings
 from optparse import OptionParser
-import os
 
 from . import views
 
