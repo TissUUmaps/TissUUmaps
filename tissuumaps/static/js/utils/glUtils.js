@@ -52,7 +52,7 @@ glUtils = {
     _showMarkerInfo: true,
     _resolutionScale: 1.0,        // If this is set to below 1.0, the WebGL output will be upscaled
     _resolutionScaleActual: 1.0,  // Automatic scaling factor computed from glUtils._resolutionScale
-    _useInstancing: false,        // Use instancing and gl.TRIANGLE_STRIP to avoid size limit of gl.POINTS
+    _useInstancing: true,        // Use instancing and gl.TRIANGLE_STRIP to avoid size limit of gl.POINTS
     _piechartPalette: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
 
