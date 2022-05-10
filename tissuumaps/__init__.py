@@ -23,7 +23,6 @@ import sys
 from optparse import OptionParser
 
 import yaml
-
 from flask import Flask
 
 log = logging.getLogger()

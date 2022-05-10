@@ -17,8 +17,6 @@ from threading import Lock
 from urllib.parse import parse_qs, urlparse
 
 import pyvips
-from openslide import ImageSlide, OpenSlide
-from openslide.deepzoom import DeepZoomGenerator
 
 # Flask dependencies
 from flask import (
@@ -32,10 +30,13 @@ from flask import (
     send_from_directory,
     url_for,
 )
+
 from tissuumaps import app
 from tissuumaps.flask_filetree import filetree
 
 import openslide  # isort: skip
+from openslide import ImageSlide, OpenSlide  # isort: skip
+from openslide.deepzoom import DeepZoomGenerator  # isort: skip
 
 
 def _fnfilter(filename):

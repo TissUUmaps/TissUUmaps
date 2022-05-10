@@ -6,13 +6,12 @@ import tempfile
 
 import numpy as np
 import pandas as pd
+from flask import abort, make_response
 from scipy.ndimage import gaussian_filter
 from scipy.sparse import csc_matrix
 from scipy.spatial import cKDTree
 from skimage.measure import approximate_polygon, find_contours, regionprops
 from sklearn.cluster import MiniBatchKMeans as KMeans
-
-from flask import abort, make_response
 
 
 class Plugin:

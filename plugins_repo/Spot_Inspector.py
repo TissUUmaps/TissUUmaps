@@ -3,10 +3,9 @@ import os
 from io import BytesIO
 
 import matplotlib
+from flask import Flask, abort, make_response, render_template
 from openslide import OpenSlideError
 from PIL import Image
-
-from flask import Flask, abort, make_response, render_template
 
 matplotlib.use("Agg")
 
