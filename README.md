@@ -1,4 +1,4 @@
-# TissUUmaps - UU is for Uppsala University ;)
+# TissUUmaps - Interactive visualization and quality assessment of large-scale spatial omics data
 
 ![TissUUmaps banner](https://github.com/TissUUmaps/TissUUmapsCore/blob/master/misc/design/logo-github-2443-473.png)
 
