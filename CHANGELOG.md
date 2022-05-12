@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.0.9.1
+
+- Enable larger markers at high resolutiion (up to 1024x1024px)
+- Fix pinch to zoom center
+- Add code of conduct
+- Clean code and use ci (pre-commit)
+
 ## 3.0.9
 
 - Move to webgl2
