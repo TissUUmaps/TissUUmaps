@@ -123,7 +123,7 @@ class ImageConverter:
         self.outputImage = outputImage
 
     def convert(self):
-        logging.debug(" ".join("Converting: ", self.inputImage, self.outputImage))
+        logging.debug(" ".join(["Converting: ", self.inputImage, self.outputImage]))
         if not os.path.isfile(self.outputImage):
 
             def convertThread():
