@@ -423,6 +423,7 @@ class webEngine(QWebEngineView):
         # self.showMaximized()
 
     def addRecent(self, path):
+        os.makedirs(os.path.join(os.path.expanduser("~"), ".tissuumaps"), exist_ok=True)
         recentFile = os.path.join(
             os.path.expanduser("~"), ".tissuumaps", "recents.json"
         )
