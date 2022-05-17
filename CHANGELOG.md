@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.9.3
+
+- Go back to webGL 1 for compatibility issue with Safari 14
+- Fix missing .tissuumaps folder for recent files
+
 ## 3.0.9.1
 
 - Enable larger markers at high resolutiion (up to 1024x1024px)
