@@ -40,11 +40,9 @@ class ImageConverter:
                 if minVal == maxVal:
                     minVal = 0
                     maxVal = 255
-                logging.debug("minVal, maxVal", minVal, maxVal)
                 imgVips = (255.0 * (imgVips - minVal)) / (maxVal - minVal)
                 imgVips = (imgVips < 0).ifthenelse(0, imgVips)
                 imgVips = (imgVips > 255).ifthenelse(255, imgVips)
-                logging.debug("minVal, maxVal", imgVips.min(), imgVips.max())
                 imgVips = imgVips.scaleimage()
                 imgVips.tiffsave(
                     self.outputImage,
@@ -70,7 +68,6 @@ class Plugin:
 
     def _get_slide(self, path):
         path = os.path.abspath(os.path.join(self.app.basedir, path))
-        logging.debug(path)
         if not path.startswith(self.app.basedir):
             # Directory traversal
             logging.error("Directory traversal, aborting.")
@@ -137,7 +134,10 @@ class Plugin:
         singleHeight = tiles[rounds[0]][channels[0]].height
 
         im = self.getConcat(tiles, rounds, channels).convert("L")
-        fig = plt.figure(figsize=(self.figureSize, self.figureSize * 4 / 5), dpi=80)
+        figureRatio = (len(channels) + 2) / len(rounds)
+        fig = plt.figure(
+            figsize=(self.figureSize * figureRatio, self.figureSize), dpi=80
+        )
         ax = fig.add_subplot(111)
         # plt.axis('off')
         imcolor = plt.imshow(im, cmap=plt.get_cmap(self.cmap), vmin=0, vmax=255)
@@ -168,6 +168,10 @@ class Plugin:
                 else:
                     markerchannels = marker["letters"]
 
+                print(
+                    marker["rounds"], markerRounds, marker["channels"], markerchannels
+                )
+
                 offset = (
                     marker["global_X_pos"] - bbox[0] - 0.5,
                     marker["global_Y_pos"] - bbox[1] - 0.5,
@@ -176,8 +180,10 @@ class Plugin:
                     zip(markerchannels, markerRounds)
                 ):
                     xIndex = channels.index(markerchannel)
+                    yIndex_ = rounds.index(markerRound)
+                    print(yIndex, yIndex_)
                     x.append(offset[0] + singleWidth * xIndex)
-                    y.append(offset[1] + singleWidth * yIndex)
+                    y.append(offset[1] + singleWidth * yIndex_)
                 ax.plot(
                     x,
                     y,
@@ -225,7 +231,6 @@ class Plugin:
             self.cmap = jsonParam["cmap"]
         else:
             self.cmap = "Greys_r"
-        logging.debug("getMatrix", bbox, layers, markers)
         tiles = {}
         rounds = jsonParam["order_rounds"]
         channels = jsonParam["order_channels"]
@@ -259,13 +264,11 @@ class Plugin:
             abort(500)
         relativepath = unquote(jsonParam["path"])
         pathFormat = unquote(jsonParam["pathFormat"])
-        logging.debug('jsonParam["path"]', jsonParam["path"])
         if relativepath != "":
             if relativepath[0] == "/":
                 relativepath = relativepath[1:]
         path = os.path.abspath(os.path.join(self.app.basedir, relativepath))
         absoluteRoot = os.path.abspath(self.app.basedir)
-        logging.debug("path", relativepath, path, absoluteRoot)
         tifFiles_ = glob.glob(path + "/" + pathFormat)
         tifFiles = []
         for tifFile in tifFiles_:
@@ -275,9 +278,8 @@ class Plugin:
                 self._get_slide(tifFile)
                 tifFiles.append(tifFile)
             except:
-                logging.error("impossible to read", tifFile, ". Abort this file.")
+                logging.error("impossible to read " + tifFile + ". Abort this file.")
                 continue
-        logging.debug(tifFiles)
         # csvFiles = glob.glob(path + "/*.csv")
         csvFilesDesc = []
         # for csvFile in csvFiles:
@@ -316,12 +318,9 @@ class Plugin:
                 channels.append(channel)
             filePath = os.path.relpath(filename, path)
             filePath = filePath.replace("\\", "/")
-            logging.debug(filename, relativepath, filePath)
             if filePath[0] != "/":
                 filePath = "/" + filePath
             layer = {"name": basename, "tileSource": filePath + ".dzi"}
-            logging.debug(channels, channel)
-            logging.debug(channels.index(channel) % len(colors))
             layerFilter = [
                 {
                     "value": colors[channels.index(channel) % len(colors)],
