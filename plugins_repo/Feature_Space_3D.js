@@ -297,6 +297,23 @@ Feature_Space_3D.run = function () {
       //Plotly.newPlot(document.getElementById("Feature_Space_3D_Control"), data);;
     }, 50);
   };
+  var copyData = function () {
+    setTimeout(function () {
+      var plotDiv = document.getElementById("Feature_Space_3D_Control");
+      const data = Feature_Space_3D.getData();
+      var plotData = plotDiv.data;
+      for (var trace in data) {
+        plotData[trace].x = data[trace].x;
+        plotData[trace].y = data[trace].y;
+        plotData[trace].z = data[trace].z;
+        plotData[trace].marker = data[trace].marker;
+      }
+      Plotly.redraw(plotDiv);
+      copySettings();
+      //Plotly.redraw(document.getElementById("Feature_Space_3D_Control"))
+      //Plotly.newPlot(document.getElementById("Feature_Space_3D_Control"), data);;
+    }, 50);
+  };
   if (glUtils.Feature_Space_3D_draw === undefined) {
     glUtils.Feature_Space_3D_draw = glUtils.draw;
     glUtils.draw = function () {
@@ -312,58 +329,84 @@ Feature_Space_3D.run = function () {
     dataUtils.Feature_Space_3D_updateViewOptions = dataUtils.updateViewOptions;
     dataUtils.updateViewOptions = function (data_id) {
       dataUtils.Feature_Space_3D_updateViewOptions(data_id);
-      copySettings();
+      copyData();
     };
   }
 
-  /*
-    function run() {
-        rotate('scene', Math.PI / 360);
-        requestAnimationFrame(run);
-    }
-    run();
+  function run() {
+    rotate("scene", Math.PI / 360);
+    requestAnimationFrame(run);
+  }
+  //run();
 
-    function rotate(id, angle) {
-        var eye0 = document.getElementById("Feature_Space_3D_Control").layout[id].camera.eye
-        var rtz = xyz2rtz(eye0);
-        rtz.t += angle;
+  function rotate(id, angle) {
+    var eye0 = document.getElementById("Feature_Space_3D_Control").layout[id]
+      .camera.eye;
+    var rtz = xyz2rtz(eye0);
+    rtz.t += angle;
 
-        var eye1 = rtz2xyz(rtz);
-        Plotly.relayout(document.getElementById("Feature_Space_3D_Control"), id + '.camera.eye', eye1)
-    }
+    var eye1 = rtz2xyz(rtz);
+    Plotly.relayout(
+      document.getElementById("Feature_Space_3D_Control"),
+      id + ".camera.eye",
+      eye1
+    );
+  }
 
-    function xyz2rtz(xyz) {
-        return {
-        r: Math.sqrt(xyz.x * xyz.x + xyz.y * xyz.y),
-        t: Math.atan2(xyz.y, xyz.x),
-        z: xyz.z
-        };
-    }
+  function xyz2rtz(xyz) {
+    return {
+      r: Math.sqrt(xyz.x * xyz.x + xyz.y * xyz.y),
+      t: Math.atan2(xyz.y, xyz.x),
+      z: xyz.z,
+    };
+  }
 
-    function rtz2xyz(rtz) {
-        return {
-        x: rtz.r * Math.cos(rtz.t),
-        y: rtz.r * Math.sin(rtz.t),
-        z: rtz.z
-        };
-    }*/
+  function rtz2xyz(rtz) {
+    return {
+      x: rtz.r * Math.cos(rtz.t),
+      y: rtz.r * Math.sin(rtz.t),
+      z: rtz.z,
+    };
+  }
 };
+if (!Array.prototype.chunk) {
+  Object.defineProperty(Array.prototype, "chunk", {
+    value: function (n) {
+      return Array(Math.ceil(this.length / n))
+        .fill()
+        .map((_, i) => this.slice(i * n, i * n + n));
+    },
+  });
+}
 
 Feature_Space_3D.getData = function () {
   const dataset = Feature_Space_3D._dataset;
   const markerData = dataUtils.data[dataset]["_processeddata"];
   const numPoints = markerData[markerData.columns[0]].length;
   const keyName = dataUtils.data[uid]["_gb_col"];
+
+  const scalarPropertyName = dataUtils.data[uid]["_cb_col"];
+  const useColorFromMarker =
+    dataUtils.data[uid]["_cb_col"] != null &&
+    dataUtils.data[uid]["_cb_cmap"] == null;
+  const colorscaleName = dataUtils.data[uid]["_cb_cmap"];
+  const useColorFromColormap = dataUtils.data[uid]["_cb_cmap"] != null;
+
   var key, X, Y, Z;
   var markers3D = {};
   for (let i = 0, index = 0; i < numPoints; ++i) {
-    key = markerData[keyName][i];
+    key = keyName ? markerData[keyName][i] : "All";
     X = markerData[Feature_Space_3D._UMAP1][i];
     Y = markerData[Feature_Space_3D._UMAP2][i];
     Z = markerData[Feature_Space_3D._UMAP3][i];
     if (markers3D[key] === undefined) {
       const inputs = interfaceUtils._mGenUIFuncs.getGroupInputs(dataset, key);
-      const hexColor = "color" in inputs ? inputs["color"] : "#ffff00";
+      var hexColor;
+      if (useColorFromColormap || useColorFromMarker) {
+        hexColor = [];
+      } else {
+        hexColor = "color" in inputs ? inputs["color"] : "#ffff00";
+      }
       var visible = "visible" in inputs ? inputs["visible"] : true;
       const shape = "shape" in inputs ? inputs["shape"] : "circle";
       const hidden = "hidden" in inputs ? inputs["hidden"] : true;
@@ -384,12 +427,32 @@ Feature_Space_3D.getData = function () {
         meta: key.toString(),
         hovertemplate: "%{meta}<extra></extra>",
       };
+      if (useColorFromColormap) {
+        markers3D[key].marker.colorscale = glUtils._colorscaleData[dataset]
+          .chunk(4)
+          .map(function (RGBA, index) {
+            return [
+              index / 255,
+              "rgb(" +
+                parseInt(RGBA[0]) +
+                "," +
+                parseInt(RGBA[1]) +
+                "," +
+                parseInt(RGBA[2]) +
+                ")",
+            ];
+          });
+      }
+      if (useColorFromColormap || useColorFromMarker) {
+        markers3D[key].hovertemplate = "%{marker.color}<extra></extra>";
+      }
     }
-    //if (markers3D[key]["marker"]["opacity"] > 0) {
     markers3D[key].x.push(X);
     markers3D[key].y.push(Y);
     markers3D[key].z.push(Z);
-    //}
+    if (useColorFromColormap || useColorFromMarker) {
+      markers3D[key].marker.color.push(markerData[scalarPropertyName][i]);
+    }
   }
   return Object.values(markers3D);
 };
