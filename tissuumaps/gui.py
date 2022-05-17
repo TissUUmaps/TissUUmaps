@@ -534,7 +534,7 @@ class webEngine(QWebEngineView):
             except:
                 pass
 
-            logging.error("Impossible to load", self.location)
+            logging.error("Impossible to load: " + self.location)
             time.sleep(0.1)
         if len(self.args) > 0:
             if not self.openImagePath(os.path.abspath(self.args[0])):
