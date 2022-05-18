@@ -3,15 +3,11 @@ import os
 from io import BytesIO
 
 import matplotlib
-from flask import Flask, abort, make_response, render_template
-from openslide import OpenSlideError
+from flask import abort, make_response
 from PIL import Image
 
 matplotlib.use("Agg")
 
-# from mpl_toolkits.axes_grid1 import make_axes_locatable
-# import importlib
-# importlib.import_module('mpl_toolkits.axes_grid1').make_axes_locatable
 import base64
 import logging
 from urllib.parse import unquote
@@ -26,128 +22,33 @@ class PILBytesIO(BytesIO):
         raise AttributeError("Not supported")
 
 
-class ImageConverter:
-    def __init__(self, inputImage, outputImage):
-        self.inputImage = inputImage
-        self.outputImage = outputImage
-
-    def convert(self):
-        if not os.path.isfile(self.outputImage):
-            try:
-                imgVips = pyvips.Image.new_from_file(self.inputImage)
-                minVal = imgVips.percent(10)
-                maxVal = imgVips.percent(99)
-                if minVal == maxVal:
-                    minVal = 0
-                    maxVal = 255
-                imgVips = (255.0 * (imgVips - minVal)) / (maxVal - minVal)
-                imgVips = (imgVips < 0).ifthenelse(0, imgVips)
-                imgVips = (imgVips > 255).ifthenelse(255, imgVips)
-                imgVips = imgVips.scaleimage()
-                imgVips.tiffsave(
-                    self.outputImage,
-                    pyramid=True,
-                    tile=True,
-                    tile_width=256,
-                    tile_height=256,
-                    properties=True,
-                    bitdepth=8,
-                )
-            except:
-                logging.error("Impossible to convert image using VIPS:")
-                import traceback
-
-                logging.error(traceback.format_exc())
-            self.convertDone = True
-        return self.outputImage
-
-
 class Plugin:
     def __init__(self, app):
         self.app = app
 
-    def _get_slide(self, path):
-        path = os.path.abspath(os.path.join(self.app.basedir, path))
-        if not path.startswith(self.app.basedir):
-            # Directory traversal
-            logging.error("Directory traversal, aborting.")
-            abort(500)
-        if not os.path.exists(path):
-            logging.error("not os.path.exists, aborting.")
-            abort(500)
-        try:
-            slide = self.app.cache.get(path)
-            return slide
-        except OpenSlideError:
-            if ".tissuumaps" in path:
-                abort(500)
-            try:
-                newpath = (
-                    os.path.dirname(path) + "/.tissuumaps/" + os.path.basename(path)
-                )
-                if not os.path.isdir(os.path.dirname(path) + "/.tissuumaps/"):
-                    os.makedirs(os.path.dirname(path) + "/.tissuumaps/")
-                path = ImageConverter(path, newpath).convert()
-                # imgPath = imgPath.replace("\\","/")
-                return self._get_slide(path)
-            except:
-                import traceback
-
-                logging.error(traceback.format_exc())
-                logging.error("OpenSlideError, aborting.")
-                abort(500)
-
-    def getTile(self, path, bbox):
-        path = path.replace(".dzi", "")
-        if path[0] == "\\" or path[0] == "/":
-            path = path[1:]
-        slide = self._get_slide(path)
-        try:
-            with slide.tileLock:
-                tile = slide.osr.read_region((bbox[0], bbox[1]), 0, (bbox[2], bbox[3]))
-        except ValueError:
-            # Invalid level or coordinates
-            logging.error("ValueError, aborting.")
-            abort(500)
+    def getTile(self, image, bbox):
+        tile = image.crop(bbox[0], bbox[1], bbox[2], bbox[3])
         return tile
 
     def getConcat(self, tiles, rounds, channels):
-        singleWidth = tiles[rounds[0]][channels[0]].width
-        singleHeight = tiles[rounds[0]][channels[0]].height
-
-        width = len(channels) * singleWidth
-        height = len(rounds) * singleHeight
-
-        dst = Image.new("RGB", (width, height))
+        tilesArray = []
         for row, round in enumerate(rounds):
             for col, channel in enumerate(channels):
-                try:
-                    dst.paste(
-                        tiles[round][channel], (col * singleWidth, row * singleHeight)
-                    )
-                except:
-                    pass
-        return dst
+                tilesArray.append(tiles[round][channel])
+        return pyvips.Image.arrayjoin(tilesArray, across=len(channels))
 
     def getPlot(self, tiles, rounds, channels, markers, bbox):
         singleWidth = tiles[rounds[0]][channels[0]].width
         singleHeight = tiles[rounds[0]][channels[0]].height
-
-        im = self.getConcat(tiles, rounds, channels).convert("L")
+        im = self.getConcat(tiles, rounds, channels)  # .convert("L")
         figureRatio = (len(channels) + 2) / len(rounds)
         fig = plt.figure(
             figsize=(self.figureSize * figureRatio, self.figureSize), dpi=80
         )
         ax = fig.add_subplot(111)
-        # plt.axis('off')
-        imcolor = plt.imshow(im, cmap=plt.get_cmap(self.cmap), vmin=0, vmax=255)
+        imcolor = plt.imshow(im, cmap=plt.get_cmap(self.cmap))
 
-        # create an axes on the right side of ax. The width of cax will be 5%
-        # of ax and the padding between cax and ax will be fixed at 0.05 inch.
-        # divider = make_axes_locatable(ax)
-        # cax = divider.append_axes("right", size="5%", pad=0.05)
-
-        plt.colorbar(imcolor, fraction=0.036, pad=0.05)  # , cax=cax)
+        plt.colorbar(imcolor, fraction=0.036, pad=0.05)
 
         for xIndex in range(len(channels) + 1):
             ax.axvline(x=singleWidth * xIndex - 0.5, color="red", linewidth=1)
@@ -168,10 +69,6 @@ class Plugin:
                 else:
                     markerchannels = marker["letters"]
 
-                print(
-                    marker["rounds"], markerRounds, marker["channels"], markerchannels
-                )
-
                 offset = (
                     marker["global_X_pos"] - bbox[0] - 0.5,
                     marker["global_Y_pos"] - bbox[1] - 0.5,
@@ -181,7 +78,6 @@ class Plugin:
                 ):
                     xIndex = channels.index(markerchannel)
                     yIndex_ = rounds.index(markerRound)
-                    print(yIndex, yIndex_)
                     x.append(offset[0] + singleWidth * xIndex)
                     y.append(offset[1] + singleWidth * yIndex_)
                 ax.plot(
@@ -214,7 +110,6 @@ class Plugin:
         fig.savefig(buf)
         fig.clf()
         plt.close()
-        # plt.close(fig)
         return buf
 
     def getMatrix(self, jsonParam):
@@ -226,6 +121,7 @@ class Plugin:
         layers = jsonParam["layers"]
         path = jsonParam["path"]
         markers = jsonParam["markers"]
+
         self.figureSize = jsonParam["figureSize"]
         if "cmap" in jsonParam.keys():
             self.cmap = jsonParam["cmap"]
@@ -243,19 +139,22 @@ class Plugin:
                     rounds.append(round)
                 if channel not in channels:
                     channels.append(channel)
+
         for layer in layers:
+            globalpath = os.path.abspath(os.path.join(self.app.basedir, path))
+            image = pyvips.Image.new_from_file(
+                globalpath + "/" + layer["tileSource"].replace(".dzi", ""),
+                memory=False,
+                access="sequential",
+            )
             round, channel = layer["name"].split("_")
             if round not in tiles.keys():
                 tiles[round] = {}
-            tiles[round][channel] = self.getTile(path + "/" + layer["tileSource"], bbox)
+            tiles[round][channel] = self.getTile(image, bbox)
 
         plot = self.getPlot(tiles, rounds, channels, markers, bbox)
-        format = "png"
         img_str = base64.b64encode(plot.getvalue())
         resp = make_response(img_str)
-        # resp.mimetype = 'image/%s' % format
-        # resp.cache_control.max_age = 0
-        # resp.cache_control.public = True
         return resp
 
     def importFolder(self, jsonParam):
