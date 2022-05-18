@@ -939,8 +939,8 @@ def main():
         metavar="PORT",
         dest="port",
         type="int",
-        default=5000,
-        help="port to listen on [5000]",
+        default=5432,
+        help="port to listen on [5432]",
     )
     parser.add_option(
         "-Q",
@@ -1024,7 +1024,7 @@ def main():
 
     qt_app.processEvents()
 
-    port = 5000
+    port = opts.port
     logging.info("Starting port detection")
     while is_port_in_use(port):
         port += 1
