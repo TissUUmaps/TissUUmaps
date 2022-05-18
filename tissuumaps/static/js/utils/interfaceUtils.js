@@ -1905,17 +1905,26 @@ interfaceUtils._mGenUIFuncs.groupUI=function(uid){
     table.appendChild(tbody);
     groupUI.appendChild(table);
     filter.addEventListener("input",function(event) {
+        // Temporary hides the table for chrome issue with slowliness
+        table.classList.add("d-none");
         const trs = table.querySelectorAll('tbody tr')
         const filter = this.value
         const regex = new RegExp(filter, 'i')
         const isFoundInTds = td => regex.test(td.innerText)
         const isFound = childrenArr => childrenArr.some(isFoundInTds)
-        const setTrStyleDisplay = ({ style, children }) => {
-            style.display = isFound([
-            ...children // <-- All columns
-            ]) ? '' : 'none' 
+        const setTrStyleDisplay = (element) => {
+            if (isFound([
+            ...element.children // <-- All columns
+            ])) {
+                element.classList.remove("d-none");
+            }
+            else {
+                element.classList.add("d-none");
+            }
         }
-        trs.forEach(setTrStyleDisplay)
+        trs.forEach(setTrStyleDisplay);
+        // Shows back the table
+        table.classList.remove("d-none");
     })
     
     sorttable.makeSortable(table);
