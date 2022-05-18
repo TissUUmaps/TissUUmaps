@@ -134,11 +134,14 @@ class ImageConverter:
                     if minVal == maxVal:
                         minVal = 0
                         maxVal = 255
-                    if imgVips.percent(1) < 0 or imgVips.percent(99) > 255:
+                    if minVal < 0 or maxVal > 255:
+                        logging.debug(
+                            f"Rescaling image {self.inputImage}: {minVal} - {maxVal} to 0 - 255"
+                        )
                         imgVips = (255.0 * (imgVips - minVal)) / (maxVal - minVal)
                         imgVips = (imgVips < 0).ifthenelse(0, imgVips)
                         imgVips = (imgVips > 255).ifthenelse(255, imgVips)
-                        imgVips = imgVips.scaleimage()
+                    imgVips = imgVips.scaleimage()
                     imgVips.tiffsave(
                         self.outputImage,
                         pyramid=True,
