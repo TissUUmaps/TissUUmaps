@@ -234,15 +234,12 @@ $( document ).ready(function() {
         }
     });
 
-    ISS_viewer_container.addEventListener("keypress", (event) => {
+    ISS_viewer_container.addEventListener("keydown", (event) => {
         if (event.key === "0") {
             interfaceUtils.toggleRightPanel();
         } else if (event.key === "f") {
             toggleFullscreen();
-        }
-    });
-    document.addEventListener("keypress", (event) => {
-        if (event.key === "m") {
+        } else if (event.key === "m") {
             for (const [key, value] of Object.entries(dataUtils.data)) {
                 $("#"+key+"_all_check").click();
                 $("#"+key+"_All_check").click();
