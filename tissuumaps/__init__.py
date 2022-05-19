@@ -62,11 +62,11 @@ with open(version_file) as f:
 
 app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
 app.config.from_object(__name__)
-app.config.from_envvar("TISSUUMAPS_CONF", silent=True)
 app.config["PLUGIN_FOLDER"] = plugins_folder
 app.config["PLUGIN_FOLDER_USER"] = os.path.join(
     os.path.expanduser("~"), ".tissuumaps", "plugins"
 )
+app.config.from_envvar("TISSUUMAPS_CONF", silent=True)
 
 
 def getPluginInFolder(folder):

@@ -798,7 +798,7 @@ class webEngine(QWebEngineView):
             return returnDict
         parts = Path(csvpath).parts
         if self.app.basedir != parts[0]:
-            if not self.app.basedir == "C:\mnt\data\shared":
+            if not self.app.basedir == os.path.abspath(self.app.config["SLIDE_DIR"]):
                 QMessageBox.warning(
                     self, "Error", "All files must be in the same drive."
                 )
@@ -838,7 +838,7 @@ class webEngine(QWebEngineView):
             return returnDict
         parts = Path(layerpath).parts
         if self.app.basedir != parts[0]:
-            if not self.app.basedir == "C:\mnt\data\shared":
+            if not self.app.basedir == os.path.abspath(self.app.config["SLIDE_DIR"]):
                 reply = QMessageBox.question(
                     self,
                     "Error",
