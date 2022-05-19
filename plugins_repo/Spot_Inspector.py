@@ -17,6 +17,7 @@ import pyvips
 
 import tissuumaps.views as tv
 
+
 class PILBytesIO(BytesIO):
     def fileno(self):
         """Classic PIL doesn't understand io.UnsupportedOperation."""
