@@ -15,6 +15,7 @@ from urllib.parse import unquote
 import matplotlib.pyplot as plt
 import pyvips
 
+import tissuumaps.views as tv
 
 class PILBytesIO(BytesIO):
     def fileno(self):
@@ -174,7 +175,7 @@ class Plugin:
             if tifFile in tifFiles:
                 continue
             try:
-                self._get_slide(tifFile)
+                tv._get_slide(tifFile)
                 tifFiles.append(tifFile)
             except:
                 logging.error("impossible to read " + tifFile + ". Abort this file.")
