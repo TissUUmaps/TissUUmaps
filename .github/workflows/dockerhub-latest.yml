@@ -19,4 +19,4 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           dockerfile: container/Dockerfile
-          tags: "latest"
+          tag_semver: true
