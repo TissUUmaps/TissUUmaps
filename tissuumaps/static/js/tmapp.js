@@ -244,6 +244,8 @@ $( document ).ready(function() {
                 $("#"+key+"_all_check").click();
                 $("#"+key+"_All_check").click();
             }
+        } else if (event.key === "r") {
+            $("#ISS_fillregions_btn").click();
         }
     });
 });
