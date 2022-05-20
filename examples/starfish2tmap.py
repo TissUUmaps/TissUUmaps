@@ -61,3 +61,4 @@ def qc_images(filtered_imgs):
 
             im = Image.fromarray(im)
             im.save('Round{}_{}.tif'.format(r,c))
+            
