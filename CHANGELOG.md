@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.9.5
+
+- Add / fix key shortcuts (https://tissuumaps.github.io/TissUUmaps-docs/docs/starting/shortcuts.html)
+- Change default GUI port to avoid collisions with server
+- Add plugin support to docker server
+
 ## 3.0.9.3
 
 - Go back to webGL 1 for compatibility issue with Safari 14
