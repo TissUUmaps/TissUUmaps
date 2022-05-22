@@ -34,12 +34,17 @@ from flask import (
 from tissuumaps import app
 from tissuumaps.flask_filetree import filetree
 
-import openslide  # isort: skip
-from openslide import ImageSlide, OpenSlide  # isort: skip
-from openslide.deepzoom import DeepZoomGenerator  # isort: skip
+#import openslide  # isort: skip
+#from openslide import ImageSlide, OpenSlide  # isort: skip
+#from openslide.deepzoom import DeepZoomGenerator  # isort: skip
 
+import tissuumaps.tiffslide as tiffslide
+from tissuumaps.tiffslide import OpenSlide
+from tifffile import TiffFile
+from tissuumaps.tiffslide.deepzoom import DeepZoomGenerator
 
 def _fnfilter(filename):
+    return True
     if OpenSlide.detect_format(filename):
         return True
     elif imghdr.what(filename):
@@ -237,11 +242,11 @@ class _SlideCache(object):
             slide.associated_images[name] = image
 
         try:
-            mpp_x = osr.properties[openslide.PROPERTY_NAME_MPP_X]
-            mpp_y = osr.properties[openslide.PROPERTY_NAME_MPP_Y]
+            mpp_x = osr.properties[tiffslide.PROPERTY_NAME_MPP_X]
+            mpp_y = osr.properties[tiffslide.PROPERTY_NAME_MPP_Y]
             slide.properties = osr.properties
             slide.mpp = float(mpp_x)
-        except (KeyError, ValueError):
+        except (KeyError, ValueError, TypeError):
             try:
                 if osr.properties["tiff.ResolutionUnit"] == "centimetre":
                     numerator = 10000  # microns in CM
@@ -297,7 +302,7 @@ def page_not_found(e):
     return redirect("/404"), 404, {"Refresh": "1; url=/404"}
 
 
-def _get_slide(path, originalPath=None):
+def _get_slide(path, page=None, originalPath=None):
     path = os.path.abspath(os.path.join(app.basedir, path))
     if not path.startswith(app.basedir):
         # Directory traversal
@@ -312,6 +317,10 @@ def _get_slide(path, originalPath=None):
         if ".tissuumaps" in path:
             abort(404)
         try:
+            
+            import traceback
+
+            logging.error(traceback.format_exc())
             newpath = (
                 os.path.dirname(path)
                 + "/.tissuumaps/"
@@ -346,6 +355,9 @@ def base_static(path):
     filename = os.path.basename(completePath)
     return send_from_directory(directory, filename)
 
+def int_to_rgb(v) :
+    rgba = [x / 255 * 100 for x in int(v).to_bytes(4, signed=True, byteorder="big")]
+    return ",".join(str(int(x)) for x in rgba[:3])
 
 @app.route("/<path:filename>")
 @requires_auth
@@ -354,11 +366,64 @@ def slide(filename):
     if not path:
         path = "./"
     path = os.path.abspath(os.path.join(app.basedir, path, filename))
-    # slide = _get_slide(path)
-    slide_url = os.path.basename(path) + ".dzi"  # url_for("dzi", path=path)
-    jsonProject = {
-        "layers": [{"name": os.path.basename(path), "tileSource": slide_url}]
-    }
+    try:
+        with TiffFile(path) as tif:
+            #print (len(tif.pages), len(tif.series))
+            if (len(tif.series[0].pages) > 1):
+                #ome = ome_types.from_xml(tif.pages[0].tags["ImageDescription"].value)  
+                #for annot in ome.structured_annotations:
+                    #pageNames = [f"Page {i}" for i in range(len(tif.pages))]
+                    #try:
+                    #    print (annot.dict())
+                    #    print (annot.value.OriginalMetadata.Key)
+                    #    if annot.Value.OriginalMetadata.Key == "Name":
+                    #        pageNames = json.loads(annot.Value.OriginalMetadata.Value)
+                    #except:
+                    #    import traceback
+
+                    #    logging.error(traceback.format_exc())
+                
+                import xml.etree.ElementTree
+                try:
+                    omexml_string = tif.series[0].pages[0].description.strip()
+                    root = xml.etree.ElementTree.parse(io.BytesIO(omexml_string.encode ("utf-16")))
+                    namespaces = {'ome': 'http://www.openmicroscopy.org/Schemas/OME/2016-06'}
+                    channels = root.findall('ome:Image[1]/ome:Pixels/ome:Channel', namespaces)
+                    channel_names = [c.attrib['Name'] for c in channels]
+                    color_names = [int_to_rgb(c.attrib["Color"]) for c in channels]
+                except:
+                    channel_names = [f"Channel_{pindex}" for pindex, page in enumerate(tif.series[0].pages)]
+                    color_names = ["100,100,100" for pindex, page in enumerate(tif.series[0].pages)]
+                    #import traceback
+
+                    #logging.error(traceback.format_exc())
+                slide_url = os.path.basename(path) + ".dzi"
+                jsonProject = {
+                    "filters": ["Color","Contrast"],
+                    "compositeMode":"lighter",
+                    "layerFilters": {
+                        str(pindex): [
+                            {
+                                "name": "Color",
+                                "value": color_names[pindex % len(color_names)]
+                            }
+                        ]
+                        for pindex, page in enumerate(tif.series[0].pages)
+                    },
+                    "layers": [
+                        {"name": channel_names[pindex], "tileSource": os.path.basename(path) + f"__p{pindex}.dzi"}
+                        for pindex, page in enumerate(tif.series[0].pages)
+                    ]
+                }
+            else:
+                raise Exception("Only one page, so back to normal layers.")
+    except:
+        #slide = _get_slide(path)
+        # slide = _get_slide(path)
+        slide_url = os.path.basename(path) + ".dzi"  # url_for("dzi", path=path)
+        jsonProject = {
+            "layers": [{"name": os.path.basename(path), "tileSource": slide_url}]
+        }
     return render_template(
         "tissuumaps.html",
         plugins=[p["module"] for p in app.config["PLUGINS"]],
@@ -483,26 +548,28 @@ def jsonFile(completePath):
         abort(404)
 
 
-@app.route("/<path:path>.dzi")
+@app.route("/<path:path>.dzi", defaults={'page': None})
+@app.route("/<path:path>__p<int:page>.dzi")
 @requires_auth
-def dzi(path):
+def dzi(path, page):
     completePath = os.path.join(app.basedir, path)
     # Check if a .dzi file exists, else use OpenSlide:
     if os.path.isfile(completePath + ".dzi"):
         directory = os.path.dirname(completePath)
         filename = os.path.basename(completePath) + ".dzi"
         return send_from_directory(directory, filename)
-    slide = _get_slide(path)
+    slide = _get_slide(path, page)
     format = app.config["DEEPZOOM_FORMAT"]
     resp = make_response(slide.get_dzi(format))
     resp.mimetype = "application/xml"
     return resp
 
 
-@app.route("/<path:path>.dzi/info")
+@app.route("/<path:path>.dzi/info", defaults={'page': None})
+@app.route("/<path:path>__p<int:page>.dzi/info")
 @requires_auth
-def dzi_asso(path):
-    slide = _get_slide(path)
+def dzi_asso(path, page):
+    slide = _get_slide(path, page)
     associated_images = []
     for key, im in slide.associated_images.items():
         output = io.BytesIO()
@@ -518,21 +585,22 @@ def dzi_asso(path):
     return resp
 
 
-@app.route("/<path:path>_files/<int:level>/<int:col>_<int:row>.<format>")
-def tile(path, level, col, row, format):
+@app.route("/<path:path>_files/<int:level>/<int:col>_<int:row>.<format>", defaults={'page': None})
+@app.route("/<path:path>__p<int:page>_files/<int:level>/<int:col>_<int:row>.<format>")
+def tile(path, level, col, row, format, page):
     completePath = os.path.join(app.basedir, path)
     if os.path.isfile(f"{completePath}_files/{level}/{col}_{row}.{format}"):
         directory = f"{completePath}_files/{level}/"
         filename = f"{col}_{row}.{format}"
         return send_from_directory(directory, filename)
-    slide = _get_slide(path)
+    slide = _get_slide(path, page)
     format = format.lower()
     # if format != 'jpeg' and format != 'png':
     #    # Not supported by Deep Zoom
     #    abort(404)
     try:
         with slide.tileLock:
-            tile = slide.get_tile(level, (col, row))
+            tile = slide.get_tile(level, (col, row), page)
     except ValueError:
         # Invalid level or coordinates
         abort(404)
