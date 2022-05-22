@@ -9,12 +9,8 @@ import json
 import os.path
 import sys
 from pathlib import PurePath
-from types import MappingProxyType
-from types import TracebackType
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Mapping
-from typing import Sequence
+from types import MappingProxyType, TracebackType
+from typing import TYPE_CHECKING, Any, Mapping, Sequence
 
 if sys.version_info >= (3, 8):
     from typing import Literal

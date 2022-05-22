@@ -7,20 +7,22 @@ from typing import AnyStr
 from warnings import warn
 
 from tissuumaps.tiffslide._types import PathOrFileOrBufferLike
-from tissuumaps.tiffslide.tiffslide import PROPERTY_NAME_BACKGROUND_COLOR
-from tissuumaps.tiffslide.tiffslide import PROPERTY_NAME_BOUNDS_HEIGHT
-from tissuumaps.tiffslide.tiffslide import PROPERTY_NAME_BOUNDS_WIDTH
-from tissuumaps.tiffslide.tiffslide import PROPERTY_NAME_BOUNDS_X
-from tissuumaps.tiffslide.tiffslide import PROPERTY_NAME_BOUNDS_Y
-from tissuumaps.tiffslide.tiffslide import PROPERTY_NAME_COMMENT
-from tissuumaps.tiffslide.tiffslide import PROPERTY_NAME_MPP_X
-from tissuumaps.tiffslide.tiffslide import PROPERTY_NAME_MPP_Y
-from tissuumaps.tiffslide.tiffslide import PROPERTY_NAME_OBJECTIVE_POWER
-from tissuumaps.tiffslide.tiffslide import PROPERTY_NAME_QUICKHASH1
-from tissuumaps.tiffslide.tiffslide import PROPERTY_NAME_VENDOR
-from tissuumaps.tiffslide.tiffslide import NotTiffSlide
-from tissuumaps.tiffslide.tiffslide import TiffFileError
-from tissuumaps.tiffslide.tiffslide import TiffSlide
+from tissuumaps.tiffslide.tiffslide import (
+    PROPERTY_NAME_BACKGROUND_COLOR,
+    PROPERTY_NAME_BOUNDS_HEIGHT,
+    PROPERTY_NAME_BOUNDS_WIDTH,
+    PROPERTY_NAME_BOUNDS_X,
+    PROPERTY_NAME_BOUNDS_Y,
+    PROPERTY_NAME_COMMENT,
+    PROPERTY_NAME_MPP_X,
+    PROPERTY_NAME_MPP_Y,
+    PROPERTY_NAME_OBJECTIVE_POWER,
+    PROPERTY_NAME_QUICKHASH1,
+    PROPERTY_NAME_VENDOR,
+    NotTiffSlide,
+    TiffFileError,
+    TiffSlide,
+)
 
 try:
     from tissuumaps.tiffslide._version import version as __version__
@@ -39,7 +41,7 @@ def __getattr__(name):  # type: ignore
         )
         return TiffFileError
     elif name == "OpenSlide":
-        #warn(f"compatibility: aliasing tiffslide.TiffSlide to {name!r}", stacklevel=2)
+        # warn(f"compatibility: aliasing tiffslide.TiffSlide to {name!r}", stacklevel=2)
         return TiffSlide
     elif name == "ImageSlide":
         warn(

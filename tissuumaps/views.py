@@ -30,18 +30,18 @@ from flask import (
     send_from_directory,
     url_for,
 )
-
-from tissuumaps import app
-from tissuumaps.flask_filetree import filetree
-
-#import openslide  # isort: skip
-#from openslide import ImageSlide, OpenSlide  # isort: skip
-#from openslide.deepzoom import DeepZoomGenerator  # isort: skip
+from tifffile import TiffFile
 
 import tissuumaps.tiffslide as tiffslide
+from tissuumaps import app
+from tissuumaps.flask_filetree import filetree
 from tissuumaps.tiffslide import OpenSlide
-from tifffile import TiffFile
 from tissuumaps.tiffslide.deepzoom import DeepZoomGenerator
+
+# import openslide  # isort: skip
+# from openslide import ImageSlide, OpenSlide  # isort: skip
+# from openslide.deepzoom import DeepZoomGenerator  # isort: skip
+
 
 def _fnfilter(filename):
     return True
@@ -317,7 +317,7 @@ def _get_slide(path, page=None, originalPath=None):
         if ".tissuumaps" in path:
             abort(404)
         try:
-            
+
             import traceback
 
             logging.error(traceback.format_exc())
@@ -355,9 +355,11 @@ def base_static(path):
     filename = os.path.basename(completePath)
     return send_from_directory(directory, filename)
 
-def int_to_rgb(v) :
+
+def int_to_rgb(v):
     rgba = [x / 255 * 100 for x in int(v).to_bytes(4, signed=True, byteorder="big")]
     return ",".join(str(int(x)) for x in rgba[:3])
+
 
 @app.route("/<path:filename>")
 @requires_auth
@@ -368,57 +370,72 @@ def slide(filename):
     path = os.path.abspath(os.path.join(app.basedir, path, filename))
     try:
         with TiffFile(path) as tif:
-            #print (len(tif.pages), len(tif.series))
-            if (len(tif.series[0].pages) > 1):
-                #ome = ome_types.from_xml(tif.pages[0].tags["ImageDescription"].value)  
-                #for annot in ome.structured_annotations:
-                    #pageNames = [f"Page {i}" for i in range(len(tif.pages))]
-                    #try:
-                    #    print (annot.dict())
-                    #    print (annot.value.OriginalMetadata.Key)
-                    #    if annot.Value.OriginalMetadata.Key == "Name":
-                    #        pageNames = json.loads(annot.Value.OriginalMetadata.Value)
-                    #except:
-                    #    import traceback
+            # print (len(tif.pages), len(tif.series))
+            if len(tif.series[0].pages) > 1:
+                # ome = ome_types.from_xml(tif.pages[0].tags["ImageDescription"].value)
+                # for annot in ome.structured_annotations:
+                # pageNames = [f"Page {i}" for i in range(len(tif.pages))]
+                # try:
+                #    print (annot.dict())
+                #    print (annot.value.OriginalMetadata.Key)
+                #    if annot.Value.OriginalMetadata.Key == "Name":
+                #        pageNames = json.loads(annot.Value.OriginalMetadata.Value)
+                # except:
+                #    import traceback
 
-                    #    logging.error(traceback.format_exc())
-                
+                #    logging.error(traceback.format_exc())
+
                 import xml.etree.ElementTree
+
                 try:
                     omexml_string = tif.series[0].pages[0].description.strip()
-                    root = xml.etree.ElementTree.parse(io.BytesIO(omexml_string.encode ("utf-16")))
-                    namespaces = {'ome': 'http://www.openmicroscopy.org/Schemas/OME/2016-06'}
-                    channels = root.findall('ome:Image[1]/ome:Pixels/ome:Channel', namespaces)
-                    channel_names = [c.attrib['Name'] for c in channels]
+                    root = xml.etree.ElementTree.parse(
+                        io.BytesIO(omexml_string.encode("utf-16"))
+                    )
+                    namespaces = {
+                        "ome": "http://www.openmicroscopy.org/Schemas/OME/2016-06"
+                    }
+                    channels = root.findall(
+                        "ome:Image[1]/ome:Pixels/ome:Channel", namespaces
+                    )
+                    channel_names = [c.attrib["Name"] for c in channels]
                     color_names = [int_to_rgb(c.attrib["Color"]) for c in channels]
                 except:
-                    channel_names = [f"Channel_{pindex}" for pindex, page in enumerate(tif.series[0].pages)]
-                    color_names = ["100,100,100" for pindex, page in enumerate(tif.series[0].pages)]
-                    #import traceback
+                    channel_names = [
+                        f"Channel_{pindex}"
+                        for pindex, page in enumerate(tif.series[0].pages)
+                    ]
+                    color_names = [
+                        "100,100,100" for pindex, page in enumerate(tif.series[0].pages)
+                    ]
+                    # import traceback
 
-                    #logging.error(traceback.format_exc())
+                    # logging.error(traceback.format_exc())
                 slide_url = os.path.basename(path) + ".dzi"
                 jsonProject = {
-                    "filters": ["Color","Contrast"],
-                    "compositeMode":"lighter",
+                    "filters": ["Color", "Contrast"],
+                    "compositeMode": "lighter",
                     "layerFilters": {
                         str(pindex): [
                             {
                                 "name": "Color",
-                                "value": color_names[pindex % len(color_names)]
+                                "value": color_names[pindex % len(color_names)],
                             }
                         ]
                         for pindex, page in enumerate(tif.series[0].pages)
                     },
                     "layers": [
-                        {"name": channel_names[pindex], "tileSource": os.path.basename(path) + f"__p{pindex}.dzi"}
+                        {
+                            "name": channel_names[pindex],
+                            "tileSource": os.path.basename(path) + f"__p{pindex}.dzi",
+                        }
                         for pindex, page in enumerate(tif.series[0].pages)
-                    ]
+                    ],
                 }
             else:
                 raise Exception("Only one page, so back to normal layers.")
     except:
-        #slide = _get_slide(path)
+        # slide = _get_slide(path)
         # slide = _get_slide(path)
         slide_url = os.path.basename(path) + ".dzi"  # url_for("dzi", path=path)
         jsonProject = {
@@ -548,7 +565,7 @@ def jsonFile(completePath):
         abort(404)
 
 
-@app.route("/<path:path>.dzi", defaults={'page': None})
+@app.route("/<path:path>.dzi", defaults={"page": None})
 @app.route("/<path:path>__p<int:page>.dzi")
 @requires_auth
 def dzi(path, page):
@@ -565,7 +582,7 @@ def dzi(path, page):
     return resp
 
 
-@app.route("/<path:path>.dzi/info", defaults={'page': None})
+@app.route("/<path:path>.dzi/info", defaults={"page": None})
 @app.route("/<path:path>__p<int:page>.dzi/info")
 @requires_auth
 def dzi_asso(path, page):
@@ -585,7 +602,10 @@ def dzi_asso(path, page):
     return resp
 
 
-@app.route("/<path:path>_files/<int:level>/<int:col>_<int:row>.<format>", defaults={'page': None})
+@app.route(
+    "/<path:path>_files/<int:level>/<int:col>_<int:row>.<format>",
+    defaults={"page": None},
+)
 @app.route("/<path:path>__p<int:page>_files/<int:level>/<int:col>_<int:row>.<format>")
 def tile(path, level, col, row, format, page):
     completePath = os.path.join(app.basedir, path)

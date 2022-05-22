@@ -1,16 +1,10 @@
 import os
 import sys
 from types import TracebackType
-from typing import IO
-from typing import Any
-from typing import AnyStr
-from typing import Optional
-from typing import Type
-from typing import Union
+from typing import IO, Any, AnyStr, Optional, Type, Union
 
 if sys.version_info >= (3, 8):
-    from typing import Protocol
-    from typing import runtime_checkable
+    from typing import Protocol, runtime_checkable
 else:
     from typing_extensions import Protocol
     from typing_extensions import runtime_checkable

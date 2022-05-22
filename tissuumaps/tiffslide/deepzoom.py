@@ -29,8 +29,9 @@ import math
 from io import BytesIO
 from xml.etree.ElementTree import Element, ElementTree, SubElement
 
-import tissuumaps.tiffslide as openslide
 from PIL import Image
+
+import tissuumaps.tiffslide as openslide
 
 
 class DeepZoomGenerator(object):
@@ -126,11 +127,11 @@ class DeepZoomGenerator(object):
         )
 
         # Slide background color
-        #print(
+        # print(
         #    self._osr.properties.get(
         #        openslide.PROPERTY_NAME_BACKGROUND_COLOR, "ffffff"
         #    ),
-        #)
+        # )
         self._bg_color = "#" + self._osr.properties.get(
             openslide.PROPERTY_NAME_BACKGROUND_COLOR, "ffffff"
         )

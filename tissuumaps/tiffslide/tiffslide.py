@@ -7,13 +7,7 @@ import sys
 from fractions import Fraction
 from itertools import count
 from types import TracebackType
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import AnyStr
-from typing import Iterator
-from typing import Mapping
-from typing import TypeVar
-from typing import overload
+from typing import TYPE_CHECKING, Any, AnyStr, Iterator, Mapping, TypeVar, overload
 from warnings import warn
 from xml.etree import ElementTree
 
@@ -26,9 +20,9 @@ else:
     from importlib_metadata import version
     from typing_extensions import Literal
 
+import numpy as np
 import tifffile
 import zarr
-import numpy as np
 from fsspec.core import url_to_fs
 from fsspec.implementations.local import LocalFileSystem
 from PIL import Image
@@ -38,9 +32,7 @@ from tifffile import TiffPageSeries
 from tifffile.tifffile import svs_description_metadata
 
 from tissuumaps.tiffslide._compat import NotTiffFile
-from tissuumaps.tiffslide._types import OpenFileLike
-from tissuumaps.tiffslide._types import PathOrFileOrBufferLike
-from tissuumaps.tiffslide._types import TiffFileIO
+from tissuumaps.tiffslide._types import OpenFileLike, PathOrFileOrBufferLike, TiffFileIO
 
 if TYPE_CHECKING:
     import numpy.typing as npt
@@ -205,7 +197,7 @@ class TiffSlide:
             PROPERTY_NAME_COMMENT: None,
             PROPERTY_NAME_VENDOR: None,
             PROPERTY_NAME_QUICKHASH1: None,
-            PROPERTY_NAME_BACKGROUND_COLOR: 'ffffff',
+            PROPERTY_NAME_BACKGROUND_COLOR: "ffffff",
             PROPERTY_NAME_OBJECTIVE_POWER: None,
             PROPERTY_NAME_MPP_X: None,
             PROPERTY_NAME_MPP_Y: None,
@@ -228,7 +220,7 @@ class TiffSlide:
 
         else:
             # todo: need to handle more supported formats in the future
-            #if tf.is_bif or tf.is_ndpi:
+            # if tf.is_bif or tf.is_ndpi:
             #    vendor = _detect_format(tf)
             #    warn(f"no special {vendor!r}-format metadata parsing implemented yet!")
             desc = tf.pages[0].description
@@ -250,20 +242,22 @@ class TiffSlide:
         if axes0 == "YXS":
             h0, w0, _ = map(int, series0.shape)
             level_dimensions = ((lvl.shape[1], lvl.shape[0]) for lvl in series0.levels)
-        #elif axes0 == "CYX":
+        # elif axes0 == "CYX":
         #    _, h0, w0 = map(int, series0.shape)
         #    level_dimensions = ((lvl.shape[2], lvl.shape[1]) for lvl in series0.levels)
-        #elif axes0 == "TYX":
+        # elif axes0 == "TYX":
         #    _, h0, w0 = map(int, series0.shape)
         #    level_dimensions = ((lvl.shape[2], lvl.shape[1]) for lvl in series0.levels)
-        #elif axes0 == "YX":
+        # elif axes0 == "YX":
         #    h0, w0 = map(int, series0.shape)
         #    level_dimensions = ((lvl.shape[1], lvl.shape[0]) for lvl in series0.levels)
         else:
-        #    raise NotImplementedError(f"series with axes={axes0!r} not supported yet")
-            #print (axes0, series0.shape, series0.shape[-2:])
+            #    raise NotImplementedError(f"series with axes={axes0!r} not supported yet")
+            # print (axes0, series0.shape, series0.shape[-2:])
             h0, w0 = map(int, series0.shape[-2:])
-            level_dimensions = ((lvl.shape[-1], lvl.shape[-2]) for lvl in series0.levels)
+            level_dimensions = (
+                (lvl.shape[-1], lvl.shape[-2]) for lvl in series0.levels
+            )
 
         for lvl, (width, height) in enumerate(level_dimensions):
             downsample = math.sqrt((w0 * h0) / (width * height))
@@ -333,7 +327,7 @@ class TiffSlide:
             obj.append({})
             for l, lvl in enumerate(self.ts_tifffile.series[idx].levels):
                 store = self.ts_tifffile.series[idx].levels[l].pages[p].aszarr()
-                obj[p][str(l)] = (zarr.open(store, mode="r"))
+                obj[p][str(l)] = zarr.open(store, mode="r")
         return obj
 
     @overload
@@ -462,17 +456,17 @@ class TiffSlide:
             selection = slice(ry0, ry1), slice(rx0, rx1)
         else:
             selection = slice(ry0, ry1), slice(rx0, rx1)
-            #raise NotImplementedError(f"axes={axes!r}")
+            # raise NotImplementedError(f"axes={axes!r}")
         arr: npt.NDArray[np.int_]
         if isinstance(self.ts_zarr_grp[page], zarr.core.Array):
             arr = self.ts_zarr_grp[page][selection]
         else:
             arr = self.ts_zarr_grp[page][str(level)][selection]
 
-        #if axes == "CYX":
+        # if axes == "CYX":
         #    arr = arr.transpose((1, 2, 0))
 
-        #if axes == "TYX":
+        # if axes == "TYX":
         #    arr = arr.transpose((1, 2, 0))
 
         if requires_padding:
@@ -492,9 +486,9 @@ class TiffSlide:
         max_value = np.iinfo(arr.dtype).max
 
         arr = arr / max_value * 255
-        #arr = arr[:,:,:3].astype(np.uint8)
-        arr = arr[:,:].astype(np.uint8)
-        
+        # arr = arr[:,:,:3].astype(np.uint8)
+        arr = arr[:, :].astype(np.uint8)
+
         if as_array:
             return arr
         else:
@@ -586,6 +580,7 @@ class NotTiffSlide(TiffSlide):
             )
         except ValueError:
             import traceback
+
             logging.error(traceback.format_exc())
             return None
         with tf as t:
