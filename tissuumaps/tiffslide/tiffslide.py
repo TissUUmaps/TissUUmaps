@@ -448,12 +448,6 @@ class TiffSlide:
 
         if axes == "YXS":
             selection = slice(ry0, ry1), slice(rx0, rx1), slice(None)
-        elif axes == "CYX":
-            selection = slice(ry0, ry1), slice(rx0, rx1)
-        elif axes == "TYX":
-            selection = slice(ry0, ry1), slice(rx0, rx1)
-        elif axes == "YX":
-            selection = slice(ry0, ry1), slice(rx0, rx1)
         else:
             selection = slice(ry0, ry1), slice(rx0, rx1)
             # raise NotImplementedError(f"axes={axes!r}")
@@ -462,12 +456,6 @@ class TiffSlide:
             arr = self.ts_zarr_grp[page][selection]
         else:
             arr = self.ts_zarr_grp[page][str(level)][selection]
-
-        # if axes == "CYX":
-        #    arr = arr.transpose((1, 2, 0))
-
-        # if axes == "TYX":
-        #    arr = arr.transpose((1, 2, 0))
 
         if requires_padding:
             if arr.shape[0] == 0 or arr.shape[1] == 0:
