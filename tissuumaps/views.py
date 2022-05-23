@@ -361,6 +361,61 @@ def int_to_rgb(v):
     return ",".join(str(int(x)) for x in rgba[:3])
 
 
+def hsv_to_rgb(h, s, v):
+    """Convert color from HSV space to RGB space"""
+    h_i = int(h * 6.0)
+    f = h * 6.0 - h_i
+    p = v * (1.0 - s)
+    q = v * (1.0 - f * s)
+    t = v * (1.0 - (1.0 - f) * s)
+    (r, g, b) = (0.0, 0.0, 0.0)
+    if 0 == h_i:
+        (r, g, b) = (v, t, p)
+    if 1 == h_i:
+        (r, g, b) = (q, v, p)
+    if 2 == h_i:
+        (r, g, b) = (p, v, t)
+    if 3 == h_i:
+        (r, g, b) = (p, q, v)
+    if 4 == h_i:
+        (r, g, b) = (t, p, v)
+    if 5 == h_i:
+        (r, g, b) = (v, p, q)
+    return (r, g, b)
+
+
+def default_color_qupath(channel):
+    """Generates a default RGB color value from channel index
+
+    This function uses the default color generator from QuPath 3.1
+    """
+    if channel == 0:
+        (r, g, b) = (255, 0, 0)
+    elif channel == 1:
+        (r, g, b) = (0, 255, 0)
+    elif channel == 2:
+        (r, g, b) = (0, 0, 255)
+    elif channel == 3:
+        (r, g, b) = (255, 224, 0)
+    elif channel == 4:
+        (r, g, b) = (0, 224, 224)
+    elif channel == 5:
+        (r, g, b) = (255, 0, 224)
+    else:
+        # Generate a pseudo-random color in HSV space
+        hue = ((channel * 128) % 360) / 360.0
+        saturation = 1.0 - (channel / 10.0) / 20.0
+        brightness = 1.0 - (channel / 10.0) / 20.0
+        print(hue, saturation, brightness)
+        (r, g, b) = hsv_to_rgb(hue, saturation, brightness)
+        (r, g, b) = (r * 255, g * 255, b * 255)
+    # Rescale components to range [0,100] before output
+    r = int(r * (100.0 / 255.0) + 0.5)
+    g = int(g * (100.0 / 255.0) + 0.5)
+    b = int(b * (100.0 / 255.0) + 0.5)
+    return f"{r},{g},{b}"
+
+
 @app.route("/<path:filename>")
 @requires_auth
 def slide(filename):
@@ -413,7 +468,7 @@ def slide(filename):
                 color_names = [
                     int_to_rgb(c.attrib["Color"])
                     if "Color" in c.attrib
-                    else f"100,100,100"
+                    else default_color_qupath(i)
                     for i, c in enumerate(channels)
                 ]
             except:
