@@ -406,7 +406,6 @@ def default_color_qupath(channel):
         hue = ((channel * 128) % 360) / 360.0
         saturation = 1.0 - (channel / 10.0) / 20.0
         brightness = 1.0 - (channel / 10.0) / 20.0
-        print(hue, saturation, brightness)
         (r, g, b) = hsv_to_rgb(hue, saturation, brightness)
         (r, g, b) = (r * 255, g * 255, b * 255)
     # Rescale components to range [0,100] before output
