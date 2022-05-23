@@ -15,6 +15,7 @@ from collections import OrderedDict
 from functools import wraps
 from threading import Lock
 from urllib.parse import parse_qs, urlparse
+import xml.etree.ElementTree
 
 import pyvips
 
@@ -426,24 +427,7 @@ def slide(filename):
         slide = _get_slide(path)
         print(slide.properties.keys())
         tif = slide._osr.ts_tifffile
-        # print (len(tif.pages), len(tif.series))
         if len(tif.series[0].pages) > 1:
-            # ome = ome_types.from_xml(tif.pages[0].tags["ImageDescription"].value)
-            # for annot in ome.structured_annotations:
-            # pageNames = [f"Page {i}" for i in range(len(tif.pages))]
-            # try:
-            #    print (annot.dict())
-            #    print (annot.value.OriginalMetadata.Key)
-            #    if annot.Value.OriginalMetadata.Key == "Name":
-            #        pageNames = json.loads(annot.Value.OriginalMetadata.Value)
-            # except:
-            #    import traceback
-
-            #    logging.error(traceback.format_exc())
-            # for p in tif.series[0].pages:
-            #    print (p.tags)
-            import xml.etree.ElementTree
-
             try:
                 omexml_string = tif.series[0].pages[0].description.strip()
                 try:
@@ -472,15 +456,23 @@ def slide(filename):
                 ]
             except:
                 channel_names = [
-                    f"Channel_{pindex}"
-                    for pindex, page in enumerate(tif.series[0].pages)
+                    f"Channel_{i+1}" for i, page in enumerate(tif.series[0].pages)
                 ]
                 color_names = [
-                    "100,100,100" for pindex, page in enumerate(tif.series[0].pages)
+                    default_color_qupath(i) for i, page in enumerate(tif.series[0].pages)
                 ]
                 import traceback
 
                 logging.error(traceback.format_exc())
+            if len(channel_names) != len(tif.series[0].pages):
+                channel_names = [
+                    f"Channel_{i}" for i, _ in enumerate(tif.series[0].pages)
+                ]
+            if len(color_names) != len(tif.series[0].pages):
+                color_names = [
+                    default_color_qupath(i) for i, _ in enumerate(tif.series[0].pages)
+                ]
+            
             slide_url = os.path.basename(path) + ".dzi"
             jsonProject = {
                 "filters": ["Color", "Contrast"],
