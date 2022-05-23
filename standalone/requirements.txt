@@ -6,3 +6,4 @@ PyQt5>=5.15.4
 PyQtWebEngine>=5.15.4
 matplotlib>=3.2.2
 pyyaml>=6.0
+tifffile>=2020.12.8
