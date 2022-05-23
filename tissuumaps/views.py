@@ -369,72 +369,84 @@ def slide(filename):
         path = "./"
     path = os.path.abspath(os.path.join(app.basedir, path, filename))
     try:
-        with TiffFile(path) as tif:
-            # print (len(tif.pages), len(tif.series))
-            if len(tif.series[0].pages) > 1:
-                # ome = ome_types.from_xml(tif.pages[0].tags["ImageDescription"].value)
-                # for annot in ome.structured_annotations:
-                # pageNames = [f"Page {i}" for i in range(len(tif.pages))]
-                # try:
-                #    print (annot.dict())
-                #    print (annot.value.OriginalMetadata.Key)
-                #    if annot.Value.OriginalMetadata.Key == "Name":
-                #        pageNames = json.loads(annot.Value.OriginalMetadata.Value)
-                # except:
-                #    import traceback
+        slide = _get_slide(path)
+        print (slide.properties.keys())
+        tif = slide._osr.ts_tifffile
+        # print (len(tif.pages), len(tif.series))
+        if len(tif.series[0].pages) > 1:
+            # ome = ome_types.from_xml(tif.pages[0].tags["ImageDescription"].value)
+            # for annot in ome.structured_annotations:
+            # pageNames = [f"Page {i}" for i in range(len(tif.pages))]
+            # try:
+            #    print (annot.dict())
+            #    print (annot.value.OriginalMetadata.Key)
+            #    if annot.Value.OriginalMetadata.Key == "Name":
+            #        pageNames = json.loads(annot.Value.OriginalMetadata.Value)
+            # except:
+            #    import traceback
 
-                #    logging.error(traceback.format_exc())
+            #    logging.error(traceback.format_exc())
+            #for p in tif.series[0].pages:
+            #    print (p.tags)
+            import xml.etree.ElementTree
 
-                import xml.etree.ElementTree
-
+            try:
+                omexml_string = tif.series[0].pages[0].description.strip()
                 try:
-                    omexml_string = tif.series[0].pages[0].description.strip()
                     root = xml.etree.ElementTree.parse(
                         io.BytesIO(omexml_string.encode("utf-16"))
                     )
-                    namespaces = {
-                        "ome": "http://www.openmicroscopy.org/Schemas/OME/2016-06"
-                    }
-                    channels = root.findall(
-                        "ome:Image[1]/ome:Pixels/ome:Channel", namespaces
-                    )
-                    channel_names = [c.attrib["Name"] for c in channels]
-                    color_names = [int_to_rgb(c.attrib["Color"]) for c in channels]
                 except:
-                    channel_names = [
-                        f"Channel_{pindex}"
-                        for pindex, page in enumerate(tif.series[0].pages)
-                    ]
-                    color_names = [
-                        "100,100,100" for pindex, page in enumerate(tif.series[0].pages)
-                    ]
-                    # import traceback
-
-                    # logging.error(traceback.format_exc())
-                slide_url = os.path.basename(path) + ".dzi"
-                jsonProject = {
-                    "filters": ["Color", "Contrast"],
-                    "compositeMode": "lighter",
-                    "layerFilters": {
-                        str(pindex): [
-                            {
-                                "name": "Color",
-                                "value": color_names[pindex % len(color_names)],
-                            }
-                        ]
-                        for pindex, page in enumerate(tif.series[0].pages)
-                    },
-                    "layers": [
-                        {
-                            "name": channel_names[pindex],
-                            "tileSource": os.path.basename(path) + f"__p{pindex}.dzi",
-                        }
-                        for pindex, page in enumerate(tif.series[0].pages)
-                    ],
+                    root = xml.etree.ElementTree.parse(
+                        io.BytesIO(omexml_string.encode("utf-8"))
+                    )
+                namespaces = {
+                    "ome": "http://www.openmicroscopy.org/Schemas/OME/2016-06"
                 }
-            else:
-                raise Exception("Only one page, so back to normal layers.")
+                channels = root.findall(
+                    "ome:Image[1]/ome:Pixels/ome:Channel", namespaces
+                )
+                channel_names = [c.attrib["Name"] for c in channels]
+                color_names = [int_to_rgb(c.attrib["Color"]) for c in channels]
+            except:
+                channel_names = [
+                    f"Channel_{pindex}"
+                    for pindex, page in enumerate(tif.series[0].pages)
+                ]
+                color_names = [
+                    "100,100,100" for pindex, page in enumerate(tif.series[0].pages)
+                ]
+                import traceback
+
+                logging.error(traceback.format_exc())
+            slide_url = os.path.basename(path) + ".dzi"
+            jsonProject = {
+                "filters": ["Color", "Contrast"],
+                "compositeMode": "lighter",
+                "layerFilters": {
+                    str(pindex): [
+                        {
+                            "name": "Color",
+                            "value": color_names[pindex % len(color_names)],
+                        }
+                    ]
+                    for pindex, page in enumerate(tif.series[0].pages)
+                },
+                "layers": [
+                    {
+                        "name": channel_names[pindex],
+                        "tileSource": os.path.basename(path) + f"__p{pindex}.dzi",
+                    }
+                    for pindex, page in enumerate(tif.series[0].pages)
+                ],
+                "mpp": slide.properties["tiffslide.mpp-x"]
+            }
+        else:
+            raise Exception("Only one page, so back to normal layers.")
     except:
+        import traceback
+
+        logging.error(traceback.format_exc())
         # slide = _get_slide(path)
         # slide = _get_slide(path)
         slide_url = os.path.basename(path) + ".dzi"  # url_for("dzi", path=path)
@@ -623,6 +635,9 @@ def tile(path, level, col, row, format, page):
             tile = slide.get_tile(level, (col, row), page)
     except ValueError:
         # Invalid level or coordinates
+        logging.error("Invalid level or coordinates:")
+        import traceback
+        logging.error(traceback.format_exc())
         abort(404)
     buf = PILBytesIO()
     tile.save(buf, format, quality=app.config["DEEPZOOM_TILE_QUALITY"])
