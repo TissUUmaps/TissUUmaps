@@ -26,7 +26,7 @@ setuptools.setup(
         "ipython>=7.28.0",
         "pyvips>=2.1.14",
         "pyyaml>=6.0",
-        "tifffile>=2020.12.8"
+        "tifffile>=2020.12.8",
     ],
     extras_require={
         "pyqt5": ["PyQt5>=5.15.4", "PyQtWebEngine>=5.15.4"],
