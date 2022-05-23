@@ -406,8 +406,16 @@ def slide(filename):
                 channels = root.findall(
                     "ome:Image[1]/ome:Pixels/ome:Channel", namespaces
                 )
-                channel_names = [c.attrib["Name"] for c in channels]
-                color_names = [int_to_rgb(c.attrib["Color"]) for c in channels]
+                channel_names = [
+                    c.attrib["Name"] if "Name" in c.attrib else f"Channel {i+1}"
+                    for i, c in enumerate(channels)
+                ]
+                color_names = [
+                    int_to_rgb(c.attrib["Color"])
+                    if "Color" in c.attrib
+                    else f"100,100,100"
+                    for i, c in enumerate(channels)
+                ]
             except:
                 channel_names = [
                     f"Channel_{pindex}"
