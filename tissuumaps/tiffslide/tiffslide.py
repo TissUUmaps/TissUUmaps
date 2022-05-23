@@ -299,6 +299,19 @@ class TiffSlide:
                         md[PROPERTY_NAME_MPP_Y] = mpp_y
         return md
 
+    def range(self, page) -> dict[str, Any]:
+        if (not hasattr(self,"_range")):
+            self._range = {}
+        if not page in self._range.keys():
+            if isinstance(self.ts_zarr_grp[page], zarr.core.Array):
+                zarray = self.ts_zarr_grp[page]
+            else:
+                zarray = self.ts_zarr_grp[page][str(max(0,len(self.level_downsamples)-2))]
+            arr = zarray[(slice(None),slice(None))]
+            self._range[page] = arr.min(), arr.max()
+        return self._range[page]
+
+
     @cached_property
     def associated_images(self) -> _LazyAssociatedImagesDict:
         """return associated images as a mapping of names to PIL images"""
@@ -471,7 +484,14 @@ class TiffSlide:
                 mode="constant",
                 constant_values=0,
             )
-        max_value = np.iinfo(arr.dtype).max
+        try:
+            max_value = self.range(page=page)[1]#np.iinfo(arr.dtype).max
+            arr[arr>max_value] = max_value
+        except:
+            #max_value = arr.max()# max_value = np.finfo(arr.dtype).max
+            #print (max_value)
+            max_value = self.range(page=page)[1]
+            arr[arr>max_value] = max_value
 
         arr = arr / max_value * 255
         # arr = arr[:,:,:3].astype(np.uint8)
