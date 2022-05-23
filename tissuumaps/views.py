@@ -370,7 +370,7 @@ def slide(filename):
     path = os.path.abspath(os.path.join(app.basedir, path, filename))
     try:
         slide = _get_slide(path)
-        print (slide.properties.keys())
+        print(slide.properties.keys())
         tif = slide._osr.ts_tifffile
         # print (len(tif.pages), len(tif.series))
         if len(tif.series[0].pages) > 1:
@@ -386,7 +386,7 @@ def slide(filename):
             #    import traceback
 
             #    logging.error(traceback.format_exc())
-            #for p in tif.series[0].pages:
+            # for p in tif.series[0].pages:
             #    print (p.tags)
             import xml.etree.ElementTree
 
@@ -439,7 +439,7 @@ def slide(filename):
                     }
                     for pindex, page in enumerate(tif.series[0].pages)
                 ],
-                "mpp": slide.properties["tiffslide.mpp-x"]
+                "mpp": slide.properties["tiffslide.mpp-x"],
             }
         else:
             raise Exception("Only one page, so back to normal layers.")
@@ -637,6 +637,7 @@ def tile(path, level, col, row, format, page):
         # Invalid level or coordinates
         logging.error("Invalid level or coordinates:")
         import traceback
+
         logging.error(traceback.format_exc())
         abort(404)
     buf = PILBytesIO()
