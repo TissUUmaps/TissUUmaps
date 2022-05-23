@@ -11,11 +11,11 @@ import logging
 import os
 import threading
 import time
+import xml.etree.ElementTree
 from collections import OrderedDict
 from functools import wraps
 from threading import Lock
 from urllib.parse import parse_qs, urlparse
-import xml.etree.ElementTree
 
 import pyvips
 
@@ -459,20 +459,42 @@ def slide(filename):
                     f"Channel_{i+1}" for i, page in enumerate(tif.series[0].pages)
                 ]
                 color_names = [
-                    default_color_qupath(i) for i, page in enumerate(tif.series[0].pages)
+                    default_color_qupath(i)
+                    for i, page in enumerate(tif.series[0].pages)
                 ]
                 import traceback
 
                 logging.error(traceback.format_exc())
             if len(channel_names) != len(tif.series[0].pages):
-                channel_names = [
-                    f"Channel_{i}" for i, _ in enumerate(tif.series[0].pages)
-                ]
-            if len(color_names) != len(tif.series[0].pages):
-                color_names = [
-                    default_color_qupath(i) for i, _ in enumerate(tif.series[0].pages)
-                ]
-            
+                # Try to extract channel names and colors from the XML metadata for each page
+                channel_names = []
+                color_names = []
+                for i, page in enumerate(tif.series[0].pages):
+                    xml_string_i = page.description.strip()
+                    try:
+                        root = xml.etree.ElementTree.parse(
+                            io.BytesIO(xml_string_i.encode("utf-16"))
+                        ).getroot()
+                    except:
+                        root = xml.etree.ElementTree.parse(
+                            io.BytesIO(xml_string_i.encode("utf-8"))
+                        ).getroot()
+                    if root.tag == "PerkinElmer-QPI-ImageDescription":
+                        # Vectra Polaris TIFF (or at least exported from such image data)
+                        assert len(root.findall("Name")) > 0
+                        assert len(root.findall("Color")) > 0
+
+                        channel_names.append(root.findall("Name")[0].text)
+                        color = root.findall("Color")[0].text.split(",")
+                        (r, g, b) = [
+                            int(float(x) * (100.0 / 255.0) + 0.5) for x in color
+                        ]
+                        color_names.append(f"{r},{g},{b}")
+                    else:
+                        # Other TIFF format (just use default names and colors in this case)
+                        channel_names.append(f"Channel_{i}")
+                        color_names.append(default_color_qupath(i))
+
             slide_url = os.path.basename(path) + ".dzi"
             jsonProject = {
                 "filters": ["Color", "Contrast"],
