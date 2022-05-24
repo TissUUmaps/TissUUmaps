@@ -1,4 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_submodules
 
 block_cipher = None
 
@@ -7,7 +8,7 @@ a = Analysis(['../tissuumaps/gui.py'],
              pathex=['./'],
              binaries=[],
              datas=[('../tissuumaps/VERSION', './'), ('../tissuumaps/web.zip', './'), ('../tissuumaps/templates', 'templates'), ('../tissuumaps/flask_filetree', 'flask_filetree'), ('../tissuumaps/static', 'static'), ('../tissuumaps/plugins/__init__.py','plugins')],
-             hiddenimports=["pyyaml","pyvips","matplotlib","mpl_toolkits","tifffile"],
+             hiddenimports=["pyyaml","pyvips","matplotlib","mpl_toolkits","tifffile","zarr","fsspec","imagecodecs"] + collect_submodules("numcodecs") + collect_submodules("tifffile"),
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -26,7 +27,7 @@ exe = EXE(pyz,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
-          console=False,
+          console=True,
           icon='../tissuumaps/static/misc/favicon.ico')
 coll = COLLECT(exe,
                a.binaries,

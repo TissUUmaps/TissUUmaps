@@ -1,5 +1,4 @@
 Flask>=2.0.0
-openslide-python>=1.1.2
 Pillow>=8.2.0
 pyvips>=2.1.14
 PyQt5>=5.15.4
@@ -7,3 +6,6 @@ PyQtWebEngine>=5.15.4
 matplotlib>=3.2.2
 pyyaml>=6.0
 tifffile>=2020.12.8
+zarr>=2.11.3
+fsspec>=2022.5.0
+imagecodecs>=2022.2.22
