@@ -56,9 +56,9 @@ __all__ = [
 ]
 
 # all relevant tifffile version numbers work with this.
-_TIFFFILE_VERSION = tuple(
-    int(x) if x.isdigit() else x for x in version("tifffile").split(".")
-)
+_TIFFFILE_VERSION = (2022, 5, 4)  # tuple(
+#    int(x) if x.isdigit() else x for x in version("tifffile").split(".")
+# )
 
 # === Constants to support drop-in ===
 PROPERTY_NAME_COMMENT = "tiffslide.comment"
