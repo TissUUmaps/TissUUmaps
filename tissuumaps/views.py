@@ -271,6 +271,11 @@ class _SlideCache(object):
                 while len(self._cache) >= self.cache_size:
                     self._cache.popitem(last=False)
                 self._cache[path] = slide
+            if originalPath:
+                if originalPath not in self._cache:
+                    while len(self._cache) >= self.cache_size:
+                        self._cache.popitem(last=False)
+                    self._cache[originalPath] = slide
         return slide
 
 
@@ -330,7 +335,7 @@ def _get_slide(path, page=None, originalPath=None):
             )
             os.makedirs(os.path.dirname(path) + "/.tissuumaps/", exist_ok=True)
             tifpath = ImageConverter(path, newpath).convert()
-            return _get_slide(tifpath, path)
+            return _get_slide(tifpath, originalPath=path)
         except:
             import traceback
 
