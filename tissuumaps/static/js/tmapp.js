@@ -138,6 +138,19 @@ tmapp.init = function () {
         tmapp[op + "_viewer"].imageLoaderLimit = 1;
     });
     
+    /* We only preload all layers for 0.5 seconds,
+    *  to have a very low resolution preload of all layers:
+    */
+    setTimeout(function() {
+        var op = tmapp["object_prefix"];
+        var count = tmapp[op + "_viewer"].world.getItemCount();
+        for (var i = 0; i < count; i++) {
+            var tiledImage = tmapp[op + "_viewer"].world.getItemAt(i);
+            tiledImage._preload = false;
+        }
+        tmapp[op + "_viewer"].preload = false;
+    },500);
+
     elt = document.getElementById("ISS_globalmarkersize");
     if (elt) {
         tmapp[vname].addControl(elt,{
@@ -187,6 +200,8 @@ tmapp.options_osd = {
     gestureSettingsPen: {
         flickEnabled: false
     }
+    },
+    preload:true
 }
 
 function toggleFullscreen() {
