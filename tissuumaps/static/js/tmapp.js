@@ -199,7 +199,6 @@ tmapp.options_osd = {
     },
     gestureSettingsPen: {
         flickEnabled: false
-    }
     },
     preload:true
 }
