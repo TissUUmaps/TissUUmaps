@@ -303,14 +303,34 @@ class TiffSlide:
         if not hasattr(self, "_range"):
             self._range = {}
         if not page in self._range.keys():
+            selection = (slice(None), slice(None))
             if isinstance(self.ts_zarr_grp[page], zarr.core.Array):
                 zarray = self.ts_zarr_grp[page]
+                arr = zarray[selection]
+                self._range[page] = arr.min(), arr.max()
             else:
-                zarray = self.ts_zarr_grp[page][
-                    str(max(0, len(self.level_downsamples) - 2))
-                ]
-            arr = zarray[(slice(None), slice(None))]
-            self._range[page] = arr.min(), arr.max()
+                w, h, x, y = None, None, None, None
+                x1, y1 = 0, 0
+                # We go iteratively through levels to find the maximum, starting from low resolution:
+                for level, downsample in list(
+                    reversed(list(enumerate(self.level_downsamples)))
+                )[::3]:
+                    if w != None:
+                        x1 = int(max(0, x / downsample - 50))
+                        x2 = int(min(w, x / downsample + 50))
+                        y1 = int(max(0, y / downsample - 50))
+                        y2 = int(min(h, y / downsample + 50))
+                        selection = (slice(y1, y2), slice(x1, x2))
+                    zarray = self.ts_zarr_grp[page][str(level)]
+                    arr = zarray[selection]
+                    y, x = np.unravel_index(np.argmax(arr, axis=None), arr.shape)
+                    y = (y + y1) * downsample
+                    x = (x + x1) * downsample
+                    if h is None:
+                        h, w = arr.shape
+                        h *= downsample
+                        w *= downsample
+                self._range[page] = arr.min(), arr.max()
         return self._range[page]
 
     @cached_property
@@ -486,13 +506,11 @@ class TiffSlide:
                 mode="constant",
                 constant_values=0,
             )
-        try:
+        if axes != "YXS":
             max_value = self.range(page=page)[1]  # np.iinfo(arr.dtype).max
             arr[arr > max_value] = max_value
-        except:
-            # max_value = arr.max()# max_value = np.finfo(arr.dtype).max
-            # print (max_value)
-            max_value = self.range(page=page)[1]
+        else:
+            max_value = np.iinfo(arr.dtype).max
             arr[arr > max_value] = max_value
 
         if normalize:
