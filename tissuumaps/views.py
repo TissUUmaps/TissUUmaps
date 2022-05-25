@@ -421,13 +421,7 @@ def default_color_qupath(channel):
     return f"{r},{g},{b}"
 
 
-@app.route("/<path:filename>")
-@requires_auth
-def slide(filename):
-    path = request.args.get("path")
-    if not path:
-        path = "./"
-    path = os.path.abspath(os.path.join(app.basedir, path, filename))
+def getProjectFromImage(path):
     try:
         slide = _get_slide(path)
         print(slide.properties.keys())
@@ -474,32 +468,40 @@ def slide(filename):
                 # Try to extract channel names and colors from the XML metadata for each page
                 channel_names = []
                 color_names = []
-                for i, page in enumerate(tif.series[0].pages):
-                    xml_string_i = page.description.strip()
-                    try:
-                        root = xml.etree.ElementTree.parse(
-                            io.BytesIO(xml_string_i.encode("utf-16"))
-                        ).getroot()
-                    except:
-                        root = xml.etree.ElementTree.parse(
-                            io.BytesIO(xml_string_i.encode("utf-8"))
-                        ).getroot()
-                    if root.tag == "PerkinElmer-QPI-ImageDescription":
-                        # Vectra Polaris TIFF (or at least exported from such image data)
-                        assert len(root.findall("Name")) > 0
-                        assert len(root.findall("Color")) > 0
+                try:
+                    for i, page in enumerate(tif.series[0].pages):
+                        xml_string_i = page.description.strip()
+                        try:
+                            root = xml.etree.ElementTree.parse(
+                                io.BytesIO(xml_string_i.encode("utf-16"))
+                            ).getroot()
+                        except:
+                            root = xml.etree.ElementTree.parse(
+                                io.BytesIO(xml_string_i.encode("utf-8"))
+                            ).getroot()
+                        if root.tag == "PerkinElmer-QPI-ImageDescription":
+                            # Vectra Polaris TIFF (or at least exported from such image data)
+                            assert len(root.findall("Name")) > 0
+                            assert len(root.findall("Color")) > 0
 
-                        channel_names.append(root.findall("Name")[0].text)
-                        color = root.findall("Color")[0].text.split(",")
-                        (r, g, b) = [
-                            int(float(x) * (100.0 / 255.0) + 0.5) for x in color
-                        ]
-                        color_names.append(f"{r},{g},{b}")
-                    else:
-                        # Other TIFF format (just use default names and colors in this case)
-                        channel_names.append(f"Channel_{i}")
-                        color_names.append(default_color_qupath(i))
-
+                            channel_names.append(root.findall("Name")[0].text)
+                            color = root.findall("Color")[0].text.split(",")
+                            (r, g, b) = [
+                                int(float(x) * (100.0 / 255.0) + 0.5) for x in color
+                            ]
+                            color_names.append(f"{r},{g},{b}")
+                        else:
+                            # Other TIFF format (just use default names and colors in this case)
+                            channel_names.append(f"Channel_{i}")
+                            color_names.append(default_color_qupath(i))
+                except:
+                    channel_names = [
+                        f"Channel_{i+1}" for i, page in enumerate(tif.series[0].pages)
+                    ]
+                    color_names = [
+                        default_color_qupath(i)
+                        for i, page in enumerate(tif.series[0].pages)
+                    ]
             slide_url = os.path.basename(path) + ".dzi"
             jsonProject = {
                 "filters": ["Color", "Contrast"],
@@ -528,12 +530,22 @@ def slide(filename):
         import traceback
 
         logging.error(traceback.format_exc())
-        # slide = _get_slide(path)
-        # slide = _get_slide(path)
-        slide_url = os.path.basename(path) + ".dzi"  # url_for("dzi", path=path)
+        slide_url = os.path.basename(path) + ".dzi"
         jsonProject = {
             "layers": [{"name": os.path.basename(path), "tileSource": slide_url}]
         }
+    return jsonProject
+
+
+@app.route("/<path:filename>")
+@requires_auth
+def slide(filename):
+    path = request.args.get("path")
+    if not path:
+        path = "./"
+    path = os.path.abspath(os.path.join(app.basedir, path, filename))
+    jsonProject = getProjectFromImage(path)
+
     return render_template(
         "tissuumaps.html",
         plugins=[p["module"] for p in app.config["PLUGINS"]],
