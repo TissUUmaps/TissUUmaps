@@ -384,6 +384,7 @@ class TiffSlide:
         size: tuple[int, int],
         *,
         as_array: bool = False,
+        normalize: bool = True,
         padding: bool = True,
         page: int = 0,
     ) -> Image.Image | npt.NDArray[np.int_]:
@@ -494,9 +495,10 @@ class TiffSlide:
             max_value = self.range(page=page)[1]
             arr[arr > max_value] = max_value
 
-        arr = arr / max_value * 255
-        # arr = arr[:,:,:3].astype(np.uint8)
-        arr = arr[:, :].astype(np.uint8)
+        if normalize:
+            arr = arr / max_value * 255
+            # arr = arr[:,:,:3].astype(np.uint8)
+            arr = arr[:, :].astype(np.uint8)
 
         if as_array:
             return arr
