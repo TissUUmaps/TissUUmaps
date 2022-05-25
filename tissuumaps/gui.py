@@ -878,6 +878,17 @@ class webEngine(QWebEngineView):
                 self.openImagePath(layerpath)
             returnDict = {"dzi": None, "name": None}
             return returnDict
+        projectFile = views.getProjectFromImage(layerpath)
+        if len(projectFile["layers"]) > 1:
+            reply = QMessageBox.question(
+                self,
+                "Error",
+                "This file as multiple layers and can not be added as an extra layer. Would you like to open this image only?",
+            )
+            if reply == QMessageBox.Yes:
+                self.openImagePath(layerpath)
+            returnDict = {"dzi": None, "name": None}
+            return returnDict
         returnDict = {
             "dzi": relativePath + "/" + os.path.basename(imgPath) + ".dzi",
             "name": os.path.basename(imgPath),
