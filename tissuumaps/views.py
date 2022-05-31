@@ -11,7 +11,6 @@ import logging
 import os
 import threading
 import time
-import xml.etree.ElementTree
 from collections import OrderedDict
 from functools import wraps
 from threading import Lock
@@ -31,12 +30,11 @@ from flask import (
     send_from_directory,
     url_for,
 )
-from tifffile import TiffFile
 
 import tissuumaps.tiffslide as tiffslide
 from tissuumaps import app
 from tissuumaps.flask_filetree import filetree
-from tissuumaps.tiffslide import OpenSlide
+from tissuumaps.tiffslide import TiffSlide
 from tissuumaps.tiffslide.deepzoom import DeepZoomGenerator
 
 # import openslide  # isort: skip
@@ -226,9 +224,9 @@ class _SlideCache(object):
                 self._cache[path] = slide
                 return slide
 
-        osr = OpenSlide(path)
+        osr = TiffSlide(path)
         # try:
-        #    osr = OpenSlide(path)
+        #    osr = TiffSlide(path)
         # except:
         #    osr = ImageSlide(path)
         # Fix for 16 bits tiff files
@@ -305,7 +303,7 @@ def _setup():
 def page_not_found(e):
     # note that we set the 404 status explicitly
     # return render_template("tissuumaps.html", isStandalone=app.config["isStandalone"], message="Impossible to load this file", readOnly=app.config["READ_ONLY"])
-    return redirect("/404"), 404, {"Refresh": "1; url=/404"}
+    return redirect("/404"), 404, {"Refresh": "1; url=/"}
 
 
 def _get_slide(path, page=None, originalPath=None):
@@ -362,179 +360,52 @@ def base_static(path):
     return send_from_directory(directory, filename)
 
 
-def int_to_rgb(v):
-    rgba = [x / 255 * 100 for x in int(v).to_bytes(4, signed=True, byteorder="big")]
-    return ",".join(str(int(x)) for x in rgba[:3])
-
-
-def hsv_to_rgb(h, s, v):
-    """Convert color from HSV space to RGB space"""
-    h_i = int(h * 6.0)
-    f = h * 6.0 - h_i
-    p = v * (1.0 - s)
-    q = v * (1.0 - f * s)
-    t = v * (1.0 - (1.0 - f) * s)
-    (r, g, b) = (0.0, 0.0, 0.0)
-    if 0 == h_i:
-        (r, g, b) = (v, t, p)
-    if 1 == h_i:
-        (r, g, b) = (q, v, p)
-    if 2 == h_i:
-        (r, g, b) = (p, v, t)
-    if 3 == h_i:
-        (r, g, b) = (p, q, v)
-    if 4 == h_i:
-        (r, g, b) = (t, p, v)
-    if 5 == h_i:
-        (r, g, b) = (v, p, q)
-    return (r, g, b)
-
-
-def default_color_qupath(channel):
-    """Generates a default RGB color value from channel index
-
-    This function uses the default color generator from QuPath 3.1
-    """
-    if channel == 0:
-        (r, g, b) = (255, 0, 0)
-    elif channel == 1:
-        (r, g, b) = (0, 255, 0)
-    elif channel == 2:
-        (r, g, b) = (0, 0, 255)
-    elif channel == 3:
-        (r, g, b) = (255, 224, 0)
-    elif channel == 4:
-        (r, g, b) = (0, 224, 224)
-    elif channel == 5:
-        (r, g, b) = (255, 0, 224)
-    else:
-        # Generate a pseudo-random color in HSV space
-        hue = ((channel * 128) % 360) / 360.0
-        saturation = 1.0 - (channel / 10.0) / 20.0
-        brightness = 1.0 - (channel / 10.0) / 20.0
-        (r, g, b) = hsv_to_rgb(hue, saturation, brightness)
-        (r, g, b) = (r * 255, g * 255, b * 255)
-    # Rescale components to range [0,100] before output
-    r = int(r * (100.0 / 255.0) + 0.5)
-    g = int(g * (100.0 / 255.0) + 0.5)
-    b = int(b * (100.0 / 255.0) + 0.5)
-    return f"{r},{g},{b}"
+def _rgb_to_filter(rgb):
+    return ",".join(str(int(v / 255 * 100 + 0.5)) for v in rgb)
 
 
 def getProjectFromImage(path):
+    slide = _get_slide(path)
+    tif = slide._osr.ts_tifffile
     try:
-        slide = _get_slide(path)
-        print(slide.properties.keys())
-        tif = slide._osr.ts_tifffile
-        if len(tif.series[0].pages) > 1:
-            try:
-                omexml_string = tif.series[0].pages[0].description.strip()
-                try:
-                    root = xml.etree.ElementTree.parse(
-                        io.BytesIO(omexml_string.encode("utf-16"))
-                    )
-                except:
-                    root = xml.etree.ElementTree.parse(
-                        io.BytesIO(omexml_string.encode("utf-8"))
-                    )
-                namespaces = {
-                    "ome": "http://www.openmicroscopy.org/Schemas/OME/2016-06"
+        channel_names = slide.properties["tiffslide.page-names"]
+        jsonProject = {
+            "layers": [
+                {
+                    "name": channel_names[pindex % len(channel_names)],
+                    "tileSource": os.path.basename(path) + f"__p{pindex}.dzi",
                 }
-                channels = root.findall(
-                    "ome:Image[1]/ome:Pixels/ome:Channel", namespaces
-                )
-                channel_names = [
-                    c.attrib["Name"] if "Name" in c.attrib else f"Channel {i+1}"
-                    for i, c in enumerate(channels)
-                ]
-                color_names = [
-                    int_to_rgb(c.attrib["Color"])
-                    if "Color" in c.attrib
-                    else default_color_qupath(i)
-                    for i, c in enumerate(channels)
-                ]
-            except:
-                channel_names = [
-                    f"Channel_{i+1}" for i, page in enumerate(tif.series[0].pages)
-                ]
-                color_names = [
-                    default_color_qupath(i)
-                    for i, page in enumerate(tif.series[0].pages)
-                ]
-                import traceback
-
-                logging.error(traceback.format_exc())
-            if len(channel_names) != len(tif.series[0].pages):
-                # Try to extract channel names and colors from the XML metadata for each page
-                channel_names = []
-                color_names = []
-                try:
-                    for i, page in enumerate(tif.series[0].pages):
-                        xml_string_i = page.description.strip()
-                        try:
-                            root = xml.etree.ElementTree.parse(
-                                io.BytesIO(xml_string_i.encode("utf-16"))
-                            ).getroot()
-                        except:
-                            root = xml.etree.ElementTree.parse(
-                                io.BytesIO(xml_string_i.encode("utf-8"))
-                            ).getroot()
-                        if root.tag == "PerkinElmer-QPI-ImageDescription":
-                            # Vectra Polaris TIFF (or at least exported from such image data)
-                            assert len(root.findall("Name")) > 0
-                            assert len(root.findall("Color")) > 0
-
-                            channel_names.append(root.findall("Name")[0].text)
-                            color = root.findall("Color")[0].text.split(",")
-                            (r, g, b) = [
-                                int(float(x) * (100.0 / 255.0) + 0.5) for x in color
-                            ]
-                            color_names.append(f"{r},{g},{b}")
-                        else:
-                            # Other TIFF format (just use default names and colors in this case)
-                            channel_names.append(f"Channel_{i}")
-                            color_names.append(default_color_qupath(i))
-                except:
-                    channel_names = [
-                        f"Channel_{i+1}" for i, page in enumerate(tif.series[0].pages)
-                    ]
-                    color_names = [
-                        default_color_qupath(i)
-                        for i, page in enumerate(tif.series[0].pages)
-                    ]
-            slide_url = os.path.basename(path) + ".dzi"
-            jsonProject = {
-                "filters": ["Color", "Contrast"],
-                "compositeMode": "lighter",
-                "layerFilters": {
-                    str(pindex): [
-                        {
-                            "name": "Color",
-                            "value": color_names[pindex % len(color_names)],
-                        }
-                    ]
-                    for pindex, page in enumerate(tif.series[0].pages)
+                for pindex, page in enumerate(tif.series[0].pages)
+            ],
+            "mpp": slide.properties["tiffslide.mpp-x"],
+        }
+        if slide.properties["tiffslide.page-colors"] is not None:
+            tiffcolors = [
+                _rgb_to_filter(rgb) for rgb in slide.properties["tiffslide.page-colors"]
+            ]
+            jsonProject = dict(
+                jsonProject,
+                **{
+                    "filters": ["Color", "Contrast"],
+                    "compositeMode": "lighter",
+                    "layerFilters": {
+                        str(pindex): [
+                            {
+                                "name": "Color",
+                                "value": tiffcolors[pindex % len(tiffcolors)],
+                            }
+                        ]
+                        for pindex, page in enumerate(tif.series[0].pages)
+                    },
                 },
-                "layers": [
-                    {
-                        "name": channel_names[pindex],
-                        "tileSource": os.path.basename(path) + f"__p{pindex}.dzi",
-                    }
-                    for pindex, page in enumerate(tif.series[0].pages)
-                ],
-                "mpp": slide.properties["tiffslide.mpp-x"],
-            }
-        else:
-            raise Exception("Only one page, so back to normal layers.")
+            )
+        return jsonProject
     except:
-        import traceback
-
-        logging.error(traceback.format_exc())
         slide_url = os.path.basename(path) + ".dzi"
         jsonProject = {
             "layers": [{"name": os.path.basename(path), "tileSource": slide_url}]
         }
-    return jsonProject
+        return jsonProject
 
 
 @app.route("/<path:filename>")

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import io
 import math
 import os.path
 import re
 import sys
 from fractions import Fraction
-from itertools import count
+from itertools import count, product
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, AnyStr, Iterator, Mapping, TypeVar, overload
 from warnings import warn
@@ -50,6 +51,8 @@ __all__ = [
     "PROPERTY_NAME_BOUNDS_Y",
     "PROPERTY_NAME_BOUNDS_WIDTH",
     "PROPERTY_NAME_BOUNDS_HEIGHT",
+    "PROPERTY_NAME_PAGE_NAMES",
+    "PROPERTY_NAME_PAGE_COLORS",
     "TiffSlide",
     "TiffFileError",
     "NotTiffSlide",
@@ -72,6 +75,8 @@ PROPERTY_NAME_BOUNDS_X = "tiffslide.bounds-x"
 PROPERTY_NAME_BOUNDS_Y = "tiffslide.bounds-y"
 PROPERTY_NAME_BOUNDS_WIDTH = "tiffslide.bounds-width"
 PROPERTY_NAME_BOUNDS_HEIGHT = "tiffslide.bounds-height"
+PROPERTY_NAME_PAGE_NAMES = "tiffslide.page-names"
+PROPERTY_NAME_PAGE_COLORS = "tiffslide.page-colors"
 
 
 class TiffSlide:
@@ -205,9 +210,10 @@ class TiffSlide:
             PROPERTY_NAME_BOUNDS_Y: None,
             PROPERTY_NAME_BOUNDS_WIDTH: None,
             PROPERTY_NAME_BOUNDS_HEIGHT: None,
+            PROPERTY_NAME_PAGE_NAMES: None,
+            PROPERTY_NAME_PAGE_COLORS: None,
         }
         tf = self.ts_tifffile
-
         if tf.is_svs:
             desc = tf.pages[0].description
             series_idx = 0
@@ -217,6 +223,16 @@ class TiffSlide:
             desc = tf.scn_metadata
             series_idx = _auto_select_series_scn(desc)
             _md = _parse_metadata_scn(desc, series_idx)
+
+        elif tf.is_ome:
+            desc = tf.pages[0].description
+            series_idx = 0
+            _md = _parse_metadata_ome(desc, tf.series[series_idx].pages)
+
+        elif tf.pages[0].software[:15] == "PerkinElmer-QPI":  # tf.is_qptiff:
+            desc = tf.pages[0].description
+            series_idx = 0
+            _md = _parse_metadata_qptiff(desc, tf.series[series_idx].pages)
 
         else:
             # todo: need to handle more supported formats in the future
@@ -229,6 +245,9 @@ class TiffSlide:
                 PROPERTY_NAME_COMMENT: desc,
                 PROPERTY_NAME_VENDOR: "generic-tiff",
             }
+            if len(tf.series[series_idx].pages) > 1:
+                __md = _parse_metadata_generic(desc, tf.series[series_idx])
+                _md.update(__md)
 
         md.update(_md)
         md["tiff.ImageDescription"] = desc
@@ -297,18 +316,20 @@ class TiffSlide:
                     else:
                         md[PROPERTY_NAME_MPP_X] = mpp_x
                         md[PROPERTY_NAME_MPP_Y] = mpp_y
+
         return md
 
     def range(self, page) -> dict[str, Any]:
         if not hasattr(self, "_range"):
             self._range = {}
         if not page in self._range.keys():
-            selection = (slice(None), slice(None))
             if isinstance(self.ts_zarr_grp[page], zarr.core.Array):
+                selection = (slice(None), slice(None))
                 zarray = self.ts_zarr_grp[page]
                 arr = zarray[selection]
                 self._range[page] = arr.min(), arr.max()
             else:
+                selection = (slice(None), slice(None))
                 w, h, x, y = None, None, None, None
                 x1, y1 = 0, 0
                 # We go iteratively through levels to find the maximum, starting from low resolution:
@@ -330,7 +351,31 @@ class TiffSlide:
                         h, w = arr.shape
                         h *= downsample
                         w *= downsample
-                self._range[page] = arr.min(), arr.max()
+                arr_max = arr.max()
+                selection = (slice(None), slice(None))
+                w, h, x, y = None, None, None, None
+                x1, y1 = 0, 0
+                # We go iteratively through levels to find the maximum, starting from low resolution:
+                for level, downsample in list(
+                    reversed(list(enumerate(self.level_downsamples)))
+                )[::3]:
+                    if w != None:
+                        x1 = int(max(0, x / downsample - 50))
+                        x2 = int(min(w, x / downsample + 50))
+                        y1 = int(max(0, y / downsample - 50))
+                        y2 = int(min(h, y / downsample + 50))
+                        selection = (slice(y1, y2), slice(x1, x2))
+                    zarray = self.ts_zarr_grp[page][str(level)]
+                    arr = zarray[selection]
+                    y, x = np.unravel_index(np.argmin(arr, axis=None), arr.shape)
+                    y = (y + y1) * downsample
+                    x = (x + x1) * downsample
+                    if h is None:
+                        h, w = arr.shape
+                        h *= downsample
+                        w *= downsample
+                arr_min = arr.min()
+                self._range[page] = arr_min, arr_max
         return self._range[page]
 
     @cached_property
@@ -507,14 +552,15 @@ class TiffSlide:
                 constant_values=0,
             )
         if axes != "YXS":
-            max_value = self.range(page=page)[1]  # np.iinfo(arr.dtype).max
+            min_value, max_value = self.range(page=page)  # np.iinfo(arr.dtype).max
             arr[arr > max_value] = max_value
+            arr[arr < min_value] = min_value
         else:
-            max_value = np.iinfo(arr.dtype).max
+            min_value, max_value = 0, np.iinfo(arr.dtype).max
             arr[arr > max_value] = max_value
-
+            arr[arr < min_value] = min_value
         if normalize:
-            arr = arr / max_value * 255
+            arr = (arr - min_value) / (max_value - min_value) * 255
             # arr = arr[:,:,:3].astype(np.uint8)
             arr = arr[:, :].astype(np.uint8)
 
@@ -608,9 +654,6 @@ class NotTiffSlide(TiffSlide):
                 _cls=NotTiffFile,
             )
         except ValueError:
-            import traceback
-
-            logging.error(traceback.format_exc())
             return None
         with tf as t:
             # noinspection PyProtectedMember
@@ -772,6 +815,8 @@ def _parse_metadata_aperio(desc: str) -> dict[str, Any]:
         PROPERTY_NAME_BOUNDS_Y: None,
         PROPERTY_NAME_BOUNDS_WIDTH: None,
         PROPERTY_NAME_BOUNDS_HEIGHT: None,
+        PROPERTY_NAME_PAGE_NAMES: None,
+        PROPERTY_NAME_PAGE_COLORS: None,
     }
     md.update({f"aperio.{k}": v for k, v in sorted(aperio_meta.items())})
     return md
@@ -804,6 +849,125 @@ def _auto_select_series_scn(desc: str) -> int:
     return idx
 
 
+def _parse_metadata_generic(desc: str, serie: object) -> dict[str, Any]:
+    """OME.TIFF metadata"""
+    dimensions = []
+
+    axes = serie.axes
+    shape = serie._shape_squeezed
+    for axis, length in list(zip(axes, shape)):
+        if axis in "XY":
+            continue
+        rangeD = range(length)
+        dimensions.append([(axis.lower(), 1 + r) for r in rangeD])
+
+    # list of layers [("c",1),("z",1),("t",1)]
+    layer_dimensions = [dim for dim in product(*dimensions)]
+
+    channel_names = [
+        "dim" + "".join([f"_{d[0]}{d[1]}" for d in dim]) for dim in layer_dimensions
+    ]
+
+    if "C" in axes:
+        channel_colors = [
+            _default_color_qupath(dict(dim)["c"] - 1) for dim in layer_dimensions
+        ]
+    else:
+        channel_colors = None
+    md = {
+        PROPERTY_NAME_PAGE_NAMES: channel_names,
+        PROPERTY_NAME_PAGE_COLORS: channel_colors,
+    }
+
+    return md
+
+
+def _parse_metadata_ome(desc: str, serie: object) -> dict[str, Any]:
+    """OME.TIFF metadata"""
+    tree = _xml_to_dict(desc)
+    pixels = tree["OME"]["Image"]["Pixels"]
+    channels = pixels["Channel"]
+    if not isinstance(channels, list):
+        channels = [channels]
+    channel_names = [
+        c["@Name"] if "@Name" in c.keys() else f"Channel {i+1}"
+        for i, c in enumerate(channels)
+    ]
+    if len(channels) > 1:
+        color_names = [
+            _int_to_rgb(c["@Color"])
+            if "@Color" in c.keys()
+            else _default_color_qupath(i)
+            for i, c in enumerate(channels)
+        ]
+    else:
+        color_names = None
+    if len(channel_names) != len(serie.pages):
+        _md = _parse_metadata_generic(desc, serie)
+        channel_names = _md[PROPERTY_NAME_PAGE_NAMES]
+        color_names = _md[PROPERTY_NAME_PAGE_COLORS]
+
+    md = {
+        PROPERTY_NAME_COMMENT: desc,
+        PROPERTY_NAME_VENDOR: "ome.tiff",
+        PROPERTY_NAME_QUICKHASH1: None,
+        PROPERTY_NAME_BACKGROUND_COLOR: None,
+        PROPERTY_NAME_OBJECTIVE_POWER: None,
+        PROPERTY_NAME_MPP_X: None,
+        PROPERTY_NAME_MPP_Y: None,
+        PROPERTY_NAME_BOUNDS_X: None,
+        PROPERTY_NAME_BOUNDS_Y: None,
+        PROPERTY_NAME_BOUNDS_WIDTH: None,
+        PROPERTY_NAME_BOUNDS_HEIGHT: None,
+        PROPERTY_NAME_PAGE_NAMES: channel_names,
+        PROPERTY_NAME_PAGE_COLORS: color_names,
+    }
+
+    return md
+
+
+def _parse_metadata_qptiff(desc: str, pages: list[Object]) -> dict[str, Any]:
+    """qptiff metadata"""
+    tree = _xml_to_dict(desc)
+    channel_names = []
+    color_names = []
+    for i, page in enumerate(pages):
+        root = _xml_to_dict(page.description)
+        if "PerkinElmer-QPI-ImageDescription" in root.keys():
+            if "Name" in root["PerkinElmer-QPI-ImageDescription"].keys():
+                # Vectra Polaris TIFF (or at least exported from such image data)
+                channel_names.append(root["PerkinElmer-QPI-ImageDescription"]["Name"])
+                color = root["PerkinElmer-QPI-ImageDescription"]["Color"].split(",")
+                color_names.append([int(v) for v in color])
+            else:
+                # Other TIFF format (just use default names and colors in this case)
+                channel_names.append(f"Channel_{i}")
+                color_names.append(_default_color_qupath(i))
+
+        else:
+            # Other TIFF format (just use default names and colors in this case)
+            channel_names.append(f"Channel_{i}")
+            color_names.append(_default_color_qupath(i))
+
+    md = {
+        PROPERTY_NAME_COMMENT: desc,
+        PROPERTY_NAME_VENDOR: "ome.tiff",
+        PROPERTY_NAME_QUICKHASH1: None,
+        PROPERTY_NAME_BACKGROUND_COLOR: None,
+        PROPERTY_NAME_OBJECTIVE_POWER: None,
+        PROPERTY_NAME_MPP_X: None,
+        PROPERTY_NAME_MPP_Y: None,
+        PROPERTY_NAME_BOUNDS_X: None,
+        PROPERTY_NAME_BOUNDS_Y: None,
+        PROPERTY_NAME_BOUNDS_WIDTH: None,
+        PROPERTY_NAME_BOUNDS_HEIGHT: None,
+        PROPERTY_NAME_PAGE_NAMES: channel_names,
+        PROPERTY_NAME_PAGE_COLORS: color_names,
+    }
+
+    return md
+
+
 def _parse_metadata_scn(desc: str, series_idx: int) -> dict[str, Any]:
     """Leica metadata"""
     tree = _xml_to_dict(desc)
@@ -830,6 +994,8 @@ def _parse_metadata_scn(desc: str, series_idx: int) -> dict[str, Any]:
         PROPERTY_NAME_BOUNDS_Y: None,
         PROPERTY_NAME_BOUNDS_WIDTH: None,
         PROPERTY_NAME_BOUNDS_HEIGHT: None,
+        PROPERTY_NAME_PAGE_NAMES: None,
+        PROPERTY_NAME_PAGE_COLORS: None,
         "leica.aperture": float(
             image["scanSettings"]["illuminationSettings"]["numericalAperture"]
         ),
@@ -877,3 +1043,59 @@ def _label_series_axes(axes: str) -> tuple[str, ...]:
 def _clip(x: int, min_: int, max_: int) -> int:
     """clip a value to a range"""
     return min(max(x, min_), max_)
+
+
+def _int_to_rgb(v):
+    rgba = [x for x in int(v).to_bytes(4, signed=True, byteorder="big")]
+    return rgba[:3]
+
+
+def _hsv_to_rgb(h, s, v):
+    """Convert color from HSV space to RGB space"""
+    h_i = int(h * 6.0)
+    f = h * 6.0 - h_i
+    p = v * (1.0 - s)
+    q = v * (1.0 - f * s)
+    t = v * (1.0 - (1.0 - f) * s)
+    (r, g, b) = (0.0, 0.0, 0.0)
+    if 0 == h_i:
+        (r, g, b) = (v, t, p)
+    if 1 == h_i:
+        (r, g, b) = (q, v, p)
+    if 2 == h_i:
+        (r, g, b) = (p, v, t)
+    if 3 == h_i:
+        (r, g, b) = (p, q, v)
+    if 4 == h_i:
+        (r, g, b) = (t, p, v)
+    if 5 == h_i:
+        (r, g, b) = (v, p, q)
+    return (r, g, b)
+
+
+def _default_color_qupath(channel):
+    """Generates a default RGB color value from channel index
+
+    This function uses the default color generator from QuPath 3.1
+    """
+    if channel == 0:
+        (r, g, b) = (255, 0, 0)
+    elif channel == 1:
+        (r, g, b) = (0, 255, 0)
+    elif channel == 2:
+        (r, g, b) = (0, 0, 255)
+    elif channel == 3:
+        (r, g, b) = (255, 224, 0)
+    elif channel == 4:
+        (r, g, b) = (0, 224, 224)
+    elif channel == 5:
+        (r, g, b) = (255, 0, 224)
+    else:
+        # Generate a pseudo-random color in HSV space
+        hue = ((channel * 128) % 360) / 360.0
+        saturation = 1.0 - (channel / 10.0) / 20.0
+        brightness = 1.0 - (channel / 10.0) / 20.0
+        (r, g, b) = _hsv_to_rgb(hue, saturation, brightness)
+        (r, g, b) = (r * 255, g * 255, b * 255)
+    # Rescale components to range [0,100] before output
+    return (r, g, b)
