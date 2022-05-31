@@ -200,7 +200,7 @@ tmapp.options_osd = {
     gestureSettingsPen: {
         flickEnabled: false
     },
-    preload:true
+    preload:false
 }
 
 function toggleFullscreen() {
