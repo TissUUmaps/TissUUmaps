@@ -127,6 +127,20 @@ tmapp.init = function () {
             }
             tmapp[op + "_viewer"].imageLoaderLimit = 50;
         }
+        if (document.getElementById("zoomDiv") == undefined) {
+            var elt = document.createElement('div');
+            elt.className = "zoomDiv px-1 mx-1 my-2 viewer-layer";
+            elt.id = "zoomDiv"
+            elt.style.zIndex = "100";
+            elt.setAttribute("role","button");
+            tmapp['ISS_viewer'].addControl(elt,{anchor: OpenSeadragon.ControlAnchor.TOP_LEFT});
+            elt.addEventListener("click",(ev) => {
+                tmapp['ISS_viewer'].viewport.zoomTo( tmapp['ISS_viewer'].viewport.imageToViewportZoom( 1.0 ) )
+            })
+        }
+        var zoom = tmapp[op + "_viewer"].world.getItemAt(0).viewportToImageZoom(tmapp[op + "_viewer"].viewport.getZoom());
+        
+        document.getElementById("zoomDiv").innerHTML = (zoom*100).toFixed(1) + " %";
     });
     tmapp["ISS_viewer"].addHandler("animation-start", function animationFinishHandler(event){
         var op = tmapp["object_prefix"];
