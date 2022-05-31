@@ -249,10 +249,10 @@ $( document ).ready(function() {
     let ISS_viewer = document.getElementById("ISS_viewer");
     let ISS_viewer_container = document.getElementById("ISS_viewer_container");
 
-    ISS_viewer.addEventListener('dblclick', function (e) {
+    /*ISS_viewer.addEventListener('dblclick', function (e) {
         // Open in fullscreen if double clicked
         toggleFullscreen();
-    });
+    });*/
 
     let full_ui = document.getElementById("main-ui");
     full_ui.addEventListener('fullscreenchange', (event) => {
