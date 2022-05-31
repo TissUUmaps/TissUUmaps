@@ -119,7 +119,7 @@ tmapp.init = function () {
             $(this).attr('stroke-width', regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
         });
         var op = tmapp["object_prefix"];
-        if (tmapp[op + "_viewer"].viewport.viewportToImageZoom(tmapp[op + "_viewer"].viewport.getZoom()) > 0.05) {
+        if (tmapp[op + "_viewer"].world.getItemAt(0).viewportToImageZoom(tmapp[op + "_viewer"].viewport.getZoom()) > 0.05) {
             var count = tmapp[op + "_viewer"].world.getItemCount();
             for (var i = 0; i < count; i++) {
                 var tiledImage = tmapp[op + "_viewer"].world.getItemAt(i);

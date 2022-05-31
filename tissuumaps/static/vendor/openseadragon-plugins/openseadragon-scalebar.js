@@ -230,7 +230,8 @@
             this.divElt.style.display = "";
 
             var viewport = this.viewer.viewport;
-            var zoom = viewport.viewportToImageZoom(viewport.getZoom(true));
+            /*var zoom = viewport.viewportToImageZoom(viewport.getZoom(true));*/
+            var zoom = this.viewer.world.getItemAt(0).viewportToImageZoom(viewport.getZoom(true));
             var currentPPM = zoom * this.pixelsPerMeter;
             var props = this.sizeAndTextRenderer(currentPPM, this.minWidth);
 
