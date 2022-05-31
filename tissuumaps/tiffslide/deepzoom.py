@@ -132,9 +132,15 @@ class DeepZoomGenerator(object):
         #        openslide.PROPERTY_NAME_BACKGROUND_COLOR, "ffffff"
         #    ),
         # )
-        self._bg_color = "#" + self._osr.properties.get(
+        _bg_color = self._osr.properties.get(
             openslide.PROPERTY_NAME_BACKGROUND_COLOR, "ffffff"
         )
+        if _bg_color is not None:
+            self._bg_color = "#" + self._osr.properties.get(
+                openslide.PROPERTY_NAME_BACKGROUND_COLOR, "ffffff"
+            )
+        else:
+            self._bg_color = "#ffffff"
 
     def __repr__(self):
         return "%s(%r, tile_size=%r, overlap=%r, limit_bounds=%r)" % (
