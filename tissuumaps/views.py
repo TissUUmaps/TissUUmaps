@@ -347,6 +347,12 @@ def base_static(path):
     return send_from_directory(directory, filename)
 
 
+@app.route("/<path:path>.html")
+@requires_auth
+def base_static_redirect(path):
+    return redirect("/web/" + path + ".html")
+
+
 @app.route("/<path:filename>")
 @requires_auth
 def slide(filename):
