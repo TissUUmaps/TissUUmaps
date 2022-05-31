@@ -44,6 +44,9 @@ overlayUtils.addAllLayersSettings = function() {
         overlayUtils.addLayerSettings(layer.name, layer.tileSource, i-1);
     });
     filterUtils.setRangesFromFilterItems();
+    overlayUtils.waitForLayers().then(() => {
+        overlayUtils.addLayerSlider();
+    });
 }
 
 /**
@@ -140,17 +143,135 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
         }
         overlayUtils.setItemOpacity(layer);
     });
-    overlayUtils.addLayerSlider();
 }
 
 /**
- * This method is used to add a layer */
+ * This method is used to add a layer slider */
  overlayUtils.addLayerSlider = function() {
-    if (document.getElementById("channelRangeInput") == undefined) {
+    if (document.getElementById("channelRangeDiv") == undefined) {
         var elt = document.createElement('div');
         elt.className = "channelRange px-1 mx-1 viewer-layer";
         elt.id = "channelRangeDiv"
+        elt.style.maxWidth = "270px";
         elt.style.zIndex = "100";
+        tmapp['ISS_viewer'].addControl(elt,{anchor: OpenSeadragon.ControlAnchor.BOTTOM_LEFT});
+    }
+    var channelRangeDiv = document.getElementById("channelRangeDiv");
+    channelRangeDiv.innerHTML = "";
+    var dimSplit = tmapp.layers[tmapp.layers.length-1].name.split("_")
+    if (dimSplit.shift() == "dim") {
+        var dimensions = dimSplit.map((dim) => {
+            return {
+                "axis": dim[0],
+                "axis_dim": parseInt(dim.substring(1))
+            }
+        }).reverse();
+        for (var dimension of dimensions) {
+            var channelRange = document.createElement("input");
+            channelRange.classList.add("form-range");
+            channelRange.classList.add("channelRangeInput");
+            channelRange.type = "range";
+            channelRange.style.width = "200px";
+            channelRange.id = "channelRangeInput_" + dimension.axis;
+            channelRange.setAttribute("min", 1);
+            channelRange.setAttribute("max", dimension.axis_dim);
+            channelRange.setAttribute("step", "1");
+            channelRange.setAttribute("value", "-1");
+            channelRange.setAttribute("dim", dimension.axis);
+            var span = document.createElement('div');
+            span.innerHTML = dimension.axis
+            span.id = "channelValue_" + dimension.axis
+            span.style.width="22px";
+            span.style.overflow="hidden";
+            span.style.verticalAlign = "bottom";
+            span.style.paddingLeft = "5px";
+            span.style.paddingRight = "5px";
+            span.style.paddingBottom = "7px";
+            span.style.display = "inline-block";
+            var spanAfter = document.createElement('div');
+            spanAfter.innerHTML = "1"
+            spanAfter.id = "channelValueAfter_" + dimension.axis
+            spanAfter.style.overflow="hidden";
+            spanAfter.style.verticalAlign = "bottom";
+            spanAfter.style.paddingLeft = "5px";
+            spanAfter.style.paddingRight = "5px";
+            spanAfter.style.paddingBottom = "7px";
+            spanAfter.style.display = "inline-block";
+            channelRangeDiv.appendChild(span);
+            channelRangeDiv.appendChild(channelRange);
+            channelRangeDiv.appendChild(spanAfter);
+            var changeFun = function(ev) {
+                var dim = ev.target.getAttribute("dim");
+                valDim = document.getElementById("channelValueAfter_" + dim);
+                console.log(dim, "channelValueAfter_" + dim, valDim);
+                valDim.innerHTML = ev.target.value;
+                var checkedLayers = document.querySelectorAll('.visible-layers:checked')
+                for (var el of checkedLayers) {
+                    $(el).click();
+                }
+                if (filterUtils._compositeMode == "source-over") {
+                    layerName = "dim";
+                    for (let indexDim = dimensions.length - 1; indexDim >= 0; indexDim --) {
+                        var ax = dimensions[indexDim].axis;
+                        layerName += "_" + ax + $("#channelRangeInput_" + ax)[0].value;
+                    }
+                    layerIndex = tmapp.layers.findIndex((e)=>{return e.name == layerName}) - 1;
+                    
+                    $("#visible-layer-"+(layerIndex- -1)).click();
+                }
+                else {
+                    var c_dim = dimensions.filter((el)=>{return el.axis == "c"})[0];
+                    console.log("c_dim", c_dim)
+                    for (let indexChannel = 0; indexChannel <= c_dim.axis_dim; indexChannel++) {
+                        layerName = "dim";
+                        for (let indexDim = dimensions.length - 1; indexDim >= 0; indexDim --) {
+                            var ax = dimensions[indexDim].axis;
+                            if (ax == "c") {
+                                layerName += "_" + ax + indexChannel;
+                            }
+                            else {
+                                layerName += "_" + ax + $("#channelRangeInput_" + ax)[0].value;
+                            }
+                        }
+                        console.log(layerName);
+                        layerIndex = tmapp.layers.findIndex((e)=>{return e.name == layerName}) - 1;
+                        $("#visible-layer-"+(layerIndex- -1)).click();
+                    }
+                    
+                }
+            };
+            channelRange.addEventListener("input", changeFun);
+            var mousewheelevt = (/Firefox/i.test(navigator.userAgent)) ? "DOMMouseScroll" : "mousewheel";
+            $(channelRange).bind(mousewheelevt, moveSlider);
+            function moveSlider(e){
+                var zoomLevel = parseInt($(e.target).val()); 
+                // detect positive or negative scrolling
+                if ( e.originalEvent.wheelDelta < 0 ) {
+                    //scroll down
+                    $(e.target).val(zoomLevel+1);
+                } else {
+                    //scroll up
+                    $(e.target).val(zoomLevel-1);
+                }
+
+                // trigger the change event
+                changeFun(e.originalEvent);
+
+                //prevent page fom scrolling
+                return false;
+            }
+        }
+        if (tmapp.layers.length <= 1) {
+            document.getElementById("channelRangeDiv").style.display = "none";
+        }
+        else {
+            document.getElementById("channelRangeDiv").style.display = "table";
+        }
+        return;
+    }
+
+    if (document.getElementById("channelRangeInput") == undefined) {
+        var elt = channelRangeDiv;
         var span = document.createElement('div');
         span.innerHTML = "Channel 1"
         span.id = "channelValue"
@@ -272,13 +393,13 @@ overlayUtils.addLayer = function(layerName, tileSource, i, visible) {
             layerNX = tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).getContentSize().x;
             tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setWidth(layerNX/layer0X);
             if (loadingModal) {
-                setTimeout(function(){$(loadingModal).modal("hide");}, 500);
+                setTimeout(function(){$(loadingModal).modal("hide");}, 1000);
             }
             showModal = false;
         },
         error: function(i) {
             if (loadingModal) {
-                setTimeout(function(){$(loadingModal).modal("hide");}, 500);
+                setTimeout(function(){$(loadingModal).modal("hide");}, 1000);
             }
             interfaceUtils.alert("Impossible to load file.")
             showModal = false;
@@ -336,6 +457,25 @@ overlayUtils.waitFullyLoaded = function () {
     });
 }
 
+overlayUtils.waitForLayers = function () {
+    function sleep (time) {
+        return new Promise((resolve) => setTimeout(resolve, time));
+    }
+    return new Promise((resolve, reject) => {
+        sleep(200).then (()=>{
+            if (tmapp["ISS_viewer"].world.getItemCount() == tmapp.layers.length) {
+                resolve();
+                return;
+            }
+            else {
+                overlayUtils.waitForLayers().then(()=>{
+                    resolve();
+                    return;
+                });
+            }    
+        });
+    });
+}
 /** 
  * @param {String} layerName name of an existing d3 node
  * @param {Number} opacity desired opacity
