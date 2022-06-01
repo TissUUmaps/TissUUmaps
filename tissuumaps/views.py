@@ -294,7 +294,7 @@ def _setup():
 def page_not_found(e):
     # note that we set the 404 status explicitly
     # return render_template("tissuumaps.html", isStandalone=app.config["isStandalone"], message="Impossible to load this file", readOnly=app.config["READ_ONLY"])
-    return redirect("/404"), 404, {"Refresh": "1; url=/404"}
+    return redirect("/"), 404, {"Refresh": "1; url=/"}
 
 
 def _get_slide(path, originalPath=None):
@@ -360,6 +360,8 @@ def slide(filename):
     if not path:
         path = "./"
     path = os.path.abspath(os.path.join(app.basedir, path, filename))
+    if not os.path.isfile(path) and not os.path.isfile(path + ".dzi"):
+        abort(404)
     # slide = _get_slide(path)
     slide_url = os.path.basename(path) + ".dzi"  # url_for("dzi", path=path)
     jsonProject = {
