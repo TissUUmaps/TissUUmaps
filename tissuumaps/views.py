@@ -153,7 +153,7 @@ class ImageConverter:
                         tile_width=256,
                         tile_height=256,
                         compression="jpeg",
-                        Q=95,
+                        Q=app.config["DEEPZOOM_TILE_QUALITY"],
                         properties=True,
                     )
                 except:
@@ -194,7 +194,9 @@ class ImageConverter:
                     imgVips.dzsave(
                         os.path.basename(self.outputImage),
                         dirname=os.path.dirname(self.outputImage),
-                        suffix=".jpg",
+                        suffix=".jpg[Q={q}]".format(
+                            q=app.config["DEEPZOOM_TILE_QUALITY"]
+                        ),
                         background=0,
                         depth="onepixel",
                         overlap=0,
