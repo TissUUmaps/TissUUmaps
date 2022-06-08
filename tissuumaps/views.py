@@ -174,7 +174,13 @@ class ImageConverter:
 
             def convertThread():
                 try:
-                    imgVips = pyvips.Image.new_from_file(self.inputImage)
+                    if "__p" in self.inputImage:
+                        self.inputImage, p = self.inputImage.split("__p")
+                        imgVips = pyvips.Image.new_from_file(
+                            self.inputImage, page=int(p)
+                        )
+                    else:
+                        imgVips = pyvips.Image.new_from_file(self.inputImage)
                     minVal = imgVips.percent(0.5)
                     maxVal = imgVips.percent(99.5)
                     if minVal == maxVal:
