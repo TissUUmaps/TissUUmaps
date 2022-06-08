@@ -553,7 +553,10 @@ def jsonFile(completePath):
 @app.route("/<path:path>__p<int:page>.dzi")
 @requires_auth
 def dzi(path, page):
-    completePath = os.path.join(app.basedir, path)
+    if path is not None:
+        completePath = os.path.join(app.basedir, path + "__p" + str(page))
+    else:
+        completePath = os.path.join(app.basedir, path)
     # Check if a .dzi file exists, else use OpenSlide:
     if os.path.isfile(completePath + ".dzi"):
         directory = os.path.dirname(completePath)
@@ -592,7 +595,10 @@ def dzi_asso(path, page):
 )
 @app.route("/<path:path>__p<int:page>_files/<int:level>/<int:col>_<int:row>.<format>")
 def tile(path, level, col, row, format, page):
-    completePath = os.path.join(app.basedir, path)
+    if path is not None:
+        completePath = os.path.join(app.basedir, path + "__p" + str(page))
+    else:
+        completePath = os.path.join(app.basedir, path)
     if os.path.isfile(f"{completePath}_files/{level}/{col}_{row}.{format}"):
         directory = f"{completePath}_files/{level}/"
         filename = f"{col}_{row}.{format}"
