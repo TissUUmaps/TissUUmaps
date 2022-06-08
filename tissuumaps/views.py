@@ -374,7 +374,8 @@ def _rgb_to_filter(rgb):
 
 def getProjectFromImage(path):
     slide = _get_slide(path)
-    tif = slide._osr.ts_tifffile
+    numChannels = slide._osr.numChannels
+    print(numChannels)
     try:
         channel_names = slide.properties["tiffslide.page-names"]
         jsonProject = {
@@ -383,7 +384,7 @@ def getProjectFromImage(path):
                     "name": channel_names[pindex % len(channel_names)],
                     "tileSource": os.path.basename(path) + f"__p{pindex}.dzi",
                 }
-                for pindex, page in enumerate(tif.series[0].pages)
+                for pindex in range(numChannels)
             ],
             "mpp": slide.properties["tiffslide.mpp-x"],
         }
@@ -403,7 +404,7 @@ def getProjectFromImage(path):
                                 "value": tiffcolors[pindex % len(tiffcolors)],
                             }
                         ]
-                        for pindex, page in enumerate(tif.series[0].pages)
+                        for pindex in range(numChannels)
                     },
                 },
             )

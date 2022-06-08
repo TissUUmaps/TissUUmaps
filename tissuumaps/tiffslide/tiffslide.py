@@ -227,7 +227,9 @@ class TiffSlide:
         elif tf.is_ome:
             desc = tf.pages[0].description
             series_idx = 0
-            _md = _parse_metadata_ome(desc, tf.series[series_idx].pages)
+            _md = _parse_metadata_ome(
+                desc, tf.series[series_idx].pages, self.numChannels
+            )
 
         elif tf.pages[0].software[:15] == "PerkinElmer-QPI":  # tf.is_qptiff:
             desc = tf.pages[0].description
@@ -272,7 +274,6 @@ class TiffSlide:
         #    level_dimensions = ((lvl.shape[1], lvl.shape[0]) for lvl in series0.levels)
         else:
             #    raise NotImplementedError(f"series with axes={axes0!r} not supported yet")
-            # print (axes0, series0.shape, series0.shape[-2:])
             h0, w0 = map(int, series0.shape[-2:])
             level_dimensions = (
                 (lvl.shape[-1], lvl.shape[-2]) for lvl in series0.levels
@@ -319,6 +320,18 @@ class TiffSlide:
 
         return md
 
+    @cached_property
+    def numChannels(self):
+        tf = self.ts_tifffile
+        if len(tf.series[0].pages) > 1:
+            return len(tf.series[0].pages)
+        else:
+            axes0 = tf.series[0].axes
+            if axes0 == "YXS":
+                if tf.series[0].shape[2] > 3:
+                    return tf.series[0].shape[2]
+        return 1
+
     def range(self, page) -> dict[str, Any]:
         if not hasattr(self, "_range"):
             self._range = {}
@@ -344,11 +357,11 @@ class TiffSlide:
                         selection = (slice(y1, y2), slice(x1, x2))
                     zarray = self.ts_zarr_grp[page][str(level)]
                     arr = zarray[selection]
-                    y, x = np.unravel_index(np.argmax(arr, axis=None), arr.shape)
+                    y, x = np.unravel_index(np.argmax(arr, axis=None), arr.shape)[-2:]
                     y = (y + y1) * downsample
                     x = (x + x1) * downsample
                     if h is None:
-                        h, w = arr.shape
+                        h, w = arr.shape[-2:]
                         h *= downsample
                         w *= downsample
                 arr_max = arr.max()
@@ -367,11 +380,11 @@ class TiffSlide:
                         selection = (slice(y1, y2), slice(x1, x2))
                     zarray = self.ts_zarr_grp[page][str(level)]
                     arr = zarray[selection]
-                    y, x = np.unravel_index(np.argmin(arr, axis=None), arr.shape)
+                    y, x = np.unravel_index(np.argmin(arr, axis=None), arr.shape)[-2:]
                     y = (y + y1) * downsample
                     x = (x + x1) * downsample
                     if h is None:
-                        h, w = arr.shape
+                        h, w = arr.shape[-2:]
                         h *= downsample
                         w *= downsample
                 arr_min = arr.min()
@@ -470,11 +483,14 @@ class TiffSlide:
         """
         if page == None:
             page = 0
+        sample = 0
+        if self.numChannels > 1 and len(self.ts_zarr_grp) == 1:
+            sample = page
+            page = 0
         base_x, base_y = map(int, location)
         base_w, base_h = self.dimensions
         _rw, _rh = map(int, size)
         axes = self.properties["tiffslide.series-axes"]
-
         try:
             if level < 0:
                 raise IndexError
@@ -495,6 +511,8 @@ class TiffSlide:
 
             if axes == "YXS":
                 depth = zarray.shape[2]
+            elif axes == "SYX":
+                depth = zarray.shape[0]
             elif axes == "TYX":
                 depth = zarray.shape[0]
             elif axes == "CYX":
@@ -527,7 +545,15 @@ class TiffSlide:
             ry1 = _clip(ry1, 0, level_h)
 
         if axes == "YXS":
-            selection = slice(ry0, ry1), slice(rx0, rx1), slice(None)
+            if self.numChannels > 1 and len(self.ts_zarr_grp) == 1:
+                selection = slice(ry0, ry1), slice(rx0, rx1), slice(sample, sample + 1)
+            else:
+                selection = slice(ry0, ry1), slice(rx0, rx1), slice(None)
+        elif axes == "SYX":
+            if self.numChannels > 1 and len(self.ts_zarr_grp) == 1:
+                selection = slice(sample, sample + 1), slice(ry0, ry1), slice(rx0, rx1)
+            else:
+                selection = slice(None), slice(ry0, ry1), slice(rx0, rx1)
         else:
             selection = slice(ry0, ry1), slice(rx0, rx1)
             # raise NotImplementedError(f"axes={axes!r}")
@@ -536,6 +562,7 @@ class TiffSlide:
             arr = self.ts_zarr_grp[page][selection]
         else:
             arr = self.ts_zarr_grp[page][str(level)][selection]
+        arr = np.squeeze(arr)
 
         if requires_padding:
             if arr.shape[0] == 0 or arr.shape[1] == 0:
@@ -551,19 +578,28 @@ class TiffSlide:
                 mode="constant",
                 constant_values=0,
             )
-        if axes != "YXS":
+        # TODO: find a better way to get intensity range, for int and float:
+        if axes != "YXS" and axes != "SYX":
             min_value, max_value = self.range(page=page)  # np.iinfo(arr.dtype).max
             arr[arr > max_value] = max_value
             arr[arr < min_value] = min_value
-        else:
-            min_value, max_value = 0, np.iinfo(arr.dtype).max
+        elif axes == "SYX":
+            min_value, max_value = 0, 255
+            arr = np.moveaxis(arr, 0, -1)
+            normalize = False
+        elif axes == "YXS":
+            min_value, max_value = self.range(page=page)
             arr[arr > max_value] = max_value
             arr[arr < min_value] = min_value
+            normalize = True
+        # else:
+        #    min_value, max_value = 0, np.iinfo(arr.dtype).max
+        #    arr[arr > max_value] = max_value
+        #    arr[arr < min_value] = min_value
         if normalize:
             arr = (arr - min_value) / (max_value - min_value) * 255
             # arr = arr[:,:,:3].astype(np.uint8)
             arr = arr[:, :].astype(np.uint8)
-
         if as_array:
             return arr
         else:
@@ -882,7 +918,7 @@ def _parse_metadata_generic(desc: str, serie: object) -> dict[str, Any]:
     return md
 
 
-def _parse_metadata_ome(desc: str, serie: object) -> dict[str, Any]:
+def _parse_metadata_ome(desc: str, serie: object, numChannels: int) -> dict[str, Any]:
     """OME.TIFF metadata"""
     tree = _xml_to_dict(desc)
     pixels = tree["OME"]["Image"]["Pixels"]
@@ -902,7 +938,7 @@ def _parse_metadata_ome(desc: str, serie: object) -> dict[str, Any]:
         ]
     else:
         color_names = None
-    if len(channel_names) != len(serie.pages):
+    if len(channel_names) != numChannels:
         _md = _parse_metadata_generic(desc, serie)
         channel_names = _md[PROPERTY_NAME_PAGE_NAMES]
         color_names = _md[PROPERTY_NAME_PAGE_COLORS]
