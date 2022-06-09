@@ -579,19 +579,25 @@ class TiffSlide:
                 constant_values=0,
             )
         # TODO: find a better way to get intensity range, for int and float:
-        if axes != "YXS" and axes != "SYX":
+        if arr.dtype == np.uint8:
+            min_value, max_value = 0, 255
+        elif axes != "YXS" and axes != "SYX":
             min_value, max_value = self.range(page=page)  # np.iinfo(arr.dtype).max
             arr[arr > max_value] = max_value
             arr[arr < min_value] = min_value
         elif axes == "SYX":
             min_value, max_value = 0, 255
-            arr = np.moveaxis(arr, 0, -1)
             normalize = False
         elif axes == "YXS":
             min_value, max_value = self.range(page=page)
             arr[arr > max_value] = max_value
             arr[arr < min_value] = min_value
             normalize = True
+
+        if axes == "SYX":
+            min_value, max_value = 0, 255
+            arr = np.moveaxis(arr, 0, -1)
+
         # else:
         #    min_value, max_value = 0, np.iinfo(arr.dtype).max
         #    arr[arr > max_value] = max_value
