@@ -331,6 +331,11 @@ def _get_slide(path, originalPath=None):
 @app.route("/")
 @requires_auth
 def index():
+    indexPath = os.path.abspath(os.path.join(app.basedir, "index.html"))
+    if os.path.isfile(indexPath) and app.config["READ_ONLY"]:
+        directory = os.path.dirname(indexPath)
+        filename = os.path.basename(indexPath)
+        return send_from_directory(directory, filename)
     return render_template(
         "tissuumaps.html",
         isStandalone=app.config["isStandalone"],
