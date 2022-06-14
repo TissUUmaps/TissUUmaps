@@ -638,20 +638,6 @@ class webEngine(QWebEngineView):
         else:
             self.load(QUrl(self.location))
 
-    @pyqtSlot(str)
-    def getProperties(self, path):
-        try:
-            path = urllib.parse.unquote(path)[:-4]
-            slide = views._get_slide(path)
-            propString = "\n".join([n + ": " + v for n, v in slide.properties.items()])
-        except:
-            propString = ""
-
-        messageBox = textWindow(
-            self, os.path.basename(path) + " properties", propString
-        )
-        messageBox.show()
-
     def openImage(self):
         folderpath = QFileDialog.getOpenFileName(self, "Select a File", self.lastdir)[0]
         self.openImagePath(folderpath)
