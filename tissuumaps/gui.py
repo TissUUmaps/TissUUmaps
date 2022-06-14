@@ -14,6 +14,7 @@ try:
         QDialogButtonBox,
         QFileDialog,
         QFormLayout,
+        QGroupBox,
         QLabel,
         QLineEdit,
         QListView,
@@ -21,8 +22,10 @@ try:
         QMessageBox,
         QPlainTextEdit,
         QPushButton,
+        QSpinBox,
         QSplashScreen,
         QStyle,
+        QVBoxLayout,
     )
 
 except ImportError:
@@ -292,6 +295,16 @@ class MainWindow(QMainWindow):
 
         file.addSeparator()
 
+        _settings = QAction(
+            self.style().standardIcon(QStyle.SP_FileDialogDetailedView),
+            "Settings",
+            self,
+        )
+        file.addAction(_settings)
+        _settings.triggered.connect(self.triggerSettings)
+
+        file.addSeparator()
+
         _exit = QAction(
             self.style().standardIcon(QStyle.SP_DialogCancelButton), "Exit", self
         )
@@ -355,6 +368,15 @@ class MainWindow(QMainWindow):
 
         self.showMaximized()
 
+    def triggerSettings(self):
+        try:
+            dlg = SettingsDialog(self.app.config)
+            dlg.exec()
+        except:
+            import traceback
+
+            logging.error(traceback.format_exc())
+
     def triggerPlugin(self, pName):
         logging.debug("Plugin triggered: " + pName)
         self.browser.page().runJavaScript('pluginUtils.startPlugin("' + pName + '");')
@@ -388,6 +410,70 @@ class MainWindow(QMainWindow):
             import traceback
 
             logging.error(traceback.format_exc())
+
+
+class SettingsDialog(QDialog):
+    """Create a settings dialog to edit all the settings of the application."""
+
+    def __init__(self, config):
+        super().__init__()
+
+        self.config = config
+        """Create groups of radio buttons as settings elements."""
+        self.quality = QGroupBox("Tile quality")
+        self.quality_val = QSpinBox()
+        self.quality_val.setMaximum(100)
+        self.quality_val.setMinimum(0)
+
+        self.button_box = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        )
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+
+        slayout = QVBoxLayout()
+        slayout.addWidget(self.quality)
+        slayout.addWidget(self.quality_val)
+        slayout.addWidget(self.button_box)
+
+        self.setLayout(slayout)
+
+        self.map = {"DEEPZOOM_TILE_QUALITY": self.quality_val}
+        self.widget_mappers = {
+            "QCheckBox": ("checkState", "setCheckState", bool),
+            "QLineEdit": ("text", "setText", str),
+            "QSpinBox": ("value", "setValue", int),
+            "QRadioButton": ("isChecked", "setChecked", bool),
+        }
+
+        self.load_settings()
+        self.accepted.connect(self.save_settings)
+
+    def load_settings(self):
+        """Reload the settings from the settings store"""
+        for setting_name, widget in self.map.items():
+            widget_name = widget.__class__.__name__
+            _, setter, data_type = self.widget_mappers.get(
+                widget_name, (None, None, None)
+            )
+            setting_value = self.config[setting_name]
+
+            if setter and setting_value is not None:
+                update_value = getattr(widget, setter)
+                update_value(setting_value)
+
+    def save_settings(self):
+        """Triggered when the dialog is accepted; copys settings values to the settings manager"""
+        for setting_name, widget in self.map.items():
+            widget_name = widget.__class__.__name__
+            getter, _, _ = self.widget_mappers.get(widget_name, (None, None, None))
+
+            if getter:
+                widget_state = getattr(widget, getter)
+                setting_value = widget_state()
+
+                if setting_value is not None:
+                    self.config[setting_name] = setting_value
 
 
 class webEngine(QWebEngineView):
