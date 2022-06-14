@@ -271,7 +271,7 @@ class _SlideCache(object):
             slide.properties = osr.properties
         slide.tileLock = Lock()
         if originalPath:
-            slide.properties = {"Path": originalPath}
+            slide.properties["Path"] = originalPath
         with self._lock:
             if path not in self._cache:
                 while len(self._cache) >= self.cache_size:
@@ -585,7 +585,11 @@ def dzi_asso(path, page):
     return render_template(
         "slide_prop.html",
         associated_images=associated_images,
-        properties=slide.properties,
+        metadata=slide.properties,
+        properties={
+            "Image height": slide.properties["tiffslide.level[0].height"],
+            "Image width": slide.properties["tiffslide.level[0].width"],
+        },
     )
     return resp
 
