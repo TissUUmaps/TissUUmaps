@@ -85,11 +85,11 @@ class CustomWebEnginePage(QWebEnginePage):
             return False
         return True
 
-    def javaScriptConsoleMessage(self, level, msg, line, sourceID):
-        logging.debug(
-            "Javascript console: "
-            + " ; ".join([str(level), str(msg), str(line), str(sourceID)])
-        )
+    # def javaScriptConsoleMessage(self, level, msg, line, sourceID):
+    #    logging.debug(
+    #        "Javascript console: "
+    #        + " ; ".join([str(level), str(msg), str(line), str(sourceID)])
+    #    )
 
 
 class textWindow(QDialog):
@@ -106,11 +106,6 @@ class textWindow(QDialog):
         self.b.insertPlainText(message)
         self.b.move(10, 10)
         self.b.resize(400, 200)
-
-
-# DEBUG_PORT = '5588'
-# DEBUG_URL = 'http://127.0.0.1:%s' % DEBUG_PORT
-# os.environ['QTWEBENGINE_REMOTE_DEBUGGING'] = DEBUG_PORT
 
 
 class SelectPluginWindow(QDialog):
@@ -343,6 +338,20 @@ class MainWindow(QMainWindow):
             QMessageBox.about(self, "Information", "TissUUmaps version " + version)
 
         _version.triggered.connect(trigger)
+
+        if self.app.config["DEBUG_CLI"]:
+            debug = self.bar.addMenu("Debug")
+            _debugpage = QAction(
+                self.style().standardIcon(QStyle.SP_FileDialogContentsView),
+                "Open external debugging",
+                self,
+            )
+            debug.addAction(_debugpage)
+
+            def trigger():
+                QDesktopServices.openUrl(QUrl("http://localhost:5588/"))
+
+            _debugpage.triggered.connect(trigger)
 
         self.showMaximized()
 
@@ -981,6 +990,7 @@ def main():
     (opts, args) = parser.parse_args()
 
     if opts.DEBUG:
+        views.app.config["DEBUG_CLI"] = True
         log = logging.getLogger("werkzeug")
         log.setLevel(logging.DEBUG)
         log = logging.getLogger("pyvips")
@@ -989,8 +999,14 @@ def main():
         log.setLevel(logging.DEBUG)
         warnings.filterwarnings("default")
         logging.debug("Debug mode")
+
+        DEBUG_PORT = "5588"
+        DEBUG_URL = "http://127.0.0.1:%s" % DEBUG_PORT
+        os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = DEBUG_PORT
+
         # os.environ['WERKZEUG_RUN_MAIN'] = 'true'
     else:
+        views.app.config["DEBUG_CLI"] = False
         log = logging.getLogger("werkzeug")
         log.setLevel(logging.ERROR)
         log = logging.getLogger("pyvips")
