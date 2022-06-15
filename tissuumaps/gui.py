@@ -1023,8 +1023,8 @@ def main():
     QtGui.QSurfaceFormat.setDefaultFormat(fmt)
 
     vp = QtGui.QOpenGLVersionProfile(fmt)
-
-    qt_app = QApplication([])
+    os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--no-sandbox"
+    qt_app = QApplication(sys.argv)
 
     logo = QtGui.QPixmap("static/misc/design/logo.png")
     logo = logo.scaledToWidth(512, Qt.SmoothTransformation)
