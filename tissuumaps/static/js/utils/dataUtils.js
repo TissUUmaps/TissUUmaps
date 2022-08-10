@@ -445,7 +445,7 @@ dataUtils.readCSV = function(data_id, thecsv, options) {
                 for (let i = 0; i < row.data.length; ++i) {
                     const value = row.data[i];
                     // Update type flag of column and push value to temporary buffer
-                    rawdata.isnan[i] = rawdata.isnan[i] || isNaN(value);
+                    rawdata.isnan[i] = rawdata.isnan[i] || isNaN(value) || (value == "");
                     rawdata.tmp[i].push(rawdata.isnan[i] ? value : +value);
                 }
                 if (rawdata.tmp[0].length >= 10000) {
