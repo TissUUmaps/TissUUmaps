@@ -1023,7 +1023,7 @@ def main():
     QtGui.QSurfaceFormat.setDefaultFormat(fmt)
 
     vp = QtGui.QOpenGLVersionProfile(fmt)
-    os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--no-sandbox"
+    os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--no-sandbox --ignore-gpu-blacklist"
     qt_app = QApplication(sys.argv)
 
     logo = QtGui.QPixmap("static/misc/design/logo.png")
