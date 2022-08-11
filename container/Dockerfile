@@ -1,7 +1,7 @@
 FROM python:3.8
 
 # Install libvips and openslide
-RUN apt-get update && apt-get install bash nano openslide-tools libvips -y
+RUN apt-get update && apt-get upgrade -y && apt-get install bash nano openslide-tools libvips -y
 
 COPY ./container/requirements.txt /requirements.txt
 COPY ./container/tissuumaps.cfg /tissuumaps.cfg
