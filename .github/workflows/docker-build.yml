@@ -15,13 +15,13 @@ jobs:
     concurrency:
       group: ${{ github.ref }}-docker-build
       cancel-in-progress: true
-    # Define the images/tags to build; will run in parallell
+    # Define the images/tags to build; will run in parallel
     strategy:
       matrix:
         include:
           - dockerfile: container/Dockerfile
             images: |
-              docker.io/cavenel/tissuumapscontainer/Dockerfile
+              docker.io/cavenel/tissuumaps
               ghcr.io/TissUUmaps/TissUUmaps
     permissions:
       contents: read
@@ -33,7 +33,6 @@ jobs:
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
-          # available in scilifelabdatacentre, ask admin for help
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       # only needed when publishing to Github (ghcr.io)
