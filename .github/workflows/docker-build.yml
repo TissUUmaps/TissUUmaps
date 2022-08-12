@@ -60,7 +60,6 @@ jobs:
           file: ${{ matrix.dockerfile }}
           context: .
           push: true
-          target: production
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64
