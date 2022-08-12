@@ -1,0 +1,66 @@
+---
+name: Docker Image TissUUmaps
+on:
+  push:
+    branches:
+      - master
+  release:
+    types: [published]
+jobs:
+  build_and_push_to_registry:
+    if: github.repository == 'TissUUmaps/TissUUmaps'
+    name: Publish Docker Image
+    runs-on: ubuntu-latest
+    # Cancel earlier job if there is a new one for the same branch/release
+    concurrency:
+      group: ${{ github.ref }}-docker-build
+      cancel-in-progress: true
+    # Define the images/tags to build; will run in parallell
+    strategy:
+      matrix:
+        include:
+          - dockerfile: container/Dockerfile
+            images: |
+              docker.io/cavenel/tissuumapscontainer/Dockerfile
+              ghcr.io/TissUUmaps/TissUUmaps
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+      # only needed when publishing to Dockerhub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          # available in scilifelabdatacentre, ask admin for help
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # only needed when publishing to Github (ghcr.io)
+      - name: Log in to Github Container Repository
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          # will run as the user who triggered the action, using its token
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Docker Meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ matrix.images }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+      - name: Build and Publish
+        uses: docker/build-push-action@v3
+        with:
+          file: ${{ matrix.dockerfile }}
+          context: .
+          push: true
+          target: production
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64
