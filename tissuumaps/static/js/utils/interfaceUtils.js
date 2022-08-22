@@ -2329,7 +2329,7 @@ interfaceUtils.addMenuItem = function(itemTree, callback, before) {
                 spanMore = "";
             }
             else if (i != itemTree.length -1) {
-                aElement = HTMLElementUtils.createElement({"kind":"a", "id":itemID, "extraAttributes":{"class":"dropdown-item","href":"#", "data-bs-toggle":"dropdown", "aria-haspopup":"true", "aria-expanded":"false"}})
+                aElement = HTMLElementUtils.createElement({"kind":"a", "id":"a_"+itemID, "extraAttributes":{"class":"dropdown-item","href":"#", "data-bs-toggle":"dropdown", "aria-haspopup":"true", "aria-expanded":"false"}})
                 liItem.appendChild(aElement);
                 ulItem = HTMLElementUtils.createElement({"kind":"ul", "id":itemID, "extraAttributes":{"class":"dropdown-menu dropdown-submenu"}})
                 liItem.appendChild(ulItem);
@@ -2337,7 +2337,7 @@ interfaceUtils.addMenuItem = function(itemTree, callback, before) {
                 spanMore = " &raquo;";
             }
             else {
-                aElement = HTMLElementUtils.createElement({"kind":"a", "extraAttributes":{"class":"dropdown-item", "href":"#"}})
+                aElement = HTMLElementUtils.createElement({"kind":"a", "id":"a_"+itemID, "extraAttributes":{"class":"dropdown-item", "href":"#"}})
                 liItem.appendChild(aElement);
                 aElement.addEventListener("click",function (event) {
                     callback();
@@ -2352,6 +2352,14 @@ interfaceUtils.addMenuItem = function(itemTree, callback, before) {
             rootElement = document.getElementById(itemID);
         }
     }
+
+    /////// Prevent closing from click inside dropdown
+    document.querySelectorAll('.dropdown-menu').forEach(function(element){
+        element.addEventListener('click', function (e) {
+            e.stopPropagation();
+        });
+    })
+
 }
 
 interfaceUtils.addPluginAccordion = function (pluginID, pluginName) {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.9.6
+
+- Add debug menu when running in debug mode, with debug access in javascript
+- Fix linux bugs with Qt displaying all blank
+- Fix empty columns in marker csv file
+
 ## 3.0.9.5
 
 - Add / fix key shortcuts (https://tissuumaps.github.io/TissUUmaps-docs/docs/starting/shortcuts.html)

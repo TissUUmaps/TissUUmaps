@@ -375,7 +375,10 @@ projectUtils.loadProjectFileFromServer = function(path) {
     }
     if (state.menuButtons) {
         state.menuButtons.forEach(function(menuButton, i) {
-            interfaceUtils.addMenuItem([menuButton.text], function(){ window.open(menuButton.url, '_self').focus();});
+            if ( Object.prototype.toString.call( menuButton.text ) !== '[object Array]' ) {
+                menuButton.text = [menuButton.text]
+            }
+            interfaceUtils.addMenuItem(menuButton.text, function(){ window.open(menuButton.url, '_self').focus();});
         });
     }
     if (state.mpp !== undefined) {
