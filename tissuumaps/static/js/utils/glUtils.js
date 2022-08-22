@@ -10,8 +10,6 @@
  */
 glUtils = {
     _initialized: false,
-    _imageSize: [1, 1],
-    _viewportRect: [0, 0, 1, 1],
     _options: {antialias: false, premultipliedAlpha: true, preserveDrawingBuffer: true},
     _markershapes: "misc/markershapes.png",
 
@@ -40,6 +38,9 @@ glUtils = {
     _colorscaleData: {},         // {uid: array of RGBA values, ...}
     _barcodeToLUTIndex: {},      // {uid: dict, ...}
     _barcodeToKey: {},           // {uid: dict, ...}
+    _tiledIndex: {},             // {uid: number, ...}
+    _imageSize: {},              // {uid: OpenSeadragon.Point, ...}
+    _viewportRect: {},           // {uid: OpenSeadragon.Rect, ...}
 
     // Global marker settings and info
     _markerScale: 1.0,
@@ -435,8 +436,6 @@ glUtils.loadMarkers = function(uid) {
     const xPosName = dataUtils.data[uid]["_X"];
     const yPosName = dataUtils.data[uid]["_Y"];
     let numPoints = markerData[xPosName].length;
-    const imageWidth = OSDViewerUtils.getImageWidth();
-    const imageHeight = OSDViewerUtils.getImageHeight();
 
     // If new marker data was loaded, we need to assign each barcode an index
     // that we can use with the LUT textures for color, visibility, etc.
@@ -480,6 +479,8 @@ glUtils.loadMarkers = function(uid) {
     const markerOpacityFactor = dataUtils.data[uid]["_opacity"];
 
     const markerOutline = !dataUtils.data[uid]["_no_outline"];
+
+    const tiledIndex = (glUtils._tiledIndex[uid] != undefined) ? glUtils._tiledIndex[uid] : 0;  // TODO
 
     // Additional info about the vertex format
     const NUM_COMPONENTS_PER_MARKER = 9;
@@ -536,8 +537,8 @@ glUtils.loadMarkers = function(uid) {
                     const sectorIndex = j;
                     hexColor = piechartPalette[j % piechartPalette.length];
 
-                    bytedata_point[4 * k + 0] = markerData[xPosName][markerIndex] / imageWidth;
-                    bytedata_point[4 * k + 1] = markerData[yPosName][markerIndex] / imageHeight;
+                    bytedata_point[4 * k + 0] = markerData[xPosName][markerIndex];
+                    bytedata_point[4 * k + 1] = markerData[yPosName][markerIndex];
                     bytedata_point[4 * k + 2] = lutIndex + sectorIndex * 4096.0;
                     bytedata_point[4 * k + 3] = Number("0x" + hexColor.substring(1,7));
                     bytedata_index[k] = markerIndex;  // Store index needed for picking
@@ -571,8 +572,8 @@ glUtils.loadMarkers = function(uid) {
                     shapeIndex = Math.max(0.0, Math.floor(Number(shapeIndex))) % numShapes;
                 }
 
-                bytedata_point[4 * i + 0] = markerData[xPosName][markerIndex] / imageWidth;
-                bytedata_point[4 * i + 1] = markerData[yPosName][markerIndex] / imageHeight;
+                bytedata_point[4 * i + 0] = markerData[xPosName][markerIndex];
+                bytedata_point[4 * i + 1] = markerData[yPosName][markerIndex];
                 bytedata_point[4 * i + 2] = lutIndex + Number(shapeIndex) * 4096.0;
                 bytedata_point[4 * i + 3] = useColorFromColormap ? Number(scalarValue)
                                                                  : Number("0x" + hexColor.substring(1,7));
@@ -675,6 +676,7 @@ glUtils.loadMarkers = function(uid) {
     glUtils._usePiechartFromMarker[uid] = usePiechartFromMarker;
     glUtils._useShapeFromMarker[uid] = useShapeFromMarker;
     glUtils._colorscaleName[uid] = colorscaleName;
+    glUtils._tiledIndex[uid] = tiledIndex;
     if (useColorFromColormap) {
         glUtils._updateColorScaleTexture(gl, uid, glUtils._textures[uid + "_colorscale"]);
     }
@@ -714,6 +716,9 @@ glUtils.deleteMarkers = function(uid) {
     delete glUtils._colorscaleData[uid];
     delete glUtils._barcodeToLUTIndex[uid];
     delete glUtils._barcodeToKey[uid];
+    delete glUtils._tiledIndex[uid];
+    delete glUtils._imageSize[uid];
+    delete glUtils._viewportRectSize[uid];
 
     // Clean up WebGL resources
     gl.deleteBuffer(glUtils._buffers[uid + "_markers"]);
@@ -1018,8 +1023,6 @@ glUtils._drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
     gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
     // Set per-scene uniforms
-    gl.uniform2fv(gl.getUniformLocation(program, "u_imageSize"), glUtils._imageSize);
-    gl.uniform4fv(gl.getUniformLocation(program, "u_viewportRect"), glUtils._viewportRect);
     gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
     gl.uniform2fv(gl.getUniformLocation(program, "u_canvasSize"), [gl.canvas.width, gl.canvas.height]);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
@@ -1033,6 +1036,8 @@ glUtils._drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
         gl_ext_vao.bindVertexArrayOES(glUtils._vaos[uid + (glUtils._useInstancing ? "_markers_instanced" : "_markers")]);
 
         // Set per-markerset uniforms
+        gl.uniform2fv(gl.getUniformLocation(program, "u_imageSize"), glUtils._imageSize[uid]);
+        gl.uniform4fv(gl.getUniformLocation(program, "u_viewportRect"), glUtils._viewportRect[uid]);
         gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
         gl.uniform2fv(gl.getUniformLocation(program, "u_markerScalarRange"), glUtils._markerScalarRange[uid]);
         gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
@@ -1093,8 +1098,6 @@ glUtils._drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) 
     gl.useProgram(program);
 
     // Set per-scene uniforms
-    gl.uniform2fv(gl.getUniformLocation(program, "u_imageSize"), glUtils._imageSize);
-    gl.uniform4fv(gl.getUniformLocation(program, "u_viewportRect"), glUtils._viewportRect);
     gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
     gl.uniform2fv(gl.getUniformLocation(program, "u_canvasSize"), [gl.canvas.width, gl.canvas.height]);
     gl.uniform2fv(gl.getUniformLocation(program, "u_pickingLocation"), glUtils._pickingLocation);
@@ -1110,6 +1113,8 @@ glUtils._drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) 
         gl_ext_vao.bindVertexArrayOES(glUtils._vaos[uid + "_markers"]);
 
         // Set per-markerset uniforms
+        gl.uniform2fv(gl.getUniformLocation(program, "u_imageSize"), glUtils._imageSize[uid]);
+        gl.uniform4fv(gl.getUniformLocation(program, "u_viewportRect"), glUtils._viewportRect[uid]);
         gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
         gl.uniform1i(gl.getUniformLocation(program, "u_usePiechartFromMarker"), glUtils._usePiechartFromMarker[uid]);
         gl.uniform1i(gl.getUniformLocation(program, "u_useShapeFromMarker"), glUtils._useShapeFromMarker[uid]);
@@ -1149,13 +1154,28 @@ glUtils.draw = function() {
     const canvas = document.getElementById("gl_canvas");
     const gl = canvas.getContext("webgl", glUtils._options);
 
-    const bounds = tmapp["ISS_viewer"].viewport.getBounds();
-    glUtils._viewportRect = [bounds.x, bounds.y, bounds.width, bounds.height];
-    const homeBounds = tmapp["ISS_viewer"].world.getHomeBounds();
-    glUtils._imageSize = [homeBounds.width, homeBounds.height];
-    const orientationDegrees = tmapp["ISS_viewer"].viewport.getRotation();
+    // Compute markerset transforms that also takes into account if collectionMode
+    // (i.e., multi-image tiling) is enabled in the OSD viewer
+    for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
+        const bounds = tmapp["ISS_viewer"].viewport.getBounds();
+        const imageWidth = OSDViewerUtils.getImageWidth();
+        const imageHeight = OSDViewerUtils.getImageHeight();
+        const tiledImage = tmapp["ISS_viewer"].world.getItemAt(glUtils._tiledIndex[uid]);
+        let tileBounds = tiledImage.getBounds();
 
-    // The OSD viewer can be rotated, so need to apply the same transform to markers
+        // Correct for zoom factor being relative the first tile (first loaded image)
+        const tiledImageFirst = tmapp["ISS_viewer"].world.getItemAt(0);
+        const zoomRatio = tiledImage.viewportToImageZoom(1.0) / tiledImageFirst.viewportToImageZoom(1.0);
+        tileBounds.height *= zoomRatio;
+        tileBounds.width *= zoomRatio;
+
+        // Compute the scaling and translation to be applied marker positions
+        glUtils._viewportRect[uid] = [bounds.x - tileBounds.x, bounds.y - tileBounds.y, bounds.width, bounds.height];
+        glUtils._imageSize[uid] = [tileBounds.width / imageWidth, tileBounds.height / imageHeight];
+    }
+
+    // The OSD viewer can be rotated, so need to also apply rotation to markers
+    const orientationDegrees = tmapp["ISS_viewer"].viewport.getRotation();
     const t = orientationDegrees * (3.141592 / 180.0);
     const viewportTransform = [Math.cos(t), -Math.sin(t), Math.sin(t), Math.cos(t)];
 
