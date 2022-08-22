@@ -14,8 +14,9 @@ import time
 from collections import OrderedDict
 from functools import wraps
 from threading import Lock
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
+import anndata
 import pyvips
 
 # Flask dependencies
@@ -31,7 +32,7 @@ from flask import (
     url_for,
 )
 
-from tissuumaps import app
+from tissuumaps import app, read_h5ad
 from tissuumaps.flask_filetree import filetree
 
 import openslide  # isort: skip
@@ -45,6 +46,8 @@ def _fnfilter(filename):
     elif imghdr.what(filename):
         return True
     elif ".tmap" in filename.lower():
+        return True
+    elif ".h5ad" in filename.lower():
         return True
     return False
 
@@ -577,6 +580,56 @@ def tile_asso(path, associated_name, level, col, row, format):
     resp = make_response(buf.getvalue())
     resp.mimetype = "image/%s" % format
     return resp
+
+
+@app.route("/<path:filename>.h5ad")
+@requires_auth
+def h5ad(filename):
+    path = request.args.get("path")
+    if not path:
+        path = "./"
+    completePath = os.path.abspath(os.path.join(app.basedir, path, filename) + ".h5ad")
+    # Check if a .h5ad file exists:
+    if not os.path.isfile(completePath):
+        abort(404)
+    state = read_h5ad.h5ad_to_tmap(app.basedir, os.path.join(path, filename) + ".h5ad")
+
+    plugins = [p["module"] for p in app.config["PLUGINS"]]
+    return render_template(
+        "tissuumaps.html",
+        plugins=plugins,
+        jsonProject=state,
+        isStandalone=app.config["isStandalone"],
+        readOnly=app.config["READ_ONLY"],
+    )
+
+
+@app.route("/<path:path>.h5ad_files/csv/<string:type>/<string:filename>.csv")
+def h5ad_csv(path, type, filename):
+    completePath = os.path.join(app.basedir, path + ".h5ad")
+    filename = unquote(filename)
+    csvPath = f"{completePath}_files/csv/{type}/{filename}.csv"
+    generate_csv = True
+    if os.path.isfile(csvPath):
+        if os.path.getmtime(completePath) > os.path.getmtime(csvPath):
+            # In this case, the h5ad file has been recently modified and the csv file is
+            # stale, so it must be regenerated.
+            print("csv exists but is older than h5ad, we will not use it.")
+            generate_csv = True
+        else:
+            print("csv exists, we will use it")
+            generate_csv = False
+    if generate_csv:
+        if type == "obs":
+            read_h5ad.h5ad_obs_to_csv(app.basedir, path + ".h5ad", filename)
+        elif type == "var":
+            read_h5ad.h5ad_var_to_csv(app.basedir, path + ".h5ad", filename)
+
+    if not os.path.isfile(f"{completePath}_files/csv/{type}/{filename}.csv"):
+        abort(404)
+    directory = f"{completePath}_files/csv/{type}/"
+    filename = f"{filename}.csv"
+    return send_from_directory(directory, filename)
 
 
 def load_plugin(name):
