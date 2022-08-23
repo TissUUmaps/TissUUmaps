@@ -39,7 +39,6 @@ glUtils = {
     _barcodeToLUTIndex: {},      // {uid: dict, ...}
     _barcodeToKey: {},           // {uid: dict, ...}
     _collectionItemIndex: {},    // {uid: number, ...}
-    _imageTransform: {},         // {uid: [scaleX, scaleY, shiftX, shiftY], ...}
 
     // Global marker settings and info
     _markerScale: 1.0,
@@ -63,9 +62,9 @@ glUtils._markersVS = `
     #define SHAPE_GRID_SIZE 4.0
     #define DISCARD_VERTEX { gl_Position = vec4(2.0, 2.0, 2.0, 0.0); return; }
 
-    uniform vec4 u_imageTransform;
     uniform mat2 u_viewportTransform;
     uniform vec2 u_canvasSize;
+    uniform float u_transformIndex;
     uniform float u_markerScale;
     uniform float u_globalMarkerScale;
     uniform vec2 u_markerScalarRange;
@@ -79,12 +78,14 @@ glUtils._markersVS = `
     uniform float u_pickedMarker;
     uniform sampler2D u_colorLUT;
     uniform sampler2D u_colorscale;
+    uniform sampler2D u_transformLUT;
 
     attribute vec4 a_position;
     attribute float a_index;
     attribute float a_scale;
     attribute float a_shape;
     attribute float a_opacity;
+    attribute float a_transform;
     #ifdef USE_INSTANCING
     attribute float a_vertexID;
     #endif  // USE_INSTANCING
@@ -107,7 +108,9 @@ glUtils._markersVS = `
 
     void main()
     {
-        vec2 viewportPos = a_position.xy * u_imageTransform.xy + u_imageTransform.zw;
+        float transformIndex = u_transformIndex >= 0.0 ? u_transformIndex : a_transform;
+        vec4 imageTransform = texture2D(u_transformLUT, vec2(transformIndex / 255.0, 0));
+        vec2 viewportPos = a_position.xy * imageTransform.xy + imageTransform.zw;
         vec2 ndcPos = viewportPos * 2.0 - 1.0;
         ndcPos.y = -ndcPos.y;
         ndcPos = u_viewportTransform * ndcPos;
@@ -249,10 +252,10 @@ glUtils._pickingVS = `
     #define OP_CLEAR 0
     #define OP_WRITE_INDEX 1
 
-    uniform vec4 u_imageTransform;
     uniform mat2 u_viewportTransform;
     uniform vec2 u_canvasSize;
     uniform vec2 u_pickingLocation;
+    uniform float u_transformIndex;
     uniform float u_markerScale;
     uniform float u_globalMarkerScale;
     uniform float u_markerOpacity;
@@ -262,11 +265,13 @@ glUtils._pickingVS = `
     uniform int u_op;
     uniform sampler2D u_colorLUT;
     uniform sampler2D u_shapeAtlas;
+    uniform sampler2D u_transformLUT;
 
     attribute vec4 a_position;
     attribute float a_index;
     attribute float a_scale;
     attribute float a_opacity;
+    attribute float a_transform;
 
     varying vec4 v_color;
 
@@ -279,7 +284,9 @@ glUtils._pickingVS = `
 
     void main()
     {
-        vec2 viewportPos = a_position.xy * u_imageTransform.xy + u_imageTransform.zw;
+        float transformIndex = u_transformIndex >= 0.0 ? u_transformIndex : a_transform;
+        vec4 imageTransform = texture2D(u_transformLUT, vec2(transformIndex / 255.0, 0));
+        vec2 viewportPos = a_position.xy * imageTransform.xy + imageTransform.zw;
         vec2 ndcPos = viewportPos * 2.0 - 1.0;
         ndcPos.y = -ndcPos.y;
         ndcPos = u_viewportTransform * ndcPos;
@@ -375,7 +382,8 @@ glUtils._loadShaderProgram = function(gl, vertSource, fragSource, definitions=""
     gl.bindAttribLocation(program, 2, "a_scale");
     gl.bindAttribLocation(program, 3, "a_shape");
     gl.bindAttribLocation(program, 4, "a_opacity");
-    gl.bindAttribLocation(program, 5, "a_vertexID");
+    gl.bindAttribLocation(program, 5, "a_transform");
+    gl.bindAttribLocation(program, 6, "a_vertexID");
 
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
@@ -475,23 +483,28 @@ glUtils.loadMarkers = function(uid) {
 
     const markerOutline = !dataUtils.data[uid]["_no_outline"];
 
-    const collectionItemIndex = dataUtils.data[uid]["_collectionItem_fixed"];
+    const collectionItemPropertyName = dataUtils.data[uid]["_collectionItem_col"];
+    const useCollectionItemFromMarker = dataUtils.data[uid]["_collectionItem_col"] != null;
+    const collectionItemFixed = dataUtils.data[uid]["_collectionItem_fixed"];
+    let collectionItemIndex = collectionItemFixed;
 
-    // Additional info about the vertex format
-    const NUM_COMPONENTS_PER_MARKER = 9;
-    const NUM_BYTES_PER_MARKER = NUM_COMPONENTS_PER_MARKER * 4;
+    // Additional info about the vertex format. Make sure you update also
+    // NUM_BYTES_PER_MARKER when making changes to the format!
+    const NUM_BYTES_PER_MARKER = 36;
     const POINT_OFFSET = numPoints * 0,
-          INDEX_OFFSET = numPoints * 4,
-          SCALE_OFFSET = numPoints * 5,
-          SHAPE_OFFSET = numPoints * 6;
-          OPACITY_OFFSET = numPoints * 7;
-          VERTEX_ID_OFFSET = numPoints * 8;
+          INDEX_OFFSET = numPoints * 16,
+          SCALE_OFFSET = numPoints * 20,
+          SHAPE_OFFSET = numPoints * 24;
+          OPACITY_OFFSET = numPoints * 28;
+          TRANSFORM_OFFSET = numPoints * 30;
+          VERTEX_ID_OFFSET = numPoints * 32;
     const POINT_LOCATION = 0,
           INDEX_LOCATION = 1,
           SCALE_LOCATION = 2,
           SHAPE_LOCATION = 3,
           OPACITY_LOCATION = 4;
-          VERTEX_ID_LOCATION = 5;
+          TRANSFORM_LOCATION = 5;
+          VERTEX_ID_LOCATION = 6;
 
     // Extract and upload vertex data for markers. For datasets with tens of of
     // millions of points, the vertex data can be quite large, so we upload the
@@ -507,7 +520,8 @@ glUtils.loadMarkers = function(uid) {
         let bytedata_index = new Float32Array(chunkSize * 1);
         let bytedata_scale = new Float32Array(chunkSize * 1);
         let bytedata_shape = new Float32Array(chunkSize * 1);
-        let bytedata_opacity = new Float32Array(chunkSize * 1);
+        let bytedata_opacity = new Uint16Array(chunkSize * 1);
+        let bytedata_transform = new Uint16Array(chunkSize * 1);
         let bytedata_vertexID = new Uint8Array(chunkSize * 4);
 
         if (usePiechartFromMarker) {
@@ -518,7 +532,8 @@ glUtils.loadMarkers = function(uid) {
             bytedata_index = new Float32Array(chunkSize * numSectors * 1);
             bytedata_scale = new Float32Array(chunkSize * numSectors * 1);
             bytedata_shape = new Float32Array(chunkSize * numSectors * 1);
-            bytedata_opacity = new Float32Array(chunkSize * numSectors * 1);
+            bytedata_opacity = new Uint16Array(chunkSize * numSectors * 1);
+            bytedata_transform = new Uint16Array(chunkSize * numSectors * 1);
             bytedata_vertexID = new Uint8Array(chunkSize * numSectors * 4);
 
             for (let i = 0; i < chunkSize; ++i) {
@@ -526,6 +541,8 @@ glUtils.loadMarkers = function(uid) {
                 const sectors = markerData[sectorsPropertyName][markerIndex].split(";");
                 const piechartAngles = glUtils._createPiechartAngles(sectors);
                 const lutIndex = (keyName != null) ? barcodeToLUTIndex[markerData[keyName][markerIndex]] : 0;
+                const opacity = useOpacityFromMarker ? markerData[opacityPropertyName][markerIndex] : 1.0;
+                if (useCollectionItemFromMarker) collectionItemIndex = markerData[collectionItemPropertyName][markerIndex];
 
                 for (let j = 0; j < numSectors; ++j) {
                     const k = (i * numSectors + j);
@@ -541,7 +558,8 @@ glUtils.loadMarkers = function(uid) {
                     bytedata_shape[k] =
                         Math.floor((j < numSectors - 1 ? piechartAngles[j + 1] : 0.0) * 4095.0) +
                         Math.floor(piechartAngles[j] * 4095.0) * 4096.0;
-                    bytedata_opacity[k] = useOpacityFromMarker ? markerData[opacityPropertyName][markerIndex] : 1.0;
+                    bytedata_opacity[k] = Math.floor(Math.max(0.0, Math.min(1.0, opacity)) * 65535.0);
+                    bytedata_transform[k] = collectionItemIndex;
                     bytedata_vertexID[4 * k + 0] = 0;  // 1st vertex
                     bytedata_vertexID[4 * k + 1] = 1;  // 2nd vertex
                     bytedata_vertexID[4 * k + 2] = 2;  // 3rd vertex
@@ -552,6 +570,8 @@ glUtils.loadMarkers = function(uid) {
             for (let i = 0; i < chunkSize; ++i) {
                 const markerIndex = i + offset;
                 const lutIndex = (keyName != null) ? barcodeToLUTIndex[markerData[keyName][markerIndex]] : 0;
+                const opacity = useOpacityFromMarker ? markerData[opacityPropertyName][markerIndex] : 1.0;
+                if (useCollectionItemFromMarker) collectionItemIndex = markerData[collectionItemPropertyName][markerIndex];
 
                 if (useColorFromMarker) hexColor = markerData[colorPropertyName][i];
                 if (useColorFromColormap) {
@@ -574,7 +594,8 @@ glUtils.loadMarkers = function(uid) {
                                                                  : Number("0x" + hexColor.substring(1,7));
                 bytedata_index[i] = markerIndex;  // Store index needed for picking
                 bytedata_scale[i] = useScaleFromMarker ? markerData[scalePropertyName][markerIndex] : 1.0;
-                bytedata_opacity[i] = useOpacityFromMarker ? markerData[opacityPropertyName][markerIndex] : 1.0;
+                bytedata_opacity[i] = Math.floor(Math.max(0.0, Math.min(1.0, opacity)) * 65535.0);
+                bytedata_transform[i] = collectionItemIndex;
                 bytedata_vertexID[4 * i + 0] = 0;  // 1st vertex
                 bytedata_vertexID[4 * i + 1] = 1;  // 2nd vertex
                 bytedata_vertexID[4 * i + 2] = 2;  // 3rd vertex
@@ -608,12 +629,13 @@ glUtils.loadMarkers = function(uid) {
             if (newBufferSize != oldBufferSize)
                 gl.bufferData(gl.ARRAY_BUFFER, newBufferSize, gl.STATIC_DRAW);
         }
-        gl.bufferSubData(gl.ARRAY_BUFFER, (POINT_OFFSET + offset * 4) * numSectors * 4, bytedata_point);
-        gl.bufferSubData(gl.ARRAY_BUFFER, (INDEX_OFFSET + offset * 1) * numSectors * 4, bytedata_index);
-        gl.bufferSubData(gl.ARRAY_BUFFER, (SCALE_OFFSET + offset * 1) * numSectors * 4, bytedata_scale);
-        gl.bufferSubData(gl.ARRAY_BUFFER, (SHAPE_OFFSET + offset * 1) * numSectors * 4, bytedata_shape);
-        gl.bufferSubData(gl.ARRAY_BUFFER, (OPACITY_OFFSET + offset * 1) * numSectors * 4, bytedata_opacity);
-        gl.bufferSubData(gl.ARRAY_BUFFER, (VERTEX_ID_OFFSET + offset * 1) * numSectors * 4, bytedata_vertexID);
+        gl.bufferSubData(gl.ARRAY_BUFFER, (POINT_OFFSET + offset * 16) * numSectors, bytedata_point);
+        gl.bufferSubData(gl.ARRAY_BUFFER, (INDEX_OFFSET + offset * 4) * numSectors, bytedata_index);
+        gl.bufferSubData(gl.ARRAY_BUFFER, (SCALE_OFFSET + offset * 4) * numSectors, bytedata_scale);
+        gl.bufferSubData(gl.ARRAY_BUFFER, (SHAPE_OFFSET + offset * 4) * numSectors, bytedata_shape);
+        gl.bufferSubData(gl.ARRAY_BUFFER, (OPACITY_OFFSET + offset * 2) * numSectors, bytedata_opacity);
+        gl.bufferSubData(gl.ARRAY_BUFFER, (TRANSFORM_OFFSET + offset * 2) * numSectors, bytedata_transform);
+        gl.bufferSubData(gl.ARRAY_BUFFER, (VERTEX_ID_OFFSET + offset * 4) * numSectors, bytedata_vertexID);
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
     }
     console.timeEnd("Generate vertex data");
@@ -624,13 +646,15 @@ glUtils.loadMarkers = function(uid) {
     gl.enableVertexAttribArray(POINT_LOCATION);
     gl.vertexAttribPointer(POINT_LOCATION, 4, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(INDEX_LOCATION);
-    gl.vertexAttribPointer(INDEX_LOCATION, 1, gl.FLOAT, false, 0, numPoints * numSectors * 16);
+    gl.vertexAttribPointer(INDEX_LOCATION, 1, gl.FLOAT, false, 0, INDEX_OFFSET * numSectors);
     gl.enableVertexAttribArray(SCALE_LOCATION);
-    gl.vertexAttribPointer(SCALE_LOCATION, 1, gl.FLOAT, false, 0, numPoints * numSectors * 20);
+    gl.vertexAttribPointer(SCALE_LOCATION, 1, gl.FLOAT, false, 0, SCALE_OFFSET * numSectors);
     gl.enableVertexAttribArray(SHAPE_LOCATION);
-    gl.vertexAttribPointer(SHAPE_LOCATION, 1, gl.FLOAT, false, 0, numPoints * numSectors * 24);
+    gl.vertexAttribPointer(SHAPE_LOCATION, 1, gl.FLOAT, false, 0, SHAPE_OFFSET * numSectors);
     gl.enableVertexAttribArray(OPACITY_LOCATION);
-    gl.vertexAttribPointer(OPACITY_LOCATION, 1, gl.FLOAT, false, 0, numPoints * numSectors * 28);
+    gl.vertexAttribPointer(OPACITY_LOCATION, 1, gl.UNSIGNED_SHORT, true, 0, OPACITY_OFFSET * numSectors);
+    gl.enableVertexAttribArray(TRANSFORM_LOCATION);
+    gl.vertexAttribPointer(TRANSFORM_LOCATION, 1, gl.UNSIGNED_SHORT, false, 0, TRANSFORM_OFFSET * numSectors);
     // Skip enabling vertex ID array, since it will not be used for non-instanced drawing
     gl_ext_vao.bindVertexArrayOES(null);
 
@@ -641,19 +665,22 @@ glUtils.loadMarkers = function(uid) {
     gl.vertexAttribPointer(POINT_LOCATION, 4, gl.FLOAT, false, 0, 0);
     gl_ext_ia.vertexAttribDivisorANGLE(POINT_LOCATION, 1);
     gl.enableVertexAttribArray(INDEX_LOCATION);
-    gl.vertexAttribPointer(INDEX_LOCATION, 1, gl.FLOAT, false, 0, numPoints * numSectors * 16);
+    gl.vertexAttribPointer(INDEX_LOCATION, 1, gl.FLOAT, false, 0, INDEX_OFFSET * numSectors);
     gl_ext_ia.vertexAttribDivisorANGLE(INDEX_LOCATION, 1);
     gl.enableVertexAttribArray(SCALE_LOCATION);
-    gl.vertexAttribPointer(SCALE_LOCATION, 1, gl.FLOAT, false, 0, numPoints * numSectors * 20);
+    gl.vertexAttribPointer(SCALE_LOCATION, 1, gl.FLOAT, false, 0, SCALE_OFFSET * numSectors);
     gl_ext_ia.vertexAttribDivisorANGLE(SCALE_LOCATION, 1);
     gl.enableVertexAttribArray(SHAPE_LOCATION);
-    gl.vertexAttribPointer(SHAPE_LOCATION, 1, gl.FLOAT, false, 0, numPoints * numSectors * 24);
+    gl.vertexAttribPointer(SHAPE_LOCATION, 1, gl.FLOAT, false, 0, SHAPE_OFFSET * numSectors);
     gl_ext_ia.vertexAttribDivisorANGLE(SHAPE_LOCATION, 1);
     gl.enableVertexAttribArray(OPACITY_LOCATION);
-    gl.vertexAttribPointer(OPACITY_LOCATION, 1, gl.FLOAT, false, 0, numPoints * numSectors * 28);
+    gl.vertexAttribPointer(OPACITY_LOCATION, 1, gl.UNSIGNED_SHORT, true, 0, OPACITY_OFFSET * numSectors);
     gl_ext_ia.vertexAttribDivisorANGLE(OPACITY_LOCATION, 1);
+    gl.enableVertexAttribArray(TRANSFORM_LOCATION);
+    gl.vertexAttribPointer(TRANSFORM_LOCATION, 1, gl.UNSIGNED_SHORT, false, 0, TRANSFORM_OFFSET * numSectors);
+    gl_ext_ia.vertexAttribDivisorANGLE(TRANSFORM_LOCATION, 1);
     gl.enableVertexAttribArray(VERTEX_ID_LOCATION);
-    gl.vertexAttribPointer(VERTEX_ID_LOCATION, 1, gl.UNSIGNED_BYTE, false, 0, numPoints * numSectors * 32);
+    gl.vertexAttribPointer(VERTEX_ID_LOCATION, 1, gl.UNSIGNED_BYTE, false, 0, VERTEX_ID_OFFSET * numSectors);
     gl_ext_ia.vertexAttribDivisorANGLE(VERTEX_ID_LOCATION, 0);  // Vertex ID rate must be per-vertex!
     gl_ext_vao.bindVertexArrayOES(null);
 
@@ -671,7 +698,7 @@ glUtils.loadMarkers = function(uid) {
     glUtils._usePiechartFromMarker[uid] = usePiechartFromMarker;
     glUtils._useShapeFromMarker[uid] = useShapeFromMarker;
     glUtils._colorscaleName[uid] = colorscaleName;
-    glUtils._collectionItemIndex[uid] = collectionItemIndex;
+    glUtils._collectionItemIndex[uid] = collectionItemFixed;
     if (useColorFromColormap) {
         glUtils._updateColorScaleTexture(gl, uid, glUtils._textures[uid + "_colorscale"]);
     }
@@ -712,7 +739,6 @@ glUtils.deleteMarkers = function(uid) {
     delete glUtils._barcodeToLUTIndex[uid];
     delete glUtils._barcodeToKey[uid];
     delete glUtils._collectionItemIndex[uid];
-    delete glUtils._imageTransform[uid];
 
     // Clean up WebGL resources
     gl.deleteBuffer(glUtils._buffers[uid + "_markers"]);
@@ -819,6 +845,52 @@ glUtils.updateColorLUTTextures = function() {
     for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
         glUtils._updateColorLUTTexture(gl, uid, glUtils._textures[uid + "_colorLUT"]);
     }
+}
+
+
+glUtils._createTransformLUTTexture = function(gl) {
+    const imageTransforms = new Array(256 * 4);  // TODO
+    const bytedata = new Float32Array(imageTransforms);
+
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 1, 0, gl.RGBA, gl.FLOAT, bytedata);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    return texture;
+}
+
+
+glUtils._updateTransformLUTTexture = function(texture) {
+    const canvas = document.getElementById("gl_canvas");
+    const gl = canvas.getContext("webgl", glUtils._options);
+
+    // Compute transforms that takes into account if collection mode viewing is
+    // enabled for image layers
+    const imageTransforms = new Array(256 * 4);
+    for (let i = 0; i < tmapp["ISS_viewer"].world.getItemCount(); ++i) {
+        const bounds = tmapp["ISS_viewer"].viewport.getBounds();
+        const image = tmapp["ISS_viewer"].world.getItemAt(i);
+        const imageWidth = image.getContentSize().x;
+        const imageHeight = image.getContentSize().y;
+        const imageBounds = image.getBounds();
+
+        // Compute the scale and shift to be applied to marker positions
+        imageTransforms[i * 4 + 0] = (imageBounds.width / imageWidth) / bounds.width;     // ScaleX
+        imageTransforms[i * 4 + 1] = (imageBounds.height / imageHeight) / bounds.height;  // ScaleY
+        imageTransforms[i * 4 + 2] = -(bounds.x - imageBounds.x) / bounds.width;          // ShiftX
+        imageTransforms[i * 4 + 3] = -(bounds.y - imageBounds.y) / bounds.height;         // ShiftY
+    }
+
+    const bytedata = new Float32Array(imageTransforms);
+
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 1, 0, gl.RGBA, gl.FLOAT, bytedata);
+    gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
 
@@ -1021,6 +1093,9 @@ glUtils._drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
     gl.uniform2fv(gl.getUniformLocation(program, "u_canvasSize"), [gl.canvas.width, gl.canvas.height]);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
     gl.uniform1f(gl.getUniformLocation(program, "u_maxPointSize"), glUtils._useInstancing ? 2048 : 256);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["transformLUT"]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_transformLUT"), 3);
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["shapeAtlas"]);
     gl.uniform1i(gl.getUniformLocation(program, "u_shapeAtlas"), 2);
@@ -1030,7 +1105,8 @@ glUtils._drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
         gl_ext_vao.bindVertexArrayOES(glUtils._vaos[uid + (glUtils._useInstancing ? "_markers_instanced" : "_markers")]);
 
         // Set per-markerset uniforms
-        gl.uniform4fv(gl.getUniformLocation(program, "u_imageTransform"), glUtils._imageTransform[uid]);
+        gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"),
+            glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
         gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
         gl.uniform2fv(gl.getUniformLocation(program, "u_markerScalarRange"), glUtils._markerScalarRange[uid]);
         gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
@@ -1096,6 +1172,9 @@ glUtils._drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) 
     gl.uniform2fv(gl.getUniformLocation(program, "u_pickingLocation"), glUtils._pickingLocation);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
     gl.uniform1f(gl.getUniformLocation(program, "u_maxPointSize"), glUtils._useInstancing ? 2048 : 256);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["transformLUT"]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_transformLUT"), 3);
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["shapeAtlas"]);
     gl.uniform1i(gl.getUniformLocation(program, "u_shapeAtlas"), 2);
@@ -1106,7 +1185,8 @@ glUtils._drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) 
         gl_ext_vao.bindVertexArrayOES(glUtils._vaos[uid + "_markers"]);
 
         // Set per-markerset uniforms
-        gl.uniform4fv(gl.getUniformLocation(program, "u_imageTransform"), glUtils._imageTransform[uid]);
+        gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"),
+            glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
         gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
         gl.uniform1i(gl.getUniformLocation(program, "u_usePiechartFromMarker"), glUtils._usePiechartFromMarker[uid]);
         gl.uniform1i(gl.getUniformLocation(program, "u_useShapeFromMarker"), glUtils._useShapeFromMarker[uid]);
@@ -1146,23 +1226,9 @@ glUtils.draw = function() {
     const canvas = document.getElementById("gl_canvas");
     const gl = canvas.getContext("webgl", glUtils._options);
 
-    // Compute per-markerset transforms that take into account if collection
-    // mode viewing is enabled for image layers
-    for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
-        const bounds = tmapp["ISS_viewer"].viewport.getBounds();
-        const image = tmapp["ISS_viewer"].world.getItemAt(
-            glUtils._collectionItemIndex[uid] % tmapp["ISS_viewer"].world.getItemCount());
-        const imageWidth = image.getContentSize().x;
-        const imageHeight = image.getContentSize().y;
-        const imageBounds = image.getBounds();
-
-        // Compute the translation and scaling to be applied to marker positions
-        const scaleX = (imageBounds.width / imageWidth) / bounds.width;
-        const scaleY = (imageBounds.height / imageHeight) / bounds.height;
-        const shiftX = -(bounds.x - imageBounds.x) / bounds.width;
-        const shiftY = -(bounds.y - imageBounds.y) / bounds.height;
-        glUtils._imageTransform[uid] = [scaleX, scaleY, shiftX, shiftY];
-    }
+    // Update per-image transforms that take into account if collection mode
+    // viewing is enabled for the image layers
+    glUtils._updateTransformLUTTexture(glUtils._textures["transformLUT"]);
 
     // The OSD viewer can be rotated, so need to also apply rotation to markers
     const orientationDegrees = tmapp["ISS_viewer"].viewport.getRotation();
@@ -1305,11 +1371,14 @@ glUtils.restoreLostContext = function(event) {
     let canvas = document.getElementById("gl_canvas");
     const gl = canvas.getContext("webgl", glUtils._options);
 
+    gl.getExtension('OES_texture_float');  // Make sure extension is enabled
+
     // Restore shared WebGL objects
     glUtils._programs["markers"] = glUtils._loadShaderProgram(gl, glUtils._markersVS, glUtils._markersFS);
     glUtils._programs["markers_instanced"] = glUtils._loadShaderProgram(gl, glUtils._markersVS, glUtils._markersFS, "#define USE_INSTANCING\n");
     glUtils._programs["picking"] = glUtils._loadShaderProgram(gl, glUtils._pickingVS, glUtils._pickingFS);
     glUtils._textures["shapeAtlas"] = glUtils._loadTextureFromImageURL(gl, glUtils._markershapes);
+    glUtils._textures["transformLUT"] = glUtils._createTransformLUTTexture(gl);
 
     // Restore per-markers WebGL objects
     for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
@@ -1345,6 +1414,7 @@ glUtils.init = function() {
         !extensions.includes("OES_texture_float")) {
         alert("TissUUmaps requires a browser that supports WebGL 1.0 and the following extensions: OES_vertex_array_object, ANGLE_instanced_arrays, OES_texture_float");
     }
+    gl.getExtension('OES_texture_float');  // Make sure extension is enabled
 
     // Place marker canvas under the OSD canvas. Doing this also enables proper
     // compositing with the minimap and other OSD elements.
@@ -1355,6 +1425,7 @@ glUtils.init = function() {
     this._programs["markers_instanced"] = this._loadShaderProgram(gl, this._markersVS, this._markersFS, "#define USE_INSTANCING\n");
     this._programs["picking"] = this._loadShaderProgram(gl, this._pickingVS, this._pickingFS);
     this._textures["shapeAtlas"] = this._loadTextureFromImageURL(gl, glUtils._markershapes);
+    this._textures["transformLUT"] = this._createTransformLUTTexture(gl);
 
     this._createColorbarCanvas();  // The colorbar is drawn separately in a 2D-canvas
 
