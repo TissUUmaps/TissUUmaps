@@ -1341,8 +1341,9 @@ glUtils.init = function() {
 
     const extensions = gl.getSupportedExtensions();
     if (!extensions.includes("OES_vertex_array_object") ||
-        !extensions.includes("ANGLE_instanced_arrays")) {
-        alert("TissUUmaps requires a browser that supports WebGL 1.0 and the following extensions: OES_vertex_array_object, ANGLE_instanced_arrays");
+        !extensions.includes("ANGLE_instanced_arrays") ||
+        !extensions.includes("OES_texture_float")) {
+        alert("TissUUmaps requires a browser that supports WebGL 1.0 and the following extensions: OES_vertex_array_object, ANGLE_instanced_arrays, OES_texture_float");
     }
 
     // Place marker canvas under the OSD canvas. Doing this also enables proper
