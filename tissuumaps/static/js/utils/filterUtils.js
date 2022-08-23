@@ -9,6 +9,7 @@
  * @property {Bool}   filterUtils._filtersUsed - 
  * @property {Object} filterUtils._filters - 
  * @property {Object} filterUtils._filterItems - 
+ * @property {String} filterUtils._compositeMode - 
  */
  filterUtils = {
     // Choose between ["Brightness", "Exposure", "Hue", "Contrast", "Vibrance", "Noise", 

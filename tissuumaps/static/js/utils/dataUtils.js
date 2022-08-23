@@ -283,6 +283,11 @@ dataUtils.updateViewOptions = function(data_id, force_reload_all){
     if (data_obj["_collectionItem_col"]=="null") {
         interfaceUtils.alert("No collection item column selected. Impossible to update view.");return;
     }
+    if (
+        (data_obj["_collectionItem_col"] || data_obj["_collectionItem_fixed"] > 0)
+        && filterUtils._compositeMode != "collection") {
+        interfaceUtils.alert("Warning, images are not in Collection Mode. Go to \"Image layers > Filter Settings > Merging mode\" to activate Collection Mode.");
+    }
     data_obj["_opacity"]=inputs["opacity"].value;
     // Tooltip
     data_obj["_tooltip_fmt"]=inputs["tooltip_fmt"].value;
