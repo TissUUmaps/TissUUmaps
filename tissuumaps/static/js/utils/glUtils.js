@@ -1159,7 +1159,8 @@ glUtils.draw = function() {
     // mode viewing is enabled for image layers
     for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
         const bounds = tmapp["ISS_viewer"].viewport.getBounds();
-        const image = tmapp["ISS_viewer"].world.getItemAt(glUtils._collectionItemIndex[uid]);
+        const image = tmapp["ISS_viewer"].world.getItemAt(
+            glUtils._collectionItemIndex[uid] % tmapp["ISS_viewer"].world.getItemCount());
         const imageWidth = image.getContentSize().x;
         const imageHeight = image.getContentSize().y;
         const imageBounds = image.getBounds();
