@@ -124,7 +124,6 @@ tmap_template = {
     "layers": [{"name": "tissue.tif", "tileSource": "./img/tissue.tif.dzi"}],
     "markerFiles": [],
     "plugins": [],
-    "mpp": 0,
     "compositeMode": "collection",
 }
 
@@ -308,6 +307,8 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                 "shape_col": "null",
                 "shape_fixed": "disc",
                 "shape_gr_dict": "",
+                "collectionItem_col": "library_id",
+                "collectionItem_fixed": "0",
             },
             "expectedRadios": {
                 "cb_col": True,
@@ -322,6 +323,8 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                 "shape_gr": False,
                 "shape_gr_dict": False,
                 "shape_gr_rand": True,
+                "collectionItem_col": True,
+                "collectionItem_fixed": False,
             },
             "hideSettings": True,
             "name": "Numerical observations",
@@ -344,6 +347,8 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                 "opacity": "1",
                 "scale_factor": markerScale,
                 "shape_fixed": "disc",
+                "collectionItem_col": "library_id",
+                "collectionItem_fixed": "0",
             },
             "expectedRadios": {
                 "cb_col": False,
@@ -358,6 +363,8 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                 "shape_gr": False,
                 "shape_gr_dict": False,
                 "shape_gr_rand": True,
+                "collectionItem_col": True,
+                "collectionItem_fixed": False,
             },
             "hideSettings": True,
             "name": "Categorical observations",
@@ -379,6 +386,8 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                 "cb_col": "gene_expression",
                 "scale_factor": markerScale,
                 "shape_fixed": "disc",
+                "collectionItem_col": "library_id",
+                "collectionItem_fixed": "0",
             },
             "expectedRadios": {
                 "cb_col": True,
@@ -393,6 +402,8 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                 "shape_gr": False,
                 "shape_gr_dict": False,
                 "shape_gr_rand": True,
+                "collectionItem_col": True,
+                "collectionItem_fixed": False,
             },
             "hideSettings": True,
             "name": "Gene expression",
@@ -403,26 +414,4 @@ def h5ad_to_tmap(basedir, path, library_id=None):
             "uid": "mainTab",
         }
     )
-    """ new_tmap_project["markerFiles"].append(
-        {
-            "expectedHeader": {
-                "X": globalX, "Y": globalY,
-                "cb_cmap": "interpolateViridis",
-                "cb_col": "gene_expression",
-                "scale_factor": markerScale,
-                "shape_fixed": "disc",
-            },
-            "expectedRadios": {
-                "cb_col": True, "cb_gr": False, "cb_gr_dict": False,
-                "cb_gr_key": True, "cb_gr_rand": False, "pie_check": False,
-                "scale_check": False, "shape_col": False, "shape_fixed": True,
-                "shape_gr": False, "shape_gr_dict": False, "shape_gr_rand": True
-            },
-            "hideSettings": True,
-            "name": "Raw gene expression",
-            "path": [f'{relOutputFolder}/csv/var/{gene["display"]} raw.csv' for gene in varList],
-            "title": "Raw gene expression",
-            "uid": "mainTab"
-        }
-    ) """
     return new_tmap_project
