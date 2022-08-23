@@ -38,7 +38,7 @@ glUtils = {
     _colorscaleData: {},         // {uid: array of RGBA values, ...}
     _barcodeToLUTIndex: {},      // {uid: dict, ...}
     _barcodeToKey: {},           // {uid: dict, ...}
-    _tiledIndex: {},             // {uid: number, ...}
+    _collectionItemIndex: {},    // {uid: number, ...}
     _imageSize: {},              // {uid: OpenSeadragon.Point, ...}
     _viewportRect: {},           // {uid: OpenSeadragon.Rect, ...}
 
@@ -480,7 +480,8 @@ glUtils.loadMarkers = function(uid) {
 
     const markerOutline = !dataUtils.data[uid]["_no_outline"];
 
-    const tiledIndex = (glUtils._tiledIndex[uid] != undefined) ? glUtils._tiledIndex[uid] : 0;  // TODO
+    const collectionItemIndex =
+        (glUtils._collectionItemIndex[uid] != undefined) ? glUtils._collectionItemIndex[uid] : 0;  // TODO
 
     // Additional info about the vertex format
     const NUM_COMPONENTS_PER_MARKER = 9;
@@ -676,7 +677,7 @@ glUtils.loadMarkers = function(uid) {
     glUtils._usePiechartFromMarker[uid] = usePiechartFromMarker;
     glUtils._useShapeFromMarker[uid] = useShapeFromMarker;
     glUtils._colorscaleName[uid] = colorscaleName;
-    glUtils._tiledIndex[uid] = tiledIndex;
+    glUtils._collectionItemIndex[uid] = collectionItemIndex;
     if (useColorFromColormap) {
         glUtils._updateColorScaleTexture(gl, uid, glUtils._textures[uid + "_colorscale"]);
     }
@@ -716,7 +717,7 @@ glUtils.deleteMarkers = function(uid) {
     delete glUtils._colorscaleData[uid];
     delete glUtils._barcodeToLUTIndex[uid];
     delete glUtils._barcodeToKey[uid];
-    delete glUtils._tiledIndex[uid];
+    delete glUtils._collectionItemIndex[uid];
     delete glUtils._imageSize[uid];
     delete glUtils._viewportRectSize[uid];
 
@@ -1158,7 +1159,7 @@ glUtils.draw = function() {
     // mode viewing is enabled for image layers
     for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
         const bounds = tmapp["ISS_viewer"].viewport.getBounds();
-        const image = tmapp["ISS_viewer"].world.getItemAt(glUtils._tiledIndex[uid]);
+        const image = tmapp["ISS_viewer"].world.getItemAt(glUtils._collectionItemIndex[uid]);
         const imageWidth = image.getContentSize().x;
         const imageHeight = image.getContentSize().y;
         const imageBounds = image.getBounds();
