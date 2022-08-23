@@ -480,8 +480,7 @@ glUtils.loadMarkers = function(uid) {
 
     const markerOutline = !dataUtils.data[uid]["_no_outline"];
 
-    const collectionItemIndex =
-        (glUtils._collectionItemIndex[uid] != undefined) ? glUtils._collectionItemIndex[uid] : 0;  // TODO
+    const collectionItemIndex = dataUtils.data[uid]["_collectionItem_fixed"];
 
     // Additional info about the vertex format
     const NUM_COMPONENTS_PER_MARKER = 9;
