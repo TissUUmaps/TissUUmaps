@@ -277,6 +277,11 @@ dataUtils.updateViewOptions = function(data_id, force_reload_all){
     data_obj["_opacity_col"]=(radios["opacity_check"].checked ? inputs["opacity_col"].value : null);
     if (data_obj["_opacity_col"]=="null") {
         interfaceUtils.alert("No opacity column selected. Impossible to update view.");return;
+    }// Use collection column
+    data_obj["_collectionItem_col"]=(radios["collectionItem_col"].checked ? inputs["collectionItem_col"].value : null);
+    data_obj["_collectionItem_fixed"]=(radios["collectionItem_col"].checked ? null : inputs["collectionItem_fixed"].value);
+    if (data_obj["_collectionItem_col"]=="null") {
+        interfaceUtils.alert("No collection item column selected. Impossible to update view.");return;
     }
     data_obj["_opacity"]=inputs["opacity"].value;
     // Tooltip
