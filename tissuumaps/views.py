@@ -614,10 +614,8 @@ def h5ad_csv(path, type, filename):
         if os.path.getmtime(completePath) > os.path.getmtime(csvPath):
             # In this case, the h5ad file has been recently modified and the csv file is
             # stale, so it must be regenerated.
-            print("csv exists but is older than h5ad, we will not use it.")
             generate_csv = True
         else:
-            print("csv exists, we will use it")
             generate_csv = False
     if generate_csv:
         if type == "obs":
