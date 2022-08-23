@@ -496,7 +496,6 @@ class webEngine(QWebEngineView):
                 links.append(str(url.toLocalFile()))
             for link in links:
                 filename, file_extension = os.path.splitext(link)
-                print(file_extension)
                 if file_extension == ".tmap":
                     self.openImagePath(link)
                 elif file_extension == ".h5ad":
