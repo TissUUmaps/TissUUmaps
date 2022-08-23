@@ -125,6 +125,7 @@ tmap_template = {
     "markerFiles": [],
     "plugins": [],
     "mpp": 0,
+    "compositeMode": "collection",
 }
 
 h5ad_cache = {}
