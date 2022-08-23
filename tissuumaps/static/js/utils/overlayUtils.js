@@ -275,9 +275,9 @@ overlayUtils.addLayer = function(layerName, tileSource, i, visible) {
                 setTimeout(function(){$(loadingModal).modal("hide");}, 500);
             }
             showModal = false;
-
-            // TODO: Update image grid if collectionMode is enabled for layers  
-            // tmapp["ISS_viewer"].world.arrange({tileSize: 1, tileMargin: 0.1});
+            if (filterUtils._compositeMode == "collection") {
+                filterUtils.setCompositeOperation();
+            }
         },
         error: function(i) {
             if (loadingModal) {

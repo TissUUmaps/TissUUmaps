@@ -295,7 +295,8 @@
         id: "filterCompositeMode",
         options:[
             {text:"Channels", value:"source-over"},
-            {text:"Composite", value:"lighter"}
+            {text:"Composite", value:"lighter"},
+            {text:"Collection", value:"collection"}
         ]
     }
     var label = document.createElement("label");
@@ -440,6 +441,33 @@ filterUtils.setCompositeOperation = function(restart) {
     }
     var filterCompositeMode = document.getElementById("filterCompositeMode");
     filterCompositeMode.value = filterUtils._compositeMode;
+    newCompositeMode = filterUtils._compositeMode;
+    if (newCompositeMode == "collection") {
+        tmapp["ISS_viewer"].collectionMode = true;
+        newCompositeMode = "lighter";
+        tmapp["ISS_viewer"].world.arrange({tileSize: 1, tileMargin: 0.1});
+        var inputs = document.querySelectorAll(".visible-layers");
+        for(var i = 0; i < inputs.length; i++) {
+            inputs[i].checked = false;
+            inputs[i].click();
+        }
+        tmapp["ISS_viewer"].viewport.goHome();
+        $(".channelRange").hide();
+    }
+    else if (tmapp["ISS_viewer"].collectionMode){
+        tmapp["ISS_viewer"].collectionMode = false;
+        tmapp["ISS_viewer"].world.setAutoRefigureSizes(false);
+        for (var i = 0; i < tmapp["ISS_viewer"].world._items.length; i++) {
+            item = tmapp["ISS_viewer"].world._items[i];
+            box = item.getBounds();
+            position = new OpenSeadragon.Point(0, 0);
+            item.setPosition(position, true);
+            item.setWidth(box.width, true);
+        }
+        tmapp["ISS_viewer"].world.setAutoRefigureSizes(true);
+        tmapp["ISS_viewer"].viewport.goHome();
+        $(".channelRange").show();
+    }
     tmapp[op + "_viewer"].compositeOperation = filterUtils._compositeMode;
     for (i = 0; i < tmapp[op + "_viewer"].world.getItemCount(); i++) {
         tmapp[op + "_viewer"].world.getItemAt(i).setCompositeOperation(filterUtils._compositeMode);
