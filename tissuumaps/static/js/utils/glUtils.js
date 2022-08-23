@@ -39,7 +39,7 @@ glUtils = {
     _barcodeToLUTIndex: {},      // {uid: dict, ...}
     _barcodeToKey: {},           // {uid: dict, ...}
     _collectionItemIndex: {},    // {uid: number, ...}
-    _imageTransform: {},         // {uid: [shiftX, shiftY, scaleX, scaleY], ...}
+    _imageTransform: {},         // {uid: [scaleX, scaleY, shiftX, shiftY], ...}
 
     // Global marker settings and info
     _markerScale: 1.0,
