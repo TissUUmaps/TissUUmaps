@@ -39,8 +39,7 @@ glUtils = {
     _barcodeToLUTIndex: {},      // {uid: dict, ...}
     _barcodeToKey: {},           // {uid: dict, ...}
     _collectionItemIndex: {},    // {uid: number, ...}
-    _imageSize: {},              // {uid: OpenSeadragon.Point, ...}
-    _viewportRect: {},           // {uid: OpenSeadragon.Rect, ...}
+    _imageTransform: {},         // {uid: [shiftX, shiftY, scaleX, scaleY], ...}
 
     // Global marker settings and info
     _markerScale: 1.0,
@@ -64,8 +63,7 @@ glUtils._markersVS = `
     #define SHAPE_GRID_SIZE 4.0
     #define DISCARD_VERTEX { gl_Position = vec4(2.0, 2.0, 2.0, 0.0); return; }
 
-    uniform vec2 u_imageSize;
-    uniform vec4 u_viewportRect;
+    uniform vec4 u_imageTransform;
     uniform mat2 u_viewportTransform;
     uniform vec2 u_canvasSize;
     uniform float u_markerScale;
@@ -109,9 +107,8 @@ glUtils._markersVS = `
 
     void main()
     {
-        vec2 imagePos = a_position.xy * u_imageSize;
-        vec2 viewportPos = imagePos - u_viewportRect.xy;
-        vec2 ndcPos = (viewportPos / u_viewportRect.zw) * 2.0 - 1.0;
+        vec2 viewportPos = a_position.xy * u_imageTransform.xy + u_imageTransform.zw;
+        vec2 ndcPos = viewportPos * 2.0 - 1.0;
         ndcPos.y = -ndcPos.y;
         ndcPos = u_viewportTransform * ndcPos;
 
@@ -144,7 +141,7 @@ glUtils._markersVS = `
         }
 
         gl_Position = vec4(ndcPos, 0.0, 1.0);
-        gl_PointSize = a_scale * u_markerScale * u_globalMarkerScale / u_viewportRect.w;
+        gl_PointSize = a_scale * u_markerScale * u_globalMarkerScale;
         gl_PointSize = clamp(gl_PointSize, 2.0, u_maxPointSize);
 
         v_shapeOrigin.x = mod((v_color.a + 0.00001) * 255.0 - 1.0, SHAPE_GRID_SIZE);
@@ -252,8 +249,7 @@ glUtils._pickingVS = `
     #define OP_CLEAR 0
     #define OP_WRITE_INDEX 1
 
-    uniform vec2 u_imageSize;
-    uniform vec4 u_viewportRect;
+    uniform vec4 u_imageTransform;
     uniform mat2 u_viewportTransform;
     uniform vec2 u_canvasSize;
     uniform vec2 u_pickingLocation;
@@ -283,9 +279,8 @@ glUtils._pickingVS = `
 
     void main()
     {
-        vec2 imagePos = a_position.xy * u_imageSize;
-        vec2 viewportPos = imagePos - u_viewportRect.xy;
-        vec2 ndcPos = (viewportPos / u_viewportRect.zw) * 2.0 - 1.0;
+        vec2 viewportPos = a_position.xy * u_imageTransform.xy + u_imageTransform.zw;
+        vec2 ndcPos = viewportPos * 2.0 - 1.0;
         ndcPos.y = -ndcPos.y;
         ndcPos = u_viewportTransform * ndcPos;
 
@@ -311,7 +306,7 @@ glUtils._pickingVS = `
 
             vec2 canvasPos = (ndcPos * 0.5 + 0.5) * u_canvasSize;
             canvasPos.y = (u_canvasSize.y - canvasPos.y);  // Y-axis is inverted
-            float pointSize = a_scale * u_markerScale * u_globalMarkerScale / u_viewportRect.w;
+            float pointSize = a_scale * u_markerScale * u_globalMarkerScale;
             pointSize = clamp(pointSize, 2.0, u_maxPointSize);
 
             // Do coarse inside/outside test against bounding box for marker
@@ -717,8 +712,7 @@ glUtils.deleteMarkers = function(uid) {
     delete glUtils._barcodeToLUTIndex[uid];
     delete glUtils._barcodeToKey[uid];
     delete glUtils._collectionItemIndex[uid];
-    delete glUtils._imageSize[uid];
-    delete glUtils._viewportRectSize[uid];
+    delete glUtils._imageTransform[uid];
 
     // Clean up WebGL resources
     gl.deleteBuffer(glUtils._buffers[uid + "_markers"]);
@@ -1036,8 +1030,7 @@ glUtils._drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
         gl_ext_vao.bindVertexArrayOES(glUtils._vaos[uid + (glUtils._useInstancing ? "_markers_instanced" : "_markers")]);
 
         // Set per-markerset uniforms
-        gl.uniform2fv(gl.getUniformLocation(program, "u_imageSize"), glUtils._imageSize[uid]);
-        gl.uniform4fv(gl.getUniformLocation(program, "u_viewportRect"), glUtils._viewportRect[uid]);
+        gl.uniform4fv(gl.getUniformLocation(program, "u_imageTransform"), glUtils._imageTransform[uid]);
         gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
         gl.uniform2fv(gl.getUniformLocation(program, "u_markerScalarRange"), glUtils._markerScalarRange[uid]);
         gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
@@ -1113,8 +1106,7 @@ glUtils._drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) 
         gl_ext_vao.bindVertexArrayOES(glUtils._vaos[uid + "_markers"]);
 
         // Set per-markerset uniforms
-        gl.uniform2fv(gl.getUniformLocation(program, "u_imageSize"), glUtils._imageSize[uid]);
-        gl.uniform4fv(gl.getUniformLocation(program, "u_viewportRect"), glUtils._viewportRect[uid]);
+        gl.uniform4fv(gl.getUniformLocation(program, "u_imageTransform"), glUtils._imageTransform[uid]);
         gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
         gl.uniform1i(gl.getUniformLocation(program, "u_usePiechartFromMarker"), glUtils._usePiechartFromMarker[uid]);
         gl.uniform1i(gl.getUniformLocation(program, "u_useShapeFromMarker"), glUtils._useShapeFromMarker[uid]);
@@ -1165,8 +1157,11 @@ glUtils.draw = function() {
         const imageBounds = image.getBounds();
 
         // Compute the translation and scaling to be applied to marker positions
-        glUtils._viewportRect[uid] = [bounds.x - imageBounds.x, bounds.y - imageBounds.y, bounds.width, bounds.height];
-        glUtils._imageSize[uid] = [imageBounds.width / imageWidth, imageBounds.height / imageHeight];
+        const scaleX = (imageBounds.width / imageWidth) / bounds.width;
+        const scaleY = (imageBounds.height / imageHeight) / bounds.height;
+        const shiftX = -(bounds.x - imageBounds.x) / bounds.width;
+        const shiftY = -(bounds.y - imageBounds.y) / bounds.height;
+        glUtils._imageTransform[uid] = [scaleX, scaleY, shiftX, shiftY];
     }
 
     // The OSD viewer can be rotated, so need to also apply rotation to markers
@@ -1178,6 +1173,7 @@ glUtils.draw = function() {
     // dependant on screen resolution or window size
     let markerScaleAdjusted = glUtils._markerScale;
     if (glUtils._useMarkerScaleFix) markerScaleAdjusted *= (gl.canvas.height / 900.0);
+    markerScaleAdjusted /= tmapp["ISS_viewer"].viewport.getBounds().height;  // FIXME
 
     gl.clearColor(0.0, 0.0, 0.0, 0.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
