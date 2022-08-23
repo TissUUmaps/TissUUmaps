@@ -265,7 +265,6 @@ def h5ad_to_tmap(basedir, path, library_id=None):
             if type(img) == str:
                 img = pyvips.Image.new_from_file(img)
             else:
-                img = (img * 255).astype(np.uint8)
                 img = numpy2vips(img)
 
             img.tiffsave(
