@@ -761,6 +761,8 @@ interfaceUtils._mGenUIFuncs.getTabDropDowns = function(uid){
     allinputs["opacity_col"]=interfaceUtils.getElementById(uid+"_opacity-col");
     allinputs["opacity"]=interfaceUtils.getElementById(uid+"_opacity");
     allinputs["tooltip_fmt"]=interfaceUtils.getElementById(uid+"_tooltip_fmt");
+    allinputs["collectionItem_col"]=interfaceUtils.getElementById(uid+"_collectionItem-col-value");
+    allinputs["collectionItem_fixed"]=interfaceUtils.getElementById(uid+"_collectionItem-fixed-value");
 
     return allinputs;
 }
@@ -790,6 +792,8 @@ interfaceUtils._mGenUIFuncs.getTabRadiosAndChecks= function(uid){
     allradios["shape_fixed"]=interfaceUtils.getElementById(uid+"_shape-fixed");
     allradios["opacity_check"]=interfaceUtils.getElementById(uid+"_use-opacity");
     allradios["_no_outline"]=interfaceUtils.getElementById(uid+"__no-outline");
+    allradios["collectionItem_col"]=interfaceUtils.getElementById(uid+"_collectionItem-bypoint");
+    allradios["collectionItem_fixed"]=interfaceUtils.getElementById(uid+"_collectionItem-fixed");
     
     
     return allradios;
@@ -1171,9 +1175,10 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
     row3=interfaceUtils._mGenUIFuncs.generateAdvancedShapeAccordion3();
     row4=interfaceUtils._mGenUIFuncs.generateAdvancedOpacityAccordion3();
     row5=interfaceUtils._mGenUIFuncs.generateAdvancedTooltipAccordion3();
-    row6=interfaceUtils._mGenUIFuncs.generateAdvancedMakeButtonAccordion3();
+    row6=interfaceUtils._mGenUIFuncs.generateAdvancedCollectionAccordion3();
+    row7=interfaceUtils._mGenUIFuncs.generateAdvancedMakeButtonAccordion3();
     
-    return [row1,row2,row3,row4, row5, row6];
+    return [row1,row2,row3,row4, row5, row6, row7];
  }
 
  /**
@@ -1352,6 +1357,76 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
             divoptionsfixed.appendChild(labelfixedshapevalue);
             divoptionsfixed.appendChild(shapeinput2);
 
+    return row0;
+}
+
+ /**
+ * @summary Creates the forms to shape by
+ * @returns {array} a single rows
+ */
+  interfaceUtils._mGenUIFuncs.generateAdvancedCollectionAccordion3= function(){
+    generated=interfaceUtils._mGenUIFuncs.ctx.aUUID;
+
+    //row 0
+    row0=HTMLElementUtils.createRow({id:generated+"_collectionItem_0"});
+        collab=HTMLElementUtils.createColumn({"width":12});
+            labellab=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_collectionItem-label"});
+            labellab.innerHTML="<strong>Collection mode</strong>";
+
+        colcollectionItem2=HTMLElementUtils.createColumn({"width":6});
+            
+            divformcheck2collectionItem=HTMLElementUtils.createElement({"kind":"div", "extraAttributes":{"class":"form-check"}});
+                inputradio2collectionItem=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_collectionItem-fixed","extraAttributes":{"name":generated+"_flexRadioCollectionBy","class":"form-check-input","type":"radio", "checked":true}});
+                labelcollectionItemfixed=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":generated+"_collectionItem-fixed"}});
+                labelcollectionItemfixed.innerText="Use a fixed collection item";
+
+            divformcheck3collectionItem=HTMLElementUtils.createElement({"kind":"div", "extraAttributes":{"class":"form-check"}});
+                inputradio3collectionItem=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_collectionItem-bypoint","extraAttributes":{"name":generated+"_flexRadioCollectionBy","class":"form-check-input","type":"radio"}});
+                labelcollectionItempoint=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":generated+"_collectionItem-bypoint"}});
+                labelcollectionItempoint.innerText="Collection item by marker";
+        //------------------------
+    
+        colcollectionItem3=HTMLElementUtils.createColumn({"width":6});
+            //create a whole group for collectionItem by group, random, key and group name
+            
+            divoptionsfixed=HTMLElementUtils.createElement({"kind":"div","id":generated+"_collectionItem-fixed-options","extraAttributes":{"class": "renderOptionContainer"}});
+                labelfixedcollectionItemvalue=HTMLElementUtils.createElement({"kind":"label","id":generated+"_collectionItem-fixed-label","extraAttributes":{"for":generated+"_collectionItem-fixed-value"}});
+                labelfixedcollectionItemvalue.innerText="Specify collection item index";
+                collectionIteminput2=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_collectionItem-fixed-value","extraAttributes":{ "class":"form-text-input", "type":"number", "value":0, "step":1, "min":0, "max":1000}});
+
+            divoptionscol=HTMLElementUtils.createElement({"kind":"div","id":generated+"_collectionItem-col-options","extraAttributes":{"class": "renderOptionContainer d-none"}});
+                selectcollectionItemcol=HTMLElementUtils.createElement({"kind":"select","id":generated+"_collectionItem-col-value","extraAttributes":{"class":"form-select form-select-sm","aria-label":".form-select-sm"}});
+                labelcollectionItemcol=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_collectionItem_col-colname-label","extraAttributes":{"for":generated+"_collectionItem-col-value"} });
+                labelcollectionItemcol.innerText="Select collection item index column";
+            
+
+        //listeners
+
+    inputradio2collectionItem.addEventListener("change",(event)=>{
+        interfaceUtils._mGenUIFuncs.hideShow(event,["_collectionItem-col-options","_collectionItem-col-group-options","_collectionItem-fixed-options"],[2])
+    });
+    inputradio3collectionItem.addEventListener("change",(event)=>{
+        interfaceUtils._mGenUIFuncs.hideShow(event,["_collectionItem-col-options","_collectionItem-col-group-options","_collectionItem-fixed-options"],[0])
+    });
+    
+    row0.appendChild(collab)
+        collab.appendChild(labellab)
+
+    row0.appendChild(colcollectionItem2);
+        colcollectionItem2.appendChild(divformcheck2collectionItem);
+            divformcheck2collectionItem.appendChild(inputradio2collectionItem);
+            divformcheck2collectionItem.appendChild(labelcollectionItemfixed);
+        colcollectionItem2.appendChild(divformcheck3collectionItem);
+            divformcheck3collectionItem.appendChild(inputradio3collectionItem);
+            divformcheck3collectionItem.appendChild(labelcollectionItempoint);
+    row0.appendChild(colcollectionItem3);
+        colcollectionItem3.appendChild(divoptionsfixed);
+            divoptionsfixed.appendChild(labelfixedcollectionItemvalue);
+            divoptionsfixed.appendChild(collectionIteminput2);
+        colcollectionItem3.appendChild(divoptionscol);
+            divoptionscol.appendChild(labelcollectionItemcol);
+            divoptionscol.appendChild(selectcollectionItemcol);
+        
     return row0;
 }
 
