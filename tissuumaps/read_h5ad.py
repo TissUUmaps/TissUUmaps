@@ -229,17 +229,23 @@ def h5ad_to_tmap(basedir, path, library_id=None):
     for uns in adata.uns:
         if "_colors" in uns:
             uns_name = uns.replace("_colors", "")
-            _colors = dict(
-                zip(
-                    [str(i) for i in range(len(adata.obs[uns_name].cat.categories))],
-                    adata.uns[uns_name + "_colors"],
+            try:
+                _colors = dict(
+                    zip(
+                        [
+                            str(i)
+                            for i in range(len(adata.obs[uns_name].cat.categories))
+                        ],
+                        adata.uns[uns_name + "_colors"],
+                    )
                 )
-            )
-            new_palette = {
-                adata.obs[uns_name].cat.categories[int(k)]: v[:7]
-                for k, v in _colors.items()
-            }
-            palette = dict(palette, **new_palette)
+                new_palette = {
+                    adata.obs[uns_name].cat.categories[int(k)]: v[:7]
+                    for k, v in _colors.items()
+                }
+                palette = dict(palette, **new_palette)
+            except:
+                pass
 
     # if library_id is not None:
     #    adata = adata[adata.obs.library_id == library_id].copy()
