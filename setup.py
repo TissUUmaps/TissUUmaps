@@ -26,6 +26,7 @@ setuptools.setup(
         "ipython>=7.28.0",
         "pyvips>=2.1.14",
         "pyyaml>=6.0",
+        "anndata>=0.8.0",
     ],
     extras_require={
         "pyqt5": ["PyQt5>=5.15.4", "PyQtWebEngine>=5.15.4"],

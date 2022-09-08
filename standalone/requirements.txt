@@ -6,3 +6,4 @@ PyQt5>=5.15.4
 PyQtWebEngine>=5.15.4
 matplotlib>=3.2.2
 pyyaml>=6.0
+anndata>=0.8.0
