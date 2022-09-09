@@ -32,6 +32,7 @@
       class="container-fluid px-0 d-flex flex-column vh-100 overflow-hidden"
     >
       <nav
+        id="main-navbar"
         class="navbar navbar-expand-lg navbar-dark border-bottom border-dark flex-shrink-0 {% if isStandalone %}d-none{% endif %}"
       >
         <div class="container-fluid">
@@ -106,7 +107,19 @@
 
       <div class="row mx-0 flex-grow-1 overflow-hidden">
         <!-- Row for viewer  -->
-        <div class="col px-0" id="ISS_viewer_container">
+        <div class="col px-0 position-relative" id="ISS_viewer_container">
+          <a
+            id="floating-navbar-toggler"
+            class="hook in floating-menu-btn shadow navbar-dark p-2 d-none"
+            data-bs-toggle="collapse"
+            data-bs-target="#main-navbar"
+            role="button"
+            aria-expanded="false"
+            aria-controls="main-navbar"
+            href="#"
+          >
+            <span class="navbar-toggler-icon"></span>
+          </a>
           <!-- The id is what OSD will look for to draw the viewer, the class is our own css to stylize
                 The ID will give the prefix for all the objects related to the viewer in this case ISS-->
           <div id="ISS_viewer" class="ISS_viewer h-100"></div>
@@ -443,6 +456,20 @@
       <!-- end of single row -->
     </div>
     <!-- end of container-fuild-->
+    <div
+      id="powered_by_tissuumaps"
+      class="d-none"
+      style="left: 10px; bottom: 10px; z-index: 100"
+    >
+      <div class="px-1 me-3 viewer-layer">
+        <small
+          ><img src="static/misc/logo.svg" height="22px" /> Powered by
+          <a href="https://tissuumaps.github.io/" target="_blank"
+            >TissUUmaps</a
+          ></small
+        >
+      </div>
+    </div>
   </body>
   <script src="static/vendor/bootstrap-5.1.1/dist/js/bootstrap.bundle.min.js"></script>
   <script src="static/vendor/openseadragon-bin-3.0.0/openseadragon.min.js"></script>
@@ -467,6 +494,23 @@
   <script src="static/js/flask.js"></script>
   <script>
 
+    if (window!=window.top) {
+      /* I'm in a frame! */
+      document.getElementById("main-navbar").classList.add("collapse");
+      document
+        .getElementById("floating-navbar-toggler")
+        .classList.remove("d-none");
+      //document.html.style.zoom=0.6
+      document.getElementById("ISS_menu").style.zoom = 0.7;
+      document.getElementById("ISS_menu").classList.remove("col-xl-4");
+      document.getElementById("ISS_menu").classList.remove("col-lg-5");
+      document.getElementById("ISS_menu").classList.remove("col-md-6");
+      document.getElementById("ISS_menu").classList.remove("col-sm-8");
+      document.getElementById("ISS_menu").classList.add("col-xl-2");
+      document.getElementById("ISS_menu").classList.add("col-lg-3");
+      document.getElementById("ISS_menu").classList.add("col-md-4");
+      document.getElementById("ISS_menu").classList.add("col-sm-6");
+    }
     // ----------
     $(document).ready(function () {
       const queryString = window.location.search;
@@ -503,6 +547,13 @@
       {% if message %}
       interfaceUtils.alert("{{message|safe}}");
       {% endif %}
+      if (window!=window.top) {
+          elt = document.getElementById("powered_by_tissuumaps");
+          tmapp["ISS_viewer"].addControl(elt,{
+              anchor: OpenSeadragon.ControlAnchor.BOTTOM_LEFT,
+          });
+          elt.classList.remove("d-none");
+      }
       });
   </script>
 </html>
