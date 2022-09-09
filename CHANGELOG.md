@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.10
+
+- Add collection mode (to display images next to each other with markers correctly placed)
+- IFrame mode (to hide navbar and make menu smaller when TissUUmaps is run inside an iFrame)
+
 ## 3.0.9.6
 
 - Add debug menu when running in debug mode, with debug access in javascript
