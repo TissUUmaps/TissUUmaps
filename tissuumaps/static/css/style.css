@@ -10206,6 +10206,18 @@ html {
   font-size: 12px;
   z-index: 100; }
 
+.floating-menu-btn {
+  display: block;
+  position: absolute;
+  z-index: 100;
+  top: 10px;
+  left: 10px;
+  border-radius: 50%;
+  line-height: normal;
+  cursor: pointer;
+  zoom: 0.8;
+  width: fit-content; }
+
 .regions_table {
   user-select: none;
   font-size: 13px; }
