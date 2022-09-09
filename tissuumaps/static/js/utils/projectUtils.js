@@ -430,9 +430,6 @@ projectUtils.loadProjectFileFromServer = function(path) {
     }
     tmapp[tmapp["object_prefix"] + "_viewer"].world.removeAll();
     overlayUtils.addAllLayers();
-    if (state.layerOpacities && state.layerVisibilities) {
-        $(".visible-layers").prop("checked",true);$(".visible-layers").click();
-    }
     if (state.compositeMode) {
         filterUtils._compositeMode = state.compositeMode;
         filterUtils.setCompositeOperation();
@@ -456,6 +453,7 @@ projectUtils.loadProjectFileFromServer = function(path) {
             filterUtils.setCompositeOperation();
         }
         if (state.layerOpacities && state.layerVisibilities) {
+            $(".visible-layers").prop("checked",true);$(".visible-layers").click();
             tmapp.layers.forEach(function(layer, i) {
                 $("#opacity-layer-"+i).val(state.layerOpacities[i]);
                 if (state.layerVisibilities[i] != 0) {
