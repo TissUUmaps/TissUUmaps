@@ -30,7 +30,7 @@ overlayUtils.addAllLayers = function() {
         tmapp.fixed_file = "";
     }
     tmapp.layers.forEach(function(layer, i) {
-        overlayUtils.addLayer(layer.name, layer.tileSource, i-1);
+        overlayUtils.addLayer(layer, i-1);
     });
     overlayUtils.addAllLayersSettings();
 }
@@ -228,21 +228,24 @@ overlayUtils.addLayerFromSelect = function() {
     var e = document.getElementById("layerSelect");
     var layerName = e.options[e.selectedIndex].text;
     var tileSource = e.options[e.selectedIndex].value;
-    tmapp.layers.push({
+    var layer = {
         name: layerName,
         tileSource: tileSource
-    });
+    }
+    tmapp.layers.push(layer);
     i = tmapp.layers.length - 1;
-    overlayUtils.addLayer(layerName, tileSource, i);
+    overlayUtils.addLayer(layer, i);
     overlayUtils.addAllLayersSettings();
 }
 
 /**
  * This method is used to add a layer */
-overlayUtils.addLayer = function(layerName, tileSource, i, visible) {
+overlayUtils.addLayer = function(layer, i, visible) {
     const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString);
     const path = urlParams.get('path')
+    var layerName = layer.layerName
+    var tileSource = layer.tileSource
     if (path != null) {
         tileSource = path + "/" + tileSource
     }
@@ -263,14 +266,21 @@ overlayUtils.addLayer = function(layerName, tileSource, i, visible) {
             tmapp["ISS_viewer"].close();
         }
     }
+    var x = layer.x || 0;
+    var y = layer.y || 0;
+    var scale = layer.scale || 1;
     tmapp[vname].addTiledImage({
         index: i + 1,
+        x: 0,
+        y: 0,
         tileSource: tmapp._url_suffix + tileSource,
         opacity: opacity,
         success: function(i) {
             layer0X = tmapp[op + "_viewer"].world.getItemAt(0).getContentSize().x;
             layerNX = tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).getContentSize().x;
-            tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setWidth(layerNX/layer0X);
+            tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setWidth(scale*layerNX/layer0X);
+            var point = new OpenSeadragon.Point(x/layer0X, y/layer0X);
+            tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setPosition(point);
             if (loadingModal) {
                 setTimeout(function(){$(loadingModal).modal("hide");}, 500);
             }

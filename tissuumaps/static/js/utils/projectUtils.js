@@ -410,14 +410,7 @@ projectUtils.loadProjectFileFromServer = function(path) {
 /**
  * This method is used to load the TissUUmaps layers from state */
  projectUtils.loadLayers = function(state) {
-    tmapp.layers = [];
-    subfolder = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
-    state.layers.forEach(function(layer) {
-        pathname = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
-        tmapp.layers.push(
-            {name: layer.name, tileSource: layer.tileSource}
-        )
-    });
+    tmapp.layers = state.layers;
     if (state.filters) {
         filterUtils._filtersUsed = state.filters;
         $(".filterSelection").prop("checked",false);
