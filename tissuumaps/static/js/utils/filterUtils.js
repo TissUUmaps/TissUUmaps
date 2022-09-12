@@ -459,11 +459,16 @@ filterUtils.setCompositeOperation = function(restart) {
         tmapp["ISS_viewer"].collectionMode = false;
         tmapp["ISS_viewer"].world.setAutoRefigureSizes(false);
         for (var i = 0; i < tmapp["ISS_viewer"].world._items.length; i++) {
-            item = tmapp["ISS_viewer"].world._items[i];
-            box = item.getBounds();
-            position = new OpenSeadragon.Point(0, 0);
-            item.setPosition(position, true);
-            item.setWidth(box.width, true);
+            layer = tmapp.layers[i];
+            var x = layer.x || 0;
+            var y = layer.y || 0;
+            var scale = layer.scale || 1;
+            var  item = tmapp["ISS_viewer"].world._items[i];
+            var layer0X = tmapp[op + "_viewer"].world.getItemAt(0).getContentSize().x;
+            var layerNX = item.getContentSize().x;
+            item.setWidth(scale*layerNX/layer0X);
+            var point = new OpenSeadragon.Point(x/layer0X, y/layer0X);
+            item.setPosition(point);
         }
         tmapp["ISS_viewer"].world.setAutoRefigureSizes(true);
         tmapp["ISS_viewer"].viewport.goHome();

@@ -83,8 +83,9 @@ flask.standalone.addLayer = function (filename) {
                 name: layerName,
                 tileSource: tileSource
             });
-            i = tmapp.layers.length - 2;
-            overlayUtils.addLayer(layerName, tileSource, i, true);
+            var i = tmapp.layers.length - 2;
+            var layer = {"name":layerName, "tileSource":tileSource};
+            overlayUtils.addLayer(layer, i, true);
             overlayUtils.addLayerSettings(layerName, tileSource, i, true);
         }
     });
@@ -200,15 +201,15 @@ flask.server.addLayer = function (filename) {
         interfaceUtils.alert("All layers must be in the same folder");
         return;
     }
-
     var layerName = filename.split('/').reverse()[0];;
     var tileSource = filename;
     tmapp.layers.push({
         name: layerName,
         tileSource: tileSource
     });
-    i = tmapp.layers.length - 2;
-    overlayUtils.addLayer(layerName, tileSource, i, true);
+    var i = tmapp.layers.length - 2;
+    var layer = {"name":layerName, "tileSource":tileSource};
+    overlayUtils.addLayer(layer, i, true);
     overlayUtils.addLayerSettings(layerName, tileSource, i, true);
     var modalUID = "messagebox";
     $(`#${modalUID}_modal`).modal('hide');
