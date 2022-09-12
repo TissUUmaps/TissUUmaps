@@ -1361,7 +1361,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
 }
 
  /**
- * @summary Creates the forms to shape by
+ * @summary Creates the forms for collection id
  * @returns {array} a single rows
  */
   interfaceUtils._mGenUIFuncs.generateAdvancedCollectionAccordion3= function(){
@@ -2434,7 +2434,6 @@ interfaceUtils.addMenuItem = function(itemTree, callback, before) {
             e.stopPropagation();
         });
     })
-
 }
 
 interfaceUtils.addPluginAccordion = function (pluginID, pluginName) {
