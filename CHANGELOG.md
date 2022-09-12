@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.10.1
+
+- Add optional offset (x, y) and scale properties to tmap.layers
+
 ## 3.0.10
 
 - Add collection mode (to display images next to each other with markers correctly placed)
