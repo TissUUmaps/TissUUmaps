@@ -48,7 +48,7 @@ import urllib.request
 from functools import partial
 from optparse import OptionParser
 from pathlib import Path
-from shutil import copyfile
+from shutil import copyfile, copytree
 from urllib.parse import parse_qs, urlparse
 
 # Don't remove this line.  The idna encoding
@@ -700,11 +700,19 @@ class webEngine(QWebEngineView):
             import zipfile
 
             if getattr(sys, "frozen", False):
-                folderPath = sys._MEIPASS
+                zipFolderPath = sys._MEIPASS
             else:
-                folderPath = os.path.dirname(pathlib.Path(__file__))
-            with zipfile.ZipFile(os.path.join(folderPath, "web.zip"), "r") as zip_ref:
+                zipFolderPath = os.path.dirname(pathlib.Path(__file__))
+            with zipfile.ZipFile(
+                os.path.join(zipFolderPath, "web.zip"), "r"
+            ) as zip_ref:
                 zip_ref.extractall(folderpath)
+            for dir in ["css", "js", "misc", "vendor"]:
+                copytree(
+                    os.path.join(zipFolderPath, "static", dir),
+                    os.path.join(folderpath, dir),
+                    dirs_exist_ok=True,
+                )
             # QMessageBox.about(self, "Information", "Export done!")
         except:
             import traceback
