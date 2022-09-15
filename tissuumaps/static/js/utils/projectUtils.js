@@ -312,7 +312,9 @@ projectUtils.loadProjectFileFromServer = function(path) {
     }
     */
     document.getElementById("divMarkersDownloadButtons").innerHTML = "";
-
+    if (state.backgroundColor) {
+        $(".openseadragon-canvas")[0].style.backgroundColor=state.backgroundColor;
+    }
     if (state.plugins) {
         state.plugins.forEach(function(pluginName) {
             pluginUtils.addPlugin(pluginName);
