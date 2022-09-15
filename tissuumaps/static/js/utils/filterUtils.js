@@ -446,7 +446,14 @@ filterUtils.setCompositeOperation = function(restart) {
     if (newCompositeMode == "collection") {
         tmapp["ISS_viewer"].collectionMode = true;
         newCompositeMode = "lighter";
-        tmapp["ISS_viewer"].world.arrange({tileSize: 1, tileMargin: 0.1});
+        var collectionLayout = {
+            tileSize: 1, tileMargin: 0.1,
+            columns: Math.ceil(Math.sqrt(tmapp.layers.length))
+        }
+        if (projectUtils._activeState["collectionLayout"] !== undefined) {
+            collectionLayout = projectUtils._activeState["collectionLayout"];
+        }
+        tmapp["ISS_viewer"].world.arrange(collectionLayout);
         var inputs = document.querySelectorAll(".visible-layers");
         for(var i = 0; i < inputs.length; i++) {
             inputs[i].checked = false;
