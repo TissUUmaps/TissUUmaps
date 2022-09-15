@@ -210,7 +210,7 @@ def h5ad_to_tmap(basedir, path, library_id=None):
             return False
 
     outputFolder = os.path.join(basedir, path) + "_files"
-    relOutputFolder = os.path.basename(path) + "_files/"
+    relOutputFolder = os.path.basename(path) + "_files"
     os.makedirs(os.path.join(outputFolder, "csv/var"), exist_ok=True)
     os.makedirs(os.path.join(outputFolder, "csv/obs"), exist_ok=True)
 
