@@ -36,6 +36,7 @@ import json
 import os
 import pathlib
 import random
+import re
 import socket
 import string
 import subprocess
@@ -595,7 +596,10 @@ class webEngine(QWebEngineView):
                         if isImg:
                             imgFiles += [s for s in state[path[0]]]
                             state[path[0]] = [
-                                "data/images/" + os.path.basename(s)
+                                "data/images/"
+                                + os.path.basename(
+                                    s.replace("/", "_").replace("\\", "_")
+                                )
                                 for s in state[path[0]]
                             ]
                         else:
@@ -611,7 +615,7 @@ class webEngine(QWebEngineView):
                         if isImg:
                             imgFiles += [state[path[0]]]
                             state[path[0]] = "data/images/" + os.path.basename(
-                                state[path[0]]
+                                state[path[0]].replace("/", "_").replace("\\", "_")
                             )
                         else:
                             otherFiles += [state[path[0]]]
@@ -670,9 +674,25 @@ class webEngine(QWebEngineView):
                 image = image.replace(".dzi", "")
                 views.ImageConverter(
                     os.path.join(previouspath, image),
-                    os.path.join(folderpath, "data/images", os.path.basename(image)),
+                    os.path.join(
+                        folderpath,
+                        "data/images",
+                        os.path.basename(image.replace("/", "_").replace("\\", "_")),
+                    ),
                 ).convertToDZI()
             for file in otherFiles:
+                print(file, previouspath)
+                m = re.match(
+                    r"(.*)\.h5ad_files(\/*|\\*)csv(\/*|\\*)(obs|var)(\/*|\\*)(.*).csv",
+                    file,
+                )
+                if m is not None:
+                    try:
+                        views.h5ad_csv(
+                            previouspath + m.group(1), m.group(4), m.group(6)
+                        )
+                    except:
+                        pass
                 copyfile(
                     os.path.join(previouspath, file),
                     os.path.join(folderpath, "data/files", os.path.basename(file)),
