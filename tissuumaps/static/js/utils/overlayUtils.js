@@ -576,7 +576,7 @@ overlayUtils.savePNG=function() {
         var svg = new Blob([svgString], {type: "image/svg+xml;charset=utf-8"});
         var url = DOMURL.createObjectURL(svg);
         img.onload = function() {
-            ctx.drawImage(img, 0, 0);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             resolve(ctx);
             DOMURL.revokeObjectURL(url);
         };
