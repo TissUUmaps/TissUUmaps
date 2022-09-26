@@ -46,6 +46,13 @@ Spot_Inspector.init = function (container) {
   row0.style.padding = "3px";
   row0.style.marginTop = "8px";
 
+  row01 = HTMLElementUtils.createElement({
+    kind: "p",
+    extraAttributes: { class: "" },
+  });
+  row01.innerHTML =
+    "<i>You can use existing layers or load a group of images from the project folder.</i>";
+
   row1 = HTMLElementUtils.createRow({});
   col11 = HTMLElementUtils.createColumn({ width: 12 });
   label112 = HTMLElementUtils.createElement({
@@ -160,14 +167,14 @@ Spot_Inspector.init = function (container) {
   row5 = HTMLElementUtils.createRow({});
   col51 = HTMLElementUtils.createColumn({ width: 12 });
   button511 = HTMLElementUtils.createButton({
-    extraAttributes: { class: "btn btn-primary" },
+    extraAttributes: { class: "btn btn-secondary btn-sm" },
   });
-  button511.innerText = "Import folder of images into layers";
+  button511.innerHTML = "Import folder of images into layers <i>(optional)</i>";
 
   button511.addEventListener("click", (event) => {
     interfaceUtils
       .prompt(
-        "Give the path format of your images, use * for numbers:",
+        "<i>This will replace all layers of the current project.</i><br/>Give the path format of your images, use * for numbers:",
         "Round*_*",
         "Import images into layers"
       )
@@ -184,6 +191,13 @@ Spot_Inspector.init = function (container) {
   row8.style.borderBottom = "1px solid #aaa";
   row8.style.marginTop = "8px";
   row8.style.padding = "3px";
+
+  row81 = HTMLElementUtils.createElement({
+    kind: "p",
+    extraAttributes: { class: "" },
+  });
+  row81.innerHTML =
+    '<i>If you want to visualize markers on top of the image, you need to have a csv column for successive {row} values separated by semi-colons, and a csv column for successive {col} values separated by semi-colons (e.g. "1;2;3;4" and "C;T;G;A" for layers in the format Round1_C.tif</i>';
 
   row9 = HTMLElementUtils.createRow({});
   col91 = HTMLElementUtils.createColumn({ width: 12 });
@@ -265,6 +279,7 @@ Spot_Inspector.init = function (container) {
 
   container.innerHTML = "";
   container.appendChild(row0);
+  container.appendChild(row01);
   container.appendChild(row5);
   row5.appendChild(col51);
   col51.appendChild(button511);
@@ -290,6 +305,7 @@ Spot_Inspector.init = function (container) {
   col61.appendChild(select611);
 
   container.appendChild(row8);
+  container.appendChild(row81);
 
   container.appendChild(row9);
   row9.appendChild(col91);

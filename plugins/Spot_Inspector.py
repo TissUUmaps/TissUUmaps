@@ -78,7 +78,11 @@ class Plugin:
         return dst
 
     def getPlot(self, outputFields, tiles, markers, bbox, use_raw, show_trace):
-
+        plt.style.use(self.style)
+        if self.style == "dark_backround":
+            grid_color = "white"
+        else:
+            grid_color = "red"
         singleWidth = tiles[0]["tile"].width
         singleHeight = tiles[0]["tile"].height
         im = self.getConcat(outputFields, tiles, use_raw)
@@ -95,7 +99,10 @@ class Plugin:
             self.cmap = "Greys_r"
         if not use_raw and self.cmap is not None:
             im = im.convert("L")
-        imcolor = plt.imshow(im.__array__(), cmap=plt.get_cmap(self.cmap))
+        try:
+            imcolor = plt.imshow(im.__array__(), cmap=plt.get_cmap(self.cmap))
+        except:
+            imcolor = plt.imshow(im, cmap=plt.get_cmap(self.cmap))
         if self.cmap is not None:
             # create an axes on the right side of ax. The width of cax will be 5%
             # of ax and the padding between cax and ax will be fixed at 0.05 inch.
@@ -112,9 +119,9 @@ class Plugin:
             plt.colorbar(imcolor, cax=cax)
 
         for xIndex in range(len(outputFields[1]) + 1):
-            ax.axvline(x=singleWidth * xIndex - 0.5, color="white", linewidth=1)
+            ax.axvline(x=singleWidth * xIndex - 0.5, color=grid_color, linewidth=1)
         for yIndex in range(len(outputFields[0]) + 1):
-            ax.axhline(y=singleHeight * yIndex - 0.5, color="white", linewidth=1)
+            ax.axhline(y=singleHeight * yIndex - 0.5, color=grid_color, linewidth=1)
 
         for marker in markers:
             try:
@@ -176,9 +183,10 @@ class Plugin:
         )
         ax.set_yticklabels(outputFields[0], rotation=90, va="center")
         ax.tick_params(axis="both", which="both", length=0)
+        ax.grid(False)
+        ax.minorticks_off()
         plt.tight_layout()
         buf = PILBytesIO()
-        plt.style.use("dark_background")
 
         fig.savefig(buf, bbox_inches="tight")
         fig.clf()
@@ -200,6 +208,7 @@ class Plugin:
             self.marker_row = jsonParam["marker_row"]
             self.marker_col = jsonParam["marker_col"]
             self.figureSize = jsonParam["figureSize"]
+            self.style = "dark_background"
             if "cmap" in jsonParam.keys():
                 self.cmap = jsonParam["cmap"]
             else:
