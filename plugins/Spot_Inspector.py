@@ -41,10 +41,22 @@ class Plugin:
         path = path.replace(".dzi", "")
         if path[0] == "\\" or path[0] == "/":
             path = path[1:]
+        if "__p" in path:
+            path, page = path.split("__p")
+            page = int(page)
+        else:
+            page = None
         slide = tv._get_slide(path)
         try:
             with slide.tileLock:
-                tile = slide.osr.read_region((bbox[0], bbox[1]), 0, (bbox[2], bbox[3]))
+                if page is not None:
+                    tile = slide.osr.read_region(
+                        (bbox[0], bbox[1]), 0, (bbox[2], bbox[3]), page=page
+                    )
+                else:
+                    tile = slide.osr.read_region(
+                        (bbox[0], bbox[1]), 0, (bbox[2], bbox[3])
+                    )
         except ValueError:
             # Invalid level or coordinates
             logging.error("ValueError, aborting.")
@@ -79,7 +91,7 @@ class Plugin:
 
     def getPlot(self, outputFields, tiles, markers, bbox, use_raw, show_trace):
         plt.style.use(self.style)
-        if self.style == "dark_backround":
+        if self.style == "dark_background":
             grid_color = "white"
         else:
             grid_color = "red"
@@ -248,7 +260,6 @@ class Plugin:
                 layers, key=lambda x: list(re.match(regexp_format, x["name"]).groups())
             ):
                 globalpath = os.path.abspath(os.path.join(self.app.basedir, path))
-
                 # Get coordinate index of tile in output
                 tileCoord = re.match(regexp_format, layer["name"])
                 if invert_row_col:
