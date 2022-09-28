@@ -1,21 +1,26 @@
-import glob
-import os
-from io import BytesIO
+try:
+    import glob
+    import os
+    from io import BytesIO
 
-import matplotlib
-from flask import abort, make_response
-from PIL import Image
+    import matplotlib
+    from flask import abort, make_response
+    from PIL import Image
 
-matplotlib.use("Agg")
+    matplotlib.use("Agg")
 
-import base64
-import logging
-from urllib.parse import unquote
+    import base64
+    import logging
+    import re
+    from urllib.parse import unquote
 
-import matplotlib.pyplot as plt
-import pyvips
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import pyvips
 
-import tissuumaps.views as tv
+    import tissuumaps.views as tv
+except:
+    pass
 
 
 class PILBytesIO(BytesIO):
@@ -28,49 +33,109 @@ class Plugin:
     def __init__(self, app):
         self.app = app
 
-    def getTile(self, image, bbox):
+    def getTileRaw(self, image, bbox):
         tile = image.crop(bbox[0], bbox[1], bbox[2], bbox[3])
         return tile
 
-    def getConcat(self, tiles, rounds, channels):
-        tilesArray = []
-        for row, round in enumerate(rounds):
-            for col, channel in enumerate(channels):
-                tilesArray.append(tiles[round][channel])
-        return pyvips.Image.arrayjoin(tilesArray, across=len(channels))
+    def getTile(self, path, bbox):
+        path = path.replace(".dzi", "")
+        if path[0] == "\\" or path[0] == "/":
+            path = path[1:]
+        slide = tv._get_slide(path)
+        try:
+            with slide.tileLock:
+                tile = slide.osr.read_region((bbox[0], bbox[1]), 0, (bbox[2], bbox[3]))
+        except ValueError:
+            # Invalid level or coordinates
+            logging.error("ValueError, aborting.")
+            abort(500, "ValueError, aborting.")
+        return tile
 
-    def getPlot(self, tiles, rounds, channels, markers, bbox):
-        singleWidth = tiles[rounds[0]][channels[0]].width
-        singleHeight = tiles[rounds[0]][channels[0]].height
-        im = self.getConcat(tiles, rounds, channels)  # .convert("L")
-        figureRatio = (len(channels) + 2) / len(rounds)
-        fig = plt.figure(
-            figsize=(self.figureSize * figureRatio, self.figureSize), dpi=80
-        )
+    def getConcat(self, outputFields, tiles, use_raw):
+        singleWidth = tiles[0]["tile"].width
+        singleHeight = tiles[0]["tile"].height
+
+        width = len(outputFields[1]) * singleWidth
+        height = len(outputFields[0]) * singleHeight
+
+        if use_raw:
+            dst = Image.new("I", (width, height))
+        else:
+            dst = Image.new("RGB", (width, height))
+        for tile in tiles:
+            try:
+                if use_raw:
+                    tile["tile"] = Image.fromarray(tile["tile"].__array__())
+                dst.paste(
+                    tile["tile"],
+                    box=(
+                        tile["coord"][1] * singleWidth,
+                        tile["coord"][0] * singleHeight,
+                    ),
+                )
+            except:
+                pass
+        return dst
+
+    def getPlot(self, outputFields, tiles, markers, bbox, use_raw, show_trace):
+        plt.style.use(self.style)
+        if self.style == "dark_backround":
+            grid_color = "white"
+        else:
+            grid_color = "red"
+        singleWidth = tiles[0]["tile"].width
+        singleHeight = tiles[0]["tile"].height
+        im = self.getConcat(outputFields, tiles, use_raw)
+        print(im, im.getextrema())
+
+        figureRatio = (im.width + singleWidth / 2) / (im.height + singleHeight / 2)
+        if figureRatio > 1:
+            figureSize = (self.figureSize, self.figureSize / figureRatio)
+        else:
+            figureSize = (self.figureSize * figureRatio, self.figureSize)
+        fig = plt.figure(dpi=80, figsize=figureSize)
         ax = fig.add_subplot(111)
-        imcolor = plt.imshow(im, cmap=plt.get_cmap(self.cmap))
+        if use_raw and self.cmap is None:
+            self.cmap = "Greys_r"
+        if not use_raw and self.cmap is not None:
+            im = im.convert("L")
+        try:
+            imcolor = plt.imshow(im.__array__(), cmap=plt.get_cmap(self.cmap))
+        except:
+            imcolor = plt.imshow(im, cmap=plt.get_cmap(self.cmap))
+        if self.cmap is not None:
+            # create an axes on the right side of ax. The width of cax will be 5%
+            # of ax and the padding between cax and ax will be fixed at 0.05 inch.
+            # divider = make_axes_locatable(ax)
+            # cax = divider.append_axes("right", size=0.2, pad=0.05)
+            cax = fig.add_axes(
+                [
+                    ax.get_position().x1 + 0.1,
+                    ax.get_position().y0,
+                    0.03 / figureRatio**0.5,
+                    ax.get_position().height,
+                ]
+            )
+            plt.colorbar(imcolor, cax=cax)
 
-        plt.colorbar(imcolor, fraction=0.036, pad=0.05)
-
-        for xIndex in range(len(channels) + 1):
-            ax.axvline(x=singleWidth * xIndex - 0.5, color="red", linewidth=1)
-        for yIndex in range(len(rounds) + 1):
-            ax.axhline(y=singleHeight * yIndex - 0.5, color="red", linewidth=1)
+        for xIndex in range(len(outputFields[1]) + 1):
+            ax.axvline(x=singleWidth * xIndex - 0.5, color=grid_color, linewidth=1)
+        for yIndex in range(len(outputFields[0]) + 1):
+            ax.axhline(y=singleHeight * yIndex - 0.5, color=grid_color, linewidth=1)
 
         for marker in markers:
             try:
                 x, y = [], []
-                if "rounds" in marker.keys():
-                    markerRounds = marker["rounds"].split(";")
-                    markerRounds = [rounds[int(m)] for m in markerRounds]
+                if self.marker_row in marker.keys():
+                    markerRounds = marker[self.marker_row].split(";")
+                    # markerRounds = [outputFields[0][int(m)] for m in markerRounds]
                 else:
-                    markerRounds = rounds
-                if "channels" in marker.keys():
-                    markerchannels = marker["channels"].split(";")
-                    markerchannels = [channels[int(m)] for m in markerchannels]
+                    markerRounds = outputFields[0]
+                if self.marker_col in marker.keys():
+                    markerchannels = marker[self.marker_col].split(";")
+                    # markerchannels = [outputFields[1][int(m)] for m in markerchannels]
                 else:
                     markerchannels = marker["letters"]
-
                 offset = (
                     marker["global_X_pos"] - bbox[0] - 0.5,
                     marker["global_Y_pos"] - bbox[1] - 0.5,
@@ -78,18 +143,24 @@ class Plugin:
                 for yIndex, (markerchannel, markerRound) in enumerate(
                     zip(markerchannels, markerRounds)
                 ):
-                    xIndex = channels.index(markerchannel)
-                    yIndex_ = rounds.index(markerRound)
+                    xIndex = outputFields[1].index(markerchannel)
+                    yIndex_ = outputFields[0].index(markerRound)
                     x.append(offset[0] + singleWidth * xIndex)
                     y.append(offset[1] + singleWidth * yIndex_)
+                if show_trace:
+                    line_ = "o-"
+                    marker_ = "x"
+                else:
+                    line_ = "o"
+                    marker_ = "o"
                 ax.plot(
                     x,
                     y,
-                    "o-",
+                    line_,
                     label=markerchannels,
                     color=marker["color"],
                     markersize=5,
-                    marker="x",
+                    marker=marker_,
                 )
             except:
                 import traceback
@@ -98,71 +169,124 @@ class Plugin:
                 pass
 
         ax.set_xticks(
-            [i * singleWidth + singleWidth / 2 - 0.5 for i, _ in enumerate(channels)]
+            [
+                i * singleWidth + singleWidth / 2 - 0.5
+                for i, _ in enumerate(outputFields[1])
+            ]
         )
-        ax.set_xticklabels([c.replace(".tif", "") for c in channels])
+        ax.set_xticklabels([c.replace(".tif", "") for c in outputFields[1]])
         ax.set_yticks(
-            [i * singleHeight + singleHeight / 2 - 0.5 for i, _ in enumerate(rounds)]
+            [
+                i * singleHeight + singleHeight / 2 - 0.5
+                for i, _ in enumerate(outputFields[0])
+            ]
         )
-        ax.set_yticklabels(rounds, rotation=90, va="center")
+        ax.set_yticklabels(outputFields[0], rotation=90, va="center")
         ax.tick_params(axis="both", which="both", length=0)
+        ax.grid(False)
+        ax.minorticks_off()
         plt.tight_layout()
-
         buf = PILBytesIO()
-        fig.savefig(buf)
+
+        fig.savefig(buf, bbox_inches="tight")
         fig.clf()
         plt.close()
         return buf
 
     def getMatrix(self, jsonParam):
-        if not jsonParam:
-            logging.error("No arguments, aborting.")
-            abort(500)
-        print(jsonParam)
-        bbox = jsonParam["bbox"]
-        layers = jsonParam["layers"]
-        path = jsonParam["path"]
-        markers = jsonParam["markers"]
+        try:
+            if not jsonParam:
+                logging.error("No arguments, aborting.")
+                abort(500, "No arguments, aborting.")
 
-        self.figureSize = jsonParam["figureSize"]
-        if "cmap" in jsonParam.keys():
-            self.cmap = jsonParam["cmap"]
-        else:
-            self.cmap = "Greys_r"
-        tiles = {}
-        rounds = jsonParam["order_rounds"]
-        channels = jsonParam["order_channels"]
-        if rounds is None or channels is None:
-            rounds = []
-            channels = []
+            bbox = jsonParam["bbox"]
+            show_trace = jsonParam["show_trace"]
+            layers = jsonParam["layers"]
+            path = jsonParam["path"]
+            markers = jsonParam["markers"]
+            use_raw = jsonParam["use_raw"]
+            self.marker_row = jsonParam["marker_row"]
+            self.marker_col = jsonParam["marker_col"]
+            self.figureSize = jsonParam["figureSize"]
+            self.style = "dark_background"
+            if "cmap" in jsonParam.keys():
+                self.cmap = jsonParam["cmap"]
+            else:
+                self.cmap = None
+            if self.cmap == "None":
+                self.cmap = None
+            layer_format = jsonParam["layer_format"]
+            if "{row}" not in layer_format:
+                layer_format = "{row}" + layer_format
+            if "{col}" not in layer_format:
+                layer_format = layer_format + "{col}"
+            invert_row_col = layer_format.index("{row}") > layer_format.index("{col}")
+            regexp_format = re.escape(layer_format)
+            for fieldName in ["\{row\}", "\{col\}"]:
+                regexp_format = regexp_format.replace(fieldName, "(.*)")
+            # Get all raws and cols sorted
+            outputFields = None
+            kept_layers = []
             for layer in layers:
-                round, channel = layer["name"].split("_")
-                if round not in rounds:
-                    rounds.append(round)
-                if channel not in channels:
-                    channels.append(channel)
+                tileCoord = re.match(regexp_format, layer["name"])
+                if tileCoord is None:
+                    continue
+                kept_layers.append(layer)
+                if invert_row_col:
+                    tileCoord = list(reversed(tileCoord.groups()))
+                else:
+                    tileCoord = list(tileCoord.groups())
+                if outputFields is None:
+                    outputFields = [[x] for x in tileCoord]
+                outputFields = [x + [y] for x, y in zip(outputFields, tileCoord)]
+            layers = kept_layers
 
-        for layer in layers:
-            globalpath = os.path.abspath(os.path.join(self.app.basedir, path))
-            image = pyvips.Image.new_from_file(
-                globalpath + "/" + layer["tileSource"].replace(".dzi", ""),
-                memory=False,
-                access="sequential",
-            )
-            round, channel = layer["name"].split("_")
-            if round not in tiles.keys():
-                tiles[round] = {}
-            tiles[round][channel] = self.getTile(image, bbox)
+            # Remove duplicates:
+            outputFields = [list(dict.fromkeys(fields)) for fields in outputFields]
+            tiles = []
+            for layer in sorted(
+                layers, key=lambda x: list(re.match(regexp_format, x["name"]).groups())
+            ):
+                globalpath = os.path.abspath(os.path.join(self.app.basedir, path))
 
-        plot = self.getPlot(tiles, rounds, channels, markers, bbox)
-        img_str = base64.b64encode(plot.getvalue())
-        resp = make_response(img_str)
-        return resp
+                # Get coordinate index of tile in output
+                tileCoord = re.match(regexp_format, layer["name"])
+                if invert_row_col:
+                    tileCoord = list(reversed(tileCoord.groups()))
+                else:
+                    tileCoord = list(tileCoord.groups())
+
+                tileCoord = [
+                    output.index(x) for output, x in zip(outputFields, tileCoord)
+                ]
+                try:
+                    if use_raw:
+                        image = pyvips.Image.new_from_file(
+                            globalpath + "/" + layer["tileSource"].replace(".dzi", ""),
+                            memory=False,
+                            access="random",
+                        )
+                        tile = self.getTileRaw(image, bbox)
+                    else:
+                        tile = self.getTile(path + "/" + layer["tileSource"], bbox)
+                    tiles.append({"coord": tileCoord, "tile": tile})
+                except:
+                    pass
+            plot = self.getPlot(outputFields, tiles, markers, bbox, use_raw, show_trace)
+
+            img_str = base64.b64encode(plot.getvalue())
+            resp = make_response(img_str)
+            return resp
+        except:
+            import traceback
+
+            resp = abort(500, traceback.format_exc())
+            return resp
 
     def importFolder(self, jsonParam):
         if not jsonParam:
             logging.error("No arguments, aborting.")
-            abort(500)
+            abort(500, "No arguments, aborting.")
         relativepath = unquote(jsonParam["path"])
         pathFormat = unquote(jsonParam["pathFormat"])
         if relativepath != "":
@@ -221,7 +345,7 @@ class Plugin:
             filePath = filePath.replace("\\", "/")
             if filePath[0] != "/":
                 filePath = "/" + filePath
-            layer = {"name": basename, "tileSource": filePath + ".dzi"}
+            layer = {"name": filePath, "tileSource": filePath + ".dzi"}
             layerFilter = [
                 {
                     "value": colors[channels.index(channel) % len(colors)],

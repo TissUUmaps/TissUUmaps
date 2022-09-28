@@ -1,4 +1,5 @@
 import logging
+import traceback
 import warnings
 
 try:
@@ -27,7 +28,8 @@ try:
 
 except ImportError:
     # dependency missing, issue a warning
-    logging.error("dependency not found, please install PyQt5 to enable gui")
+    logging.error("dependency not found, please install PyQt6 to enable gui")
+    logging.error(traceback.format_exc())
     import sys
 
     sys.exit()
@@ -141,8 +143,6 @@ class SelectPluginWindow(QDialog):
 
             self.getPlugins()
         except:
-            import traceback
-
             logging.error(traceback.format_exc())
 
     def getPlugins(self):
@@ -187,8 +187,6 @@ class SelectPluginWindow(QDialog):
                 model.appendRow(standardItem)
             self.listView.setModel(model)
         except:
-            import traceback
-
             try:
                 QMessageBox.warning(self, "Error", traceback.format_exc())
             except:
@@ -386,8 +384,6 @@ class MainWindow(QMainWindow):
                         "The new plugins will only be available after restarting TissUUmaps.",
                     )
         except:
-            import traceback
-
             logging.error(traceback.format_exc())
 
 
@@ -643,8 +639,6 @@ class webEngine(QWebEngineView):
                 for path in paths:
                     addRelativePath_aux(state, path, path[0] == "layers")
             except:
-                import traceback
-
                 logging.error(traceback.format_exc())
 
             return state
@@ -715,8 +709,6 @@ class webEngine(QWebEngineView):
                 )
             # QMessageBox.about(self, "Information", "Export done!")
         except:
-            import traceback
-
             logging.error(traceback.format_exc())
 
     @pyqtSlot(str)
@@ -757,8 +749,6 @@ class webEngine(QWebEngineView):
                 for path in paths:
                     addRelativePath_aux(state, path)
             except:
-                import traceback
-
                 logging.error(traceback.format_exc())
 
             return state
@@ -896,8 +886,6 @@ class webEngine(QWebEngineView):
         try:
             views._get_slide(imgPath)
         except:
-            import traceback
-
             logging.error(traceback.format_exc())
             QMessageBox.about(
                 self, "Error", "TissUUmaps did not manage to open this image."
