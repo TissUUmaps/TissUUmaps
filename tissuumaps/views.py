@@ -9,10 +9,14 @@ import io
 import json
 import logging
 import os
+import pathlib
+import re
+import sys
 import threading
 import time
 from collections import OrderedDict
 from functools import wraps
+from shutil import copyfile, copytree
 from threading import Lock
 from urllib.parse import parse_qs, unquote, urlparse
 
@@ -628,6 +632,128 @@ def h5ad_csv(path, type, filename):
     directory = f"{completePath}_files/csv/{type}/"
     filename = f"{filename}.csv"
     return send_from_directory(directory, filename)
+
+
+def exportToStatic(state, folderpath, previouspath):
+    imgFiles = []
+    otherFiles = []
+
+    def addRelativePath(state, relativePath):
+        nonlocal imgFiles, otherFiles
+
+        def addRelativePath_aux(state, path, isImg):
+            nonlocal imgFiles, otherFiles
+            if not path[0] in state.keys():
+                return
+            if len(path) == 1:
+                if path[0] not in state.keys():
+                    return
+                if isinstance(state[path[0]], list):
+                    if isImg:
+                        imgFiles += [s for s in state[path[0]]]
+                        state[path[0]] = [
+                            "data/images/"
+                            + os.path.basename(s.replace("/", "_").replace("\\", "_"))
+                            for s in state[path[0]]
+                        ]
+                    else:
+                        otherFiles += [relativePath + "/" + s for s in state[path[0]]]
+                        state[path[0]] = [
+                            "data/files/" + os.path.basename(s) for s in state[path[0]]
+                        ]
+
+                else:
+                    if isImg:
+                        imgFiles += [state[path[0]]]
+                        state[path[0]] = "data/images/" + os.path.basename(
+                            state[path[0]].replace("/", "_").replace("\\", "_")
+                        )
+                    else:
+                        otherFiles += [state[path[0]]]
+                        state[path[0]] = "data/files/" + os.path.basename(
+                            state[path[0]]
+                        )
+                return
+            else:
+                if path[0] not in state.keys():
+                    return
+                if isinstance(state[path[0]], list):
+                    for state_ in state[path[0]]:
+                        addRelativePath_aux(state_, path[1:], isImg)
+                else:
+                    addRelativePath_aux(state[path[0]], path[1:], isImg)
+
+        try:
+            relativePath = relativePath.replace("\\", "/")
+            paths = [
+                ["layers", "tileSource"],
+                ["markerFiles", "path"],
+                ["regionFiles", "path"],
+                ["regionFile"],
+            ]
+            for path in paths:
+                addRelativePath_aux(state, path, path[0] == "layers")
+        except:
+            import traceback
+
+            logging.error(traceback.format_exc())
+
+        return state
+
+    if not folderpath:
+        return {}
+    try:
+        relativePath = os.path.relpath(previouspath, os.path.dirname(folderpath))
+        state = addRelativePath(json.loads(state), relativePath)
+
+        with open(folderpath + "/project.tmap", "w") as f:
+            json.dump(state, f, indent=4)
+        os.makedirs(os.path.join(folderpath, "data/images"), exist_ok=True)
+        os.makedirs(os.path.join(folderpath, "data/files"), exist_ok=True)
+        for image in imgFiles:
+            image = image.replace(".dzi", "")
+            ImageConverter(
+                os.path.join(previouspath, image),
+                os.path.join(
+                    folderpath,
+                    "data/images",
+                    os.path.basename(image.replace("/", "_").replace("\\", "_")),
+                ),
+            ).convertToDZI()
+        for file in otherFiles:
+            print(file, previouspath)
+            m = re.match(
+                r"(.*)\.h5ad_files(\/*|\\*)csv(\/*|\\*)(obs|var)(\/*|\\*)(.*).csv",
+                file,
+            )
+            if m is not None:
+                try:
+                    h5ad_csv(previouspath + m.group(1), m.group(4), m.group(6))
+                except:
+                    pass
+            copyfile(
+                os.path.join(previouspath, file),
+                os.path.join(folderpath, "data/files", os.path.basename(file)),
+            )
+        import zipfile
+
+        if getattr(sys, "frozen", False):
+            zipFolderPath = sys._MEIPASS
+        else:
+            zipFolderPath = os.path.dirname(pathlib.Path(__file__))
+        with zipfile.ZipFile(os.path.join(zipFolderPath, "web.zip"), "r") as zip_ref:
+            zip_ref.extractall(folderpath)
+        for dir in ["css", "js", "misc", "vendor"]:
+            copytree(
+                os.path.join(zipFolderPath, "static", dir),
+                os.path.join(folderpath, dir),
+                dirs_exist_ok=True,
+            )
+        # QMessageBox.about(self, "Information", "Export done!")
+    except:
+        import traceback
+
+        logging.error(traceback.format_exc())
 
 
 def load_plugin(name):
