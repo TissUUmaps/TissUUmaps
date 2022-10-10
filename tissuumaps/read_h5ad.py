@@ -155,9 +155,15 @@ def h5ad_obs_to_csv(basedir, path, obsName):
             spatial_data, img_key=img_key, scale_factor=None
         )
         if "spatial" in adata.obsm:
-            obsdata["globalX"][adata.obs.library_id == library_id] *= scale_factor
-            obsdata["globalY"][adata.obs.library_id == library_id] *= scale_factor
-            obsdata["library_id"][adata.obs.library_id == library_id] = library_index
+            if "library_id" in adata.obs:
+                obsdata["globalX"][adata.obs.library_id == library_id] *= scale_factor
+                obsdata["globalY"][adata.obs.library_id == library_id] *= scale_factor
+                obsdata["library_id"][
+                    adata.obs.library_id == library_id
+                ] = library_index
+            else:
+                obsdata["globalX"] *= scale_factor
+                obsdata["globalY"] *= scale_factor
 
     obsdata.reset_index(drop=True).to_csv(
         os.path.join(outputFolder, "csv", "obs", obsName + ".csv")
@@ -188,10 +194,14 @@ def h5ad_var_to_csv(basedir, path, obsName):
             spatial_data, img_key=img_key, scale_factor=None
         )
         if "spatial" in adata.obsm:
-            lib_index = adata[:, obsName].obs.library_id == library_id
-            geneExp["globalX"][lib_index.reset_index(drop=True)] *= scale_factor
-            geneExp["globalY"][lib_index.reset_index(drop=True)] *= scale_factor
-            geneExp["library_id"][lib_index.reset_index(drop=True)] = library_index
+            if "library_id" in adata.obs:
+                lib_index = adata[:, obsName].obs.library_id == library_id
+                geneExp["globalX"][lib_index.reset_index(drop=True)] *= scale_factor
+                geneExp["globalY"][lib_index.reset_index(drop=True)] *= scale_factor
+                geneExp["library_id"][lib_index.reset_index(drop=True)] = library_index
+            else:
+                geneExp["globalX"] *= scale_factor
+                geneExp["globalY"] *= scale_factor
 
     geneExp.to_csv(os.path.join(outputFolder, "csv", "var", obsName + ".csv"))
 
