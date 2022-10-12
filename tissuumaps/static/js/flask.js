@@ -215,6 +215,17 @@ flask.server.addLayer = function (filename) {
     $(`#${modalUID}_modal`).modal('hide');
 }
 
+flask.server.loading = function (message) {
+    var loadingModal =null;
+    setTimeout(function() {
+        loadingModal=interfaceUtils.loadingModal(message);
+    },0);
+}
+
+flask.server.hideloading = function (message) {
+    $('#loadingModal').modal('hide');
+}
+
 function toggleNavbar(turn_on = null) {
     return false;
 }

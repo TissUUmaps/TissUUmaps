@@ -684,6 +684,7 @@ class webEngine(QWebEngineView):
 
         filename = os.path.basename(imgPath)
         path = os.path.dirname(imgPath)
+        self.page().runJavaScript("flask.server.loading('Opening image...');")
         self.load(QUrl(self.location + filename + "?path=" + path))
         self.mainWin.setWindowTitle("TissUUmaps - " + os.path.basename(folderpath))
         return True
