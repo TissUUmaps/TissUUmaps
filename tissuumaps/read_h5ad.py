@@ -1,5 +1,7 @@
 import copy
+import logging
 import os
+import string
 from enum import Enum
 from typing import Mapping, Optional, Tuple, Union
 
@@ -116,6 +118,11 @@ def numpy2vips(a):
     return vi
 
 
+def to_filename(key):
+    valid_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
+    return "".join(c if c in valid_chars else " " for c in key)
+
+
 import os
 
 import numpy as np
@@ -130,12 +137,31 @@ tmap_template = {
 h5ad_cache = {}
 
 
-def h5ad_obs_to_csv(basedir, path, obsName):
-    if os.path.join(basedir, path) in h5ad_cache.keys():
-        adata = h5ad_cache[os.path.join(basedir, path)]
+def read_h5ad(filename, cache=True):
+    filename = filename.replace("\\", "/")
+    if not cache and filename in h5ad_cache.keys():
+        del h5ad_cache[filename]
+    if filename in h5ad_cache.keys():
+        logging.info("H5AD file in cache: " + filename)
+        adata = h5ad_cache[filename]
     else:
-        adata = anndata.read_h5ad(os.path.join(basedir, path))
-        h5ad_cache[os.path.join(basedir, path)] = adata
+        logging.info("H5AD file not in cache: loading " + filename)
+        adata = anndata.read_h5ad(filename, backed="r")
+        # Cleaning var / obs names that can not be in file names:
+        logging.info("Cleaning var and obs names to store as files")
+        adata.var_names = [to_filename(key) for key in adata.var_names]
+        for key in adata.obs.keys():
+            clean_key = to_filename(key)
+            if key != clean_key:
+                adata.obs[clean_key] = adata.obs[key]
+                del adata.obs[key]
+        h5ad_cache[filename] = adata
+        logging.info("Loading AnnData object done.")
+    return adata
+
+
+def h5ad_obs_to_csv(basedir, path, obsName):
+    adata = read_h5ad(os.path.join(basedir, path))
     img_key = "hires"
     outputFolder = os.path.join(basedir, path) + "_files"
 
@@ -171,11 +197,7 @@ def h5ad_obs_to_csv(basedir, path, obsName):
 
 
 def h5ad_var_to_csv(basedir, path, obsName):
-    if os.path.join(basedir, path) in h5ad_cache.keys():
-        adata = h5ad_cache[os.path.join(basedir, path)]
-    else:
-        adata = anndata.read_h5ad(os.path.join(basedir, path))
-        h5ad_cache[os.path.join(basedir, path)] = adata
+    adata = read_h5ad(os.path.join(basedir, path))
     img_key = "hires"
     outputFolder = os.path.join(basedir, path) + "_files"
 
@@ -207,11 +229,7 @@ def h5ad_var_to_csv(basedir, path, obsName):
 
 
 def h5ad_to_tmap(basedir, path, library_id=None):
-    if False:  # os.path.join(basedir, path) in h5ad_cache.keys():
-        adata = h5ad_cache[os.path.join(basedir, path)]
-    else:
-        adata = anndata.read_h5ad(os.path.join(basedir, path))
-        h5ad_cache[os.path.join(basedir, path)] = adata
+    adata = read_h5ad(os.path.join(basedir, path), cache=False)
 
     def is_numeric_dtype(object):
         try:
