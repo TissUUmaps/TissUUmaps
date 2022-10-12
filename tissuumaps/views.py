@@ -620,13 +620,7 @@ def h5ad_csv(path, type, filename, ext):
     filename = unquote(filename)
     csvPath = f"{completePath}_files/csv/{type}/{filename}.csv"
     generate_csv = True
-    print("os.path.isfile(csvPath)", os.path.isfile(csvPath))
     if os.path.isfile(csvPath):
-        print(
-            os.path.getmtime(completePath) > os.path.getmtime(csvPath),
-            os.path.getmtime(completePath),
-            os.path.getmtime(csvPath),
-        )
         if os.path.getmtime(completePath) > os.path.getmtime(csvPath):
             # In this case, the h5ad file has been recently modified and the csv file is
             # stale, so it must be regenerated.
@@ -736,7 +730,6 @@ def exportToStatic(state, folderpath, previouspath):
                 ),
             ).convertToDZI()
         for file in otherFiles:
-            print(file, previouspath)
             m = re.match(
                 r"(.*)\.(h5ad|adata)_files(\/*|\\*)csv(\/*|\\*)(obs|var)(\/*|\\*)(.*).csv",
                 file,
