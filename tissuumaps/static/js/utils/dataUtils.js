@@ -178,23 +178,28 @@ dataUtils.updateViewOptions = function(data_id, force_reload_all){
             while (len--) { min = +arr[len] < min ? +arr[len] : min; }
             return min;
         }
-        minX = getMin(data_obj["_processeddata"][data_obj["_X"]]);
-        maxX = getMax(data_obj["_processeddata"][data_obj["_X"]]);
-        minY = getMin(data_obj["_processeddata"][data_obj["_Y"]]);
-        maxY = getMax(data_obj["_processeddata"][data_obj["_Y"]]);
-        if (minX <0 || maxX < 500) {
-            let arr = data_obj["_processeddata"][data_obj["_X"]];
-            for (let i = 0; i < arr.length; ++i) {
-                arr[i] = 5000 * (arr[i] - minX) / (maxX - minX);
+        var minX = getMin(data_obj["_processeddata"][data_obj["_X"]]);
+        var maxX = getMax(data_obj["_processeddata"][data_obj["_X"]]);
+        var minY = getMin(data_obj["_processeddata"][data_obj["_Y"]]);
+        var maxY = getMax(data_obj["_processeddata"][data_obj["_Y"]]);
+        if (minX <0 || maxX < 500 || minY <0 || maxY < 500) {
+            var markerTransform;
+            if (maxX - minX > maxY - minY) {
+                markerTransform = 5000 / (maxX - minX);
             }
-            maxX = getMax(arr);
-        }
-        if (minY <0 || maxY < 500) {
-            let arr = data_obj["_processeddata"][data_obj["_Y"]];
-            for (let i = 0; i < arr.length; ++i) {
-                arr[i] = 5000 * (arr[i] - minY) / (maxY - minY);
+            else {
+                markerTransform = 5000 / (maxY - minY);
             }
-            maxY = getMax(arr);
+            let arrX = data_obj["_processeddata"][data_obj["_X"]];
+            for (let i = 0; i < arrX.length; ++i) {
+                arrX[i] = markerTransform * (arrX[i] - minX);
+            }
+            maxX = getMax(arrX);
+            let arrY = data_obj["_processeddata"][data_obj["_Y"]];
+            for (let i = 0; i < arrY.length; ++i) {
+                arrY[i] = markerTransform * (arrY[i] - minY);
+            }
+            maxY = getMax(arrY);
         }
         // We load an empty image at the size of the data.
         if (tmapp["ISS_viewer"].world.getItemCount() > 0) {
