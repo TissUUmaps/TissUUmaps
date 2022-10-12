@@ -586,17 +586,21 @@ def tile_asso(path, associated_name, level, col, row, format):
     return resp
 
 
-@app.route("/<path:filename>.h5ad")
+@app.route("/<path:filename>.<any(h5ad, adata):ext>")
 @requires_auth
-def h5ad(filename):
+def h5ad(filename, ext):
     path = request.args.get("path")
     if not path:
         path = "./"
-    completePath = os.path.abspath(os.path.join(app.basedir, path, filename) + ".h5ad")
+    completePath = os.path.abspath(
+        os.path.join(app.basedir, path, filename) + "." + ext
+    )
     # Check if a .h5ad file exists:
     if not os.path.isfile(completePath):
         abort(404)
-    state = read_h5ad.h5ad_to_tmap(app.basedir, os.path.join(path, filename) + ".h5ad")
+    state = read_h5ad.h5ad_to_tmap(
+        app.basedir, os.path.join(path, filename) + "." + ext
+    )
 
     plugins = [p["module"] for p in app.config["PLUGINS"]]
     return render_template(
@@ -608,29 +612,40 @@ def h5ad(filename):
     )
 
 
-@app.route("/<path:path>.h5ad_files/csv/<string:type>/<string:filename>.csv")
-def h5ad_csv(path, type, filename):
-    completePath = os.path.join(app.basedir, path + ".h5ad")
+@app.route(
+    "/<path:path>.<any(h5ad, adata):ext>_files/csv/<string:type>/<string:filename>.csv"
+)
+def h5ad_csv(path, type, filename, ext):
+    completePath = os.path.join(app.basedir, path + "." + ext)
     filename = unquote(filename)
     csvPath = f"{completePath}_files/csv/{type}/{filename}.csv"
     generate_csv = True
+    print("os.path.isfile(csvPath)", os.path.isfile(csvPath))
     if os.path.isfile(csvPath):
+        print(
+            os.path.getmtime(completePath) > os.path.getmtime(csvPath),
+            os.path.getmtime(completePath),
+            os.path.getmtime(csvPath),
+        )
         if os.path.getmtime(completePath) > os.path.getmtime(csvPath):
             # In this case, the h5ad file has been recently modified and the csv file is
             # stale, so it must be regenerated.
             generate_csv = True
         else:
             generate_csv = False
+    logging.info("Generate_csv: " + str(generate_csv))
     if generate_csv:
         if type == "obs":
-            read_h5ad.h5ad_obs_to_csv(app.basedir, path + ".h5ad", filename)
+            read_h5ad.h5ad_obs_to_csv(app.basedir, path + "." + ext, filename)
         elif type == "var":
-            read_h5ad.h5ad_var_to_csv(app.basedir, path + ".h5ad", filename)
+            read_h5ad.h5ad_var_to_csv(app.basedir, path + "." + ext, filename)
+        elif type == "uns":
+            read_h5ad.h5ad_uns_to_csv(app.basedir, path + "." + ext, filename)
 
-    if not os.path.isfile(f"{completePath}_files/csv/{type}/{filename}.csv"):
+    if not os.path.isfile(csvPath):
         abort(404)
-    directory = f"{completePath}_files/csv/{type}/"
-    filename = f"{filename}.csv"
+    directory = os.path.dirname(csvPath)
+    filename = os.path.basename(csvPath)
     return send_from_directory(directory, filename)
 
 
@@ -723,12 +738,14 @@ def exportToStatic(state, folderpath, previouspath):
         for file in otherFiles:
             print(file, previouspath)
             m = re.match(
-                r"(.*)\.h5ad_files(\/*|\\*)csv(\/*|\\*)(obs|var)(\/*|\\*)(.*).csv",
+                r"(.*)\.(h5ad|adata)_files(\/*|\\*)csv(\/*|\\*)(obs|var)(\/*|\\*)(.*).csv",
                 file,
             )
             if m is not None:
                 try:
-                    h5ad_csv(previouspath + m.group(1), m.group(4), m.group(6))
+                    h5ad_csv(
+                        previouspath + m.group(1), m.group(5), m.group(7), m.group(2)
+                    )
                 except:
                     pass
             copyfile(
