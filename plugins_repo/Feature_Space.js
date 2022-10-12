@@ -54,7 +54,7 @@ Feature_Space.init = function (container) {
   col31 = HTMLElementUtils.createColumn({ width: 12 });
   select311 = HTMLElementUtils.createElement({
     kind: "select",
-    id: "UMAP1",
+    id: "umap_0",
     extraAttributes: {
       class: "form-select form-select-sm",
       "aria-label": ".form-select-sm",
@@ -62,7 +62,7 @@ Feature_Space.init = function (container) {
   });
   label312 = HTMLElementUtils.createElement({
     kind: "label",
-    extraAttributes: { for: "UMAP1" },
+    extraAttributes: { for: "umap_0" },
   });
   label312.innerText = "Select Feature Space X";
 
@@ -70,7 +70,7 @@ Feature_Space.init = function (container) {
   col41 = HTMLElementUtils.createColumn({ width: 12 });
   select411 = HTMLElementUtils.createElement({
     kind: "select",
-    id: "UMAP2",
+    id: "umap_1",
     extraAttributes: {
       class: "form-select form-select-sm",
       "aria-label": ".form-select-sm",
@@ -78,7 +78,7 @@ Feature_Space.init = function (container) {
   });
   label412 = HTMLElementUtils.createElement({
     kind: "label",
-    extraAttributes: { for: "UMAP2" },
+    extraAttributes: { for: "umap_1" },
   });
   label412.innerText = "Select Feature Space Y";
 
@@ -137,8 +137,8 @@ Feature_Space.init = function (container) {
 
   button111.addEventListener("click", (event) => {
     interfaceUtils.cleanSelect("Feature_Space_dataset");
-    interfaceUtils.cleanSelect("UMAP1");
-    interfaceUtils.cleanSelect("UMAP2");
+    interfaceUtils.cleanSelect("umap_0");
+    interfaceUtils.cleanSelect("umap_1");
     interfaceUtils.cleanSelect("Feature_Space_histoKey");
 
     var datasets = Object.keys(dataUtils.data).map(function (e, i) {
@@ -155,14 +155,14 @@ Feature_Space.init = function (container) {
   select211.addEventListener("change", (event) => {
     Feature_Space._dataset = select211.value;
     if (!dataUtils.data[Feature_Space._dataset]) return;
-    interfaceUtils.cleanSelect("UMAP1");
+    interfaceUtils.cleanSelect("umap_0");
     interfaceUtils.addElementsToSelect(
-      "UMAP1",
+      "umap_0",
       dataUtils.data[Feature_Space._dataset]._csv_header
     );
-    interfaceUtils.cleanSelect("UMAP2");
+    interfaceUtils.cleanSelect("umap_1");
     interfaceUtils.addElementsToSelect(
-      "UMAP2",
+      "umap_1",
       dataUtils.data[Feature_Space._dataset]._csv_header
     );
     interfaceUtils.cleanSelect("Feature_Space_histoKey");
@@ -171,18 +171,18 @@ Feature_Space.init = function (container) {
       dataUtils.data[Feature_Space._dataset]._csv_header
     );
     if (
-      dataUtils.data[Feature_Space._dataset]._csv_header.indexOf("UMAP1") > 0
+      dataUtils.data[Feature_Space._dataset]._csv_header.indexOf("umap_0") > 0
     ) {
-      interfaceUtils.getElementById("UMAP1").value = "UMAP1";
+      interfaceUtils.getElementById("umap_0").value = "umap_0";
       var event = new Event("change");
-      interfaceUtils.getElementById("UMAP1").dispatchEvent(event);
+      interfaceUtils.getElementById("umap_0").dispatchEvent(event);
     }
     if (
-      dataUtils.data[Feature_Space._dataset]._csv_header.indexOf("UMAP2") > 0
+      dataUtils.data[Feature_Space._dataset]._csv_header.indexOf("umap_1") > 0
     ) {
-      interfaceUtils.getElementById("UMAP2").value = "UMAP2";
+      interfaceUtils.getElementById("umap_1").value = "umap_1";
       var event = new Event("change");
-      interfaceUtils.getElementById("UMAP2").dispatchEvent(event);
+      interfaceUtils.getElementById("umap_1").dispatchEvent(event);
     }
     if (
       dataUtils.data[Feature_Space._dataset]._csv_header.indexOf(
@@ -283,6 +283,8 @@ function copyDataset(dataIn, dataOut) {
       dataOut[key] = Feature_Space._UMAP2;
     }
   }
+  dataOut["_collectionItem_col"] = null;
+  dataOut["_collectionItem_fixed"] = 0;
   console.log("dataIn", "dataOut");
   console.log(JSON.stringify(dataIn["expectedHeader"]));
   console.log(JSON.stringify(dataOut["expectedHeader"]));
@@ -434,6 +436,7 @@ Feature_Space.run = function () {
         newwin.projectUtils._activeState = JSON.parse(
           JSON.stringify(projectUtils._activeState)
         );
+        newwin.filterUtils._compositeMode = filterUtils._compositeMode;
         try {
           newwin.interfaceUtils.generateDataTabUI({
             uid: Feature_Space._dataset,
@@ -599,7 +602,7 @@ Feature_Space.releaseHandler = function (event, win, mainwin) {
   );
   markerData[opacityPropertyName] = markerData[opacityPropertyName].map(
     function () {
-      return 0.3;
+      return 0.15;
     }
   );
   markerData[scalePropertyName] = markerData[scalePropertyName].map(
@@ -703,90 +706,93 @@ Feature_Space.moveHandler = function (event, win, mainwin) {
 };
 
 Feature_Space.analyzeRegion = function (points, win) {
-  var associatedPoints = [];
   Feature_Space._histogram = [];
   var pointsInside = [];
   var dataset = Feature_Space._dataset;
-  var allkeys = Object.keys(win.dataUtils.data[dataset]["_groupgarden"]);
   var countsInsideRegion = {};
-  for (var codeIndex in allkeys) {
-    var code = allkeys[codeIndex];
+  var options = {
+    globalCoords: true,
+    xselector: win.dataUtils.data[dataset]["_X"],
+    yselector: win.dataUtils.data[dataset]["_Y"],
+    dataset: dataset,
+  };
+  var imageWidth = win.OSDViewerUtils.getImageWidth();
+  var x0 = Math.min(
+    ...points.map(function (x) {
+      return x.x;
+    })
+  );
+  var y0 = Math.min(
+    ...points.map(function (x) {
+      return x.y;
+    })
+  );
+  var x3 = Math.max(
+    ...points.map(function (x) {
+      return x.x;
+    })
+  );
+  var y3 = Math.max(
+    ...points.map(function (x) {
+      return x.y;
+    })
+  );
+  var xselector = options.xselector;
+  var yselector = options.yselector;
+  var regionPath = win.document.getElementById("path_UMAP");
+  var svgovname = win.tmapp["object_prefix"] + "_svgov";
+  var svg = win.tmapp[svgovname]._svg;
+  var tmpPoint = svg.createSVGPoint();
 
-    var quadtree = win.dataUtils.data[dataset]["_groupgarden"][code];
-    var imageWidth = win.OSDViewerUtils.getImageWidth();
-    var x0 =
-      Math.min(
-        ...points.map(function (x) {
-          return x.x;
-        })
-      ) * imageWidth;
-    var y0 =
-      Math.min(
-        ...points.map(function (x) {
-          return x.y;
-        })
-      ) * imageWidth;
-    var x3 =
-      Math.max(
-        ...points.map(function (x) {
-          return x.x;
-        })
-      ) * imageWidth;
-    var y3 =
-      Math.max(
-        ...points.map(function (x) {
-          return x.y;
-        })
-      ) * imageWidth;
-    var options = {
-      globalCoords: true,
-      xselector: win.dataUtils.data[dataset]["_X"],
-      yselector: win.dataUtils.data[dataset]["_Y"],
-      dataset: dataset,
-    };
-    var xselector = options.xselector;
-    var yselector = options.yselector;
-    var imageWidth = win.OSDViewerUtils.getImageWidth();
-    var regionPath = win.document.getElementById("path_UMAP");
-    var svgovname = win.tmapp["object_prefix"] + "_svgov";
-    var svg = win.tmapp[svgovname]._svg;
-    var tmpPoint = svg.createSVGPoint();
-    var inputs = interfaceUtils._mGenUIFuncs.getGroupInputs(dataset, code);
-    var visible = "visible" in inputs ? inputs["visible"] : true;
-    if (visible) {
-      var pointInBbox = Feature_Space.searchTreeForPointsInBbox(
-        quadtree,
-        x0,
-        y0,
-        x3,
-        y3,
-        options
-      );
-      var markerData = win.dataUtils.data[dataset]["_processeddata"];
-      for (var d of pointInBbox) {
-        var x = markerData[xselector][d];
-        var y = markerData[yselector][d];
-        var key;
-        if (
-          win.regionUtils.globalPointInPath(
-            x / imageWidth,
-            y / imageWidth,
-            regionPath,
-            tmpPoint
-          )
-        ) {
-          if (Feature_Space._histoKey) {
-            key = markerData[Feature_Space._histoKey][d];
-          } else {
-            key = quadtree.treeName;
-          }
-          if (countsInsideRegion[key] === undefined) {
-            countsInsideRegion[key] = 0;
-          }
-          countsInsideRegion[key] += 1;
-          pointsInside.push(d);
+  var pointInBbox = [
+    ...Array(
+      win.dataUtils.data[dataset]["_processeddata"][xselector].length
+    ).keys(),
+  ];
+  var markerData = win.dataUtils.data[dataset]["_processeddata"];
+  var collectionItemIndex = win.glUtils._collectionItemIndex[dataset];
+  const collectionItemPropertyName =
+    win.dataUtils.data[dataset]["_collectionItem_col"];
+  const useCollectionItemFromMarker =
+    win.dataUtils.data[dataset]["_collectionItem_col"] != null;
+  const worldCount = win.tmapp["ISS_viewer"].world.getItemCount();
+  for (var d of pointInBbox) {
+    if (useCollectionItemFromMarker) {
+      LUTindex = markerData[collectionItemPropertyName][d];
+    } else {
+      LUTindex = collectionItemIndex;
+    }
+    LUTindex = LUTindex % worldCount;
+    const image = win.tmapp["ISS_viewer"].world.getItemAt(LUTindex);
+    var viewportCoord = image.imageToViewportCoordinates(
+      markerData[xselector][d],
+      markerData[yselector][d]
+    );
+    if (
+      viewportCoord.x < x0 ||
+      viewportCoord.x > x3 ||
+      viewportCoord.y < y0 ||
+      viewportCoord.y > y3
+    ) {
+      continue;
+    }
+    var key;
+    if (
+      win.regionUtils.globalPointInPath(
+        viewportCoord.x,
+        viewportCoord.y,
+        regionPath,
+        tmpPoint
+      )
+    ) {
+      if (Feature_Space._histoKey) {
+        key = markerData[Feature_Space._histoKey][d];
+        if (countsInsideRegion[key] === undefined) {
+          countsInsideRegion[key] = 0;
         }
       }
+      countsInsideRegion[key] += 1;
+      pointsInside.push(d);
     }
   }
   for (var key in countsInsideRegion) {
