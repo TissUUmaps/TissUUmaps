@@ -459,6 +459,8 @@ glUtils.loadMarkers = function(uid) {
     const useScaleFromMarker = dataUtils.data[uid]["_scale_col"] != null;
     const markerScaleFactor = dataUtils.data[uid]["_scale_factor"];
     
+    const markerCoordFactor = dataUtils.data[uid]["_coord_factor"];
+    
     const sectorsPropertyName = dataUtils.data[uid]["_pie_col"];
     const usePiechartFromMarker = dataUtils.data[uid]["_pie_col"] != null;
     if (dataUtils.data[uid]["_pie_dict"] && sectorsPropertyName) {
@@ -587,8 +589,8 @@ glUtils.loadMarkers = function(uid) {
                     shapeIndex = Math.max(0.0, Math.floor(Number(shapeIndex))) % numShapes;
                 }
 
-                bytedata_point[4 * i + 0] = markerData[xPosName][markerIndex];
-                bytedata_point[4 * i + 1] = markerData[yPosName][markerIndex];
+                bytedata_point[4 * i + 0] = markerData[xPosName][markerIndex] * markerCoordFactor;
+                bytedata_point[4 * i + 1] = markerData[yPosName][markerIndex] * markerCoordFactor;
                 bytedata_point[4 * i + 2] = lutIndex + Number(shapeIndex) * 4096.0;
                 bytedata_point[4 * i + 3] = useColorFromColormap ? Number(scalarValue)
                                                                  : Number("0x" + hexColor.substring(1,7));
