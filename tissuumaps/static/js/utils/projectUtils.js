@@ -339,6 +339,7 @@ projectUtils.loadProjectFileFromServer = function(path) {
     if (state.markerFiles) {
         state.markerFiles.forEach(function(markerFile, buttonIndex) {
             markerFile["fromButton"] = buttonIndex;
+            // For compatibility reasons:
             if (markerFile.expectedCSV) {
                 projectUtils.convertOldMarkerFile(markerFile);
                 state.hideTabs = true;

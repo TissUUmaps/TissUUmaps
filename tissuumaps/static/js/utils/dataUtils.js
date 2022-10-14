@@ -273,6 +273,7 @@ dataUtils.updateViewOptions = function(data_id, force_reload_all){
         interfaceUtils.alert("No size column selected. Impossible to update view.");return;
     }
     data_obj["_scale_factor"]=inputs["scale_factor"].value;
+    data_obj["_coord_factor"]=inputs["coord_factor"].value;
     // Use shape column
     data_obj["_shape_col"]=(radios["shape_col"].checked ? inputs["shape_col"].value : null);
     if (data_obj["_shape_col"]=="null") {

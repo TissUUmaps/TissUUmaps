@@ -753,6 +753,7 @@ interfaceUtils._mGenUIFuncs.getTabDropDowns = function(uid){
 
     allinputs["scale_col"]=interfaceUtils.getElementById(uid+"_scale-col");   
     allinputs["scale_factor"]=interfaceUtils.getElementById(uid+"_scale-factor");
+    allinputs["coord_factor"]=interfaceUtils.getElementById(uid+"_coord-factor");
     allinputs["pie_col"]=interfaceUtils.getElementById(uid+"_piechart-col");
     allinputs["pie_dict"]=interfaceUtils.getElementById(uid+"_piechart-dict-val");
     allinputs["shape_col"]=interfaceUtils.getElementById(uid+"_shape-col-value");
@@ -963,9 +964,11 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem1=function(){
             label221.innerText="Y coordinate";
             select222=HTMLElementUtils.createElement({"kind":"select", "id":generated+"_y-value", "extraAttributes":{ "class":"form-select form-select-sm", "aria-label":".form-select-sm"} });
 
-    /*row3=HTMLElementUtils.createRow({"id":generated+"_row-3"});
+    row3=HTMLElementUtils.createRow({"id":generated+"_row-3"});
         col30=HTMLElementUtils.createColumn({"width":4});
-            button300=HTMLElementUtils.createButton({"id":generated+"_delete_button","innerText":"Close tab","class":"btn btn-primary","eventListeners":{"click":(event)=>interfaceUtils._mGenUIFuncs.deleteTab(event)}})*/
+            label301=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":generated+"_coord-factor"}});
+            label301.innerHTML="Coordinate scale factor";
+            inputscalefactor=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_coord-factor","extraAttributes":{ "class":"form-text-input", "type":"number", "value":1, "min":0, "step":0.05}});            
 
     /*row0.appendChild(col01)
         col01.appendChild(div011)
@@ -987,11 +990,12 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem1=function(){
         col22.appendChild(label221);
         col22.appendChild(select222);
 
-    /*row3.appendChild(col30);
-        col30.appendChild(button300);*/
+    row3.appendChild(col30);
+        col30.appendChild(label301);
+        col30.appendChild(inputscalefactor);
 
 
-    return [row1,row2];///,row3];
+    return [row1,row2,row3];
 
 }
 
