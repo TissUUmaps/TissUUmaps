@@ -738,7 +738,10 @@ def exportToStatic(state, folderpath, previouspath):
             if m is not None:
                 try:
                     h5ad_csv(
-                        previouspath + m.group(1), m.group(5), m.group(7), m.group(2)
+                        previouspath + "/" + m.group(1),
+                        m.group(5),
+                        m.group(7),
+                        m.group(2),
                     )
                 except:
                     pass
