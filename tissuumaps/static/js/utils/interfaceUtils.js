@@ -2267,6 +2267,7 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
     if (!options.uid)
         options.uid=interfaceUtils._mGenUIFuncs.ctx.aUUID;
     var callback = function(e, params){
+        $('.chosen-select').not(e.target).val('').trigger('chosen:updated');
         projectUtils.applySettings(options.settings);
         var dataURL = params.selected;
         if (dataURL == "") return;
@@ -2323,6 +2324,7 @@ interfaceUtils.createDownloadButtonMarkers = function(options) {
     if (!options.uid)
         options.uid=interfaceUtils._mGenUIFuncs.ctx.aUUID;
     var callback = function(e){
+        $('.chosen-select').not(e.target).val('').trigger('chosen:updated');
         projectUtils.applySettings(options.settings);
         interfaceUtils.generateDataTabUI(options);
     }
