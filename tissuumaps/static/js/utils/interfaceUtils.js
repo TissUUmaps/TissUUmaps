@@ -2288,11 +2288,9 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
         })
     });
     interfaceUtils.createDownloadDropdown(downloadRow, options.title, callback, options.comment, dropdownOptions);
-    //var label = document.getElementById("label_ISS_csv");
     if (options.autoLoad) {
         setTimeout(function(){callback(null, {'selected':options["path"][0]})},500);
     }
-    //else { label.innerHTML = "Or import gene expression from CSV file:"; }
 }
 
 interfaceUtils.createDownloadButton = function(downloadRow, innerText, callback, comment) {
