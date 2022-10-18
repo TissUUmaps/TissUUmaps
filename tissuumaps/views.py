@@ -338,6 +338,7 @@ def index():
         return send_from_directory(directory, filename)
     return render_template(
         "tissuumaps.html",
+        plugins=[p["module"] for p in app.config["PLUGINS"]],
         isStandalone=app.config["isStandalone"],
         readOnly=app.config["READ_ONLY"],
     )
