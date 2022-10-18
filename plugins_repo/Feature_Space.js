@@ -205,11 +205,11 @@ Feature_Space.init = function (container) {
   });
   select711.addEventListener("change", (event) => {
     Feature_Space._histoKey = select711.value;
-    var pointsIn = Feature_Space.analyzeRegion(
+    /*var pointsIn = Feature_Space.analyzeRegion(
       Feature_Space._region,
       Feature_Space._regionWin
     );
-    Feature_Space.getHisto();
+    Feature_Space.getHisto();*/
   });
 
   button511.addEventListener("click", (event) => {
@@ -270,6 +270,8 @@ function copyDataset(dataIn, dataOut) {
   );
   dataOut["expectedHeader"]["X"] = Feature_Space._UMAP1;
   dataOut["expectedHeader"]["Y"] = Feature_Space._UMAP2;
+  dataOut["expectedRadios"]["collectionItem_col"] = false;
+  dataOut["expectedRadios"]["collectionItem_fixed"] = true;
   for (var key of Object.keys(dataIn)) {
     if (
       ["_X", "_Y", "expectedHeader", "expectedRadios", "_groupgarden"].indexOf(
@@ -285,254 +287,276 @@ function copyDataset(dataIn, dataOut) {
   }
   dataOut["_collectionItem_col"] = null;
   dataOut["_collectionItem_fixed"] = 0;
-  console.log("dataIn", "dataOut");
-  console.log(JSON.stringify(dataIn["expectedHeader"]));
-  console.log(JSON.stringify(dataOut["expectedHeader"]));
 }
 
 Feature_Space.run = function () {
   var op = tmapp["object_prefix"];
   var vname = op + "_viewer";
   var Feature_Space_Control = document.getElementById("Feature_Space_Control");
-  if (!Feature_Space_Control) {
-    Feature_Space_Control = document.createElement("iframe");
-    Feature_Space_Control.id = "Feature_Space_Control";
-    Feature_Space_Control.style.width = "100%";
-    Feature_Space_Control.style.height = "100%";
-    Feature_Space_Control.style.borderLeft = "1px solid #aaa";
-    Feature_Space_Control.style.display = "inline-block";
-    var elt = document.createElement("div");
-    elt.style.width = "40%";
-    elt.style.height = "100%";
-    elt.style.display = "inline-block";
-    elt.style.verticalAlign = "top";
-    elt.appendChild(Feature_Space_Control);
-    document.getElementById("ISS_viewer").appendChild(elt);
-    $(".openseadragon-container")[0].style.display = "inline-flex";
-    $(".openseadragon-container")[0].style.width = "60%";
+  if (Feature_Space_Control) {
+    Feature_Space.clear();
+  }
+  Feature_Space_Control = document.createElement("iframe");
+  Feature_Space_Control.id = "Feature_Space_Control";
+  Feature_Space_Control.style.width = "100%";
+  Feature_Space_Control.style.height = "100%";
+  Feature_Space_Control.style.borderLeft = "1px solid #aaa";
+  Feature_Space_Control.style.display = "inline-block";
+  var elt = document.createElement("div");
+  elt.style.width = "40%";
+  elt.style.height = "100%";
+  elt.style.display = "inline-block";
+  elt.style.verticalAlign = "top";
+  elt.appendChild(Feature_Space_Control);
+  document.getElementById("ISS_viewer").appendChild(elt);
+  $(".openseadragon-container")[0].style.display = "inline-flex";
+  $(".openseadragon-container")[0].style.width = "60%";
 
-    Feature_Space_Control.addEventListener("load", (ev) => {
-      Feature_Space_Control.classList.add("d-none");
-      var timeout = setTimeout(function () {
-        var newwin = Feature_Space_Control.contentWindow;
-        Feature_Space._newwin = newwin;
-        //OSD handlers are not registered manually they have to be registered
-        //using MouseTracker OSD objects
-        if (newwin.tmapp.ISS_viewer) {
-          clearInterval(timeout);
-        } else {
-          return;
+  Feature_Space_Control.addEventListener("load", (ev) => {
+    Feature_Space_Control.classList.add("d-none");
+    var timeout = setTimeout(function () {
+      var newwin = Feature_Space_Control.contentWindow;
+      Feature_Space._newwin = newwin;
+      //OSD handlers are not registered manually they have to be registered
+      //using MouseTracker OSD objects
+      if (newwin.tmapp.ISS_viewer) {
+        clearInterval(timeout);
+      } else {
+        return;
+      }
+      Feature_Space.getHisto();
+      Feature_Space._newwin.tmapp[
+        vname
+      ].viewport.preserveImageSizeOnResize = false;
+      Feature_Space._newwin.tmapp[vname].viewport.visibilityRatio = 1.0;
+      new Feature_Space._newwin.OpenSeadragon.MouseTracker({
+        element: Feature_Space._newwin.tmapp[vname].canvas,
+        moveHandler: (event) =>
+          Feature_Space.moveHandler(event, Feature_Space._newwin, window),
+      }).setTracking(true);
+
+      Feature_Space._newwin.tmapp["ISS_viewer"].addHandler(
+        "canvas-press",
+        (event) => {
+          Feature_Space.pressHandler(event, Feature_Space._newwin, window);
         }
-        Feature_Space.getHisto();
-        Feature_Space._newwin.tmapp[
-          vname
-        ].viewport.preserveImageSizeOnResize = false;
-        Feature_Space._newwin.tmapp[vname].viewport.visibilityRatio = 1.0;
-        new Feature_Space._newwin.OpenSeadragon.MouseTracker({
-          element: Feature_Space._newwin.tmapp[vname].canvas,
-          moveHandler: (event) =>
-            Feature_Space.moveHandler(event, Feature_Space._newwin, window),
-        }).setTracking(true);
-
-        Feature_Space._newwin.tmapp["ISS_viewer"].addHandler(
-          "canvas-press",
-          (event) => {
-            Feature_Space.pressHandler(event, Feature_Space._newwin, window);
-          }
-        );
-        Feature_Space._newwin.tmapp["ISS_viewer"].addHandler(
-          "canvas-release",
-          (event) => {
-            Feature_Space.releaseHandler(event, Feature_Space._newwin, window);
-          }
-        );
-        Feature_Space._newwin.tmapp["ISS_viewer"].addHandler(
-          "canvas-drag",
-          (event) => {
-            if (event.originalEvent.shiftKey) event.preventDefaultAction = true;
-          }
-        );
-        Feature_Space._newwin.tmapp["ISS_viewer"].addHandler(
-          "animation-finish",
-          function animationFinishHandler(event) {
-            Feature_Space._newwin.d3
-              .selectAll(".region_UMAP")
-              .selectAll("polyline")
-              .each(function (el) {
-                $(this).attr(
-                  "stroke-width",
-                  (2 * regionUtils._polygonStrokeWidth) /
-                    Feature_Space._newwin.tmapp["ISS_viewer"].viewport.getZoom()
-                );
-              });
-            Feature_Space._newwin.d3
-              .selectAll(".region_UMAP")
-              .selectAll("circle")
-              .each(function (el) {
-                $(this).attr(
-                  "r",
-                  (10 * regionUtils._handleRadius) /
-                    Feature_Space._newwin.tmapp["ISS_viewer"].viewport.getZoom()
-                );
-              });
-            Feature_Space._newwin.d3
-              .selectAll(".region_UMAP")
-              .each(function (el) {
-                $(this).attr(
-                  "stroke-width",
-                  (2 * regionUtils._polygonStrokeWidth) /
-                    Feature_Space._newwin.tmapp["ISS_viewer"].viewport.getZoom()
-                );
-              });
-          }
-        );
-
-        new OpenSeadragon.MouseTracker({
-          element: tmapp[vname].canvas,
-          moveHandler: (event) =>
-            Feature_Space.moveHandler(event, window, Feature_Space._newwin),
-        }).setTracking(true);
-
-        tmapp["ISS_viewer"].addHandler("canvas-press", (event) => {
-          Feature_Space.pressHandler(event, window, Feature_Space._newwin);
-        });
-        tmapp["ISS_viewer"].addHandler("canvas-release", (event) => {
-          Feature_Space.releaseHandler(event, window, Feature_Space._newwin);
-        });
-        tmapp["ISS_viewer"].addHandler("canvas-drag", (event) => {
+      );
+      Feature_Space._newwin.tmapp["ISS_viewer"].addHandler(
+        "canvas-release",
+        (event) => {
+          Feature_Space.releaseHandler(event, Feature_Space._newwin, window);
+        }
+      );
+      Feature_Space._newwin.tmapp["ISS_viewer"].addHandler(
+        "canvas-drag",
+        (event) => {
           if (event.originalEvent.shiftKey) event.preventDefaultAction = true;
-        });
-        tmapp["ISS_viewer"].addHandler(
-          "animation-finish",
-          function animationFinishHandler(event) {
-            d3.selectAll(".region_UMAP")
-              .selectAll("polyline")
-              .each(function (el) {
-                $(this).attr(
-                  "stroke-width",
-                  (2 * regionUtils._polygonStrokeWidth) /
-                    tmapp["ISS_viewer"].viewport.getZoom()
-                );
-              });
-            d3.selectAll(".region_UMAP")
-              .selectAll("circle")
-              .each(function (el) {
-                $(this).attr(
-                  "r",
-                  (10 * regionUtils._handleRadius) /
-                    tmapp["ISS_viewer"].viewport.getZoom()
-                );
-              });
-            d3.selectAll(".region_UMAP").each(function (el) {
+        }
+      );
+      Feature_Space._newwin.tmapp["ISS_viewer"].addHandler(
+        "animation-finish",
+        function animationFinishHandler(event) {
+          Feature_Space._newwin.d3
+            .selectAll(".region_UMAP")
+            .selectAll("polyline")
+            .each(function (el) {
+              $(this).attr(
+                "stroke-width",
+                (2 * regionUtils._polygonStrokeWidth) /
+                  Feature_Space._newwin.tmapp["ISS_viewer"].viewport.getZoom()
+              );
+            });
+          Feature_Space._newwin.d3
+            .selectAll(".region_UMAP")
+            .selectAll("circle")
+            .each(function (el) {
+              $(this).attr(
+                "r",
+                (10 * regionUtils._handleRadius) /
+                  Feature_Space._newwin.tmapp["ISS_viewer"].viewport.getZoom()
+              );
+            });
+          Feature_Space._newwin.d3
+            .selectAll(".region_UMAP")
+            .each(function (el) {
+              $(this).attr(
+                "stroke-width",
+                (2 * regionUtils._polygonStrokeWidth) /
+                  Feature_Space._newwin.tmapp["ISS_viewer"].viewport.getZoom()
+              );
+            });
+        }
+      );
+
+      new OpenSeadragon.MouseTracker({
+        element: tmapp[vname].canvas,
+        moveHandler: (event) =>
+          Feature_Space.moveHandler(event, window, Feature_Space._newwin),
+      }).setTracking(true);
+
+      tmapp["ISS_viewer"].addHandler("canvas-press", (event) => {
+        Feature_Space.pressHandler(event, window, Feature_Space._newwin);
+      });
+      tmapp["ISS_viewer"].addHandler("canvas-release", (event) => {
+        Feature_Space.releaseHandler(event, window, Feature_Space._newwin);
+      });
+      tmapp["ISS_viewer"].addHandler("canvas-drag", (event) => {
+        if (event.originalEvent.shiftKey) event.preventDefaultAction = true;
+      });
+      tmapp["ISS_viewer"].addHandler(
+        "animation-finish",
+        function animationFinishHandler(event) {
+          d3.selectAll(".region_UMAP")
+            .selectAll("polyline")
+            .each(function (el) {
               $(this).attr(
                 "stroke-width",
                 (2 * regionUtils._polygonStrokeWidth) /
                   tmapp["ISS_viewer"].viewport.getZoom()
               );
             });
-          }
-        );
-
-        newwin.projectUtils._activeState = JSON.parse(
-          JSON.stringify(projectUtils._activeState)
-        );
-        newwin.filterUtils._compositeMode = filterUtils._compositeMode;
-        try {
-          newwin.interfaceUtils.generateDataTabUI({
-            uid: Feature_Space._dataset,
-            name: "UMAP",
+          d3.selectAll(".region_UMAP")
+            .selectAll("circle")
+            .each(function (el) {
+              $(this).attr(
+                "r",
+                (10 * regionUtils._handleRadius) /
+                  tmapp["ISS_viewer"].viewport.getZoom()
+              );
+            });
+          d3.selectAll(".region_UMAP").each(function (el) {
+            $(this).attr(
+              "stroke-width",
+              (2 * regionUtils._polygonStrokeWidth) /
+                tmapp["ISS_viewer"].viewport.getZoom()
+            );
           });
-        } catch (error) {}
-        newwin.dataUtils.data[Feature_Space._dataset] = {};
-        copyDataset(
-          dataUtils.data[Feature_Space._dataset],
-          newwin.dataUtils.data[Feature_Space._dataset]
-        );
+        }
+      );
 
-        newwin.dataUtils.createMenuFromCSV(
-          Feature_Space._dataset,
-          newwin.dataUtils.data[Feature_Space._dataset]["_processeddata"]
-            .columns
-        );
+      newwin.projectUtils._activeState = JSON.parse(
+        JSON.stringify(projectUtils._activeState)
+      );
+      newwin.filterUtils._compositeMode = filterUtils._compositeMode;
+      try {
+        newwin.interfaceUtils.generateDataTabUI({
+          uid: Feature_Space._dataset,
+          name: "UMAP",
+        });
+      } catch (error) {}
+      newwin.dataUtils.data[Feature_Space._dataset] = {};
+      copyDataset(
+        dataUtils.data[Feature_Space._dataset],
+        newwin.dataUtils.data[Feature_Space._dataset]
+      );
 
-        let main_button = newwin.document.getElementById("ISS_collapse_btn");
-        main_button.classList.add("d-none");
-        newwin.interfaceUtils.toggleRightPanel();
-        let main_navbar = newwin.document.getElementsByTagName("nav")[0];
-        main_navbar.classList.add("d-none");
-        newwin.tmapp.ISS_viewer.close();
-        Feature_Space_Control.classList.remove("d-none");
-        newwin.document
-          .getElementsByClassName("navigator ")[0]
-          .classList.add("d-none");
-        setTimeout(function () {
-          var copySettings = function () {
-            setTimeout(function () {
-              copyDataset(
-                dataUtils.data[Feature_Space._dataset],
-                newwin.dataUtils.data[Feature_Space._dataset]
-              );
-              $(
-                "." +
-                  Feature_Space._dataset +
-                  "-marker-input, ." +
-                  Feature_Space._dataset +
-                  "-marker-hidden, ." +
-                  Feature_Space._dataset +
-                  "-marker-color, ." +
-                  Feature_Space._dataset +
-                  "-marker-shape"
-              )
-                .each(function (i, elt) {
-                  newwin.document.getElementById(elt.id).value = elt.value;
-                  newwin.document.getElementById(elt.id).checked = elt.checked;
-                })
-                .promise()
-                .done(function () {
-                  newwin.glUtils.loadMarkers(Feature_Space._dataset);
-                  newwin.glUtils.draw();
-                });
-            }, 100);
+      newwin.dataUtils.createMenuFromCSV(
+        Feature_Space._dataset,
+        newwin.dataUtils.data[Feature_Space._dataset]["_processeddata"].columns
+      );
+      let main_button = newwin.document.getElementById("ISS_collapse_btn");
+      main_button.classList.add("d-none");
+      newwin.interfaceUtils.toggleRightPanel();
+      newwin.document.getElementById("main-navbar").classList.add("d-none");
+      newwin.document
+        .getElementById("floating-navbar-toggler")
+        .classList.add("d-none");
+      newwin.document
+        .getElementById("powered_by_tissuumaps")
+        .classList.add("d-none");
+      let elt = document.createElement("div");
+      elt.className = "closeFeature_Space px-1 mx-1 viewer-layer";
+      elt.id = "closeFeature_Space";
+      elt.style.zIndex = "100";
+      elt.style.cursor = "pointer";
+      elt.innerHTML = "<i class='bi bi-x-lg'></i>";
+      elt.addEventListener("click", function (event) {
+        Feature_Space.clear();
+      });
+      newwin.tmapp.ISS_viewer.addControl(elt, {
+        anchor: OpenSeadragon.ControlAnchor.TOP_LEFT,
+      });
+      newwin.tmapp.ISS_viewer.close();
+      Feature_Space_Control.classList.remove("d-none");
+      newwin.document
+        .getElementsByClassName("navigator ")[0]
+        .classList.add("d-none");
+      setTimeout(function () {
+        var copySettings = function () {
+          setTimeout(function () {
+            newwin = Feature_Space._newwin;
+            copyDataset(
+              dataUtils.data[Feature_Space._dataset],
+              newwin.dataUtils.data[Feature_Space._dataset]
+            );
+            $(
+              "." +
+                Feature_Space._dataset +
+                "-marker-input, ." +
+                Feature_Space._dataset +
+                "-marker-hidden, ." +
+                Feature_Space._dataset +
+                "-marker-color, ." +
+                Feature_Space._dataset +
+                "-marker-shape"
+            )
+              .each(function (i, elt) {
+                newwin.document.getElementById(elt.id).value = elt.value;
+                newwin.document.getElementById(elt.id).checked = elt.checked;
+              })
+              .promise()
+              .done(function () {
+                newwin.glUtils.loadMarkers(Feature_Space._dataset);
+                newwin.glUtils.draw();
+              });
+          }, 100);
+        };
+        if (glUtils.temp_draw === undefined) {
+          glUtils.temp_draw = glUtils.draw;
+          glUtils.draw = function () {
+            glUtils.temp_draw();
+            copySettings();
           };
-          if (glUtils.temp_draw === undefined) {
-            glUtils.temp_draw = glUtils.draw;
-            glUtils.draw = function () {
-              glUtils.temp_draw();
-              copySettings();
-            };
-            glUtils.temp_updateColorLUTTexture = glUtils._updateColorLUTTexture;
-            glUtils._updateColorLUTTexture = function (gl, uid, texture) {
-              glUtils.temp_updateColorLUTTexture(gl, uid, texture);
-              copySettings();
-            };
-            dataUtils.temp_updateViewOptions = dataUtils.updateViewOptions;
-            dataUtils.updateViewOptions = function (data_id) {
-              dataUtils.temp_updateViewOptions(data_id);
-              copyDataset(
-                dataUtils.data[Feature_Space._dataset],
-                newwin.dataUtils.data[Feature_Space._dataset]
-              );
-              newwin.dataUtils.createMenuFromCSV(
-                Feature_Space._dataset,
-                newwin.dataUtils.data[Feature_Space._dataset]["_processeddata"]
-                  .columns
-              );
-            };
-          }
-          if (interfaceUtils.temp_toggleRightPanel === undefined) {
-            interfaceUtils.temp_toggleRightPanel =
-              interfaceUtils.toggleRightPanel;
-            interfaceUtils.toggleRightPanel = function () {
-              interfaceUtils.temp_toggleRightPanel();
-              Plotly.Plots.resize(document.getElementById("histoView"));
-            };
-          }
-        }, 200);
+          glUtils.temp_updateColorLUTTexture = glUtils._updateColorLUTTexture;
+          glUtils._updateColorLUTTexture = function (gl, uid, texture) {
+            glUtils.temp_updateColorLUTTexture(gl, uid, texture);
+            copySettings();
+          };
+          dataUtils.temp_updateViewOptions = dataUtils.updateViewOptions;
+          dataUtils.updateViewOptions = function (data_id) {
+            dataUtils.temp_updateViewOptions(data_id);
+            copyDataset(
+              dataUtils.data[Feature_Space._dataset],
+              newwin.dataUtils.data[Feature_Space._dataset]
+            );
+            newwin.dataUtils.createMenuFromCSV(
+              Feature_Space._dataset,
+              newwin.dataUtils.data[Feature_Space._dataset]["_processeddata"]
+                .columns
+            );
+          };
+        }
+        if (interfaceUtils.temp_toggleRightPanel === undefined) {
+          interfaceUtils.temp_toggleRightPanel =
+            interfaceUtils.toggleRightPanel;
+          interfaceUtils.toggleRightPanel = function () {
+            interfaceUtils.temp_toggleRightPanel();
+            Plotly.Plots.resize(document.getElementById("histoView"));
+          };
+        }
       }, 200);
-    });
-  }
+    }, 200);
+  });
+
   Feature_Space_Control.classList.add("d-none");
   Feature_Space_Control.setAttribute("src", "/");
+};
+
+Feature_Space.clear = function () {
+  Feature_Space_Control = document.getElementById("Feature_Space_Control");
+  Feature_Space_Control.parentNode.remove();
+  $(".openseadragon-container")[0].style.display = "block";
+  $(".openseadragon-container")[0].style.width = "100%";
 };
 
 Feature_Space.pressHandler = function (event, win, mainwin) {
