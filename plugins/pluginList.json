@@ -25,7 +25,7 @@
         "author": "Andrea Behanova, Christophe Avenel",
         "date": "2022-10-31",
         "description": "InteractionV&QC plugin is for visualization, comparison and quality control of cell classification",
-        "image": "Feature_Space.gif",
+        "image": "InteractionQC.gif",
         "js": "InteractionQC.js",
         "name": "InteractionV&QC plugin",
         "py": "InteractionQC.py",
