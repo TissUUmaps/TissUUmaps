@@ -9,7 +9,7 @@
  */
 var InteractionQC;
 InteractionQC = {
-  name: "Neighborhood Enrichment Test Plugin",
+  name: "InteractionQC Plugin",
   _dataset: null,
   _matrix: null,
   _matrix_header: null,
@@ -184,23 +184,7 @@ InteractionQC.run = function () {
   var InteractionQC_Control = document.getElementById(
     "InteractionQC_Control"
   );
-  // if (!InteractionQC_Control) {
-  //   InteractionQC_Control = document.createElement("div");
-  //   InteractionQC_Control.id = "InteractionQC_Control";
-  //   InteractionQC_Control.style.width = "100%";
-  //   InteractionQC_Control.style.height = "100%";
-  //   InteractionQC_Control.style.borderLeft = "1px solid #aaa";
-  //   InteractionQC_Control.style.display = "inline-block";
-  //   var elt = document.createElement("div");
-  //   elt.style.width = "40%";
-  //   elt.style.height = "50%";
-  //   elt.style.display = "inline-block";
-  //   elt.style.verticalAlign = "top";
-  //   elt.appendChild(InteractionQC_Control);
-  //   document.getElementById("ISS_viewer").appendChild(elt);
-  //   $(".openseadragon-container")[0].style.display = "inline-flex";
-  //   $(".openseadragon-container")[0].style.width = "60%";
-  // }
+
 
   var data = [
     {
