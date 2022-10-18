@@ -1,5 +1,16 @@
 [
     {
+        "author": "Andrea Behanova, Christophe Avenel",
+        "date": "2022-10-31",
+        "description": "ClassV&QC plugin is for visualization, comparison and quality control of cell classification.",
+        "image": "ClassQC.gif",
+        "js": "ClassQC.js",
+        "name": "ClassV&QC",
+        "py": "ClassQC.py",
+        "version": 1.0,
+        "yml": "ClassQC.yml"
+    },
+    {
         "author": "Christophe Avenel",
         "date": "2022-03-30",
         "description": "The Feature Space plugin allows to display markers in any feature space - such as UMAP, t-SNE or PCA - next to markers with spatial coordinates. You can interactively select markers in the Feature Space viewport and instantaneously see the corresponding markers in the Spatial viewport.",
@@ -24,7 +35,7 @@
     {
         "author": "Andrea Behanova, Christophe Avenel",
         "date": "2022-10-31",
-        "description": "InteractionV&QC plugin is for visualization, comparison and quality control of cell classification",
+        "description": "InteractionV&QC plugin is for visualization and quality control of cell-cell interactions.",
         "image": "InteractionQC.gif",
         "js": "InteractionQC.js",
         "name": "InteractionV&QC plugin",
