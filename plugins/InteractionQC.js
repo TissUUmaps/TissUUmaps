@@ -21,7 +21,7 @@ InteractionQC = {
 
 /**
  * @summary */
- InteractionQC.init = function (container) {
+InteractionQC.init = function (container) {
   var script = document.createElement("script");
   script.src = "https://cdn.plot.ly/plotly-latest.min.js";
   document.head.appendChild(script);
@@ -48,17 +48,23 @@ InteractionQC = {
   });
   label212.innerText = "Select marker dataset";
 
-
   row4 = HTMLElementUtils.createRow({});
   col41 = HTMLElementUtils.createColumn({ width: 12 });
-  input411 = HTMLElementUtils.createElement({"kind":"input", "id":"InteractionQC_csv","extraAttributes":{ "name":"InteractionQC_csv", 
-  "class":"form-control-file form-control form-control-sm", "type":"file", "accept":".csv,.tsv,.txt"}});
+  input411 = HTMLElementUtils.createElement({
+    kind: "input",
+    id: "InteractionQC_csv",
+    extraAttributes: {
+      name: "InteractionQC_csv",
+      class: "form-control-file form-control form-control-sm",
+      type: "file",
+      accept: ".csv,.tsv,.txt",
+    },
+  });
   label412 = HTMLElementUtils.createElement({
     kind: "label",
     extraAttributes: { for: "matrix" },
   });
   label412.innerText = "Select file";
-
 
   row5 = HTMLElementUtils.createRow({});
   col51 = HTMLElementUtils.createColumn({ width: 12 });
@@ -67,10 +73,15 @@ InteractionQC = {
   });
   button511.innerText = "Display Neighborhood Enrichment Test";
 
-  row12=HTMLElementUtils.createRow({});
-  col121=HTMLElementUtils.createElement({"kind":"div","id":"InteractionQC_matrix"});
-  col131=HTMLElementUtils.createElement({"kind":"div","id":"InteractionQC_legend"});
-
+  row12 = HTMLElementUtils.createRow({});
+  col121 = HTMLElementUtils.createElement({
+    kind: "div",
+    id: "InteractionQC_matrix",
+  });
+  col131 = HTMLElementUtils.createElement({
+    kind: "div",
+    id: "InteractionQC_legend",
+  });
 
   // Refresh button Refresh drop-down lists based on loaded markers
   button111.addEventListener("click", (event) => {
@@ -120,27 +131,32 @@ InteractionQC = {
   });
 
   input411.addEventListener("change", (event) => {
-    var reader = new FileReader();  
-    
-    function loadFile() {      
-      var file = input411.files[0];      
+    var reader = new FileReader();
+
+    function loadFile() {
+      var file = input411.files[0];
       reader.addEventListener("load", parseFile, false);
       if (file) {
         reader.readAsText(file);
       }
     }
-    
-    function parseFile(){
+
+    function parseFile() {
       rows = Plotly.d3.csv.parseRows(reader.result);
       /*function unpack(rows, key) {
         return rows.map(function(row) { return row[key]; });
       }*/
       console.log(rows);
-      rows = rows.map(function(row) {row.shift(); return row;})
+      rows = rows.map(function (row) {
+        row.shift();
+        return row;
+      });
       InteractionQC._matrix_header = rows.shift();
-      rows = rows.map(function(row) {return row.map(Number)})
+      rows = rows.map(function (row) {
+        return row.map(Number);
+      });
       InteractionQC._matrix = rows.reverse();
-    };
+    }
     loadFile();
     parseFile();
   });
@@ -148,8 +164,6 @@ InteractionQC = {
   button511.addEventListener("click", (event) => {
     InteractionQC.run();
   });
-
-  
 
   container.innerHTML = "";
   // container.appendChild(row0);
@@ -161,104 +175,121 @@ InteractionQC = {
   col21.appendChild(label212);
   col21.appendChild(select211);
   container.appendChild(row4);
-    row4.appendChild(col41);
-    col41.appendChild(label412);
-    col41.appendChild(input411);
+  row4.appendChild(col41);
+  col41.appendChild(label412);
+  col41.appendChild(input411);
   container.appendChild(row5);
-    row5.appendChild(col51);
-    col51.appendChild(button511);
-    container.appendChild(row12);
-    row12.appendChild(col121);
-    row12.appendChild(col131);
+  row5.appendChild(col51);
+  col51.appendChild(button511);
+  container.appendChild(row12);
+  row12.appendChild(col121);
+  row12.appendChild(col131);
 
   var event = new Event("click");
   button111.dispatchEvent(event);
-
-
 };
-
 
 InteractionQC.run = function () {
   var op = tmapp["object_prefix"];
   var vname = op + "_viewer";
-  var InteractionQC_Control = document.getElementById(
-    "InteractionQC_Control"
-  );
-
+  var InteractionQC_Control = document.getElementById("InteractionQC_Control");
 
   var data = [
     {
       z: InteractionQC._matrix,
       x: InteractionQC._matrix_header,
       y: InteractionQC._matrix_header.slice().reverse(),
-      type: 'heatmap',
+      type: "heatmap",
       hoverongaps: false,
-      colorscale: 'Hot'
-    }
+      colorscale: "Hot",
+    },
   ];
-  
+
   var layout = {
     autosize: true,
     automargin: true,
     showlegend: true,
     yaxis: {
-      side:'top',
+      side: "top",
       tickmode: "array",
       tickvals: InteractionQC._matrix_header,
       ticktext: InteractionQC._matrix_header.map(function (text) {
-        color = document.getElementById(InteractionQC._dataset +"_" + text + "_color").value
-        return "<span style='font-weight:bold;color:"+color+"'>███</span>";
+        color = document.getElementById(
+          InteractionQC._dataset + "_" + text + "_color"
+        ).value;
+        return "<span style='font-weight:bold;color:" + color + "'>███</span>";
       }),
-      ticks:"",
-      tickangle:90,
+      ticks: "",
+      tickangle: 90,
       title: {
         text: "Cell class 2",
         font: {
-            size: 25,
-            color: "black"
-        }
-      }
+          size: 25,
+          color: "black",
+        },
+      },
     },
     xaxis: {
       // "scaleanchor":"x",
       tickvals: InteractionQC._matrix_header.slice().reverse(),
-      ticktext: InteractionQC._matrix_header.slice().reverse().map(function (text) {
-        color = document.getElementById(InteractionQC._dataset +"_" + text + "_color").value
-        return "<span style='font-weight:bold;color:"+color+"'>███</span>";
-      }),
-      ticks:"",
-      tickangle:0,
+      ticktext: InteractionQC._matrix_header
+        .slice()
+        .reverse()
+        .map(function (text) {
+          color = document.getElementById(
+            InteractionQC._dataset + "_" + text + "_color"
+          ).value;
+          return (
+            "<span style='font-weight:bold;color:" + color + "'>███</span>"
+          );
+        }),
+      ticks: "",
+      tickangle: 0,
       title: {
         text: "Cell class 1",
         font: {
-            size: 25,
-            color: "black"
-        }
+          size: 25,
+          color: "black",
+        },
       },
-      ticklabelposition:"top",
-      side:"top"
+      ticklabelposition: "top",
+      side: "top",
     },
     annotations: [],
-    title: null
+    title: null,
   };
 
-  Plotly.newPlot(document.getElementById("InteractionQC_matrix"), data, layout, {
-    responsive: true,
-    displayModeBar: false,
-  });
+  Plotly.newPlot(
+    document.getElementById("InteractionQC_matrix"),
+    data,
+    layout,
+    {
+      responsive: true,
+      displayModeBar: false,
+    }
+  );
 
-  legend =  "";
+  legend = "";
   for (type of InteractionQC._matrix_header) {
-    typecolor = document.getElementById(InteractionQC._dataset +"_" + type + "_color").value
-    legend += "<div style='display:inline-block;margin-right:10px;'><span style='width:15px;color:"+typecolor+"'>█</span><span style='min-width:150px;margin: 0px 5px;'>"+type+"</span></div>"
+    typecolor = document.getElementById(
+      InteractionQC._dataset + "_" + type + "_color"
+    ).value;
+    legend +=
+      "<div style='display:inline-block;margin-right:10px;'><span style='width:15px;color:" +
+      typecolor +
+      "'>█</span><span style='min-width:150px;margin: 0px 5px;'>" +
+      type +
+      "</span></div>";
   }
   document.getElementById("InteractionQC_legend").innerHTML = legend;
 
   // InteractionQC_Control.on('plotly_click', function(data){
-  document.getElementById("InteractionQC_matrix").on('plotly_click', function(data){
+  document
+    .getElementById("InteractionQC_matrix")
+    .on("plotly_click", function (data) {
       console.log(data.points[0].x, data.points[0].y);
-      var clicked_x = data.points[0].x.replace(/ /g,"_");;
-      var clicked_y = data.points[0].y.replace(/ /g,"_");;
+      var clicked_x = data.points[0].x.replace(/ /g, "_");
+      var clicked_y = data.points[0].y.replace(/ /g, "_");
       var uid = InteractionQC._dataset;
       console.log(uid + "_" + clicked_x);
       document.getElementById(uid + "_all_check").checked = true;
@@ -273,8 +304,7 @@ InteractionQC.run = function () {
               data.points[i].y.toPrecision(4) + '\n\n';
       }
       alert('Closest point clicked:\n\n'+pts);*/
-  });
+    });
 };
 
-InteractionQC.getData = function() {
-}
+InteractionQC.getData = function () {};

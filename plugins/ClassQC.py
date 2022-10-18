@@ -12,11 +12,11 @@ import logging
 from urllib.parse import unquote
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pyvips
 
 import tissuumaps.views as tv
 
-import numpy as np
 
 class PILBytesIO(BytesIO):
     def fileno(self):
@@ -29,8 +29,8 @@ class Plugin:
         self.app = app
 
     def getTile(self, slide, bbox):
-        tile = slide._osr.read_region((bbox[0],bbox[1]),0,(bbox[2],bbox[3]))
-        
+        tile = slide._osr.read_region((bbox[0], bbox[1]), 0, (bbox[2], bbox[3]))
+
         return np.array(tile.convert("L"))
 
     # def getConcat(self, tiles, rounds, channels):
@@ -41,10 +41,10 @@ class Plugin:
     #             channelsArray.append(tiles[round][channel])
     #         tilesArray.append(channelsArray)
     #     return np.block(tilesArray)
-        
+
     def getConcat(self, tiles, rounds, channels):
         tilesArray = []
-    
+
         for row, channel in enumerate(channels):
             tilesArray.append([tiles["_"][channel]])
         #     print (tiles["_"][channel].shape)
@@ -123,9 +123,9 @@ class Plugin:
         ax.tick_params(axis="both", which="both", length=0)
 
         buf = PILBytesIO()
-        fig.savefig(buf,bbox_inches='tight')
+        fig.savefig(buf, bbox_inches="tight")
         fig.clf()
-        #plt.close()
+        # plt.close()
         return buf
 
     def getMatrix(self, jsonParam):
@@ -151,9 +151,9 @@ class Plugin:
             globalpath = os.path.abspath(os.path.join(self.app.basedir, path))
             imagePath = layer["tileSource"].replace(".dzi", "")
             slide = tv._get_slide(globalpath + "/" + imagePath)
-            
+
             channel = layer["name"]
-            
+
             if "_" not in tiles.keys():
                 tiles["_"] = {}
             tiles["_"][channel] = self.getTile(slide, bbox)
