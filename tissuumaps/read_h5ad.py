@@ -174,6 +174,17 @@ def h5ad_obs_to_csv(basedir, path, obsName):
     if "spatial" in adata.obsm:
         obsdata["globalX"] = adata.obsm["spatial"][:, 0]
         obsdata["globalY"] = adata.obsm["spatial"][:, 1]
+    if "spatial_connectivities" in adata.obsp:
+        logging.info("Found spatial neighborhood graph!")
+        matrix = adata.obsp["spatial_connectivities"]  # Sparse matrix in CSR format
+        edges = [np.where(matrix[i].toarray())[1] for i in range(matrix.shape[0])]
+        for i in range(0, matrix.shape[0]):
+            # Convert edge list for row into string with indices separated by ";"
+            edges[i] = (
+                str(list(edges[i])).replace(",", ";").strip("[").strip("]").strip(" ")
+            )
+        obsdata["obsp"] = edges
+        logging.info("Spatial neighborhood graph added to CSV data")
 
     for library_index, library_id in enumerate(adata.uns.get("spatial", {})):
         library_id, spatial_data = _check_spatial_data(adata.uns, library_id)
