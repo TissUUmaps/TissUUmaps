@@ -108,8 +108,16 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
         filterParams.layer = layerIndex + 1;
 
         filterInput = filterUtils.createHTMLFilter(filterParams);
-        filterInput.classList.add("overlay-slider");
-        filterInput.classList.add("form-range");
+        if (filterParams.type == "range") {
+            filterInput.classList.add("overlay-slider");
+            filterInput.classList.add("form-range");
+        }
+        else if (filterParams.type == "checkbox") {
+            filterInput.classList.add("form-check-input");
+        }
+        else if (filterParams.type == "color") {
+            filterInput.classList.add("form-range");
+        }
         var td_filterInput = document.createElement("td");
         td_filterInput.classList.add("text-center");
         td_filterInput.appendChild(filterInput);
