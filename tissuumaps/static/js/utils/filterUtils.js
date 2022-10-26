@@ -382,6 +382,7 @@ filterUtils.getFilterFunction = function(filterName) {
                         return hex.length == 1 ? "0" + hex : hex;
                     }
                     function rgbToHex(rgb) {
+                        if (rgb == "0" || rgb == 0) {return "#FFFFFF";}
                         var array = rgb.split(',');
                         return "#" + componentToHex(array[0]) + componentToHex(array[1]) + componentToHex(array[2]);
                     }
