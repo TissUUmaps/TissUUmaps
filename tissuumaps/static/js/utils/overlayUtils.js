@@ -277,6 +277,33 @@ overlayUtils.addLayer = function(layer, i, visible) {
     var x = layer.x || 0;
     var y = layer.y || 0;
     var scale = layer.scale || 1;
+    var flip = layer.flip || false;
+    var rotation = layer.rotation || 0;
+    if (layer.transform_matrix) {
+        var transform_matrix = layer.transform_matrix.map(Number) 
+        rotation = Math.atan2(transform_matrix[1], transform_matrix[0]) * 360 / (2*Math.PI)
+        var shear_y = Math.atan2(transform_matrix[4], transform_matrix[1]) - Math.PI/2 - (2*Math.PI*rotation / 360)
+        var scale_x = Math.sqrt(transform_matrix[0] * transform_matrix[0] + transform_matrix[3] * transform_matrix[3])
+        var scale_y = Math.sqrt(transform_matrix[1] * transform_matrix[1] + transform_matrix[4] * transform_matrix[4]) * Math.cos(shear_y)
+        if (scale_x < 0) {
+            scale_x = -scale_x;
+            flip = true;
+        }
+        if (scale_y < 0) {
+            scale_y = -scale_y;
+            flip = true;
+            rotation += 180;
+        }
+        scale = (scale_x + scale_y) / 2.;
+        x = transform_matrix[2]
+        y = transform_matrix[5]
+        layer.x = x;
+        layer.y = y;
+        layer.scale = scale;
+        layer.rotation = rotation;
+        layer.flip = flip;
+    }
+    
     tmapp[vname].addTiledImage({
         index: i + 1,
         x: 0,
@@ -289,6 +316,8 @@ overlayUtils.addLayer = function(layer, i, visible) {
             tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setWidth(scale*layerNX/layer0X);
             var point = new OpenSeadragon.Point(x/layer0X, y/layer0X);
             tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setPosition(point);
+            tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setRotation(rotation);
+            tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setFlip(flip);
             if (loadingModal) {
                 setTimeout(function(){$(loadingModal).modal("hide");}, 500);
             }
