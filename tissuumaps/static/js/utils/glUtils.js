@@ -23,6 +23,7 @@ glUtils = {
     // better handled by having an object per UID that stores all info
     // and is easy to delete when closing a marker tab...)
     _numPoints: {},              // {uid: numPoints, ...}
+    _numEdges: {},               // {uid: numEdges, ...}
     _markerScalarRange: {},      // {uid: [minval, maxval], ...}
     _markerScaleFactor: {},      // {uid: float}
     _markerScalarPropertyName: {},  // {uid: string, ...}
@@ -351,6 +352,80 @@ glUtils._pickingFS = `
     void main()
     {
         gl_FragColor = v_color;
+    }
+`;
+
+
+glUtils._edgesVS = `
+    uniform mat2 u_viewportTransform;
+    uniform vec2 u_canvasSize;
+    uniform float u_transformIndex;
+
+    uniform sampler2D u_colorLUT;
+    uniform sampler2D u_transformLUT;
+
+    attribute vec4 a_position;
+    attribute float a_index;
+    attribute float a_opacity;
+    attribute float a_transform;
+    attribute float a_vertexID;
+
+    varying vec4 v_color;
+    varying highp vec2 v_texCoord;
+
+    void main()
+    {
+        float transformIndex = u_transformIndex >= 0.0 ? u_transformIndex : a_transform;
+        vec4 imageTransform = texture2D(u_transformLUT, vec2(transformIndex / 255.0, 0));
+
+        vec2 localPos0 = a_position.xy;
+        vec2 localPos1 = a_position.zw;
+
+        // Transform 1st edge vertex
+        vec2 viewportPos0 = localPos0 * imageTransform.xy + imageTransform.zw;
+        vec2 ndcPos0 = viewportPos0 * 2.0 - 1.0;
+        ndcPos0.y = -ndcPos0.y;
+        ndcPos0 = u_viewportTransform * ndcPos0;
+
+        // Transform 2nd edge vertex
+        vec2 viewportPos1 = localPos1 * imageTransform.xy + imageTransform.zw;
+        vec2 ndcPos1 = viewportPos1 * 2.0 - 1.0;
+        ndcPos1.y = -ndcPos1.y;
+        ndcPos1 = u_viewportTransform * ndcPos1;
+
+        vec2 ndcMidpoint = (ndcPos1 + ndcPos0) * 0.5;
+        vec2 ndcDeltaU = (ndcPos1 - ndcPos0) * 0.5;
+        vec2 canvasDeltaU = ndcDeltaU * u_canvasSize;
+        vec2 canvasDeltaV = vec2(-canvasDeltaU.y, canvasDeltaU.x);
+        vec2 ndcDeltaV = 4.0 * normalize(canvasDeltaV) / u_canvasSize;
+
+        gl_Position = vec4(ndcMidpoint, 0.0, 1.0);
+
+        // Edge will be drawn as a triangle strip, so need to generate
+        // texture coordinate and offset the output position depending on
+        // which of the four corners we are processing
+        //v_texCoord = vec2(gl_VertexID & 1, (gl_VertexID >> 1) & 1);  // WebGL 2.0
+        v_texCoord = mod(vec2(a_vertexID, floor(a_vertexID / 2.0)), 2.0);  // WebGL 1.0
+        gl_Position.xy += (v_texCoord.x * 2.0 - 1.0) * ndcDeltaU;
+        gl_Position.xy += (v_texCoord.y * 2.0 - 1.0) * ndcDeltaV;
+
+        v_color.rgb = sqrt(fract((float(a_index) + vec3(1.0, 2.0, 3.0)) / 3.0));
+        v_color.a = a_opacity;
+    }
+`;
+
+
+glUtils._edgesFS = `
+    precision mediump float;
+
+    varying vec4 v_color;
+    varying highp vec2 v_texCoord;
+
+    void main()
+    {
+        //gl_FragColor = v_color;
+        //gl_FragColor = vec4(v_texCoord, 0.0, 1.0);
+        gl_FragColor = vec4(0.8, 0.8, 0.8, 1.0);
     }
 `;
 
@@ -686,8 +761,13 @@ glUtils.loadMarkers = function(uid) {
     gl_ext_ia.vertexAttribDivisorANGLE(VERTEX_ID_LOCATION, 0);  // Vertex ID rate must be per-vertex!
     gl_ext_vao.bindVertexArrayOES(null);
 
+    // Generate separate WebGL resources for drawing graph edges (if markerset
+    // contains spatial connectivity data and the user wants to display it)
+    const numEdges = glUtils._loadEdges(uid);
+
     // Update marker info and LUT + colormap textures
     glUtils._numPoints[uid] = numPoints * numSectors;
+    glUtils._numEdges[uid] = numEdges;
     glUtils._markerScalarRange[uid] = scalarRange;
     glUtils._markerScalarPropertyName[uid] = scalarPropertyName;
     glUtils._markerScaleFactor[uid] = markerScaleFactor;
@@ -725,6 +805,7 @@ glUtils.deleteMarkers = function(uid) {
 
     // Delete marker settings and info for UID
     delete glUtils._numPoints[uid];
+    delete glUtils._numEdges[uid];
     delete glUtils._markerScaleFactor[uid];
     delete glUtils._markerScalarRange[uid];
     delete glUtils._markerScalarPropertyName[uid];
@@ -746,11 +827,15 @@ glUtils.deleteMarkers = function(uid) {
     gl.deleteBuffer(glUtils._buffers[uid + "_markers"]);
     gl_ext_vao.deleteVertexArrayOES(glUtils._vaos[uid + "_markers"]);
     gl_ext_vao.deleteVertexArrayOES(glUtils._vaos[uid + "_markers_instanced"]);
+    gl.deleteBuffer(glUtils._buffers[uid + "_edges"]);
+    gl_ext_vao.deleteVertexArrayOES(glUtils._vaos[uid + "_edges"]);
     gl.deleteTexture(glUtils._textures[uid + "_colorLUT"]);
     gl.deleteTexture(glUtils._textures[uid + "_colorscale"]);
     delete glUtils._buffers[uid + "_markers"];
     delete glUtils._vaos[uid + "_markers"];
     delete glUtils._vaos[uid + "_markers_instanced"];
+    delete glUtils._buffers[uid + "_edges"];
+    delete glUtils._vaos[uid + "_edges"];
     delete glUtils._textures[uid + "_colorLUT"];
     delete glUtils._textures[uid + "_colorscale"];
     // Make sure colorbar is also deleted from the 2D canvas
@@ -758,6 +843,164 @@ glUtils.deleteMarkers = function(uid) {
 
     // Make sure piechart legend is deleted if it was used for this UID
     markerUtils.updatePiechartLegend();
+}
+
+
+// Create WebGL resources and other objects for drawing graph edges. Returns
+// the number of edges found in the data. This function should only be called
+// from within glUtils.loadMarkers().
+glUtils._loadEdges = function(uid) {
+    if (!glUtils._initialized) return;
+    const canvas = document.getElementById("gl_canvas");
+    const gl = canvas.getContext("webgl", glUtils._options);
+    const gl_ext_ia = gl.getExtension('ANGLE_instanced_arrays');
+    const gl_ext_vao = gl.getExtension('OES_vertex_array_object');
+
+    // Get marker data and other info like image size
+    const markerData = dataUtils.data[uid]["_processeddata"];
+    const keyName = dataUtils.data[uid]["_gb_col"];
+    const xPosName = dataUtils.data[uid]["_X"];
+    const yPosName = dataUtils.data[uid]["_Y"];
+    let numPoints = markerData[xPosName].length;
+
+    const connectionsPropertyName = "obsp";  // FIXME This name should not be hard-coded!
+    if (markerData[connectionsPropertyName] == null) return 0;  // No edge data in the markerset!
+
+    // Check how the user wants to draw the edges
+    glUtils._updateBarcodeToLUTIndexDict(uid, markerData, keyName);
+    const barcodeToLUTIndex = glUtils._barcodeToLUTIndex[uid];
+    const markerCoordFactor = dataUtils.data[uid]["_coord_factor"];
+    const opacityPropertyName = dataUtils.data[uid]["_opacity_col"];
+    const useOpacityFromMarker = dataUtils.data[uid]["_opacity_col"] != null;
+    const markerOpacityFactor = dataUtils.data[uid]["_opacity"];
+    const collectionItemPropertyName = dataUtils.data[uid]["_collectionItem_col"];
+    const useCollectionItemFromMarker = dataUtils.data[uid]["_collectionItem_col"] != null;
+    const collectionItemFixed = dataUtils.data[uid]["_collectionItem_fixed"];
+    let collectionItemIndex = collectionItemFixed;
+
+    // Find out how many edges there are in the data
+    let numEdges = 0;
+    for (let markerIndex = 0; markerIndex < numPoints; ++markerIndex) {
+        const edges = markerData[connectionsPropertyName][markerIndex].split(";");
+        numEdges += edges.length;
+    }
+
+    // Additional info about the vertex format. Make sure you update also
+    // NUM_BYTES_PER_EDGE when making changes to the format!
+    const NUM_BYTES_PER_EDGE = 28;
+    const POINT_OFFSET = numEdges * 0,
+          INDEX_OFFSET = numEdges * 16,
+          OPACITY_OFFSET = numEdges * 20,
+          TRANSFORM_OFFSET = numEdges * 22;
+          VERTEX_ID_OFFSET = numEdges * 24;
+    const POINT_LOCATION = 0,      // Re-use the same attribute locations that
+          INDEX_LOCATION = 1,      // are used also for drawing the markers
+          OPACITY_LOCATION = 4;
+          TRANSFORM_LOCATION = 5;
+          VERTEX_ID_LOCATION = 6;
+
+    // Extract and upload vertex data for edges. Similar to for the markers, the
+    // vertex data can be large, so we upload the data in chunks to the GPU
+    // buffer to avoid having to allocate a large temporary buffer in system memory.
+    console.time("Generate edge data");
+    let chunkSize = 100000;
+    let offsetEdges = 0;
+    for (let offset = 0; offset < numPoints; offset += chunkSize) {
+        if (offset + chunkSize >= numPoints) chunkSize = numPoints - offset;
+
+        // Compute actual chunk size for the edges in the chunk
+        let chunkSizeEdges = 0;
+        for (let i = 0; i < chunkSize; ++i) {
+            const markerIndex = i + offset;
+            const edges = markerData[connectionsPropertyName][markerIndex].split(";");
+            chunkSizeEdges += edges.length;
+        }
+
+        // Allocate arrays for edge data that will be uploaded to vertex buffer
+        let bytedata_point = new Float32Array(chunkSizeEdges * 4);
+        let bytedata_index = new Float32Array(chunkSizeEdges * 1);
+        let bytedata_opacity = new Uint16Array(chunkSizeEdges * 1);
+        let bytedata_transform = new Uint16Array(chunkSizeEdges * 1);
+        let bytedata_vertexID = new Uint8Array(chunkSizeEdges * 4);
+
+        let offsetEdges2 = 0;
+        for (let i = 0; i < chunkSize; ++i) {
+            const markerIndex = i + offset;
+            const lutIndex = (keyName != null) ? barcodeToLUTIndex[markerData[keyName][markerIndex]] : 0;
+            const opacity = useOpacityFromMarker ? markerData[opacityPropertyName][markerIndex] : 1.0;
+            if (useCollectionItemFromMarker) collectionItemIndex = markerData[collectionItemPropertyName][markerIndex];
+
+            // Generate line segments for edges to neighboring markers
+            const edges = markerData[connectionsPropertyName][markerIndex].split(";");
+            for (let j = 0; j < edges.length; ++j) {
+                const markerIndex_j = Number(edges[j]);
+                const lutIndex_j = (keyName != null) ? barcodeToLUTIndex[markerData[keyName][markerIndex_j]] : 0;
+                const k = offsetEdges2 + j;
+
+                bytedata_point[4 * k + 0] = markerData[xPosName][markerIndex] * markerCoordFactor;
+                bytedata_point[4 * k + 1] = markerData[yPosName][markerIndex] * markerCoordFactor;
+                bytedata_point[4 * k + 2] = markerData[xPosName][markerIndex_j] * markerCoordFactor;
+                bytedata_point[4 * k + 3] = markerData[yPosName][markerIndex_j] * markerCoordFactor;
+                bytedata_index[k] = lutIndex + (lutIndex_j * 4096.0);
+                bytedata_opacity[k] = Math.floor(Math.max(0.0, Math.min(1.0, opacity)) * 65535.0);
+                bytedata_transform[k] = collectionItemIndex;
+                bytedata_vertexID[4 * k + 0] = 0;  // 1st vertex
+                bytedata_vertexID[4 * k + 1] = 1;  // 2nd vertex
+                bytedata_vertexID[4 * k + 2] = 2;  // 3rd vertex
+                bytedata_vertexID[4 * k + 3] = 3;  // 4th vertex
+            }
+
+            offsetEdges2 += edges.length;
+        }
+
+        // Create WebGL objects (if this has not already been done)
+        if (!(uid + "_edges" in glUtils._buffers))
+            glUtils._buffers[uid + "_edges"] = glUtils._createMarkerBuffer(gl, numEdges * NUM_BYTES_PER_EDGE);
+        if (!(uid + "_edges" in glUtils._vaos))
+            glUtils._vaos[uid + "_edges"] = gl_ext_vao.createVertexArrayOES();
+
+        // Upload chunks of vertex data to buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_edges"]);
+        if (offset == 0) {
+            // Check if buffer needs to be allocated or re-allocated
+            const newBufferSize = numEdges * NUM_BYTES_PER_EDGE;
+            const oldBufferSize = gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_SIZE);
+            if (newBufferSize != oldBufferSize) {
+                gl.bufferData(gl.ARRAY_BUFFER, newBufferSize, gl.STATIC_DRAW);
+            }
+        }
+
+        gl.bufferSubData(gl.ARRAY_BUFFER, (POINT_OFFSET + offsetEdges * 16), bytedata_point);
+        gl.bufferSubData(gl.ARRAY_BUFFER, (INDEX_OFFSET + offsetEdges * 4), bytedata_index);
+        gl.bufferSubData(gl.ARRAY_BUFFER, (OPACITY_OFFSET + offsetEdges * 2), bytedata_opacity);
+        gl.bufferSubData(gl.ARRAY_BUFFER, (TRANSFORM_OFFSET + offsetEdges * 2), bytedata_transform);
+        gl.bufferSubData(gl.ARRAY_BUFFER, (VERTEX_ID_OFFSET + offsetEdges * 4), bytedata_vertexID);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        offsetEdges += chunkSizeEdges;
+    }
+    console.timeEnd("Generate edge data");
+
+    // Set up VAO with vertex format for drawing thick lines via instancing
+    gl_ext_vao.bindVertexArrayOES(glUtils._vaos[uid + "_edges"]);
+    gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_edges"]);
+    gl.enableVertexAttribArray(POINT_LOCATION);
+    gl.vertexAttribPointer(POINT_LOCATION, 4, gl.FLOAT, false, 0, 0);
+    gl_ext_ia.vertexAttribDivisorANGLE(POINT_LOCATION, 1);
+    gl.enableVertexAttribArray(INDEX_LOCATION);
+    gl.vertexAttribPointer(INDEX_LOCATION, 1, gl.FLOAT, false, 0, INDEX_OFFSET);
+    gl_ext_ia.vertexAttribDivisorANGLE(INDEX_LOCATION, 1);
+    gl.enableVertexAttribArray(OPACITY_LOCATION);
+    gl.vertexAttribPointer(OPACITY_LOCATION, 1, gl.UNSIGNED_SHORT, true, 0, OPACITY_OFFSET);
+    gl_ext_ia.vertexAttribDivisorANGLE(OPACITY_LOCATION, 1);
+    gl.enableVertexAttribArray(TRANSFORM_LOCATION);
+    gl.vertexAttribPointer(TRANSFORM_LOCATION, 1, gl.UNSIGNED_SHORT, false, 0, TRANSFORM_OFFSET);
+    gl_ext_ia.vertexAttribDivisorANGLE(TRANSFORM_LOCATION, 1);
+    gl.enableVertexAttribArray(VERTEX_ID_LOCATION);
+    gl.vertexAttribPointer(VERTEX_ID_LOCATION, 1, gl.UNSIGNED_BYTE, false, 0, VERTEX_ID_OFFSET);
+    gl_ext_ia.vertexAttribDivisorANGLE(VERTEX_ID_LOCATION, 0);  // Vertex ID rate must be per-vertex!
+    gl_ext_vao.bindVertexArrayOES(null);
+
+    return numEdges;
 }
 
 
@@ -1160,6 +1403,46 @@ glUtils._drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
 }
 
 
+glUtils._drawEdgesColorPass = function(gl, viewportTransform) {
+    const gl_ext_ia = gl.getExtension('ANGLE_instanced_arrays');
+    const gl_ext_vao = gl.getExtension('OES_vertex_array_object');
+
+    // Set up render pipeline
+    const program = glUtils._programs["edges"];
+    gl.useProgram(program);
+    gl.enable(gl.BLEND);
+    gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+
+    // Set per-scene uniforms
+    gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
+    gl.uniform2fv(gl.getUniformLocation(program, "u_canvasSize"), [gl.canvas.width, gl.canvas.height]);
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["transformLUT"]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_transformLUT"), 3);
+
+    for (let [uid, numEdges] of Object.entries(glUtils._numEdges)) {
+        if (numEdges == 0) continue;
+        gl_ext_vao.bindVertexArrayOES(glUtils._vaos[uid + "_edges"]);
+
+        // Set per-markerset uniforms
+        gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"),
+            glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorLUT"]);
+        gl.uniform1i(gl.getUniformLocation(program, "u_colorLUT"), 0);
+
+        gl_ext_ia.drawArraysInstancedANGLE(gl.TRIANGLE_STRIP, 0, 4, numEdges);
+    }
+
+    // Restore render pipeline state
+    gl_ext_vao.bindVertexArrayOES(null);
+    gl.blendFunc(gl.ONE, gl.ONE);
+    gl.disable(gl.BLEND);
+    gl.useProgram(null);
+}
+
+
 glUtils._drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) {
     const gl_ext_ia = gl.getExtension('ANGLE_instanced_arrays');
     const gl_ext_vao = gl.getExtension('OES_vertex_array_object');
@@ -1252,6 +1535,7 @@ glUtils.draw = function() {
         glUtils._pickingEnabled = false;  // Clear flag until next click event
     }
 
+    glUtils._drawEdgesColorPass(gl, viewportTransform);
     glUtils._drawColorPass(gl, viewportTransform, markerScaleAdjusted);
 }
 
@@ -1379,6 +1663,7 @@ glUtils.restoreLostContext = function(event) {
     glUtils._programs["markers"] = glUtils._loadShaderProgram(gl, glUtils._markersVS, glUtils._markersFS);
     glUtils._programs["markers_instanced"] = glUtils._loadShaderProgram(gl, glUtils._markersVS, glUtils._markersFS, "#define USE_INSTANCING\n");
     glUtils._programs["picking"] = glUtils._loadShaderProgram(gl, glUtils._pickingVS, glUtils._pickingFS);
+    glUtils._programs["edges"] = glUtils._loadShaderProgram(gl, glUtils._edgesVS, glUtils._edgesFS);
     glUtils._textures["shapeAtlas"] = glUtils._loadTextureFromImageURL(gl, glUtils._markershapes);
     glUtils._textures["transformLUT"] = glUtils._createTransformLUTTexture(gl);
 
@@ -1426,6 +1711,7 @@ glUtils.init = function() {
     this._programs["markers"] = this._loadShaderProgram(gl, this._markersVS, this._markersFS);
     this._programs["markers_instanced"] = this._loadShaderProgram(gl, this._markersVS, this._markersFS, "#define USE_INSTANCING\n");
     this._programs["picking"] = this._loadShaderProgram(gl, this._pickingVS, this._pickingFS);
+    this._programs["edges"] = this._loadShaderProgram(gl, this._edgesVS, this._edgesFS);
     this._textures["shapeAtlas"] = this._loadTextureFromImageURL(gl, glUtils._markershapes);
     this._textures["transformLUT"] = this._createTransformLUTTexture(gl);
 
