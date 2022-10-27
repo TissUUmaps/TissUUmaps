@@ -53,6 +53,7 @@ glUtils = {
     _resolutionScale: 1.0,        // If this is set to below 1.0, the WebGL output will be upscaled
     _resolutionScaleActual: 1.0,  // Automatic scaling factor computed from glUtils._resolutionScale
     _useInstancing: true,         // Use instancing and gl.TRIANGLE_STRIP to avoid size limit of gl.POINTS
+    _showEdgesExperimental: false,
     _piechartPalette: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
 
@@ -1535,7 +1536,13 @@ glUtils.draw = function() {
         glUtils._pickingEnabled = false;  // Clear flag until next click event
     }
 
-    glUtils._drawEdgesColorPass(gl, viewportTransform);
+    if (glUtils._showEdgesExperimental) {
+        // Note: Edges should ideally be drawn interleaved with the markers (for
+        // correct overlap, if multiple markersets have spatial connectivity
+        // data) but for now we just draw them first a separate rendering pass
+        glUtils._drawEdgesColorPass(gl, viewportTransform);
+    }
+
     glUtils._drawColorPass(gl, viewportTransform, markerScaleAdjusted);
 }
 
