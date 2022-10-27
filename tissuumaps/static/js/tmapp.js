@@ -108,18 +108,34 @@ tmapp.init = function () {
     }).setTracking(true);*/
     
     tmapp["ISS_viewer"].addHandler('canvas-click', click_handler);
-
     tmapp["ISS_viewer"].addHandler("animation-finish", function animationFinishHandler(event){
-        console.log("animation-finish");
-            d3.selectAll("." + regionUtils._drawingclass).selectAll('polyline').each(function(el) {
-                $(this).attr('stroke-width', regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
-            });
-            d3.selectAll("." + regionUtils._drawingclass).selectAll('circle').each(function(el) {
-                $(this).attr('r', 10* regionUtils._handleRadius / tmapp["ISS_viewer"].viewport.getZoom());
-            });
-            d3.selectAll(".regionpoly").each(function(el) {
-                $(this).attr('stroke-width', regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
-            });
+        d3.selectAll("." + regionUtils._drawingclass).selectAll('polyline').each(function(el) {
+            $(this).attr('stroke-width', regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
+        });
+        d3.selectAll("." + regionUtils._drawingclass).selectAll('circle').each(function(el) {
+            $(this).attr('r', 10* regionUtils._handleRadius / tmapp["ISS_viewer"].viewport.getZoom());
+        });
+        d3.selectAll(".regionpoly").each(function(el) {
+            $(this).attr('stroke-width', regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
+        });
+        var op = tmapp["object_prefix"];
+        if (tmapp[op + "_viewer"].world.getItemAt(0).viewportToImageZoom(tmapp[op + "_viewer"].viewport.getZoom()) > 0.05) {
+            var count = tmapp[op + "_viewer"].world.getItemCount();
+            for (var i = 0; i < count; i++) {
+                var tiledImage = tmapp[op + "_viewer"].world.getItemAt(i);
+                tiledImage.immediateRender = true;
+            }
+            tmapp[op + "_viewer"].imageLoaderLimit = 50;
+        }
+    });
+    tmapp["ISS_viewer"].addHandler("animation-start", function animationFinishHandler(event){
+        var op = tmapp["object_prefix"];
+        var count = tmapp[op + "_viewer"].world.getItemCount();
+        for (var i = 0; i < count; i++) {
+            var tiledImage = tmapp[op + "_viewer"].world.getItemAt(i);
+            tiledImage.immediateRender = false;
+        }
+        tmapp[op + "_viewer"].imageLoaderLimit = 1;
     });
     
     elt = document.getElementById("ISS_globalmarkersize");
@@ -153,6 +169,7 @@ tmapp.options_osd = {
     blendTime: 0,
     minZoomImageRatio: 1,
     maxZoomPixelRatio: 30,
+    immediateRender: false,
     zoomPerClick: 1.0,
     constrainDuringPan: true,
     visibilityRatio: 0.85,
@@ -160,6 +177,7 @@ tmapp.options_osd = {
     maxImageCacheCount:2000,
     imageSmoothingEnabled:false,
     preserveImageSizeOnResize: true,
+    imageLoaderLimit: 50,
     gestureSettingsUnknown: {
         flickEnabled: false
     },

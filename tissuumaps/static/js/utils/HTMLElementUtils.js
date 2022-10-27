@@ -53,6 +53,12 @@ HTMLElementUtils.inputTypeColor = function (params) {
             color.setAttribute(attr, extraAttributes[attr]);
         }
     }
+    var eventListeners = params.eventListeners || null;
+    if (eventListeners) {
+        for (var message in eventListeners) {
+            color.addEventListener(message, eventListeners[message]);
+        }
+    }
     return color;
 }
 

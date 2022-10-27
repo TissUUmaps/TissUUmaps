@@ -18,17 +18,8 @@
     _filters: {
         "Color":{
             params:{
-                type:"select",
-                options:[
-                    {text:"----", value:0},
-                    {text:"Red", value:"100,0,0"},
-                    {text:"Green", value:"0,100,0"},
-                    {text:"Blue", value:"0,0,100"},
-                    {text:"Yellow", value:"100,100,0"},
-                    {text:"Cyan", value:"0,100,100"},
-                    {text:"Magenta", value:"100,0,100"},
-                    {text:"Gray", value:"100,100,100"}
-                ]
+                type:"color",
+                value:"100,100,100"
             },
             filterFunction: function (value) {
                 if (value == 0) {  return function (context, callback) {callback();}}
@@ -362,10 +353,12 @@ filterUtils.getFilterFunction = function(filterName) {
         });
     };
     tmapp[op + "_viewer"].setFilterOptions({
-        filters: filters
+        filters: filters,
+        loadMode: "async"
     });
     for ( var i = 0; i < tmapp[op + "_viewer"].world._items.length; i++ ) {
         tmapp[op + "_viewer"].world._items[i].tilesMatrix={};
+        tmapp[op + "_viewer"].world._items[i]._needsDraw = true;
     }
 }
 
@@ -383,6 +376,20 @@ filterUtils.getFilterFunction = function(filterName) {
                     filterRange.value = item.value;
                 else if (filterRange.type == "checkbox")
                     filterRange.checked = item.value;
+                if (filterRange.type == "color") {
+                    function componentToHex(c) {
+                        var hex = Math.floor(c*255/100).toString(16);
+                        return hex.length == 1 ? "0" + hex : hex;
+                    }
+                    function rgbToHex(rgb) {
+                        if (rgb == "0" || rgb == 0) {return "#FFFFFF";}
+                        var array = rgb.split(',');
+                        return "#" + componentToHex(array[0]) + componentToHex(array[1]) + componentToHex(array[2]);
+                    }
+                    console.log(item.value);
+                    console.log("setRangesFromFilterItems", item.value, rgbToHex(item.value))
+                    filterRange.value = rgbToHex(item.value);
+                }
             }
         }
     };
@@ -414,6 +421,17 @@ filterUtils.getFilterItems = function() {
             inputValue = filterInputsRanges[i].value;
         else if (filterInputsRanges[i].type == "checkbox")
             inputValue = filterInputsRanges[i].checked;
+        else if (filterInputsRanges[i].type == "color") {
+            function hex2RGB(hex) {
+                const color = hex
+                const r = Math.floor(100*parseInt(color.substr(1,2), 16)/255)
+                const g = Math.floor(100*parseInt(color.substr(3,2), 16)/255)
+                const b = Math.floor(100*parseInt(color.substr(5,2), 16)/255)
+                console.log(hex, r+","+g+","+b);
+                return r+","+g+","+b
+              }
+            inputValue = hex2RGB(filterInputsRanges[i].value);
+        }
         if (inputValue) {
             items[filterLayer].push(
                 {
@@ -502,21 +520,51 @@ filterUtils.createHTMLFilter = function (params) {
     else if (type == "select") {
         filterInput = HTMLElementUtils.selectTypeDropDown(params);
     }
+    else if (type == "color") {
+        filterInput = HTMLElementUtils.inputTypeColor(params);
+        console.log(params);
+        if (params.value.includes(",")) {
+            function componentToHex(c) {
+                var hex = Math.floor(c*255/100).toString(16);
+                return hex.length == 1 ? "0" + hex : hex;
+            }
+            function rgbToHex(rgb) {
+                var array = rgb.split(',');
+                return "#" + componentToHex(array[0]) + componentToHex(array[1]) + componentToHex(array[2]);
+            }
+            params.value = rgbToHex(params.value);
+        }
+    }
     if (params.value != undefined) {
         filterInput.setAttribute("value", params.value);
     }
     filterInput.setAttribute("layer", params.layer);
     filterInput.setAttribute("filter", params.filter);
     filterInput.setAttribute("id", "filterInput-" + params.filter + "-" + params.layer);
-    filterInput.setAttribute("list", "filterDatalist-" + params.filter + "-" + params.layer);
+    if (type != "color") {
+        filterInput.setAttribute("list", "filterDatalist-" + params.filter + "-" + params.layer);
 
-    datalist = document.createElement("datalist");
-    datalist.setAttribute("id", "filterDatalist-" + params.filter + "-" + params.layer);
-    option = document.createElement("option");
-    option.text = params.value;
-    datalist.appendChild(option);
+        datalist = document.createElement("datalist");
+        datalist.setAttribute("id", "filterDatalist-" + params.filter + "-" + params.layer);
+        option = document.createElement("option");
+        option.text = params.value;
+        datalist.appendChild(option);
 
-    filterInput.appendChild(datalist);
+        filterInput.appendChild(datalist);
+    }else {
+        filterInput.setAttribute("list", "filterDatalist-" + params.filter + "-" + params.layer);
 
+        datalist = document.createElement("datalist");
+        datalist.setAttribute("id", "filterDatalist-" + params.filter + "-" + params.layer);
+        const colors = ['#FFFFFF', '#FF0000', '#00FF00','#0000FF','#FF00FF','#FFFF00','#00FFFF',"#FF007F","#7F00FF","#007FFF","#00FF7F","#7FFF00","#FF7F00"];
+        for (const element of colors) {
+            option = document.createElement("option");
+            option.text = element;
+            datalist.appendChild(option);
+        }
+        
+
+        filterInput.appendChild(datalist);
+    }
     return filterInput;
 }

@@ -42,7 +42,7 @@ flask.standalone.init = function () {
     button = HTMLElementUtils.createElement({"kind":"div", extraAttributes:{"class":"btn btn-primary btn-sm"}});
     button.innerHTML = "Add image layer";
     div.append(button)
-    document.getElementById("image-overlay-panel").append(div)
+    document.getElementById("image-overlay-panel").after(div)
     button.addEventListener("click", function(){
         flask.standalone.addLayer("");
     });
@@ -173,7 +173,7 @@ flask.server.init = function () {
     button = HTMLElementUtils.createElement({"kind":"div", extraAttributes:{"class":"btn btn-primary btn-sm"}});
     button.innerHTML = "Add image layer";
     div.append(button)
-    document.getElementById("image-overlay-panel").append(div)
+    document.getElementById("image-overlay-panel").after(div)
     button.addEventListener("click", function(){
         var modalUID = "messagebox"
         button1=HTMLElementUtils.createButton({"extraAttributes":{ "class":"btn btn-primary mx-2"}})
