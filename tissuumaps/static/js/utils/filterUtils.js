@@ -332,34 +332,29 @@ filterUtils.getFilterFunction = function(filterName) {
 	caman.Store.put = function() {};
 
     var op = tmapp["object_prefix"];
-    if (!tmapp[op + "_viewer"].world || !tmapp[op + "_viewer"].world.getItemAt(Object.keys(filterUtils._filterItems).length-1)) {
-        setTimeout(function() {
-            if (calledItems == filterUtils._filterItems)
-                filterUtils.applyFilterItems(calledItems);
-        }, 100);
-        return;
-    }
-    filters = [];
-    for (const layer in filterUtils._filterItems) {
-        processors = [];
-        for(var filterIndex=0;filterIndex<filterUtils._filterItems[layer].length;filterIndex++) {
-            processors.push(
-                filterUtils._filterItems[layer][filterIndex].filterFunction(filterUtils._filterItems[layer][filterIndex].value)
-            );
-        }
-        filters.push({
-            items: tmapp[op + "_viewer"].world.getItemAt(layer),
-            processors: processors
+    overlayUtils.waitLayersReady().then(() => {    
+        filters = [];
+        for (const layer in filterUtils._filterItems) {
+            processors = [];
+            for(var filterIndex=0;filterIndex<filterUtils._filterItems[layer].length;filterIndex++) {
+                processors.push(
+                    filterUtils._filterItems[layer][filterIndex].filterFunction(filterUtils._filterItems[layer][filterIndex].value)
+                );
+            }
+            filters.push({
+                items: tmapp[op + "_viewer"].world.getItemAt(layer),
+                processors: processors
+            });
+        };
+        tmapp[op + "_viewer"].setFilterOptions({
+            filters: filters,
+            loadMode: "async"
         });
-    };
-    tmapp[op + "_viewer"].setFilterOptions({
-        filters: filters,
-        loadMode: "async"
-    });
-    for ( var i = 0; i < tmapp[op + "_viewer"].world._items.length; i++ ) {
-        tmapp[op + "_viewer"].world._items[i].tilesMatrix={};
-        tmapp[op + "_viewer"].world._items[i]._needsDraw = true;
-    }
+        for ( var i = 0; i < tmapp[op + "_viewer"].world._items.length; i++ ) {
+            tmapp[op + "_viewer"].world._items[i].tilesMatrix={};
+            tmapp[op + "_viewer"].world._items[i]._needsDraw = true;
+        }
+    })
 }
 
 /** 
@@ -400,109 +395,59 @@ filterUtils.getFilterFunction = function(filterName) {
  *  */
 filterUtils.getFilterItems = function() {
     var op = tmapp["object_prefix"];
-    if (!tmapp[op + "_viewer"].world || !tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1)) {
-        setTimeout(function() {
-            filterUtils.getFilterItems();
-        }, 100);
-        return;
-    }
-    filterInputsRanges = document.getElementsByClassName("filterInput");
-    items = {};
-    for (i = 0; i < filterInputsRanges.length; i++) {
-        var filterLayer = filterInputsRanges[i].getAttribute("layer");
-        items[filterLayer] = []
-    }
-    for (i = 0; i < filterInputsRanges.length; i++) {
-        var filterName = filterInputsRanges[i].getAttribute("filter");
-        var filterLayer = filterInputsRanges[i].getAttribute("layer");
-        var filterFunction = filterUtils.getFilterFunction(filterName);
-        
-        if (filterInputsRanges[i].type == "range" || filterInputsRanges[i].type == "select-one")
-            inputValue = filterInputsRanges[i].value;
-        else if (filterInputsRanges[i].type == "checkbox")
-            inputValue = filterInputsRanges[i].checked;
-        else if (filterInputsRanges[i].type == "color") {
-            function hex2RGB(hex) {
-                const color = hex
-                const r = Math.floor(100*parseInt(color.substr(1,2), 16)/255)
-                const g = Math.floor(100*parseInt(color.substr(3,2), 16)/255)
-                const b = Math.floor(100*parseInt(color.substr(5,2), 16)/255)
-                console.log(hex, r+","+g+","+b);
-                return r+","+g+","+b
-              }
-            inputValue = hex2RGB(filterInputsRanges[i].value);
+    
+    overlayUtils.waitLayersReady().then(() => {    
+        filterInputsRanges = document.getElementsByClassName("filterInput");
+        items = {};
+        for (i = 0; i < filterInputsRanges.length; i++) {
+            var filterLayer = filterInputsRanges[i].getAttribute("layer");
+            items[filterLayer] = []
         }
-        if (inputValue) {
-            items[filterLayer].push(
-                {
-                    filterFunction: filterFunction,
-                    value: inputValue,
-                    name: filterName
+        for (i = 0; i < filterInputsRanges.length; i++) {
+            var filterName = filterInputsRanges[i].getAttribute("filter");
+            var filterLayer = filterInputsRanges[i].getAttribute("layer");
+            var filterFunction = filterUtils.getFilterFunction(filterName);
+            
+            if (filterInputsRanges[i].type == "range" || filterInputsRanges[i].type == "select-one")
+                inputValue = filterInputsRanges[i].value;
+            else if (filterInputsRanges[i].type == "checkbox")
+                inputValue = filterInputsRanges[i].checked;
+            else if (filterInputsRanges[i].type == "color") {
+                function hex2RGB(hex) {
+                    const color = hex
+                    const r = Math.floor(100*parseInt(color.substr(1,2), 16)/255)
+                    const g = Math.floor(100*parseInt(color.substr(3,2), 16)/255)
+                    const b = Math.floor(100*parseInt(color.substr(5,2), 16)/255)
+                    console.log(hex, r+","+g+","+b);
+                    return r+","+g+","+b
                 }
-            );
+                inputValue = hex2RGB(filterInputsRanges[i].value);
+            }
+            if (inputValue) {
+                items[filterLayer].push(
+                    {
+                        filterFunction: filterFunction,
+                        value: inputValue,
+                        name: filterName
+                    }
+                );
+            }
         }
-    }
-    filterUtils._filterItems = items;
-    filterUtils.applyFilterItems(items);
+        filterUtils._filterItems = items;
+        filterUtils.applyFilterItems(items);
+    })
 }
 
-filterUtils.setCompositeOperation = function(restart) {
+filterUtils.setCompositeOperation = function() {
     var op = tmapp["object_prefix"];
-    if (!tmapp[op + "_viewer"].world || !tmapp[op + "_viewer"].world.getItemAt(Object.keys(filterUtils._filterItems).length-1)) {
-        setTimeout(function() {
-            if (restart == undefined){
-                restart = 10;
-            }
-            if (restart > 0)
-                filterUtils.setCompositeOperation(restart-1);
-        }, 100);
-        return;
-    }
-    var filterCompositeMode = document.getElementById("filterCompositeMode");
-    filterCompositeMode.value = filterUtils._compositeMode;
-    newCompositeMode = filterUtils._compositeMode;
-    if (newCompositeMode == "collection") {
-        tmapp["ISS_viewer"].collectionMode = true;
-        newCompositeMode = "lighter";
-        var collectionLayout = {
-            tileSize: 1, tileMargin: 0.1,
-            columns: Math.ceil(Math.sqrt(tmapp.layers.length))
+    overlayUtils.waitLayersReady().then(() => {
+        var filterCompositeMode = document.getElementById("filterCompositeMode");
+        filterCompositeMode.value = filterUtils._compositeMode;
+        tmapp[op + "_viewer"].compositeOperation = filterUtils._compositeMode;
+        for (i = 0; i < tmapp[op + "_viewer"].world.getItemCount(); i++) {
+            tmapp[op + "_viewer"].world.getItemAt(i).setCompositeOperation(filterUtils._compositeMode);
         }
-        if (projectUtils._activeState["collectionLayout"] !== undefined) {
-            collectionLayout = projectUtils._activeState["collectionLayout"];
-        }
-        tmapp["ISS_viewer"].world.arrange(collectionLayout);
-        var inputs = document.querySelectorAll(".visible-layers");
-        for(var i = 0; i < inputs.length; i++) {
-            inputs[i].checked = false;
-            inputs[i].click();
-        }
-        tmapp["ISS_viewer"].viewport.goHome();
-        $(".channelRange").hide();
-    }
-    else if (tmapp["ISS_viewer"].collectionMode){
-        tmapp["ISS_viewer"].collectionMode = false;
-        tmapp["ISS_viewer"].world.setAutoRefigureSizes(false);
-        for (var i = 0; i < tmapp["ISS_viewer"].world._items.length; i++) {
-            layer = tmapp.layers[i];
-            var x = layer.x || 0;
-            var y = layer.y || 0;
-            var scale = layer.scale || 1;
-            var  item = tmapp["ISS_viewer"].world._items[i];
-            var layer0X = tmapp[op + "_viewer"].world.getItemAt(0).getContentSize().x;
-            var layerNX = item.getContentSize().x;
-            item.setWidth(scale*layerNX/layer0X);
-            var point = new OpenSeadragon.Point(x/layer0X, y/layer0X);
-            item.setPosition(point);
-        }
-        tmapp["ISS_viewer"].world.setAutoRefigureSizes(true);
-        tmapp["ISS_viewer"].viewport.goHome();
-        $(".channelRange").show();
-    }
-    tmapp[op + "_viewer"].compositeOperation = filterUtils._compositeMode;
-    for (i = 0; i < tmapp[op + "_viewer"].world.getItemCount(); i++) {
-        tmapp[op + "_viewer"].world.getItemAt(i).setCompositeOperation(filterUtils._compositeMode);
-    }
+    })
 }
 
 /** Create an HTML filter */

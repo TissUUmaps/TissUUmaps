@@ -131,7 +131,7 @@ tmap_template = {
     "layers": [{"name": "tissue.tif", "tileSource": "./img/tissue.tif.dzi"}],
     "markerFiles": [],
     "plugins": [],
-    "compositeMode": "collection",
+    "collectionMode": True,
 }
 
 h5ad_cache = {}

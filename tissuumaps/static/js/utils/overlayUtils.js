@@ -33,6 +33,7 @@ overlayUtils.addAllLayers = function() {
         overlayUtils.addLayer(layer, i-1);
     });
     overlayUtils.addAllLayersSettings();
+    overlayUtils.setCollectionMode();
 }
 
 /**
@@ -44,6 +45,38 @@ overlayUtils.addAllLayersSettings = function() {
         overlayUtils.addLayerSettings(layer.name, layer.tileSource, i-1);
     });
     filterUtils.setRangesFromFilterItems();
+    
+    // Add collection mode checkbox:
+    if (document.getElementById("setCollectionModeRow")) {
+        document.getElementById("setCollectionModeRow").remove();
+    }
+    var extraAttributes = {
+        class: "form-check-input",
+        type: "checkbox"
+    };
+    if (projectUtils._activeState.collectionMode) {
+        extraAttributes.checked = true;
+    }
+    var input11 = HTMLElementUtils.createElement({
+        kind: "input",
+        id: "setCollectionMode",
+        extraAttributes: extraAttributes,
+    });
+    var label11 = HTMLElementUtils.createElement({
+        kind: "label",
+        extraAttributes: { for: "setCollectionMode" },
+    });
+    label11.innerHTML = "&nbsp;Collection mode";
+    var row = HTMLElementUtils.createRow({ id: "setCollectionModeRow"});
+    var col1 = HTMLElementUtils.createColumn({ width: 12 });
+    col1.appendChild(input11);
+    col1.appendChild(label11);
+    row.appendChild(col1);
+    settingsPanel.after(row);
+    input11.addEventListener("change", (event) => {
+        projectUtils._activeState.collectionMode = event.target.checked;
+        overlayUtils.setCollectionMode();
+    });
 }
 
 /**
@@ -333,6 +366,51 @@ overlayUtils.addLayer = function(layer, i, visible) {
             interfaceUtils.alert("Impossible to load file.")
             showModal = false;
         } 
+    });
+}
+
+/** 
+ * @summary Set collection mode of layers */
+ overlayUtils.setCollectionMode = function() {
+    var op = tmapp["object_prefix"];
+    overlayUtils.waitLayersReady().then(() => {
+        if (projectUtils._activeState.collectionMode) {
+            tmapp["ISS_viewer"].collectionMode = true;
+            var collectionLayout = {
+                tileSize: 1, tileMargin: 0.1,
+                columns: Math.ceil(Math.sqrt(tmapp.layers.length))
+            }
+            if (projectUtils._activeState["collectionLayout"] !== undefined) {
+                collectionLayout = projectUtils._activeState["collectionLayout"];
+            }
+            tmapp["ISS_viewer"].world.arrange(collectionLayout);
+            var inputs = document.querySelectorAll(".visible-layers");
+            for(var i = 0; i < inputs.length; i++) {
+                inputs[i].checked = false;
+                inputs[i].click();
+            }
+            tmapp["ISS_viewer"].viewport.goHome();
+            $(".channelRange").hide();
+        }
+        else if (tmapp["ISS_viewer"].collectionMode){
+            tmapp["ISS_viewer"].collectionMode = false;
+            tmapp["ISS_viewer"].world.setAutoRefigureSizes(false);
+            for (var i = 0; i < tmapp["ISS_viewer"].world._items.length; i++) {
+                layer = tmapp.layers[i];
+                var x = layer.x || 0;
+                var y = layer.y || 0;
+                var scale = layer.scale || 1;
+                var  item = tmapp["ISS_viewer"].world._items[i];
+                var layer0X = tmapp[op + "_viewer"].world.getItemAt(0).getContentSize().x;
+                var layerNX = item.getContentSize().x;
+                item.setWidth(scale*layerNX/layer0X);
+                var point = new OpenSeadragon.Point(x/layer0X, y/layer0X);
+                item.setPosition(point);
+            }
+            tmapp["ISS_viewer"].world.setAutoRefigureSizes(true);
+            tmapp["ISS_viewer"].viewport.goHome();
+            $(".channelRange").show();
+        }
     });
 }
 

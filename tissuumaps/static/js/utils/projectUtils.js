@@ -405,6 +405,11 @@ projectUtils.loadProjectFileFromServer = function(path) {
             location: OpenSeadragon.ScalebarLocation.BOTTOM_RIGHT
         });
     }
+    // for backward compatibility only:
+    if (state.compositeMode == "collection") {
+        state.compositeMode = "source-over";
+        state.collectionMode = true;
+    }
     projectUtils.loadLayers(state);
     
     //tmapp[tmapp["object_prefix"] + "_viewer"].world.resetItems()
