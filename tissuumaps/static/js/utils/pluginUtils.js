@@ -96,7 +96,7 @@ pluginUtils.loadParameters = function (pluginID, pluginDiv, parameters) {
         var col1 = HTMLElementUtils.createColumn({ width: 12 });
         if (parameter.type == "section") {
             row0=HTMLElementUtils.createElement({"kind":"h6", "extraAttributes":{"class":""}});
-            row0.innerText = parameterName;
+            row0.innerText = parameter.title;
             row0.style.borderBottom = "1px solid #aaa";
             row0.style.padding = "3px";
             row0.style.marginTop = "8px";
