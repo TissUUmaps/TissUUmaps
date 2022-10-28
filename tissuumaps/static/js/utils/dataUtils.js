@@ -488,6 +488,10 @@ dataUtils.readCSV = function(data_id, thecsv, options) {
             console.timeEnd("Load CSV");
             dataUtils._quadtreesLastInputs = {};  // Clear to make sure quadtrees are generated
             dataUtils.processRawData(data_id, rawdata);
+        },
+        error: function() {
+            interfaceUtils.alert("Impossible to load csv file, please check relative path in the tmap file:<br/><code>" + thecsv + "</code>","CSV loading error...");
+            interfaceUtils._mGenUIFuncs.deleteTab(data_id);
         }
     });
 }
