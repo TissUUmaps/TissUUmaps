@@ -286,9 +286,31 @@
         },
         id: "filterCompositeMode",
         options:[
-            {text:"Channels", value:"source-over"},
-            {text:"Composite", value:"lighter"},
-            {text:"Collection", value:"collection"}
+            {text:"source-over", value:"source-over"},
+            {text:"lighter", value:"lighter"},
+            {text:"darken", value:"darken"},
+            {text:"source-atop", value:"source-atop"},
+            {text:"source-in", value:"source-in"},
+            {text:"source-out", value:"source-out"},
+            {text:"destination-over", value:"destination-over"},
+            {text:"destination-atop", value:"destination-atop"},
+            {text:"destination-in", value:"destination-in"},
+            {text:"destination-out", value:"destination-out"},
+            {text:"copy", value:"copy"},
+            {text:"xor", value:"xor"},
+            {text:"multiply", value:"multiply"},
+            {text:"screen", value:"screen"},
+            {text:"overlay", value:"overlay"},
+            {text:"color-dodge", value:"color-dodge"},
+            {text:"color-burn", value:"color-burn"},
+            {text:"hard-light", value:"hard-light"},
+            {text:"soft-light", value:"soft-light"},
+            {text:"difference", value:"difference"},
+            {text:"exclusion", value:"exclusion"},
+            {text:"hue", value:"hue"},
+            {text:"saturation", value:"saturation"},
+            {text:"color", value:"color"},
+            {text:"luminosity", value:"luminosity"}
         ]
     }
     var label = document.createElement("label");
