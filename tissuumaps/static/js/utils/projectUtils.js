@@ -573,7 +573,7 @@ projectUtils.applySettings = function (settings) {
         settings.forEach(function(setting, i) {
             if (window[setting.module]) {
                 if (typeof window[setting.module][setting.function]  === 'function') {
-                    window[setting.module][setting.function](setting.value);
+                    window[setting.module][setting.function].apply(this, setting.value);
                 }
                 else {
                     window[setting.module][setting.function] = setting.value;
