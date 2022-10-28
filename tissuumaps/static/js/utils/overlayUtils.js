@@ -366,6 +366,26 @@ overlayUtils.areAllFullyLoaded = function () {
     return true;
   }
 
+overlayUtils.waitLayersReady = function () {
+    function sleep (time) {
+        return new Promise((resolve) => setTimeout(resolve, time));
+    }
+    return new Promise((resolve, reject) => {
+        sleep(200).then (()=>{
+            var op = tmapp["object_prefix"];
+            if (!tmapp[op + "_viewer"].world || !tmapp[op + "_viewer"].world.getItemCount() != tmapp.layers.length) {
+                resolve();
+                return;
+            }
+            else {
+                overlayUtils.waitLayersReady().then(()=>{
+                    resolve();
+                    return;
+                });
+            }    
+        });
+    });
+}
 overlayUtils.waitFullyLoaded = function () {
     function sleep (time) {
         return new Promise((resolve) => setTimeout(resolve, time));
