@@ -1167,6 +1167,12 @@ regionUtils.regionsToJSON= function(){
 
 regionUtils.JSONToRegions= function(filepath){
     if(filepath!==undefined){
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        const path = urlParams.get('path')
+        if (path != null) {
+            filepath = path + "/" + filepath;
+        }
         fetch(filepath)
         .then((response) => {
             return response.json();
