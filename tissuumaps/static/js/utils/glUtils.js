@@ -358,9 +358,15 @@ glUtils._pickingFS = `
 
 
 glUtils._edgesVS = `
+    #define THICKNESS_RATIO 0.2
+
     uniform mat2 u_viewportTransform;
     uniform vec2 u_canvasSize;
     uniform float u_transformIndex;
+    uniform float u_markerScale;
+    uniform float u_globalMarkerScale;
+    uniform float u_markerOpacity;
+    uniform float u_maxPointSize;
 
     uniform sampler2D u_colorLUT;
     uniform sampler2D u_transformLUT;
@@ -394,11 +400,15 @@ glUtils._edgesVS = `
         ndcPos1.y = -ndcPos1.y;
         ndcPos1 = u_viewportTransform * ndcPos1;
 
+        float pointSize = u_markerScale * u_globalMarkerScale;
+        pointSize = clamp(pointSize, 2.0, u_maxPointSize);
+        float lineThickness = max(1.0, THICKNESS_RATIO * pointSize);
+
         vec2 ndcMidpoint = (ndcPos1 + ndcPos0) * 0.5;
         vec2 ndcDeltaU = (ndcPos1 - ndcPos0) * 0.5;
         vec2 canvasDeltaU = ndcDeltaU * u_canvasSize;
         vec2 canvasDeltaV = vec2(-canvasDeltaU.y, canvasDeltaU.x);
-        vec2 ndcDeltaV = 4.0 * normalize(canvasDeltaV) / u_canvasSize;
+        vec2 ndcDeltaV = lineThickness * normalize(canvasDeltaV) / u_canvasSize;
 
         gl_Position = vec4(ndcMidpoint, 0.0, 1.0);
 
@@ -410,8 +420,8 @@ glUtils._edgesVS = `
         gl_Position.xy += (v_texCoord.x * 2.0 - 1.0) * ndcDeltaU;
         gl_Position.xy += (v_texCoord.y * 2.0 - 1.0) * ndcDeltaV;
 
-        v_color.rgb = sqrt(fract((float(a_index) + vec3(1.0, 2.0, 3.0)) / 3.0));
-        v_color.a = a_opacity;
+        v_color.rgb = vec3(0.8);  // Use a fixed color (for now)
+        v_color.a = a_opacity * u_markerOpacity;
     }
 `;
 
@@ -424,9 +434,7 @@ glUtils._edgesFS = `
 
     void main()
     {
-        //gl_FragColor = v_color;
-        //gl_FragColor = vec4(v_texCoord, 0.0, 1.0);
-        gl_FragColor = vec4(0.8, 0.8, 0.8, 1.0);
+        gl_FragColor = v_color;
     }
 `;
 
@@ -1412,7 +1420,7 @@ glUtils._drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
 }
 
 
-glUtils._drawEdgesColorPass = function(gl, viewportTransform) {
+glUtils._drawEdgesColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
     const gl_ext_ia = gl.getExtension('ANGLE_instanced_arrays');
     const gl_ext_vao = gl.getExtension('OES_vertex_array_object');
 
@@ -1425,6 +1433,8 @@ glUtils._drawEdgesColorPass = function(gl, viewportTransform) {
     // Set per-scene uniforms
     gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
     gl.uniform2fv(gl.getUniformLocation(program, "u_canvasSize"), [gl.canvas.width, gl.canvas.height]);
+    gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
+    gl.uniform1f(gl.getUniformLocation(program, "u_maxPointSize"), glUtils._useInstancing ? 2048 : 256);
     gl.activeTexture(gl.TEXTURE3);
     gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["transformLUT"]);
     gl.uniform1i(gl.getUniformLocation(program, "u_transformLUT"), 3);
@@ -1434,6 +1444,8 @@ glUtils._drawEdgesColorPass = function(gl, viewportTransform) {
         gl_ext_vao.bindVertexArrayOES(glUtils._vaos[uid + "_edges"]);
 
         // Set per-markerset uniforms
+        gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
+        gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
         gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"),
             glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
 
@@ -1548,7 +1560,7 @@ glUtils.draw = function() {
         // Note: Edges should ideally be drawn interleaved with the markers (for
         // correct overlap, if multiple markersets have spatial connectivity
         // data) but for now we just draw them first a separate rendering pass
-        glUtils._drawEdgesColorPass(gl, viewportTransform);
+        glUtils._drawEdgesColorPass(gl, viewportTransform, markerScaleAdjusted);
     }
 
     glUtils._drawColorPass(gl, viewportTransform, markerScaleAdjusted);
