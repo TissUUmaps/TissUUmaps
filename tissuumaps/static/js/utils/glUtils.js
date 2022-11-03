@@ -402,21 +402,23 @@ glUtils._edgesVS = `
 
         float pointSize = u_markerScale * u_globalMarkerScale;
         pointSize = clamp(pointSize, 2.0, u_maxPointSize);
-        float lineThickness = max(1.0, THICKNESS_RATIO * pointSize);
+        float lineThickness = max(0.5, THICKNESS_RATIO * pointSize);
+        float lineThicknessAdjusted = lineThickness + 0.25;  // Expanded thickness values,
+        float lineThicknessAdjusted2 = lineThickness + 0.5;  // needed for anti-aliasing
 
         vec2 ndcMidpoint = (ndcPos1 + ndcPos0) * 0.5;
         vec2 ndcDeltaU = (ndcPos1 - ndcPos0) * 0.5;
         vec2 canvasDeltaU = ndcDeltaU * u_canvasSize;
         vec2 canvasDeltaV = vec2(-canvasDeltaU.y, canvasDeltaU.x);
-        vec2 ndcDeltaV = lineThickness * normalize(canvasDeltaV) / u_canvasSize;
+        vec2 ndcDeltaV = lineThicknessAdjusted * normalize(canvasDeltaV) / u_canvasSize;
 
         gl_Position = vec4(ndcMidpoint, 0.0, 1.0);
 
         // Edge will be drawn as a triangle strip, so need to generate
         // texture coordinate and offset the output position depending on
         // which of the four corners we are processing
-        //v_texCoord = vec2(gl_VertexID & 1, (gl_VertexID >> 1) & 1);  // WebGL 2.0
-        v_texCoord = mod(vec2(a_vertexID, floor(a_vertexID / 2.0)), 2.0);  // WebGL 1.0
+        v_texCoord = mod(vec2(a_vertexID, floor(a_vertexID / 2.0)), 2.0);
+        v_texCoord.y = ((v_texCoord.y - 0.5) * (lineThicknessAdjusted2 / lineThickness)) + 0.5;
         gl_Position.xy += (v_texCoord.x * 2.0 - 1.0) * ndcDeltaU;
         gl_Position.xy += (v_texCoord.y * 2.0 - 1.0) * ndcDeltaV;
 
@@ -427,14 +429,35 @@ glUtils._edgesVS = `
 
 
 glUtils._edgesFS = `
+    #extension GL_OES_standard_derivatives : enable
+
     precision mediump float;
 
     varying vec4 v_color;
     varying highp vec2 v_texCoord;
 
+    float subpixelCoverage(vec2 uv)
+    {
+        vec2 samples[4];  // Sample locations (from rotated grid)
+        samples[0] = vec2(0.25, -0.75); samples[1] = vec2(0.75, 0.25);
+        samples[2] = vec2(-0.25, 0.75); samples[3] = vec2(-0.75, -0.25);
+
+        vec2 deltaX = dFdx(uv) * 0.5;
+        vec2 deltaY = dFdy(uv) * 0.5;
+        float accum = 0.0;
+        for (int i = 0; i < 4; ++i) {
+            // Check if sample is inside or outside the line for the edge
+            vec2 uv_i = uv + samples[i].x * deltaX + samples[i].y * deltaY;
+            bool inside = (uv_i.x > 0.0 && uv_i.x < 1.0 && uv_i.y > 0.0 && uv_i.y < 1.0);
+            accum += float(inside);
+        }
+        return accum * (1.0 / 4.0);
+    }
+
     void main()
     {
-        gl_FragColor = v_color;
+        gl_FragColor.rgb = v_color.rgb;
+        gl_FragColor.a = v_color.a * subpixelCoverage(v_texCoord);
     }
 `;
 
@@ -1685,6 +1708,7 @@ glUtils.restoreLostContext = function(event) {
     const gl = canvas.getContext("webgl", glUtils._options);
 
     gl.getExtension('OES_texture_float');  // Make sure extension is enabled
+    gl.getExtension('OES_standard_derivatives');  // Make sure extension is enabled
 
     // Restore shared WebGL objects
     glUtils._programs["markers"] = glUtils._loadShaderProgram(gl, glUtils._markersVS, glUtils._markersFS);
@@ -1725,10 +1749,12 @@ glUtils.init = function() {
     const extensions = gl.getSupportedExtensions();
     if (!extensions.includes("OES_vertex_array_object") ||
         !extensions.includes("ANGLE_instanced_arrays") ||
-        !extensions.includes("OES_texture_float")) {
-        alert("TissUUmaps requires a browser that supports WebGL 1.0 and the following extensions: OES_vertex_array_object, ANGLE_instanced_arrays, OES_texture_float");
+        !extensions.includes("OES_texture_float") ||
+        !extensions.includes("OES_standard_derivatives")) {
+        alert("TissUUmaps requires a browser that supports WebGL 1.0 and the following extensions: OES_vertex_array_object, ANGLE_instanced_arrays, OES_texture_float, OES_standard_derivatives");
     }
     gl.getExtension('OES_texture_float');  // Make sure extension is enabled
+    gl.getExtension('OES_standard_derivatives');  // Make sure extension is enabled
 
     // Place marker canvas under the OSD canvas. Doing this also enables proper
     // compositing with the minimap and other OSD elements.
