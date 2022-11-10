@@ -7,68 +7,11 @@ import tempfile
 import numpy as np
 import pandas as pd
 from flask import abort, make_response
-from scipy.ndimage import gaussian_filter
-from scipy.sparse import csc_matrix
-from scipy.spatial import cKDTree
+from scipy.sparse import csr_matrix, vstack
 from skimage.measure import approximate_polygon, find_contours, regionprops
 from sklearn.cluster import MiniBatchKMeans as KMeans
-
-
-class Plugin:
-    def __init__(self, app):
-        self.app = app
-
-    def getCacheFile(self, jsonParam):
-        strCache = self.app.basedir + json.dumps(jsonParam, sort_keys=True, indent=2)
-        hashKey = hashlib.md5(strCache.encode("utf-8")).hexdigest()
-        return os.path.join(
-            tempfile.gettempdir(),
-            "_".join([tempfile.gettempprefix(), "tmapPoints2Regions", hashKey]),
-        )
-
-    def Points2Regions(self, jsonParam):
-        if not jsonParam:
-            logging.error("No arguments, aborting.")
-            abort(500)
-
-        cacheFile = self.getCacheFile(jsonParam)
-        if os.path.isfile(cacheFile):
-            with open(cacheFile, "r") as f:
-                return make_response(f.read())
-
-        csvPath = os.path.abspath(os.path.join(self.app.basedir, jsonParam["csv_path"]))
-
-        df = pd.read_csv(csvPath)
-        xy = df[[jsonParam["xKey"], jsonParam["yKey"]]].to_numpy()
-        labels = df[jsonParam["clusterKey"]].to_numpy()
-
-        sigma = jsonParam["sigma"]
-        stride = jsonParam["stride"]
-        region_name = jsonParam["region_name"]
-        nclusters = jsonParam["nclusters"]
-        expression_threshold = jsonParam["expression_threshold"]
-        normalize_order = jsonParam["normalize_order"]
-
-        regions = points2geojson(
-            xy,
-            labels,
-            sigma,
-            stride,
-            region_name,
-            nclusters,
-            normalize_order,
-            expression_threshold,
-        )
-        strRegions = json.dumps(regions)
-
-        with open(cacheFile, "w") as f:
-            f.write(strRegions)
-
-        resp = make_response(strRegions)
-        return resp
-
-
-# COLORS = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', '#ffffff', '#000000']
+from sklearn.mixture import GaussianMixture
+from sklearn.preprocessing import normalize as sknormalize
 
 COLORS = [
     [0.9019607843137255, 0.09803921568627451, 0.29411764705882354],
@@ -137,284 +80,303 @@ def binary_mask_to_polygon(binary_mask, tolerance=0, offset=None, scale=None):
         contour = approximate_polygon(contour, tolerance)
         if len(contour) < 3:
             continue
-        if offset is not None:
-            contour = contour + offset  # .ravel().tolist()
+
         if scale is not None:
             contour = contour * scale
+        if offset is not None:
+            contour = contour + offset  # .ravel().tolist()
         # after padding and subtracting 1 we may get -0.5 points in our segmentation
         polygons.append(contour.tolist())
 
     return polygons
 
 
-def create_gene_signatures(
-    gene_labels,
-    gene_position_xy,
-    spatial_scale,
-    gene_labels_unqiue=None,
-    bin_stride=None,
-    bin_type="gaussian_per_point",
+def labelmask2geojson(
+    labelmask, region_name: str = "My regions", scale: float = 1.0, offset: float = 0
 ):
-
-    """
-    Computes gene expression signatures in different "empty" bins by inpainting neighbouring gene expression markers.
-    The inpainting is done by:
-        1.
-            Each "empty" bin is connected to its neighbouring, "known", gene expression bins through edges.
-            A known gene expression bin is a one-hot-encoded vector that labels a particular gene.
-            Each edge has a weight that is given by exp(-0.5 d_ij^2 / sigma^2 ), where d_ij is the distance
-            between the empty node i and the known node j.
-        2. The gene expression of the the empty bin is obtained by a weighted sum of the neighbouring known bins.
-
-    The empty bins can either be placed on a rectangular grid or ontop of each known node.
-
-    Input:
-        - gene_labels: The categorical label of each gene, (#genes long np.array).
-        - gene_position_xy: Position of each gene (#genes x 2 size np.array)
-        - Spatial scale, i.e., the sigma of a Gaussian kernel. Scalar
-        - gene_labels_unique: unique list of labels. If not provided, it is automagically computed using np.unique(gene_labels)
-        - bin_stride: Stride between bins. If not provided it is set to spatial scale.
-        - bin_type: option for setting the type of bins. If set to gaussian_grid it will use bins on a grid. If set to gaussian_per_point
-            it will compute bins centered around each point in gene_position_xy.
-    Output:
-        Gene vectors (#genes x #gene_types) gene profile vectors
-        Coord       (#genes x 2) spatial coordinate of each vector.
-    """
-
-    ok_bin_types = ["gaussian_grid", "gaussian_per_point", "gaussian_grid_fast"]
-
-    if bin_type not in ok_bin_types:
-        raise ValueError(f"bin_type must be one of the following: {ok_bin_types}")
-
-    if bin_stride is None:
-        bin_stride = spatial_scale
-
-    if gene_labels_unqiue is None:
-        gene_labels_unqiue = np.unique(gene_labels)
-
-    # Create unique numeric labels
-    gene_labels_unique_map = {str(k): i for i, k in enumerate(gene_labels_unqiue)}
-    gene_labels_numeric = np.array(
-        [gene_labels_unique_map[str(k)] for k in gene_labels]
-    )
-
-    gene_labels_numeric_unqiue = np.array(
-        [gene_labels_unique_map[str(label)] for label in gene_labels_unqiue]
-    )
-    n_genes = len(gene_labels_unqiue)
-    n_pts = gene_position_xy.shape[0]
-    if bin_type == "gaussian_grid":
-        # Compute grid start and stop
-        start = gene_position_xy.min(axis=0)
-        stop = gene_position_xy.max(axis=0) + 0.5 * bin_stride
-        # Compute location of each bin
-        y, x = np.meshgrid(
-            np.arange(start[1], stop[1], bin_stride),
-            np.arange(start[0], stop[0], bin_stride),
-        )
-        bin_coords = np.array([x.ravel(), y.ravel()]).T
-        # Compute gene vectors
-        vectors = np.eye(n_genes)
-        p = cKDTree(gene_position_xy).query_ball_point(
-            bin_coords, spatial_scale * 3, p=2
-        )
-        q = [np.ones(len(l)) * i for i, l in enumerate(p) if len(l) > 0]
-        p = np.concatenate(p).astype("int")
-        q = np.concatenate(q).astype("int")
-        # Affinities
-        aff = np.sum((gene_position_xy[p, :] - bin_coords[q, :]) ** 2, axis=1)
-        aff = np.exp(-0.5 * aff / (spatial_scale**2))
-        # Sum neighbours
-        gene_each_point_one_hot = np.array(
-            [vectors[:, gene_labels_numeric[i]] for i in range(n_pts)]
-        )
-        gene_vectors = (
-            csc_matrix((aff, (q, p)), shape=(bin_coords.shape[0], n_pts))
-            @ gene_each_point_one_hot
-        )
-    elif bin_type == "gaussian_grid_fast":
-        # Bin each marker onto a 2D grid
-        m = gene_position_xy.min(axis=0)
-        k = bin_stride
-        xy_downsamples = np.array((gene_position_xy - m) // k, dtype="int")
-        dim = np.append(xy_downsamples.max(axis=0) + 1, n_genes)
-        linearind = np.ravel_multi_index(
-            (xy_downsamples[:, 0], xy_downsamples[:, 1], gene_labels_numeric), dim
-        )
-        linearind_unique, counts = np.unique(linearind, return_counts=True)
-        x, y, c = np.unravel_index(linearind_unique, dim)
-        gene_vectors = np.zeros(dim)
-        gene_vectors[x, y, c] = counts
-        alpha = spatial_scale / bin_stride * 2 * np.pi
-        for l in gene_labels_numeric_unqiue:
-            gene_vectors[:, :, l] = alpha * gaussian_filter(
-                gene_vectors[:, :, l], spatial_scale / bin_stride
-            )
-        gene_vectors = gene_vectors.reshape(
-            (-1, len(gene_labels_numeric_unqiue)), order="F"
-        )
-        x, y = np.meshgrid(np.arange(dim[0]), np.arange(dim[1]))
-        bin_coords = k * (np.array([x.ravel(), y.ravel()]).T) + m
-    elif bin_type == "gaussian_per_point":
-        bin_coords = gene_position_xy.copy()
-        vectors = np.eye(n_genes)
-        p = cKDTree(gene_position_xy).query_ball_point(
-            bin_coords, spatial_scale * 3, p=2
-        )
-        q = [np.ones(len(l)) * i for i, l in enumerate(p) if len(l) > 0]
-        p = np.concatenate(p).astype("int")
-        q = np.concatenate(q).astype("int")
-        aff = np.sum((gene_position_xy[p, :] - bin_coords[q, :]) ** 2, axis=1)
-        aff = np.exp(-0.5 * aff / (spatial_scale**2))
-        gene_each_point_one_hot = np.array(
-            [vectors[:, gene_labels_numeric[i]] for i in range(n_pts)]
-        )
-        gene_vectors = (
-            csc_matrix((aff, (q, p)), shape=(bin_coords.shape[0], n_pts))
-            @ gene_each_point_one_hot
-        )
-    return gene_vectors, bin_coords, gene_labels_numeric_unqiue
-
-
-def preprocess_vectors(
-    gene_vectors,
-    gene_vector_coords,
-    threshold=None,
-    logtform=True,
-    normalize=True,
-    ord=1,
-):
-    """
-    The parameter ord is the order of the normalization
-    and must be one of the following:
-
-    inf    max(abs(x))
-    0      sum(x != 0)
-    1      sum(abs(x))
-    2      sqrt(sum(x^2))
-    """
-    if threshold is not None:
-        ind = gene_vectors.sum(axis=1) > threshold
-        gene_vectors = gene_vectors[ind, :]
-        gene_vector_coords = gene_vector_coords[ind, :]
-
-    if logtform:
-        gene_vectors = np.log(gene_vectors + 1)
-    if normalize:
-        gene_vectors = gene_vectors / np.linalg.norm(
-            gene_vectors, ord=ord, axis=1, keepdims=True
-        )
-    return gene_vectors, gene_vector_coords
-
-
-def cluster_signatures(
-    gene_vectors, n_clusters=6, threshold=None, logtform=True, normalize=True, ord=1
-):
-    """
-    Cluster gene vectors (#ngenes x #gene types).
-    """
-    kmeans = KMeans(n_clusters, random_state=42).fit(gene_vectors)
-    labels = kmeans.labels_
-    cluster_centers = kmeans.cluster_centers_
-    return labels, cluster_centers
-
-
-def makejson(
-    regionname: str,
-    labels_numeric_unique,
-    labels: np.array,
-    xy: np.array,
-    bin_stride,
-    colors,
-):
-    xy_lowres = (xy.astype("float32") // bin_stride).astype("int")
-    sz = xy_lowres.max(axis=0) + 1
-    labelmask = np.zeros((sz[0], sz[1]), dtype="uint8")
-    for label in labels_numeric_unique:
-        ind = labels == label
-        labelmask[xy_lowres[ind, 0], xy_lowres[ind, 1]] = label + 1
-
-    polygons = []
-    cluster_names = [f"Region {l+1}" for l in labels_numeric_unique]
-    for region in regionprops(labelmask):
-        # take regions with large enough areas
-        print(region.label)
-        contours = binary_mask_to_polygon(
-            region.image,
-            offset=np.array([region.bbox[0] + 0.5, region.bbox[1] + 0.5]),
-            scale=bin_stride,
-        )
-        polygons.append(contours)
-
-    json = polygons2json(polygons, regionname, cluster_names, colors=colors)
-    return json
-
-
-def points2geojson(
-    xy: np.array,
-    labels: np.array,
-    sigma: float,
-    stride: int,
-    region_name: str = "My regions",
-    nclusters: int = 4,
-    normalize_order: int = 1,
-    expression_threshold: float = 3,
-):
+    nclusters = np.max(labelmask)
     colors = [COLORS[k % len(COLORS)] for k in range(nclusters)]
 
-    # Create neighbourhood vectors
-    gene_vectors, gene_vector_coords, gene_labels_unique = create_gene_signatures(
-        labels, xy, sigma, bin_stride=stride, bin_type="gaussian_grid_fast"
-    )
-    # Filter genes
-    gene_vectors, gene_vector_coords = preprocess_vectors(
-        gene_vectors,
-        gene_vector_coords,
-        threshold=expression_threshold,
-        logtform=False,
-        normalize=True,
-        ord=normalize_order,
-    )
-
-    # Mini batch kmeans
-    clusterlabels, centers = cluster_signatures(gene_vectors, nclusters)
-
-    # Geojson
-    json = makejson(
-        region_name,
-        gene_labels_unique,
-        clusterlabels,
-        gene_vector_coords,
-        stride,
-        colors,
-    )
-
+    # Make JSON
+    polygons = []
+    cluster_names = [f"Region {l+1}" for l in np.arange(1, nclusters + 1)]
+    for region in regionprops(labelmask):
+        # take regions with large enough areas
+        contours = binary_mask_to_polygon(
+            region.image,
+            offset=scale * np.array(region.bbox[0:2]) + offset + 0.5 * scale,
+            scale=scale,
+        )
+        polygons.append(contours)
+    json = polygons2json(polygons, region_name, cluster_names, colors=colors)
     return json
 
 
-def test():
-    import json
+class Plugin:
+    def __init__(self, app):
+        self.app = app
 
-    import pandas as pd
+    def getCacheFile(self, jsonParam):
+        strCache = self.app.basedir + json.dumps(jsonParam, sort_keys=True, indent=2)
+        hashKey = hashlib.md5(strCache.encode("utf-8")).hexdigest()
+        return os.path.join(
+            tempfile.gettempdir(),
+            "_".join([tempfile.gettempprefix(), "tmapPoints2Regions", hashKey]),
+        )
 
-    data = pd.read_csv("example_data.csv")
-    xy = data[["x", "y"]].to_numpy()
-    labels = data["name"].to_numpy()
-    sigma = 40
-    stride = int(0.5 * sigma)
-    geojson = points2geojson(
-        xy,
-        labels,
-        sigma,
-        stride,
-        region_name="My regions",
-        nclusters=8,
-        normalize_order=1,
-        expression_threshold=3,
-    )
-    with open(f"regions.json", "w") as fp:
-        json.dump(geojson, fp, indent=4, sort_keys=True)
+    def Points2Regions(self, jsonParam):
+        if not jsonParam:
+            logging.error("No arguments, aborting.")
+            abort(500)
+
+        cacheFile = self.getCacheFile(jsonParam)
+        if os.path.isfile(cacheFile):
+            with open(cacheFile, "r") as f:
+                return make_response(f.read())
+
+        csvPath = os.path.abspath(os.path.join(self.app.basedir, jsonParam["csv_path"]))
+
+        df = pd.read_csv(csvPath)
+        xy = df[[jsonParam["xKey"], jsonParam["yKey"]]].to_numpy()
+        print(df.columns)
+        print(jsonParam["clusterKey"])
+        labels = df[jsonParam["clusterKey"]].to_numpy()
+
+        sigma = jsonParam["sigma"]
+        stride = jsonParam["stride"]
+        region_name = jsonParam["region_name"]
+        nclusters = jsonParam["nclusters"]
+        expression_threshold = jsonParam["expression_threshold"]
+
+        regions = FastCluster(
+            xy, labels, stride, sigma, nclusters, min_density=expression_threshold
+        ).get_geojson(region_name=region_name)
+        strRegions = json.dumps(regions)
+
+        with open(cacheFile, "w") as f:
+            f.write(strRegions)
+
+        resp = make_response(strRegions)
+        return resp
+
+
+class Rasterizer:
+    def __init__(self, bin_width: float, xy: np.ndarray, labels: np.ndarray) -> None:
+        self.bin_width = bin_width
+        npts = len(labels)
+        labels_unique = np.unique(labels)
+        __label2num = {l: i for i, l in enumerate(labels_unique)}
+
+        self.__labels_numeric = np.array(list(map(__label2num.get, labels)))
+        self.__labels_numeric_unique = np.array(list(__label2num.values()))
+
+        # Get id of each bin
+        self.offset = np.min(xy, axis=0, keepdims=True)
+        positional_ids = (xy - self.offset) // bin_width
+        positional_ids = positional_ids.astype("int")
+
+        grid_shape = tuple(np.max(positional_ids, axis=0).astype("int") + 1)
+
+        positional_linear_ids = np.ravel_multi_index(positional_ids.T, dims=grid_shape)
+        (
+            self._unique_positions_linear,
+            positional_linear_ids_zero_based,
+        ) = self.__reindex(positional_linear_ids)
+        self._unique_positions = np.array(
+            np.unravel_index(self._unique_positions_linear, shape=grid_shape)
+        ).T
+
+        # Center of mass for each bin
+        _, _, xy2bin = np.unique(
+            positional_linear_ids_zero_based,
+            return_index=True,
+            return_inverse=True,
+        )
+
+        com_map = csr_matrix((np.ones(npts), (xy2bin, np.arange(npts))), dtype="bool")
+        self._bin_com = (com_map @ xy) / (com_map @ np.ones((npts, 1)))
+
+        bin_ids = np.vstack((positional_linear_ids_zero_based, self.__labels_numeric)).T
+
+        u, counts = np.unique(bin_ids, axis=0, return_counts=True)
+
+        g = u[:, 0]
+        a = np.array(
+            np.unravel_index(self._unique_positions_linear[g], shape=grid_shape)
+        )
+
+        masks = [u[:, 1] == label for label in self.__labels_numeric_unique]
+        self._features = [
+            csr_matrix((counts[mask], (a[0, mask], a[1, mask])), shape=grid_shape)
+            for mask in masks
+        ]
+
+        m = len(self._unique_positions)
+        self.grid_shape = grid_shape
+        self.grid_coords = self._unique_positions
+        self._pt2bin = positional_linear_ids_zero_based
+        self._active_bins = csr_matrix(
+            (
+                np.repeat(1, m),
+                (self._unique_positions[:, 0], self._unique_positions[:, 1]),
+            ),
+            shape=grid_shape,
+        )
+
+    def __reindex(self, indices):
+        u, i = np.unique(indices, return_inverse=True)
+        re = np.arange(len(u))
+        return u, re[i]
+
+    def threshold(self, min_density: float = 0):
+        if min_density == 0:
+            return
+
+        s = np.zeros(self.grid_shape)
+        for i, n in enumerate(self._features):
+            s = s + n
+        counts = s.ravel()
+        if min_density == -1:
+            logcounts = np.array(np.log(counts + 1)).ravel()
+            is_bg = logcounts < 0.5
+            gmm = GaussianMixture(n_components=2, covariance_type="diag")
+            gmm.fit(logcounts[~is_bg].reshape((-1, 1)))
+            bglabel = np.argmax(gmm.means_)
+            fglabel = np.argmin(gmm.means_)
+
+            # Predict background
+            is_bg[~is_bg] = gmm.predict(logcounts[~is_bg].reshape((-1, 1))) == bglabel
+            mask = csr_matrix(is_bg.reshape(self.grid_shape))
+        else:
+            mask = csr_matrix(s > min_density, dtype="float32")
+        for i, n in enumerate(self._features):
+            self._features[i] = n.multiply(mask)
+        pass
+
+    def diffuse(self, sigma: float = 1.0):
+        if self.bin_width is not None:
+            sigma = sigma / self.bin_width
+        GX = csr_matrix(self.__make_gaussian(sigma, self.grid_shape[0]))
+        GY = csr_matrix(self.__make_gaussian(sigma, self.grid_shape[1]).T)
+
+        self._features = [GX @ X @ GY for X in self._features]
+
+    def __make_gaussian(self, sigma, shape):
+        mu = np.arange(shape).reshape((-1, 1))
+        x = np.arange(shape)
+        d2 = (mu - x) ** 2
+        gaussian = np.exp(-d2 / (2 * sigma * sigma)) * (d2 < (9 * sigma * sigma))
+        gaussian = gaussian / gaussian.max(axis=1, keepdims=True)
+        return gaussian
+
+    def which_bin(self):
+        return self._pt2bin
+
+    def bin_pos(self):
+        return self._bin_com
+
+    def extract(self, sparse: bool = True, normalize: bool = False):
+        features = vstack(
+            [f.reshape((1, np.prod(self.grid_shape))) for f in self._features]
+        ).T.tocsr()
+        if not sparse:
+            features = np.array(features.todense())
+        if normalize:
+            features = sknormalize(features, norm="l1")
+        return self._bin_com, features
+
+    def extract_grid(self, sparse: bool = True, normalize: bool = False):
+        features = (
+            vstack(self._features, dtype="float32")
+            .reshape((len(self._features), np.prod(self.grid_shape)))
+            .T.tocsr()
+        )
+        features_query = features[self._unique_positions_linear, :]
+
+        ind = np.arange(np.prod(self.grid_shape))
+        mass = np.array(features.sum(axis=1)).ravel()
+        keepind = mass > 0
+        query_pass_threshold = np.array(features_query.sum(axis=1)).ravel() > 0
+        features = features[keepind, :]
+        ind = ind[keepind]
+        xy = np.unravel_index(ind, self.grid_shape)
+        if not sparse:
+            features = np.array(features.todense())
+            features_query = np.array(features_query.todense())
+        if normalize:
+            features = sknormalize(features, norm="l1")
+            features_query = sknormalize(features_query, norm="l1")
+
+        return xy, features, features_query, query_pass_threshold
+
+
+class FastCluster:
+    def __init__(
+        self,
+        xy: np.ndarray,
+        labels: np.ndarray,
+        bin_width: float,
+        sigma: float,
+        n_clusters: int,
+        min_density: float = 0,
+        random_state: int = 42,
+    ) -> None:
+
+        self.raster = Rasterizer(bin_width, xy, labels)
+        self.raster.diffuse(sigma=sigma)
+        self.raster.threshold(min_density)
+
+        self.kmeans = KMeans(n_clusters, random_state=random_state)
+        (
+            self.grid_coords,
+            self.features,
+            self.features_query,
+            pass_threshold,
+        ) = self.raster.extract_grid(normalize=True)
+        self.kmeans.fit(self.features_query[pass_threshold])
+        self.labels_grid = self.kmeans.predict(self.features) + 1
+        self.labels = self.kmeans.predict(self.features_query) + 1
+        self.labels[~pass_threshold] = -1
+        self.centroids = self.kmeans.cluster_centers_
+        self.bin_width = bin_width
+
+    def get_label_per_point(self):
+        return self.labels[self.raster.which_bin()]
+
+    def get_label_per_bin(self):
+        return self.labels
+
+    def get_position_per_bin(self):
+        return self.raster._bin_com
+
+    def get_geojson(self, region_name: str = "My regions"):
+        labelmask = np.zeros(self.raster.grid_shape, dtype="int")
+        labelmask[self.grid_coords[0], self.grid_coords[1]] = self.labels_grid
+        labelmask = labelmask
+        return labelmask2geojson(
+            labelmask,
+            scale=self.bin_width,
+            offset=self.raster.offset,
+            region_name=region_name,
+        )
 
 
 if __name__ == "__main__":
-    test()
+    from os.path import join
+
+    import matplotlib.pyplot as plt
+    import pandas as pd
+
+    df = pd.read_csv(join("data", "example_data", "data.csv"))
+    xy = df[["x", "y"]].to_numpy()
+    labels = df["gene"].to_numpy()
+
+    c = FastCluster(xy, labels, bin_width=5, sigma=45, n_clusters=8, min_density=2)
+    labels = c.get_label_per_point()
+    import json
+
+    d = c.get_geojson()
+    with open(join("data", "example_data", "regions.json"), "w") as fp:
+        json.dump(d, fp)
+    df["semantic_label"] = labels
+    df.to_csv(join("data", "example_data", "results.csv"))
