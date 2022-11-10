@@ -12,11 +12,11 @@ Points2Regions = {
   name: "Points2Regions Plugin",
   _dataset: null,
   _clusterKey: false,
-  _nclusters: 4,
-  _expression_threshold: 3,
+  _nclusters: 8,
+  _expression_threshold: 1,
   _normalize_order: 1,
-  _sigma: 40,
-  _stride: 20,
+  _sigma: 15,
+  _stride: 5,
   _region_name: "Clusters",
 };
 
@@ -169,7 +169,7 @@ Points2Regions.init = function (container) {
       for: "Points2Regions_bboxSize",
     },
   });
-  label_stride12.innerHTML = "Stride:";
+  label_stride12.innerHTML = "Bin width:";
   var input_stride12 = HTMLElementUtils.createElement({
     kind: "input",
     id: "Points2Regions_stride",
@@ -211,7 +211,7 @@ Points2Regions.init = function (container) {
     if (
       dataUtils.data[Points2Regions._dataset]._csv_header.indexOf(
         dataUtils.data[Points2Regions._dataset]._gb_col
-      ) > 0
+      ) >= 0
     ) {
       interfaceUtils.getElementById("Points2Regions_clusterKey").value =
         dataUtils.data[Points2Regions._dataset]._gb_col;
@@ -222,6 +222,7 @@ Points2Regions.init = function (container) {
     }
   });
   select711.addEventListener("change", (event) => {
+    alert(select711.value);
     Points2Regions._clusterKey = select711.value;
   });
 
