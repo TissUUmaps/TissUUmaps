@@ -719,6 +719,7 @@ interfaceUtils._mGenUIFuncs.ChangeTabName=function(uid, value){
             domelement.innerText=value
         else
             domelement.innerText=uid;
+        domelement.setAttribute("title", domelement.innerText);
         interfaceUtils.getElementById(uid + "_tab-name").value = domelement.innerText;
     }
 }
@@ -850,7 +851,7 @@ interfaceUtils._mGenUIFuncs.generateTab=function(){
     li1=HTMLElementUtils.createElement({"kind":"li", "id":generated+"_li-tab", "extraAttributes":{ "class":"nav-item", "role":"presentation"}});
     button1=HTMLElementUtils.createButton({"id":generated+"_marker-tab-button","extraAttributes":{ "class":"nav-link marker-tab-button", "data-bs-toggle":"tab","data-bs-target":"#"+generated+"_marker-pane","type":"button","role":"tab","aria-controls":generated+"_marker","aria-selected":"false"}})
 
-    span1=HTMLElementUtils.createElement({"kind":"span", "id":generated+"_marker-tab-name"})
+    span1=HTMLElementUtils.createElement({"kind":"span", "id":generated+"_marker-tab-name","extraAttributes":{ "title": "New markers"}})
     span1.innerHTML="New markers";
 
     button1.appendChild(span1);

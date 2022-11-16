@@ -10244,6 +10244,14 @@ html {
 .progress-bar {
   transition: width 0s ease !important; }
 
+.marker-tab-button span {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width: 12vw;
+  display: inline-block;
+  vertical-align: bottom;
+  white-space: nowrap; }
+
 /* ============ desktop view ============ */
 @media all and (min-width: 992px) {
   .dropdown-menu li {
