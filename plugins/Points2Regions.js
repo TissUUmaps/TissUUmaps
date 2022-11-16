@@ -222,6 +222,7 @@ Points2Regions.init = function (container) {
     }
   });
   select711.addEventListener("change", (event) => {
+    alert(select711.value);
     Points2Regions._clusterKey = select711.value;
   });
 
