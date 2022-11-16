@@ -569,6 +569,7 @@ class webEngine(QWebEngineView):
         self.openImagePath(folderpath)
 
     def closeImage(self):
+        self.app.basedir = os.path.abspath(self.app.config["SLIDE_DIR"])
         self.load(QUrl(self.location))
         self.mainWin.setWindowTitle("TissUUmaps")
 
@@ -717,13 +718,6 @@ class webEngine(QWebEngineView):
         imgPath = os.path.abspath(os.path.join(self.app.basedir, imgPath))
 
         relativePath = os.path.relpath(os.path.dirname(imgPath), path)
-
-        if ".." in relativePath:
-            QMessageBox.warning(
-                self, "Error", "Impossible to add files from a parent folder."
-            )
-            returnDict = {"markerFile": None}
-            return returnDict
 
         returnDict = {
             "markerFile": {
