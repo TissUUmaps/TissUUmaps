@@ -348,6 +348,7 @@ def index():
         plugins=[p["module"] for p in app.config["PLUGINS"]],
         isStandalone=app.config["isStandalone"],
         readOnly=app.config["READ_ONLY"],
+        version=app.config["VERSION"],
     )
 
 
@@ -386,6 +387,7 @@ def slide(filename):
         jsonProject=jsonProject,
         isStandalone=app.config["isStandalone"],
         readOnly=app.config["READ_ONLY"],
+        version=app.config["VERSION"],
     )
 
 
@@ -450,6 +452,7 @@ def tmapFile(filename):
             jsonProject=state,
             isStandalone=app.config["isStandalone"],
             readOnly=app.config["READ_ONLY"],
+            version=app.config["VERSION"],
         )
 
 
@@ -610,6 +613,7 @@ def h5ad(filename, ext):
         jsonProject=state,
         isStandalone=app.config["isStandalone"],
         readOnly=app.config["READ_ONLY"],
+        version=app.config["VERSION"],
     )
 
 

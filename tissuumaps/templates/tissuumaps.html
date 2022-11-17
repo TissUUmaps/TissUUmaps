@@ -528,7 +528,7 @@
       glUtils._markershapes = "/static/misc/markershapes.png"
       tmapp.registerActions();
       tmapp.init();
-
+      tmapp.version = "{{ version | safe }}";
       {% for plugin in plugins %} {% if plugin %}
       pluginUtils.addPlugin("{{ plugin }}");
       {% endif %} {% endfor %}
