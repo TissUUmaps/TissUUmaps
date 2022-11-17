@@ -210,8 +210,10 @@ def h5ad_var_to_csv(basedir, path, obsName):
     adata = read_h5ad(os.path.join(basedir, path))
     img_key = "hires"
     outputFolder = os.path.join(basedir, path) + "_files"
-
-    geneExp = pd.DataFrame(adata[:, obsName].X.toarray())
+    try:
+        geneExp = pd.DataFrame(adata[:, obsName].X.toarray())
+    except:
+        geneExp = pd.DataFrame(adata[:, obsName].X)
     geneExp.columns = ["gene_expression"]
     geneExp["library_id"] = ""
     if "X_umap" in adata.obsm:
