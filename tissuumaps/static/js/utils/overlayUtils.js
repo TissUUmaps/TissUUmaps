@@ -17,7 +17,8 @@ overlayUtils = {
     _percentageForSubsample: 0.25,
     _zoomForSubsample:5.15,
     _layerOpacities:{},
-    _linkMarkersToChannels:false
+    _linkMarkersToChannels:false,
+    _collectionMode:false
 }
 
 /**
@@ -375,7 +376,7 @@ overlayUtils.addLayer = function(layer, i, visible) {
     var op = tmapp["object_prefix"];
     overlayUtils.waitLayersReady().then(() => {
         if (projectUtils._activeState.collectionMode) {
-            tmapp["ISS_viewer"].collectionMode = true;
+            overlayUtils._collectionMode = true;
             var collectionLayout = {
                 tileSize: 1, tileMargin: 0.1,
                 columns: Math.ceil(Math.sqrt(tmapp.layers.length))
@@ -392,8 +393,8 @@ overlayUtils.addLayer = function(layer, i, visible) {
             tmapp["ISS_viewer"].viewport.goHome();
             $(".channelRange").hide();
         }
-        else if (tmapp["ISS_viewer"].collectionMode){
-            tmapp["ISS_viewer"].collectionMode = false;
+        else if (overlayUtils._collectionMode){
+            overlayUtils._collectionMode = false;
             tmapp["ISS_viewer"].world.setAutoRefigureSizes(false);
             for (var i = 0; i < tmapp["ISS_viewer"].world._items.length; i++) {
                 layer = tmapp.layers[i];
