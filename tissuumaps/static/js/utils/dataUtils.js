@@ -267,6 +267,10 @@ dataUtils.updateViewOptions = function(data_id, force_reload_all){
     if (data_obj["_pie_col"]=="null") {
         interfaceUtils.alert("No piechart column selected. Impossible to update view.");return;
     }
+    data_obj["_edges_col"]=(radios["edges_check"].checked ? inputs["edges_col"].value : null);
+    if (data_obj["_edges_col"]=="null") {
+        interfaceUtils.alert("No edges column selected. Impossible to update view.");return;
+    }
     // Use scale colummn
     data_obj["_scale_col"]=(radios["scale_check"].checked ? inputs["scale_col"].value : null);
     if (data_obj["_scale_col"]=="null") {

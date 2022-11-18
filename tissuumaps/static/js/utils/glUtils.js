@@ -53,7 +53,7 @@ glUtils = {
     _resolutionScale: 1.0,        // If this is set to below 1.0, the WebGL output will be upscaled
     _resolutionScaleActual: 1.0,  // Automatic scaling factor computed from glUtils._resolutionScale
     _useInstancing: true,         // Use instancing and gl.TRIANGLE_STRIP to avoid size limit of gl.POINTS
-    _showEdgesExperimental: false,
+    _showEdgesExperimental: true,
     _piechartPalette: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
 
@@ -895,7 +895,7 @@ glUtils._loadEdges = function(uid) {
     const yPosName = dataUtils.data[uid]["_Y"];
     let numPoints = markerData[xPosName].length;
 
-    const connectionsPropertyName = "obsp";  // FIXME This name should not be hard-coded!
+    const connectionsPropertyName = dataUtils.data[uid]["_edges_col"];
     if (markerData[connectionsPropertyName] == null) return 0;  // No edge data in the markerset!
 
     // Check how the user wants to draw the edges
@@ -913,7 +913,7 @@ glUtils._loadEdges = function(uid) {
     // Find out how many edges there are in the data
     let numEdges = 0;
     for (let markerIndex = 0; markerIndex < numPoints; ++markerIndex) {
-        const edges = markerData[connectionsPropertyName][markerIndex].split(";");
+        const edges = markerData[connectionsPropertyName][markerIndex].toString().split(";");
         numEdges += edges.length;
     }
 
@@ -944,7 +944,7 @@ glUtils._loadEdges = function(uid) {
         let chunkSizeEdges = 0;
         for (let i = 0; i < chunkSize; ++i) {
             const markerIndex = i + offset;
-            const edges = markerData[connectionsPropertyName][markerIndex].split(";");
+            const edges = markerData[connectionsPropertyName][markerIndex].toString().split(";");
             chunkSizeEdges += edges.length;
         }
 
@@ -963,7 +963,7 @@ glUtils._loadEdges = function(uid) {
             if (useCollectionItemFromMarker) collectionItemIndex = markerData[collectionItemPropertyName][markerIndex];
 
             // Generate line segments for edges to neighboring markers
-            const edges = markerData[connectionsPropertyName][markerIndex].split(";");
+            const edges = markerData[connectionsPropertyName][markerIndex].toString().split(";");
             for (let j = 0; j < edges.length; ++j) {
                 let markerIndex_j = Number(edges[j]);
                 let lutIndex_j = (keyName != null) ? barcodeToLUTIndex[markerData[keyName][markerIndex_j]] : 0;

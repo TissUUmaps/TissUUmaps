@@ -757,6 +757,7 @@ interfaceUtils._mGenUIFuncs.getTabDropDowns = function(uid){
     allinputs["coord_factor"]=interfaceUtils.getElementById(uid+"_coord-factor");
     allinputs["pie_col"]=interfaceUtils.getElementById(uid+"_piechart-col");
     allinputs["pie_dict"]=interfaceUtils.getElementById(uid+"_piechart-dict-val");
+    allinputs["edges_col"]=interfaceUtils.getElementById(uid+"_edges-col");
     allinputs["shape_col"]=interfaceUtils.getElementById(uid+"_shape-col-value");
     allinputs["shape_fixed"]=interfaceUtils.getElementById(uid+"_shape-fixed-value");
     allinputs["shape_gr_dict"]=interfaceUtils.getElementById(uid+"_shape-bygroup-dict-val");
@@ -786,6 +787,7 @@ interfaceUtils._mGenUIFuncs.getTabRadiosAndChecks= function(uid){
     allradios["cb_gr_key"]=interfaceUtils.getElementById(uid+"_cb-bygroup-key");
 
     allradios["pie_check"]=interfaceUtils.getElementById(uid+"_use-piecharts");
+    allradios["edges_check"]=interfaceUtils.getElementById(uid+"_use-edges");
     allradios["scale_check"]=interfaceUtils.getElementById(uid+"_use-scales");
     allradios["shape_gr"]=interfaceUtils.getElementById(uid+"_shape-bygroup");
     allradios["shape_gr_rand"]=interfaceUtils.getElementById(uid+"_shape-bygroup-rand");
@@ -1168,7 +1170,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
 }
 
 /**
- * @summary Creates piechart options
+ * @summary Creates advanced options
  * @returns {array} array of rows
  */
  interfaceUtils._mGenUIFuncs.generateAccordionItem3=function(){
@@ -1177,13 +1179,14 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
 
     row1=interfaceUtils._mGenUIFuncs.generateAdvancedScaleAccordion3();
     row2=interfaceUtils._mGenUIFuncs.generateAdvancedPiechartAccordion3();
-    row3=interfaceUtils._mGenUIFuncs.generateAdvancedShapeAccordion3();
-    row4=interfaceUtils._mGenUIFuncs.generateAdvancedOpacityAccordion3();
-    row5=interfaceUtils._mGenUIFuncs.generateAdvancedTooltipAccordion3();
-    row6=interfaceUtils._mGenUIFuncs.generateAdvancedCollectionAccordion3();
-    row7=interfaceUtils._mGenUIFuncs.generateAdvancedMakeButtonAccordion3();
+    row3=interfaceUtils._mGenUIFuncs.generateAdvancedEdgesAccordion3();
+    row4=interfaceUtils._mGenUIFuncs.generateAdvancedShapeAccordion3();
+    row5=interfaceUtils._mGenUIFuncs.generateAdvancedOpacityAccordion3();
+    row6=interfaceUtils._mGenUIFuncs.generateAdvancedTooltipAccordion3();
+    row7=interfaceUtils._mGenUIFuncs.generateAdvancedCollectionAccordion3();
+    row8=interfaceUtils._mGenUIFuncs.generateAdvancedMakeButtonAccordion3();
     
-    return [row1,row2,row3,row4, row5, row6, row7];
+    return [row1,row2,row3,row4,row5,row6,row7,row8];
  }
 
  /**
@@ -1490,6 +1493,57 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
         col01.appendChild(select011);
         col01.appendChild(label012);
         col01.appendChild(input013);
+
+    return row0;
+}
+
+ /**
+ * @summary Creates the forms for edges
+ * @returns {array} a single rows
+ */
+  interfaceUtils._mGenUIFuncs.generateAdvancedEdgesAccordion3= function(){
+    generated=interfaceUtils._mGenUIFuncs.ctx.aUUID;
+
+    //row 0
+    row0=HTMLElementUtils.createRow({id:generated+"_edges_0"});
+        collab=HTMLElementUtils.createColumn({"width":12});
+            labellab=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_cb-label"});
+            labellab.innerHTML="<strong>Network diagram</strong>";
+
+        col00=HTMLElementUtils.createColumn({"width":6});
+            divformcheck000=HTMLElementUtils.createElement({ "kind":"div", "extraAttributes":{"class":"form-check"}});
+                inputcheck0000=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_use-edges","extraAttributes":{"class":"form-check-input","type":"checkbox" }});
+                label0001=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_use-edges-label", "extraAttributes":{ "for":generated+"_use-edges" }});
+                label0001.innerText="Add Edges"
+                
+        col01=HTMLElementUtils.createColumn({"width":6});
+            label010=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_edges-col-label", "extraAttributes":{ "class":"d-none", "for":generated+"_edges-col" }});
+            label010.innerText="Edges column"
+            select011=HTMLElementUtils.createElement({"kind":"select", "id":generated+"_edges-col", "extraAttributes":{ "class":"d-none form-select form-select-sm", "aria-label":".form-select-sm"}});
+
+    inputcheck0000.addEventListener("change", (event)=>{
+        var value=event.target.checked;
+        //var doms=["_gb-single","_gb-col","_gb-feature-value","_cb-colormap","_cb-bypoint","_cb-bygroup","_gb-feature-value",
+        //          "_gb-col-value","_gb-col-name","_cb-cmap-value","_cb-col-value","_cb-bygroup-rand","_cb-bygroup-gene","_cb-bygroup-name" ]
+        if(value){
+            interfaceUtils._mGenUIFuncs.hideShow(event, ["_edges-col-label","_edges-col","_edges-dict-label","_edges-dict-val"],[0,1,2,3]);
+        }
+        else {
+            interfaceUtils._mGenUIFuncs.hideShow(event, ["_edges-col-label","_edges-col","_edges-dict-label","_edges-dict-val"],[]);
+        }
+    })
+
+    row0.appendChild(collab)
+        collab.appendChild(labellab)
+
+    row0.appendChild(col00)
+        col00.appendChild(divformcheck000)
+            divformcheck000.appendChild(inputcheck0000);
+            divformcheck000.appendChild(label0001);
+
+    row0.appendChild(col01);
+        col01.appendChild(label010);
+        col01.appendChild(select011);
 
     return row0;
 }
