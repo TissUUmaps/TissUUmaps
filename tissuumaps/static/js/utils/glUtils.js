@@ -401,10 +401,11 @@ glUtils._edgesVS = `
         ndcPos1 = u_viewportTransform * ndcPos1;
 
         float pointSize = u_markerScale * u_globalMarkerScale;
-        pointSize = clamp(pointSize, 2.0, u_maxPointSize);
+        pointSize = clamp(pointSize, 1.0, u_maxPointSize);
         float lineThickness = max(0.5, THICKNESS_RATIO * pointSize);
         float lineThicknessAdjusted = lineThickness + 0.25;  // Expanded thickness values,
         float lineThicknessAdjusted2 = lineThickness + 0.5;  // needed for anti-aliasing
+        float lineThicknessOpacity = clamp(THICKNESS_RATIO * pointSize, 0.5, 1.0);
 
         vec2 ndcMidpoint = (ndcPos1 + ndcPos0) * 0.5;
         vec2 ndcDeltaU = (ndcPos1 - ndcPos0) * 0.5;
@@ -423,7 +424,7 @@ glUtils._edgesVS = `
         gl_Position.xy += (v_texCoord.y * 2.0 - 1.0) * ndcDeltaV;
 
         v_color.rgb = vec3(0.8);  // Use a fixed color (for now)
-        v_color.a = a_opacity * u_markerOpacity;
+        v_color.a = a_opacity * u_markerOpacity * lineThicknessOpacity;
     }
 `;
 
