@@ -405,7 +405,7 @@ glUtils._edgesVS = `
         float lineThickness = max(0.5, THICKNESS_RATIO * pointSize);
         float lineThicknessAdjusted = lineThickness + 0.25;  // Expanded thickness values,
         float lineThicknessAdjusted2 = lineThickness + 0.5;  // needed for anti-aliasing
-        float lineThicknessOpacity = clamp(THICKNESS_RATIO * pointSize, 0.5, 1.0);
+        float lineThicknessOpacity = clamp(THICKNESS_RATIO * pointSize + 0.25, 0.5, 1.0);
 
         vec2 ndcMidpoint = (ndcPos1 + ndcPos0) * 0.5;
         vec2 ndcDeltaU = (ndcPos1 - ndcPos0) * 0.5;
