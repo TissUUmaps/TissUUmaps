@@ -211,7 +211,7 @@ Points2Regions.init = function (container) {
     if (
       dataUtils.data[Points2Regions._dataset]._csv_header.indexOf(
         dataUtils.data[Points2Regions._dataset]._gb_col
-      ) >= 0
+      ) > 0
     ) {
       interfaceUtils.getElementById("Points2Regions_clusterKey").value =
         dataUtils.data[Points2Regions._dataset]._gb_col;
