@@ -382,20 +382,22 @@ glUtils._edgesVS = `
 
     void main()
     {
-        float transformIndex = u_transformIndex >= 0.0 ? u_transformIndex : a_transform;
-        vec4 imageTransform = texture2D(u_transformLUT, vec2(transformIndex / 255.0, 0));
+        float transformIndex0 = u_transformIndex >= 0.0 ? u_transformIndex : mod(a_transform, 256.0);
+        float transformIndex1 = u_transformIndex >= 0.0 ? u_transformIndex : floor(a_transform / 256.0);
+        vec4 imageTransform0 = texture2D(u_transformLUT, vec2(transformIndex0 / 255.0, 0));
+        vec4 imageTransform1 = texture2D(u_transformLUT, vec2(transformIndex1 / 255.0, 0));
 
         vec2 localPos0 = a_position.xy;
         vec2 localPos1 = a_position.zw;
 
         // Transform 1st edge vertex
-        vec2 viewportPos0 = localPos0 * imageTransform.xy + imageTransform.zw;
+        vec2 viewportPos0 = localPos0 * imageTransform0.xy + imageTransform0.zw;
         vec2 ndcPos0 = viewportPos0 * 2.0 - 1.0;
         ndcPos0.y = -ndcPos0.y;
         ndcPos0 = u_viewportTransform * ndcPos0;
 
         // Transform 2nd edge vertex
-        vec2 viewportPos1 = localPos1 * imageTransform.xy + imageTransform.zw;
+        vec2 viewportPos1 = localPos1 * imageTransform1.xy + imageTransform1.zw;
         vec2 ndcPos1 = viewportPos1 * 2.0 - 1.0;
         ndcPos1.y = -ndcPos1.y;
         ndcPos1 = u_viewportTransform * ndcPos1;
@@ -966,17 +968,11 @@ glUtils._loadEdges = function(uid) {
             // Generate line segments for edges to neighboring markers
             const edges = markerData[connectionsPropertyName][markerIndex].toString().split(";");
             for (let j = 0; j < edges.length; ++j) {
-                let markerIndex_j = Number(edges[j]);
-                let lutIndex_j = (keyName != null) ? barcodeToLUTIndex[markerData[keyName][markerIndex_j]] : 0;
+                const markerIndex_j = Number(edges[j]);
+                const lutIndex_j = (keyName != null) ? barcodeToLUTIndex[markerData[keyName][markerIndex_j]] : 0;
+                let collectionItemIndex_j = collectionItemFixed;
+                if (useCollectionItemFromMarker) collectionItemIndex_j = markerData[collectionItemPropertyName][markerIndex_j];
                 const k = offsetEdges2 + j;
-                if (useCollectionItemFromMarker) {
-                    const collectionItemIndex_j = markerData[collectionItemPropertyName][markerIndex_j];
-                    if (collectionItemIndex != collectionItemIndex_j) {
-                        // Make sure that edges with endpoints in different library ID:s are not drawn
-                        markerIndex_j = markerIndex;
-                        lutIndex_j = lutIndex;
-                    }
-                }
 
                 bytedata_point[4 * k + 0] = markerData[xPosName][markerIndex] * markerCoordFactor;
                 bytedata_point[4 * k + 1] = markerData[yPosName][markerIndex] * markerCoordFactor;
@@ -984,7 +980,7 @@ glUtils._loadEdges = function(uid) {
                 bytedata_point[4 * k + 3] = markerData[yPosName][markerIndex_j] * markerCoordFactor;
                 bytedata_index[k] = lutIndex + (lutIndex_j * 4096.0);
                 bytedata_opacity[k] = Math.floor(Math.max(0.0, Math.min(1.0, opacity)) * 65535.0);
-                bytedata_transform[k] = collectionItemIndex;
+                bytedata_transform[k] = collectionItemIndex + (collectionItemIndex_j * 256);
                 bytedata_vertexID[4 * k + 0] = 0;  // 1st vertex
                 bytedata_vertexID[4 * k + 1] = 1;  // 2nd vertex
                 bytedata_vertexID[4 * k + 2] = 2;  // 3rd vertex
