@@ -65,7 +65,6 @@ flask.standalone.init = function () {
         const urlParams = new URLSearchParams(queryString);
         const path = urlParams.get('path')
         flask.standalone.backend.addCSV(path, "", function(csvJSON) {
-            console.log("json return markerFile:", csvJSON["markerFile"], csvJSON["markerFile"]!=null);
             if (csvJSON["markerFile"]!=null) {
                 interfaceUtils.generateDataTabUI(csvJSON["markerFile"]);
             }
