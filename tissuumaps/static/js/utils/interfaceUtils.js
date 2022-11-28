@@ -616,10 +616,14 @@ interfaceUtils.generateDataTabUI = function(options){
         if (options.expectedHeader === undefined) {
             $('#'+generated+'_flush-collapse0').collapse("show");
         }
+        if (options.path !== undefined & options.fromButton === undefined) {
+            projectUtils.makeButtonFromTabAux(generated, options.path, "", "", true);
+        }
     }
     else {
         $('#'+generated+'_flush-collapse0').collapse("show");
     }
+    return generated;
 }
 
 /**
@@ -637,7 +641,12 @@ interfaceUtils._mGenUIFuncs.deleteTab=function(uid){
 
     tabpane=interfaceUtils.getElementById(uid+"_marker-pane")
     tabpane.remove();
-
+    if (dataUtils.data[uid].fromButton !== undefined) {
+        let stateMarkerFile = projectUtils._activeState.markerFiles[dataUtils.data[uid].fromButton];
+        if (stateMarkerFile.autoLoad) {
+            delete projectUtils._activeState.markerFiles[dataUtils.data[uid].fromButton];
+        }
+    }
     delete dataUtils.data[uid];
 
     glUtils.deleteMarkers(uid);
@@ -1640,10 +1649,18 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
   interfaceUtils._mGenUIFuncs.generateAdvancedMakeButtonAccordion3= function(){
     generated=interfaceUtils._mGenUIFuncs.ctx.aUUID;
 
+    var generateButton = function (event) {
+        return projectUtils.makeButtonFromTab(event.target.id.split("_")[0]);
+    } 
     //row 0
     row0=HTMLElementUtils.createRow({id:generated+"_opacity_0"});
         col00=HTMLElementUtils.createColumn({"width":6});
-            button000=HTMLElementUtils.createButton({"id":generated+"_Generate-button-from-tab","innerText":"Generate button from tab","class":"btn btn-light my-1","eventListeners":{"click":(event)=> projectUtils.makeButtonFromTab(event.target.id.split("_")[0]) }});
+            button000=HTMLElementUtils.createButton({
+                "id":generated+"_Generate-button-from-tab",
+                "innerText":"Generate button from tab",
+                "class":"btn btn-light my-1",
+                "eventListeners":{"click":generateButton }
+            });
             
     row0.appendChild(col00)
         col00.appendChild(button000);
@@ -2322,7 +2339,11 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
     if (!options.uid)
         options.uid=interfaceUtils._mGenUIFuncs.ctx.aUUID;
     var callback = function(e, params){
-        $('.chosen-select').not(e.target).val('').trigger('chosen:updated');
+        if (e) {
+            if ($('.chosen-select').not(e.target)) {
+                $('.chosen-select').not(e.target).val('').trigger('chosen:updated');
+            }
+        }
         projectUtils.applySettings(options.settings);
         var dataURL = params.selected;
         if (dataURL == "") return;
@@ -2379,7 +2400,11 @@ interfaceUtils.createDownloadButtonMarkers = function(options) {
     if (!options.uid)
         options.uid=interfaceUtils._mGenUIFuncs.ctx.aUUID;
     var callback = function(e){
-        $('.chosen-select').not(e.target).val('').trigger('chosen:updated');
+        if (e) {
+            if ($('.chosen-select').not(e.target)) {
+                $('.chosen-select').not(e.target).val('').trigger('chosen:updated')
+            }
+        };
         projectUtils.applySettings(options.settings);
         interfaceUtils.generateDataTabUI(options);
     }

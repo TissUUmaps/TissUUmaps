@@ -219,18 +219,29 @@ projectUtils.updateMarkerButton = function(dataset) {
     markerFile.expectedRadios = Object.assign({}, ...Object.keys(radios).map((k) => ({[k]: radios[k].checked})));
 }
 
-projectUtils.makeButtonFromTabAux = function (dataset, csvFile, title, comment) {
-    buttonsDict = {};
-
     if (!csvFile)
         return;
+    
+    if (autoLoad === undefined)
+        autoLoad = false;
+    
+    if (!autoLoad && projectUtils._activeState.markerFiles) {
+        // We check if a markerFile exists with autoload, to remove it:
+        let autoload_markerFiles = projectUtils._activeState.markerFiles.filter(markerFile => {
+            return (markerFile.uid == dataset) && (markerFile.autoLoad)
+        });
+        if (autoload_markerFiles.length > 0) {
+            const index = projectUtils._activeState.markerFiles.indexOf(autoload_markerFiles[0]);
+            projectUtils._activeState.markerFiles.splice(index, 1);
+        }
+    }
 
     markerFile = {
         "path": csvFile,
         "comment":comment,
         "title":title,
         "hideSettings":true,
-        "autoLoad":false,
+        "autoLoad":autoLoad,
         "uid":dataset
     };
     tabName = document.getElementById(dataset + "_tab-name").value;
@@ -246,11 +257,13 @@ projectUtils.makeButtonFromTabAux = function (dataset, csvFile, title, comment) 
     markerFile.fromButton = projectUtils._activeState.markerFiles.length - 1;
     dataUtils.data[dataset].fromButton = projectUtils._activeState.markerFiles.length - 1;
     
-    if( Object.prototype.toString.call( markerFile.path ) === '[object Array]' ) {
-        interfaceUtils.createDownloadDropdownMarkers(markerFile);
-    }
-    else {
-        interfaceUtils.createDownloadButtonMarkers(markerFile);
+    if (!autoLoad) {
+        if( Object.prototype.toString.call( markerFile.path ) === '[object Array]' ) {
+            interfaceUtils.createDownloadDropdownMarkers(markerFile);
+        }
+        else {
+            interfaceUtils.createDownloadButtonMarkers(markerFile);
+        }
     }
 }
 
