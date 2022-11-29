@@ -53,10 +53,10 @@ jobs:
         shell: cmd
 
       - name: Upload the installer as an artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           path: "standalone/dist/TissUUmaps_winInstaller.exe"
-          name: ${{ github.workspace }}/TissUUmaps_winInstaller.exe
+          name: TissUUmaps_winInstaller.exe
 
   release:
     runs-on: ubuntu-latest
@@ -67,5 +67,5 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ncipollo/release-action@v1
         with:
-          artifacts: ${{ github.workspace }}/TissUUmaps_winInstaller.exe
+          artifacts: TissUUmaps_winInstaller.exe
           token: ${{ secrets.GITHUB_TOKEN }}
