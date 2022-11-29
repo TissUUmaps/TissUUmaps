@@ -3,13 +3,13 @@ import traceback
 import warnings
 
 try:
-    from PyQt5 import QtGui
-    from PyQt5.QtCore import *
-    from PyQt5.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
-    from PyQt5.QtWebChannel import QWebChannel
-    from PyQt5.QtWebEngineWidgets import *
-    from PyQt5.QtWidgets import (
-        QAction,
+    from PyQt6 import QtGui
+    from PyQt6.QtCore import *
+    from PyQt6.QtGui import QAction, QDesktopServices, QStandardItem, QStandardItemModel
+    from PyQt6.QtWebChannel import QWebChannel
+    from PyQt6.QtWebEngineCore import *
+    from PyQt6.QtWebEngineWidgets import *
+    from PyQt6.QtWidgets import (
         QApplication,
         QDialog,
         QDialogButtonBox,
@@ -134,7 +134,10 @@ class SelectPluginWindow(QDialog):
             form.addRow(self.listView)
 
             buttonBox = QDialogButtonBox(
-                QDialogButtonBox.Ok | QDialogButtonBox.Cancel, Qt.Horizontal, self
+                QDialogButtonBox.StandardButton.Ok
+                | QDialogButtonBox.StandardButton.Cancel,
+                Qt.Orientation.Horizontal,
+                self,
             )
             form.addRow(buttonBox)
             buttonBox.accepted.connect(self.accept)
@@ -177,7 +180,9 @@ class SelectPluginWindow(QDialog):
                     standardItem = QStandardItem(item["name"])
 
                 standardItem.setCheckState(
-                    Qt.Checked if not updateAvailable else Qt.Unchecked
+                    Qt.CheckState.Checked
+                    if not updateAvailable
+                    else Qt.CheckState.Unchecked
                 )
                 if updateAvailable:
                     standardItem.setCheckable(True)
@@ -226,7 +231,9 @@ class MainWindow(QMainWindow):
         file = self.bar.addMenu("File")
 
         _open = QAction(
-            self.style().standardIcon(QStyle.SP_DialogOpenButton), "Open", self
+            self.style().standardIcon(QStyle.StandardPixmap.SP_DialogOpenButton),
+            "Open",
+            self,
         )
         _open.setShortcut("Ctrl+O")
         file.addAction(_open)
@@ -244,7 +251,9 @@ class MainWindow(QMainWindow):
         self.browser.updateRecent()
 
         _save = QAction(
-            self.style().standardIcon(QStyle.SP_DialogSaveButton), "Save project", self
+            self.style().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton),
+            "Save project",
+            self,
         )
         _save.setShortcut("Ctrl+S")
         file.addAction(_save)
@@ -255,7 +264,7 @@ class MainWindow(QMainWindow):
         _save.triggered.connect(trigger)
 
         _close = QAction(
-            self.style().standardIcon(QStyle.SP_DockWidgetCloseButton),
+            self.style().standardIcon(QStyle.StandardPixmap.SP_DockWidgetCloseButton),
             "Close file",
             self,
         )
@@ -265,7 +274,7 @@ class MainWindow(QMainWindow):
         file.addSeparator()
 
         _export = QAction(
-            self.style().standardIcon(QStyle.SP_FileDialogListView),
+            self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogListView),
             "Capture viewport",
             self,
         )
@@ -277,7 +286,7 @@ class MainWindow(QMainWindow):
         _export.triggered.connect(trigger)
 
         _export = QAction(
-            self.style().standardIcon(QStyle.SP_DirLinkIcon),
+            self.style().standardIcon(QStyle.StandardPixmap.SP_DirLinkIcon),
             "Export to static webpage",
             self,
         )
@@ -291,7 +300,9 @@ class MainWindow(QMainWindow):
         file.addSeparator()
 
         _exit = QAction(
-            self.style().standardIcon(QStyle.SP_DialogCancelButton), "Exit", self
+            self.style().standardIcon(QStyle.StandardPixmap.SP_DialogCancelButton),
+            "Exit",
+            self,
         )
         _exit.setShortcut("Ctrl+Q")
         file.addAction(_exit)
@@ -312,7 +323,9 @@ class MainWindow(QMainWindow):
 
         about = self.bar.addMenu("About")
         _help = QAction(
-            self.style().standardIcon(QStyle.SP_DialogHelpButton), "Help", self
+            self.style().standardIcon(QStyle.StandardPixmap.SP_DialogHelpButton),
+            "Help",
+            self,
         )
         about.addAction(_help)
 
@@ -321,7 +334,9 @@ class MainWindow(QMainWindow):
 
         _help.triggered.connect(trigger)
         _version = QAction(
-            self.style().standardIcon(QStyle.SP_FileDialogInfoView), "Version", self
+            self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogInfoView),
+            "Version",
+            self,
         )
         about.addAction(_version)
 
@@ -340,7 +355,9 @@ class MainWindow(QMainWindow):
         if self.app.config["DEBUG_CLI"]:
             debug = self.bar.addMenu("Debug")
             _debugpage = QAction(
-                self.style().standardIcon(QStyle.SP_FileDialogContentsView),
+                self.style().standardIcon(
+                    QStyle.StandardPixmap.SP_FileDialogContentsView
+                ),
                 "Open external debugging",
                 self,
             )
@@ -361,7 +378,7 @@ class MainWindow(QMainWindow):
         logging.debug("Adding plugins")
         try:
             dial = SelectPluginWindow(self.app, self)
-            if dial.exec_() == QDialog.Accepted:
+            if dial.exec() == QDialog.DialogCode.Accepted:
                 changed = False
                 for plugin in dial.itemsSelected():
                     if plugin["updateAvailable"]:
@@ -395,11 +412,12 @@ class webEngine(QWebEngineView):
         self.args = args
         self.maxRecent = 25
         self.setMinimumSize(800, 400)
-        self.setContextMenuPolicy(Qt.NoContextMenu)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         self.lastdir = str(Path.home())
         profile = QWebEngineProfile().defaultProfile()
-        profile.setHttpCacheType(QWebEngineProfile.DiskHttpCache)
-        self.setPage(CustomWebEnginePage(profile, self))
+
+        # profile.setHttpCacheType(QWebEngineProfile.DiskHttpCache)
+        # self.setPage(CustomWebEnginePage(profile, self))
         self.webchannel = QWebChannel()
         self.page().setWebChannel(self.webchannel)
         self.webchannel.registerObject("backend", self)
@@ -407,14 +425,16 @@ class webEngine(QWebEngineView):
         self.mainWin = mainWin
 
         self.mainWin.setWindowTitle("TissUUmaps")
-        self.mainWin.resize(1024, 800)
-        self.setZoomFactor(1.0)
-        profile.clearHttpCache()
+        # self.mainWin.resize(1024, 800)
+        # self.setZoomFactor(1.0)
+        # profile.clearHttpCache()
         profile.downloadRequested.connect(self.on_downloadRequested)
-        self.settings().setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)
+        self.settings().setAttribute(
+            QWebEngineSettings.WebAttribute.FullScreenSupportEnabled, True
+        )
 
         def setfullscreen(request):
-            if self.mainWin.windowState() & Qt.WindowFullScreen:
+            if self.mainWin.windowState() & Qt.WindowState.WindowFullScreen:
                 self.mainWin.showMaximized()
                 self.mainWin.bar.setVisible(True)
             else:
@@ -425,7 +445,6 @@ class webEngine(QWebEngineView):
         self.page().fullScreenRequested.connect(setfullscreen)
 
         self.mainWin.setWindowIcon(QtGui.QIcon("static/misc/favicon.ico"))
-        # self.showMaximized()
 
     def addRecent(self, path):
         os.makedirs(os.path.join(os.path.expanduser("~"), ".tissuumaps"), exist_ok=True)
@@ -478,14 +497,14 @@ class webEngine(QWebEngineView):
 
     def dragMoveEvent(self, event):
         if event.mimeData().hasUrls:
-            event.setDropAction(Qt.CopyAction)
+            event.setDropAction(Qt.DropAction.CopyAction)
             event.accept()
         else:
             event.ignore()
 
     def dropEvent(self, event):
         if event.mimeData().hasUrls:
-            event.setDropAction(Qt.CopyAction)
+            event.setDropAction(Qt.DropAction.CopyAction)
             event.accept()
             links = []
             for url in event.mimeData().urls():
@@ -505,13 +524,16 @@ class webEngine(QWebEngineView):
             event.ignore()
 
     def on_downloadRequested(self, download):
-        old_path = download.path()  # download.path()
-        suffix = QFileInfo(old_path).suffix()
+        old_path = os.path.join(
+            download.downloadDirectory(), download.downloadFileName()
+        )
+        suffix = os.path.splitext(old_path)[1]
         path, _ = QFileDialog.getSaveFileName(
             self, "Save File", old_path, "*." + suffix
         )
         if path:
-            download.setPath(path)
+            download.setDownloadDirectory(os.path.dirname(path))
+            download.setDownloadFileName(os.path.basename(path))
             download.accept()
 
             def openImageThread():
@@ -529,9 +551,6 @@ class webEngine(QWebEngineView):
                     subprocess.call([opener, os.path.normpath(path)])
 
             threading.Thread(target=openImageThread, daemon=True).start()
-
-    def run(self):
-        sys.exit(self.qt_app.exec_())
 
     def setLocation(self, location):
         self.location = location
@@ -583,7 +602,7 @@ class webEngine(QWebEngineView):
             self,
             "Select webpage directory",
             self.lastdir,
-            options=QFileDialog.ShowDirsOnly,
+            options=QFileDialog.Option.ShowDirsOnly,
         )
         views.exportToStatic(state, folderpath, previouspath)
 
@@ -654,7 +673,7 @@ class webEngine(QWebEngineView):
         self.addRecent(folderpath)
         parts = Path(folderpath).parts
         if not hasattr(self.app, "cache"):
-            setup(self.app)
+            views.setup(self.app)
         self.app.basedir = parts[0]
         imgPath = os.path.join(*parts[1:])
         imgPath = imgPath.replace("\\", "/")
@@ -693,7 +712,6 @@ class webEngine(QWebEngineView):
     @pyqtSlot()
     def exit(self):
         self.close()
-        # sys.exit()
 
     @pyqtSlot(str, str, result="QJsonObject")
     def addCSV(self, path, csvpath):
@@ -903,25 +921,24 @@ def main():
     qInstallMessageHandler(lambda x, y, z: None)
 
     fmt = QtGui.QSurfaceFormat()
-    fmt.setColorSpace(QtGui.QSurfaceFormat.sRGBColorSpace)
-    fmt.setVersion(4, 1)
+    # fmt.setColorSpace(QtGui.QSurfaceFormat.sRGBColorSpace)
+    # fmt.setVersion(4, 1)
 
-    fmt.setProfile(QtGui.QSurfaceFormat.CoreProfile)
+    fmt.setProfile(QtGui.QSurfaceFormat.OpenGLContextProfile.CoreProfile)
     fmt.setSamples(4)
     QtGui.QSurfaceFormat.setDefaultFormat(fmt)
 
-    vp = QtGui.QOpenGLVersionProfile(fmt)
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--no-sandbox --ignore-gpu-blacklist"
     qt_app = QApplication(sys.argv)
 
     logo = QtGui.QPixmap("static/misc/design/logo.png")
-    logo = logo.scaledToWidth(512, Qt.SmoothTransformation)
-    splash = QSplashScreen(logo, Qt.WindowStaysOnTopHint)
+    logo = logo.scaledToWidth(512, Qt.TransformationMode.SmoothTransformation)
+    splash = QSplashScreen(logo, Qt.WindowType.WindowStaysOnTopHint)
 
-    desktop = qt_app.desktop()
-    scrn = desktop.screenNumber(QtGui.QCursor.pos())
-    currentDesktopsCenter = desktop.availableGeometry(scrn).center()
-    splash.move(currentDesktopsCenter - splash.rect().center())
+    # desktop = qt_app.desktop()
+    # scrn = desktop.screenNumber(QtGui.QCursor.pos())
+    # currentDesktopsCenter = desktop.availableGeometry(scrn).center()
+    # splash.move(currentDesktopsCenter - splash.rect().center())
 
     splash.show()
     # splash.showMessage('Loading TissUUmaps...',Qt.AlignBottom | Qt.AlignCenter,Qt.white)
@@ -945,7 +962,7 @@ def main():
     ui.browser.setLocation("http://127.0.0.1:" + str(port) + "/")
 
     QTimer.singleShot(1000, splash.close)
-    ui.browser.run()
+    qt_app.exec()
 
 
 if __name__ == "__main__":

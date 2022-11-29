@@ -29,8 +29,8 @@ setuptools.setup(
         "anndata>=0.8.0",
     ],
     extras_require={
-        "pyqt5": ["PyQt5>=5.15.4", "PyQtWebEngine>=5.15.4"],
-        "full": ["PyQt5>=5.15.4", "PyQtWebEngine>=5.15.4"],
+        "pyqt6": ["PyQt6>=6.3.0", "PyQt6-WebEngine>=6.3.0"],
+        "full": ["PyQt6>=6.3.0", "PyQt6-WebEngine>=6.3.0"],
     },
     classifiers=[
         "Programming Language :: Python :: 3",
