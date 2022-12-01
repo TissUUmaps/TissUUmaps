@@ -968,11 +968,18 @@ glUtils._loadEdges = function(uid) {
             // Generate line segments for edges to neighboring markers
             const edges = markerData[connectionsPropertyName][markerIndex].toString().split(";");
             for (let j = 0; j < edges.length; ++j) {
-                const markerIndex_j = Number(edges[j]);
-                const lutIndex_j = (keyName != null) ? barcodeToLUTIndex[markerData[keyName][markerIndex_j]] : 0;
+                let markerIndex_j = Number(edges[j]);
+                let lutIndex_j = (keyName != null) ? barcodeToLUTIndex[markerData[keyName][markerIndex_j]] : 0;
                 let collectionItemIndex_j = collectionItemFixed;
                 if (useCollectionItemFromMarker) collectionItemIndex_j = markerData[collectionItemPropertyName][markerIndex_j];
                 const k = offsetEdges2 + j;
+
+                if (markerIndex_j == 0) {
+                    // FIXME Workaround for false edges to marker with index 0
+                    markerIndex_j = markerIndex;
+                    lutIndex_j = lutIndex;
+                    collectionItemIndex_j = collectionItemIndex;
+                }
 
                 bytedata_point[4 * k + 0] = markerData[xPosName][markerIndex] * markerCoordFactor;
                 bytedata_point[4 * k + 1] = markerData[yPosName][markerIndex] * markerCoordFactor;
