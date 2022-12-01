@@ -40,6 +40,8 @@ glUtils = {
     _barcodeToLUTIndex: {},      // {uid: dict, ...}
     _barcodeToKey: {},           // {uid: dict, ...}
     _collectionItemIndex: {},    // {uid: number, ...}
+    _markerInputsCached: {},     // {uid: dict, ...}
+    _edgeInputsCached: {},       // {uid: dict, ...}
 
     // Global marker settings and info
     _markerScale: 1.0,
@@ -536,18 +538,20 @@ glUtils._createPiechartAngles = function(sectors) {
  * @summary Create WebGL resources and other objects for drawing marker dataset.
  * @param {String | Number} uid Identifier referencing the marker dataset in dataUtils.
  */
-glUtils.loadMarkers = function(uid) {
+glUtils.loadMarkers = function(uid, forceUpdate) {
     if (!glUtils._initialized) return;
     const canvas = document.getElementById("gl_canvas");
     const gl = canvas.getContext("webgl", glUtils._options);
     const gl_ext_ia = gl.getExtension('ANGLE_instanced_arrays');
     const gl_ext_vao = gl.getExtension('OES_vertex_array_object');
 
+    let newInputs = {};  // Inputs that will require a vertex buffer update when changed
+
     // Get marker data and other info like image size
     const markerData = dataUtils.data[uid]["_processeddata"];
-    const keyName = dataUtils.data[uid]["_gb_col"];
-    const xPosName = dataUtils.data[uid]["_X"];
-    const yPosName = dataUtils.data[uid]["_Y"];
+    const keyName = newInputs.keyName = dataUtils.data[uid]["_gb_col"];
+    const xPosName = newInputs.xPosName = dataUtils.data[uid]["_X"];
+    const yPosName = newInputs.yPosName = dataUtils.data[uid]["_Y"];
     let numPoints = markerData[xPosName].length;
 
     // If new marker data was loaded, we need to assign each barcode an index
@@ -556,22 +560,22 @@ glUtils.loadMarkers = function(uid) {
     const barcodeToLUTIndex = glUtils._barcodeToLUTIndex[uid];
 
     // Check how the user wants to draw the markers
-    const colorPropertyName = dataUtils.data[uid]["_cb_col"];
-    const useColorFromMarker = (dataUtils.data[uid]["_cb_col"] != null && dataUtils.data[uid]["_cb_cmap"] == null);
+    const colorPropertyName = newInputs.colorPropertyName = dataUtils.data[uid]["_cb_col"];
+    const useColorFromMarker = newInputs.useColorFromMarker = (dataUtils.data[uid]["_cb_col"] != null && dataUtils.data[uid]["_cb_cmap"] == null);
     let hexColor = "#000000";
 
-    const scalarPropertyName = dataUtils.data[uid]["_cb_col"];
+    const scalarPropertyName = newInputs.scalarPropertyName = dataUtils.data[uid]["_cb_col"];
     const colorscaleName = dataUtils.data[uid]["_cb_cmap"];
-    const useColorFromColormap = dataUtils.data[uid]["_cb_cmap"] != null;
-    let scalarRange = [1e9, -1e9];  // This range will be computed from the data
+    const useColorFromColormap = newInputs.useColorFromColormap = dataUtils.data[uid]["_cb_cmap"] != null;
+    let scalarRange = glUtils._markerScalarRange[uid];
 
-    const scalePropertyName = dataUtils.data[uid]["_scale_col"];
-    const useScaleFromMarker = dataUtils.data[uid]["_scale_col"] != null;
+    const scalePropertyName = newInputs.scalePropertyName = dataUtils.data[uid]["_scale_col"];
+    const useScaleFromMarker = newInputs.useScaleFromMarker = dataUtils.data[uid]["_scale_col"] != null;
     const markerScaleFactor = dataUtils.data[uid]["_scale_factor"];
     
-    const markerCoordFactor = dataUtils.data[uid]["_coord_factor"];
+    const markerCoordFactor = newInputs.markerCoordFactor = dataUtils.data[uid]["_coord_factor"];
     
-    const sectorsPropertyName = dataUtils.data[uid]["_pie_col"];
+    const sectorsPropertyName = newInputs.sectorsPropertyName = dataUtils.data[uid]["_pie_col"];
     const usePiechartFromMarker = dataUtils.data[uid]["_pie_col"] != null;
     if (dataUtils.data[uid]["_pie_dict"] && sectorsPropertyName) {
         glUtils._piechartPalette = JSON.parse(dataUtils.data[uid]["_pie_dict"])
@@ -584,20 +588,20 @@ glUtils.loadMarkers = function(uid) {
     const piechartPalette = glUtils._piechartPalette;
     let numSectors = 1;
 
-    const shapePropertyName = dataUtils.data[uid]["_shape_col"];
-    const useShapeFromMarker = dataUtils.data[uid]["_shape_col"] != null;
+    const shapePropertyName = newInputs.shapePropertyName = dataUtils.data[uid]["_shape_col"];
+    const useShapeFromMarker = newInputs.useShapeFromMarker = dataUtils.data[uid]["_shape_col"] != null;
     const numShapes = Object.keys(markerUtils._symbolStrings).length;
     let shapeIndex = 0;
 
-    const opacityPropertyName = dataUtils.data[uid]["_opacity_col"];
-    const useOpacityFromMarker = dataUtils.data[uid]["_opacity_col"] != null;
+    const opacityPropertyName = newInputs.opacityPropertyName = dataUtils.data[uid]["_opacity_col"];
+    const useOpacityFromMarker = newInputs.useOpacityFromMarker = dataUtils.data[uid]["_opacity_col"] != null;
     const markerOpacityFactor = dataUtils.data[uid]["_opacity"];
 
     const markerOutline = !dataUtils.data[uid]["_no_outline"];
 
-    const collectionItemPropertyName = dataUtils.data[uid]["_collectionItem_col"];
-    const useCollectionItemFromMarker = dataUtils.data[uid]["_collectionItem_col"] != null;
-    const collectionItemFixed = dataUtils.data[uid]["_collectionItem_fixed"];
+    const collectionItemPropertyName = newInputs.collectionItemPropertyName = dataUtils.data[uid]["_collectionItem_col"];
+    const useCollectionItemFromMarker = newInputs.useCollectionItemFromMarker = dataUtils.data[uid]["_collectionItem_col"] != null;
+    const collectionItemFixed = newInputs.collectionItemFixed = dataUtils.data[uid]["_collectionItem_fixed"];
     let collectionItemIndex = collectionItemFixed;
 
     // Additional info about the vertex format. Make sure you update also
@@ -618,187 +622,194 @@ glUtils.loadMarkers = function(uid) {
           TRANSFORM_LOCATION = 5;
           VERTEX_ID_LOCATION = 6;
 
-    // Extract and upload vertex data for markers. For datasets with tens of of
-    // millions of points, the vertex data can be quite large, so we upload the
-    // data in chunks to the GPU buffer to avoid having to allocate a large
-    // temporary buffer in system memory.
-    console.time("Generate vertex data");
-    let chunkSize = 100000;
-    for (let offset = 0; offset < numPoints; offset += chunkSize) {
-        // Allocate space for vertex data that will be uploaded to vertex buffer
-        if (offset + chunkSize >= numPoints) chunkSize = numPoints - offset;
-        // console.log(offset, chunkSize, numPoints);
-        let bytedata_point = new Float32Array(chunkSize * 4);
-        let bytedata_index = new Float32Array(chunkSize * 1);
-        let bytedata_scale = new Float32Array(chunkSize * 1);
-        let bytedata_shape = new Float32Array(chunkSize * 1);
-        let bytedata_opacity = new Uint16Array(chunkSize * 1);
-        let bytedata_transform = new Uint16Array(chunkSize * 1);
-        let bytedata_vertexID = new Uint8Array(chunkSize * 4);
+    const lastInputs = glUtils._markerInputsCached[uid];
+    if (forceUpdate || (lastInputs != JSON.stringify(newInputs))) {
+        scalarRange = [1e9, -1e9];  // This range will be computed from the data
 
-        if (usePiechartFromMarker) {
-            // For piecharts, we need to create one marker per piechart sector,
-            // so also have to allocate additional space for the vertex data
-            numSectors = markerData[sectorsPropertyName][0].split(";").length;
-            bytedata_point = new Float32Array(chunkSize * numSectors * 4);
-            bytedata_index = new Float32Array(chunkSize * numSectors * 1);
-            bytedata_scale = new Float32Array(chunkSize * numSectors * 1);
-            bytedata_shape = new Float32Array(chunkSize * numSectors * 1);
-            bytedata_opacity = new Uint16Array(chunkSize * numSectors * 1);
-            bytedata_transform = new Uint16Array(chunkSize * numSectors * 1);
-            bytedata_vertexID = new Uint8Array(chunkSize * numSectors * 4);
+        // Extract and upload vertex data for markers. For datasets with tens of of
+        // millions of points, the vertex data can be quite large, so we upload the
+        // data in chunks to the GPU buffer to avoid having to allocate a large
+        // temporary buffer in system memory.
+        console.time("Generate vertex data");
+        let chunkSize = 100000;
+        for (let offset = 0; offset < numPoints; offset += chunkSize) {
+            // Allocate space for vertex data that will be uploaded to vertex buffer
+            if (offset + chunkSize >= numPoints) chunkSize = numPoints - offset;
+            // console.log(offset, chunkSize, numPoints);
+            let bytedata_point = new Float32Array(chunkSize * 4);
+            let bytedata_index = new Float32Array(chunkSize * 1);
+            let bytedata_scale = new Float32Array(chunkSize * 1);
+            let bytedata_shape = new Float32Array(chunkSize * 1);
+            let bytedata_opacity = new Uint16Array(chunkSize * 1);
+            let bytedata_transform = new Uint16Array(chunkSize * 1);
+            let bytedata_vertexID = new Uint8Array(chunkSize * 4);
 
-            for (let i = 0; i < chunkSize; ++i) {
-                const markerIndex = i + offset;
-                const sectors = markerData[sectorsPropertyName][markerIndex].split(";");
-                const piechartAngles = glUtils._createPiechartAngles(sectors);
-                const lutIndex = (keyName != null) ? barcodeToLUTIndex[markerData[keyName][markerIndex]] : 0;
-                const opacity = useOpacityFromMarker ? markerData[opacityPropertyName][markerIndex] : 1.0;
-                if (useCollectionItemFromMarker) collectionItemIndex = markerData[collectionItemPropertyName][markerIndex];
+            if (usePiechartFromMarker) {
+                // For piecharts, we need to create one marker per piechart sector,
+                // so also have to allocate additional space for the vertex data
+                numSectors = markerData[sectorsPropertyName][0].split(";").length;
+                bytedata_point = new Float32Array(chunkSize * numSectors * 4);
+                bytedata_index = new Float32Array(chunkSize * numSectors * 1);
+                bytedata_scale = new Float32Array(chunkSize * numSectors * 1);
+                bytedata_shape = new Float32Array(chunkSize * numSectors * 1);
+                bytedata_opacity = new Uint16Array(chunkSize * numSectors * 1);
+                bytedata_transform = new Uint16Array(chunkSize * numSectors * 1);
+                bytedata_vertexID = new Uint8Array(chunkSize * numSectors * 4);
 
-                for (let j = 0; j < numSectors; ++j) {
-                    const k = (i * numSectors + j);
-                    const sectorIndex = j;
-                    hexColor = piechartPalette[j % piechartPalette.length];
+                for (let i = 0; i < chunkSize; ++i) {
+                    const markerIndex = i + offset;
+                    const sectors = markerData[sectorsPropertyName][markerIndex].split(";");
+                    const piechartAngles = glUtils._createPiechartAngles(sectors);
+                    const lutIndex = (keyName != null) ? barcodeToLUTIndex[markerData[keyName][markerIndex]] : 0;
+                    const opacity = useOpacityFromMarker ? markerData[opacityPropertyName][markerIndex] : 1.0;
+                    if (useCollectionItemFromMarker) collectionItemIndex = markerData[collectionItemPropertyName][markerIndex];
 
-                    bytedata_point[4 * k + 0] = markerData[xPosName][markerIndex];
-                    bytedata_point[4 * k + 1] = markerData[yPosName][markerIndex];
-                    bytedata_point[4 * k + 2] = lutIndex + sectorIndex * 4096.0;
-                    bytedata_point[4 * k + 3] = Number("0x" + hexColor.substring(1,7));
-                    bytedata_index[k] = markerIndex;  // Store index needed for picking
-                    bytedata_scale[k] = useScaleFromMarker ? markerData[scalePropertyName][markerIndex] : 1.0;
-                    bytedata_shape[k] =
-                        Math.floor((j < numSectors - 1 ? piechartAngles[j + 1] : 0.0) * 4095.0) +
-                        Math.floor(piechartAngles[j] * 4095.0) * 4096.0;
-                    bytedata_opacity[k] = Math.floor(Math.max(0.0, Math.min(1.0, opacity)) * 65535.0);
-                    bytedata_transform[k] = collectionItemIndex;
-                    bytedata_vertexID[4 * k + 0] = 0;  // 1st vertex
-                    bytedata_vertexID[4 * k + 1] = 1;  // 2nd vertex
-                    bytedata_vertexID[4 * k + 2] = 2;  // 3rd vertex
-                    bytedata_vertexID[4 * k + 3] = 3;  // 4th vertex
+                    for (let j = 0; j < numSectors; ++j) {
+                        const k = (i * numSectors + j);
+                        const sectorIndex = j;
+                        hexColor = piechartPalette[j % piechartPalette.length];
+
+                        bytedata_point[4 * k + 0] = markerData[xPosName][markerIndex];
+                        bytedata_point[4 * k + 1] = markerData[yPosName][markerIndex];
+                        bytedata_point[4 * k + 2] = lutIndex + sectorIndex * 4096.0;
+                        bytedata_point[4 * k + 3] = Number("0x" + hexColor.substring(1,7));
+                        bytedata_index[k] = markerIndex;  // Store index needed for picking
+                        bytedata_scale[k] = useScaleFromMarker ? markerData[scalePropertyName][markerIndex] : 1.0;
+                        bytedata_shape[k] =
+                            Math.floor((j < numSectors - 1 ? piechartAngles[j + 1] : 0.0) * 4095.0) +
+                            Math.floor(piechartAngles[j] * 4095.0) * 4096.0;
+                        bytedata_opacity[k] = Math.floor(Math.max(0.0, Math.min(1.0, opacity)) * 65535.0);
+                        bytedata_transform[k] = collectionItemIndex;
+                        bytedata_vertexID[4 * k + 0] = 0;  // 1st vertex
+                        bytedata_vertexID[4 * k + 1] = 1;  // 2nd vertex
+                        bytedata_vertexID[4 * k + 2] = 2;  // 3rd vertex
+                        bytedata_vertexID[4 * k + 3] = 3;  // 4th vertex
+                    }
+                }
+            } else {
+                for (let i = 0; i < chunkSize; ++i) {
+                    const markerIndex = i + offset;
+                    const lutIndex = (keyName != null) ? barcodeToLUTIndex[markerData[keyName][markerIndex]] : 0;
+                    const opacity = useOpacityFromMarker ? markerData[opacityPropertyName][markerIndex] : 1.0;
+                    if (useCollectionItemFromMarker) collectionItemIndex = markerData[collectionItemPropertyName][markerIndex];
+
+                    if (useColorFromMarker) hexColor = markerData[colorPropertyName][i];
+                    if (useColorFromColormap) {
+                        scalarValue = markerData[scalarPropertyName][markerIndex];
+                        // Update scalar range that will be used for normalizing the values
+                        scalarRange[0] = Math.min(scalarRange[0], scalarValue);
+                        scalarRange[1] = Math.max(scalarRange[1], scalarValue);
+                    }
+                    if (useShapeFromMarker) {
+                        shapeIndex = markerData[shapePropertyName][markerIndex];
+                        // Check if shapeIndex is a symbol names that needs to be converted to an index
+                        if (isNaN(shapeIndex)) shapeIndex = markerUtils._symbolStrings.indexOf(shapeIndex);
+                        shapeIndex = Math.max(0.0, Math.floor(Number(shapeIndex))) % numShapes;
+                    }
+
+                    bytedata_point[4 * i + 0] = markerData[xPosName][markerIndex] * markerCoordFactor;
+                    bytedata_point[4 * i + 1] = markerData[yPosName][markerIndex] * markerCoordFactor;
+                    bytedata_point[4 * i + 2] = lutIndex + Number(shapeIndex) * 4096.0;
+                    bytedata_point[4 * i + 3] = useColorFromColormap ? Number(scalarValue)
+                                                                     : Number("0x" + hexColor.substring(1,7));
+                    bytedata_index[i] = markerIndex;  // Store index needed for picking
+                    bytedata_scale[i] = useScaleFromMarker ? markerData[scalePropertyName][markerIndex] : 1.0;
+                    bytedata_opacity[i] = Math.floor(Math.max(0.0, Math.min(1.0, opacity)) * 65535.0);
+                    bytedata_transform[i] = collectionItemIndex;
+                    bytedata_vertexID[4 * i + 0] = 0;  // 1st vertex
+                    bytedata_vertexID[4 * i + 1] = 1;  // 2nd vertex
+                    bytedata_vertexID[4 * i + 2] = 2;  // 3rd vertex
+                    bytedata_vertexID[4 * i + 3] = 3;  // 4th vertex
                 }
             }
-        } else {
-            for (let i = 0; i < chunkSize; ++i) {
-                const markerIndex = i + offset;
-                const lutIndex = (keyName != null) ? barcodeToLUTIndex[markerData[keyName][markerIndex]] : 0;
-                const opacity = useOpacityFromMarker ? markerData[opacityPropertyName][markerIndex] : 1.0;
-                if (useCollectionItemFromMarker) collectionItemIndex = markerData[collectionItemPropertyName][markerIndex];
 
-                if (useColorFromMarker) hexColor = markerData[colorPropertyName][i];
-                if (useColorFromColormap) {
-                    scalarValue = markerData[scalarPropertyName][markerIndex];
-                    // Update scalar range that will be used for normalizing the values
-                    scalarRange[0] = Math.min(scalarRange[0], scalarValue);
-                    scalarRange[1] = Math.max(scalarRange[1], scalarValue);
-                }
-                if (useShapeFromMarker) {
-                    shapeIndex = markerData[shapePropertyName][markerIndex];
-                    // Check if shapeIndex is a symbol names that needs to be converted to an index
-                    if (isNaN(shapeIndex)) shapeIndex = markerUtils._symbolStrings.indexOf(shapeIndex);
-                    shapeIndex = Math.max(0.0, Math.floor(Number(shapeIndex))) % numShapes;
-                }
-
-                bytedata_point[4 * i + 0] = markerData[xPosName][markerIndex] * markerCoordFactor;
-                bytedata_point[4 * i + 1] = markerData[yPosName][markerIndex] * markerCoordFactor;
-                bytedata_point[4 * i + 2] = lutIndex + Number(shapeIndex) * 4096.0;
-                bytedata_point[4 * i + 3] = useColorFromColormap ? Number(scalarValue)
-                                                                 : Number("0x" + hexColor.substring(1,7));
-                bytedata_index[i] = markerIndex;  // Store index needed for picking
-                bytedata_scale[i] = useScaleFromMarker ? markerData[scalePropertyName][markerIndex] : 1.0;
-                bytedata_opacity[i] = Math.floor(Math.max(0.0, Math.min(1.0, opacity)) * 65535.0);
-                bytedata_transform[i] = collectionItemIndex;
-                bytedata_vertexID[4 * i + 0] = 0;  // 1st vertex
-                bytedata_vertexID[4 * i + 1] = 1;  // 2nd vertex
-                bytedata_vertexID[4 * i + 2] = 2;  // 3rd vertex
-                bytedata_vertexID[4 * i + 3] = 3;  // 4th vertex
+            if (!(uid + "_markers" in glUtils._buffers)) {
+                document.getElementById(uid + "_menu-UI").addEventListener("input", glUtils.updateColorLUTTextures);
+                document.getElementById(uid + "_menu-UI").addEventListener("input", glUtils.draw);
             }
+
+            // Create WebGL objects (if this has not already been done)
+            if (!(uid + "_markers" in glUtils._buffers))
+                glUtils._buffers[uid + "_markers"] = glUtils._createMarkerBuffer(gl, numPoints * numSectors * NUM_BYTES_PER_MARKER);
+            if (!(uid + "_markers" in glUtils._vaos))
+                glUtils._vaos[uid + "_markers"] = gl_ext_vao.createVertexArrayOES();
+            if (!(uid + "_markers_instanced" in glUtils._vaos))
+                glUtils._vaos[uid + "_markers_instanced"] = gl_ext_vao.createVertexArrayOES();
+            if (!(uid + "_colorLUT" in glUtils._textures))
+                glUtils._textures[uid + "_colorLUT"] = glUtils._createColorLUTTexture(gl);
+            if (!(uid + "_colorscale" in glUtils._textures))
+                glUtils._textures[uid + "_colorscale"] = glUtils._createColorScaleTexture(gl);
+
+            // Upload chunks of vertex data to buffer
+            gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_markers"]);
+            if (offset == 0) {
+                // If the number of sectors used is changed, we have to reallocate the buffer
+                const newBufferSize = numPoints * numSectors * NUM_BYTES_PER_MARKER;
+                const oldBufferSize = gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_SIZE);
+                if (newBufferSize != oldBufferSize)
+                    gl.bufferData(gl.ARRAY_BUFFER, newBufferSize, gl.STATIC_DRAW);
+            }
+            gl.bufferSubData(gl.ARRAY_BUFFER, (POINT_OFFSET + offset * 16) * numSectors, bytedata_point);
+            gl.bufferSubData(gl.ARRAY_BUFFER, (INDEX_OFFSET + offset * 4) * numSectors, bytedata_index);
+            gl.bufferSubData(gl.ARRAY_BUFFER, (SCALE_OFFSET + offset * 4) * numSectors, bytedata_scale);
+            gl.bufferSubData(gl.ARRAY_BUFFER, (SHAPE_OFFSET + offset * 4) * numSectors, bytedata_shape);
+            gl.bufferSubData(gl.ARRAY_BUFFER, (OPACITY_OFFSET + offset * 2) * numSectors, bytedata_opacity);
+            gl.bufferSubData(gl.ARRAY_BUFFER, (TRANSFORM_OFFSET + offset * 2) * numSectors, bytedata_transform);
+            gl.bufferSubData(gl.ARRAY_BUFFER, (VERTEX_ID_OFFSET + offset * 4) * numSectors, bytedata_vertexID);
+            gl.bindBuffer(gl.ARRAY_BUFFER, null);
         }
+        console.timeEnd("Generate vertex data");
 
-        if (!(uid + "_markers" in glUtils._buffers)) {
-            document.getElementById(uid + "_menu-UI").addEventListener("input", glUtils.updateColorLUTTextures);
-            document.getElementById(uid + "_menu-UI").addEventListener("input", glUtils.draw);
-        }
-
-        // Create WebGL objects (if this has not already been done)
-        if (!(uid + "_markers" in glUtils._buffers))
-            glUtils._buffers[uid + "_markers"] = glUtils._createMarkerBuffer(gl, numPoints * numSectors * NUM_BYTES_PER_MARKER);
-        if (!(uid + "_markers" in glUtils._vaos))
-            glUtils._vaos[uid + "_markers"] = gl_ext_vao.createVertexArrayOES();
-        if (!(uid + "_markers_instanced" in glUtils._vaos))
-            glUtils._vaos[uid + "_markers_instanced"] = gl_ext_vao.createVertexArrayOES();
-        if (!(uid + "_colorLUT" in glUtils._textures))
-            glUtils._textures[uid + "_colorLUT"] = glUtils._createColorLUTTexture(gl);
-        if (!(uid + "_colorscale" in glUtils._textures))
-            glUtils._textures[uid + "_colorscale"] = glUtils._createColorScaleTexture(gl);
-
-        // Upload chunks of vertex data to buffer
+        // Set up VAO with vertex format for drawing
+        gl_ext_vao.bindVertexArrayOES(glUtils._vaos[uid + "_markers"]);
         gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_markers"]);
-        if (offset == 0) {
-            // If the number of sectors used is changed, we have to reallocate the buffer
-            const newBufferSize = numPoints * numSectors * NUM_BYTES_PER_MARKER;
-            const oldBufferSize = gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_SIZE);
-            if (newBufferSize != oldBufferSize)
-                gl.bufferData(gl.ARRAY_BUFFER, newBufferSize, gl.STATIC_DRAW);
-        }
-        gl.bufferSubData(gl.ARRAY_BUFFER, (POINT_OFFSET + offset * 16) * numSectors, bytedata_point);
-        gl.bufferSubData(gl.ARRAY_BUFFER, (INDEX_OFFSET + offset * 4) * numSectors, bytedata_index);
-        gl.bufferSubData(gl.ARRAY_BUFFER, (SCALE_OFFSET + offset * 4) * numSectors, bytedata_scale);
-        gl.bufferSubData(gl.ARRAY_BUFFER, (SHAPE_OFFSET + offset * 4) * numSectors, bytedata_shape);
-        gl.bufferSubData(gl.ARRAY_BUFFER, (OPACITY_OFFSET + offset * 2) * numSectors, bytedata_opacity);
-        gl.bufferSubData(gl.ARRAY_BUFFER, (TRANSFORM_OFFSET + offset * 2) * numSectors, bytedata_transform);
-        gl.bufferSubData(gl.ARRAY_BUFFER, (VERTEX_ID_OFFSET + offset * 4) * numSectors, bytedata_vertexID);
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        gl.enableVertexAttribArray(POINT_LOCATION);
+        gl.vertexAttribPointer(POINT_LOCATION, 4, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(INDEX_LOCATION);
+        gl.vertexAttribPointer(INDEX_LOCATION, 1, gl.FLOAT, false, 0, INDEX_OFFSET * numSectors);
+        gl.enableVertexAttribArray(SCALE_LOCATION);
+        gl.vertexAttribPointer(SCALE_LOCATION, 1, gl.FLOAT, false, 0, SCALE_OFFSET * numSectors);
+        gl.enableVertexAttribArray(SHAPE_LOCATION);
+        gl.vertexAttribPointer(SHAPE_LOCATION, 1, gl.FLOAT, false, 0, SHAPE_OFFSET * numSectors);
+        gl.enableVertexAttribArray(OPACITY_LOCATION);
+        gl.vertexAttribPointer(OPACITY_LOCATION, 1, gl.UNSIGNED_SHORT, true, 0, OPACITY_OFFSET * numSectors);
+        gl.enableVertexAttribArray(TRANSFORM_LOCATION);
+        gl.vertexAttribPointer(TRANSFORM_LOCATION, 1, gl.UNSIGNED_SHORT, false, 0, TRANSFORM_OFFSET * numSectors);
+        // Skip enabling vertex ID array, since it will not be used for non-instanced drawing
+        gl_ext_vao.bindVertexArrayOES(null);
+
+        // Set up 2nd VAO (for experimental instanced drawing)
+        gl_ext_vao.bindVertexArrayOES(glUtils._vaos[uid + "_markers_instanced"]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_markers"]);
+        gl.enableVertexAttribArray(POINT_LOCATION);
+        gl.vertexAttribPointer(POINT_LOCATION, 4, gl.FLOAT, false, 0, 0);
+        gl_ext_ia.vertexAttribDivisorANGLE(POINT_LOCATION, 1);
+        gl.enableVertexAttribArray(INDEX_LOCATION);
+        gl.vertexAttribPointer(INDEX_LOCATION, 1, gl.FLOAT, false, 0, INDEX_OFFSET * numSectors);
+        gl_ext_ia.vertexAttribDivisorANGLE(INDEX_LOCATION, 1);
+        gl.enableVertexAttribArray(SCALE_LOCATION);
+        gl.vertexAttribPointer(SCALE_LOCATION, 1, gl.FLOAT, false, 0, SCALE_OFFSET * numSectors);
+        gl_ext_ia.vertexAttribDivisorANGLE(SCALE_LOCATION, 1);
+        gl.enableVertexAttribArray(SHAPE_LOCATION);
+        gl.vertexAttribPointer(SHAPE_LOCATION, 1, gl.FLOAT, false, 0, SHAPE_OFFSET * numSectors);
+        gl_ext_ia.vertexAttribDivisorANGLE(SHAPE_LOCATION, 1);
+        gl.enableVertexAttribArray(OPACITY_LOCATION);
+        gl.vertexAttribPointer(OPACITY_LOCATION, 1, gl.UNSIGNED_SHORT, true, 0, OPACITY_OFFSET * numSectors);
+        gl_ext_ia.vertexAttribDivisorANGLE(OPACITY_LOCATION, 1);
+        gl.enableVertexAttribArray(TRANSFORM_LOCATION);
+        gl.vertexAttribPointer(TRANSFORM_LOCATION, 1, gl.UNSIGNED_SHORT, false, 0, TRANSFORM_OFFSET * numSectors);
+        gl_ext_ia.vertexAttribDivisorANGLE(TRANSFORM_LOCATION, 1);
+        gl.enableVertexAttribArray(VERTEX_ID_LOCATION);
+        gl.vertexAttribPointer(VERTEX_ID_LOCATION, 1, gl.UNSIGNED_BYTE, false, 0, VERTEX_ID_OFFSET * numSectors);
+        gl_ext_ia.vertexAttribDivisorANGLE(VERTEX_ID_LOCATION, 0);  // Vertex ID rate must be per-vertex!
+        gl_ext_vao.bindVertexArrayOES(null);
+
     }
-    console.timeEnd("Generate vertex data");
-
-    // Set up VAO with vertex format for drawing
-    gl_ext_vao.bindVertexArrayOES(glUtils._vaos[uid + "_markers"]);
-    gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_markers"]);
-    gl.enableVertexAttribArray(POINT_LOCATION);
-    gl.vertexAttribPointer(POINT_LOCATION, 4, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(INDEX_LOCATION);
-    gl.vertexAttribPointer(INDEX_LOCATION, 1, gl.FLOAT, false, 0, INDEX_OFFSET * numSectors);
-    gl.enableVertexAttribArray(SCALE_LOCATION);
-    gl.vertexAttribPointer(SCALE_LOCATION, 1, gl.FLOAT, false, 0, SCALE_OFFSET * numSectors);
-    gl.enableVertexAttribArray(SHAPE_LOCATION);
-    gl.vertexAttribPointer(SHAPE_LOCATION, 1, gl.FLOAT, false, 0, SHAPE_OFFSET * numSectors);
-    gl.enableVertexAttribArray(OPACITY_LOCATION);
-    gl.vertexAttribPointer(OPACITY_LOCATION, 1, gl.UNSIGNED_SHORT, true, 0, OPACITY_OFFSET * numSectors);
-    gl.enableVertexAttribArray(TRANSFORM_LOCATION);
-    gl.vertexAttribPointer(TRANSFORM_LOCATION, 1, gl.UNSIGNED_SHORT, false, 0, TRANSFORM_OFFSET * numSectors);
-    // Skip enabling vertex ID array, since it will not be used for non-instanced drawing
-    gl_ext_vao.bindVertexArrayOES(null);
-
-    // Set up 2nd VAO (for experimental instanced drawing)
-    gl_ext_vao.bindVertexArrayOES(glUtils._vaos[uid + "_markers_instanced"]);
-    gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_markers"]);
-    gl.enableVertexAttribArray(POINT_LOCATION);
-    gl.vertexAttribPointer(POINT_LOCATION, 4, gl.FLOAT, false, 0, 0);
-    gl_ext_ia.vertexAttribDivisorANGLE(POINT_LOCATION, 1);
-    gl.enableVertexAttribArray(INDEX_LOCATION);
-    gl.vertexAttribPointer(INDEX_LOCATION, 1, gl.FLOAT, false, 0, INDEX_OFFSET * numSectors);
-    gl_ext_ia.vertexAttribDivisorANGLE(INDEX_LOCATION, 1);
-    gl.enableVertexAttribArray(SCALE_LOCATION);
-    gl.vertexAttribPointer(SCALE_LOCATION, 1, gl.FLOAT, false, 0, SCALE_OFFSET * numSectors);
-    gl_ext_ia.vertexAttribDivisorANGLE(SCALE_LOCATION, 1);
-    gl.enableVertexAttribArray(SHAPE_LOCATION);
-    gl.vertexAttribPointer(SHAPE_LOCATION, 1, gl.FLOAT, false, 0, SHAPE_OFFSET * numSectors);
-    gl_ext_ia.vertexAttribDivisorANGLE(SHAPE_LOCATION, 1);
-    gl.enableVertexAttribArray(OPACITY_LOCATION);
-    gl.vertexAttribPointer(OPACITY_LOCATION, 1, gl.UNSIGNED_SHORT, true, 0, OPACITY_OFFSET * numSectors);
-    gl_ext_ia.vertexAttribDivisorANGLE(OPACITY_LOCATION, 1);
-    gl.enableVertexAttribArray(TRANSFORM_LOCATION);
-    gl.vertexAttribPointer(TRANSFORM_LOCATION, 1, gl.UNSIGNED_SHORT, false, 0, TRANSFORM_OFFSET * numSectors);
-    gl_ext_ia.vertexAttribDivisorANGLE(TRANSFORM_LOCATION, 1);
-    gl.enableVertexAttribArray(VERTEX_ID_LOCATION);
-    gl.vertexAttribPointer(VERTEX_ID_LOCATION, 1, gl.UNSIGNED_BYTE, false, 0, VERTEX_ID_OFFSET * numSectors);
-    gl_ext_ia.vertexAttribDivisorANGLE(VERTEX_ID_LOCATION, 0);  // Vertex ID rate must be per-vertex!
-    gl_ext_vao.bindVertexArrayOES(null);
+    glUtils._markerInputsCached[uid] = JSON.stringify(newInputs);
 
     // Generate separate WebGL resources for drawing graph edges (if markerset
     // contains spatial connectivity data and the user wants to display it)
-    const numEdges = glUtils._loadEdges(uid);
+    const numEdges = glUtils._loadEdges(uid, forceUpdate);
 
     // Update marker info and LUT + colormap textures
     glUtils._numPoints[uid] = numPoints * numSectors;
@@ -857,6 +868,8 @@ glUtils.deleteMarkers = function(uid) {
     delete glUtils._barcodeToLUTIndex[uid];
     delete glUtils._barcodeToKey[uid];
     delete glUtils._collectionItemIndex[uid];
+    delete glUtils._markerInputsCached[uid];
+    delete glUtils._edgeInputsCached[uid];
 
     // Clean up WebGL resources
     gl.deleteBuffer(glUtils._buffers[uid + "_markers"]);
@@ -884,40 +897,43 @@ glUtils.deleteMarkers = function(uid) {
 // Create WebGL resources and other objects for drawing graph edges. Returns
 // the number of edges found in the data. This function should only be called
 // from within glUtils.loadMarkers().
-glUtils._loadEdges = function(uid) {
+glUtils._loadEdges = function(uid, forceUpdate) {
     if (!glUtils._initialized) return;
     const canvas = document.getElementById("gl_canvas");
     const gl = canvas.getContext("webgl", glUtils._options);
     const gl_ext_ia = gl.getExtension('ANGLE_instanced_arrays');
     const gl_ext_vao = gl.getExtension('OES_vertex_array_object');
 
+    let newInputs = {};  // Inputs that will require a vertex buffer update when changed
+
     // Get marker data and other info like image size
     const markerData = dataUtils.data[uid]["_processeddata"];
-    const keyName = dataUtils.data[uid]["_gb_col"];
-    const xPosName = dataUtils.data[uid]["_X"];
-    const yPosName = dataUtils.data[uid]["_Y"];
-    let numPoints = markerData[xPosName].length;
+    const keyName = newInputs.keyName = dataUtils.data[uid]["_gb_col"];
+    const xPosName = newInputs.xPosName = dataUtils.data[uid]["_X"];
+    const yPosName = newInputs.yPosName = dataUtils.data[uid]["_Y"];
+    const numPoints = markerData[xPosName].length;
 
-    const connectionsPropertyName = dataUtils.data[uid]["_edges_col"];
-    if (markerData[connectionsPropertyName] == null) return 0;  // No edge data in the markerset!
+    const connectionsPropertyName = newInputs.connectionsPropertyName = dataUtils.data[uid]["_edges_col"];
 
     // Check how the user wants to draw the edges
     glUtils._updateBarcodeToLUTIndexDict(uid, markerData, keyName);
     const barcodeToLUTIndex = glUtils._barcodeToLUTIndex[uid];
-    const markerCoordFactor = dataUtils.data[uid]["_coord_factor"];
-    const opacityPropertyName = dataUtils.data[uid]["_opacity_col"];
-    const useOpacityFromMarker = dataUtils.data[uid]["_opacity_col"] != null;
+    const markerCoordFactor = newInputs.markerCoordFactor = dataUtils.data[uid]["_coord_factor"];
+    const opacityPropertyName = newInputs.opacityPropertyName = dataUtils.data[uid]["_opacity_col"];
+    const useOpacityFromMarker = newInputs.useOpacityFromMarker = dataUtils.data[uid]["_opacity_col"] != null;
     const markerOpacityFactor = dataUtils.data[uid]["_opacity"];
-    const collectionItemPropertyName = dataUtils.data[uid]["_collectionItem_col"];
-    const useCollectionItemFromMarker = dataUtils.data[uid]["_collectionItem_col"] != null;
-    const collectionItemFixed = dataUtils.data[uid]["_collectionItem_fixed"];
+    const collectionItemPropertyName = newInputs.collectionItemPropertyName = dataUtils.data[uid]["_collectionItem_col"];
+    const useCollectionItemFromMarker = newInputs.useCollectionItemFromMarker = dataUtils.data[uid]["_collectionItem_col"] != null;
+    const collectionItemFixed = newInputs.collectionItemFixed = dataUtils.data[uid]["_collectionItem_fixed"];
     let collectionItemIndex = collectionItemFixed;
 
     // Find out how many edges there are in the data
     let numEdges = 0;
-    for (let markerIndex = 0; markerIndex < numPoints; ++markerIndex) {
-        const edges = markerData[connectionsPropertyName][markerIndex].toString().split(";");
-        numEdges += edges.length;
+    if (markerData[connectionsPropertyName] != null) {
+        for (let markerIndex = 0; markerIndex < numPoints; ++markerIndex) {
+            const edges = markerData[connectionsPropertyName][markerIndex].toString().split(";");
+            numEdges += edges.length;
+        }
     }
 
     // Additional info about the vertex format. Make sure you update also
@@ -934,115 +950,121 @@ glUtils._loadEdges = function(uid) {
           TRANSFORM_LOCATION = 5;
           VERTEX_ID_LOCATION = 6;
 
-    // Extract and upload vertex data for edges. Similar to for the markers, the
-    // vertex data can be large, so we upload the data in chunks to the GPU
-    // buffer to avoid having to allocate a large temporary buffer in system memory.
-    console.time("Generate edge data");
-    let chunkSize = 100000;
-    let offsetEdges = 0;
-    for (let offset = 0; offset < numPoints; offset += chunkSize) {
-        if (offset + chunkSize >= numPoints) chunkSize = numPoints - offset;
+    const lastInputs = glUtils._edgeInputsCached[uid];
+    if ((markerData[connectionsPropertyName] != null) &&
+        (forceUpdate || (lastInputs != JSON.stringify(newInputs)))) {
 
-        // Compute actual chunk size for the edges in the chunk
-        let chunkSizeEdges = 0;
-        for (let i = 0; i < chunkSize; ++i) {
-            const markerIndex = i + offset;
-            const edges = markerData[connectionsPropertyName][markerIndex].toString().split(";");
-            chunkSizeEdges += edges.length;
-        }
+        // Extract and upload vertex data for edges. Similar to for the markers, the
+        // vertex data can be large, so we upload the data in chunks to the GPU
+        // buffer to avoid having to allocate a large temporary buffer in system memory.
+        console.time("Generate edge data");
+        let chunkSize = 100000;
+        let offsetEdges = 0;
+        for (let offset = 0; offset < numPoints; offset += chunkSize) {
+            if (offset + chunkSize >= numPoints) chunkSize = numPoints - offset;
 
-        // Allocate arrays for edge data that will be uploaded to vertex buffer
-        let bytedata_point = new Float32Array(chunkSizeEdges * 4);
-        let bytedata_index = new Float32Array(chunkSizeEdges * 1);
-        let bytedata_opacity = new Uint16Array(chunkSizeEdges * 1);
-        let bytedata_transform = new Uint16Array(chunkSizeEdges * 1);
-        let bytedata_vertexID = new Uint8Array(chunkSizeEdges * 4);
+            // Compute actual chunk size for the edges in the chunk
+            let chunkSizeEdges = 0;
+            for (let i = 0; i < chunkSize; ++i) {
+                const markerIndex = i + offset;
+                const edges = markerData[connectionsPropertyName][markerIndex].toString().split(";");
+                chunkSizeEdges += edges.length;
+            }
 
-        let offsetEdges2 = 0;
-        for (let i = 0; i < chunkSize; ++i) {
-            const markerIndex = i + offset;
-            const lutIndex = (keyName != null) ? barcodeToLUTIndex[markerData[keyName][markerIndex]] : 0;
-            const opacity = useOpacityFromMarker ? markerData[opacityPropertyName][markerIndex] : 1.0;
-            if (useCollectionItemFromMarker) collectionItemIndex = markerData[collectionItemPropertyName][markerIndex];
+            // Allocate arrays for edge data that will be uploaded to vertex buffer
+            let bytedata_point = new Float32Array(chunkSizeEdges * 4);
+            let bytedata_index = new Float32Array(chunkSizeEdges * 1);
+            let bytedata_opacity = new Uint16Array(chunkSizeEdges * 1);
+            let bytedata_transform = new Uint16Array(chunkSizeEdges * 1);
+            let bytedata_vertexID = new Uint8Array(chunkSizeEdges * 4);
 
-            // Generate line segments for edges to neighboring markers
-            const edges = markerData[connectionsPropertyName][markerIndex].toString().split(";");
-            for (let j = 0; j < edges.length; ++j) {
-                let markerIndex_j = Number(edges[j]);
-                let lutIndex_j = (keyName != null) ? barcodeToLUTIndex[markerData[keyName][markerIndex_j]] : 0;
-                let collectionItemIndex_j = collectionItemFixed;
-                if (useCollectionItemFromMarker) collectionItemIndex_j = markerData[collectionItemPropertyName][markerIndex_j];
-                const k = offsetEdges2 + j;
+            let offsetEdges2 = 0;
+            for (let i = 0; i < chunkSize; ++i) {
+                const markerIndex = i + offset;
+                const lutIndex = (keyName != null) ? barcodeToLUTIndex[markerData[keyName][markerIndex]] : 0;
+                const opacity = useOpacityFromMarker ? markerData[opacityPropertyName][markerIndex] : 1.0;
+                if (useCollectionItemFromMarker) collectionItemIndex = markerData[collectionItemPropertyName][markerIndex];
 
-                if (markerIndex_j == 0) {
-                    // FIXME Workaround for false edges to marker with index 0
-                    markerIndex_j = markerIndex;
-                    lutIndex_j = lutIndex;
-                    collectionItemIndex_j = collectionItemIndex;
+                // Generate line segments for edges to neighboring markers
+                const edges = markerData[connectionsPropertyName][markerIndex].toString().split(";");
+                for (let j = 0; j < edges.length; ++j) {
+                    let markerIndex_j = Number(edges[j]);
+                    let lutIndex_j = (keyName != null) ? barcodeToLUTIndex[markerData[keyName][markerIndex_j]] : 0;
+                    let collectionItemIndex_j = collectionItemFixed;
+                    if (useCollectionItemFromMarker) collectionItemIndex_j = markerData[collectionItemPropertyName][markerIndex_j];
+                    const k = offsetEdges2 + j;
+
+                    if (markerIndex_j == 0) {
+                        // FIXME Workaround for false edges to marker with index 0
+                        markerIndex_j = markerIndex;
+                        lutIndex_j = lutIndex;
+                        collectionItemIndex_j = collectionItemIndex;
+                    }
+
+                    bytedata_point[4 * k + 0] = markerData[xPosName][markerIndex] * markerCoordFactor;
+                    bytedata_point[4 * k + 1] = markerData[yPosName][markerIndex] * markerCoordFactor;
+                    bytedata_point[4 * k + 2] = markerData[xPosName][markerIndex_j] * markerCoordFactor;
+                    bytedata_point[4 * k + 3] = markerData[yPosName][markerIndex_j] * markerCoordFactor;
+                    bytedata_index[k] = lutIndex + (lutIndex_j * 4096.0);
+                    bytedata_opacity[k] = Math.floor(Math.max(0.0, Math.min(1.0, opacity)) * 65535.0);
+                    bytedata_transform[k] = collectionItemIndex + (collectionItemIndex_j * 256);
+                    bytedata_vertexID[4 * k + 0] = 0;  // 1st vertex
+                    bytedata_vertexID[4 * k + 1] = 1;  // 2nd vertex
+                    bytedata_vertexID[4 * k + 2] = 2;  // 3rd vertex
+                    bytedata_vertexID[4 * k + 3] = 3;  // 4th vertex
                 }
 
-                bytedata_point[4 * k + 0] = markerData[xPosName][markerIndex] * markerCoordFactor;
-                bytedata_point[4 * k + 1] = markerData[yPosName][markerIndex] * markerCoordFactor;
-                bytedata_point[4 * k + 2] = markerData[xPosName][markerIndex_j] * markerCoordFactor;
-                bytedata_point[4 * k + 3] = markerData[yPosName][markerIndex_j] * markerCoordFactor;
-                bytedata_index[k] = lutIndex + (lutIndex_j * 4096.0);
-                bytedata_opacity[k] = Math.floor(Math.max(0.0, Math.min(1.0, opacity)) * 65535.0);
-                bytedata_transform[k] = collectionItemIndex + (collectionItemIndex_j * 256);
-                bytedata_vertexID[4 * k + 0] = 0;  // 1st vertex
-                bytedata_vertexID[4 * k + 1] = 1;  // 2nd vertex
-                bytedata_vertexID[4 * k + 2] = 2;  // 3rd vertex
-                bytedata_vertexID[4 * k + 3] = 3;  // 4th vertex
+                offsetEdges2 += edges.length;
             }
 
-            offsetEdges2 += edges.length;
+            // Create WebGL objects (if this has not already been done)
+            if (!(uid + "_edges" in glUtils._buffers))
+                glUtils._buffers[uid + "_edges"] = glUtils._createMarkerBuffer(gl, numEdges * NUM_BYTES_PER_EDGE);
+            if (!(uid + "_edges" in glUtils._vaos))
+                glUtils._vaos[uid + "_edges"] = gl_ext_vao.createVertexArrayOES();
+
+            // Upload chunks of vertex data to buffer
+            gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_edges"]);
+            if (offset == 0) {
+                // Check if buffer needs to be allocated or re-allocated
+                const newBufferSize = numEdges * NUM_BYTES_PER_EDGE;
+                const oldBufferSize = gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_SIZE);
+                if (newBufferSize != oldBufferSize) {
+                    gl.bufferData(gl.ARRAY_BUFFER, newBufferSize, gl.STATIC_DRAW);
+                }
+            }
+
+            gl.bufferSubData(gl.ARRAY_BUFFER, (POINT_OFFSET + offsetEdges * 16), bytedata_point);
+            gl.bufferSubData(gl.ARRAY_BUFFER, (INDEX_OFFSET + offsetEdges * 4), bytedata_index);
+            gl.bufferSubData(gl.ARRAY_BUFFER, (OPACITY_OFFSET + offsetEdges * 2), bytedata_opacity);
+            gl.bufferSubData(gl.ARRAY_BUFFER, (TRANSFORM_OFFSET + offsetEdges * 2), bytedata_transform);
+            gl.bufferSubData(gl.ARRAY_BUFFER, (VERTEX_ID_OFFSET + offsetEdges * 4), bytedata_vertexID);
+            gl.bindBuffer(gl.ARRAY_BUFFER, null);
+            offsetEdges += chunkSizeEdges;
         }
+        console.timeEnd("Generate edge data");
 
-        // Create WebGL objects (if this has not already been done)
-        if (!(uid + "_edges" in glUtils._buffers))
-            glUtils._buffers[uid + "_edges"] = glUtils._createMarkerBuffer(gl, numEdges * NUM_BYTES_PER_EDGE);
-        if (!(uid + "_edges" in glUtils._vaos))
-            glUtils._vaos[uid + "_edges"] = gl_ext_vao.createVertexArrayOES();
-
-        // Upload chunks of vertex data to buffer
+        // Set up VAO with vertex format for drawing thick lines via instancing
+        gl_ext_vao.bindVertexArrayOES(glUtils._vaos[uid + "_edges"]);
         gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_edges"]);
-        if (offset == 0) {
-            // Check if buffer needs to be allocated or re-allocated
-            const newBufferSize = numEdges * NUM_BYTES_PER_EDGE;
-            const oldBufferSize = gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_SIZE);
-            if (newBufferSize != oldBufferSize) {
-                gl.bufferData(gl.ARRAY_BUFFER, newBufferSize, gl.STATIC_DRAW);
-            }
-        }
-
-        gl.bufferSubData(gl.ARRAY_BUFFER, (POINT_OFFSET + offsetEdges * 16), bytedata_point);
-        gl.bufferSubData(gl.ARRAY_BUFFER, (INDEX_OFFSET + offsetEdges * 4), bytedata_index);
-        gl.bufferSubData(gl.ARRAY_BUFFER, (OPACITY_OFFSET + offsetEdges * 2), bytedata_opacity);
-        gl.bufferSubData(gl.ARRAY_BUFFER, (TRANSFORM_OFFSET + offsetEdges * 2), bytedata_transform);
-        gl.bufferSubData(gl.ARRAY_BUFFER, (VERTEX_ID_OFFSET + offsetEdges * 4), bytedata_vertexID);
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
-        offsetEdges += chunkSizeEdges;
+        gl.enableVertexAttribArray(POINT_LOCATION);
+        gl.vertexAttribPointer(POINT_LOCATION, 4, gl.FLOAT, false, 0, 0);
+        gl_ext_ia.vertexAttribDivisorANGLE(POINT_LOCATION, 1);
+        gl.enableVertexAttribArray(INDEX_LOCATION);
+        gl.vertexAttribPointer(INDEX_LOCATION, 1, gl.FLOAT, false, 0, INDEX_OFFSET);
+        gl_ext_ia.vertexAttribDivisorANGLE(INDEX_LOCATION, 1);
+        gl.enableVertexAttribArray(OPACITY_LOCATION);
+        gl.vertexAttribPointer(OPACITY_LOCATION, 1, gl.UNSIGNED_SHORT, true, 0, OPACITY_OFFSET);
+        gl_ext_ia.vertexAttribDivisorANGLE(OPACITY_LOCATION, 1);
+        gl.enableVertexAttribArray(TRANSFORM_LOCATION);
+        gl.vertexAttribPointer(TRANSFORM_LOCATION, 1, gl.UNSIGNED_SHORT, false, 0, TRANSFORM_OFFSET);
+        gl_ext_ia.vertexAttribDivisorANGLE(TRANSFORM_LOCATION, 1);
+        gl.enableVertexAttribArray(VERTEX_ID_LOCATION);
+        gl.vertexAttribPointer(VERTEX_ID_LOCATION, 1, gl.UNSIGNED_BYTE, false, 0, VERTEX_ID_OFFSET);
+        gl_ext_ia.vertexAttribDivisorANGLE(VERTEX_ID_LOCATION, 0);  // Vertex ID rate must be per-vertex!
+        gl_ext_vao.bindVertexArrayOES(null);
     }
-    console.timeEnd("Generate edge data");
-
-    // Set up VAO with vertex format for drawing thick lines via instancing
-    gl_ext_vao.bindVertexArrayOES(glUtils._vaos[uid + "_edges"]);
-    gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_edges"]);
-    gl.enableVertexAttribArray(POINT_LOCATION);
-    gl.vertexAttribPointer(POINT_LOCATION, 4, gl.FLOAT, false, 0, 0);
-    gl_ext_ia.vertexAttribDivisorANGLE(POINT_LOCATION, 1);
-    gl.enableVertexAttribArray(INDEX_LOCATION);
-    gl.vertexAttribPointer(INDEX_LOCATION, 1, gl.FLOAT, false, 0, INDEX_OFFSET);
-    gl_ext_ia.vertexAttribDivisorANGLE(INDEX_LOCATION, 1);
-    gl.enableVertexAttribArray(OPACITY_LOCATION);
-    gl.vertexAttribPointer(OPACITY_LOCATION, 1, gl.UNSIGNED_SHORT, true, 0, OPACITY_OFFSET);
-    gl_ext_ia.vertexAttribDivisorANGLE(OPACITY_LOCATION, 1);
-    gl.enableVertexAttribArray(TRANSFORM_LOCATION);
-    gl.vertexAttribPointer(TRANSFORM_LOCATION, 1, gl.UNSIGNED_SHORT, false, 0, TRANSFORM_OFFSET);
-    gl_ext_ia.vertexAttribDivisorANGLE(TRANSFORM_LOCATION, 1);
-    gl.enableVertexAttribArray(VERTEX_ID_LOCATION);
-    gl.vertexAttribPointer(VERTEX_ID_LOCATION, 1, gl.UNSIGNED_BYTE, false, 0, VERTEX_ID_OFFSET);
-    gl_ext_ia.vertexAttribDivisorANGLE(VERTEX_ID_LOCATION, 0);  // Vertex ID rate must be per-vertex!
-    gl_ext_vao.bindVertexArrayOES(null);
+    glUtils._edgeInputsCached[uid] = JSON.stringify(newInputs);
 
     return numEdges;
 }
