@@ -1,4 +1,4 @@
-# Using TissUUmaps for exploring QuPath output and cell-cell interactions
+# Using TissUUmaps plugin InteractionV&QC
 InteractionV&QC plugin is for visualization and quality control of cell-cell interactions. In order to run this plugin, you need a .csv file containing markers and a .csv file containing neighborhood enrichment test matrix. In the following lines, we also show you how to get a .csv file containing neighborhood enrichment test matrix.
 
 ## Interaction:
