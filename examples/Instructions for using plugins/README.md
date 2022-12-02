@@ -1,9 +1,13 @@
-# TissUUmaps instructions for workshop
+# TissUUmaps instructions
 
-The TissUUmaps workshop is divided in three parts:
+This repository contains the following instructions:
 
-### 1. [Using TissUUmaps for exploring QuPath output and cell-cell interactions](1_QuPath_output_in_TissUUmaps.md)
+### 1. [Using TissUUmaps for exploring ISS data](1_ISS_data_in_TissUUmaps.md)
 
-### 2. [Using TissUUmaps for exploring MALDI data](2_MALDI_data_in_TissUUmaps.md)
+### 2. [Using TissUUmaps plugin ClassV&QC](2_ClassV&QC_plugin_in_TissUUmaps.md)
 
-### 3. [Using TissUUmaps for exploring ISS data](3_ISS_data_in_TissUUmaps.md)
+### 3. [Using TissUUmaps plugin InteractionV&QC](3_InteractionV&QC_plugin_in_TissUUmaps.md)
+
+### 4. [Using TissUUmaps for exploring multidimensional data](4_Multidimensional_data_in_TissUUmaps.md)
+
+
