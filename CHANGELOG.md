@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.0.10.4
+
+- Fix path issue on json loading from server
+
+## 3.0.10.3
+
+- Reset all input dropdowns when new data selected
+
 ## 3.0.10.2
 
 - Add scale factor for coordinates of markers
