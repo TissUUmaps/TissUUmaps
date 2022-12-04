@@ -52,20 +52,29 @@ self.onmessage = async function (event) {
     const { action, payload, id } = event.data;
     if (action === "load") {
         const url = payload?.url;
-        const requestChunkSize = payload?.requestChunkSize ?? 1024 * 1024;
-        const LRUSize = payload?.LRUSize ?? 50;
+        console.log("url", url);
         const { FS } = await h5wasm.ready;
-        const config = {
-            rangeMapper: (fromByte, toByte) => ({url, fromByte, toByte}),
-            requestChunkSize,
-            LRUSize
+        if (typeof url === 'string' || url instanceof String) {
+            const requestChunkSize = payload?.requestChunkSize ?? 1024 * 1024;
+            const LRUSize = payload?.LRUSize ?? 50;
+            const config = {
+                rangeMapper: (fromByte, toByte) => ({url, fromByte, toByte}),
+                requestChunkSize,
+                LRUSize
+            }
+            try {
+                createLazyFile(FS, '/', 'current_file_with_range.h5', true, false, config);
+                file = new h5wasm.File("current_file_with_range.h5");
+            } catch (error) {
+                h5wasm.FS.createLazyFile('/', "current_file_without_range.h5", url, true, false);
+                file = new h5wasm.File("current_file_without_range.h5");
+            }
         }
-        try {
-            createLazyFile(FS, '/', 'current_file_with_range.h5', true, false, config);
-            file = new h5wasm.File("current_file_with_range.h5");
-        } catch (error) {
-            h5wasm.FS.createLazyFile('/', "current_file_without_range.h5", url, true, false);
-            file = new h5wasm.File("current_file_without_range.h5");
+        else {
+            FS.mkdir('/work');
+            FS.mount(FS.filesystems.WORKERFS, { files: [url] }, '/work');
+
+            file = new h5wasm.File(`/work/${url.name}`, 'r');
         }
         self.postMessage({id:id,data:file.keys()})
     }

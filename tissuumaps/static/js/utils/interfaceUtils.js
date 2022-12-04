@@ -683,7 +683,10 @@ interfaceUtils._mGenUIFuncs.dataTabUIToH5 = function(uid){
             lookup: function (query, done) {
                 // Do Ajax call or lookup locally, when done,
                 // call the callback and pass your results:
-                dataUtils.data[uid]._hdf5Api.getKeys("/"+dataUtils.data[uid]._csv_path, query).then((data) => {
+                let url = dataUtils.data[uid]._csv_path
+                if (typeof url === 'string' || url instanceof String)
+                    url = "/" + url;
+                dataUtils.data[uid]._hdf5Api.getKeys(url, query).then((data) => {
                     console.log(data);
                     let keys = data.children.map((value) => {
                         let completePath = value.replace("//","/");
@@ -1002,7 +1005,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem1=function(){
                 label1111=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":generated+"_csv"}});
                 label1111.innerText="File and coordinates";
                 input1112=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_csv","extraAttributes":{ "name":generated+"_csv", 
-                "class":"form-control-file form-control form-control-sm", "type":"file", "accept":".csv,.tsv,.txt"}});
+                "class":"form-control-file form-control form-control-sm", "type":"file", "accept":".csv,.tsv,.txt,.h5,.h5ad"}});
                 input1112.addEventListener("change",(event)=>{dataUtils.startCSVcascade(event)});
     
     //---------------------------------

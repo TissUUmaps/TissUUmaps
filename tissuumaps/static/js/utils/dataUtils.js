@@ -148,7 +148,10 @@ dataUtils.getAllH5Data = function(data_id){
                 }
                 data_obj["_processeddata"].columns.push(alldrops[drop].value);
                 data_obj["_csv_header"].push(alldrops[drop].value);
-                data_obj["_hdf5Api"].getXRow("/"+data_obj["_csv_path"], h5range, h5path).then((data) => {
+                let url = data_obj["_csv_path"];
+                if (typeof url === 'string' || url instanceof String)
+                    url = "/" + url;
+                data_obj["_hdf5Api"].getXRow(url, h5range, h5path).then((data) => {
                     if (Object.prototype.toString.call(data).includes("BigInt") || Object.prototype.toString.call(data).includes("BigUint")) {
                         data = [...data].map((x)=>Number(x));
                     }
@@ -475,7 +478,8 @@ dataUtils.readH5 = function(data_id, thecsv, options) {
     }
     let url = thecsv;
     console.log("thecsv",thecsv);
-    data_obj["_hdf5Api"].get("/"+url,{path:"/"}).then((data) => {
+    if (typeof url === 'string' || url instanceof String) url = "/" + url;
+    data_obj["_hdf5Api"].get(url,{path:"/"}).then((data) => {
         progressBar.style.width = "100%";
         progressParent.classList.add("d-none");
         dataUtils._quadtreesLastInputs = {};  // Clear to make sure quadtrees are generated

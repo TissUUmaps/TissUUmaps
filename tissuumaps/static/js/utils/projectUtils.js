@@ -108,6 +108,9 @@ projectUtils.getActiveProject = function () {
         if (!csvFile) {
             if (dataUtils.data[dataset]) {
                 csvFile = dataUtils.data[dataset]["_csv_path"];
+                if (!(typeof csvFile === 'string' || csvFile instanceof String)) {
+                    csvFile = csvFile.name;
+                }
             }
             else {
                 interfaceUtils.alert("Select a csv file first!");
