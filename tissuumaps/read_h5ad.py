@@ -1,4 +1,5 @@
 import copy
+import json
 import logging
 import os
 import string
@@ -6,91 +7,10 @@ from enum import Enum
 from typing import Mapping, Optional, Tuple, Union
 
 import anndata
+import h5py
 import numpy as np
 import pandas as pd
 import pyvips
-
-
-class Empty(Enum):
-    token = 0
-
-
-_empty = Empty.token
-
-# Helpers
-def _check_spatial_data(
-    uns: Mapping, library_id: Union[Empty, None, str]
-) -> Tuple[Optional[str], Optional[Mapping]]:
-    """
-    Given a mapping, try and extract a library id/ mapping with spatial data.
-
-    Assumes this is `.uns` from how we parse visium data.
-    """
-    spatial_mapping = uns.get("spatial", {})
-    if library_id is _empty:
-        if len(spatial_mapping) > 1:
-            raise ValueError(
-                "Found multiple possible libraries in `.uns['spatial']. Please specify."
-                f" Options are:\n\t{list(spatial_mapping.keys())}"
-            )
-        elif len(spatial_mapping) == 1:
-            library_id = list(spatial_mapping.keys())[0]
-        else:
-            library_id = None
-    if library_id is not None:
-        spatial_data = spatial_mapping[library_id]
-    else:
-        spatial_data = None
-    return library_id, spatial_data
-
-
-def _check_img(
-    spatial_data: Optional[Mapping],
-    img: Optional[np.ndarray],
-    img_key: Union[None, str, Empty],
-    bw: bool = False,
-) -> Tuple[Optional[np.ndarray], Optional[str]]:
-    """
-    Resolve image for spatial plots.
-    """
-    if img is None and spatial_data is not None and img_key is _empty:
-        img_key = next(
-            (k for k in ["hires", "lowres"] if k in spatial_data["images"]),
-        )  # Throws StopIteration Error if keys not present
-    if img is None and spatial_data is not None and img_key is not None:
-        img = spatial_data["images"][img_key]
-    if bw:
-        img = np.dot(img[..., :3], [0.2989, 0.5870, 0.1140])
-    return img, img_key
-
-
-def _check_crop_coord(
-    crop_coord: Optional[tuple],
-    scale_factor: float,
-) -> Tuple[float, float, float, float]:
-    """Handle cropping with image or basis."""
-    if crop_coord is None:
-        return None
-    if len(crop_coord) != 4:
-        raise ValueError("Invalid crop_coord of length {len(crop_coord)}(!=4)")
-    crop_coord = tuple(c * scale_factor for c in crop_coord)
-    return crop_coord
-
-
-def _check_scale_factor(
-    spatial_data: Optional[Mapping],
-    img_key: Optional[str],
-    scale_factor: Optional[float],
-) -> float:
-    """Resolve scale_factor, defaults to 1."""
-    if scale_factor is not None:
-        return scale_factor
-    elif spatial_data is not None and img_key is not None:
-        if img_key == "raw":
-            return 1
-        return spatial_data["scalefactors"][f"tissue_{img_key}_scalef"]
-    else:
-        return 1.0
 
 
 def numpy2vips(a):
@@ -118,15 +38,6 @@ def numpy2vips(a):
     return vi
 
 
-def to_filename(key):
-    valid_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
-    return "".join(c if c in valid_chars else " " for c in key)
-
-
-import os
-
-import numpy as np
-
 tmap_template = {
     "layers": [{"name": "tissue.tif", "tileSource": "./img/tissue.tif.dzi"}],
     "markerFiles": [],
@@ -134,168 +45,81 @@ tmap_template = {
     "collectionMode": True,
 }
 
-h5ad_cache = {}
+
+def getPalette(adata):
+    palette = {}
+    for uns in list(adata.get("uns", [])):
+        if "_colors" in uns:
+            uns_name = uns.replace("_colors", "")
+
+            try:
+                new_palette = dict(
+                    zip(
+                        adata.get(f"/obs/{uns_name}/categories").asstr()[...],
+                        adata.get(f"uns/{uns}/").asstr()[...],
+                    )
+                )
+                palette = dict(palette, **new_palette)
+            except:
+                pass
+    return palette
 
 
-def read_h5ad(filename, cache=True):
-    filename = filename.replace("\\", "/")
-    if not cache and filename in h5ad_cache.keys():
-        del h5ad_cache[filename]
-    if filename in h5ad_cache.keys():
-        logging.info("H5AD file in cache: " + filename)
-        adata = h5ad_cache[filename]
+def getVarList(adata):
+    var = adata.get("/var")
+    if "_index" in var.attrs.keys():
+        varIndex = adata.get("/var").attrs["_index"]
+        varList = [x.decode("utf-8") for x in adata.get(f"/var/{varIndex}", [])]
     else:
-        logging.info("H5AD file not in cache: loading " + filename)
-        adata = anndata.read_h5ad(filename, backed="r")
-        # Cleaning var / obs names that can not be in file names:
-        logging.info("Cleaning var and obs names to store as files")
-        adata.var_names = [to_filename(key) for key in adata.var_names]
-        for key in adata.obs.keys():
-            clean_key = to_filename(key)
-            if key != clean_key:
-                adata.obs[clean_key] = adata.obs[key]
-                del adata.obs[key]
-        h5ad_cache[filename] = adata
-        logging.info("Loading AnnData object done.")
-    return adata
+        # TODO
+        varList = []
+    return varList
 
 
-def h5ad_obs_to_csv(basedir, path, obsName):
-    adata = read_h5ad(os.path.join(basedir, path))
-    img_key = "hires"
-    outputFolder = os.path.join(basedir, path) + "_files"
-
-    obsdata = adata.obs[[obsName]].copy()  # .reset_index(drop=True)
-    obsdata.columns = ["obs"]
-    obsdata["library_id"] = ""
-    if "X_umap" in adata.obsm:
-        obsdata["umap_0"] = adata.obsm["X_umap"][:, 0]
-        obsdata["umap_1"] = adata.obsm["X_umap"][:, 1]
-    if "spatial" in adata.obsm:
-        obsdata["globalX"] = adata.obsm["spatial"][:, 0]
-        obsdata["globalY"] = adata.obsm["spatial"][:, 1]
-    if "spatial_connectivities" in adata.obsp:
-        logging.info("Found spatial neighborhood graph!")
-        matrix = adata.obsp["spatial_connectivities"]  # Sparse matrix in CSR format
-        # Convert edge list for each node (row) into string with indices separated by ";"
-        edges = [
-            str(list(matrix[i].indices)).replace(",", ";").strip("[").strip("]")
-            for i in range(matrix.shape[0])
-        ]
-        obsdata["obsp"] = edges
-        logging.info("Spatial neighborhood graph added to CSV data")
-
-    for library_index, library_id in enumerate(adata.uns.get("spatial", {})):
-        library_id, spatial_data = _check_spatial_data(adata.uns, library_id)
-        scale_factor = _check_scale_factor(
-            spatial_data, img_key=img_key, scale_factor=None
-        )
-        if "spatial" in adata.obsm:
-            if "library_id" in adata.obs:
-                obsdata["globalX"][adata.obs.library_id == library_id] *= scale_factor
-                obsdata["globalY"][adata.obs.library_id == library_id] *= scale_factor
-                obsdata["library_id"][
-                    adata.obs.library_id == library_id
-                ] = library_index
-            else:
-                obsdata["globalX"] *= scale_factor
-                obsdata["globalY"] *= scale_factor
-
-    obsdata.reset_index(drop=True).to_csv(
-        os.path.join(outputFolder, "csv", "obs", obsName + ".csv")
-    )
-
-
-def h5ad_var_to_csv(basedir, path, obsName):
-    adata = read_h5ad(os.path.join(basedir, path))
-    img_key = "hires"
-    outputFolder = os.path.join(basedir, path) + "_files"
+def getObsList(adata):
     try:
-        geneExp = pd.DataFrame(adata[:, obsName].X.toarray())
+        # if obs is a dataframe:
+        obsList = list(adata.get("obs").dtype.names)
     except:
-        geneExp = pd.DataFrame(adata[:, obsName].X)
-    geneExp.columns = ["gene_expression"]
-    geneExp["library_id"] = ""
-    if "X_umap" in adata.obsm:
-        geneExp["umap_0"] = adata.obsm["X_umap"][:, 0]
-        geneExp["umap_1"] = adata.obsm["X_umap"][:, 1]
-    if "spatial" in adata.obsm:
-        geneExp["globalX"] = adata.obsm["spatial"][:, 0]
-        geneExp["globalY"] = adata.obsm["spatial"][:, 1]
-    for library_index, library_id in enumerate(adata.uns.get("spatial", {})):
-        library_id, spatial_data = _check_spatial_data(adata.uns, library_id)
-        scale_factor = _check_scale_factor(
-            spatial_data, img_key=img_key, scale_factor=None
-        )
-        if "spatial" in adata.obsm:
-            if "library_id" in adata.obs:
-                lib_index = adata[:, obsName].obs.library_id == library_id
-                geneExp["globalX"][lib_index.reset_index(drop=True)] *= scale_factor
-                geneExp["globalY"][lib_index.reset_index(drop=True)] *= scale_factor
-                geneExp["library_id"][lib_index.reset_index(drop=True)] = library_index
-            else:
-                geneExp["globalX"] *= scale_factor
-                geneExp["globalY"] *= scale_factor
-
-    geneExp.to_csv(os.path.join(outputFolder, "csv", "var", obsName + ".csv"))
+        # if obs is NOT a dataframe:
+        obsList = list(adata.get("obs"))
+    return obsList
 
 
 def h5ad_to_tmap(basedir, path, library_id=None):
-    adata = read_h5ad(os.path.join(basedir, path), cache=False)
-
-    def is_numeric_dtype(object):
-        try:
-            return np.issubdtype(object.dtype, np.number)
-        except:
-            return False
-
+    adata = h5py.File(os.path.join(basedir, path), "r")
+    adata_out = None
     outputFolder = os.path.join(basedir, path) + "_files"
     relOutputFolder = os.path.basename(path) + "_files"
-    os.makedirs(os.path.join(outputFolder, "csv/var"), exist_ok=True)
-    os.makedirs(os.path.join(outputFolder, "csv/obs"), exist_ok=True)
 
     img_key = "hires"
-    obsList = adata.obs.columns
+
     markerScale = 1
     plugins = []
 
     globalX, globalY = "", ""
-    if "X_umap" in adata.obsm:
-        globalX, globalY = "umap_0", "umap_1"
-    if "spatial" in adata.obsm:
-        globalX, globalY = "globalX", "globalY"
+    for coordinates in [
+        "spatial",
+        "X_spatial",
+        "X_umap",
+        "tSNE",
+    ]:
+        if coordinates in list(adata.get("obsm", [])):
+            globalX, globalY = f"/obsm/{coordinates};0", f"/obsm/{coordinates};1"
+            break
 
-    palette = {}
-    for uns in adata.uns:
-        if "_colors" in uns:
-            uns_name = uns.replace("_colors", "")
-            try:
-                _colors = dict(
-                    zip(
-                        [
-                            str(i)
-                            for i in range(len(adata.obs[uns_name].cat.categories))
-                        ],
-                        adata.uns[uns_name + "_colors"],
-                    )
-                )
-                new_palette = {
-                    adata.obs[uns_name].cat.categories[int(k)]: v[:7]
-                    for k, v in _colors.items()
-                }
-                palette = dict(palette, **new_palette)
-            except:
-                pass
-
-    # if library_id is not None:
-    #    adata = adata[adata.obs.library_id == library_id].copy()
-    # else:
-    #    adata = adata.copy()
-
-    # print ("library_id:", library_id)
     layers = []
-    for library_id in adata.uns.get("spatial", {}):
-        library_id, spatial_data = _check_spatial_data(adata.uns, library_id)
+    library_ids = list(adata.get("uns/spatial", []))
+    try:
+        library_ids = adata["/obs/library_id/categories"].asstr()[...]
+    except:
+        pass
+    coord_factor = 1
+    for library_id in library_ids:
+        print("lib", library_id)
+        coord_factor = adata.get(
+            f"/uns/spatial/{library_id}/scalefactors/tissue_{img_key}_scalef", 1
+        )[()]
         os.makedirs(os.path.join(outputFolder, str(library_id), "img"), exist_ok=True)
         outputImage = os.path.join(outputFolder, str(library_id), "img", "tissue.tif")
         relOutputImage = os.path.join(
@@ -305,7 +129,8 @@ def h5ad_to_tmap(basedir, path, library_id=None):
         if os.path.isfile(outputImage):
             continue
         try:
-            img = spatial_data["images"][img_key]
+            print(f"uns/spatial/{library_id}/images/{img_key}")
+            img = np.array(adata.get(f"/uns/spatial/{library_id}/images/{img_key}"))
 
             if type(img) == str:
                 img = pyvips.Image.new_from_file(img)
@@ -313,7 +138,6 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                 if img.max() <= 1:
                     img *= 255
                 img = numpy2vips(img)
-
             img.tiffsave(
                 outputImage,
                 pyramid=True,
@@ -329,10 +153,45 @@ def h5ad_to_tmap(basedir, path, library_id=None):
             import traceback
 
             print(traceback.format_exc())
-    varList = [
-        {"gene": gene, "display": gene} if type(gene) == str else gene
-        for gene in adata.var_names
-    ]
+
+    use_libraries = len(library_ids) > 1
+
+    library_col = ""
+    if use_libraries:
+        path += "_tmap.h5ad"
+        adata_out = h5py.File(os.path.join(basedir, path), "w")
+        for obj in adata.keys():
+            adata.copy(obj, adata_out)
+        spatial_array = adata["/obsm/spatial"][()]
+        if "/obsm/spatial;" in globalX:
+            library_codes_array = adata["/obs/library_id/codes"][...]
+            library_categ_array = adata["/obs/library_id/categories"].asstr()[...]
+            spatial_scaled_array = np.ones(spatial_array.shape)
+            for library_index, library_id in enumerate(library_categ_array):
+                scale_factor = adata.get(
+                    f"/uns/spatial/{library_id}/scalefactors/tissue_{img_key}_scalef", 1
+                )[()]
+                spatial_scaled_array[library_codes_array == library_index] = (
+                    spatial_array[library_codes_array == library_index] * scale_factor
+                )
+            adata_out.create_dataset("/obsm/spatial_scaled", data=spatial_scaled_array)
+            globalX = "/obsm/spatial_scaled;0"
+            globalY = "/obsm/spatial_scaled;1"
+            coord_factor = 1
+        library_col = "/obs/library_id/codes"
+
+    if "spatial_connectivities" in list(adata.get("obsp", [])):
+        spatial_connectivities = "/obsp/spatial_connectivities;join"
+    else:
+        spatial_connectivities = ""
+
+    # TODO:
+    # - if sparse csr, convert to sparse csc.
+    # adata.X = sparse.csc_matrix(adata.X)
+
+    varList = getVarList(adata)
+    obsList = getObsList(adata)
+    palette = getPalette(adata)
 
     new_tmap_project = copy.deepcopy(tmap_template)
 
@@ -344,18 +203,20 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                 "X": globalX,
                 "Y": globalY,
                 "cb_cmap": "interpolateTurbo",
-                "cb_col": "obs",
+                "cb_col": "",
                 "cb_gr_dict": "",
                 "gb_col": "",
-                "gb_name": "null",
+                "gb_name": "",
                 "opacity": "1",
-                "pie_col": "null",
-                "scale_col": "null",
+                "pie_col": "",
+                "scale_col": "",
                 "scale_factor": markerScale,
-                "shape_col": "null",
+                "coord_factor": coord_factor,
+                "shape_col": "",
                 "shape_fixed": "disc",
                 "shape_gr_dict": "",
-                "collectionItem_col": "library_id",
+                "edges_col": spatial_connectivities,
+                "collectionItem_col": library_col,
                 "collectionItem_fixed": "0",
             },
             "expectedRadios": {
@@ -371,15 +232,16 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                 "shape_gr": False,
                 "shape_gr_dict": False,
                 "shape_gr_rand": True,
-                "collectionItem_col": True,
-                "collectionItem_fixed": False,
+                "collectionItem_col": use_libraries,
+                "collectionItem_fixed": not use_libraries,
             },
             "hideSettings": True,
             "name": "Numerical observations",
-            "path": [
-                f"{relOutputFolder}/csv/obs/{obs}.csv"
+            "path": os.path.basename(path),
+            "dropdownOptions": [
+                {"optionName": obs, "name": obs, "expectedHeader.cb_col": f"/obs/{obs}"}
                 for obs in obsList
-                if is_numeric_dtype(adata.obs[obs])
+                if adata.get(f"/obs/{obs}/categories") is None
             ],
             "title": "Numerical observations",
             "uid": "mainTab",
@@ -394,8 +256,10 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                 "gb_col": "obs",
                 "opacity": "1",
                 "scale_factor": markerScale,
+                "coord_factor": coord_factor,
                 "shape_fixed": "disc",
-                "collectionItem_col": "library_id",
+                "edges_col": spatial_connectivities,
+                "collectionItem_col": library_col,
                 "collectionItem_fixed": "0",
             },
             "expectedRadios": {
@@ -411,15 +275,16 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                 "shape_gr": False,
                 "shape_gr_dict": False,
                 "shape_gr_rand": True,
-                "collectionItem_col": True,
-                "collectionItem_fixed": False,
+                "collectionItem_col": use_libraries,
+                "collectionItem_fixed": not use_libraries,
             },
             "hideSettings": True,
             "name": "Categorical observations",
-            "path": [
-                f"{relOutputFolder}/csv/obs/{obs}.csv"
+            "path": os.path.basename(path),
+            "dropdownOptions": [
+                {"optionName": obs, "name": obs, "expectedHeader.gb_col": f"/obs/{obs}"}
                 for obs in obsList
-                if not is_numeric_dtype(adata.obs[obs])
+                if adata.get(f"/obs/{obs}/categories") is not None
             ],
             "title": "Categorical observations",
             "uid": "mainTab",
@@ -431,10 +296,12 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                 "X": globalX,
                 "Y": globalY,
                 "cb_cmap": "interpolateViridis",
-                "cb_col": "gene_expression",
+                "cb_col": "",
                 "scale_factor": markerScale,
+                "coord_factor": coord_factor,
                 "shape_fixed": "disc",
-                "collectionItem_col": "library_id",
+                "edges_col": spatial_connectivities,
+                "collectionItem_col": library_col,
                 "collectionItem_fixed": "0",
             },
             "expectedRadios": {
@@ -450,16 +317,27 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                 "shape_gr": False,
                 "shape_gr_dict": False,
                 "shape_gr_rand": True,
-                "collectionItem_col": True,
-                "collectionItem_fixed": False,
+                "collectionItem_col": use_libraries,
+                "collectionItem_fixed": not use_libraries,
             },
             "hideSettings": True,
             "name": "Gene expression",
-            "path": [
-                f'{relOutputFolder}/csv/var/{gene["display"]}.csv' for gene in varList
+            "path": os.path.basename(path),
+            "dropdownOptions": [
+                {
+                    "optionName": gene,
+                    "name": "Gene expression: " + gene,
+                    "expectedHeader.cb_col": f"/X;{index}",
+                }
+                for index, gene in enumerate(varList)
             ],
             "title": "Gene expression",
             "uid": "mainTab",
         }
     )
+    # with open(os.path.join(basedir, path + ".tmap"), "w") as f:
+    #    json.dump(new_tmap_project, f, indent=4)
+    adata.close()
+    if adata_out is not None:
+        adata_out.close()
     return new_tmap_project
