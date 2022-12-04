@@ -458,7 +458,7 @@ overlayUtils.waitLayersReady = function () {
             }
             else {
                 overlayUtils.waitLayersReady().then(()=>{
-                    resolve();
+                    setTimeout(resolve,200);
                     return;
                 });
             }    
