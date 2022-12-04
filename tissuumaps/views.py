@@ -415,6 +415,8 @@ def getPathFromReferrer(request, filename):
 @app.route("/<path:path>/<string:filename>.tmap", methods=["GET", "POST"])
 @requires_auth
 def tmapFile_old(path, filename):
+    if path == "":
+        path = "./"
     return redirect(url_for("tmapFile", filename=filename) + "?path=" + path)
 
 
@@ -422,7 +424,7 @@ def tmapFile_old(path, filename):
 @requires_auth
 def tmapFile(filename):
     path = request.args.get("path")
-    if not path:
+    if not path or path == "null":
         path = "./"
     jsonFilename = os.path.abspath(os.path.join(app.basedir, path, filename) + ".tmap")
 
