@@ -592,7 +592,7 @@ class webEngine(QWebEngineView):
         self.load(QUrl(self.location))
         self.mainWin.setWindowTitle("TissUUmaps")
 
-    @pyqtSlot(str)
+    @pyqtSlot(str, result="QJsonObject")
     def exportToStatic(self, state):
         parsed_url = urlparse(self.url().toString())
         previouspath = parse_qs(parsed_url.query)["path"][0]
@@ -604,7 +604,11 @@ class webEngine(QWebEngineView):
             self.lastdir,
             options=QFileDialog.Option.ShowDirsOnly,
         )
-        views.exportToStatic(state, folderpath, previouspath)
+        try:
+            views.exportToStatic(state, folderpath, previouspath)
+        except:
+            return {"success": False, "error": traceback.format_exc()}
+        return {"success": True}
 
     @pyqtSlot(str)
     def saveProject(self, state):

@@ -120,11 +120,17 @@ flask.standalone.exportToStatic = function () {
             loadingModal=interfaceUtils.loadingModal("Exporting to static web page")
         },0);
         setTimeout(function() {
-            flask.standalone.backend.exportToStatic(JSON.stringify(state));
-            setTimeout(function() {
-                $(loadingModal).modal('hide');
-                interfaceUtils.alert("Exporting done.")
-            }, 500);
+            flask.standalone.backend.exportToStatic(JSON.stringify(state),
+                function (jsonVal) {
+                    $(loadingModal).modal('hide');
+                    if (jsonVal["success"]) {
+                        interfaceUtils.alert("Exporting done.")
+                    }
+                    else {
+                        interfaceUtils.alert("Exporting failed: " + jsonVal["error"])
+                    }
+                }
+            );
         }, 500);
     })
 };
