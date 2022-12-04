@@ -1,15 +1,8 @@
 import copy
-import json
-import logging
 import os
-import string
-from enum import Enum
-from typing import Mapping, Optional, Tuple, Union
 
-import anndata
 import h5py
 import numpy as np
-import pandas as pd
 import pyvips
 
 
