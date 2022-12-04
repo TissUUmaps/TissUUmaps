@@ -357,7 +357,7 @@ projectUtils.loadProjectFileFromServer = function(path) {
                 projectUtils.convertOldMarkerFile(markerFile);
                 state.hideTabs = true;
             }
-            if( Object.prototype.toString.call( markerFile.path ) === '[object Array]' ) {
+            if( Object.prototype.toString.call( markerFile.path ) === '[object Array]' || markerFile.dropdownOptions) {
                 interfaceUtils.createDownloadDropdownMarkers(markerFile);
             }
             else {

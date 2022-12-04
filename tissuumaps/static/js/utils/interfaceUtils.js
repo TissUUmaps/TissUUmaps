@@ -2345,10 +2345,28 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
             }
         }
         projectUtils.applySettings(options.settings);
-        var dataURL = params.selected;
-        if (dataURL == "") return;
         optionsCopy = JSON.parse(JSON.stringify(options));
-        optionsCopy["path"] = dataURL;
+        var dataURL = "";
+        if (params.selected == "") {return;}
+        if (options.dropdownOptions) {
+            dropdownOption = options.dropdownOptions[params.selected];
+            for (key in dropdownOption) {
+                option_shifted = optionsCopy;
+                var parameters = key.split(".");
+                for (param_key in parameters) {
+                    if (param_key == parameters.length-1) {
+                        option_shifted[parameters[param_key]] = dropdownOption[key];
+                    }
+                    else {
+                        option_shifted = option_shifted[parameters[param_key]]
+                    }
+                }
+            }
+        }
+        else {
+            dataURL = options.path[params.selected];
+            optionsCopy["path"] = dataURL;
+        }
         interfaceUtils.generateDataTabUI(optionsCopy);
     }
     var dropdownOptions;
@@ -2358,12 +2376,22 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
     else {
         dropdownOptions = [{"value":"","text":"Select from list"}];
     }
-    options["path"].forEach (function (dataURL) {
-        dropdownOptions.push({
-            "value": dataURL,
-            "text": dataURL.split('/').reverse()[0].replace(/_/g, ' ').replace('.csv', '')
-        })
-    });
+    if (options.dropdownOptions) {
+        options.dropdownOptions.forEach (function (dropdownOption, index) {
+            dropdownOptions.push({
+                "value": index,
+                "text": dropdownOption.optionName
+            })
+        });
+    }
+    else {
+        options["path"].forEach (function (dataURL, index) {
+            dropdownOptions.push({
+                "value": index,
+                "text": dataURL.split('/').reverse()[0].replace(/_/g, ' ').replace('.csv', '')
+            })
+        });
+    }
     interfaceUtils.createDownloadDropdown(downloadRow, options.title, callback, options.comment, dropdownOptions);
     if (options.autoLoad) {
         setTimeout(function(){callback(null, {'selected':options["path"][0]})},500);
