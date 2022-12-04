@@ -180,14 +180,23 @@ class H5AD_API  extends H5_API {
         if (path[0] != "/") path = "/" + path;
         return new Promise(resolve => {
             this.get(url,{path:path}, "keys").then((data_keys) => {
-                if (data_keys.type == "error") {
-                    path = path.substring(0, path.lastIndexOf('/'));
+                if (data_keys.type == "Dataset") {
+                    let children = [];
+                    if (data_keys.shape.length > 1) {
+                        for (let i=0; i<data_keys.shape.length;i++){
+                            children.push(path+";"+i.toString());
+                        }
+                    }
+                    resolve({children:children});
+                }
+                else if (data_keys.type == "Group") {
+                    resolve(data_keys);
+                }
+                else {
+                    path = path.substring(0, Math.max(path.lastIndexOf('/'),path.lastIndexOf(';')));
                     this.getKeys(url, path).then((data_keys_root)=>{
                         resolve(data_keys_root);
                     })
-                }
-                else {
-                    resolve(data_keys);
                 }
             });
         });

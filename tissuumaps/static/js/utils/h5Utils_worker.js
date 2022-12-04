@@ -99,6 +99,15 @@ self.onmessage = async function (event) {
                     children: [...item.keys()].map((x)=>{return path+"/"+x})
                 });
             }
+            else if (item instanceof h5wasm.Dataset) {
+                self.postMessage({
+                    id:id,
+                    type: item.type,
+                    shape: item.shape,
+                    dtype: item.dtype,
+                    attrs: getAttributes (item)
+                });
+            }
             else {
                 self.postMessage({
                     id:id,
