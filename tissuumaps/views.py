@@ -21,7 +21,6 @@ from shutil import copyfile, copytree
 from threading import Lock
 from urllib.parse import parse_qs, unquote, urlparse
 
-import anndata
 import pyvips
 
 # Flask dependencies
