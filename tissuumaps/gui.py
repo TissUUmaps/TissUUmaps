@@ -37,6 +37,7 @@ except ImportError:
 import json
 import os
 import pathlib
+import platform
 import random
 import re
 import socket
@@ -925,12 +926,11 @@ def main():
     qInstallMessageHandler(lambda x, y, z: None)
 
     fmt = QtGui.QSurfaceFormat()
-    # fmt.setColorSpace(QtGui.QSurfaceFormat.sRGBColorSpace)
-    # fmt.setVersion(4, 1)
-
-    fmt.setProfile(QtGui.QSurfaceFormat.OpenGLContextProfile.CoreProfile)
-    fmt.setSamples(4)
+    if platform.system() == "Darwin":
+        fmt.setProfile(QtGui.QSurfaceFormat.OpenGLContextProfile.CoreProfile)
+        fmt.setVersion(4, 1)
     QtGui.QSurfaceFormat.setDefaultFormat(fmt)
+    QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
 
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--no-sandbox --ignore-gpu-blacklist"
     qt_app = QApplication(sys.argv)
