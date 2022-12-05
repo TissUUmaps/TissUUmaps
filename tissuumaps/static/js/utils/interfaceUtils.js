@@ -679,8 +679,6 @@ interfaceUtils._mGenUIFuncs.dataTabUIToH5 = function(uid){
                 // Do Ajax call or lookup locally, when done,
                 // call the callback and pass your results:
                 let url = dataUtils.data[uid]._csv_path
-                if (typeof url === 'string' || url instanceof String)
-                    url = "/" + url;
                 dataUtils.data[uid]._hdf5Api.getKeys(url, query).then((data) => {
                     console.log(data);
                     let keys = data.children.map((value) => {

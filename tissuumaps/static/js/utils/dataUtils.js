@@ -149,8 +149,6 @@ dataUtils.getAllH5Data = function(data_id){
                 data_obj["_processeddata"].columns.push(alldrops[drop].value);
                 data_obj["_csv_header"].push(alldrops[drop].value);
                 let url = data_obj["_csv_path"];
-                if (typeof url === 'string' || url instanceof String)
-                    url = "/" + url;
                 data_obj["_hdf5Api"].getXRow(url, h5range, h5path).then((data) => {
                     if (Object.prototype.toString.call(data).includes("BigInt") || Object.prototype.toString.call(data).includes("BigUint")) {
                         data = [...data].map((x)=>Number(x));
@@ -193,7 +191,11 @@ dataUtils.getAllH5Data = function(data_id){
 * @param {String} data_id The id of the data group like "U234345"
 */
 dataUtils.updateViewOptions = function(data_id, force_reload_all){
-
+    let progressParent=interfaceUtils.getElementById(data_id+"_csv_progress_parent");
+    progressParent.classList.remove("d-none");
+    let progressBar=interfaceUtils.getElementById(data_id+"_csv_progress");
+    progressBar.style.width = "50%";
+    
     var data_obj = dataUtils.data[data_id];
     
     if(data_obj === undefined){
@@ -400,9 +402,14 @@ dataUtils.updateViewOptions = function(data_id, force_reload_all){
         }
         glUtils.draw();
         updateButton.innerHTML = "Update view"
+        progressBar.style.width = "100%";
+        progressParent.classList.add("d-none");
     },
     (error) => {
         console.log("ERROR:", error);
+        interfaceUtils.alert("Error loading markers: " + error);
+        progressBar.style.width = "100%";
+        progressParent.classList.add("d-none");
     });
     
 }
@@ -477,8 +484,6 @@ dataUtils.readH5 = function(data_id, thecsv, options) {
         data_obj["_hdf5Api"] = new H5AD_API()
     }
     let url = thecsv;
-    console.log("thecsv",thecsv);
-    if (typeof url === 'string' || url instanceof String) url = "/" + url;
     data_obj["_hdf5Api"].get(url,{path:"/"}).then((data) => {
         progressBar.style.width = "100%";
         progressParent.classList.add("d-none");
@@ -570,7 +575,6 @@ dataUtils.readCSV = function(data_id, thecsv, options) {
     };
     
     let rawdata = { columns: [], isnan: [], data: [], tmp: [] };
-
     console.time("Load CSV");
     Papa.parse(thecsv, {
         download: (options != undefined),

@@ -9,7 +9,8 @@
  * @property {Boolean} _initialized True when h5Utils has been initialized
  */
  h5Utils = {
-    worker_path: 'js/utils/h5Utils_worker.js'
+    worker_path: 'js/utils/h5Utils_worker.js',
+    relative_root: '../../'
  }
 
 class H5_API {
@@ -31,7 +32,10 @@ class H5_API {
     loadPromise (url) {
         let requestChunkSize = this.chunkSize;
         const id = this.count++;
-        this.worker.postMessage({id: id, action: "load", payload: {requestChunkSize, url}});
+        let _url = url;
+        if (typeof url === 'string' || url instanceof String)
+            _url = h5Utils.relative_root + _url;
+        this.worker.postMessage({id: id, action: "load", payload: {requestChunkSize, url:_url}});
         return new Promise(resolve => this.resolvers[id] = resolve);
     }
 
@@ -62,6 +66,7 @@ class H5_API {
             }
             const id = this.count++;
             this.resolvers[id] = resolve
+            payload.url = h5Utils.relative_root + url;
             this.worker.postMessage({id: id, action: action, payload: payload});
         });
     }
