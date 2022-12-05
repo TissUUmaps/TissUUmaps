@@ -470,7 +470,7 @@ overlayUtils.waitFullyLoaded = function () {
         return new Promise((resolve) => setTimeout(resolve, time));
     }
     return new Promise((resolve, reject) => {
-        sleep(200).then (()=>{
+        sleep(400).then (()=>{
             if (overlayUtils.areAllFullyLoaded()) {
                 resolve();
                 return;
@@ -642,13 +642,15 @@ overlayUtils.savePNG=function() {
                         ctx_offset.canvas.width,
                         ctx_offset.canvas.height
                     );
-                    getCanvasCtx_aux(index+1, size, ctx, bounds).then(
-                        (ctx)=>{
-                            resolve(ctx);
-                            return;
-                        }
-                        
-                    )
+                    setTimeout(() => {
+                        getCanvasCtx_aux(index+1, size, ctx, bounds).then(
+                            (ctx)=>{
+                                resolve(ctx);
+                                return;
+                            }
+                            
+                        )
+                    },200);
                 });
             });
         });
