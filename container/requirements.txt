@@ -4,4 +4,4 @@ Pillow>=8.2.0
 pyvips==2.1.14
 matplotlib==3.2.2
 pyyaml>=6.0
-anndata>=0.8.0
+h5py>=3.6.0
