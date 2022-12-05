@@ -343,8 +343,8 @@ dataUtils.updateViewOptions = function(data_id, force_reload_all){
         if (data_obj["_scale_col"]=="null") {
             interfaceUtils.alert("No size column selected. Impossible to update view.");return;
         }
-        data_obj["_scale_factor"]=inputs["scale_factor"].value;
-        data_obj["_coord_factor"]=inputs["coord_factor"].value;
+        data_obj["_scale_factor"]=parseFloat(inputs["scale_factor"].value);
+        data_obj["_coord_factor"]=parseFloat(inputs["coord_factor"].value);
         // Use shape column
         data_obj["_shape_col"]=(radios["shape_col"].checked ? inputs["shape_col"].value : null);
         if (data_obj["_shape_col"]=="null") {
@@ -356,7 +356,7 @@ dataUtils.updateViewOptions = function(data_id, force_reload_all){
             interfaceUtils.alert("No opacity column selected. Impossible to update view.");return;
         }// Use collection column
         data_obj["_collectionItem_col"]=(radios["collectionItem_col"].checked ? inputs["collectionItem_col"].value : null);
-        data_obj["_collectionItem_fixed"]=(radios["collectionItem_col"].checked ? null : inputs["collectionItem_fixed"].value);
+        data_obj["_collectionItem_fixed"]=(radios["collectionItem_col"].checked ? null : parseInt(inputs["collectionItem_fixed"].value));
         if (data_obj["_collectionItem_col"]=="null") {
             interfaceUtils.alert("No collection item column selected. Impossible to update view.");return;
         }
@@ -365,7 +365,7 @@ dataUtils.updateViewOptions = function(data_id, force_reload_all){
             && filterUtils._compositeMode != "collection") {
             //interfaceUtils.alert("Warning, images are not in Collection Mode. Go to \"Image layers > Filter Settings > Merging mode\" to activate Collection Mode.");
         }
-        data_obj["_opacity"]=inputs["opacity"].value;
+        data_obj["_opacity"]=parseFloat(inputs["opacity"].value);
         // Tooltip
         data_obj["_tooltip_fmt"]=inputs["tooltip_fmt"].value;
         
