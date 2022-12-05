@@ -34,7 +34,7 @@ overlayUtils.addAllLayers = function() {
         overlayUtils.addLayer(layer, i-1);
     });
     overlayUtils.addAllLayersSettings();
-    overlayUtils.setCollectionMode();
+    setTimeout(overlayUtils.setCollectionMode,500);
 }
 
 /**
