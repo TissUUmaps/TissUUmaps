@@ -2,14 +2,11 @@
 
 block_cipher = None
 
-from PyInstaller.utils.hooks import copy_metadata
-metadata = copy_metadata('anndata')
-
 a = Analysis(['../tissuumaps/gui.py'],
              pathex=['./'],
              binaries=[],
-             datas=[('../tissuumaps/VERSION', './'), ('../tissuumaps/web.zip', './'), ('../tissuumaps/templates', 'templates'), ('../tissuumaps/flask_filetree', 'flask_filetree'), ('../tissuumaps/static', 'static'), ('../tissuumaps/plugins/__init__.py','plugins')]+metadata,
-             hiddenimports=["pyvips","matplotlib","mpl_toolkits","anndata"],
+             datas=[('../tissuumaps/VERSION', './'), ('../tissuumaps/web.zip', './'), ('../tissuumaps/templates', 'templates'), ('../tissuumaps/flask_filetree', 'flask_filetree'), ('../tissuumaps/static', 'static'), ('../tissuumaps/plugins/__init__.py','plugins')],
+             hiddenimports=["pyvips","matplotlib","mpl_toolkits"],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
