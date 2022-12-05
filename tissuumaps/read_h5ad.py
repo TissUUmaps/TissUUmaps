@@ -49,7 +49,7 @@ def getPalette(adata):
                 new_palette = dict(
                     zip(
                         adata.get(f"/obs/{uns_name}/categories").asstr()[...],
-                        adata.get(f"uns/{uns}/").asstr()[...],
+                        [x[:7] for x in adata.get(f"uns/{uns}/").asstr()[...]],
                     )
                 )
                 palette = dict(palette, **new_palette)
