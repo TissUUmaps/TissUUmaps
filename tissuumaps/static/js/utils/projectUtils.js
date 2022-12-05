@@ -222,6 +222,7 @@ projectUtils.updateMarkerButton = function(dataset) {
     markerFile.expectedRadios = Object.assign({}, ...Object.keys(radios).map((k) => ({[k]: radios[k].checked})));
 }
 
+projectUtils.makeButtonFromTabAux = function (dataset, csvFile, title, comment, autoLoad) {
     if (!csvFile)
         return;
     
