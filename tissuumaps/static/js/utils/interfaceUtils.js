@@ -641,12 +641,7 @@ interfaceUtils._mGenUIFuncs.deleteTab=function(uid){
 
     tabpane=interfaceUtils.getElementById(uid+"_marker-pane")
     tabpane.remove();
-    if (dataUtils.data[uid].fromButton !== undefined) {
-        let stateMarkerFile = projectUtils._activeState.markerFiles[dataUtils.data[uid].fromButton];
-        if (stateMarkerFile.autoLoad) {
-            delete projectUtils._activeState.markerFiles[dataUtils.data[uid].fromButton];
-        }
-    }
+    projectUtils.removeTabFromProject(uid);
     delete dataUtils.data[uid];
 
     glUtils.deleteMarkers(uid);

@@ -222,6 +222,31 @@ projectUtils.updateMarkerButton = function(dataset) {
     markerFile.expectedRadios = Object.assign({}, ...Object.keys(radios).map((k) => ({[k]: radios[k].checked})));
 }
 
+projectUtils.removeTabFromProject = function (dataset) {
+    if (dataUtils.data[dataset].fromButton !== undefined) {
+        let stateMarkerFile = projectUtils._activeState.markerFiles[dataUtils.data[dataset].fromButton];
+        if (stateMarkerFile.autoLoad) {
+            projectUtils._activeState.markerFiles.splice(dataUtils.data[dataset].fromButton,1);
+            // Reduce fromButton value for all datasets and buttons with larger fromButton value: 
+            for (data_obj_uid in dataUtils.data) {
+                let data_obj = dataUtils.data[data_obj_uid];
+                if (data_obj.fromButton){
+                    if (data_obj.fromButton > dataUtils.data[dataset].fromButton){
+                        data_obj.fromButton -= 1;
+                    }
+                }
+            }
+            for (markerFile of projectUtils._activeState.markerFiles) {
+                if (markerFile.fromButton){
+                    if (markerFile.fromButton > dataUtils.data[dataset].fromButton){
+                        markerFile.fromButton -= 1;
+                    }
+                }
+            }
+        }
+    }
+}
+
 projectUtils.makeButtonFromTabAux = function (dataset, csvFile, title, comment, autoLoad) {
     if (!csvFile)
         return;
@@ -231,13 +256,7 @@ projectUtils.makeButtonFromTabAux = function (dataset, csvFile, title, comment, 
     
     if (!autoLoad && projectUtils._activeState.markerFiles) {
         // We check if a markerFile exists with autoload, to remove it:
-        let autoload_markerFiles = projectUtils._activeState.markerFiles.filter(markerFile => {
-            return (markerFile.uid == dataset) && (markerFile.autoLoad)
-        });
-        if (autoload_markerFiles.length > 0) {
-            const index = projectUtils._activeState.markerFiles.indexOf(autoload_markerFiles[0]);
-            projectUtils._activeState.markerFiles.splice(index, 1);
-        }
+        projectUtils.removeTabFromProject(dataset);
     }
 
     markerFile = {
