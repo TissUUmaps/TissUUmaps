@@ -149,7 +149,8 @@ glUtils._markersVS = `
 
         gl_Position = vec4(ndcPos, 0.0, 1.0);
         gl_PointSize = a_scale * u_markerScale * u_globalMarkerScale;
-        gl_PointSize = clamp(gl_PointSize, 2.0, u_maxPointSize);
+        float alphaFactorSize = clamp(gl_PointSize, 0.2, 1.0); 
+        gl_PointSize = clamp(gl_PointSize, 1.0, u_maxPointSize);
 
         v_shapeOrigin.x = mod((v_color.a + 0.00001) * 255.0 - 1.0, SHAPE_GRID_SIZE);
         v_shapeOrigin.y = floor(((v_color.a + 0.00001) * 255.0 - 1.0) / SHAPE_GRID_SIZE);
@@ -167,6 +168,7 @@ glUtils._markersVS = `
 
         // Discard point here in vertex shader if marker is hidden
         v_color.a = v_color.a > 0.0 ? a_opacity * u_markerOpacity : 0.0;
+        v_color.a *= alphaFactorSize * alphaFactorSize;
         if (v_color.a == 0.0) DISCARD_VERTEX;
     }
 `;
@@ -242,7 +244,7 @@ glUtils._markersFS = `
         }
 
         gl_FragColor = shapeColor * v_color;
-        if (gl_FragColor.a < 0.01) discard;
+        if (gl_FragColor.a < 0.004) discard;
     }
 `;
 
