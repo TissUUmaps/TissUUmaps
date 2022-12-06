@@ -661,7 +661,7 @@ overlayUtils.savePNG=function() {
             var canvas = document.createElement("canvas");
             var ctx = canvas.getContext("2d");
             var ctx_osd = document.querySelector(".openseadragon-canvas canvas").getContext("2d");
-            var ctx_webgl = document.querySelector("#gl_canvas").getContext("webgl", glUtils._options);
+            var ctx_webgl = document.querySelector("#gl_canvas").getContext("webgl2", glUtils._options);
             canvas.width = tiling * Math.min(ctx_osd.canvas.width, ctx_webgl.canvas.width);
             canvas.height = tiling * Math.min(ctx_osd.canvas.height, ctx_webgl.canvas.height);
             var bounds = tmapp.ISS_viewer.viewport.getBounds();
@@ -697,7 +697,7 @@ overlayUtils.savePNG=function() {
         // Create an empty canvas element
         var canvas = document.createElement("canvas");
         var ctx_osd = document.querySelector(".openseadragon-canvas canvas").getContext("2d");
-        var ctx_webgl = document.querySelector("#gl_canvas").getContext("webgl", glUtils._options);
+        var ctx_webgl = document.querySelector("#gl_canvas").getContext("webgl2", glUtils._options);
         canvas.width = Math.min(ctx_osd.canvas.width, ctx_webgl.canvas.width);
         canvas.height = Math.min(ctx_osd.canvas.height, ctx_webgl.canvas.height);
 

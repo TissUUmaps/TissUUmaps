@@ -263,7 +263,7 @@ window.addEventListener("message", evt => {
     // Create an empty canvas element
     var canvas = document.createElement("canvas");
     var ctx_osd = document.querySelector(".openseadragon-canvas canvas").getContext("2d");
-    var ctx_webgl = document.querySelector("#gl_canvas").getContext("webgl");
+    var ctx_webgl = document.querySelector("#gl_canvas").getContext("webgl2", glUtils._options);
     canvas.width = Math.min(ctx_osd.canvas.width, ctx_webgl.canvas.width);
     canvas.height = Math.min(ctx_osd.canvas.height, ctx_webgl.canvas.height);
     
