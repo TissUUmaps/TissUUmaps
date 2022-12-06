@@ -7,3 +7,4 @@ PyQt6-WebEngine>=6.3.0
 matplotlib>=3.2.2
 pyyaml>=5.0
 h5py>=3.6.0
+scipy>=1.7.2

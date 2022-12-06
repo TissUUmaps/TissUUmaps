@@ -582,11 +582,12 @@ interfaceUtils.generateDataTabUI = function(options){
         //row progressbar
         row0=HTMLElementUtils.createRow({id:generated+"_csv_progress_parent"});
         row0.classList.add("d-none");
+        row0.classList.add("px-3");
         row0.innerHTML="Loading markers..."
 
         col01=HTMLElementUtils.createColumn({"width":12});
             div011=HTMLElementUtils.createElement({"kind":"div", "extraAttributes":{"class":"progress"}});
-                div0111=HTMLElementUtils.createElement({"kind":"div", "id":generated+"_csv_progress", "extraAttributes":{"class":"progress-bar progress-bar-striped","role":"progressbar" ,"aria-valuenow":"10", "aria-valuemin":"0" ,"aria-valuemax":"100"}});
+                div0111=HTMLElementUtils.createElement({"kind":"div", "id":generated+"_csv_progress", "extraAttributes":{"class":"progress-bar progress-bar-striped progress-bar-animated","role":"progressbar" ,"aria-valuenow":"10", "aria-valuemin":"0" ,"aria-valuemax":"100"}});
         
         row0.appendChild(col01)
             col01.appendChild(div011)

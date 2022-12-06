@@ -13,41 +13,6 @@ function getAttributes (item) {
     return attrs;
 }
 
-function getLeafNodes(nodes, result = []){
-    for(var i in nodes.children){
-        if(Object.keys(nodes.children[i].children).length == 0){
-            result.push(nodes.children[i].value);
-        }else{
-            result = getLeafNodes(nodes.children[i], result);
-        }
-    }
-    return result;
-}
-
-function getKeys (path) {
-    const item = file.get(path);
-    if (path == "/") path = "";
-    let attributes = getAttributes (item);
-    var keys_array = {
-        children:{},
-        attrs:attributes,
-        value:path
-    }
-    var stop_encoding = [
-        "csc_matrix",
-        "csr_matrix",
-        "array",
-        "categorical"
-    ]
-    if (stop_encoding.indexOf(attributes["encoding-type"]) >= 0) return keys_array;
-    if (!item) return keys_array;
-    if (!item.keys) return keys_array;
-    for (let key of item.keys()) {
-        keys_array.children[key] = getKeys(path + "/" + key)
-    }
-    return keys_array;
-}
-
 self.onmessage = async function (event) {   
     const { action, payload, id } = event.data;
     if (action === "load") {
@@ -82,14 +47,6 @@ self.onmessage = async function (event) {
         await h5wasm.ready;
         if (file) {
             const path = payload?.path ?? "/";
-            /*var keys = getKeys(path);
-            console.log(keys);
-            var leafs = getLeafNodes(keys);
-            console.log(leafs)
-            self.postMessage({
-                id:id,
-                keys: leafs
-            });*/
             const item = file.get(path);
             if (item instanceof h5wasm.Group) {
                 self.postMessage({
