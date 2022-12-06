@@ -1,9 +1,11 @@
 import copy
+import logging
 import os
 
 import h5py
 import numpy as np
 import pyvips
+from scipy import sparse
 
 
 def numpy2vips(a):
@@ -79,9 +81,37 @@ def getObsList(adata):
     return obsList
 
 
+def to_csc_sparse(adata):
+    if adata.get("X").attrs["encoding-type"] == "csr_matrix":
+        logging.info(
+            "Converting sparse CSR matrix to sparse CSC. This can take a long time."
+        )
+        shape = adata.get("X").attrs["shape"]
+        X_data = adata.get("X/data")[:]
+        X_indices = adata.get("X/indices")[:]
+        X_indptr = adata.get("X/indptr")[:]
+        csr_matrix = sparse.csr_matrix((X_data, X_indices, X_indptr), shape=shape)
+        csc_matrix = sparse.csc_matrix(csr_matrix)
+
+        del adata["X/indptr"]
+        del adata["X/data"]
+        del adata["X/indices"]
+        adata["X/indptr"] = csc_matrix.indptr
+        adata["X/data"] = csc_matrix.data
+        adata["X/indices"] = csc_matrix.indices
+        adata.get("X").attrs["encoding-type"] = "csc_matrix"
+
+
 def h5ad_to_tmap(basedir, path, library_id=None):
-    adata = h5py.File(os.path.join(basedir, path), "r")
     adata_out = None
+    path_out = os.path.splitext(path)[0] + "_tmap.h5ad"
+    if os.path.isfile(os.path.join(basedir, path_out)):
+        if os.path.getmtime(os.path.join(basedir, path)) < os.path.getmtime(
+            os.path.join(basedir, path_out)
+        ):
+            path = path_out
+
+    adata = h5py.File(os.path.join(basedir, path), "r+")
     outputFolder = os.path.join(basedir, path) + "_files"
     relOutputFolder = os.path.basename(path) + "_files"
 
@@ -151,36 +181,46 @@ def h5ad_to_tmap(basedir, path, library_id=None):
 
     library_col = ""
     if use_libraries:
-        path += "_tmap.h5ad"
-        adata_out = h5py.File(os.path.join(basedir, path), "w")
-        for obj in adata.keys():
-            adata.copy(obj, adata_out)
-        spatial_array = adata["/obsm/spatial"][()]
         if "/obsm/spatial;" in globalX:
-            library_codes_array = adata["/obs/library_id/codes"][...]
-            library_categ_array = adata["/obs/library_id/categories"].asstr()[...]
-            spatial_scaled_array = np.ones(spatial_array.shape)
-            for library_index, library_id in enumerate(library_categ_array):
-                scale_factor = adata.get(
-                    f"/uns/spatial/{library_id}/scalefactors/tissue_{img_key}_scalef", 1
-                )[()]
-                spatial_scaled_array[library_codes_array == library_index] = (
-                    spatial_array[library_codes_array == library_index] * scale_factor
+            if not "spatial_hires" in list(adata.get("/obsm", [])):
+                path = path_out
+                adata_out = h5py.File(os.path.join(basedir, path), "w")
+                for obj in adata.keys():
+                    adata.copy(obj, adata_out)
+                spatial_array = adata["/obsm/spatial"][()]
+                library_codes_array = adata["/obs/library_id/codes"][...]
+                library_categ_array = adata["/obs/library_id/categories"].asstr()[...]
+                spatial_scaled_array = np.ones(spatial_array.shape)
+                for library_index, library_id in enumerate(library_categ_array):
+                    scale_factor = adata.get(
+                        f"/uns/spatial/{library_id}/scalefactors/tissue_{img_key}_scalef",
+                        1,
+                    )[()]
+                    spatial_scaled_array[library_codes_array == library_index] = (
+                        spatial_array[library_codes_array == library_index]
+                        * scale_factor
+                    )
+                adata_out.create_dataset(
+                    "/obsm/spatial_hires", data=spatial_scaled_array
                 )
-            adata_out.create_dataset("/obsm/spatial_scaled", data=spatial_scaled_array)
-            globalX = "/obsm/spatial_scaled;0"
-            globalY = "/obsm/spatial_scaled;1"
+            globalX = "/obsm/spatial_hires;0"
+            globalY = "/obsm/spatial_hires;1"
             coord_factor = 1
-        library_col = "/obs/library_id/codes"
+            library_col = "/obs/library_id/codes"
 
     if "spatial_connectivities" in list(adata.get("obsp", [])):
         spatial_connectivities = "/obsp/spatial_connectivities;join"
     else:
         spatial_connectivities = ""
 
-    # TODO:
-    # - if sparse csr, convert to sparse csc.
-    # adata.X = sparse.csc_matrix(adata.X)
+    if adata.get("X").attrs["encoding-type"] == "csr_matrix":
+        if adata_out is None:
+            path = path_out
+            adata_out = h5py.File(os.path.join(basedir, path), "w")
+            for obj in adata.keys():
+                adata.copy(obj, adata_out)
+
+        to_csc_sparse(adata_out)
 
     varList = getVarList(adata)
     obsList = getObsList(adata)
