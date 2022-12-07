@@ -592,15 +592,18 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
     const collectionItemFixed = newInputs.collectionItemFixed = dataUtils.data[uid]["_collectionItem_fixed"];
     let collectionItemIndex = collectionItemFixed;
 
-    // Additional info about the vertex format. Make sure you update also
-    // NUM_BYTES_PER_MARKER when making changes to the format!
-    const NUM_BYTES_PER_MARKER = 32;
+    // Additional info about the vertex format. Make sure to update also
+    // NUM_BYTES_PER_MARKER and NUM_BYTES_PER_MARKER_SECONDARY when making
+    // changes to the format! Two buffers will be used for the vertex data
+    // to avoid the 1GB max size limit imposed by QtWebEngine/Chromium.
+    const NUM_BYTES_PER_MARKER = 16;
+    const NUM_BYTES_PER_MARKER_SECONDARY = 16;
     const POINT_OFFSET = numPoints * 0,
-          INDEX_OFFSET = numPoints * 16,
-          SCALE_OFFSET = numPoints * 20,
-          SHAPE_OFFSET = numPoints * 24;
-          OPACITY_OFFSET = numPoints * 28;
-          TRANSFORM_OFFSET = numPoints * 30;
+          INDEX_OFFSET = numPoints * 0,
+          SCALE_OFFSET = numPoints * 4,
+          SHAPE_OFFSET = numPoints * 8;
+          OPACITY_OFFSET = numPoints * 12;
+          TRANSFORM_OFFSET = numPoints * 14;
     const POINT_LOCATION = 0,
           INDEX_LOCATION = 1,
           SCALE_LOCATION = 2,
@@ -706,7 +709,11 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
 
             // Create WebGL objects (if this has not already been done)
             if (!(uid + "_markers" in glUtils._buffers))
-                glUtils._buffers[uid + "_markers"] = glUtils._createMarkerBuffer(gl, numPoints * numSectors * NUM_BYTES_PER_MARKER);
+                glUtils._buffers[uid + "_markers"] = glUtils._createMarkerBuffer(
+                    gl, numPoints * numSectors * NUM_BYTES_PER_MARKER);
+            if (!(uid + "_markers_secondary" in glUtils._buffers))
+                glUtils._buffers[uid + "_markers_secondary"] = glUtils._createMarkerBuffer(
+                    gl, numPoints * numSectors * NUM_BYTES_PER_MARKER_SECONDARY);
             if (!(uid + "_markers" in glUtils._vaos))
                 glUtils._vaos[uid + "_markers"] = gl.createVertexArray();
             if (!(uid + "_markers_instanced" in glUtils._vaos))
@@ -717,15 +724,26 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
                 glUtils._textures[uid + "_colorscale"] = glUtils._createColorScaleTexture(gl);
 
             // Upload chunks of vertex data to buffer
-            gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_markers"]);
             if (offset == 0) {
-                // If the number of sectors used is changed, we have to reallocate the buffer
-                const newBufferSize = numPoints * numSectors * NUM_BYTES_PER_MARKER;
-                const oldBufferSize = gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_SIZE);
-                if (newBufferSize != oldBufferSize)
-                    gl.bufferData(gl.ARRAY_BUFFER, newBufferSize, gl.STATIC_DRAW);
+                // If the number of sectors used is changed, we have to reallocate the buffers
+                {
+                    gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_markers"]);
+                    const newBufferSize = numPoints * numSectors * NUM_BYTES_PER_MARKER;
+                    const oldBufferSize = gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_SIZE);
+                    if (newBufferSize != oldBufferSize)
+                        gl.bufferData(gl.ARRAY_BUFFER, newBufferSize, gl.STATIC_DRAW);
+                }
+                {
+                    gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_markers_secondary"]);
+                    const newBufferSize = numPoints * numSectors * NUM_BYTES_PER_MARKER_SECONDARY;
+                    const oldBufferSize = gl.getBufferParameter(gl.ARRAY_BUFFER, gl.BUFFER_SIZE);
+                    if (newBufferSize != oldBufferSize)
+                        gl.bufferData(gl.ARRAY_BUFFER, newBufferSize, gl.STATIC_DRAW);
+                }
             }
+            gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_markers"]);
             gl.bufferSubData(gl.ARRAY_BUFFER, (POINT_OFFSET + offset * 16) * numSectors, bytedata_point);
+            gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_markers_secondary"]);
             gl.bufferSubData(gl.ARRAY_BUFFER, (INDEX_OFFSET + offset * 4) * numSectors, bytedata_index);
             gl.bufferSubData(gl.ARRAY_BUFFER, (SCALE_OFFSET + offset * 4) * numSectors, bytedata_scale);
             gl.bufferSubData(gl.ARRAY_BUFFER, (SHAPE_OFFSET + offset * 4) * numSectors, bytedata_shape);
@@ -739,7 +757,8 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
         gl.bindVertexArray(glUtils._vaos[uid + "_markers"]);
         gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_markers"]);
         gl.enableVertexAttribArray(POINT_LOCATION);
-        gl.vertexAttribPointer(POINT_LOCATION, 4, gl.FLOAT, false, 0, 0);
+        gl.vertexAttribPointer(POINT_LOCATION, 4, gl.FLOAT, false, 0, POINT_OFFSET * numSectors);
+        gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_markers_secondary"]);
         gl.enableVertexAttribArray(INDEX_LOCATION);
         gl.vertexAttribPointer(INDEX_LOCATION, 1, gl.FLOAT, false, 0, INDEX_OFFSET * numSectors);
         gl.enableVertexAttribArray(SCALE_LOCATION);
@@ -757,8 +776,9 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
         gl.bindVertexArray(glUtils._vaos[uid + "_markers_instanced"]);
         gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_markers"]);
         gl.enableVertexAttribArray(POINT_LOCATION);
-        gl.vertexAttribPointer(POINT_LOCATION, 4, gl.FLOAT, false, 0, 0);
+        gl.vertexAttribPointer(POINT_LOCATION, 4, gl.FLOAT, false, 0, POINT_OFFSET * numSectors);
         gl.vertexAttribDivisor(POINT_LOCATION, 1);
+        gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_markers_secondary"]);
         gl.enableVertexAttribArray(INDEX_LOCATION);
         gl.vertexAttribPointer(INDEX_LOCATION, 1, gl.FLOAT, false, 0, INDEX_OFFSET * numSectors);
         gl.vertexAttribDivisor(INDEX_LOCATION, 1);
@@ -843,6 +863,7 @@ glUtils.deleteMarkers = function(uid) {
 
     // Clean up WebGL resources
     gl.deleteBuffer(glUtils._buffers[uid + "_markers"]);
+    gl.deleteBuffer(glUtils._buffers[uid + "_markers_secondary"]);
     gl.deleteVertexArray(glUtils._vaos[uid + "_markers"]);
     gl.deleteVertexArray(glUtils._vaos[uid + "_markers_instanced"]);
     gl.deleteBuffer(glUtils._buffers[uid + "_edges"]);
@@ -850,6 +871,7 @@ glUtils.deleteMarkers = function(uid) {
     gl.deleteTexture(glUtils._textures[uid + "_colorLUT"]);
     gl.deleteTexture(glUtils._textures[uid + "_colorscale"]);
     delete glUtils._buffers[uid + "_markers"];
+    delete glUtils._buffers[uid + "_markers_secondary"];
     delete glUtils._vaos[uid + "_markers"];
     delete glUtils._vaos[uid + "_markers_instanced"];
     delete glUtils._buffers[uid + "_edges"];
