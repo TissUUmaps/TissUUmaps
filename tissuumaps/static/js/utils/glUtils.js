@@ -90,9 +90,6 @@ glUtils._markersVS = `
     layout(location = 3) in float in_shape;
     layout(location = 4) in float in_opacity;
     layout(location = 5) in float in_transform;
-    #ifdef USE_INSTANCING
-    layout(location = 6) in float in_vertexID;
-    #endif  // USE_INSTANCING
 
     out vec4 v_color;
     out vec2 v_shapeOrigin;
@@ -159,8 +156,7 @@ glUtils._markersVS = `
         // Marker will be drawn as a triangle strip, so need to generate
         // texture coordinate and offset the output position depending on
         // which of the four corners we are processing
-        //v_texCoord = vec2(gl_VertexID & 1, (gl_VertexID >> 1) & 1);
-        v_texCoord = mod(vec2(in_vertexID, floor(in_vertexID / 2.0)), 2.0);
+        v_texCoord = vec2(gl_VertexID & 1, (gl_VertexID >> 1) & 1);
         gl_Position.xy += (v_texCoord * 2.0 - 1.0) * (gl_PointSize / u_canvasSize);
         v_texCoord.y = 1.0 - v_texCoord.y;  // Flip Y-axis to match gl_PointCoord behaviour
     #endif  // USE_INSTANCING
@@ -381,7 +377,6 @@ glUtils._edgesVS = `
     layout(location = 1) in float in_index;
     layout(location = 4) in float in_opacity;
     layout(location = 5) in float in_transform;
-    layout(location = 6) in float in_vertexID;
 
     out vec4 v_color;
     out highp vec2 v_texCoord;
@@ -426,7 +421,7 @@ glUtils._edgesVS = `
         // Edge will be drawn as a triangle strip, so need to generate
         // texture coordinate and offset the output position depending on
         // which of the four corners we are processing
-        v_texCoord = mod(vec2(in_vertexID, floor(in_vertexID / 2.0)), 2.0);
+        v_texCoord = vec2(gl_VertexID & 1, (gl_VertexID >> 1) & 1);
         v_texCoord.y = ((v_texCoord.y - 0.5) * (lineThicknessAdjusted2 / lineThickness)) + 0.5;
         gl_Position.xy += (v_texCoord.x * 2.0 - 1.0) * ndcDeltaU;
         gl_Position.xy += (v_texCoord.y * 2.0 - 1.0) * ndcDeltaV;
@@ -599,21 +594,19 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
 
     // Additional info about the vertex format. Make sure you update also
     // NUM_BYTES_PER_MARKER when making changes to the format!
-    const NUM_BYTES_PER_MARKER = 36;
+    const NUM_BYTES_PER_MARKER = 32;
     const POINT_OFFSET = numPoints * 0,
           INDEX_OFFSET = numPoints * 16,
           SCALE_OFFSET = numPoints * 20,
           SHAPE_OFFSET = numPoints * 24;
           OPACITY_OFFSET = numPoints * 28;
           TRANSFORM_OFFSET = numPoints * 30;
-          VERTEX_ID_OFFSET = numPoints * 32;
     const POINT_LOCATION = 0,
           INDEX_LOCATION = 1,
           SCALE_LOCATION = 2,
           SHAPE_LOCATION = 3,
           OPACITY_LOCATION = 4;
           TRANSFORM_LOCATION = 5;
-          VERTEX_ID_LOCATION = 6;
 
     const lastInputs = glUtils._markerInputsCached[uid];
     if (forceUpdate || (lastInputs != JSON.stringify(newInputs))) {
@@ -635,7 +628,6 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
             let bytedata_shape = new Float32Array(chunkSize * 1);
             let bytedata_opacity = new Uint16Array(chunkSize * 1);
             let bytedata_transform = new Uint16Array(chunkSize * 1);
-            let bytedata_vertexID = new Uint8Array(chunkSize * 4);
 
             if (usePiechartFromMarker) {
                 // For piecharts, we need to create one marker per piechart sector,
@@ -647,7 +639,6 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
                 bytedata_shape = new Float32Array(chunkSize * numSectors * 1);
                 bytedata_opacity = new Uint16Array(chunkSize * numSectors * 1);
                 bytedata_transform = new Uint16Array(chunkSize * numSectors * 1);
-                bytedata_vertexID = new Uint8Array(chunkSize * numSectors * 4);
 
                 for (let i = 0; i < chunkSize; ++i) {
                     const markerIndex = i + offset;
@@ -673,10 +664,6 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
                             Math.floor(piechartAngles[j] * 4095.0) * 4096.0;
                         bytedata_opacity[k] = Math.floor(Math.max(0.0, Math.min(1.0, opacity)) * 65535.0);
                         bytedata_transform[k] = collectionItemIndex;
-                        bytedata_vertexID[4 * k + 0] = 0;  // 1st vertex
-                        bytedata_vertexID[4 * k + 1] = 1;  // 2nd vertex
-                        bytedata_vertexID[4 * k + 2] = 2;  // 3rd vertex
-                        bytedata_vertexID[4 * k + 3] = 3;  // 4th vertex
                     }
                 }
             } else {
@@ -709,10 +696,6 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
                     bytedata_scale[i] = useScaleFromMarker ? markerData[scalePropertyName][markerIndex] : 1.0;
                     bytedata_opacity[i] = Math.floor(Math.max(0.0, Math.min(1.0, opacity)) * 65535.0);
                     bytedata_transform[i] = collectionItemIndex;
-                    bytedata_vertexID[4 * i + 0] = 0;  // 1st vertex
-                    bytedata_vertexID[4 * i + 1] = 1;  // 2nd vertex
-                    bytedata_vertexID[4 * i + 2] = 2;  // 3rd vertex
-                    bytedata_vertexID[4 * i + 3] = 3;  // 4th vertex
                 }
             }
 
@@ -748,7 +731,6 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
             gl.bufferSubData(gl.ARRAY_BUFFER, (SHAPE_OFFSET + offset * 4) * numSectors, bytedata_shape);
             gl.bufferSubData(gl.ARRAY_BUFFER, (OPACITY_OFFSET + offset * 2) * numSectors, bytedata_opacity);
             gl.bufferSubData(gl.ARRAY_BUFFER, (TRANSFORM_OFFSET + offset * 2) * numSectors, bytedata_transform);
-            gl.bufferSubData(gl.ARRAY_BUFFER, (VERTEX_ID_OFFSET + offset * 4) * numSectors, bytedata_vertexID);
             gl.bindBuffer(gl.ARRAY_BUFFER, null);
         }
         console.timeEnd("Generate vertex data");
@@ -792,9 +774,6 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
         gl.enableVertexAttribArray(TRANSFORM_LOCATION);
         gl.vertexAttribPointer(TRANSFORM_LOCATION, 1, gl.UNSIGNED_SHORT, false, 0, TRANSFORM_OFFSET * numSectors);
         gl.vertexAttribDivisor(TRANSFORM_LOCATION, 1);
-        gl.enableVertexAttribArray(VERTEX_ID_LOCATION);
-        gl.vertexAttribPointer(VERTEX_ID_LOCATION, 1, gl.UNSIGNED_BYTE, false, 0, VERTEX_ID_OFFSET * numSectors);
-        gl.vertexAttribDivisor(VERTEX_ID_LOCATION, 0);  // Vertex ID rate must be per-vertex!
         gl.bindVertexArray(null);
 
     }
@@ -927,17 +906,15 @@ glUtils._loadEdges = function(uid, forceUpdate) {
 
     // Additional info about the vertex format. Make sure you update also
     // NUM_BYTES_PER_EDGE when making changes to the format!
-    const NUM_BYTES_PER_EDGE = 28;
+    const NUM_BYTES_PER_EDGE = 24;
     const POINT_OFFSET = numEdges * 0,
           INDEX_OFFSET = numEdges * 16,
           OPACITY_OFFSET = numEdges * 20,
           TRANSFORM_OFFSET = numEdges * 22;
-          VERTEX_ID_OFFSET = numEdges * 24;
     const POINT_LOCATION = 0,      // Re-use the same attribute locations that
           INDEX_LOCATION = 1,      // are used also for drawing the markers
           OPACITY_LOCATION = 4;
           TRANSFORM_LOCATION = 5;
-          VERTEX_ID_LOCATION = 6;
 
     const lastInputs = glUtils._edgeInputsCached[uid];
     if ((markerData[connectionsPropertyName] != null) &&
@@ -965,7 +942,6 @@ glUtils._loadEdges = function(uid, forceUpdate) {
             let bytedata_index = new Float32Array(chunkSizeEdges * 1);
             let bytedata_opacity = new Uint16Array(chunkSizeEdges * 1);
             let bytedata_transform = new Uint16Array(chunkSizeEdges * 1);
-            let bytedata_vertexID = new Uint8Array(chunkSizeEdges * 4);
 
             let offsetEdges2 = 0;
             for (let i = 0; i < chunkSize; ++i) {
@@ -997,10 +973,6 @@ glUtils._loadEdges = function(uid, forceUpdate) {
                     bytedata_index[k] = lutIndex + (lutIndex_j * 4096.0);
                     bytedata_opacity[k] = Math.floor(Math.max(0.0, Math.min(1.0, opacity)) * 65535.0);
                     bytedata_transform[k] = collectionItemIndex + (collectionItemIndex_j * 256);
-                    bytedata_vertexID[4 * k + 0] = 0;  // 1st vertex
-                    bytedata_vertexID[4 * k + 1] = 1;  // 2nd vertex
-                    bytedata_vertexID[4 * k + 2] = 2;  // 3rd vertex
-                    bytedata_vertexID[4 * k + 3] = 3;  // 4th vertex
                 }
 
                 offsetEdges2 += edges.length;
@@ -1027,7 +999,6 @@ glUtils._loadEdges = function(uid, forceUpdate) {
             gl.bufferSubData(gl.ARRAY_BUFFER, (INDEX_OFFSET + offsetEdges * 4), bytedata_index);
             gl.bufferSubData(gl.ARRAY_BUFFER, (OPACITY_OFFSET + offsetEdges * 2), bytedata_opacity);
             gl.bufferSubData(gl.ARRAY_BUFFER, (TRANSFORM_OFFSET + offsetEdges * 2), bytedata_transform);
-            gl.bufferSubData(gl.ARRAY_BUFFER, (VERTEX_ID_OFFSET + offsetEdges * 4), bytedata_vertexID);
             gl.bindBuffer(gl.ARRAY_BUFFER, null);
             offsetEdges += chunkSizeEdges;
         }
@@ -1048,9 +1019,6 @@ glUtils._loadEdges = function(uid, forceUpdate) {
         gl.enableVertexAttribArray(TRANSFORM_LOCATION);
         gl.vertexAttribPointer(TRANSFORM_LOCATION, 1, gl.UNSIGNED_SHORT, false, 0, TRANSFORM_OFFSET);
         gl.vertexAttribDivisor(TRANSFORM_LOCATION, 1);
-        gl.enableVertexAttribArray(VERTEX_ID_LOCATION);
-        gl.vertexAttribPointer(VERTEX_ID_LOCATION, 1, gl.UNSIGNED_BYTE, false, 0, VERTEX_ID_OFFSET);
-        gl.vertexAttribDivisor(VERTEX_ID_LOCATION, 0);  // Vertex ID rate must be per-vertex!
         gl.bindVertexArray(null);
     }
     glUtils._edgeInputsCached[uid] = JSON.stringify(newInputs);
