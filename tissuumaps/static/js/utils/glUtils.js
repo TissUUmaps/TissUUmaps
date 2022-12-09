@@ -79,13 +79,13 @@ glUtils._markersVS = `
     uniform bool u_usePiechartFromMarker;
     uniform bool u_useShapeFromMarker;
     uniform bool u_alphaPass;
-    uniform float u_pickedMarker;
+    uniform int u_pickedMarker;
     uniform sampler2D u_colorLUT;
     uniform sampler2D u_colorscale;
     uniform sampler2D u_transformLUT;
 
     layout(location = 0) in vec4 in_position;
-    layout(location = 1) in float in_index;
+    layout(location = 1) in int in_index;
     layout(location = 2) in float in_scale;
     layout(location = 3) in float in_shape;
     layout(location = 4) in float in_opacity;
@@ -270,7 +270,7 @@ glUtils._pickingVS = `
     uniform sampler2D u_transformLUT;
 
     layout(location = 0) in vec4 in_position;
-    layout(location = 1) in float in_index;
+    layout(location = 1) in int in_index;
     layout(location = 2) in float in_scale;
     layout(location = 4) in float in_opacity;
     layout(location = 5) in float in_transform;
@@ -336,7 +336,11 @@ glUtils._pickingVS = `
             if (in_opacity * u_markerOpacity <= 0.0) DISCARD_VERTEX
 
             // Output marker index encoded as hexadecimal color
-            v_color.rgb = hex_to_rgb(in_index + float(u_op));
+            int encoded = in_index + 1;
+            v_color.r = float((encoded >> 0) & 255) / 255.0;
+            v_color.g = float((encoded >> 8) & 255) / 255.0;
+            v_color.b = float((encoded >> 16) & 255) / 255.0;
+            v_color.a = float((encoded >> 24) & 255) / 255.0;
         }
 
         gl_Position = vec4(-0.9999, -0.9999, 0.0, 1.0);
@@ -374,7 +378,7 @@ glUtils._edgesVS = `
     uniform sampler2D u_transformLUT;
 
     layout(location = 0) in vec4 in_position;
-    layout(location = 1) in float in_index;
+    layout(location = 1) in int in_index;
     layout(location = 4) in float in_opacity;
     layout(location = 5) in float in_transform;
 
@@ -626,7 +630,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
             if (offset + chunkSize >= numPoints) chunkSize = numPoints - offset;
             // console.log(offset, chunkSize, numPoints);
             let bytedata_point = new Float32Array(chunkSize * 4);
-            let bytedata_index = new Float32Array(chunkSize * 1);
+            let bytedata_index = new Int32Array(chunkSize * 1);
             let bytedata_scale = new Float32Array(chunkSize * 1);
             let bytedata_shape = new Float32Array(chunkSize * 1);
             let bytedata_opacity = new Uint16Array(chunkSize * 1);
@@ -760,7 +764,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
         gl.vertexAttribPointer(POINT_LOCATION, 4, gl.FLOAT, false, 0, POINT_OFFSET * numSectors);
         gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_markers_secondary"]);
         gl.enableVertexAttribArray(INDEX_LOCATION);
-        gl.vertexAttribPointer(INDEX_LOCATION, 1, gl.FLOAT, false, 0, INDEX_OFFSET * numSectors);
+        gl.vertexAttribIPointer(INDEX_LOCATION, 1, gl.INT, 0, INDEX_OFFSET * numSectors);
         gl.enableVertexAttribArray(SCALE_LOCATION);
         gl.vertexAttribPointer(SCALE_LOCATION, 1, gl.FLOAT, false, 0, SCALE_OFFSET * numSectors);
         gl.enableVertexAttribArray(SHAPE_LOCATION);
@@ -780,7 +784,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
         gl.vertexAttribDivisor(POINT_LOCATION, 1);
         gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_markers_secondary"]);
         gl.enableVertexAttribArray(INDEX_LOCATION);
-        gl.vertexAttribPointer(INDEX_LOCATION, 1, gl.FLOAT, false, 0, INDEX_OFFSET * numSectors);
+        gl.vertexAttribIPointer(INDEX_LOCATION, 1, gl.INT, 0, INDEX_OFFSET * numSectors);
         gl.vertexAttribDivisor(INDEX_LOCATION, 1);
         gl.enableVertexAttribArray(SCALE_LOCATION);
         gl.vertexAttribPointer(SCALE_LOCATION, 1, gl.FLOAT, false, 0, SCALE_OFFSET * numSectors);
@@ -961,7 +965,7 @@ glUtils._loadEdges = function(uid, forceUpdate) {
 
             // Allocate arrays for edge data that will be uploaded to vertex buffer
             let bytedata_point = new Float32Array(chunkSizeEdges * 4);
-            let bytedata_index = new Float32Array(chunkSizeEdges * 1);
+            let bytedata_index = new Int32Array(chunkSizeEdges * 1);
             let bytedata_opacity = new Uint16Array(chunkSizeEdges * 1);
             let bytedata_transform = new Uint16Array(chunkSizeEdges * 1);
 
@@ -1033,7 +1037,7 @@ glUtils._loadEdges = function(uid, forceUpdate) {
         gl.vertexAttribPointer(POINT_LOCATION, 4, gl.FLOAT, false, 0, 0);
         gl.vertexAttribDivisor(POINT_LOCATION, 1);
         gl.enableVertexAttribArray(INDEX_LOCATION);
-        gl.vertexAttribPointer(INDEX_LOCATION, 1, gl.FLOAT, false, 0, INDEX_OFFSET);
+        gl.vertexAttribIPointer(INDEX_LOCATION, 1, gl.INT, 0, INDEX_OFFSET);
         gl.vertexAttribDivisor(INDEX_LOCATION, 1);
         gl.enableVertexAttribArray(OPACITY_LOCATION);
         gl.vertexAttribPointer(OPACITY_LOCATION, 1, gl.UNSIGNED_SHORT, true, 0, OPACITY_OFFSET);
@@ -1402,7 +1406,7 @@ glUtils._drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
         gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromColormap"), glUtils._useColorFromColormap[uid]);
         gl.uniform1i(gl.getUniformLocation(program, "u_usePiechartFromMarker"), glUtils._usePiechartFromMarker[uid]);
         gl.uniform1i(gl.getUniformLocation(program, "u_useShapeFromMarker"), glUtils._useShapeFromMarker[uid]);
-        gl.uniform1f(gl.getUniformLocation(program, "u_pickedMarker"),
+        gl.uniform1i(gl.getUniformLocation(program, "u_pickedMarker"),
             glUtils._pickedMarker[0] == uid ? glUtils._pickedMarker[1] : -1);
         gl.activeTexture(gl.TEXTURE1);
         gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorscale"]);
@@ -1530,7 +1534,8 @@ glUtils._drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) 
         // Read back pixel at location (0, 0) to get the picked object
         const result = new Uint8Array(4);
         gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, result);
-        const picked = Number(result[2] + result[1] * 256 + result[0] * 65536) - 1;
+        //const picked = Number(result[2] + result[1] * 256 + result[0] * 65536) - 1;
+        const picked = Number(result[0] + result[1] * 256 + result[2] * 65536 + result[3] * 16777216) - 1;
         if (picked >= 0)
             glUtils._pickedMarker = [uid, picked];
     }
