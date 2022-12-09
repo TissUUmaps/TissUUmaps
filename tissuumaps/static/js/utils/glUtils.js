@@ -773,7 +773,6 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
         gl.vertexAttribPointer(OPACITY_LOCATION, 1, gl.UNSIGNED_SHORT, true, 0, OPACITY_OFFSET * numSectors);
         gl.enableVertexAttribArray(TRANSFORM_LOCATION);
         gl.vertexAttribPointer(TRANSFORM_LOCATION, 1, gl.UNSIGNED_SHORT, false, 0, TRANSFORM_OFFSET * numSectors);
-        // Skip enabling vertex ID array, since it will not be used for non-instanced drawing
         gl.bindVertexArray(null);
 
         // Set up 2nd VAO (for experimental instanced drawing)
