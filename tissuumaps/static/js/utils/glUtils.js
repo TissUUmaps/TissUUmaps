@@ -18,6 +18,7 @@ glUtils = {
     _buffers: {},
     _vaos: {},
     _textures: {},
+    _query: null,
 
     // Marker settings and info stored per UID (this could perhaps be
     // better handled by having an object per UID that stores all info
@@ -56,6 +57,7 @@ glUtils = {
     _resolutionScaleActual: 1.0,  // Automatic scaling factor computed from glUtils._resolutionScale
     _useInstancing: true,         // Use instancing and gl.TRIANGLE_STRIP to avoid size limit of gl.POINTS
     _showEdgesExperimental: true,
+    _logPerformance: false,       // Use GPU timer queries to log performance
     _piechartPalette: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
 
@@ -1554,6 +1556,7 @@ glUtils._drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) 
 glUtils.draw = function() {
     const canvas = document.getElementById("gl_canvas");
     const gl = canvas.getContext("webgl2", glUtils._options);
+    const ext = gl.getExtension("EXT_disjoint_timer_query_webgl2");
 
     // Update per-image transforms that take into account if collection mode
     // viewing is enabled for the image layers
@@ -1586,7 +1589,32 @@ glUtils.draw = function() {
         glUtils._drawEdgesColorPass(gl, viewportTransform, markerScaleAdjusted);
     }
 
+    const query = glUtils._query;
+    if (glUtils._logPerformance) {
+        if (query == null) {
+            glUtils._query = gl.createQuery();
+            gl.beginQuery(ext.TIME_ELAPSED_EXT, glUtils._query);
+        }
+    }
+
     glUtils._drawColorPass(gl, viewportTransform, markerScaleAdjusted);
+
+    if (glUtils._logPerformance) {
+        if (query == null) {
+            gl.endQuery(ext.TIME_ELAPSED_EXT);
+        } else {
+            const available = gl.getQueryParameter(glUtils._query, gl.QUERY_RESULT_AVAILABLE);
+            const disjoint = gl.getParameter(ext.GPU_DISJOINT_EXT);
+            if (available && !disjoint) {
+                const timeElapsed = gl.getQueryParameter(glUtils._query, gl.QUERY_RESULT);
+                console.log("Rasterization time (GPU) (ms): ", timeElapsed / 1e6);
+            }
+            if (available || disjoint) {
+                gl.deleteQuery(glUtils._query);
+                glUtils._query = null;
+            }
+        }
+    }
 }
 
 
