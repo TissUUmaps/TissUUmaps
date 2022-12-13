@@ -42,8 +42,8 @@ class H5_API {
     load (url) {
         this.status[url] = "loading";
         this.loadPromise(url).then((data)=>{
-            setTimeout(()=>{this.status[url] = "loaded";},500);
             console.log("Keys of H5 file:", data);
+            setTimeout(()=>{this.status[url] = "loaded";},50);
         })
     }
 
@@ -99,8 +99,8 @@ class H5AD_API  extends H5_API {
     getXRow_csc (url, rowIndex, path) {
         return new Promise(resolve => {
             this.get(url,{path:path}, "attr").then((data_X) => {
-                var rowLength = data_X.attrs["shape"][0];
                 console.log("rowLength",rowLength);
+                var rowLength = Number(data_X.attrs["shape"][0]);
                 this.get(url,{path:path+"/indptr"}).then((indptr) => {
                     console.log(indptr);
                     let x1 = indptr.value[parseInt(rowIndex)];

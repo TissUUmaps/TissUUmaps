@@ -3,7 +3,7 @@ import  { createLazyFile } from '../../vendor/h5wasm/lazyFileLRU.js';*/
 importScripts("../../vendor/h5wasm/h5wasm_iife.js");
 importScripts("../../vendor/h5wasm/lazyFileLRU.js");
 
-var file;
+var file = {};
 
 function getAttributes (item) {
     var attrs = {};
@@ -28,26 +28,27 @@ self.onmessage = async function (event) {
                 LRUSize
             }
             try {
-                createLazyFile(FS, '/', 'current_file_with_range.h5', true, false, config);
-                file = new h5wasm.File("current_file_with_range.h5");
+                createLazyFile(FS, '/', 'current_file_with_range'+id+'.h5', true, false, config);
+                file[url] = new h5wasm.File('current_file_with_range'+id+'.h5');
             } catch (error) {
-                h5wasm.FS.createLazyFile('/', "current_file_without_range.h5", url, true, false);
-                file = new h5wasm.File("current_file_without_range.h5");
+                h5wasm.FS.createLazyFile('/', "current_file_without_range"+id+".h5", url, true, false);
+                file[url] = new h5wasm.File("current_file_without_range"+id+".h5");
             }
         }
         else {
             FS.mkdir('/work');
             FS.mount(FS.filesystems.WORKERFS, { files: [url] }, '/work');
 
-            file = new h5wasm.File(`/work/${url.name}`, 'r');
+            file[url] = new h5wasm.File(`/work/${url.name}`, 'r');
         }
-        self.postMessage({id:id,data:file.keys()})
+        self.postMessage({id:id,data:file[url].keys()})
     }
     else if (action === "keys") {
         await h5wasm.ready;
-        if (file) {
+        const url = payload?.url;
+        if (file[url]) {
             const path = payload?.path ?? "/";
-            const item = file.get(path);
+            const item = file[url].get(path);
             if (item instanceof h5wasm.Group) {
                 self.postMessage({
                     id:id,
@@ -76,9 +77,10 @@ self.onmessage = async function (event) {
     }
     else if (action === "attr") {
         await h5wasm.ready;
-        if (file) {
+        const url = payload?.url;
+        if (file[url]) {
             const path = payload?.path ?? "/";
-            const item = file.get(path);
+            const item = file[url].get(path);
             self.postMessage({
                     id:id,
                     type: item.type,
@@ -88,9 +90,10 @@ self.onmessage = async function (event) {
     }
     else if (action === "get") {
         await h5wasm.ready;
-        if (file) {
+        const url = payload?.url;
+        if (file[url]) {
             const path = payload?.path ?? "/";
-            const item = file.get(path);
+            const item = file[url].get(path);
             if (item instanceof h5wasm.Group) {
                 self.postMessage({
                     id:id,
@@ -117,5 +120,8 @@ self.onmessage = async function (event) {
                 })
             }
         }
+    }
+    else if (action === "clear") {
+        file = {};
     }
   };

@@ -153,6 +153,10 @@ tmapp.init = function () {
     } else {
         console.log("Using CPU-based marker drawing (SVG canvas)")
     }
+    
+    if (dataUtils._hdf5Api === undefined) {
+        dataUtils._hdf5Api = new H5AD_API()
+    }
 } //finish init
 
 /**

@@ -55,7 +55,7 @@ dataUtils.createDataset = function(uid,options){
         _type: "GENERIC_DATA",
         _filetype: options.filetype || "csv",
         _name:options.name || "",
-        _processeddata:[],
+        _processeddata:undefined,
         //iff user selects by group
         _groupgarden:{},// full of separated d3.tree
         _X:"",
@@ -140,6 +140,9 @@ dataUtils.getAllH5Data = function(data_id){
             if(drop=="collectionItem_fixed" || drop=="coord_factor" || drop=="scale_factor" || drop=="shape_gr_dict" || drop=="cb_gr_dict" || drop=="opacity" || drop=="pie_dict" || drop=="tooltip_fmt") {reject(null);return} //not dropdowns
             if (!alldrops[drop]) {reject(null);return}
             if (alldrops[drop].value != "") {
+                if (data_obj["_processeddata"].columns.includes(alldrops[drop].value)) {
+                    resolve(drop);return
+                }
                 let h5paths = alldrops[drop].value.split(";");
                 let h5range = 0;
                 let h5path = h5paths[0];
@@ -149,7 +152,7 @@ dataUtils.getAllH5Data = function(data_id){
                 data_obj["_processeddata"].columns.push(alldrops[drop].value);
                 data_obj["_csv_header"].push(alldrops[drop].value);
                 let url = data_obj["_csv_path"];
-                data_obj["_hdf5Api"].getXRow(url, h5range, h5path).then((data) => {
+                dataUtils._hdf5Api.getXRow(url, h5range, h5path).then((data) => {
                     if (Object.prototype.toString.call(data).includes("BigInt") || Object.prototype.toString.call(data).includes("BigUint")) {
                         data = [...data].map((x)=>Number(x));
                     }
@@ -168,11 +171,14 @@ dataUtils.getAllH5Data = function(data_id){
 
     var alldrops=interfaceUtils._mGenUIFuncs.getTabDropDowns(data_id);
     var namesymbols=Object.getOwnPropertyNames(alldrops);
-    data_obj["_processeddata"] = {
-        columns : []
-    };
-    data_obj["_csv_header"] = [];
-    
+    // TODO: keep columns if needed!
+    console.log(data_obj["_processeddata"])
+    if (data_obj["_processeddata"] === undefined) {
+        data_obj["_processeddata"] = {
+            columns : []
+        };
+        data_obj["_csv_header"] = [];
+    }
     // We get H5 data for each field, sequentially:
     return namesymbols.reduce(function(p, drop) {
         return p.then(function(results) {
@@ -190,11 +196,12 @@ dataUtils.getAllH5Data = function(data_id){
 * its ready to be displayed.
 * @param {String} data_id The id of the data group like "U234345"
 */
-dataUtils.updateViewOptions = function(data_id, force_reload_all){
+dataUtils.updateViewOptions = function(data_id, force_reload_all, reloadH5){
+    if (reloadH5 === undefined) reloadH5 = true;
     let progressParent=interfaceUtils.getElementById(data_id+"_csv_progress_parent");
     progressParent.classList.remove("d-none");
     let progressBar=interfaceUtils.getElementById(data_id+"_csv_progress");
-    progressBar.style.width = "50%";
+    progressBar.style.width = "10%";
     
     var data_obj = dataUtils.data[data_id];
     
@@ -214,7 +221,7 @@ dataUtils.updateViewOptions = function(data_id, force_reload_all){
     updateButton.innerHTML = "Loading..."
     
     var p = Promise.resolve();
-    if (data_obj._filetype == "h5") {
+    if (data_obj._filetype == "h5" && reloadH5) {
         p = dataUtils.getAllH5Data(data_id);
     }
     p.then (() => {
@@ -274,7 +281,7 @@ dataUtils.updateViewOptions = function(data_id, force_reload_all){
             if (tmapp["ISS_viewer"].world.getItemCount() > 0) {
                 if (tmapp["ISS_viewer"].world.getItemAt(0).source.height < parseInt(maxY*1.06) || tmapp["ISS_viewer"].world.getItemAt(0).source.width < parseInt(maxX*1.06)){
                     tmapp["ISS_viewer"].close();
-                    setTimeout (function() {dataUtils.updateViewOptions(data_id)},50);
+                    setTimeout (function() {dataUtils.updateViewOptions(data_id, false, false)},50);
                     return;
                 }
             }
@@ -290,7 +297,7 @@ dataUtils.updateViewOptions = function(data_id, force_reload_all){
                     x: -0.02,
                     y: -0.02
                 })
-                setTimeout (function() {dataUtils.updateViewOptions(data_id, true)},50);
+                setTimeout (function() {dataUtils.updateViewOptions(data_id, true, false)},50);
                 return;
             }
         }
@@ -462,7 +469,7 @@ dataUtils.readH5 = function(data_id, thecsv, options) {
     dataUtils.createDataset(data_id,{"name":data_id, "filetype":"h5"});
 
     let data_obj = dataUtils.data[data_id];
-    data_obj["_processeddata"] = {};
+    data_obj["_processeddata"] = undefined;
     data_obj["_isnan"] = {};
     data_obj["_csv_header"] = null;
     data_obj["_csv_path"] = thecsv;
@@ -480,11 +487,9 @@ dataUtils.readH5 = function(data_id, thecsv, options) {
     progressParent.classList.remove("d-none");
     let progressBar=interfaceUtils.getElementById(data_id+"_csv_progress");
     progressBar.style.width = "0%";
-    if (data_obj["_hdf5Api"] === undefined) {
-        data_obj["_hdf5Api"] = new H5AD_API()
-    }
+    
     let url = thecsv;
-    data_obj["_hdf5Api"].get(url,{path:"/"}).then((data) => {
+    dataUtils._hdf5Api.get(url,{path:"/"}).then((data) => {
         progressBar.style.width = "100%";
         progressParent.classList.add("d-none");
         dataUtils._quadtreesLastInputs = {};  // Clear to make sure quadtrees are generated

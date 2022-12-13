@@ -680,13 +680,13 @@ interfaceUtils._mGenUIFuncs.dataTabUIToH5 = function(uid){
                 // Do Ajax call or lookup locally, when done,
                 // call the callback and pass your results:
                 let url = dataUtils.data[uid]._csv_path
-                dataUtils.data[uid]._hdf5Api.getKeys(url, query).then((data) => {
                     console.log(data);
+                dataUtils._hdf5Api.getKeys(url, query).then((data) => {
                     let keys = data.children.map((value) => {
                         let completePath = value.replace("//","/");
                         return {"value": completePath, "data": completePath };
                     },
-                    (error)=>{console.log("WTF?",error)});
+                    (error)=>{console.log("Error!",error)});
                     var result = {
                         suggestions: keys
                     };

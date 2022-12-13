@@ -23,8 +23,6 @@ flask.init = function () {
     styles += "}";
     // Add the first CSS rule to the stylesheet
     sheet.insertRule(styles, 0);
-    console.log(styles);
-    console.log(sheet);
 }
 
 flask.standalone = {}
@@ -35,7 +33,6 @@ flask.standalone.init = function () {
     new QWebChannel(qt.webChannelTransport, function (channel) {
         flask.standalone.backend = channel.objects.backend;
     });
-    console.log("backend:",flask.standalone.backend);
 
     // Add layer button
     div = HTMLElementUtils.createElement({"kind":"div", extraAttributes:{"class":"px-3 my-2"}});
@@ -77,7 +74,6 @@ flask.standalone.addCSV = function (filename) {
     const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString);
     const path = urlParams.get('path')
-    console.log("Loading csv file:", path, filename);
     flask.standalone.backend.addCSV(path, filename, function(csvJSON) {
         if (csvJSON["markerFile"]!=null) {
             interfaceUtils.generateDataTabUI(csvJSON["markerFile"]);
@@ -213,7 +209,6 @@ flask.server.addLayer = function (filename) {
     const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString);
     const path = urlParams.get('path')
-    console.log(filename, path);
     if (filename.startsWith(path)) {
         filename = filename.slice(path.length);
     }
@@ -272,7 +267,6 @@ window.addEventListener("message", evt => {
     
     ctx.drawImage(ctx_osd.canvas, 0, 0, canvas.width, canvas.height);
     ctx.drawImage(ctx_webgl.canvas, 0, 0, canvas.width, canvas.height);
-    console.log(canvas.width,canvas.height);
     var dataURL = canvas.toDataURL("image/png");
     
     var svgString = new XMLSerializer().serializeToString(document.querySelector('.openseadragon-canvas svg'));
