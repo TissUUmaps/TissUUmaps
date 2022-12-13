@@ -301,11 +301,14 @@ def _setup():
 @app.errorhandler(404)
 def page_not_found(e):
     # note that we set the 404 status explicitly
-    return render_template(
-        "tissuumaps.html",
-        isStandalone=app.config["isStandalone"],
-        message="File not found or corrupted.",
-        readOnly=app.config["READ_ONLY"],
+    return (
+        render_template(
+            "tissuumaps.html",
+            isStandalone=app.config["isStandalone"],
+            message="File not found or corrupted.",
+            readOnly=app.config["READ_ONLY"],
+        ),
+        404,
     )
     return redirect("/"), 404, {"Refresh": "1; url=/"}
 
@@ -313,11 +316,14 @@ def page_not_found(e):
 @app.errorhandler(500)
 def internal_server_error(e):
     # note that we set the 500 status explicitly
-    return render_template(
-        "tissuumaps.html",
-        isStandalone=app.config["isStandalone"],
-        message="Internal Server Error<br/>The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.",
-        readOnly=app.config["READ_ONLY"],
+    return (
+        render_template(
+            "tissuumaps.html",
+            isStandalone=app.config["isStandalone"],
+            message="Internal Server Error<br/>The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.",
+            readOnly=app.config["READ_ONLY"],
+        ),
+        500,
     )
     return redirect("/"), 500, {"Refresh": "1; url=/"}
 
