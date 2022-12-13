@@ -438,8 +438,10 @@ overlayUtils.areAllFullyLoaded = function () {
     var count = tmapp[op + "_viewer"].world.getItemCount();
     for (var i = 0; i < count; i++) {
       tiledImage = tmapp[op + "_viewer"].world.getItemAt(i);
-      if (!tiledImage.getFullyLoaded() && tiledImage.getOpacity() != 0) {
-        return false;
+      if (Object.keys(tiledImage.loadingCoverage).length > 0) {
+        if (!tiledImage.getFullyLoaded() && tiledImage.getOpacity() != 0) {
+            return false;
+        }
       }
     }
     return true;
