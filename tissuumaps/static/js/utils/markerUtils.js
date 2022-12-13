@@ -99,7 +99,6 @@ markerUtils.makePiechartTable = function(uid, markerIndex, sectorsPropertyName) 
             return b[0]-a[0];
         }
     );
-    console.dir(sortedSectors);
     sortedSectors.forEach(function (sector) {
         outText += "<span style='border:2px solid " + glUtils._piechartPalette[sector[2] % glUtils._piechartPalette.length] + ";padding:3px;margin:2px;display: inline-block;'>" + sector[1] + ": " + (sector[0] * 100).toFixed(1) + " %</span> ";
     })

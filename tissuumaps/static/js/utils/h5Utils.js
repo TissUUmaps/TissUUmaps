@@ -42,7 +42,6 @@ class H5_API {
     load (url) {
         this.status[url] = "loading";
         this.loadPromise(url).then((data)=>{
-            console.log("Keys of H5 file:", data);
             setTimeout(()=>{this.status[url] = "loaded";},50);
         })
     }
@@ -99,13 +98,10 @@ class H5AD_API  extends H5_API {
     getXRow_csc (url, rowIndex, path) {
         return new Promise(resolve => {
             this.get(url,{path:path}, "attr").then((data_X) => {
-                console.log("rowLength",rowLength);
                 var rowLength = Number(data_X.attrs["shape"][0]);
                 this.get(url,{path:path+"/indptr"}).then((indptr) => {
-                    console.log(indptr);
                     let x1 = indptr.value[parseInt(rowIndex)];
                     let x2 = indptr.value[parseInt(rowIndex)+1];
-                    console.log("x1,x2",x1,x2);
                     this.get(url,{path:path+"/indices", slice:[[x1,x2]]}).then((indices) => {
                         this.get(url,{path:path+"/data", slice:[[x1,x2]]}).then((data) => {
                             const row = new Float32Array(rowLength);
@@ -131,12 +127,9 @@ class H5AD_API  extends H5_API {
     getXRow (url, rowIndex, path) {
         return new Promise(resolve => {
             this.get(url,{path:path}, "attr").then((data_X) => {
-                console.log("data_X:", data_X);
                 if (rowIndex == "join") {
                     this.get (url, {path:path+"/indptr"}).then((indptr)=>{
-                        console.log(indptr.value);
                         this.get (url, {path:path+"/indices"}).then((indices)=>{
-                            console.log(indices.value);
                             var str_array = [];
                             
                             for (let i=0; i<indptr.value.length;i++) {
@@ -144,7 +137,6 @@ class H5AD_API  extends H5_API {
                                     indices.value.slice(indptr.value[i], indptr.value[i+1]).join(";")
                                 );
                             }
-                            console.log(str_array);
                             resolve(str_array);
                         });
                     });
@@ -155,7 +147,6 @@ class H5AD_API  extends H5_API {
                         resolve(data);
                     });
                 }
-                console.log("encoding:", data_X.attrs["encoding-type"]);
                 
                 if (data_X.attrs["encoding-type"] == "categorical") {
                     this.getXRow_categ (url, rowIndex, path).then((data)=>{
@@ -171,7 +162,6 @@ class H5AD_API  extends H5_API {
                     resolve("csr sparse format not supported!")
                 }
                 else {
-                    console.log("Unknown encoding:",data_X.attrs["encoding-type"])
                     return this.getXRow_array (url, rowIndex, path).then((data)=>{
                         resolve(data);
                     });

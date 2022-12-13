@@ -17,7 +17,6 @@ self.onmessage = async function (event) {
     const { action, payload, id } = event.data;
     if (action === "load") {
         const url = payload?.url;
-        console.log("url", url);
         const { FS } = await h5wasm.ready;
         if (typeof url === 'string' || url instanceof String) {
             const requestChunkSize = payload?.requestChunkSize ?? 1024 * 1024;

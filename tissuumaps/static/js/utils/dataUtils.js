@@ -549,7 +549,6 @@ dataUtils.readCSV = function(data_id, thecsv, options) {
   
       if (http.status === 200) {
           fileSize = http.getResponseHeader('content-length');
-          console.log('fileSize = ' + fileSize);
       }
   
       return fileSize;

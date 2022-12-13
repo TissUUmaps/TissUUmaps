@@ -670,7 +670,6 @@ interfaceUtils._mGenUIFuncs.dataTabUIToH5 = function(uid){
         var inputText=HTMLElementUtils.createElement({"kind":"input", "id":alldrops[drop].id, "extraAttributes":{ "name":alldrops[drop].id, "class":"form-control","type":"text" }});
         if (alldrops[drop].classList.contains("d-none"))
             inputText.classList.add("d-none");
-        console.log(drop, alldrops[drop], inputText);
         
         alldrops[drop].parentNode.replaceChild(inputText, alldrops[drop]);
         let options = {
@@ -680,7 +679,6 @@ interfaceUtils._mGenUIFuncs.dataTabUIToH5 = function(uid){
                 // Do Ajax call or lookup locally, when done,
                 // call the callback and pass your results:
                 let url = dataUtils.data[uid]._csv_path
-                    console.log(data);
                 dataUtils._hdf5Api.getKeys(url, query).then((data) => {
                     let keys = data.children.map((value) => {
                         let completePath = value.replace("//","/");
