@@ -82,11 +82,21 @@ def getObsList(adata):
 
 
 def to_csc_sparse(adata):
-    if adata.get("X").attrs["encoding-type"] == "csr_matrix":
+    if "encoding-type" in adata.get("X").attrs.keys():
+        encodingTypeKey = "encoding-type"
+    elif "h5sparse_format" in adata.get("X").attrs.keys():
+        encodingTypeKey
+
+    if "shape" in adata.get("X").attrs.keys():
+        shapeKey = "shape"
+    elif "h5sparse_shape" in adata.get("X").attrs.keys():
+        shapeKey = "h5sparse_shape"
+
+    if adata.get("X").attrs[encodingTypeKey] == "csr_matrix":
         logging.info(
             "Converting sparse CSR matrix to sparse CSC. This can take a long time."
         )
-        shape = adata.get("X").attrs["shape"]
+        shape = adata.get("X").attrs[shapeKey]
         X_data = adata.get("X/data")[:]
         X_indices = adata.get("X/indices")[:]
         X_indptr = adata.get("X/indptr")[:]
@@ -102,16 +112,26 @@ def to_csc_sparse(adata):
         adata.get("X").attrs["encoding-type"] = "csc_matrix"
 
 
-def h5ad_to_tmap(basedir, path, library_id=None):
-    adata_out = None
+def get_write_adata(adata, path, basedir):
     path_out = os.path.splitext(path)[0] + "_tmap.h5ad"
-    if os.path.isfile(os.path.join(basedir, path_out)):
-        if os.path.getmtime(os.path.join(basedir, path)) < os.path.getmtime(
-            os.path.join(basedir, path_out)
-        ):
-            path = path_out
+    adata_out = h5py.File(os.path.join(basedir, path_out), "w")
+    for obj in adata.keys():
+        adata.copy(obj, adata_out)
+    adata.close()
+    adata = adata_out
+    return adata, path_out
 
-    adata = h5py.File(os.path.join(basedir, path), "r+")
+
+def h5ad_to_tmap(basedir, path, library_id=None):
+    write_adata = False
+    path_out = os.path.splitext(path)[0] + "_tmap.h5ad"
+    # if os.path.isfile(os.path.join(basedir, path_out)):
+    #    if os.path.getmtime(os.path.join(basedir, path)) < os.path.getmtime(
+    #        os.path.join(basedir, path_out)
+    #    ):
+    #        path = path_out
+
+    adata = h5py.File(os.path.join(basedir, path), "r")
     outputFolder = os.path.join(basedir, path) + "_files"
     relOutputFolder = os.path.basename(path) + "_files"
 
@@ -131,12 +151,32 @@ def h5ad_to_tmap(basedir, path, library_id=None):
             globalX, globalY = f"/obsm/{coordinates};0", f"/obsm/{coordinates};1"
             break
 
+    if list(adata.get("/obs/__categories/", [])) != []:
+        if not write_adata:
+            write_adata = True
+            adata, path = get_write_adata(adata, path, basedir)
+
+        for categ in list(adata.get("/obs/__categories/", [])):
+            print(categ)
+            if categ in list(adata["/obs/"]):
+                newgroup = adata.create_group(f"/obs/__{categ}__")
+                newgroup.attrs["encoding-type"] = "categorical"
+                adata.copy(f"/obs/{categ}", f"/obs/__{categ}__/codes")
+                adata.copy(f"/obs/__categories/{categ}", f"/obs/__{categ}__/categories")
+                del adata[f"/obs/{categ}"]
+                adata["obs"].move(f"__{categ}__", f"{categ}")
+        del adata[f"/obs/__categories"]
+
     layers = []
     library_ids = list(adata.get("uns/spatial", []))
     try:
         library_ids = adata["/obs/library_id/categories"].asstr()[...]
     except:
-        pass
+        try:
+            library_ids = adata["/obs/__categories/library_id"].asstr()[...]
+        except:
+            pass
+
     coord_factor = 1
     for library_id in library_ids:
         print("lib", library_id)
@@ -182,14 +222,21 @@ def h5ad_to_tmap(basedir, path, library_id=None):
     library_col = ""
     if use_libraries:
         if "/obsm/spatial;" in globalX:
-            if not "spatial_hires" in list(adata.get("/obsm", [])):
-                path = path_out
-                adata_out = h5py.File(os.path.join(basedir, path), "w")
-                for obj in adata.keys():
-                    adata.copy(obj, adata_out)
-                spatial_array = adata["/obsm/spatial"][()]
+            try:
                 library_codes_array = adata["/obs/library_id/codes"][...]
                 library_categ_array = adata["/obs/library_id/categories"].asstr()[...]
+                library_col = "/obs/library_id/codes"
+            except:
+                library_codes_array = adata["/obs/library_id"][...]
+                library_categ_array = adata["/obs/__categories/library_id"][...]
+                library_col = "/obs/library_id"
+
+            if not "spatial_hires" in list(adata.get("/obsm", [])):
+                if not write_adata:
+                    write_adata = True
+                    adata, path = get_write_adata(adata, path, basedir)
+                spatial_array = adata["/obsm/spatial"][()]
+
                 spatial_scaled_array = np.ones(spatial_array.shape)
                 for library_index, library_id in enumerate(library_categ_array):
                     scale_factor = adata.get(
@@ -200,27 +247,28 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                         spatial_array[library_codes_array == library_index]
                         * scale_factor
                     )
-                adata_out.create_dataset(
-                    "/obsm/spatial_hires", data=spatial_scaled_array
-                )
+                adata.create_dataset("/obsm/spatial_hires", data=spatial_scaled_array)
             globalX = "/obsm/spatial_hires;0"
             globalY = "/obsm/spatial_hires;1"
             coord_factor = 1
-            library_col = "/obs/library_id/codes"
 
     if "spatial_connectivities" in list(adata.get("obsp", [])):
         spatial_connectivities = "/obsp/spatial_connectivities;join"
     else:
         spatial_connectivities = ""
 
-    if adata.get("X").attrs["encoding-type"] == "csr_matrix":
-        if adata_out is None:
-            path = path_out
-            adata_out = h5py.File(os.path.join(basedir, path), "w")
-            for obj in adata.keys():
-                adata.copy(obj, adata_out)
+    encodingType = None
+    if "encoding-type" in adata.get("X").attrs.keys():
+        encodingType = "encoding-type"
+    elif "h5sparse_format" in adata.get("X").attrs.keys():
+        encodingType
+    if encodingType:
+        if adata.get("X").attrs["encoding-type"] == "csr_matrix":
+            if not write_adata:
+                write_adata = True
+                adata, path = get_write_adata(adata, path, basedir)
 
-        to_csc_sparse(adata_out)
+            to_csc_sparse(adata)
 
     varList = getVarList(adata)
     obsList = getObsList(adata)
@@ -275,6 +323,7 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                 {"optionName": obs, "name": obs, "expectedHeader.cb_col": f"/obs/{obs}"}
                 for obs in obsList
                 if adata.get(f"/obs/{obs}/categories") is None
+                and adata.get(f"/obs/__categories/{obs}") is None
             ],
             "title": "Numerical observations",
             "uid": "mainTab",
@@ -318,6 +367,7 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                 {"optionName": obs, "name": obs, "expectedHeader.gb_col": f"/obs/{obs}"}
                 for obs in obsList
                 if adata.get(f"/obs/{obs}/categories") is not None
+                or adata.get(f"/obs/__categories/{obs}") is not None
             ],
             "title": "Categorical observations",
             "uid": "mainTab",
@@ -371,6 +421,4 @@ def h5ad_to_tmap(basedir, path, library_id=None):
     # with open(os.path.join(basedir, path + ".tmap"), "w") as f:
     #    json.dump(new_tmap_project, f, indent=4)
     adata.close()
-    if adata_out is not None:
-        adata_out.close()
     return new_tmap_project
