@@ -81,30 +81,6 @@ ClassQC.init = function (container) {
   select211.addEventListener("change", (event) => {
     ClassQC._dataset1 = select211.value;
     if (!dataUtils.data[ClassQC._dataset1]) return;
-    /*interfaceUtils.cleanSelect("Column");
-       interfaceUtils.addElementsToSelect(
-       "Column",
-       dataUtils.data[ClassQC._dataset1]._csv_header
-       );
-       interfaceUtils.cleanSelect("matrix");
-       interfaceUtils.addElementsToSelect(
-       "matrix",
-       dataUtils.data[ClassQC._dataset1]._csv_header
-       );
-       if (
-       dataUtils.data[ClassQC._dataset1]._csv_header.indexOf("Column") > 0
-       ) {
-       interfaceUtils.getElementById("Column").value = "Column";
-       var event = new Event("change");
-       interfaceUtils.getElementById("Column").dispatchEvent(event);
-       }
-       if (
-       dataUtils.data[ClassQC._dataset1]._csv_header.indexOf("matrix") > 0
-       ) {
-       interfaceUtils.getElementById("matrix").value = "matrix";
-       var event = new Event("change");
-       interfaceUtils.getElementById("matrix").dispatchEvent(event);
-       }*/
 
     interfaceUtils.cleanSelect("ClassQC_dataset1_column");
     interfaceUtils.addElementsToSelect(
@@ -129,7 +105,7 @@ ClassQC.init = function (container) {
     kind: "label",
     extraAttributes: { for: "ClassQC_dataset1_column" },
   });
-  label312.innerText = "Select column of Dataset 1";
+  label312.innerText = "Select column of Dataset 1 - Circles";
 
   select311.addEventListener("change", (event) => {
     ClassQC._dataset1_column = select311.value;
@@ -157,30 +133,6 @@ ClassQC.init = function (container) {
   select411.addEventListener("change", (event) => {
     ClassQC._dataset2 = select411.value;
     if (!dataUtils.data[ClassQC._dataset2]) return;
-    /*interfaceUtils.cleanSelect("Column");
-        interfaceUtils.addElementsToSelect(
-        "Column",
-        dataUtils.data[ClassQC._dataset2]._csv_header
-        );
-        interfaceUtils.cleanSelect("matrix");
-        interfaceUtils.addElementsToSelect(
-        "matrix",
-        dataUtils.data[ClassQC._dataset2]._csv_header
-        );
-        if (
-        dataUtils.data[ClassQC._dataset2]._csv_header.indexOf("Column") > 0
-        ) {
-        interfaceUtils.getElementById("Column").value = "Column";
-        var event = new Event("change");
-        interfaceUtils.getElementById("Column").dispatchEvent(event);
-        }
-        if (
-        dataUtils.data[ClassQC._dataset2]._csv_header.indexOf("matrix") > 0
-        ) {
-        interfaceUtils.getElementById("matrix").value = "matrix";
-        var event = new Event("change");
-        interfaceUtils.getElementById("matrix").dispatchEvent(event);
-        }*/
 
     interfaceUtils.cleanSelect("ClassQC_dataset2_column");
     interfaceUtils.addElementsToSelect(
@@ -205,7 +157,7 @@ ClassQC.init = function (container) {
     kind: "label",
     extraAttributes: { for: "ClassQC_dataset2_column" },
   });
-  label512.innerText = "Select column of Dataset 2";
+  label512.innerText = "Select column of Dataset 2  - Stars";
 
   select511.addEventListener("change", (event) => {
     ClassQC._dataset2_column = select511.value;
@@ -276,16 +228,6 @@ ClassQC.init = function (container) {
   input812.addEventListener("change", (event) => {
     ClassQC._figureSize = parseInt(input812.value);
   });
-
-  // row9=HTMLElementUtils.createRow({});
-  //     col91=HTMLElementUtils.createColumn({"width":12});
-  //         label912=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":"ClassQC_order_channels"}});
-  //         label912.innerHTML="Channel order:";
-  //         var input912=HTMLElementUtils.createElement({"kind":"input", "id":"ClassQC_order_channels", "extraAttributes":{ "class":"form-text-input form-control", "type":"text", "value":JSON.stringify(ClassQC._order_channels)}});
-
-  // input912.addEventListener("change",(event)=>{
-  //     ClassQC._order_channels = JSON.parse(input912.value);
-  // });
 
   row10 = HTMLElementUtils.createRow({});
   col101 = HTMLElementUtils.createColumn({ width: 12 });
@@ -366,11 +308,6 @@ ClassQC.init = function (container) {
   row8.appendChild(col81);
   col81.appendChild(label812);
   col81.appendChild(input812);
-
-  // container.appendChild(row9);
-  //     row9.appendChild(col91);
-  //         col91.appendChild(label912);
-  //         col91.appendChild(input912);
 
   container.appendChild(row10);
   row10.appendChild(col101);
