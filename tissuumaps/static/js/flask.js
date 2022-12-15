@@ -52,7 +52,7 @@ flask.standalone.init = function () {
             else 
                 flask.standalone.pixelFlickering.style.backgroundColor="rgb(255, 255, 255)";
         },
-        200
+        50
     )
     var plusButton = document.getElementById("plus-1-button");
     var clone = plusButton.cloneNode(true); plusButton.replaceWith(clone); 
