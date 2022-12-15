@@ -633,7 +633,6 @@ def send_file_partial(path):
 
     size = os.path.getsize(path)
     byte1, byte2 = 0, None
-    print("Getting range:", range_header)
     m = re.search("(\d+)-(\d*)", range_header)
     g = m.groups()
 
@@ -660,11 +659,15 @@ def send_file_partial(path):
         "Content-Range", "bytes {0}-{1}/{2}".format(byte1, byte1 + length, size)
     )
 
-    print(
-        "Sent!",
-        range_header,
-        size,
-        "bytes {0}-{1}/{2}".format(byte1, byte1 + length, size),
+    logging.debug(
+        " ".join(
+            [
+                "Sent!",
+                str(range_header),
+                str(size),
+                "bytes {0}-{1}/{2}".format(byte1, byte1 + length, size),
+            ]
+        )
     )
     return rv
 
