@@ -3,14 +3,15 @@ import json
 import logging
 import os
 import tempfile
+
+import numpy as np
 import pandas as pd
 from flask import abort, make_response
-import numpy as np
 from scipy.sparse import csr_matrix, vstack
-from sklearn.preprocessing import normalize as sknormalize
+from skimage.measure import approximate_polygon, find_contours, regionprops
 from sklearn.cluster import MiniBatchKMeans as KMeans
 from sklearn.mixture import GaussianMixture
-from skimage.measure import approximate_polygon, find_contours, regionprops
+from sklearn.preprocessing import normalize as sknormalize
 
 COLORS = [
     [0.9019607843137255, 0.09803921568627451, 0.29411764705882354],
@@ -91,23 +92,20 @@ def binary_mask_to_polygon(binary_mask, tolerance=0, offset=None, scale=None):
 
 
 def labelmask2geojson(
-    labelmask,
-    region_name:str="My regions",
-    scale:float=1.0,
-    offset:float = 0
+    labelmask, region_name: str = "My regions", scale: float = 1.0, offset: float = 0
 ):
     nclusters = np.max(labelmask)
     colors = [COLORS[k % len(COLORS)] for k in range(nclusters)]
 
     # Make JSON
     polygons = []
-    cluster_names = [f"Region {l+1}" for l in np.arange(1,nclusters+1)]
+    cluster_names = [f"Region {l+1}" for l in np.arange(1, nclusters + 1)]
     for region in regionprops(labelmask):
         # take regions with large enough areas
         contours = binary_mask_to_polygon(
             region.image,
-            offset=scale*np.array(region.bbox[0:2]) + offset + 0.5*scale,
-            scale=scale
+            offset=scale * np.array(region.bbox[0:2]) + offset + 0.5 * scale,
+            scale=scale,
         )
         polygons.append(contours)
     json = polygons2json(polygons, region_name, cluster_names, colors=colors)
@@ -149,12 +147,7 @@ class Plugin:
         expression_threshold = jsonParam["expression_threshold"]
 
         regions = FastCluster(
-            xy, 
-            labels, 
-            stride, 
-            sigma, 
-            nclusters, 
-            min_density=expression_threshold
+            xy, labels, stride, sigma, nclusters, min_density=expression_threshold
         ).get_geojson(region_name=region_name)
         strRegions = json.dumps(regions)
 
@@ -165,65 +158,55 @@ class Plugin:
         return resp
 
 
-
-
 class Rasterizer:
-
-    def __init__(self, bin_width:float, xy:np.ndarray, labels:np.ndarray) -> None:
+    def __init__(self, bin_width: float, xy: np.ndarray, labels: np.ndarray) -> None:
         self.bin_width = bin_width
         npts = len(labels)
         labels_unique = np.unique(labels)
-        __label2num = {
-            l : i for i,l in enumerate(labels_unique)
-        }
+        __label2num = {l: i for i, l in enumerate(labels_unique)}
 
-        self.__labels_numeric = np.array(
-            list(map(__label2num.get, labels))
-        )
-        self.__labels_numeric_unique = np.array(
-            list(__label2num.values())
-        )
+        self.__labels_numeric = np.array(list(map(__label2num.get, labels)))
+        self.__labels_numeric_unique = np.array(list(__label2num.values()))
 
         # Get id of each bin
         self.offset = np.min(xy, axis=0, keepdims=True)
         positional_ids = (xy - self.offset) // bin_width
-        positional_ids = positional_ids.astype('int')
-        
-        grid_shape = tuple(
-            np.max(positional_ids, axis=0).astype('int')+1
-        )
-        
+        positional_ids = positional_ids.astype("int")
+
+        grid_shape = tuple(np.max(positional_ids, axis=0).astype("int") + 1)
+
         positional_linear_ids = np.ravel_multi_index(positional_ids.T, dims=grid_shape)
-        self._unique_positions_linear, positional_linear_ids_zero_based = self.__reindex(positional_linear_ids)
-        self._unique_positions = np.array(np.unravel_index(self._unique_positions_linear, shape=grid_shape)).T
+        (
+            self._unique_positions_linear,
+            positional_linear_ids_zero_based,
+        ) = self.__reindex(positional_linear_ids)
+        self._unique_positions = np.array(
+            np.unravel_index(self._unique_positions_linear, shape=grid_shape)
+        ).T
 
         # Center of mass for each bin
         _, _, xy2bin = np.unique(
-            positional_linear_ids_zero_based, 
-            return_index=True, 
-            return_inverse=True, 
+            positional_linear_ids_zero_based,
+            return_index=True,
+            return_inverse=True,
         )
 
-        com_map = csr_matrix((np.ones(npts), (xy2bin, np.arange(npts))), dtype='bool')
-        self._bin_com = (com_map @ xy) / (com_map @ np.ones((npts,1)))
-
+        com_map = csr_matrix((np.ones(npts), (xy2bin, np.arange(npts))), dtype="bool")
+        self._bin_com = (com_map @ xy) / (com_map @ np.ones((npts, 1)))
 
         bin_ids = np.vstack((positional_linear_ids_zero_based, self.__labels_numeric)).T
-        
-        u, counts = np.unique(
-            bin_ids, 
-            axis=0, 
-            return_counts=True
+
+        u, counts = np.unique(bin_ids, axis=0, return_counts=True)
+
+        g = u[:, 0]
+        a = np.array(
+            np.unravel_index(self._unique_positions_linear[g], shape=grid_shape)
         )
 
-        g = u[:,0]
-        a = np.array(np.unravel_index(self._unique_positions_linear[g], shape=grid_shape))
-        
-        masks = [
-            u[:,1] == label for label in self.__labels_numeric_unique
-        ]
+        masks = [u[:, 1] == label for label in self.__labels_numeric_unique]
         self._features = [
-            csr_matrix((counts[mask],(a[0,mask], a[1,mask])), shape=grid_shape) for mask in masks
+            csr_matrix((counts[mask], (a[0, mask], a[1, mask])), shape=grid_shape)
+            for mask in masks
         ]
 
         m = len(self._unique_positions)
@@ -231,63 +214,57 @@ class Rasterizer:
         self.grid_coords = self._unique_positions
         self._pt2bin = positional_linear_ids_zero_based
         self._active_bins = csr_matrix(
-            (np.repeat(1,m), (self._unique_positions[:,0], self._unique_positions[:,1])),
-            shape=grid_shape
+            (
+                np.repeat(1, m),
+                (self._unique_positions[:, 0], self._unique_positions[:, 1]),
+            ),
+            shape=grid_shape,
         )
 
-    
-
-
     def __reindex(self, indices):
-        u,i = np.unique(indices, return_inverse=True)
+        u, i = np.unique(indices, return_inverse=True)
         re = np.arange(len(u))
-        return u,re[i]
+        return u, re[i]
 
-    def threshold(self, min_density:float=0):
+    def threshold(self, min_density: float = 0):
         if min_density == 0:
             return
 
         s = np.zeros(self.grid_shape)
-        for i,n in enumerate(self._features):
-            s = s+n
+        for i, n in enumerate(self._features):
+            s = s + n
         counts = s.ravel()
         if min_density == -1:
-            logcounts = np.array(np.log(counts+1)).ravel()
+            logcounts = np.array(np.log(counts + 1)).ravel()
             is_bg = logcounts < 0.5
-            gmm = GaussianMixture(
-                n_components=2, 
-                covariance_type='diag'
-            )
-            gmm.fit(logcounts[~is_bg].reshape((-1,1)))
+            gmm = GaussianMixture(n_components=2, covariance_type="diag")
+            gmm.fit(logcounts[~is_bg].reshape((-1, 1)))
             bglabel = np.argmax(gmm.means_)
             fglabel = np.argmin(gmm.means_)
 
             # Predict background
-            is_bg[~is_bg] =  gmm.predict(logcounts[~is_bg].reshape((-1,1))) == bglabel
+            is_bg[~is_bg] = gmm.predict(logcounts[~is_bg].reshape((-1, 1))) == bglabel
             mask = csr_matrix(is_bg.reshape(self.grid_shape))
         else:
-            mask = csr_matrix(s > min_density, dtype='float32')
-        for i,n in enumerate(self._features):
+            mask = csr_matrix(s > min_density, dtype="float32")
+        for i, n in enumerate(self._features):
             self._features[i] = n.multiply(mask)
         pass
-    def diffuse(self, sigma:float=1.0):
+
+    def diffuse(self, sigma: float = 1.0):
         if self.bin_width is not None:
             sigma = sigma / self.bin_width
         GX = csr_matrix(self.__make_gaussian(sigma, self.grid_shape[0]))
-        GY = csr_matrix(self.__make_gaussian(sigma, self.grid_shape[1]).T) 
+        GY = csr_matrix(self.__make_gaussian(sigma, self.grid_shape[1]).T)
 
-        self._features = [
-           GX @ X @ GY for X in self._features
-        ]      
+        self._features = [GX @ X @ GY for X in self._features]
 
-
-    
     def __make_gaussian(self, sigma, shape):
-        mu = np.arange(shape).reshape((-1,1))
+        mu = np.arange(shape).reshape((-1, 1))
         x = np.arange(shape)
-        d2 = (mu - x)**2 
-        gaussian = np.exp(-d2/ (2*sigma*sigma)) * (d2<(9*sigma*sigma))
-        gaussian = gaussian / gaussian.max(axis=1,keepdims=True)
+        d2 = (mu - x) ** 2
+        gaussian = np.exp(-d2 / (2 * sigma * sigma)) * (d2 < (9 * sigma * sigma))
+        gaussian = gaussian / gaussian.max(axis=1, keepdims=True)
         return gaussian
 
     def which_bin(self):
@@ -296,59 +273,71 @@ class Rasterizer:
     def bin_pos(self):
         return self._bin_com
 
-    def extract(self, sparse:bool=True, normalize:bool=False):
-        features = vstack([f.reshape((1,np.prod(self.grid_shape))) for f in self._features]).T.tocsr()
+    def extract(self, sparse: bool = True, normalize: bool = False):
+        features = vstack(
+            [f.reshape((1, np.prod(self.grid_shape))) for f in self._features]
+        ).T.tocsr()
         if not sparse:
             features = np.array(features.todense())
         if normalize:
-            features = sknormalize(features, norm='l1')
-        return self._bin_com , features
+            features = sknormalize(features, norm="l1")
+        return self._bin_com, features
 
-    def extract_grid(self, sparse:bool=True, normalize:bool=False):
-        features = vstack(self._features, dtype='float32').reshape((len(self._features),np.prod(self.grid_shape))).T.tocsr()
-        features_query = features[self._unique_positions_linear,:]
+    def extract_grid(self, sparse: bool = True, normalize: bool = False):
+        features = (
+            vstack(self._features, dtype="float32")
+            .reshape((len(self._features), np.prod(self.grid_shape)))
+            .T.tocsr()
+        )
+        features_query = features[self._unique_positions_linear, :]
 
         ind = np.arange(np.prod(self.grid_shape))
         mass = np.array(features.sum(axis=1)).ravel()
         keepind = mass > 0
         query_pass_threshold = np.array(features_query.sum(axis=1)).ravel() > 0
-        features = features[keepind,:]
+        features = features[keepind, :]
         ind = ind[keepind]
-        xy = np.unravel_index(ind, self.grid_shape)        
+        xy = np.unravel_index(ind, self.grid_shape)
         if not sparse:
             features = np.array(features.todense())
             features_query = np.array(features_query.todense())
         if normalize:
-            features = sknormalize(features, norm='l1')
-            features_query = sknormalize(features_query, norm='l1')
+            features = sknormalize(features, norm="l1")
+            features_query = sknormalize(features_query, norm="l1")
 
-        return xy , features, features_query, query_pass_threshold
+        return xy, features, features_query, query_pass_threshold
 
 
 class FastCluster:
-    def __init__(self, 
-        xy:np.ndarray, 
-        labels:np.ndarray, 
-        bin_width:float, 
-        sigma:float, 
-        n_clusters:int, 
-        min_density:float=0, 
-        random_state:int=42
+    def __init__(
+        self,
+        xy: np.ndarray,
+        labels: np.ndarray,
+        bin_width: float,
+        sigma: float,
+        n_clusters: int,
+        min_density: float = 0,
+        random_state: int = 42,
     ) -> None:
-                
 
         self.raster = Rasterizer(bin_width, xy, labels)
         self.raster.diffuse(sigma=sigma)
         self.raster.threshold(min_density)
 
         self.kmeans = KMeans(n_clusters, random_state=random_state)
-        self.grid_coords, self.features, self.features_query, pass_threshold = self.raster.extract_grid(normalize=True)
+        (
+            self.grid_coords,
+            self.features,
+            self.features_query,
+            pass_threshold,
+        ) = self.raster.extract_grid(normalize=True)
         self.kmeans.fit(self.features_query[pass_threshold])
         self.labels_grid = self.kmeans.predict(self.features) + 1
         self.labels = self.kmeans.predict(self.features_query) + 1
         self.labels[~pass_threshold] = -1
         self.centroids = self.kmeans.cluster_centers_
         self.bin_width = bin_width
+
     def get_label_per_point(self):
         return self.labels[self.raster.which_bin()]
 
@@ -358,26 +347,34 @@ class FastCluster:
     def get_position_per_bin(self):
         return self.raster._bin_com
 
-    def get_geojson(self, region_name:str='My regions'):
-        labelmask = np.zeros(self.raster.grid_shape, dtype='int')
+    def get_geojson(self, region_name: str = "My regions"):
+        labelmask = np.zeros(self.raster.grid_shape, dtype="int")
         labelmask[self.grid_coords[0], self.grid_coords[1]] = self.labels_grid
         labelmask = labelmask
-        return labelmask2geojson(labelmask, scale=self.bin_width, offset=self.raster.offset, region_name=region_name)
+        return labelmask2geojson(
+            labelmask,
+            scale=self.bin_width,
+            offset=self.raster.offset,
+            region_name=region_name,
+        )
 
 
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt 
-    import pandas as pd
+if __name__ == "__main__":
     from os.path import join
-    df = pd.read_csv(join('data','example_data','data.csv'))
-    xy = df[['x','y']].to_numpy()
-    labels = df['gene'].to_numpy()
-    
+
+    import matplotlib.pyplot as plt
+    import pandas as pd
+
+    df = pd.read_csv(join("data", "example_data", "data.csv"))
+    xy = df[["x", "y"]].to_numpy()
+    labels = df["gene"].to_numpy()
+
     c = FastCluster(xy, labels, bin_width=5, sigma=45, n_clusters=8, min_density=2)
     labels = c.get_label_per_point()
     import json
+
     d = c.get_geojson()
-    with open(join('data','example_data','regions.json'), 'w') as fp:
+    with open(join("data", "example_data", "regions.json"), "w") as fp:
         json.dump(d, fp)
-    df['semantic_label'] = labels
-    df.to_csv(join('data','example_data','results.csv'))
+    df["semantic_label"] = labels
+    df.to_csv(join("data", "example_data", "results.csv"))
