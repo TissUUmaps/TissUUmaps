@@ -659,12 +659,9 @@ interfaceUtils._mGenUIFuncs.deleteTab=function(uid){
 * Options are not implemented but are there if needed in the future 
 */
 interfaceUtils._mGenUIFuncs.dataTabUIToH5 = function(uid){
-    var alldrops=interfaceUtils._mGenUIFuncs.getTabDropDowns(uid);
-    var namesymbols=Object.getOwnPropertyNames(alldrops);
+    var alldrops=interfaceUtils._mGenUIFuncs.getTabDropDowns(uid, true);
+    var namesymbols=Object.getOwnPropertyNames(alldrops, true);
     namesymbols.forEach((drop)=>{
-        if(drop=="cb_cmap") return; //if its colormaps dont fill it with csv but with d3 luts which are already there
-        if(drop=="shape_fixed") return; //if its shapes dont fill it with csv but with shape symbols which are already there
-        if(drop=="collectionItem_fixed" || drop=="coord_factor" || drop=="scale_factor" || drop=="shape_gr_dict" || drop=="cb_gr_dict" || drop=="opacity" || drop=="pie_dict" || drop=="tooltip_fmt") return; //not dropdowns
         if (!alldrops[drop]) return;
         //alldrops[drop].parent.innerHTML = "";
         var inputText=HTMLElementUtils.createElement({"kind":"input", "id":alldrops[drop].id, "extraAttributes":{ "name":alldrops[drop].id, "class":"form-control","type":"text" }});
@@ -796,7 +793,8 @@ interfaceUtils._mGenUIFuncs.ActivateTab=function(uid){
  * "X","Y","gb_sr","gb_col","gb_name","cb_cmap","cb_col"
  * @returns {Object} allinputs
  */
-interfaceUtils._mGenUIFuncs.getTabDropDowns = function(uid){
+interfaceUtils._mGenUIFuncs.getTabDropDowns = function(uid, only_csvColumns){
+    if (only_csvColumns === undefined) only_csvColumns = false;
     allinputs={}
     allinputs["X"]=interfaceUtils.getElementById(uid+"_x-value");
     allinputs["Y"]=interfaceUtils.getElementById(uid+"_y-value");
@@ -804,25 +802,26 @@ interfaceUtils._mGenUIFuncs.getTabDropDowns = function(uid){
     allinputs["gb_col"]=interfaceUtils.getElementById(uid+"_gb-col-value");
     allinputs["gb_name"]=interfaceUtils.getElementById(uid+"_gb-col-name");
 
-    allinputs["cb_cmap"]=interfaceUtils.getElementById(uid+"_cb-cmap-value");
     allinputs["cb_col"]=interfaceUtils.getElementById(uid+"_cb-col-value");    
-    allinputs["cb_gr_dict"]=interfaceUtils.getElementById(uid+"_cb-bygroup-dict-val");
 
     allinputs["scale_col"]=interfaceUtils.getElementById(uid+"_scale-col");   
-    allinputs["scale_factor"]=interfaceUtils.getElementById(uid+"_scale-factor");
-    allinputs["coord_factor"]=interfaceUtils.getElementById(uid+"_coord-factor");
-    allinputs["pie_col"]=interfaceUtils.getElementById(uid+"_piechart-col");
-    allinputs["pie_dict"]=interfaceUtils.getElementById(uid+"_piechart-dict-val");
     allinputs["edges_col"]=interfaceUtils.getElementById(uid+"_edges-col");
-    allinputs["shape_col"]=interfaceUtils.getElementById(uid+"_shape-col-value");
-    allinputs["shape_fixed"]=interfaceUtils.getElementById(uid+"_shape-fixed-value");
-    allinputs["shape_gr_dict"]=interfaceUtils.getElementById(uid+"_shape-bygroup-dict-val");
+    allinputs["pie_col"]=interfaceUtils.getElementById(uid+"_piechart-col");
     allinputs["opacity_col"]=interfaceUtils.getElementById(uid+"_opacity-col");
-    allinputs["opacity"]=interfaceUtils.getElementById(uid+"_opacity");
-    allinputs["tooltip_fmt"]=interfaceUtils.getElementById(uid+"_tooltip_fmt");
+    allinputs["shape_col"]=interfaceUtils.getElementById(uid+"_shape-col-value");
     allinputs["collectionItem_col"]=interfaceUtils.getElementById(uid+"_collectionItem-col-value");
-    allinputs["collectionItem_fixed"]=interfaceUtils.getElementById(uid+"_collectionItem-fixed-value");
-
+    if (!only_csvColumns) {
+        allinputs["cb_gr_dict"]=interfaceUtils.getElementById(uid+"_cb-bygroup-dict-val");
+        allinputs["cb_cmap"]=interfaceUtils.getElementById(uid+"_cb-cmap-value");
+        allinputs["scale_factor"]=interfaceUtils.getElementById(uid+"_scale-factor");
+        allinputs["coord_factor"]=interfaceUtils.getElementById(uid+"_coord-factor");
+        allinputs["pie_dict"]=interfaceUtils.getElementById(uid+"_piechart-dict-val");
+        allinputs["shape_fixed"]=interfaceUtils.getElementById(uid+"_shape-fixed-value");
+        allinputs["shape_gr_dict"]=interfaceUtils.getElementById(uid+"_shape-bygroup-dict-val");
+        allinputs["opacity"]=interfaceUtils.getElementById(uid+"_opacity");
+        allinputs["tooltip_fmt"]=interfaceUtils.getElementById(uid+"_tooltip_fmt");
+        allinputs["collectionItem_fixed"]=interfaceUtils.getElementById(uid+"_collectionItem-fixed-value");
+    }
     return allinputs;
 }
 

@@ -135,9 +135,6 @@ dataUtils.getAllH5Data = function(data_id){
 
     let getH5Data = function(drop){
         return new Promise((resolve, reject) => {
-            if(drop=="cb_cmap") {reject(null);return} //if its colormaps dont fill it with csv but with d3 luts which are already there
-            if(drop=="shape_fixed") {reject(null);return} //if its shapes dont fill it with csv but with shape symbols which are already there
-            if(drop=="collectionItem_fixed" || drop=="coord_factor" || drop=="scale_factor" || drop=="shape_gr_dict" || drop=="cb_gr_dict" || drop=="opacity" || drop=="pie_dict" || drop=="tooltip_fmt") {reject(null);return} //not dropdowns
             if (!alldrops[drop]) {reject(null);return}
             if (alldrops[drop].value != "") {
                 if (data_obj["_processeddata"].columns.includes(alldrops[drop].value)) {
@@ -169,8 +166,9 @@ dataUtils.getAllH5Data = function(data_id){
         })
     }
 
-    var alldrops=interfaceUtils._mGenUIFuncs.getTabDropDowns(data_id);
+    var alldrops=interfaceUtils._mGenUIFuncs.getTabDropDowns(data_id, true);
     var namesymbols=Object.getOwnPropertyNames(alldrops);
+    namesymbols = namesymbols.filter((val)=>{return alldrops[val].value != ""})
     // TODO: keep columns if needed!
     console.log(data_obj["_processeddata"])
     if (data_obj["_processeddata"] === undefined) {
@@ -434,12 +432,9 @@ dataUtils.createMenuFromCSV = function(data_id,datumExample) {
     data_obj["_csv_header"] = csvheaders;
 
     //fill dropdowns
-    var alldrops=interfaceUtils._mGenUIFuncs.getTabDropDowns(data_id);
+    var alldrops=interfaceUtils._mGenUIFuncs.getTabDropDowns(data_id, true);
     var namesymbols=Object.getOwnPropertyNames(alldrops);
     namesymbols.forEach((drop)=>{
-        if(drop=="cb_cmap") return; //if its colormaps dont fill it with csv but with d3 luts which are already there
-        if(drop=="shape_fixed") return; //if its shapes dont fill it with csv but with shape symbols which are already there
-        if(drop=="collectionItem_fixed" || drop=="coord_factor" || drop=="scale_factor" || drop=="shape_gr_dict" || drop=="cb_gr_dict" || drop=="opacity" || drop=="pie_dict" || drop=="tooltip_fmt") return; //not dropdowns
         if (!alldrops[drop]) return;
         alldrops[drop].innerHTML = "";
         var option = document.createElement("option");
