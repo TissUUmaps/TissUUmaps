@@ -40,9 +40,15 @@ class H5_API {
     }
 
     load (url) {
-        this.status[url] = "loading";
+        if (typeof url === 'string' || url instanceof String) {
+            var urlName = url;
+        }
+        else {
+            var urlName = url.name;
+        }
+        this.status[urlName] = "loading";
         this.loadPromise(url).then((data)=>{
-            setTimeout(()=>{this.status[url] = "loaded";},50);
+            setTimeout(()=>{this.status[urlName] = "loaded";},50);
         })
     }
 
@@ -51,11 +57,18 @@ class H5_API {
         function sleep (time) {
             return new Promise((resolve) => setTimeout(resolve, time));
         }
-        if (this.status[url] === undefined) {
+        if (!(typeof url === 'string' || url instanceof String)) {
+            var urlName = url.name;
+        }
+        else {
+            var urlName = url;
+        }
+        console.log("get:",url, urlName, this.status[urlName]);
+        if (this.status[urlName] === undefined) {
             this.load(url);
         }
         return new Promise(resolve => {
-            if (this.status[url] === "loading") {
+            if (this.status[urlName] === "loading") {
                 sleep(50).then (()=>{
                     this.get(url, payload, action).then((data)=>{
                         resolve(data)
@@ -65,7 +78,13 @@ class H5_API {
             }
             const id = this.count++;
             this.resolvers[id] = resolve
-            payload.url = h5Utils.relative_root + url;
+            if (typeof url === 'string' || url instanceof String) {
+                payload.url = h5Utils.relative_root + url;
+            }
+            else {
+                payload.url = urlName;
+            }
+            console.log(payload, action);
             this.worker.postMessage({id: id, action: action, payload: payload});
         });
     }

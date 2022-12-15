@@ -13,10 +13,10 @@ function getAttributes (item) {
     return attrs;
 }
 
-self.onmessage = async function (event) {   
+self.onmessage = async function (event) {
     const { action, payload, id } = event.data;
     if (action === "load") {
-        const url = payload?.url;
+        var url = payload?.url;
         const { FS } = await h5wasm.ready;
         if (typeof url === 'string' || url instanceof String) {
             const requestChunkSize = payload?.requestChunkSize ?? 1024 * 1024;
@@ -38,7 +38,8 @@ self.onmessage = async function (event) {
             FS.mkdir('/work');
             FS.mount(FS.filesystems.WORKERFS, { files: [url] }, '/work');
 
-            file[url] = new h5wasm.File(`/work/${url.name}`, 'r');
+            file[url.name] = new h5wasm.File(`/work/${url.name}`, 'r');
+            url = url.name
         }
         self.postMessage({id:id,data:file[url].keys()})
     }
