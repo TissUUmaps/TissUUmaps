@@ -177,10 +177,16 @@ dataUtils.getAllH5Data = function(data_id){
         };
         data_obj["_csv_header"] = [];
     }
+    let progressBar=interfaceUtils.getElementById(data_id+"_csv_progress");
+    progressBar.style.width = "10%";
     // We get H5 data for each field, sequentially:
-    return namesymbols.reduce(function(p, drop) {
+    return namesymbols.reduce(function(p, drop, drop_index) {
         return p.then(function(results) {
             return getH5Data(drop).then(function(data) {
+                let perc=100 * (drop_index+1) / namesymbols.length;
+                perc=perc.toString()+"%";
+                console.log(drop_index, namesymbols.length,perc);
+                progressBar.style.width = perc;
                 results.push(data);
                 return results;
             },
