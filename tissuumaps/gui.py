@@ -1,6 +1,12 @@
 import logging
+import sys
 import traceback
 import warnings
+
+debug_logger = logging.getLogger("root")
+debug_logger.write = debug_logger.debug  # consider all prints as debug information
+debug_logger.flush = lambda: None  # this may be called when printing
+sys.stdout = debug_logger
 
 try:
     from PyQt6 import QtGui
