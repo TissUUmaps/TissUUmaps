@@ -52,11 +52,11 @@ jobs:
           images: ${{ matrix.images }}
           tags: |
             type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}.{{micro}}.{{patch}}
-            type=semver,pattern={{major}}.{{minor}}.{{micro}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=pep440,pattern={{version}}
+            type=pep440,pattern={{major}}.{{minor}}.{{micro}}.{{patch}}
+            type=pep440,pattern={{major}}.{{minor}}.{{micro}}
+            type=pep440,pattern={{major}}.{{minor}}
+            type=pep440,pattern={{major}}
       - name: Build and Publish
         uses: docker/build-push-action@v3
         with:
