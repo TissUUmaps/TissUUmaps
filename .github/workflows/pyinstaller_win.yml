@@ -60,6 +60,9 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./standalone
     needs: [build]
     permissions:
       contents: write
