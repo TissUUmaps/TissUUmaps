@@ -17,7 +17,8 @@ overlayUtils = {
     _percentageForSubsample: 0.25,
     _zoomForSubsample:5.15,
     _layerOpacities:{},
-    _linkMarkersToChannels:false
+    _linkMarkersToChannels:false,
+    _collectionMode:false
 }
 
 /**
@@ -33,6 +34,7 @@ overlayUtils.addAllLayers = function() {
         overlayUtils.addLayer(layer, i-1);
     });
     overlayUtils.addAllLayersSettings();
+    setTimeout(overlayUtils.setCollectionMode,500);
 }
 
 /**
@@ -44,6 +46,38 @@ overlayUtils.addAllLayersSettings = function() {
         overlayUtils.addLayerSettings(layer.name, layer.tileSource, i-1);
     });
     filterUtils.setRangesFromFilterItems();
+    
+    // Add collection mode checkbox:
+    if (document.getElementById("setCollectionModeRow")) {
+        document.getElementById("setCollectionModeRow").remove();
+    }
+    var extraAttributes = {
+        class: "form-check-input",
+        type: "checkbox"
+    };
+    if (projectUtils._activeState.collectionMode) {
+        extraAttributes.checked = true;
+    }
+    var input11 = HTMLElementUtils.createElement({
+        kind: "input",
+        id: "setCollectionMode",
+        extraAttributes: extraAttributes,
+    });
+    var label11 = HTMLElementUtils.createElement({
+        kind: "label",
+        extraAttributes: { for: "setCollectionMode" },
+    });
+    label11.innerHTML = "&nbsp;Collection mode";
+    var row = HTMLElementUtils.createRow({ id: "setCollectionModeRow"});
+    var col1 = HTMLElementUtils.createColumn({ width: 12 });
+    col1.appendChild(input11);
+    col1.appendChild(label11);
+    row.appendChild(col1);
+    settingsPanel.after(row);
+    input11.addEventListener("change", (event) => {
+        projectUtils._activeState.collectionMode = event.target.checked;
+        overlayUtils.setCollectionMode();
+    });
 }
 
 /**
@@ -108,8 +142,16 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
         filterParams.layer = layerIndex + 1;
 
         filterInput = filterUtils.createHTMLFilter(filterParams);
-        filterInput.classList.add("overlay-slider");
-        filterInput.classList.add("form-range");
+        if (filterParams.type == "range") {
+            filterInput.classList.add("overlay-slider");
+            filterInput.classList.add("form-range");
+        }
+        else if (filterParams.type == "checkbox") {
+            filterInput.classList.add("form-check-input");
+        }
+        else if (filterParams.type == "color") {
+            filterInput.classList.add("form-range");
+        }
         var td_filterInput = document.createElement("td");
         td_filterInput.classList.add("text-center");
         td_filterInput.appendChild(filterInput);
@@ -269,6 +311,33 @@ overlayUtils.addLayer = function(layer, i, visible) {
     var x = layer.x || 0;
     var y = layer.y || 0;
     var scale = layer.scale || 1;
+    var flip = layer.flip || false;
+    var rotation = layer.rotation || 0;
+    if (layer.transform_matrix) {
+        var transform_matrix = layer.transform_matrix.map(Number) 
+        rotation = Math.atan2(transform_matrix[1], transform_matrix[0]) * 360 / (2*Math.PI)
+        var shear_y = Math.atan2(transform_matrix[4], transform_matrix[1]) - Math.PI/2 - (2*Math.PI*rotation / 360)
+        var scale_x = Math.sqrt(transform_matrix[0] * transform_matrix[0] + transform_matrix[3] * transform_matrix[3])
+        var scale_y = Math.sqrt(transform_matrix[1] * transform_matrix[1] + transform_matrix[4] * transform_matrix[4]) * Math.cos(shear_y)
+        if (scale_x < 0) {
+            scale_x = -scale_x;
+            flip = true;
+        }
+        if (scale_y < 0) {
+            scale_y = -scale_y;
+            flip = true;
+            rotation += 180;
+        }
+        scale = (scale_x + scale_y) / 2.;
+        x = transform_matrix[2]
+        y = transform_matrix[5]
+        layer.x = x;
+        layer.y = y;
+        layer.scale = scale;
+        layer.rotation = rotation;
+        layer.flip = flip;
+    }
+    
     tmapp[vname].addTiledImage({
         index: i + 1,
         x: 0,
@@ -281,6 +350,8 @@ overlayUtils.addLayer = function(layer, i, visible) {
             tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setWidth(scale*layerNX/layer0X);
             var point = new OpenSeadragon.Point(x/layer0X, y/layer0X);
             tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setPosition(point);
+            tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setRotation(rotation);
+            tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setFlip(flip);
             if (loadingModal) {
                 setTimeout(function(){$(loadingModal).modal("hide");}, 500);
             }
@@ -296,6 +367,51 @@ overlayUtils.addLayer = function(layer, i, visible) {
             interfaceUtils.alert("Impossible to load file.")
             showModal = false;
         } 
+    });
+}
+
+/** 
+ * @summary Set collection mode of layers */
+ overlayUtils.setCollectionMode = function() {
+    var op = tmapp["object_prefix"];
+    overlayUtils.waitLayersReady().then(() => {
+        if (projectUtils._activeState.collectionMode) {
+            overlayUtils._collectionMode = true;
+            var collectionLayout = {
+                tileSize: 1, tileMargin: 0.1,
+                columns: Math.ceil(Math.sqrt(tmapp.layers.length))
+            }
+            if (projectUtils._activeState["collectionLayout"] !== undefined) {
+                collectionLayout = projectUtils._activeState["collectionLayout"];
+            }
+            tmapp["ISS_viewer"].world.arrange(collectionLayout);
+            var inputs = document.querySelectorAll(".visible-layers");
+            for(var i = 0; i < inputs.length; i++) {
+                inputs[i].checked = false;
+                inputs[i].click();
+            }
+            tmapp["ISS_viewer"].viewport.goHome();
+            $(".channelRange").hide();
+        }
+        else if (overlayUtils._collectionMode){
+            overlayUtils._collectionMode = false;
+            tmapp["ISS_viewer"].world.setAutoRefigureSizes(false);
+            for (var i = 0; i < tmapp["ISS_viewer"].world._items.length; i++) {
+                layer = tmapp.layers[i];
+                var x = layer.x || 0;
+                var y = layer.y || 0;
+                var scale = layer.scale || 1;
+                var  item = tmapp["ISS_viewer"].world._items[i];
+                var layer0X = tmapp[op + "_viewer"].world.getItemAt(0).getContentSize().x;
+                var layerNX = item.getContentSize().x;
+                item.setWidth(scale*layerNX/layer0X);
+                var point = new OpenSeadragon.Point(x/layer0X, y/layer0X);
+                item.setPosition(point);
+            }
+            tmapp["ISS_viewer"].world.setAutoRefigureSizes(true);
+            tmapp["ISS_viewer"].viewport.goHome();
+            $(".channelRange").show();
+        }
     });
 }
 
@@ -322,19 +438,41 @@ overlayUtils.areAllFullyLoaded = function () {
     var count = tmapp[op + "_viewer"].world.getItemCount();
     for (var i = 0; i < count; i++) {
       tiledImage = tmapp[op + "_viewer"].world.getItemAt(i);
-      if (!tiledImage.getFullyLoaded() && tiledImage.getOpacity() != 0) {
-        return false;
+      if (Object.keys(tiledImage.loadingCoverage).length > 0) {
+        if (!tiledImage.getFullyLoaded() && tiledImage.getOpacity() != 0) {
+            return false;
+        }
       }
     }
     return true;
   }
 
-overlayUtils.waitFullyLoaded = function () {
+overlayUtils.waitLayersReady = function () {
     function sleep (time) {
         return new Promise((resolve) => setTimeout(resolve, time));
     }
     return new Promise((resolve, reject) => {
         sleep(200).then (()=>{
+            var op = tmapp["object_prefix"];
+            if (!tmapp[op + "_viewer"].world || !tmapp[op + "_viewer"].world.getItemCount() != tmapp.layers.length) {
+                resolve();
+                return;
+            }
+            else {
+                overlayUtils.waitLayersReady().then(()=>{
+                    setTimeout(resolve,200);
+                    return;
+                });
+            }    
+        });
+    });
+}
+overlayUtils.waitFullyLoaded = function () {
+    function sleep (time) {
+        return new Promise((resolve) => setTimeout(resolve, time));
+    }
+    return new Promise((resolve, reject) => {
+        sleep(400).then (()=>{
             if (overlayUtils.areAllFullyLoaded()) {
                 resolve();
                 return;
@@ -506,13 +644,15 @@ overlayUtils.savePNG=function() {
                         ctx_offset.canvas.width,
                         ctx_offset.canvas.height
                     );
-                    getCanvasCtx_aux(index+1, size, ctx, bounds).then(
-                        (ctx)=>{
-                            resolve(ctx);
-                            return;
-                        }
-                        
-                    )
+                    setTimeout(() => {
+                        getCanvasCtx_aux(index+1, size, ctx, bounds).then(
+                            (ctx)=>{
+                                resolve(ctx);
+                                return;
+                            }
+                            
+                        )
+                    },200);
                 });
             });
         });
@@ -523,7 +663,7 @@ overlayUtils.savePNG=function() {
             var canvas = document.createElement("canvas");
             var ctx = canvas.getContext("2d");
             var ctx_osd = document.querySelector(".openseadragon-canvas canvas").getContext("2d");
-            var ctx_webgl = document.querySelector("#gl_canvas").getContext("webgl", glUtils._options);
+            var ctx_webgl = document.querySelector("#gl_canvas").getContext("webgl2", glUtils._options);
             canvas.width = tiling * Math.min(ctx_osd.canvas.width, ctx_webgl.canvas.width);
             canvas.height = tiling * Math.min(ctx_osd.canvas.height, ctx_webgl.canvas.height);
             var bounds = tmapp.ISS_viewer.viewport.getBounds();
@@ -559,7 +699,7 @@ overlayUtils.savePNG=function() {
         // Create an empty canvas element
         var canvas = document.createElement("canvas");
         var ctx_osd = document.querySelector(".openseadragon-canvas canvas").getContext("2d");
-        var ctx_webgl = document.querySelector("#gl_canvas").getContext("webgl", glUtils._options);
+        var ctx_webgl = document.querySelector("#gl_canvas").getContext("webgl2", glUtils._options);
         canvas.width = Math.min(ctx_osd.canvas.width, ctx_webgl.canvas.width);
         canvas.height = Math.min(ctx_osd.canvas.height, ctx_webgl.canvas.height);
 

@@ -1,2 +1,2 @@
 pyinstaller ./TissUUmaps.spec --noconfirm
-mv dist/TissUUmaps/PyQt5/Qt dist/TissUUmaps/PyQt5/Qt5
+mv dist/TissUUmaps/PyQt6/Qt dist/TissUUmaps/PyQt6/Qt6

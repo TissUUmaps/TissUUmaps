@@ -2,12 +2,11 @@
 
 block_cipher = None
 
-
 a = Analysis(['../tissuumaps/gui.py'],
              pathex=['./'],
              binaries=[],
              datas=[('../tissuumaps/VERSION', './'), ('../tissuumaps/web.zip', './'), ('../tissuumaps/templates', 'templates'), ('../tissuumaps/flask_filetree', 'flask_filetree'), ('../tissuumaps/static', 'static'), ('../tissuumaps/plugins/__init__.py','plugins')],
-             hiddenimports=["pyyaml","pyvips","matplotlib","mpl_toolkits"],
+             hiddenimports=["pyvips","matplotlib","mpl_toolkits","scipy.sparse"],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],

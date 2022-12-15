@@ -11,7 +11,12 @@
     <script src="static/vendor/d3-plugins/d3-scale-chromaticV3.js"></script>
     <script src="static/vendor/jquery-3.5.1/jquery-3.5.1.min.js"></script>
     <script src="static/vendor/chosen/chosen.jquery.min.js"></script>
+    <script src="static/vendor/jquery-3.5.1/jquery.autocomplete.min.js"></script>
     <link rel="stylesheet" href="static/vendor/chosen/chosen.min.css" />
+    <link
+      rel="stylesheet"
+      href="static/vendor/jquery-3.5.1/jquery.autocomplete.css"
+    />
     <link
       rel="stylesheet"
       href="static/vendor/bootstrap-5.1.1/dist/css/bootstrap.min.css"
@@ -481,6 +486,7 @@
   <script src="static/vendor/sorttable/sorttable.js"></script>
   <script src="static/js/utils/interfaceUtils.js"></script>
   <script src="static/js/utils/dataUtils.js"></script>
+  <script src="static/js/utils/h5Utils.js"></script>
   <script src="static/js/utils/markerUtils.js"></script>
   <script src="static/js/utils/OSDViewerUtils.js"></script>
   <script src="static/js/utils/HTMLElementUtils.js"></script>
@@ -526,9 +532,11 @@
         ];*/
       }
       glUtils._markershapes = "/static/misc/markershapes.png"
+      h5Utils.worker_path = "/static/js/utils/h5Utils_worker.js";
+      h5Utils.relative_root = "../../../";
       tmapp.registerActions();
       tmapp.init();
-
+      tmapp.version = "{{ version | safe }}";
       {% for plugin in plugins %} {% if plugin %}
       pluginUtils.addPlugin("{{ plugin }}");
       {% endif %} {% endfor %}

@@ -26,10 +26,12 @@ setuptools.setup(
         "ipython>=7.0",
         "pyvips>=2.1.14",
         "pyyaml>=6.0",
+        "h5py>=3.6.0",
+        "scipy>=1.7.2",
     ],
     extras_require={
-        "pyqt5": ["PyQt5>=5.15.4", "PyQtWebEngine>=5.15.4"],
-        "full": ["PyQt5>=5.15.4", "PyQtWebEngine>=5.15.4"],
+        "pyqt6": ["PyQt6>=6.3.0", "PyQt6-WebEngine>=6.3.0"],
+        "full": ["PyQt6>=6.3.0", "PyQt6-WebEngine>=6.3.0"],
     },
     classifiers=[
         "Programming Language :: Python :: 3",

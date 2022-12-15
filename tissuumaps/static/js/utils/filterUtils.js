@@ -18,17 +18,8 @@
     _filters: {
         "Color":{
             params:{
-                type:"select",
-                options:[
-                    {text:"----", value:0},
-                    {text:"Red", value:"100,0,0"},
-                    {text:"Green", value:"0,100,0"},
-                    {text:"Blue", value:"0,0,100"},
-                    {text:"Yellow", value:"100,100,0"},
-                    {text:"Cyan", value:"0,100,100"},
-                    {text:"Magenta", value:"100,0,100"},
-                    {text:"Gray", value:"100,100,100"}
-                ]
+                type:"color",
+                value:"100,100,100"
             },
             filterFunction: function (value) {
                 if (value == 0) {  return function (context, callback) {callback();}}
@@ -295,9 +286,31 @@
         },
         id: "filterCompositeMode",
         options:[
-            {text:"Channels", value:"source-over"},
-            {text:"Composite", value:"lighter"},
-            {text:"Collection", value:"collection"}
+            {text:"source-over", value:"source-over"},
+            {text:"lighter", value:"lighter"},
+            {text:"darken", value:"darken"},
+            {text:"source-atop", value:"source-atop"},
+            {text:"source-in", value:"source-in"},
+            {text:"source-out", value:"source-out"},
+            {text:"destination-over", value:"destination-over"},
+            {text:"destination-atop", value:"destination-atop"},
+            {text:"destination-in", value:"destination-in"},
+            {text:"destination-out", value:"destination-out"},
+            {text:"copy", value:"copy"},
+            {text:"xor", value:"xor"},
+            {text:"multiply", value:"multiply"},
+            {text:"screen", value:"screen"},
+            {text:"overlay", value:"overlay"},
+            {text:"color-dodge", value:"color-dodge"},
+            {text:"color-burn", value:"color-burn"},
+            {text:"hard-light", value:"hard-light"},
+            {text:"soft-light", value:"soft-light"},
+            {text:"difference", value:"difference"},
+            {text:"exclusion", value:"exclusion"},
+            {text:"hue", value:"hue"},
+            {text:"saturation", value:"saturation"},
+            {text:"color", value:"color"},
+            {text:"luminosity", value:"luminosity"}
         ]
     }
     var label = document.createElement("label");
@@ -341,32 +354,29 @@ filterUtils.getFilterFunction = function(filterName) {
 	caman.Store.put = function() {};
 
     var op = tmapp["object_prefix"];
-    if (!tmapp[op + "_viewer"].world || !tmapp[op + "_viewer"].world.getItemAt(Object.keys(filterUtils._filterItems).length-1)) {
-        setTimeout(function() {
-            if (calledItems == filterUtils._filterItems)
-                filterUtils.applyFilterItems(calledItems);
-        }, 100);
-        return;
-    }
-    filters = [];
-    for (const layer in filterUtils._filterItems) {
-        processors = [];
-        for(var filterIndex=0;filterIndex<filterUtils._filterItems[layer].length;filterIndex++) {
-            processors.push(
-                filterUtils._filterItems[layer][filterIndex].filterFunction(filterUtils._filterItems[layer][filterIndex].value)
-            );
-        }
-        filters.push({
-            items: tmapp[op + "_viewer"].world.getItemAt(layer),
-            processors: processors
+    overlayUtils.waitLayersReady().then(() => {    
+        filters = [];
+        for (const layer in filterUtils._filterItems) {
+            processors = [];
+            for(var filterIndex=0;filterIndex<filterUtils._filterItems[layer].length;filterIndex++) {
+                processors.push(
+                    filterUtils._filterItems[layer][filterIndex].filterFunction(filterUtils._filterItems[layer][filterIndex].value)
+                );
+            }
+            filters.push({
+                items: tmapp[op + "_viewer"].world.getItemAt(layer),
+                processors: processors
+            });
+        };
+        tmapp[op + "_viewer"].setFilterOptions({
+            filters: filters,
+            loadMode: "async"
         });
-    };
-    tmapp[op + "_viewer"].setFilterOptions({
-        filters: filters
-    });
-    for ( var i = 0; i < tmapp[op + "_viewer"].world._items.length; i++ ) {
-        tmapp[op + "_viewer"].world._items[i].tilesMatrix={};
-    }
+        for ( var i = 0; i < tmapp[op + "_viewer"].world._items.length; i++ ) {
+            tmapp[op + "_viewer"].world._items[i].tilesMatrix={};
+            tmapp[op + "_viewer"].world._items[i]._needsDraw = true;
+        }
+    })
 }
 
 /** 
@@ -383,6 +393,20 @@ filterUtils.getFilterFunction = function(filterName) {
                     filterRange.value = item.value;
                 else if (filterRange.type == "checkbox")
                     filterRange.checked = item.value;
+                if (filterRange.type == "color") {
+                    function componentToHex(c) {
+                        var hex = Math.floor(c*255/100).toString(16);
+                        return hex.length == 1 ? "0" + hex : hex;
+                    }
+                    function rgbToHex(rgb) {
+                        if (rgb == "0" || rgb == 0) {return "#FFFFFF";}
+                        var array = rgb.split(',');
+                        return "#" + componentToHex(array[0]) + componentToHex(array[1]) + componentToHex(array[2]);
+                    }
+                    console.log(item.value);
+                    console.log("setRangesFromFilterItems", item.value, rgbToHex(item.value))
+                    filterRange.value = rgbToHex(item.value);
+                }
             }
         }
     };
@@ -393,98 +417,59 @@ filterUtils.getFilterFunction = function(filterName) {
  *  */
 filterUtils.getFilterItems = function() {
     var op = tmapp["object_prefix"];
-    if (!tmapp[op + "_viewer"].world || !tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1)) {
-        setTimeout(function() {
-            filterUtils.getFilterItems();
-        }, 100);
-        return;
-    }
-    filterInputsRanges = document.getElementsByClassName("filterInput");
-    items = {};
-    for (i = 0; i < filterInputsRanges.length; i++) {
-        var filterLayer = filterInputsRanges[i].getAttribute("layer");
-        items[filterLayer] = []
-    }
-    for (i = 0; i < filterInputsRanges.length; i++) {
-        var filterName = filterInputsRanges[i].getAttribute("filter");
-        var filterLayer = filterInputsRanges[i].getAttribute("layer");
-        var filterFunction = filterUtils.getFilterFunction(filterName);
-        
-        if (filterInputsRanges[i].type == "range" || filterInputsRanges[i].type == "select-one")
-            inputValue = filterInputsRanges[i].value;
-        else if (filterInputsRanges[i].type == "checkbox")
-            inputValue = filterInputsRanges[i].checked;
-        if (inputValue) {
-            items[filterLayer].push(
-                {
-                    filterFunction: filterFunction,
-                    value: inputValue,
-                    name: filterName
-                }
-            );
+    
+    overlayUtils.waitLayersReady().then(() => {    
+        filterInputsRanges = document.getElementsByClassName("filterInput");
+        items = {};
+        for (i = 0; i < filterInputsRanges.length; i++) {
+            var filterLayer = filterInputsRanges[i].getAttribute("layer");
+            items[filterLayer] = []
         }
-    }
-    filterUtils._filterItems = items;
-    filterUtils.applyFilterItems(items);
+        for (i = 0; i < filterInputsRanges.length; i++) {
+            var filterName = filterInputsRanges[i].getAttribute("filter");
+            var filterLayer = filterInputsRanges[i].getAttribute("layer");
+            var filterFunction = filterUtils.getFilterFunction(filterName);
+            
+            if (filterInputsRanges[i].type == "range" || filterInputsRanges[i].type == "select-one")
+                inputValue = filterInputsRanges[i].value;
+            else if (filterInputsRanges[i].type == "checkbox")
+                inputValue = filterInputsRanges[i].checked;
+            else if (filterInputsRanges[i].type == "color") {
+                function hex2RGB(hex) {
+                    const color = hex
+                    const r = Math.floor(100*parseInt(color.substr(1,2), 16)/255)
+                    const g = Math.floor(100*parseInt(color.substr(3,2), 16)/255)
+                    const b = Math.floor(100*parseInt(color.substr(5,2), 16)/255)
+                    console.log(hex, r+","+g+","+b);
+                    return r+","+g+","+b
+                }
+                inputValue = hex2RGB(filterInputsRanges[i].value);
+            }
+            if (inputValue) {
+                items[filterLayer].push(
+                    {
+                        filterFunction: filterFunction,
+                        value: inputValue,
+                        name: filterName
+                    }
+                );
+            }
+        }
+        filterUtils._filterItems = items;
+        filterUtils.applyFilterItems(items);
+    })
 }
 
-filterUtils.setCompositeOperation = function(restart) {
+filterUtils.setCompositeOperation = function() {
     var op = tmapp["object_prefix"];
-    if (!tmapp[op + "_viewer"].world || !tmapp[op + "_viewer"].world.getItemAt(Object.keys(filterUtils._filterItems).length-1)) {
-        setTimeout(function() {
-            if (restart == undefined){
-                restart = 10;
-            }
-            if (restart > 0)
-                filterUtils.setCompositeOperation(restart-1);
-        }, 100);
-        return;
-    }
-    var filterCompositeMode = document.getElementById("filterCompositeMode");
-    filterCompositeMode.value = filterUtils._compositeMode;
-    newCompositeMode = filterUtils._compositeMode;
-    if (newCompositeMode == "collection") {
-        tmapp["ISS_viewer"].collectionMode = true;
-        newCompositeMode = "lighter";
-        var collectionLayout = {
-            tileSize: 1, tileMargin: 0.1,
-            columns: Math.ceil(Math.sqrt(tmapp.layers.length))
+    overlayUtils.waitLayersReady().then(() => {
+        var filterCompositeMode = document.getElementById("filterCompositeMode");
+        filterCompositeMode.value = filterUtils._compositeMode;
+        tmapp[op + "_viewer"].compositeOperation = filterUtils._compositeMode;
+        for (i = 0; i < tmapp[op + "_viewer"].world.getItemCount(); i++) {
+            tmapp[op + "_viewer"].world.getItemAt(i).setCompositeOperation(filterUtils._compositeMode);
         }
-        if (projectUtils._activeState["collectionLayout"] !== undefined) {
-            collectionLayout = projectUtils._activeState["collectionLayout"];
-        }
-        tmapp["ISS_viewer"].world.arrange(collectionLayout);
-        var inputs = document.querySelectorAll(".visible-layers");
-        for(var i = 0; i < inputs.length; i++) {
-            inputs[i].checked = false;
-            inputs[i].click();
-        }
-        tmapp["ISS_viewer"].viewport.goHome();
-        $(".channelRange").hide();
-    }
-    else if (tmapp["ISS_viewer"].collectionMode){
-        tmapp["ISS_viewer"].collectionMode = false;
-        tmapp["ISS_viewer"].world.setAutoRefigureSizes(false);
-        for (var i = 0; i < tmapp["ISS_viewer"].world._items.length; i++) {
-            layer = tmapp.layers[i];
-            var x = layer.x || 0;
-            var y = layer.y || 0;
-            var scale = layer.scale || 1;
-            var  item = tmapp["ISS_viewer"].world._items[i];
-            var layer0X = tmapp[op + "_viewer"].world.getItemAt(0).getContentSize().x;
-            var layerNX = item.getContentSize().x;
-            item.setWidth(scale*layerNX/layer0X);
-            var point = new OpenSeadragon.Point(x/layer0X, y/layer0X);
-            item.setPosition(point);
-        }
-        tmapp["ISS_viewer"].world.setAutoRefigureSizes(true);
-        tmapp["ISS_viewer"].viewport.goHome();
-        $(".channelRange").show();
-    }
-    tmapp[op + "_viewer"].compositeOperation = filterUtils._compositeMode;
-    for (i = 0; i < tmapp[op + "_viewer"].world.getItemCount(); i++) {
-        tmapp[op + "_viewer"].world.getItemAt(i).setCompositeOperation(filterUtils._compositeMode);
-    }
+    })
 }
 
 /** Create an HTML filter */
@@ -502,21 +487,51 @@ filterUtils.createHTMLFilter = function (params) {
     else if (type == "select") {
         filterInput = HTMLElementUtils.selectTypeDropDown(params);
     }
+    else if (type == "color") {
+        filterInput = HTMLElementUtils.inputTypeColor(params);
+        console.log(params);
+        if (params.value.includes(",")) {
+            function componentToHex(c) {
+                var hex = Math.floor(c*255/100).toString(16);
+                return hex.length == 1 ? "0" + hex : hex;
+            }
+            function rgbToHex(rgb) {
+                var array = rgb.split(',');
+                return "#" + componentToHex(array[0]) + componentToHex(array[1]) + componentToHex(array[2]);
+            }
+            params.value = rgbToHex(params.value);
+        }
+    }
     if (params.value != undefined) {
         filterInput.setAttribute("value", params.value);
     }
     filterInput.setAttribute("layer", params.layer);
     filterInput.setAttribute("filter", params.filter);
     filterInput.setAttribute("id", "filterInput-" + params.filter + "-" + params.layer);
-    filterInput.setAttribute("list", "filterDatalist-" + params.filter + "-" + params.layer);
+    if (type != "color") {
+        filterInput.setAttribute("list", "filterDatalist-" + params.filter + "-" + params.layer);
 
-    datalist = document.createElement("datalist");
-    datalist.setAttribute("id", "filterDatalist-" + params.filter + "-" + params.layer);
-    option = document.createElement("option");
-    option.text = params.value;
-    datalist.appendChild(option);
+        datalist = document.createElement("datalist");
+        datalist.setAttribute("id", "filterDatalist-" + params.filter + "-" + params.layer);
+        option = document.createElement("option");
+        option.text = params.value;
+        datalist.appendChild(option);
 
-    filterInput.appendChild(datalist);
+        filterInput.appendChild(datalist);
+    }else {
+        filterInput.setAttribute("list", "filterDatalist-" + params.filter + "-" + params.layer);
 
+        datalist = document.createElement("datalist");
+        datalist.setAttribute("id", "filterDatalist-" + params.filter + "-" + params.layer);
+        const colors = ['#FFFFFF', '#FF0000', '#00FF00','#0000FF','#FF00FF','#FFFF00','#00FFFF',"#FF007F","#7F00FF","#007FFF","#00FF7F","#7FFF00","#FF7F00"];
+        for (const element of colors) {
+            option = document.createElement("option");
+            option.text = element;
+            datalist.appendChild(option);
+        }
+        
+
+        filterInput.appendChild(datalist);
+    }
     return filterInput;
 }

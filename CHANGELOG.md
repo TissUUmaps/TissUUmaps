@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.1.0
+
+- Adding HDF5 support on the client side
+- Adding AnnData support on the server side / GUI
+- Adding Network diagram visualization
+- Tabs now saved automatically even without buttons
+- Adding Plugin helpers in javascript
+- Many fixes on the interface
+- Move to PyQt6
+
 ## 3.0.10.4
 
 - Fix path issue on json loading from server

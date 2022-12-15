@@ -582,11 +582,12 @@ interfaceUtils.generateDataTabUI = function(options){
         //row progressbar
         row0=HTMLElementUtils.createRow({id:generated+"_csv_progress_parent"});
         row0.classList.add("d-none");
+        row0.classList.add("px-3");
         row0.innerHTML="Loading markers..."
 
         col01=HTMLElementUtils.createColumn({"width":12});
             div011=HTMLElementUtils.createElement({"kind":"div", "extraAttributes":{"class":"progress"}});
-                div0111=HTMLElementUtils.createElement({"kind":"div", "id":generated+"_csv_progress", "extraAttributes":{"class":"progress-bar progress-bar-striped","role":"progressbar" ,"aria-valuenow":"10", "aria-valuemin":"0" ,"aria-valuemax":"100"}});
+                div0111=HTMLElementUtils.createElement({"kind":"div", "id":generated+"_csv_progress", "extraAttributes":{"class":"progress-bar progress-bar-striped progress-bar-animated","role":"progressbar" ,"aria-valuenow":"10", "aria-valuemin":"0" ,"aria-valuemax":"100"}});
         
         row0.appendChild(col01)
             col01.appendChild(div011)
@@ -616,10 +617,14 @@ interfaceUtils.generateDataTabUI = function(options){
         if (options.expectedHeader === undefined) {
             $('#'+generated+'_flush-collapse0').collapse("show");
         }
+        if (options.path !== undefined & options.fromButton === undefined) {
+            projectUtils.makeButtonFromTabAux(generated, options.path, "", "", true);
+        }
     }
     else {
         $('#'+generated+'_flush-collapse0').collapse("show");
     }
+    return generated;
 }
 
 /**
@@ -637,7 +642,7 @@ interfaceUtils._mGenUIFuncs.deleteTab=function(uid){
 
     tabpane=interfaceUtils.getElementById(uid+"_marker-pane")
     tabpane.remove();
-
+    projectUtils.removeTabFromProject(uid);
     delete dataUtils.data[uid];
 
     glUtils.deleteMarkers(uid);
@@ -646,6 +651,57 @@ interfaceUtils._mGenUIFuncs.deleteTab=function(uid){
     if (tabButtons.length > 0) {
         tabButtons[tabButtons.length - 1].click();
     }
+}
+
+/** 
+* @param {Object} options The id of the element
+* @summary Create a complete new tab with all the UI, accordion and buttons. 
+* Options are not implemented but are there if needed in the future 
+*/
+interfaceUtils._mGenUIFuncs.dataTabUIToH5 = function(uid){
+    var alldrops=interfaceUtils._mGenUIFuncs.getTabDropDowns(uid);
+    var namesymbols=Object.getOwnPropertyNames(alldrops);
+    namesymbols.forEach((drop)=>{
+        if(drop=="cb_cmap") return; //if its colormaps dont fill it with csv but with d3 luts which are already there
+        if(drop=="shape_fixed") return; //if its shapes dont fill it with csv but with shape symbols which are already there
+        if(drop=="collectionItem_fixed" || drop=="coord_factor" || drop=="scale_factor" || drop=="shape_gr_dict" || drop=="cb_gr_dict" || drop=="opacity" || drop=="pie_dict" || drop=="tooltip_fmt") return; //not dropdowns
+        if (!alldrops[drop]) return;
+        //alldrops[drop].parent.innerHTML = "";
+        var inputText=HTMLElementUtils.createElement({"kind":"input", "id":alldrops[drop].id, "extraAttributes":{ "name":alldrops[drop].id, "class":"form-control","type":"text" }});
+        if (alldrops[drop].classList.contains("d-none"))
+            inputText.classList.add("d-none");
+        
+        alldrops[drop].parentNode.replaceChild(inputText, alldrops[drop]);
+        let options = {
+            tabDisabled: true,
+            minChars: 0,
+            lookup: function (query, done) {
+                // Do Ajax call or lookup locally, when done,
+                // call the callback and pass your results:
+                let url = dataUtils.data[uid]._csv_path
+                dataUtils._hdf5Api.getKeys(url, query).then((data) => {
+                    let keys = data.children.map((value) => {
+                        let completePath = value.replace("//","/");
+                        return {"value": completePath, "data": completePath };
+                    },
+                    (error)=>{console.log("Error!",error)});
+                    var result = {
+                        suggestions: keys
+                    };
+                    done(result);
+                },function(error){console.log(error)})
+        
+            },
+            onSelect: function (suggestion) {
+                //alert('You selected: ' + suggestion.value + ', ' + suggestion.data);
+                console.log("Focsing:alldrops[drop]", inputText);
+                inputText.focus();
+            }
+        }
+        $("#" + alldrops[drop].id).autocomplete(options);
+
+    })
+
 }
 
 /** 
@@ -719,6 +775,7 @@ interfaceUtils._mGenUIFuncs.ChangeTabName=function(uid, value){
             domelement.innerText=value
         else
             domelement.innerText=uid;
+        domelement.setAttribute("title", domelement.innerText);
         interfaceUtils.getElementById(uid + "_tab-name").value = domelement.innerText;
     }
 }
@@ -756,6 +813,7 @@ interfaceUtils._mGenUIFuncs.getTabDropDowns = function(uid){
     allinputs["coord_factor"]=interfaceUtils.getElementById(uid+"_coord-factor");
     allinputs["pie_col"]=interfaceUtils.getElementById(uid+"_piechart-col");
     allinputs["pie_dict"]=interfaceUtils.getElementById(uid+"_piechart-dict-val");
+    allinputs["edges_col"]=interfaceUtils.getElementById(uid+"_edges-col");
     allinputs["shape_col"]=interfaceUtils.getElementById(uid+"_shape-col-value");
     allinputs["shape_fixed"]=interfaceUtils.getElementById(uid+"_shape-fixed-value");
     allinputs["shape_gr_dict"]=interfaceUtils.getElementById(uid+"_shape-bygroup-dict-val");
@@ -785,6 +843,7 @@ interfaceUtils._mGenUIFuncs.getTabRadiosAndChecks= function(uid){
     allradios["cb_gr_key"]=interfaceUtils.getElementById(uid+"_cb-bygroup-key");
 
     allradios["pie_check"]=interfaceUtils.getElementById(uid+"_use-piecharts");
+    allradios["edges_check"]=interfaceUtils.getElementById(uid+"_use-edges");
     allradios["scale_check"]=interfaceUtils.getElementById(uid+"_use-scales");
     allradios["shape_gr"]=interfaceUtils.getElementById(uid+"_shape-bygroup");
     allradios["shape_gr_rand"]=interfaceUtils.getElementById(uid+"_shape-bygroup-rand");
@@ -850,7 +909,7 @@ interfaceUtils._mGenUIFuncs.generateTab=function(){
     li1=HTMLElementUtils.createElement({"kind":"li", "id":generated+"_li-tab", "extraAttributes":{ "class":"nav-item", "role":"presentation"}});
     button1=HTMLElementUtils.createButton({"id":generated+"_marker-tab-button","extraAttributes":{ "class":"nav-link marker-tab-button", "data-bs-toggle":"tab","data-bs-target":"#"+generated+"_marker-pane","type":"button","role":"tab","aria-controls":generated+"_marker","aria-selected":"false"}})
 
-    span1=HTMLElementUtils.createElement({"kind":"span", "id":generated+"_marker-tab-name"})
+    span1=HTMLElementUtils.createElement({"kind":"span", "id":generated+"_marker-tab-name","extraAttributes":{ "title": "New markers"}})
     span1.innerHTML="New markers";
 
     button1.appendChild(span1);
@@ -938,7 +997,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem1=function(){
                 label1111=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":generated+"_csv"}});
                 label1111.innerText="File and coordinates";
                 input1112=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_csv","extraAttributes":{ "name":generated+"_csv", 
-                "class":"form-control-file form-control form-control-sm", "type":"file", "accept":".csv,.tsv,.txt"}});
+                "class":"form-control-file form-control form-control-sm", "type":"file", "accept":".csv,.tsv,.txt,.h5,.h5ad"}});
                 input1112.addEventListener("change",(event)=>{dataUtils.startCSVcascade(event)});
     
     //---------------------------------
@@ -1167,7 +1226,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
 }
 
 /**
- * @summary Creates piechart options
+ * @summary Creates advanced options
  * @returns {array} array of rows
  */
  interfaceUtils._mGenUIFuncs.generateAccordionItem3=function(){
@@ -1176,13 +1235,14 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
 
     row1=interfaceUtils._mGenUIFuncs.generateAdvancedScaleAccordion3();
     row2=interfaceUtils._mGenUIFuncs.generateAdvancedPiechartAccordion3();
-    row3=interfaceUtils._mGenUIFuncs.generateAdvancedShapeAccordion3();
-    row4=interfaceUtils._mGenUIFuncs.generateAdvancedOpacityAccordion3();
-    row5=interfaceUtils._mGenUIFuncs.generateAdvancedTooltipAccordion3();
-    row6=interfaceUtils._mGenUIFuncs.generateAdvancedCollectionAccordion3();
-    row7=interfaceUtils._mGenUIFuncs.generateAdvancedMakeButtonAccordion3();
+    row3=interfaceUtils._mGenUIFuncs.generateAdvancedEdgesAccordion3();
+    row4=interfaceUtils._mGenUIFuncs.generateAdvancedShapeAccordion3();
+    row5=interfaceUtils._mGenUIFuncs.generateAdvancedOpacityAccordion3();
+    row6=interfaceUtils._mGenUIFuncs.generateAdvancedTooltipAccordion3();
+    row7=interfaceUtils._mGenUIFuncs.generateAdvancedCollectionAccordion3();
+    row8=interfaceUtils._mGenUIFuncs.generateAdvancedMakeButtonAccordion3();
     
-    return [row1,row2,row3,row4, row5, row6, row7];
+    return [row1,row2,row3,row4,row5,row6,row7,row8];
  }
 
  /**
@@ -1494,6 +1554,57 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
 }
 
  /**
+ * @summary Creates the forms for edges
+ * @returns {array} a single rows
+ */
+  interfaceUtils._mGenUIFuncs.generateAdvancedEdgesAccordion3= function(){
+    generated=interfaceUtils._mGenUIFuncs.ctx.aUUID;
+
+    //row 0
+    row0=HTMLElementUtils.createRow({id:generated+"_edges_0"});
+        collab=HTMLElementUtils.createColumn({"width":12});
+            labellab=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_cb-label"});
+            labellab.innerHTML="<strong>Network diagram</strong>";
+
+        col00=HTMLElementUtils.createColumn({"width":6});
+            divformcheck000=HTMLElementUtils.createElement({ "kind":"div", "extraAttributes":{"class":"form-check"}});
+                inputcheck0000=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_use-edges","extraAttributes":{"class":"form-check-input","type":"checkbox" }});
+                label0001=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_use-edges-label", "extraAttributes":{ "for":generated+"_use-edges" }});
+                label0001.innerText="Add Edges"
+                
+        col01=HTMLElementUtils.createColumn({"width":6});
+            label010=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_edges-col-label", "extraAttributes":{ "class":"d-none", "for":generated+"_edges-col" }});
+            label010.innerText="Edges column"
+            select011=HTMLElementUtils.createElement({"kind":"select", "id":generated+"_edges-col", "extraAttributes":{ "class":"d-none form-select form-select-sm", "aria-label":".form-select-sm"}});
+
+    inputcheck0000.addEventListener("change", (event)=>{
+        var value=event.target.checked;
+        //var doms=["_gb-single","_gb-col","_gb-feature-value","_cb-colormap","_cb-bypoint","_cb-bygroup","_gb-feature-value",
+        //          "_gb-col-value","_gb-col-name","_cb-cmap-value","_cb-col-value","_cb-bygroup-rand","_cb-bygroup-gene","_cb-bygroup-name" ]
+        if(value){
+            interfaceUtils._mGenUIFuncs.hideShow(event, ["_edges-col-label","_edges-col","_edges-dict-label","_edges-dict-val"],[0,1,2,3]);
+        }
+        else {
+            interfaceUtils._mGenUIFuncs.hideShow(event, ["_edges-col-label","_edges-col","_edges-dict-label","_edges-dict-val"],[]);
+        }
+    })
+
+    row0.appendChild(collab)
+        collab.appendChild(labellab)
+
+    row0.appendChild(col00)
+        col00.appendChild(divformcheck000)
+            divformcheck000.appendChild(inputcheck0000);
+            divformcheck000.appendChild(label0001);
+
+    row0.appendChild(col01);
+        col01.appendChild(label010);
+        col01.appendChild(select011);
+
+    return row0;
+}
+
+ /**
  * @summary Creates the forms to scale by
  * @returns {array} a single rows
  */
@@ -1585,10 +1696,18 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
   interfaceUtils._mGenUIFuncs.generateAdvancedMakeButtonAccordion3= function(){
     generated=interfaceUtils._mGenUIFuncs.ctx.aUUID;
 
+    var generateButton = function (event) {
+        return projectUtils.makeButtonFromTab(event.target.id.split("_")[0]);
+    } 
     //row 0
     row0=HTMLElementUtils.createRow({id:generated+"_opacity_0"});
         col00=HTMLElementUtils.createColumn({"width":6});
-            button000=HTMLElementUtils.createButton({"id":generated+"_Generate-button-from-tab","innerText":"Generate button from tab","class":"btn btn-light my-1","eventListeners":{"click":(event)=> projectUtils.makeButtonFromTab(event.target.id.split("_")[0]) }});
+            button000=HTMLElementUtils.createButton({
+                "id":generated+"_Generate-button-from-tab",
+                "innerText":"Generate button from tab",
+                "class":"btn btn-light my-1",
+                "eventListeners":{"click":generateButton }
+            });
             
     row0.appendChild(col00)
         col00.appendChild(button000);
@@ -2267,12 +2386,34 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
     if (!options.uid)
         options.uid=interfaceUtils._mGenUIFuncs.ctx.aUUID;
     var callback = function(e, params){
-        $('.chosen-select').not(e.target).val('').trigger('chosen:updated');
+        if (e) {
+            if ($('.chosen-select').not(e.target)) {
+                $('.chosen-select').not(e.target).val('').trigger('chosen:updated');
+            }
+        }
         projectUtils.applySettings(options.settings);
-        var dataURL = params.selected;
-        if (dataURL == "") return;
         optionsCopy = JSON.parse(JSON.stringify(options));
-        optionsCopy["path"] = dataURL;
+        var dataURL = "";
+        if (params.selected == "") {return;}
+        if (options.dropdownOptions) {
+            dropdownOption = options.dropdownOptions[params.selected];
+            for (key in dropdownOption) {
+                option_shifted = optionsCopy;
+                var parameters = key.split(".");
+                for (param_key in parameters) {
+                    if (param_key == parameters.length-1) {
+                        option_shifted[parameters[param_key]] = dropdownOption[key];
+                    }
+                    else {
+                        option_shifted = option_shifted[parameters[param_key]]
+                    }
+                }
+            }
+        }
+        else {
+            dataURL = options.path[params.selected];
+            optionsCopy["path"] = dataURL;
+        }
         interfaceUtils.generateDataTabUI(optionsCopy);
     }
     var dropdownOptions;
@@ -2282,12 +2423,22 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
     else {
         dropdownOptions = [{"value":"","text":"Select from list"}];
     }
-    options["path"].forEach (function (dataURL) {
-        dropdownOptions.push({
-            "value": dataURL,
-            "text": dataURL.split('/').reverse()[0].replace(/_/g, ' ').replace('.csv', '')
-        })
-    });
+    if (options.dropdownOptions) {
+        options.dropdownOptions.forEach (function (dropdownOption, index) {
+            dropdownOptions.push({
+                "value": index,
+                "text": dropdownOption.optionName
+            })
+        });
+    }
+    else {
+        options["path"].forEach (function (dataURL, index) {
+            dropdownOptions.push({
+                "value": index,
+                "text": dataURL.split('/').reverse()[0].replace(/_/g, ' ').replace('.csv', '')
+            })
+        });
+    }
     interfaceUtils.createDownloadDropdown(downloadRow, options.title, callback, options.comment, dropdownOptions);
     if (options.autoLoad) {
         setTimeout(function(){callback(null, {'selected':options["path"][0]})},500);
@@ -2324,7 +2475,11 @@ interfaceUtils.createDownloadButtonMarkers = function(options) {
     if (!options.uid)
         options.uid=interfaceUtils._mGenUIFuncs.ctx.aUUID;
     var callback = function(e){
-        $('.chosen-select').not(e.target).val('').trigger('chosen:updated');
+        if (e) {
+            if ($('.chosen-select').not(e.target)) {
+                $('.chosen-select').not(e.target).val('').trigger('chosen:updated')
+            }
+        };
         projectUtils.applySettings(options.settings);
         interfaceUtils.generateDataTabUI(options);
     }

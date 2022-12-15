@@ -58,11 +58,13 @@ else:
 logging.debug("template_folder: " + template_folder)
 logging.debug("static_folder: " + static_folder)
 with open(version_file) as f:
-    logging.info(" * TissUUmaps version: " + f.read())
+    tissuumaps_version = f.read().strip()
+logging.info(" * TissUUmaps version: " + tissuumaps_version)
 
 app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
 app.config.from_object(__name__)
 app.config["PLUGIN_FOLDER"] = plugins_folder
+app.config["VERSION"] = tissuumaps_version
 app.config["PLUGIN_FOLDER_USER"] = os.path.join(
     os.path.expanduser("~"), ".tissuumaps", "plugins"
 )
