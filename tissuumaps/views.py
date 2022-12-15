@@ -660,7 +660,6 @@ def send_file_partial(path):
         "Content-Range", "bytes {0}-{1}/{2}".format(byte1, byte1 + length, size)
     )
 
-    # print ("Sent!", range_header, size, 'bytes {0}-{1}/{2}'.format(byte1, byte1 + length - 1, size))
     print(
         "Sent!",
         range_header,
@@ -818,7 +817,7 @@ def exportToStatic(state, folderpath, previouspath):
                     os.path.basename(image.replace("/", "_").replace("\\", "_")),
                 ),
             ).convertToDZI()
-        for file in otherFiles:
+        for file in set(otherFiles):
             m = re.match(
                 r"(.*)\.(h5ad|adata)_files(\/*|\\*)csv(\/*|\\*)(obs|var)(\/*|\\*)(.*).csv",
                 file,
@@ -851,7 +850,6 @@ def exportToStatic(state, folderpath, previouspath):
                 os.path.join(folderpath, dir),
                 dirs_exist_ok=True,
             )
-        # QMessageBox.about(self, "Information", "Export done!")
     except:
         import traceback
 
