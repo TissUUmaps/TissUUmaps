@@ -929,6 +929,7 @@ def main():
     if platform.system() == "Darwin":
         fmt.setProfile(QtGui.QSurfaceFormat.OpenGLContextProfile.CoreProfile)
         fmt.setVersion(4, 1)
+    fmt.setSwapBehavior(QtGui.QSurfaceFormat.SwapBehavior.DoubleBuffer)
     QtGui.QSurfaceFormat.setDefaultFormat(fmt)
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
 
