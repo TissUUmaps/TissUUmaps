@@ -34,7 +34,8 @@ class H5_API {
         const id = this.count++;
         let _url = url;
         if (typeof url === 'string' || url instanceof String)
-            _url = h5Utils.relative_root + _url;
+            if (!_url.startsWith("https")) 
+                _url = h5Utils.relative_root + _url;
         this.worker.postMessage({id: id, action: "load", payload: {requestChunkSize, url:_url}});
         return new Promise(resolve => this.resolvers[id] = resolve);
     }
@@ -79,7 +80,12 @@ class H5_API {
             const id = this.count++;
             this.resolvers[id] = resolve
             if (typeof url === 'string' || url instanceof String) {
-                payload.url = h5Utils.relative_root + url;
+                if (!url.startsWith("https")) {
+                    payload.url = h5Utils.relative_root + url;
+                }
+                else {
+                    payload.url = url;
+                }
             }
             else {
                 payload.url = urlName;
