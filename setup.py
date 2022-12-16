@@ -21,7 +21,7 @@ setuptools.setup(
     zip_safe=False,
     install_requires=[
         "PyQt6>=6.0.0",
-        "PyQt6-WebEngine>=6.0.0"
+        "PyQt6-WebEngine>=6.0.0",
         "Flask>=2.0.0",
         "openslide-python>=1.1.2",
         "Pillow>=8.2.0",
