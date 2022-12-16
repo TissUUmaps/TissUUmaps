@@ -157,7 +157,6 @@ def h5ad_to_tmap(basedir, path, library_id=None):
             adata, path = get_write_adata(adata, path, basedir)
 
         for categ in list(adata.get("/obs/__categories/", [])):
-            print(categ)
             if categ in list(adata["/obs/"]):
                 newgroup = adata.create_group(f"/obs/__{categ}__")
                 newgroup.attrs["encoding-type"] = "categorical"
@@ -179,7 +178,6 @@ def h5ad_to_tmap(basedir, path, library_id=None):
 
     coord_factor = 1
     for library_id in library_ids:
-        print("lib", library_id)
         coord_factor = adata.get(
             f"/uns/spatial/{library_id}/scalefactors/tissue_{img_key}_scalef", 1
         )[()]
@@ -192,7 +190,6 @@ def h5ad_to_tmap(basedir, path, library_id=None):
         if os.path.isfile(outputImage):
             continue
         try:
-            print(f"uns/spatial/{library_id}/images/{img_key}")
             img = np.array(adata.get(f"/uns/spatial/{library_id}/images/{img_key}"))
 
             if type(img) == str:
@@ -215,7 +212,7 @@ def h5ad_to_tmap(basedir, path, library_id=None):
             img = None
             import traceback
 
-            print(traceback.format_exc())
+            logging.error(traceback.format_exc())
 
     use_libraries = len(library_ids) > 1
 
