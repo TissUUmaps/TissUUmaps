@@ -735,22 +735,28 @@ class webEngine(QWebEngineView):
             returnDict = {"markerFile": None}
             return returnDict
         parts = Path(csvpath).parts
-        if self.app.basedir != parts[0]:
-            if not self.app.basedir == os.path.abspath(self.app.config["SLIDE_DIR"]):
-                QMessageBox.warning(
-                    self, "Error", "All files must be in the same drive."
-                )
-                returnDict = {"markerFile": None}
-                return returnDict
-            else:
-                self.app.basedir = parts[0]
-        imgPath = os.path.join(*parts[1:])
+        if parts[0] == "https:":
+            imgPath = parts[-1]
+            relativePath = "/".join(parts[:-1])
 
-        path = os.path.abspath(os.path.join(self.app.basedir, path))
-        imgPath = os.path.abspath(os.path.join(self.app.basedir, imgPath))
+        else:
+            if self.app.basedir != parts[0]:
+                if not self.app.basedir == os.path.abspath(
+                    self.app.config["SLIDE_DIR"]
+                ):
+                    QMessageBox.warning(
+                        self, "Error", "All files must be in the same drive."
+                    )
+                    returnDict = {"markerFile": None}
+                    return returnDict
+                else:
+                    self.app.basedir = parts[0]
+            imgPath = os.path.join(*parts[1:])
 
-        relativePath = os.path.relpath(os.path.dirname(imgPath), path)
+            path = os.path.abspath(os.path.join(self.app.basedir, path))
+            imgPath = os.path.abspath(os.path.join(self.app.basedir, imgPath))
 
+            relativePath = os.path.relpath(os.path.dirname(imgPath), path)
         returnDict = {
             "markerFile": {
                 "name": os.path.basename(imgPath),
