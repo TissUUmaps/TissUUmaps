@@ -68,7 +68,11 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v3
+        with:
+          name: TissUUmaps_winInstaller.exe
+          path: "standalone/dist"
       - uses: ncipollo/release-action@v1
         with:
-          artifacts: TissUUmaps_winInstaller.exe
+          artifacts: standalone/TissUUmaps_winInstaller.exe
           token: ${{ secrets.GITHUB_TOKEN }}
