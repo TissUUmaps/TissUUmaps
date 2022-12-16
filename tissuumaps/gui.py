@@ -601,8 +601,11 @@ class webEngine(QWebEngineView):
 
     @pyqtSlot(str, result="QJsonObject")
     def exportToStatic(self, state):
-        parsed_url = urlparse(self.url().toString())
-        previouspath = parse_qs(parsed_url.query)["path"][0]
+        try:
+            parsed_url = urlparse(self.url().toString())
+            previouspath = parse_qs(parsed_url.query)["path"][0]
+        except:
+            previouspath = "./"
         previouspath = os.path.abspath(os.path.join(self.app.basedir, previouspath))
 
         folderpath = QFileDialog.getExistingDirectory(
