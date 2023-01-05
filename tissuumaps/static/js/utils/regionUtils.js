@@ -1003,25 +1003,37 @@ regionUtils.analyzeRegion = function (regionid) {
     regionUtils._regions[regionid].associatedPoints=[];
     regionUtils._regions[regionid].barcodeHistogram=[];
     allDatasets = Object.keys(dataUtils.data);
-    for (var dataset of allDatasets) {
-        var allkeys=Object.keys(dataUtils.data[dataset]["_groupgarden"]);
+    for (var uid of allDatasets) {
+        var allkeys=Object.keys(dataUtils.data[uid]["_groupgarden"]);
+
+        var datapath = dataUtils.data[uid]["_csv_path"];
+        if (datapath.includes(".csv") || datapath.includes(".CSV")) {
+            // Strip everything except the filename, to save a bit of memory
+            // and reduce the filesize when exporting to CSV
+            datapath = dataUtils.data[uid]["_csv_path"].split("/").pop();
+        } else if (datapath.includes("base64")) {
+            // If the file is encoded in the path as a Base64 string, use
+            // the name of the marker tab as identifier in the output CSV
+            datapath = dataUtils.data[uid]["_name"];
+        }
+
         for (var codeIndex in allkeys) {
             var code = allkeys[codeIndex];
 
-            var pointsInside=regionUtils.searchTreeForPointsInRegion(dataUtils.data[dataset]["_groupgarden"][code],
+            var pointsInside=regionUtils.searchTreeForPointsInRegion(dataUtils.data[uid]["_groupgarden"][code],
                 regionUtils._regions[regionid]._gxmin,regionUtils._regions[regionid]._gymin,
                 regionUtils._regions[regionid]._gxmax,regionUtils._regions[regionid]._gymax,
                 regionid, {
                     "globalCoords":true,
-                    "xselector":dataUtils.data[dataset]["_X"],
-                    "yselector":dataUtils.data[dataset]["_Y"],
-                    "dataset":dataset
+                    "xselector":dataUtils.data[uid]["_X"],
+                    "yselector":dataUtils.data[uid]["_Y"],
+                    "dataset":uid
                 });
             if(pointsInside.length>0){
                 pointsInside.forEach(function(p){
                     var pin=clone(p);
                     pin.regionid=regionid;
-                    pin.dataset=dataUtils.data[dataset]["_csv_path"];
+                    pin.dataset=datapath
                     regionUtils._regions[regionid].associatedPoints.push(pin)
                 });
             }
@@ -1107,6 +1119,7 @@ regionUtils.pointsInRegionsToCSV=function(){
             alldata.push(p);
         });
     }
+
     var csvRows=[];
     var headers=alldata.reduce(function(arr, o) {
         return Object.keys(o).reduce(function(a, k) {
@@ -1114,18 +1127,27 @@ regionUtils.pointsInRegionsToCSV=function(){
           return a;
         }, arr)
       }, []);
-    
     csvRows.push(headers.join(','));
     
-
     for(var row of alldata){
         var values=[];
         headers.forEach(function(header){
-            values.push(row[header]);
+            const value = row[header];
+            if (isNaN(value) && typeof(value) == "string" &&
+                (value.includes(",") || value.includes("\""))) {
+                // Make sure that commas and quotation marks are properly escaped
+                let escaped = value;
+                if (escaped.includes(",") || escaped.includes("\""))
+                    escaped = "\"" + escaped.replaceAll("\"", "\"\"") + "\"";
+                values.push(escaped);
+            } else {
+                values.push(value);
+            }
         });
         csvRows.push(values.join(","));
     }
     var theblobdata=csvRows.join('\n');
+
     regionUtils.downloadPointsInRegionsCSV(theblobdata);
 
 }
