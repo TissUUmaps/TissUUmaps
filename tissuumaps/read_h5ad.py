@@ -178,9 +178,11 @@ def h5ad_to_tmap(basedir, path, library_id=None):
 
     coord_factor = 1
     for library_id in library_ids:
-        coord_factor = adata.get(
-            f"/uns/spatial/{library_id}/scalefactors/tissue_{img_key}_scalef", 1
-        )[()]
+        coord_factor = float(
+            adata.get(
+                f"/uns/spatial/{library_id}/scalefactors/tissue_{img_key}_scalef", 1
+            )[()]
+        )
         os.makedirs(os.path.join(outputFolder, str(library_id), "img"), exist_ok=True)
         outputImage = os.path.join(outputFolder, str(library_id), "img", "tissue.tif")
         relOutputImage = os.path.join(
@@ -236,10 +238,12 @@ def h5ad_to_tmap(basedir, path, library_id=None):
 
                 spatial_scaled_array = np.ones(spatial_array.shape)
                 for library_index, library_id in enumerate(library_categ_array):
-                    scale_factor = adata.get(
-                        f"/uns/spatial/{library_id}/scalefactors/tissue_{img_key}_scalef",
-                        1,
-                    )[()]
+                    scale_factor = float(
+                        adata.get(
+                            f"/uns/spatial/{library_id}/scalefactors/tissue_{img_key}_scalef",
+                            1,
+                        )[()]
+                    )
                     spatial_scaled_array[library_codes_array == library_index] = (
                         spatial_array[library_codes_array == library_index]
                         * scale_factor
