@@ -130,7 +130,7 @@ dataUtils.processRawData = function(data_id, rawdata) {
 
 }
 
-dataUtils.getAllH5Data = function(data_id){
+dataUtils.getAllH5Data = function(data_id, alldrops){
     var data_obj = dataUtils.data[data_id];
 
     let getH5Data = function(drop){
@@ -165,8 +165,9 @@ dataUtils.getAllH5Data = function(data_id){
             }
         })
     }
-
-    var alldrops=interfaceUtils._mGenUIFuncs.getTabDropDowns(data_id, true);
+    if (alldrops === undefined) {
+        var alldrops=interfaceUtils._mGenUIFuncs.getTabDropDowns(data_id, true);
+    }
     var namesymbols=Object.getOwnPropertyNames(alldrops);
     namesymbols = namesymbols.filter((val)=>{return alldrops[val].value != ""})
     // TODO: keep columns if needed!
@@ -412,6 +413,13 @@ dataUtils.updateViewOptions = function(data_id, force_reload_all, reloadH5){
             glUtils.loadMarkers(data_id);
         }
         glUtils.draw();
+        
+        // Create the event.
+        const event = document.createEvent('Event');
+        // Define that the event name is 'glUtilsDraw'.
+        event.initEvent('glUtilsDraw', true, true);
+        // target can be any Element or other EventTarget.
+        document.dispatchEvent(event);
         updateButton.innerHTML = "Update view"
         progressBar.style.width = "100%";
         progressParent.classList.add("d-none");

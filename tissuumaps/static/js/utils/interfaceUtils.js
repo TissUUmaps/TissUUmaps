@@ -654,51 +654,55 @@ interfaceUtils._mGenUIFuncs.deleteTab=function(uid){
 }
 
 /** 
-* @param {Object} options The id of the element
-* @summary Create a complete new tab with all the UI, accordion and buttons. 
-* Options are not implemented but are there if needed in the future 
+* @param {Object} uid The id of the element
+* @param {Object} drop The id of the dropdown element to convert
+* @summary Converts a csv tab to h5 by replacing DropDown inputs with autocomplete 
+*/
+interfaceUtils._mGenUIFuncs.intputToH5 = function(uid, inputDropDown){
+    if (!inputDropDown) return;
+    //inputDropDown.parent.innerHTML = "";
+    var inputText=HTMLElementUtils.createElement({"kind":"input", "id":inputDropDown.id, "extraAttributes":{ "name":inputDropDown.id, "class":"form-control","type":"text" }});
+    if (inputDropDown.classList.contains("d-none"))
+        inputText.classList.add("d-none");
+    
+    inputDropDown.parentNode.replaceChild(inputText, inputDropDown);
+    let options = {
+        tabDisabled: true,
+        minChars: 0,
+        lookup: function (query, done) {
+            // Do Ajax call or lookup locally, when done,
+            // call the callback and pass your results:
+            let url = dataUtils.data[uid]._csv_path
+            dataUtils._hdf5Api.getKeys(url, query).then((data) => {
+                let keys = data.children.map((value) => {
+                    let completePath = value.replace("//","/");
+                    return {"value": completePath, "data": completePath };
+                },
+                (error)=>{console.log("Error!",error)});
+                var result = {
+                    suggestions: keys
+                };
+                done(result);
+            },function(error){console.log(error)})
+        },
+        onSelect: function (suggestion) {
+            inputText.focus();
+        }
+    }
+    $("#" + inputDropDown.id).autocomplete(options);
+    return $("#" + inputDropDown.id)[0];
+}
+
+/** 
+* @param {Object} uid The id of the element
+* @summary Converts a csv tab to h5 by replacing DropDown inputs with autocomplete 
 */
 interfaceUtils._mGenUIFuncs.dataTabUIToH5 = function(uid){
     var alldrops=interfaceUtils._mGenUIFuncs.getTabDropDowns(uid, true);
     var namesymbols=Object.getOwnPropertyNames(alldrops, true);
     namesymbols.forEach((drop)=>{
-        if (!alldrops[drop]) return;
-        //alldrops[drop].parent.innerHTML = "";
-        var inputText=HTMLElementUtils.createElement({"kind":"input", "id":alldrops[drop].id, "extraAttributes":{ "name":alldrops[drop].id, "class":"form-control","type":"text" }});
-        if (alldrops[drop].classList.contains("d-none"))
-            inputText.classList.add("d-none");
-        
-        alldrops[drop].parentNode.replaceChild(inputText, alldrops[drop]);
-        let options = {
-            tabDisabled: true,
-            minChars: 0,
-            lookup: function (query, done) {
-                // Do Ajax call or lookup locally, when done,
-                // call the callback and pass your results:
-                let url = dataUtils.data[uid]._csv_path
-                dataUtils._hdf5Api.getKeys(url, query).then((data) => {
-                    let keys = data.children.map((value) => {
-                        let completePath = value.replace("//","/");
-                        return {"value": completePath, "data": completePath };
-                    },
-                    (error)=>{console.log("Error!",error)});
-                    var result = {
-                        suggestions: keys
-                    };
-                    done(result);
-                },function(error){console.log(error)})
-        
-            },
-            onSelect: function (suggestion) {
-                //alert('You selected: ' + suggestion.value + ', ' + suggestion.data);
-                console.log("Focsing:alldrops[drop]", inputText);
-                inputText.focus();
-            }
-        }
-        $("#" + alldrops[drop].id).autocomplete(options);
-
+        interfaceUtils._mGenUIFuncs.intputToH5(uid, alldrops[drop]);
     })
-
 }
 
 /** 
