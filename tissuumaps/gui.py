@@ -126,7 +126,9 @@ class SelectPluginWindow(QDialog):
             form = QFormLayout(self)
             form.addRow(QLabel("Plugin site:"))
             self.textbox = QLineEdit(self)
-            self.textbox.setText("https://tissuumaps.github.io/TissUUmaps/plugins/")
+            self.textbox.setText(
+                "https://tissuumaps.github.io/TissUUmaps/plugins/latest/"
+            )
             form.addRow(self.textbox)
 
             # Create a button in the window

@@ -1,0 +1,7 @@
+---
+name: Plot Histogram
+version: 1.0
+author: Christophe Avenel
+date: 2022-03-30
+image: Plot_Histogram.gif
+description: The Plot_Histogram plugin allows to display histograms of markers from any hand drawn selection in the image, in real time.
