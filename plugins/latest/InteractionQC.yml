@@ -1,0 +1,7 @@
+---
+name: InteractionV&QC plugin
+version: 1.0
+author: Andrea Behanova, Christophe Avenel
+date: 2022-10-31
+image: InteractionQC.gif
+description: InteractionV&QC plugin is for visualization and quality control of cell-cell interactions.

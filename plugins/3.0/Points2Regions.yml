@@ -1,0 +1,7 @@
+---
+name: Points2Regions
+version: 0.4.0
+author: Axel Andersson, Christophe Avenel
+date: 2022-11-25
+image: Points2Regions.gif
+description: Points2Regions allows the user to automatically identify regions of similar gene expression. Gene signature vectors are created by counting the frequency of different genes in small local neighborhoods. The signatures are then clustered resulting in masks for regions of similar gene expression.
