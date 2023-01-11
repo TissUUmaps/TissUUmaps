@@ -806,8 +806,6 @@ def exportToStatic(state, folderpath, previouspath):
         relativePath = os.path.relpath(previouspath, os.path.dirname(folderpath))
         state = addRelativePath(json.loads(state), relativePath)
 
-        with open(folderpath + "/project.tmap", "w") as f:
-            json.dump(state, f, indent=4)
         os.makedirs(os.path.join(folderpath, "data/images"), exist_ok=True)
         os.makedirs(os.path.join(folderpath, "data/files"), exist_ok=True)
         for image in imgFiles:
@@ -842,15 +840,27 @@ def exportToStatic(state, folderpath, previouspath):
         import zipfile
 
         if getattr(sys, "frozen", False):
-            zipFolderPath = sys._MEIPASS
+            mainFolderPath = sys._MEIPASS
         else:
-            zipFolderPath = os.path.dirname(pathlib.Path(__file__))
-        with zipfile.ZipFile(os.path.join(zipFolderPath, "web.zip"), "r") as zip_ref:
-            zip_ref.extractall(folderpath)
+            mainFolderPath = os.path.dirname(pathlib.Path(__file__))
+
+        with app.app_context():
+            index = render_template(
+                "tissuumaps.html",
+                plugins=[],
+                jsonProject=state,
+                isStandalone=False,
+                readOnly=True,
+                version=app.config["VERSION"],
+            )
+
+        with open(folderpath + "/index.html", "w") as f:
+            f.write(index)
+
         for dir in ["css", "js", "misc", "vendor"]:
             copytree(
-                os.path.join(zipFolderPath, "static", dir),
-                os.path.join(folderpath, dir),
+                os.path.join(mainFolderPath, "static", dir),
+                os.path.join(folderpath, "static", dir),
                 dirs_exist_ok=True,
             )
     except:
