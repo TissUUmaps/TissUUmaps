@@ -1,6 +1,7 @@
 import glob
 import json
 import os
+import shutil
 
 import yaml
 from jinja2 import Template
@@ -104,36 +105,36 @@ old_versions = [
 ]
 
 
-def getPlugin(ymlFile, relativePath=""):
+def getPlugin(ymlFile):
     with open(ymlFile, "r") as stream:
         pluginObject = yaml.safe_load(stream)
-    pluginObject["yml"] = relativePath + os.path.basename(ymlFile)
+    pluginObject["yml"] = os.path.basename(ymlFile)
     pyFile = ymlFile.replace(".yml", ".py")
     if os.path.isfile(pyFile):
-        pluginObject["py"] = relativePath + os.path.basename(pyFile)
+        pluginObject["py"] = os.path.basename(pyFile)
     jsFile = ymlFile.replace(".yml", ".js")
     if os.path.isfile(jsFile):
-        pluginObject["js"] = relativePath + os.path.basename(jsFile)
+        pluginObject["js"] = os.path.basename(jsFile)
     if "image" in pluginObject.keys():
-        pluginObject["image"] = relativePath + pluginObject["image"]
+        pluginObject["image"] = pluginObject["image"]
     return pluginObject
 
 
+# For compatibility reasons, we keep v3.0 in the main folder:
+v3_0Files = glob.glob(rf"../plugins_repo/3.0/*")
+for src in v3_0Files:
+    shutil.copyfile(src, src.replace("plugins_repo/3.0", "plugins_repo/"))
+
 for version in ["."] + old_versions:
     pluginList = []
-    if version == ".":
-        pluginFolder = r"3.0/"
-        relativePath = "3.0/"
-    else:
-        pluginFolder = rf"{version}/"
-        relativePath = ""
-    ymlFiles = glob.glob(rf"../plugins_repo/{pluginFolder}/*.yml")
+
+    ymlFiles = glob.glob(rf"../plugins_repo/{version}/*.yml")
     ymlFiles.sort(key=alphaSort)
     for ymlFile in ymlFiles:
-        # try:
-        pluginList.append(getPlugin(ymlFile, relativePath))
-    # except:
-    #    pass
+        try:
+            pluginList.append(getPlugin(ymlFile))
+        except:
+            pass
 
     if version != ".":
         with open(f"../plugins_repo/{version}/index.html", "w") as f:
