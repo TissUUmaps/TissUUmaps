@@ -111,6 +111,16 @@ pluginUtils.loadParameters = function (pluginID, pluginDiv, parameters) {
             pluginDiv.appendChild(row);
             continue;
         }
+        else if (parameter.type == "label") {
+            row0=HTMLElementUtils.createElement({"kind":"p", "extraAttributes":{"class":""}});
+            row0.innerHTML = parameter.label;
+            
+            row.appendChild(col1);
+            col1.appendChild(row0);
+            
+            pluginDiv.appendChild(row);
+            continue;
+        }
         else if (parameter.type == "button") {
             button11 = HTMLElementUtils.createButton({
                 extraAttributes: {
