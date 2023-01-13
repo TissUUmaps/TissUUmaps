@@ -414,6 +414,10 @@ dataUtils.updateViewOptions = function(data_id, force_reload_all, reloadH5){
         }
         glUtils.draw();
         
+        setTimeout(()=>{
+            // We apply constraints after 300 ms in case the viewport size changed.
+            tmapp.ISS_viewer.viewport.applyConstraints(false);
+        },300);
         // Create the event.
         const event = document.createEvent('Event');
         // Define that the event name is 'glUtilsDraw'.
