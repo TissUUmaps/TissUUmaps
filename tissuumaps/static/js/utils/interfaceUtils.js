@@ -687,6 +687,8 @@ interfaceUtils._mGenUIFuncs.intputToH5 = function(uid, inputDropDown){
         },
         onSelect: function (suggestion) {
             inputText.focus();
+            const event = new Event('change');
+            $("#" + inputDropDown.id)[0].dispatchEvent(event);
         }
     }
     $("#" + inputDropDown.id).autocomplete(options);
