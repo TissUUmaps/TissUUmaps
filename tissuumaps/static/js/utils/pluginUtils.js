@@ -132,7 +132,9 @@ pluginUtils.loadParameters = function (pluginID, pluginDiv, parameters) {
 
             button11.addEventListener("click", (event) => {
                 var parameterName = event.target.getAttribute("data_parameterName");
-                window[pluginID].inputTrigger(parameterName);
+                if (window[pluginID].inputTrigger !== undefined) {
+                    window[pluginID].inputTrigger(parameterName);
+                }
             });
             col1.appendChild(button11);
             row.appendChild(col1);
