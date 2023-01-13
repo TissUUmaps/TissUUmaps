@@ -128,7 +128,7 @@ pluginUtils.loadParameters = function (pluginID, pluginDiv, parameters) {
                     data_parameterName: parameterName
                 },
             });
-            button11.innerHTML = "Import folder of images into layers <i>(optional)</i>";
+            button11.innerHTML = parameter.label;
 
             button11.addEventListener("click", (event) => {
                 var parameterName = event.target.getAttribute("data_parameterName");
