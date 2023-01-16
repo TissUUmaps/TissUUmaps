@@ -1103,9 +1103,11 @@ glUtils._createColorLUTTexture = function(gl) {
 glUtils._updateColorLUTTexture = function(gl, uid, texture) {
     if (!(uid + "_colorLUT" in glUtils._textures)) return;
 
+    const hasGroups = dataUtils.data[uid]["_gb_col"] != null;
+
     const colors = new Array(4096 * 4);
     for (let [barcode, index] of Object.entries(glUtils._barcodeToLUTIndex[uid])) {
-        const key = (barcode != "undefined" ? glUtils._barcodeToKey[uid][barcode] : "All");
+        const key = hasGroups ? glUtils._barcodeToKey[uid][barcode] : "All";
         const inputs = interfaceUtils._mGenUIFuncs.getGroupInputs(uid, key);
         const hexColor = "color" in inputs ? inputs["color"] : "#ffff00";
         const shape = "shape" in inputs ? inputs["shape"] : "circle";
