@@ -643,7 +643,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
                 // so also have to allocate additional space for the vertex data
                 numSectors = markerData[sectorsPropertyName][0].split(";").length;
                 bytedata_point = new Float32Array(chunkSize * numSectors * 4);
-                bytedata_index = new Float32Array(chunkSize * numSectors * 1);
+                bytedata_index = new Int32Array(chunkSize * numSectors * 1);
                 bytedata_scale = new Float32Array(chunkSize * numSectors * 1);
                 bytedata_shape = new Float32Array(chunkSize * numSectors * 1);
                 bytedata_opacity = new Uint16Array(chunkSize * numSectors * 1);
