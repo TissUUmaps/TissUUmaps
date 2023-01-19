@@ -640,6 +640,7 @@ interfaceUtils._mGenUIFuncs={ctx:{aUUID:0}}
 * @summary Delete all trace of a tab including datautils.data.key*/
 interfaceUtils._mGenUIFuncs.deleteTab=function(uid){
     tabbutton=interfaceUtils.getElementById(uid+"_li-tab")
+    if (!tabbutton) {return;}
     tabbutton.remove();
 
     tabpane=interfaceUtils.getElementById(uid+"_marker-pane")
@@ -2418,6 +2419,7 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
             }
         }
         else {
+            interfaceUtils._mGenUIFuncs.deleteTab(options.uid);
             dataURL = options.path[params.selected];
             optionsCopy["path"] = dataURL;
         }
@@ -2487,6 +2489,7 @@ interfaceUtils.createDownloadButtonMarkers = function(options) {
                 $('.chosen-select').not(e.target).val('').trigger('chosen:updated')
             }
         };
+        interfaceUtils._mGenUIFuncs.deleteTab(options.uid);
         projectUtils.applySettings(options.settings);
         interfaceUtils.generateDataTabUI(options);
     }
