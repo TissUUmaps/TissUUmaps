@@ -10,15 +10,45 @@
 var Feature_Space;
 Feature_Space = {
   name: "Feature_Space Plugin",
-  _dataset: null,
-  _UMAP1: null,
-  _UMAP2: null,
+  parameters: {
+    _refresh: {
+      label: "Refresh plugin based on loaded markers",
+      type: "button",
+    },
+    _dataset: {
+      label: "Select marker dataset",
+      type: "select",
+    },
+    _UMAP1: {
+      label: "Select Feature Space X",
+      type: "select",
+    },
+    _UMAP2: {
+      label: "Select Feature Space Y",
+      type: "select",
+    },
+    _showHisto: {
+      label: "Show histogram of selected markers",
+      type: "checkbox",
+      value: true,
+    },
+    _histoKey: {
+      label: "Select Histogram Key",
+      type: "select",
+    },
+    _display: {
+      label: "Display Feature Space",
+      type: "button",
+    },
+    _info: {
+      label: "Hold shift to draw a region around markers",
+      type: "label",
+    },
+  },
   _region: null,
   _regionPixels: null,
   _regionWin: null,
   _newwin: null,
-  _showHisto: true,
-  _histoKey: false,
 };
 
 /**
@@ -27,97 +57,32 @@ Feature_Space.init = function (container) {
   var script = document.createElement("script");
   script.src = "https://cdn.plot.ly/plotly-2.9.0.min.js";
   document.head.appendChild(script);
-  row1 = HTMLElementUtils.createRow({});
-  col11 = HTMLElementUtils.createColumn({ width: 12 });
-  button111 = HTMLElementUtils.createButton({
-    extraAttributes: { class: "btn btn-primary mx-2" },
-  });
-  button111.innerText = "Refresh drop-down lists based on loaded markers";
+  Feature_Space.inputTrigger("_refresh");
+};
 
-  row2 = HTMLElementUtils.createRow({});
-  col21 = HTMLElementUtils.createColumn({ width: 12 });
-  select211 = HTMLElementUtils.createElement({
-    kind: "select",
-    id: "Feature_Space_dataset",
-    extraAttributes: {
-      class: "form-select form-select-sm",
-      "aria-label": ".form-select-sm",
-    },
-  });
-  label212 = HTMLElementUtils.createElement({
-    kind: "label",
-    extraAttributes: { for: "Feature_Space_dataset" },
-  });
-  label212.innerText = "Select marker dataset";
+Feature_Space.inputTrigger = function (parameterName) {
+  if (parameterName == "_refresh") {
+    interfaceUtils.cleanSelect(Feature_Space.getInputID("_dataset"));
+    interfaceUtils.cleanSelect(Feature_Space.getInputID("_UMAP1"));
+    interfaceUtils.cleanSelect(Feature_Space.getInputID("_UMAP2"));
+    interfaceUtils.cleanSelect(Feature_Space.getInputID("_histoKey"));
 
-  row3 = HTMLElementUtils.createRow({});
-  col31 = HTMLElementUtils.createColumn({ width: 12 });
-  select311 = HTMLElementUtils.createElement({
-    kind: "select",
-    id: "umap_0",
-    extraAttributes: {
-      class: "form-select form-select-sm",
-      "aria-label": ".form-select-sm",
-    },
-  });
-  label312 = HTMLElementUtils.createElement({
-    kind: "label",
-    extraAttributes: { for: "umap_0" },
-  });
-  label312.innerText = "Select Feature Space X";
-
-  row4 = HTMLElementUtils.createRow({});
-  col41 = HTMLElementUtils.createColumn({ width: 12 });
-  select411 = HTMLElementUtils.createElement({
-    kind: "select",
-    id: "umap_1",
-    extraAttributes: {
-      class: "form-select form-select-sm",
-      "aria-label": ".form-select-sm",
-    },
-  });
-  label412 = HTMLElementUtils.createElement({
-    kind: "label",
-    extraAttributes: { for: "umap_1" },
-  });
-  label412.innerText = "Select Feature Space Y";
-
-  row6 = HTMLElementUtils.createRow({});
-  col61 = HTMLElementUtils.createColumn({ width: 12 });
-  var input611 = HTMLElementUtils.createElement({
-    kind: "input",
-    id: "Feature_Space_showHisto",
-    extraAttributes: {
-      class: "form-check-input",
-      type: "checkbox",
-      checked: true,
-    },
-  });
-  label611 = HTMLElementUtils.createElement({
-    kind: "label",
-    extraAttributes: { for: "Feature_Space_showHisto" },
-  });
-  label611.innerHTML = "&nbsp;Show histogram of selected markers";
-
-  row7 = HTMLElementUtils.createRow({});
-  col71 = HTMLElementUtils.createColumn({ width: 12 });
-  select711 = HTMLElementUtils.createElement({
-    kind: "select",
-    id: "Feature_Space_histoKey",
-    extraAttributes: {
-      class: "form-select form-select-sm",
-      "aria-label": ".form-select-sm",
-    },
-  });
-  label712 = HTMLElementUtils.createElement({
-    kind: "label",
-    extraAttributes: { for: "Feature_Space_histoKey" },
-  });
-  label712.innerText = "Select Histogram Key";
-
-  input611.addEventListener("change", (event) => {
-    Feature_Space._showHisto = input611.checked;
-    if (Feature_Space._showHisto) {
+    var datasets = Object.keys(dataUtils.data).map(function (e, i) {
+      return {
+        value: e,
+        innerHTML: document.getElementById(e + "_tab-name").value,
+      };
+    });
+    interfaceUtils.addObjectsToSelect(
+      Feature_Space.getInputID("_dataset"),
+      datasets
+    );
+    var event = new Event("change");
+    interfaceUtils
+      .getElementById(Feature_Space.getInputID("_dataset"))
+      .dispatchEvent(event);
+  } else if (parameterName == "_showHisto") {
+    if (Feature_Space.get("_showHisto")) {
       Feature_Space.getHisto();
     } else {
       Feature_Space_Control.style.height = "100%";
@@ -126,143 +91,104 @@ Feature_Space.init = function (container) {
         histoView.parentNode.parentNode.removeChild(histoView.parentNode);
       }
     }
-  });
-
-  row5 = HTMLElementUtils.createRow({});
-  col51 = HTMLElementUtils.createColumn({ width: 12 });
-  button511 = HTMLElementUtils.createButton({
-    extraAttributes: { class: "btn btn-primary mx-2" },
-  });
-  button511.innerText = "Display Feature Space";
-
-  button111.addEventListener("click", (event) => {
-    interfaceUtils.cleanSelect("Feature_Space_dataset");
-    interfaceUtils.cleanSelect("umap_0");
-    interfaceUtils.cleanSelect("umap_1");
-    interfaceUtils.cleanSelect("Feature_Space_histoKey");
-
-    var datasets = Object.keys(dataUtils.data).map(function (e, i) {
-      return {
-        value: e,
-        innerHTML: document.getElementById(e + "_tab-name").value,
-      };
-    });
-    interfaceUtils.addObjectsToSelect("Feature_Space_dataset", datasets);
-    var event = new Event("change");
-    interfaceUtils.getElementById("Feature_Space_dataset").dispatchEvent(event);
-  });
-
-  select211.addEventListener("change", (event) => {
-    Feature_Space._dataset = select211.value;
-    if (!dataUtils.data[Feature_Space._dataset]) return;
-    interfaceUtils.cleanSelect("umap_0");
+  } else if (parameterName == "_dataset") {
+    if (!dataUtils.data[Feature_Space.get("_dataset")]) return;
+    interfaceUtils.cleanSelect(Feature_Space.getInputID("_UMAP1"));
     interfaceUtils.addElementsToSelect(
-      "umap_0",
-      dataUtils.data[Feature_Space._dataset]._csv_header
+      Feature_Space.getInputID("_UMAP1"),
+      dataUtils.data[Feature_Space.get("_dataset")]._csv_header
     );
-    interfaceUtils.cleanSelect("umap_1");
+    interfaceUtils.cleanSelect(Feature_Space.getInputID("_UMAP2"));
     interfaceUtils.addElementsToSelect(
-      "umap_1",
-      dataUtils.data[Feature_Space._dataset]._csv_header
+      Feature_Space.getInputID("_UMAP2"),
+      dataUtils.data[Feature_Space.get("_dataset")]._csv_header
     );
-    interfaceUtils.cleanSelect("Feature_Space_histoKey");
+    interfaceUtils.cleanSelect("_histoKey");
     interfaceUtils.addElementsToSelect(
-      "Feature_Space_histoKey",
-      dataUtils.data[Feature_Space._dataset]._csv_header
+      Feature_Space.getInputID("_histoKey"),
+      dataUtils.data[Feature_Space.get("_dataset")]._csv_header
     );
     if (
-      dataUtils.data[Feature_Space._dataset]._csv_header.indexOf("umap_0") > 0
-    ) {
-      interfaceUtils.getElementById("umap_0").value = "umap_0";
-      var event = new Event("change");
-      interfaceUtils.getElementById("umap_0").dispatchEvent(event);
-    }
-    if (
-      dataUtils.data[Feature_Space._dataset]._csv_header.indexOf("umap_1") > 0
-    ) {
-      interfaceUtils.getElementById("umap_1").value = "umap_1";
-      var event = new Event("change");
-      interfaceUtils.getElementById("umap_1").dispatchEvent(event);
-    }
-    if (
-      dataUtils.data[Feature_Space._dataset]._csv_header.indexOf(
-        dataUtils.data[Feature_Space._dataset]._gb_col
+      dataUtils.data[Feature_Space.get("_dataset")]._csv_header.indexOf(
+        "umap_0"
       ) > 0
     ) {
-      interfaceUtils.getElementById("Feature_Space_histoKey").value =
-        dataUtils.data[Feature_Space._dataset]._gb_col;
-      var event = new Event("change");
-      interfaceUtils
-        .getElementById("Feature_Space_histoKey")
-        .dispatchEvent(event);
+      Feature_Space.set("_UMAP1", "umap_0");
+      Feature_Space.inputTrigger("_UMAP1");
     }
-  });
-  select311.addEventListener("change", (event) => {
-    Feature_Space._UMAP1 = select311.value;
-  });
-  select411.addEventListener("change", (event) => {
-    Feature_Space._UMAP2 = select411.value;
-  });
-  select711.addEventListener("change", (event) => {
-    Feature_Space._histoKey = select711.value;
-    /*var pointsIn = Feature_Space.analyzeRegion(
-      Feature_Space._region,
-      Feature_Space._regionWin
-    );
-    Feature_Space.getHisto();*/
-  });
-
-  button511.addEventListener("click", (event) => {
+    if (
+      dataUtils.data[Feature_Space.get("_dataset")]._csv_header.indexOf(
+        "umap_1"
+      ) > 0
+    ) {
+      Feature_Space.set("_UMAP2", "umap_1");
+      Feature_Space.inputTrigger("_UMAP2");
+    }
+    if (
+      dataUtils.data[Feature_Space.get("_dataset")]._csv_header.indexOf(
+        dataUtils.data[Feature_Space.get("_dataset")]._gb_col
+      ) > 0
+    ) {
+      Feature_Space.set(
+        "_histoKey",
+        dataUtils.data[Feature_Space.get("_dataset")]._gb_col
+      );
+      Feature_Space.inputTrigger("_histoKey");
+    }
+    if (dataUtils.data[Feature_Space.get("_dataset")]._filetype == "h5") {
+      select311 = interfaceUtils._mGenUIFuncs.intputToH5(
+        Feature_Space.get("_dataset"),
+        interfaceUtils.getElementById(Feature_Space.getInputID("_UMAP1"))
+      );
+      select411 = interfaceUtils._mGenUIFuncs.intputToH5(
+        Feature_Space.get("_dataset"),
+        interfaceUtils.getElementById(Feature_Space.getInputID("_UMAP2"))
+      );
+      select711 = interfaceUtils._mGenUIFuncs.intputToH5(
+        Feature_Space.get("_dataset"),
+        interfaceUtils.getElementById(Feature_Space.getInputID("_histoKey"))
+      );
+      Feature_Space.set("_UMAP1", "/obsm/X_umap;0");
+      Feature_Space.set("_UMAP2", "/obsm/X_umap;1");
+      Feature_Space.set(
+        "_histoKey",
+        dataUtils.data[Feature_Space.get("_dataset")]._gb_col
+      );
+      select311.addEventListener("change", (event) => {
+        Feature_Space.set("_UMAP1", select311.value);
+      });
+      select411.addEventListener("change", (event) => {
+        Feature_Space.set("_UMAP2", select411.value);
+      });
+      select711.addEventListener("change", (event) => {
+        Feature_Space.set("_histoKey", select711.value);
+      });
+    }
+  } else if (parameterName == "_display") {
     Feature_Space.run();
-  });
-
-  container.innerHTML = "";
-  // container.appendChild(row0);
-  container.appendChild(row1);
-  row1.appendChild(col11);
-  col11.appendChild(button111);
-  container.appendChild(row2);
-  row2.appendChild(col21);
-  col21.appendChild(label212);
-  col21.appendChild(select211);
-  container.appendChild(row3);
-  row3.appendChild(col31);
-  col31.appendChild(label312);
-  col31.appendChild(select311);
-  container.appendChild(row4);
-  row4.appendChild(col41);
-  col41.appendChild(label412);
-  col41.appendChild(select411);
-  container.appendChild(row6);
-  row6.appendChild(col61);
-  col61.appendChild(input611);
-  col61.appendChild(label611);
-  container.appendChild(row7);
-  row7.appendChild(col71);
-  col71.appendChild(label712);
-  col71.appendChild(select711);
-  container.appendChild(row5);
-  row5.appendChild(col51);
-  col51.appendChild(button511);
-  var event = new Event("click");
-  button111.dispatchEvent(event);
-
-  var textInfo = document.createElement("div");
-  textInfo.style.marginTop = "10px";
-  textInfo.innerHTML = "Hold shift to draw a region around markers";
-  container.appendChild(textInfo);
+  }
 };
 
-function copyDataset(dataIn, dataOut) {
+async function copyDataset(dataIn, dataOut) {
+  if (dataIn._filetype == "h5") {
+    let allinputs = {
+      umap0: interfaceUtils.getElementById(Feature_Space.getInputID("_UMAP1")),
+      umap1: interfaceUtils.getElementById(Feature_Space.getInputID("_UMAP2")),
+      Feature_Space_histoKey: interfaceUtils.getElementById(
+        Feature_Space.getInputID("_histoKey")
+      ),
+    };
+    await dataUtils.getAllH5Data(Feature_Space.get("_dataset"), allinputs);
+  }
   var headers = interfaceUtils._mGenUIFuncs.getTabDropDowns(
-    Feature_Space._dataset
+    Feature_Space.get("_dataset")
   );
   dataOut["expectedHeader"] = Object.assign(
     {},
     ...Object.keys(headers).map((k) => ({ [k]: headers[k].value }))
   );
   var radios = interfaceUtils._mGenUIFuncs.getTabRadiosAndChecks(
-    Feature_Space._dataset
+    Feature_Space.get("_dataset")
   );
   dataOut["expectedRadios"] = Object.assign(
     {},
@@ -289,13 +215,25 @@ function copyDataset(dataIn, dataOut) {
   dataOut["_collectionItem_fixed"] = 0;
 }
 
-Feature_Space.run = function () {
+Feature_Space.run = async function () {
   var op = tmapp["object_prefix"];
   var vname = op + "_viewer";
   var Feature_Space_Control = document.getElementById("Feature_Space_Control");
   if (Feature_Space_Control) {
     Feature_Space.clear();
   }
+
+  if (dataUtils.data[Feature_Space.get("_dataset")]._filetype == "h5") {
+    let allinputs = {
+      umap0: interfaceUtils.getElementById(Feature_Space.getInputID("_UMAP1")),
+      umap1: interfaceUtils.getElementById(Feature_Space.getInputID("_UMAP2")),
+      Feature_Space_histoKey: interfaceUtils.getElementById(
+        Feature_Space.getInputID("_histoKey")
+      ),
+    };
+    await dataUtils.getAllH5Data(Feature_Space.get("_dataset"), allinputs);
+  }
+
   Feature_Space_Control = document.createElement("iframe");
   Feature_Space_Control.id = "Feature_Space_Control";
   Feature_Space_Control.style.width = "100%";
@@ -307,14 +245,17 @@ Feature_Space.run = function () {
   elt.style.height = "100%";
   elt.style.display = "inline-block";
   elt.style.verticalAlign = "top";
+  elt.id = "Feature_Space_MainDiv";
   elt.appendChild(Feature_Space_Control);
   document.getElementById("ISS_viewer").appendChild(elt);
   $(".openseadragon-container")[0].style.display = "inline-flex";
   $(".openseadragon-container")[0].style.width = "60%";
 
   Feature_Space_Control.addEventListener("load", (ev) => {
+    Feature_Space_Control.contentWindow.projectUtils.loadProject =
+      function () {};
     Feature_Space_Control.classList.add("d-none");
-    var timeout = setTimeout(function () {
+    var timeout = setInterval(function () {
       var newwin = Feature_Space_Control.contentWindow;
       Feature_Space._newwin = newwin;
       //OSD handlers are not registered manually they have to be registered
@@ -438,118 +379,141 @@ Feature_Space.run = function () {
         JSON.stringify(projectUtils._activeState)
       );
       newwin.filterUtils._compositeMode = filterUtils._compositeMode;
-      try {
+      newwin.interfaceUtils.generateDataTabUI({
+        uid: Feature_Space.get("_dataset"),
+        name: "UMAP",
+      });
+      /*try {
         newwin.interfaceUtils.generateDataTabUI({
-          uid: Feature_Space._dataset,
+          uid: Feature_Space.get("_dataset"),
           name: "UMAP",
         });
-      } catch (error) {}
-      newwin.dataUtils.data[Feature_Space._dataset] = {};
+      } catch (error) {}*/
+      newwin.dataUtils.data[Feature_Space.get("_dataset")] = {};
       copyDataset(
-        dataUtils.data[Feature_Space._dataset],
-        newwin.dataUtils.data[Feature_Space._dataset]
-      );
-
-      newwin.dataUtils.createMenuFromCSV(
-        Feature_Space._dataset,
-        newwin.dataUtils.data[Feature_Space._dataset]["_processeddata"].columns
-      );
-      let main_button = newwin.document.getElementById("ISS_collapse_btn");
-      main_button.classList.add("d-none");
-      newwin.interfaceUtils.toggleRightPanel();
-      newwin.document.getElementById("main-navbar").classList.add("d-none");
-      newwin.document
-        .getElementById("floating-navbar-toggler")
-        .classList.add("d-none");
-      newwin.document
-        .getElementById("powered_by_tissuumaps")
-        .classList.add("d-none");
-      let elt = document.createElement("div");
-      elt.className = "closeFeature_Space px-1 mx-1 viewer-layer";
-      elt.id = "closeFeature_Space";
-      elt.style.zIndex = "100";
-      elt.style.cursor = "pointer";
-      elt.innerHTML = "<i class='bi bi-x-lg'></i>";
-      elt.addEventListener("click", function (event) {
-        Feature_Space.clear();
-      });
-      newwin.tmapp.ISS_viewer.addControl(elt, {
-        anchor: OpenSeadragon.ControlAnchor.TOP_LEFT,
-      });
-      newwin.tmapp.ISS_viewer.close();
-      Feature_Space_Control.classList.remove("d-none");
-      newwin.document
-        .getElementsByClassName("navigator ")[0]
-        .classList.add("d-none");
-      setTimeout(function () {
-        var copySettings = function () {
-          setTimeout(function () {
-            newwin = Feature_Space._newwin;
-            copyDataset(
-              dataUtils.data[Feature_Space._dataset],
-              newwin.dataUtils.data[Feature_Space._dataset]
-            );
-            $(
-              "." +
-                Feature_Space._dataset +
-                "-marker-input, ." +
-                Feature_Space._dataset +
-                "-marker-hidden, ." +
-                Feature_Space._dataset +
-                "-marker-color, ." +
-                Feature_Space._dataset +
-                "-marker-shape"
-            )
-              .each(function (i, elt) {
-                newwin.document.getElementById(elt.id).value = elt.value;
-                newwin.document.getElementById(elt.id).checked = elt.checked;
-              })
-              .promise()
-              .done(function () {
-                newwin.glUtils.loadMarkers(Feature_Space._dataset);
-                newwin.glUtils.draw();
+        dataUtils.data[Feature_Space.get("_dataset")],
+        newwin.dataUtils.data[Feature_Space.get("_dataset")]
+      ).then(() => {
+        newwin.dataUtils.createMenuFromCSV(
+          Feature_Space.get("_dataset"),
+          newwin.dataUtils.data[Feature_Space.get("_dataset")]["_processeddata"]
+            .columns
+        );
+        let main_button = newwin.document.getElementById("ISS_collapse_btn");
+        main_button.classList.add("d-none");
+        newwin.interfaceUtils.toggleRightPanel();
+        newwin.document.getElementById("main-navbar").classList.add("d-none");
+        newwin.document
+          .getElementById("floating-navbar-toggler")
+          .classList.add("d-none");
+        newwin.document
+          .getElementById("powered_by_tissuumaps")
+          .classList.add("d-none");
+        let elt = document.createElement("div");
+        elt.className = "closeFeature_Space px-1 mx-1 viewer-layer";
+        elt.id = "closeFeature_Space";
+        elt.style.zIndex = "100";
+        elt.style.cursor = "pointer";
+        elt.innerHTML = "<i class='bi bi-x-lg'></i>";
+        elt.addEventListener("click", function (event) {
+          Feature_Space.clear();
+        });
+        newwin.tmapp.ISS_viewer.addControl(elt, {
+          anchor: OpenSeadragon.ControlAnchor.TOP_LEFT,
+        });
+        newwin.tmapp.ISS_viewer.close();
+        Feature_Space_Control.classList.remove("d-none");
+        newwin.document
+          .getElementsByClassName("navigator ")[0]
+          .classList.add("d-none");
+        setTimeout(function () {
+          var copySettings = function () {
+            setTimeout(function () {
+              newwin = Feature_Space._newwin;
+              copyDataset(
+                dataUtils.data[Feature_Space.get("_dataset")],
+                newwin.dataUtils.data[Feature_Space.get("_dataset")]
+              ).then(() => {
+                $(
+                  "." +
+                    Feature_Space.get("_dataset") +
+                    "-marker-input, ." +
+                    Feature_Space.get("_dataset") +
+                    "-marker-hidden, ." +
+                    Feature_Space.get("_dataset") +
+                    "-marker-color, ." +
+                    Feature_Space.get("_dataset") +
+                    "-marker-shape"
+                )
+                  .each(function (i, elt) {
+                    newwin.document.getElementById(elt.id).value = elt.value;
+                    newwin.document.getElementById(elt.id).checked =
+                      elt.checked;
+                  })
+                  .promise()
+                  .done(function () {
+                    newwin.glUtils.loadMarkers(Feature_Space.get("_dataset"));
+                    newwin.glUtils.draw();
+                  });
               });
-          }, 100);
-        };
-        if (glUtils.temp_draw === undefined) {
-          glUtils.temp_draw = glUtils.draw;
-          glUtils.draw = function () {
-            glUtils.temp_draw();
-            copySettings();
+            }, 100);
           };
-          glUtils.temp_updateColorLUTTexture = glUtils._updateColorLUTTexture;
-          glUtils._updateColorLUTTexture = function (gl, uid, texture) {
-            glUtils.temp_updateColorLUTTexture(gl, uid, texture);
-            copySettings();
-          };
-          dataUtils.temp_updateViewOptions = dataUtils.updateViewOptions;
-          dataUtils.updateViewOptions = function (data_id) {
-            dataUtils.temp_updateViewOptions(data_id);
-            copyDataset(
-              dataUtils.data[Feature_Space._dataset],
-              newwin.dataUtils.data[Feature_Space._dataset]
-            );
-            newwin.dataUtils.createMenuFromCSV(
-              Feature_Space._dataset,
-              newwin.dataUtils.data[Feature_Space._dataset]["_processeddata"]
-                .columns
-            );
-          };
-        }
-        if (interfaceUtils.temp_toggleRightPanel === undefined) {
-          interfaceUtils.temp_toggleRightPanel =
-            interfaceUtils.toggleRightPanel;
-          interfaceUtils.toggleRightPanel = function () {
-            interfaceUtils.temp_toggleRightPanel();
-            Plotly.Plots.resize(document.getElementById("histoView"));
-          };
-        }
-      }, 200);
+          if (glUtils.temp_draw === undefined) {
+            glUtils.temp_draw = glUtils.draw;
+            glUtils.draw = function () {
+              glUtils.temp_draw();
+              copySettings();
+            };
+            glUtils.temp_updateColorLUTTexture = glUtils._updateColorLUTTexture;
+            glUtils._updateColorLUTTexture = function (gl, uid, texture) {
+              glUtils.temp_updateColorLUTTexture(gl, uid, texture);
+              copySettings();
+            };
+            dataUtils.temp_updateViewOptions = dataUtils.updateViewOptions;
+            dataUtils.updateViewOptions = function (
+              data_id,
+              force_reload_all,
+              reloadH5
+            ) {
+              newwin.tmapp["ISS_viewer"].world.removeAll();
+              dataUtils.temp_updateViewOptions(
+                data_id,
+                force_reload_all,
+                reloadH5
+              );
+              copyDataset(
+                dataUtils.data[Feature_Space.get("_dataset")],
+                newwin.dataUtils.data[Feature_Space.get("_dataset")]
+              ).then(() => {
+                newwin.dataUtils.createMenuFromCSV(
+                  Feature_Space.get("_dataset"),
+                  newwin.dataUtils.data[Feature_Space.get("_dataset")][
+                    "_processeddata"
+                  ].columns
+                );
+                newwin.dataUtils.updateViewOptions(
+                  data_id,
+                  force_reload_all,
+                  reloadH5
+                );
+              });
+            };
+          }
+          if (interfaceUtils.temp_toggleRightPanel === undefined) {
+            interfaceUtils.temp_toggleRightPanel =
+              interfaceUtils.toggleRightPanel;
+            interfaceUtils.toggleRightPanel = function () {
+              interfaceUtils.temp_toggleRightPanel();
+              Plotly.Plots.resize(document.getElementById("histoView"));
+            };
+          }
+        }, 200);
+      });
     }, 200);
   });
 
   Feature_Space_Control.classList.add("d-none");
-  Feature_Space_Control.setAttribute("src", "/");
+  Feature_Space_Control.setAttribute("src", window.location.href);
 };
 
 Feature_Space.clear = function () {
@@ -611,18 +575,22 @@ Feature_Space.releaseHandler = function (event, win, mainwin) {
 
   var pointsIn = Feature_Space.analyzeRegion(Feature_Space._region, win);
   var scalePropertyName = "UMAP_Region_scale";
-  win.dataUtils.data[Feature_Space._dataset]["_scale_col"] = scalePropertyName;
-  dataUtils.data[Feature_Space._dataset]["_scale_col"] = scalePropertyName;
-  var markerData = win.dataUtils.data[Feature_Space._dataset]["_processeddata"];
+  win.dataUtils.data[Feature_Space.get("_dataset")]["_scale_col"] =
+    scalePropertyName;
+  dataUtils.data[Feature_Space.get("_dataset")]["_scale_col"] =
+    scalePropertyName;
+  var markerData =
+    win.dataUtils.data[Feature_Space.get("_dataset")]["_processeddata"];
   markerData[scalePropertyName] = new Float64Array(
-    markerData[win.dataUtils.data[Feature_Space._dataset]["_X"]].length
+    markerData[win.dataUtils.data[Feature_Space.get("_dataset")]["_X"]].length
   );
   var opacityPropertyName = "UMAP_Region_opacity";
-  win.dataUtils.data[Feature_Space._dataset]["_opacity_col"] =
+  win.dataUtils.data[Feature_Space.get("_dataset")]["_opacity_col"] =
     opacityPropertyName;
-  dataUtils.data[Feature_Space._dataset]["_opacity_col"] = opacityPropertyName;
+  dataUtils.data[Feature_Space.get("_dataset")]["_opacity_col"] =
+    opacityPropertyName;
   markerData[opacityPropertyName] = new Float64Array(
-    markerData[win.dataUtils.data[Feature_Space._dataset]["_X"]].length
+    markerData[win.dataUtils.data[Feature_Space.get("_dataset")]["_X"]].length
   );
   markerData[opacityPropertyName] = markerData[opacityPropertyName].map(
     function () {
@@ -659,10 +627,10 @@ Feature_Space.releaseHandler = function (event, win, mainwin) {
       histoView.parentNode.parentNode.removeChild(histoView.parentNode);
     }
   }
-  win.glUtils.loadMarkers(Feature_Space._dataset);
+  mainwin.glUtils.loadMarkers(Feature_Space.get("_dataset"), true);
+  mainwin.glUtils.draw();
+  win.glUtils.loadMarkers(Feature_Space.get("_dataset"), true);
   win.glUtils.draw();
-  glUtils.loadMarkers(Feature_Space._dataset);
-  glUtils.draw();
   return;
 };
 
@@ -732,7 +700,7 @@ Feature_Space.moveHandler = function (event, win, mainwin) {
 Feature_Space.analyzeRegion = function (points, win) {
   Feature_Space._histogram = [];
   var pointsInside = [];
-  var dataset = Feature_Space._dataset;
+  var dataset = Feature_Space.get("_dataset");
   var countsInsideRegion = {};
   var options = {
     globalCoords: true,
@@ -822,8 +790,8 @@ Feature_Space.analyzeRegion = function (points, win) {
   for (var key in countsInsideRegion) {
     var hexColor;
     if (
-      !Feature_Space._histoKey ||
-      Feature_Space._histoKey == win.dataUtils.data[dataset]._gb_col
+      !Feature_Space.get("_histoKey") ||
+      Feature_Space.get("_histoKey") == win.dataUtils.data[dataset]._gb_col
     ) {
       var inputs = interfaceUtils._mGenUIFuncs.getGroupInputs(dataset, key);
       hexColor = "color" in inputs ? inputs["color"] : "#ff0000";
