@@ -46,6 +46,6 @@ setuptools.setup(
         ]
     }  # ,
     # data_files=[
-    #    ('tissuumaps',['tissuumaps/VERSION','tissuumaps/web.zip']),
+    #    ('tissuumaps',['tissuumaps/VERSION']),
     # ],
 )
