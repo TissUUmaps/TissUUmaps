@@ -613,7 +613,9 @@ interfaceUtils.generateDataTabUI = function(options){
             divpane_settings_toggle.classList.remove("d-none");
         }
         interfaceUtils._mGenUIFuncs.ChangeTabName(generated, options.name);
-        dataUtils.XHRCSV(generated,options);
+        if (options.path !== undefined) {
+            dataUtils.XHRCSV(generated,options);
+        }
         if (options.expectedHeader === undefined) {
             $('#'+generated+'_flush-collapse0').collapse("show");
         }
