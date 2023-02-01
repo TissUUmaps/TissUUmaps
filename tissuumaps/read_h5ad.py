@@ -85,7 +85,7 @@ def to_csc_sparse(adata):
     if "encoding-type" in adata.get("X").attrs.keys():
         encodingTypeKey = "encoding-type"
     elif "h5sparse_format" in adata.get("X").attrs.keys():
-        encodingTypeKey
+        encodingTypeKey = "h5sparse_format"
 
     if "shape" in adata.get("X").attrs.keys():
         shapeKey = "shape"
@@ -262,9 +262,9 @@ def h5ad_to_tmap(basedir, path, library_id=None):
     if "encoding-type" in adata.get("X").attrs.keys():
         encodingType = "encoding-type"
     elif "h5sparse_format" in adata.get("X").attrs.keys():
-        encodingType
+        encodingType = "h5sparse_format"
     if encodingType:
-        if adata.get("X").attrs["encoding-type"] == "csr_matrix":
+        if adata.get("X").attrs[encodingType] == "csr_matrix":
             if not write_adata:
                 write_adata = True
                 adata, path = get_write_adata(adata, path, basedir)
