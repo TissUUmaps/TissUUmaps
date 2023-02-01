@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.1.0
+## 3.1
 
 - Adding HDF5 support on the client side
 - Adding AnnData support on the server side / GUI

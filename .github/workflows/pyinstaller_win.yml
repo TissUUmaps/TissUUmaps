@@ -74,5 +74,5 @@ jobs:
           path: "standalone/dist"
       - uses: ncipollo/release-action@v1
         with:
-          artifacts: standalone/TissUUmaps_winInstaller.exe
+          artifacts: standalone/dist/TissUUmaps_winInstaller.exe
           token: ${{ secrets.GITHUB_TOKEN }}
