@@ -203,7 +203,7 @@ class H5AD_API  extends H5_API {
                 if (data_keys.type == "Dataset") {
                     let children = [];
                     if (data_keys.shape.length > 1) {
-                        for (let i=0; i<data_keys.shape.length;i++){
+                        for (let i=0; i<data_keys.shape[1];i++){
                             children.push(path+";"+i.toString());
                         }
                     }
