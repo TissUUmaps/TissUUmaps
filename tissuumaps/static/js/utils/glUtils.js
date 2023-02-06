@@ -57,6 +57,7 @@ glUtils = {
     _resolutionScaleActual: 1.0,  // Automatic scaling factor computed from glUtils._resolutionScale
     _useInstancing: true,         // Use instancing and gl.TRIANGLE_STRIP to avoid size limit of gl.POINTS
     _showEdgesExperimental: true,
+    _edgeThicknessRatio: 0.1,     // Ratio between edge thickness and marker size
     _logPerformance: false,       // Use GPU timer queries to log performance
     _piechartPalette: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
@@ -366,8 +367,6 @@ glUtils._pickingFS = `
 
 
 glUtils._edgesVS = `
-    #define THICKNESS_RATIO 0.2
-
     uniform mat2 u_viewportTransform;
     uniform vec2 u_canvasSize;
     uniform float u_transformIndex;
@@ -375,6 +374,7 @@ glUtils._edgesVS = `
     uniform float u_globalMarkerScale;
     uniform float u_markerOpacity;
     uniform float u_maxPointSize;
+    uniform float u_edgeThicknessRatio;
 
     uniform sampler2D u_colorLUT;
     uniform sampler2D u_transformLUT;
@@ -410,11 +410,11 @@ glUtils._edgesVS = `
         ndcPos1 = u_viewportTransform * ndcPos1;
 
         float pointSize = u_markerScale * u_globalMarkerScale;
-        pointSize = clamp(pointSize, 1.0, u_maxPointSize);
-        float lineThickness = max(0.5, THICKNESS_RATIO * pointSize);
+        pointSize = clamp(pointSize, 0.2, u_maxPointSize);
+        float lineThickness = max(0.5, u_edgeThicknessRatio * pointSize);
         float lineThicknessAdjusted = lineThickness + 0.25;  // Expanded thickness values,
         float lineThicknessAdjusted2 = lineThickness + 0.5;  // needed for anti-aliasing
-        float lineThicknessOpacity = clamp(THICKNESS_RATIO * pointSize + 0.25, 0.5, 1.0);
+        float lineThicknessOpacity = clamp(u_edgeThicknessRatio * pointSize, 0.01, 1.0);
 
         vec2 ndcMidpoint = (ndcPos1 + ndcPos0) * 0.5;
         vec2 ndcDeltaU = (ndcPos1 - ndcPos0) * 0.5;
@@ -1464,6 +1464,7 @@ glUtils._drawEdgesColorPass = function(gl, viewportTransform, markerScaleAdjuste
     gl.uniform2fv(gl.getUniformLocation(program, "u_canvasSize"), [gl.canvas.width, gl.canvas.height]);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
     gl.uniform1f(gl.getUniformLocation(program, "u_maxPointSize"), glUtils._useInstancing ? 2048 : 256);
+    gl.uniform1f(gl.getUniformLocation(program, "u_edgeThicknessRatio"), glUtils._edgeThicknessRatio);
     gl.activeTexture(gl.TEXTURE3);
     gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["transformLUT"]);
     gl.uniform1i(gl.getUniformLocation(program, "u_transformLUT"), 3);
