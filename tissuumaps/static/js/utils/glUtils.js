@@ -410,11 +410,11 @@ glUtils._edgesVS = `
         ndcPos1 = u_viewportTransform * ndcPos1;
 
         float pointSize = u_markerScale * u_globalMarkerScale;
-        pointSize = clamp(pointSize, 0.2, u_maxPointSize);
+        pointSize = clamp(pointSize, 0.05, u_maxPointSize);
         float lineThickness = max(0.5, u_edgeThicknessRatio * pointSize);
         float lineThicknessAdjusted = lineThickness + 0.25;  // Expanded thickness values,
         float lineThicknessAdjusted2 = lineThickness + 0.5;  // needed for anti-aliasing
-        float lineThicknessOpacity = clamp(u_edgeThicknessRatio * pointSize, 0.01, 1.0);
+        float lineThicknessOpacity = clamp(u_edgeThicknessRatio * pointSize, 0.005, 1.0);
 
         vec2 ndcMidpoint = (ndcPos1 + ndcPos0) * 0.5;
         vec2 ndcDeltaU = (ndcPos1 - ndcPos0) * 0.5;
