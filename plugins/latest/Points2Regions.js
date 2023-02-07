@@ -12,10 +12,10 @@ Points2Regions = {
   name: "Points2Regions Plugin",
   _dataset: null,
   _clusterKey: false,
-  _nclusters: 8,
+  _nclusters: 3,
   _expression_threshold: 1,
   _normalize_order: 1,
-  _sigma: 15,
+  _sigma: 1,
   _stride: 5,
   _region_name: "Clusters",
 };
@@ -95,7 +95,7 @@ Points2Regions.init = function (container) {
       for: "Points2Regions_bboxSize",
     },
   });
-  label_expression_threshold12.innerHTML = "Expression threshold:";
+  label_expression_threshold12.innerHTML = "Min points per bin (increase to avoid regions with few markers).";
   var input_expression_threshold12 = HTMLElementUtils.createElement({
     kind: "input",
     id: "Points2Regions_expression_threshold",
@@ -145,7 +145,7 @@ Points2Regions.init = function (container) {
       for: "Points2Regions_bboxSize",
     },
   });
-  label_sigma12.innerHTML = "Sigma:";
+  label_sigma12.innerHTML = "Amount of smoothing between bins (default 1):";
   var input_sigma12 = HTMLElementUtils.createElement({
     kind: "input",
     id: "Points2Regions_sigma",
@@ -169,7 +169,7 @@ Points2Regions.init = function (container) {
       for: "Points2Regions_bboxSize",
     },
   });
-  label_stride12.innerHTML = "Bin width:";
+  label_stride12.innerHTML = "Bin size (increase/decrease for coarser/finer regions):";
   var input_stride12 = HTMLElementUtils.createElement({
     kind: "input",
     id: "Points2Regions_stride",

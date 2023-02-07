@@ -75,7 +75,7 @@ def binary_mask_to_polygon(binary_mask, tolerance=0, offset=None, scale=None):
         binary_mask, pad_width=1, mode="constant", constant_values=0
     )
     contours = find_contours(padded_binary_mask, 0.5)
-    contours = np.subtract(contours, 1)
+    contours = [c-1 for c in contours]
     for contour in contours:
         contour = approximate_polygon(contour, tolerance)
         if len(contour) < 3:
@@ -252,8 +252,8 @@ class Rasterizer:
         pass
 
     def diffuse(self, sigma: float = 1.0):
-        if self.bin_width is not None:
-            sigma = sigma / self.bin_width
+        #if self.bin_width is not None:
+        #    sigma = sigma / self.bin_width
         GX = csr_matrix(self.__make_gaussian(sigma, self.grid_shape[0]))
         GY = csr_matrix(self.__make_gaussian(sigma, self.grid_shape[1]).T)
 
@@ -362,14 +362,13 @@ class FastCluster:
 if __name__ == "__main__":
     from os.path import join
 
-    import matplotlib.pyplot as plt
     import pandas as pd
 
-    df = pd.read_csv(join("data", "example_data", "data.csv"))
-    xy = df[["x", "y"]].to_numpy()
-    labels = df["gene"].to_numpy()
+    df = pd.read_csv(r"C:\Users\Axel\Downloads\patient2_cell_positions.csv")
+    xy = df[["Centroid_X", "Centroid_Y"]].to_numpy()
+    labels = df["label"].to_numpy()
 
-    c = FastCluster(xy, labels, bin_width=5, sigma=45, n_clusters=8, min_density=2)
+    c = FastCluster(xy, labels, bin_width=5, sigma=15, n_clusters=8, min_density=1)
     labels = c.get_label_per_point()
     import json
 
