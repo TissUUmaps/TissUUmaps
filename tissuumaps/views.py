@@ -132,7 +132,9 @@ class ImageConverter:
 
     def convert(self):
         logging.debug(" ".join(["Converting: ", self.inputImage, self.outputImage]))
-        if not os.path.isfile(self.outputImage):
+        if not os.path.isfile(self.outputImage) or (
+            os.path.getmtime(self.inputImage) > os.path.getmtime(self.outputImage)
+        ):
 
             def convertThread():
                 try:
