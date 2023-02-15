@@ -522,15 +522,7 @@
       const queryString = window.location.search;
       const urlParams = new URLSearchParams(queryString);
       const tmapFile = urlParams.get('tmap')
-      if (tmapFile != null) {
-        projectUtils.loadProjectFileFromServer(tmapFile);
-      }
-      else {
-        /*tmapp.layers =[
-            {name:"Fluo",tileSource:"data/breastcancer/fluo.dzi"},
-            {name:"HE",tileSource:"data/breastcancer/HE.dzi"}
-        ];*/
-      }
+
       glUtils._markershapes = "/static/misc/markershapes.png"
       h5Utils.worker_path = "/static/js/utils/h5Utils_worker.js";
       h5Utils.relative_root = "../../../";
@@ -541,10 +533,16 @@
       pluginUtils.addPlugin("{{ plugin }}");
       {% endif %} {% endfor %}
 
-      {% if jsonProject %}
-      jsonState = {{ jsonProject | tojson | safe }}
-      projectUtils.loadProject(jsonState);
-      {% endif %}
+      if (tmapFile != null) {
+        projectUtils.loadProjectFileFromServer(tmapFile);
+      }
+      else {
+        {% if jsonProject %}
+        jsonState = {{ jsonProject | tojson | safe }}
+        projectUtils.loadProject(jsonState);
+        {% endif %}
+      }
+
       {% if isStandalone %}
       flask.standalone.init();
       {% elif readOnly %}
