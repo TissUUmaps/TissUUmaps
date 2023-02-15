@@ -2381,10 +2381,8 @@ interfaceUtils.createDownloadDropdown = function(downloadRow, innerText, callbac
 
     downloadRow.appendChild(row);
 
-    $(".chosen-select_" + random_chosen_id).chosen({disable_search_threshold: 10, search_contains: true, width: "100%"});
-    $(".chosen-select_" + random_chosen_id).on('change', function(evt, params) {
-        callback(evt, params);
-    });
+    $(".chosen-select_" + random_chosen_id).chosen({disable_search_threshold: 10, search_contains: true, width: "100%"})
+    .change(callback);
     return row;
 }
 
@@ -2402,7 +2400,7 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
         projectUtils.applySettings(options.settings);
         optionsCopy = JSON.parse(JSON.stringify(options));
         var dataURL = "";
-        if (params.selected == "") {return;}
+        if (params.selected === "") {return;}
         if (options.dropdownOptions) {
             dropdownOption = options.dropdownOptions[params.selected];
             for (key in dropdownOption) {
@@ -2426,12 +2424,7 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
         interfaceUtils.generateDataTabUI(optionsCopy);
     }
     var dropdownOptions;
-    if (options.autoLoad) {
-        dropdownOptions = [];
-    }
-    else {
-        dropdownOptions = [{"value":"","text":"Select from list"}];
-    }
+    dropdownOptions = [{"value":"","text":"Select from list"}];
     if (options.dropdownOptions) {
         options.dropdownOptions.forEach (function (dropdownOption, index) {
             dropdownOptions.push({
@@ -2448,9 +2441,16 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
             })
         });
     }
-    interfaceUtils.createDownloadDropdown(downloadRow, options.title, callback, options.comment, dropdownOptions);
+    row = interfaceUtils.createDownloadDropdown(downloadRow, options.title, callback, options.comment, dropdownOptions);
     if (options.autoLoad) {
-        setTimeout(function(){callback(null, {'selected':options["path"][0]})},500);
+        if (options.autoLoad === true) {
+            indexLoad = 0;
+        }
+        else {
+            indexLoad = options.autoLoad;
+        }
+        $(row).find(".chosen-select").val(indexLoad).trigger('chosen:updated');
+        setTimeout(function(){callback(null, {'selected':indexLoad})},500);
     }
 }
 
