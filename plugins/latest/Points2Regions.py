@@ -75,7 +75,7 @@ def binary_mask_to_polygon(binary_mask, tolerance=0, offset=None, scale=None):
         binary_mask, pad_width=1, mode="constant", constant_values=0
     )
     contours = find_contours(padded_binary_mask, 0.5)
-    contours = [c-1 for c in contours]
+    contours = [c - 1 for c in contours]
     for contour in contours:
         contour = approximate_polygon(contour, tolerance)
         if len(contour) < 3:
@@ -252,7 +252,7 @@ class Rasterizer:
         pass
 
     def diffuse(self, sigma: float = 1.0):
-        #if self.bin_width is not None:
+        # if self.bin_width is not None:
         #    sigma = sigma / self.bin_width
         GX = csr_matrix(self.__make_gaussian(sigma, self.grid_shape[0]))
         GY = csr_matrix(self.__make_gaussian(sigma, self.grid_shape[1]).T)
