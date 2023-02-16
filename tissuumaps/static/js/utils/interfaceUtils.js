@@ -1730,6 +1730,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
 interfaceUtils._mGenUIFuncs.generateRowOptionsButtons=function(){
     generated=interfaceUtils._mGenUIFuncs.ctx.aUUID;
     row0=HTMLElementUtils.createRow({"id":generated+"_row-option-buttons"});
+    row0.classList.add("updateViewRow")
         col00=HTMLElementUtils.createColumn({"width":8});
         //col01=HTMLElementUtils.createColumn({"width":3});
         //    button010=HTMLElementUtils.createButton({"id":generated+"_delete-button","innerText":"Close tab","class":"btn btn-secondary","eventListeners":{"click":(event)=>interfaceUtils._mGenUIFuncs.deleteTab(event)}});
