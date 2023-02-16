@@ -95,7 +95,8 @@ Points2Regions.init = function (container) {
       for: "Points2Regions_bboxSize",
     },
   });
-  label_expression_threshold12.innerHTML = "Min points per bin (increase to avoid regions with few markers).";
+  label_expression_threshold12.innerHTML =
+    "Min points per bin (increase to avoid regions with few markers).";
   var input_expression_threshold12 = HTMLElementUtils.createElement({
     kind: "input",
     id: "Points2Regions_expression_threshold",
@@ -169,7 +170,8 @@ Points2Regions.init = function (container) {
       for: "Points2Regions_bboxSize",
     },
   });
-  label_stride12.innerHTML = "Bin size (increase/decrease for coarser/finer regions):";
+  label_stride12.innerHTML =
+    "Bin size (increase/decrease for coarser/finer regions):";
   var input_stride12 = HTMLElementUtils.createElement({
     kind: "input",
     id: "Points2Regions_stride",
