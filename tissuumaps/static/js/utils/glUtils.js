@@ -58,6 +58,7 @@ glUtils = {
     _useInstancing: true,         // Use instancing and gl.TRIANGLE_STRIP to avoid size limit of gl.POINTS
     _showEdgesExperimental: true,
     _edgeThicknessRatio: 0.1,     // Ratio between edge thickness and marker size
+    _showRegionsExperimental: true,
     _logPerformance: false,       // Use GPU timer queries to log performance
     _piechartPalette: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
@@ -468,6 +469,64 @@ glUtils._edgesFS = `
     {
         out_color.rgb = v_color.rgb;
         out_color.a = v_color.a * subpixelCoverage(v_texCoord);
+    }
+`;
+
+
+glUtils._regionsVS = `
+    uniform mat2 u_viewportTransform;
+    uniform float u_transformIndex;
+    uniform int u_numScanlines;
+
+    uniform sampler2D u_transformLUT;
+
+    out highp vec2 v_texCoord;
+    out float v_scanline;
+
+    void main()
+    {
+        v_texCoord = vec2(gl_VertexID & 1, (gl_VertexID >> 1) & 1);
+        v_scanline = float(gl_InstanceID);
+
+        vec4 imageTransform = texture(u_transformLUT, vec2(u_transformIndex / 255.0, 0));
+
+        vec2 localPos;
+        localPos.x = v_texCoord.x * 5320.0;
+        localPos.y = (float(gl_InstanceID) + v_texCoord.y) * (3920.0 / float(u_numScanlines));
+
+        vec2 viewportPos = localPos * imageTransform.xy + imageTransform.zw;
+        vec2 ndcPos = viewportPos * 2.0 - 1.0;
+        ndcPos.y = -ndcPos.y;
+        ndcPos = u_viewportTransform * ndcPos;
+
+        gl_Position = vec4(ndcPos, 0.0, 1.0);
+    }
+`;
+
+
+glUtils._regionsFS = `
+    precision mediump float;
+
+    uniform sampler2D u_regionData;
+
+    in highp vec2 v_texCoord;
+    in float v_scanline;
+
+    layout(location = 0) out vec4 out_color;
+
+    void main()
+    {
+        vec4 color = vec4(0.0, 1.0, 0.0, 1.0);
+
+        float dx = dFdx(v_texCoord.x);
+        float dy = dFdy(v_texCoord.y);
+        if (abs(v_texCoord.x - 0.5) + abs(dx) < 0.5 &&
+            abs(v_texCoord.y - 0.5) + abs(dy * 0.5) < 0.5) {
+            color.rgb = texelFetch(u_regionData, ivec2(v_texCoord.x * 4095.99, v_scanline), 0).rgb / 1024.0;
+            if (all(equal(color.rgb, vec3(0.0)))) discard;
+        }
+
+        out_color = color;
     }
 `;
 
@@ -1191,6 +1250,36 @@ glUtils._updateTransformLUTTexture = function(texture) {
 }
 
 
+glUtils._createRegionDataTexture = function(gl, maxNumScanlines=512) {
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); 
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA32F, 4096, maxNumScanlines);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    return texture;
+}
+
+
+glUtils._updateRegionDataTexture = function(gl, texture) {
+    const numScanlines = regionUtils._edgeLists.length;
+
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    for (let i = 0; i < numScanlines; ++i) {
+        // Update single row of the texture
+        let texeldata = new Float32Array(4096 * 4);  // Zero-initialized
+        if (regionUtils._edgeLists[i].length <= texeldata.length) {
+            texeldata.set(regionUtils._edgeLists[i]);
+        }
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, i, 4096, 1, gl.RGBA, gl.FLOAT, texeldata);
+    }
+    gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
+
 glUtils._createColorScaleTexture = function(gl) {
     const bytedata = new Uint8Array(256 * 4);
 
@@ -1494,6 +1583,39 @@ glUtils._drawEdgesColorPass = function(gl, viewportTransform, markerScaleAdjuste
 }
 
 
+glUtils._drawRegionsColorPass = function(gl, viewportTransform) {
+    const numScanlines = regionUtils._edgeLists.length;
+    if (numScanlines == 0) return;  // No regions to draw
+
+    // Set up render pipeline
+    const program = glUtils._programs["regions"];
+    gl.useProgram(program);
+    gl.enable(gl.BLEND);
+    gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+
+    // Set per-scene uniforms
+    gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
+    gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"), 0);
+    gl.uniform1i(gl.getUniformLocation(program, "u_numScanlines"), numScanlines);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionData"]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_regionData"), 1);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["transformLUT"]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_transformLUT"), 0);
+
+    // Draw rectangles that will each render a scanline segment of the region(s)
+    gl.bindVertexArray(glUtils._vaos["empty"]);
+    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numScanlines);
+
+    // Restore render pipeline state
+    gl.bindVertexArray(null);
+    gl.blendFunc(gl.ONE, gl.ONE);
+    gl.disable(gl.BLEND);
+    gl.useProgram(null);
+}
+
+
 glUtils._drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) {
     // Set up render pipeline
     const program = glUtils._programs["picking"];
@@ -1583,6 +1705,14 @@ glUtils.draw = function() {
     if (glUtils._pickingEnabled) {
         glUtils._drawPickingPass(gl, viewportTransform, markerScaleAdjusted);
         glUtils._pickingEnabled = false;  // Clear flag until next click event
+    }
+
+    if (glUtils._showRegionsExperimental) {
+        if (regionUtils._currentRegionId > 0 && regionUtils._edgeLists.length == 0) {
+            regionUtils._generateEdgeListsForDrawing();
+            glUtils._updateRegionDataTexture(gl, glUtils._textures["regionData"]);
+        }
+        glUtils._drawRegionsColorPass(gl, viewportTransform);
     }
 
     if (glUtils._showEdgesExperimental) {
@@ -1743,8 +1873,11 @@ glUtils.restoreLostContext = function(event) {
     glUtils._programs["markers_instanced"] = glUtils._loadShaderProgram(gl, glUtils._markersVS, glUtils._markersFS, "#define USE_INSTANCING\n");
     glUtils._programs["picking"] = glUtils._loadShaderProgram(gl, glUtils._pickingVS, glUtils._pickingFS);
     glUtils._programs["edges"] = glUtils._loadShaderProgram(gl, glUtils._edgesVS, glUtils._edgesFS);
+    glUtils._programs["regions"] = glUtils._loadShaderProgram(gl, glUtils._regionsVS, glUtils._regionsFS);
     glUtils._textures["shapeAtlas"] = glUtils._loadTextureFromImageURL(gl, glUtils._markershapes);
     glUtils._textures["transformLUT"] = glUtils._createTransformLUTTexture(gl);
+    glUtils._textures["regionData"] = glUtils._createRegionDataTexture(gl);
+    glUtils._vaos["empty"] = gl.createVertexArray();
 
     // Restore per-markers WebGL objects
     for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
@@ -1783,8 +1916,11 @@ glUtils.init = function() {
     this._programs["markers_instanced"] = this._loadShaderProgram(gl, this._markersVS, this._markersFS, "#define USE_INSTANCING\n");
     this._programs["picking"] = this._loadShaderProgram(gl, this._pickingVS, this._pickingFS);
     this._programs["edges"] = this._loadShaderProgram(gl, this._edgesVS, this._edgesFS);
+    this._programs["regions"] = this._loadShaderProgram(gl, this._regionsVS, this._regionsFS);
     this._textures["shapeAtlas"] = this._loadTextureFromImageURL(gl, glUtils._markershapes);
     this._textures["transformLUT"] = this._createTransformLUTTexture(gl);
+    this._textures["regionData"] = this._createRegionDataTexture(gl);
+    this._vaos["empty"] = gl.createVertexArray();
 
     this._createColorbarCanvas();  // The colorbar is drawn separately in a 2D-canvas
 

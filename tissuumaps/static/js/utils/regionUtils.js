@@ -28,7 +28,8 @@ regionUtils = {
     _epsilonDistance: 0.004,
     _regions: {},
     _drawingclass: "drawPoly",
-    _maxRegionsInMenu: 200
+    _maxRegionsInMenu: 200,
+    _edgeLists: []  // Data structure used for WebGL drawing
 }
 
 /** 
@@ -1250,4 +1251,41 @@ regionUtils.JSONValToRegions= function(jsonVal){
     regionUtils.geoJSON2regions(regions);
     regionUtils.updateAllRegionClassUI();
     $('[data-bs-target="#markers-regions-project-gui"]').tab('show');
+}
+
+
+regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
+    // Build data structure for drawing region objects. The basic idea is to
+    // divide the image region into scanlines, and bin edges from polygons into
+    // those scanlines. Edges within scanlines will be ordered by object IDs.
+
+    const regionObjects = regionUtils._regions;
+    const imageBounds = [0.0, 0.0, 5320.0, 3920.0];  // FIXME Hardcoded values
+    const scanlineHeight = imageBounds[3] / numScanlines;
+
+    regionUtils._edgeLists = [];
+    for (let i = 0; i < numScanlines; ++i) {
+        regionUtils._edgeLists[i] = [];
+    }
+
+    let objectID = 0;
+    for (let region of Object.values(regionObjects)) {
+        for (let subregion of region.globalPoints) {
+            const points = subregion[0];
+            const numPoints = points.length;
+            if (numPoints <= 1) continue;
+
+            for (let i = 0; i < numPoints - 1; ++i) {
+                const v0 = points[i + 0];
+                const v1 = points[i + 1];
+                const lower = Math.max(Math.floor(Math.min(v0.y, v1.y) / scanlineHeight), 0);
+                const upper = Math.min(Math.floor(Math.max(v0.y, v1.y) / scanlineHeight), numScanlines - 1);
+                for (let j = lower; j <= upper; ++j) {
+                    regionUtils._edgeLists[j].push(v0.x, v0.y, 0xff0000, objectID);
+                    regionUtils._edgeLists[j].push(v1.x, v1.y, 0xff0000, objectID);
+                }
+            }
+        }
+        objectID += 1;
+    }
 }
