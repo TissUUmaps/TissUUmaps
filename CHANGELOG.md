@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.1.0.1
+
+- Move docker to python-alpine for security reasons
+- Add sorting options of markers (applied automatically on AnnData observations)
+- Make Update View button always visible
+- Minor fixes
+
 ## 3.1
 
 - Adding HDF5 support on the client side
