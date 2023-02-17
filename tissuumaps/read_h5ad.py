@@ -63,7 +63,7 @@ def getPalette(adata):
 def getVarList(adata):
     var = adata.get("/var")
     if "_index" in var.attrs.keys():
-        varIndex = adata.get("/var").attrs["_index"]
+        varIndex = str(adata.get("/var").attrs["_index"])
         varList = [x.decode("utf-8") for x in adata.get(f"/var/{varIndex}", [])]
     else:
         # TODO
@@ -361,6 +361,7 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                 "scale_check": False,
                 "shape_col": False,
                 "shape_fixed": True,
+                "sortby_check": False,
                 "shape_gr": False,
                 "shape_gr_dict": False,
                 "shape_gr_rand": True,

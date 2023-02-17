@@ -9,8 +9,9 @@ RUN apk update \
 	&& apk upgrade
 RUN apk add vips hdf5 hdf5-dev
 
-RUN pip3 install --upgrade pip setuptools wheel && \
-    apk add --no-cache --virtual .build-deps gfortran openblas-dev gcc g++ zlib-dev make python3-dev jpeg-dev && \
+RUN apk add --no-cache openblas-dev && \
+    pip3 install --upgrade pip setuptools wheel && \
+    apk add --no-cache --virtual .build-deps gfortran gcc g++ zlib-dev make python3-dev jpeg-dev && \
     pip3 install -r /requirements.txt && \
     apk del .build-deps
 
