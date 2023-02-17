@@ -40,11 +40,10 @@ jobs:
           path: "fred"
 
       - name: Download fred from the Github Release
-        uses: i3h/download-release-asset@v1.2.0
+        uses: dsaltares/fetch-gh-release-asset@1.1.0
         with:
-          owner: "freenet"
-          repo: "fred"
-          tag: "latest"
+          repo: "freenet/fred"
+          version: "latest"
           file: "freenet.jar"
 
       - name: Building the installer
