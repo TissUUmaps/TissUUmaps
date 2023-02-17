@@ -1593,10 +1593,10 @@ glUtils._drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) 
 
         // 1st pass: clear the corner pixel
         gl.uniform1i(gl.getUniformLocation(program, "u_op"), 0);
-        gl.drawArrays(gl.POINTS, 0, 1);
+        gl.drawArrays(gl.POINTS, 0, 1);  // Note: this drawcall does not have to be indexed
         // 2nd pass: draw all the markers (as single pixels)
         gl.uniform1i(gl.getUniformLocation(program, "u_op"), 1);
-        gl.drawArrays(gl.POINTS, 0, numPoints);
+        gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_INT, 0);
 
         // Read back pixel at location (0, 0) to get the picked object
         const result = new Uint8Array(4);
