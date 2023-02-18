@@ -804,16 +804,6 @@ class webEngine(QWebEngineView):
         path = os.path.abspath(os.path.join(self.app.basedir, path))
         imgPath = os.path.abspath(os.path.join(self.app.basedir, imgPath))
         relativePath = os.path.relpath(os.path.dirname(imgPath), path)
-        if ".." in relativePath:
-            reply = QMessageBox.question(
-                self,
-                "Error",
-                "Impossible to add layers from a parent folder. Would you like to open this image only?",
-            )
-            if reply == QMessageBox.StandardButton.Yes:
-                self.openImagePath(layerpath)
-            returnDict = {"dzi": None, "name": None}
-            return returnDict
         returnDict = {
             "dzi": relativePath + "/" + os.path.basename(imgPath) + ".dzi",
             "name": os.path.basename(imgPath),
