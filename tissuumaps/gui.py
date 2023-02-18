@@ -783,8 +783,7 @@ class webEngine(QWebEngineView):
                     "Error",
                     "All layers must be in the same drive. Would you like to open this image only?",
                 )
-                reply = reply == QMessageBox.Yes
-                if reply:
+                if reply == QMessageBox.StandardButton.Yes:
                     self.openImagePath(layerpath)
                 returnDict = {"dzi": None, "name": None}
                 return returnDict
@@ -811,7 +810,7 @@ class webEngine(QWebEngineView):
                 "Error",
                 "Impossible to add layers from a parent folder. Would you like to open this image only?",
             )
-            if reply == QMessageBox.Yes:
+            if reply == QMessageBox.StandardButton.Yes:
                 self.openImagePath(layerpath)
             returnDict = {"dzi": None, "name": None}
             return returnDict
