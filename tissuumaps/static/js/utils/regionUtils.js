@@ -412,7 +412,7 @@ regionUtils.regionUI = function (regionid) {
         regionUtils.addRegionClassUI (null)
         regionClassID = "";
         var regionsPanel = document.getElementById("markers-regions-panel-");
-        numRegions = Object.values(regionUtils._regions).filter(x => x.regionClass==regionClass).length
+        numRegions = Object.values(regionUtils._regions).filter(x => x.regionClass==regionClass || x.regionClass=="undefined").length
         if (numRegions > regionUtils._maxRegionsInMenu) {
             spanEl = document.getElementById("regionGroupWarning-" + regionClassID)
             if (spanEl) spanEl.innerHTML = "<i class='bi bi-exclamation-triangle'></i> Max "+regionUtils._maxRegionsInMenu+" regions displayed below";
