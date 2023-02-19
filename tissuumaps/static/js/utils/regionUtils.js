@@ -1268,7 +1268,7 @@ regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
         regionUtils._edgeLists[i] = [];
     }
 
-    let objectID = 0;
+    let objectID = 1;
     for (let region of Object.values(regionObjects)) {
         for (let subregion of region.globalPoints) {
             const points = subregion[0];

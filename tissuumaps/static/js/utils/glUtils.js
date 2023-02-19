@@ -481,6 +481,7 @@ glUtils._regionsVS = `
     uniform sampler2D u_transformLUT;
 
     out highp vec2 v_texCoord;
+    out highp vec2 v_localPos;
     out float v_scanline;
 
     void main()
@@ -493,6 +494,7 @@ glUtils._regionsVS = `
         vec2 localPos;
         localPos.x = v_texCoord.x * 5320.0;
         localPos.y = (float(gl_InstanceID) + v_texCoord.y) * (3920.0 / float(u_numScanlines));
+        v_localPos = localPos;
 
         vec2 viewportPos = localPos * imageTransform.xy + imageTransform.zw;
         vec2 ndcPos = viewportPos * 2.0 - 1.0;
@@ -510,12 +512,20 @@ glUtils._regionsFS = `
     uniform sampler2D u_regionData;
 
     in highp vec2 v_texCoord;
+    in highp vec2 v_localPos;
     in float v_scanline;
 
     layout(location = 0) out vec4 out_color;
 
+    vec3 lds_r3(float n)
+    {
+        float phi = 1.0 / 1.2207440846;
+        return fract(n * vec3(phi, phi * phi, phi * phi * phi));
+    }
+
     void main()
     {
+    #if 0
         vec4 color = vec4(0.0, 1.0, 0.0, 1.0);
 
         float dx = dFdx(v_texCoord.x);
@@ -525,6 +535,37 @@ glUtils._regionsFS = `
             color.rgb = texelFetch(u_regionData, ivec2(v_texCoord.x * 4095.99, v_scanline), 0).rgb / 1024.0;
             if (all(equal(color.rgb, vec3(0.0)))) discard;
         }
+    #else
+        vec4 color = vec4(0.0);
+
+        vec2 p = v_localPos;
+        float n = 0.0;
+        float objectID = texelFetch(u_regionData, ivec2(n, v_scanline), 0).w;
+        int windingNumber = 0;
+
+        while (objectID != 0.0 && n < 4096.0) {
+            vec4 texel0 = texelFetch(u_regionData, ivec2(n + 0.0, v_scanline), 0);
+            vec4 texel1 = texelFetch(u_regionData, ivec2(n + 1.0, v_scanline), 0);
+
+            if (texel0.w != objectID) {
+                if (windingNumber > 0 && (windingNumber & 1) == 1) {
+                    color = vec4(lds_r3(objectID + 0.5), 1.0);
+                }
+                windingNumber = 0;
+                objectID = texel0.w;
+            }
+
+            vec2 v0 = texel0.xy;
+            vec2 v1 = texel1.xy;
+            if (min(v0.y, v1.y) <= p.y && p.y < max(v0.y, v1.y)) {
+                float t = (p.y - v0.y) / (v1.y - v0.y + 1e-5);
+                float x = v0.x + (v1.x - v0.x) * t;
+                windingNumber += int(x - p.x > 0.0);
+            }
+
+            n += 2.0;
+        }
+    #endif
 
         out_color = color;
     }
