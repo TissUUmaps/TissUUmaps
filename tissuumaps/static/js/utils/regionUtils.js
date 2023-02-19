@@ -1265,7 +1265,7 @@ regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
 
     regionUtils._edgeLists = [];
     for (let i = 0; i < numScanlines; ++i) {
-        regionUtils._edgeLists[i] = [];
+        regionUtils._edgeLists[i] = [[], 0];
     }
 
     let objectID = 1;
@@ -1275,14 +1275,39 @@ regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
             const numPoints = points.length;
             if (numPoints <= 1) continue;
 
+            // Compute axis-aligned bounding box for object's path
+            let xMin = 99999, xMax = -99999, yMin = 99999, yMax = -99999;
+            for (let i = 0; i < numPoints; ++i) {
+                const v = points[i];
+                xMin = Math.min(xMin, v.x);
+                xMax = Math.max(xMax, v.x);
+                yMin = Math.min(yMin, v.y);
+                yMax = Math.max(yMax, v.y);
+            }
+
+            // Create header elements for storing information about the number
+            // of edges within each scanline. We also want to store some other
+            // information such as object ID and bounds.
+            {
+                const lower = Math.max(Math.floor(yMin / scanlineHeight), 0);
+                const upper = Math.min(Math.floor(yMax / scanlineHeight), numScanlines - 1);
+                for (let j = lower; j <= upper; ++j) {
+                    const headerOffset = regionUtils._edgeLists[j][0].length;
+                    regionUtils._edgeLists[j][0].push(xMin, xMax, objectID, 0);
+                    regionUtils._edgeLists[j][1] = headerOffset;
+                }
+            }
+
+            // Create elements for storing vertex pairs for edges within each scanline
             for (let i = 0; i < numPoints - 1; ++i) {
                 const v0 = points[i + 0];
                 const v1 = points[i + 1];
                 const lower = Math.max(Math.floor(Math.min(v0.y, v1.y) / scanlineHeight), 0);
                 const upper = Math.min(Math.floor(Math.max(v0.y, v1.y) / scanlineHeight), numScanlines - 1);
                 for (let j = lower; j <= upper; ++j) {
-                    regionUtils._edgeLists[j].push(v0.x, v0.y, 0xff0000, objectID);
-                    regionUtils._edgeLists[j].push(v1.x, v1.y, 0xff0000, objectID);
+                    const headerOffset = regionUtils._edgeLists[j][1];
+                    regionUtils._edgeLists[j][0].push(v0.x, v0.y, v1.x, v1.y);
+                    regionUtils._edgeLists[j][0][headerOffset + 3] += 1;  // Update edge counter
                 }
             }
         }

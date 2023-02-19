@@ -538,32 +538,44 @@ glUtils._regionsFS = `
     #else
         vec4 color = vec4(0.0);
 
-        vec2 p = v_localPos;
-        float n = 0.0;
-        float objectID = texelFetch(u_regionData, ivec2(n, v_scanline), 0).w;
-        int windingNumber = 0;
+        vec2 p = v_localPos;  // Current sample position
+        vec4 headerData = texelFetch(u_regionData, ivec2(0, int(v_scanline)), 0);
+        int objectID = int(headerData.z), offset = 0, windingNumber = 0;
 
-        while (objectID != 0.0 && n < 4096.0) {
-            vec4 texel0 = texelFetch(u_regionData, ivec2(n + 0.0, v_scanline), 0);
-            vec4 texel1 = texelFetch(u_regionData, ivec2(n + 1.0, v_scanline), 0);
+        while (headerData.w != 0.0 && offset < 4096) {
 
-            if (texel0.w != objectID) {
+            // Find next path that might intersect this sample position
+            while (headerData.w != 0.0 && offset < 4096) {
+                headerData = texelFetch(u_regionData, ivec2(offset, int(v_scanline)), 0);
+                if (headerData.x <= p.x && p.x <= headerData.y) { break; }
+                offset += int(headerData.w) + 1;
+            }
+            offset += 1;  // Position pointer at first edge element
+
+            // Check if we are done for this object ID and need to update the color value
+            if (objectID != int(headerData.z)) {
+                // Use odd-even winding rule for inside test
                 if (windingNumber > 0 && (windingNumber & 1) == 1) {
-                    color = vec4(lds_r3(objectID + 0.5), 1.0);
+                    color = vec4(lds_r3(float(objectID) + 0.5), 1.0);  // Assign random color
                 }
-                windingNumber = 0;
-                objectID = texel0.w;
+                windingNumber = 0;  // Reset intersection count
+                objectID = int(headerData.z);
             }
 
-            vec2 v0 = texel0.xy;
-            vec2 v1 = texel1.xy;
-            if (min(v0.y, v1.y) <= p.y && p.y < max(v0.y, v1.y)) {
-                float t = (p.y - v0.y) / (v1.y - v0.y + 1e-5);
-                float x = v0.x + (v1.x - v0.x) * t;
-                windingNumber += int(x - p.x > 0.0);
+            // Do intersection tests with edge elements to update intersection count
+            int count = int(headerData.w);
+            for (int i = 0; i < count; ++i) {
+                vec4 edgeData = texelFetch(u_regionData, ivec2(offset + i, int(v_scanline)), 0);
+                vec2 v0 = edgeData.xy;
+                vec2 v1 = edgeData.zw;
+                if (min(v0.y, v1.y) <= p.y && p.y < max(v0.y, v1.y)) {
+                    float t = (p.y - v0.y) / (v1.y - v0.y + 1e-5);
+                    float x = v0.x + (v1.x - v0.x) * t;
+                    windingNumber += int(x - p.x > 0.0);
+                }
             }
 
-            n += 2.0;
+            offset += count;
         }
     #endif
 
@@ -1312,8 +1324,8 @@ glUtils._updateRegionDataTexture = function(gl, texture) {
     for (let i = 0; i < numScanlines; ++i) {
         // Update single row of the texture
         let texeldata = new Float32Array(4096 * 4);  // Zero-initialized
-        if (regionUtils._edgeLists[i].length <= texeldata.length) {
-            texeldata.set(regionUtils._edgeLists[i]);
+        if (regionUtils._edgeLists[i][0].length <= texeldata.length) {
+            texeldata.set(regionUtils._edgeLists[i][0]);
         }
         gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, i, 4096, 1, gl.RGBA, gl.FLOAT, texeldata);
     }
