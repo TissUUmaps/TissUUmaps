@@ -10252,6 +10252,13 @@ html {
   vertical-align: bottom;
   white-space: nowrap; }
 
+.updateViewRow {
+  position: sticky;
+  bottom: 0px;
+  background: #ffffffaa;
+  backdrop-filter: blur(3px);
+  border-top: 1px solid #cccccc; }
+
 /* ============ desktop view ============ */
 @media all and (min-width: 992px) {
   .dropdown-menu li {

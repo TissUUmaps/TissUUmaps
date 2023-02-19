@@ -95,7 +95,8 @@ Points2Regions.init = function (container) {
       for: "Points2Regions_bboxSize",
     },
   });
-  label_expression_threshold12.innerHTML = "Min points per bin (increase to avoid regions with few markers).";
+  label_expression_threshold12.innerHTML =
+    "Min points per bin (increase to avoid regions with few markers).";
   var input_expression_threshold12 = HTMLElementUtils.createElement({
     kind: "input",
     id: "Points2Regions_expression_threshold",
@@ -169,7 +170,8 @@ Points2Regions.init = function (container) {
       for: "Points2Regions_bboxSize",
     },
   });
-  label_stride12.innerHTML = "Bin size (increase/decrease for coarser/finer regions):";
+  label_stride12.innerHTML =
+    "Bin size (increase/decrease for coarser/finer regions):";
   var input_stride12 = HTMLElementUtils.createElement({
     kind: "input",
     id: "Points2Regions_stride",
@@ -222,7 +224,6 @@ Points2Regions.init = function (container) {
     }
   });
   select711.addEventListener("change", (event) => {
-    alert(select711.value);
     Points2Regions._clusterKey = select711.value;
   });
 
@@ -286,11 +287,11 @@ Points2Regions.run = function () {
     return;
   }
   // Get the path from url:
-  const queryString = window.location.search;
-  const urlParams = new URLSearchParams(queryString);
-  const path = urlParams.get("path");
-  if (path != null) {
-    csvFile = path + "/" + csvFile;
+  if (dataUtils.data[Points2Regions._dataset]._filetype != "h5") {
+    const path = dataUtils.getPath();
+    if (path != null) {
+      csvFile = path + "/" + csvFile;
+    }
   }
   loadingModal = interfaceUtils.loadingModal("Points2Regions... Please wait.");
   $.ajax({
@@ -308,6 +309,7 @@ Points2Regions.run = function () {
       stride: Points2Regions._stride,
       region_name: Points2Regions._region_name,
       csv_path: csvFile,
+      filetype: dataUtils.data[Points2Regions._dataset]._filetype,
     }),
     success: function (data) {
       Points2Regions.loadRegions(data);

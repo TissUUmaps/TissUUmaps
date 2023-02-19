@@ -855,6 +855,8 @@ def exportToStatic(state, folderpath, previouspath):
                 readOnly=True,
                 version=app.config["VERSION"],
             )
+        # Replace /static with static:
+        index = index.replace('"/static/', '"static/')
 
         with open(folderpath + "/index.html", "w") as f:
             f.write(index)

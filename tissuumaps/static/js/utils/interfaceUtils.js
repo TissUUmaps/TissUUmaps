@@ -815,6 +815,7 @@ interfaceUtils._mGenUIFuncs.getTabDropDowns = function(uid, only_csvColumns){
 
     allinputs["scale_col"]=interfaceUtils.getElementById(uid+"_scale-col");   
     allinputs["edges_col"]=interfaceUtils.getElementById(uid+"_edges-col");
+    allinputs["sortby_col"]=interfaceUtils.getElementById(uid+"_sortby-col");
     allinputs["pie_col"]=interfaceUtils.getElementById(uid+"_piechart-col");
     allinputs["opacity_col"]=interfaceUtils.getElementById(uid+"_opacity-col");
     allinputs["shape_col"]=interfaceUtils.getElementById(uid+"_shape-col-value");
@@ -852,6 +853,8 @@ interfaceUtils._mGenUIFuncs.getTabRadiosAndChecks= function(uid){
 
     allradios["pie_check"]=interfaceUtils.getElementById(uid+"_use-piecharts");
     allradios["edges_check"]=interfaceUtils.getElementById(uid+"_use-edges");
+    allradios["sortby_check"]=interfaceUtils.getElementById(uid+"_use-sortby");
+    allradios["sortby_desc_check"]=interfaceUtils.getElementById(uid+"_sortby-desc");
     allradios["scale_check"]=interfaceUtils.getElementById(uid+"_use-scales");
     allradios["shape_gr"]=interfaceUtils.getElementById(uid+"_shape-bygroup");
     allradios["shape_gr_rand"]=interfaceUtils.getElementById(uid+"_shape-bygroup-rand");
@@ -1246,11 +1249,12 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
     row3=interfaceUtils._mGenUIFuncs.generateAdvancedEdgesAccordion3();
     row4=interfaceUtils._mGenUIFuncs.generateAdvancedShapeAccordion3();
     row5=interfaceUtils._mGenUIFuncs.generateAdvancedOpacityAccordion3();
-    row6=interfaceUtils._mGenUIFuncs.generateAdvancedTooltipAccordion3();
-    row7=interfaceUtils._mGenUIFuncs.generateAdvancedCollectionAccordion3();
-    row8=interfaceUtils._mGenUIFuncs.generateAdvancedMakeButtonAccordion3();
+    row6=interfaceUtils._mGenUIFuncs.generateAdvancedSortbyAccordion3();
+    row7=interfaceUtils._mGenUIFuncs.generateAdvancedTooltipAccordion3();
+    row8=interfaceUtils._mGenUIFuncs.generateAdvancedCollectionAccordion3();
+    row9=interfaceUtils._mGenUIFuncs.generateAdvancedMakeButtonAccordion3();
     
-    return [row1,row2,row3,row4,row5,row6,row7,row8];
+    return [row1,row2,row3,row4,row5,row6,row7,row8,row9];
  }
 
  /**
@@ -1613,7 +1617,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
 }
 
  /**
- * @summary Creates the forms to scale by
+ * @summary Creates the forms for opacity
  * @returns {array} a single rows
  */
   interfaceUtils._mGenUIFuncs.generateAdvancedOpacityAccordion3= function(){
@@ -1665,6 +1669,64 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
     row0.appendChild(col01);
         col01.appendChild(label010);
         col01.appendChild(select011);
+
+    return row0;
+}
+
+ /**
+ * @summary Creates the forms for sorting
+ * @returns {array} a single rows
+ */
+ interfaceUtils._mGenUIFuncs.generateAdvancedSortbyAccordion3= function(){
+    generated=interfaceUtils._mGenUIFuncs.ctx.aUUID;
+
+    //row 0
+    row0=HTMLElementUtils.createRow({id:generated+"_sortby_0"});
+        collab=HTMLElementUtils.createColumn({"width":12});
+            labellab=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_cb-label"});
+            labellab.innerHTML="<strong>Marker ordering</strong>";
+
+        col00=HTMLElementUtils.createColumn({"width":6});
+            divformcheck000=HTMLElementUtils.createElement({ "kind":"div", "extraAttributes":{"class":"form-check"}});
+                inputcheck0000=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_use-sortby","extraAttributes":{"class":"form-check-input","type":"checkbox" }});
+                label0001=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_use-sortby-label", "extraAttributes":{ "for":generated+"_use-sortby" }});
+                label0001.innerText="Sort markers"
+                
+        col01=HTMLElementUtils.createColumn({"width":6});
+            label010=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_sortby-col-label", "extraAttributes":{ "class":"d-none", "for":generated+"_sortby-col" }});
+            label010.innerText="Sort by column"
+            select011=HTMLElementUtils.createElement({"kind":"select", "id":generated+"_sortby-col", "extraAttributes":{ "class":"d-none form-select form-select-sm", "aria-label":".form-select-sm"}});
+            divformcheck012=HTMLElementUtils.createElement({ "kind":"div", "id":generated+"_sortby-desc-div", "extraAttributes":{"class":"d-none form-check"}});
+                inputcheck0120=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_sortby-desc","extraAttributes":{"class":"form-check-input","type":"checkbox" }});
+                label0121=HTMLElementUtils.createElement({"kind":"label", "id":generated+"sortby-desc-label", "extraAttributes":{ "for":generated+"_sortby-desc" }});
+                label0121.innerText="Use descending order"
+
+    inputcheck0000.addEventListener("change", (event)=>{
+        var value=event.target.checked;
+        //var doms=["_gb-single","_gb-col","_gb-feature-value","_cb-colormap","_cb-bypoint","_cb-bygroup","_gb-feature-value",
+        //          "_gb-col-value","_gb-col-name","_cb-cmap-value","_cb-col-value","_cb-bygroup-rand","_cb-bygroup-gene","_cb-bygroup-name" ]
+        if(value){
+            interfaceUtils._mGenUIFuncs.hideShow(event, ["_sortby-desc-div", "_sortby-col-label","_sortby-col","_sortby-dict-label","_sortby-dict-val"],[0,1,2,3]);
+        }
+        else {
+            interfaceUtils._mGenUIFuncs.hideShow(event, ["_sortby-desc-div", "_sortby-col-label","_sortby-col","_sortby-dict-label","_sortby-dict-val"],[]);
+        }
+    })
+
+    row0.appendChild(collab)
+        collab.appendChild(labellab)
+
+    row0.appendChild(col00)
+        col00.appendChild(divformcheck000)
+            divformcheck000.appendChild(inputcheck0000);
+            divformcheck000.appendChild(label0001);
+
+    row0.appendChild(col01);
+        col01.appendChild(label010);
+        col01.appendChild(select011);
+        col01.appendChild(divformcheck012);
+            divformcheck012.appendChild(inputcheck0120);
+            divformcheck012.appendChild(label0121);
 
     return row0;
 }
@@ -1730,11 +1792,12 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
 interfaceUtils._mGenUIFuncs.generateRowOptionsButtons=function(){
     generated=interfaceUtils._mGenUIFuncs.ctx.aUUID;
     row0=HTMLElementUtils.createRow({"id":generated+"_row-option-buttons"});
+    row0.classList.add("updateViewRow")
         col00=HTMLElementUtils.createColumn({"width":8});
         //col01=HTMLElementUtils.createColumn({"width":3});
         //    button010=HTMLElementUtils.createButton({"id":generated+"_delete-button","innerText":"Close tab","class":"btn btn-secondary","eventListeners":{"click":(event)=>interfaceUtils._mGenUIFuncs.deleteTab(event)}});
         col02=HTMLElementUtils.createColumn({"width":4});
-            button020=HTMLElementUtils.createButton({"id":generated+"_update-view-button","innerText":"Update view","class":"btn btn-primary my-1","eventListeners":{"click":(event)=> dataUtils.updateViewOptions(event.target.id.split("_")[0]) }});
+            button020=HTMLElementUtils.createButton({"id":generated+"_update-view-button","innerText":"Update view","class":" btn btn-primary my-1","eventListeners":{"click":(event)=> dataUtils.updateViewOptions(event.target.id.split("_")[0]) }});
     
     row0.appendChild(col00);
     //row0.appendChild(col01);
@@ -2381,10 +2444,8 @@ interfaceUtils.createDownloadDropdown = function(downloadRow, innerText, callbac
 
     downloadRow.appendChild(row);
 
-    $(".chosen-select_" + random_chosen_id).chosen({disable_search_threshold: 10, search_contains: true, width: "100%"});
-    $(".chosen-select_" + random_chosen_id).on('change', function(evt, params) {
-        callback(evt, params);
-    });
+    $(".chosen-select_" + random_chosen_id).chosen({disable_search_threshold: 10, search_contains: true, width: "100%"})
+    .change(callback);
     return row;
 }
 
@@ -2402,7 +2463,7 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
         projectUtils.applySettings(options.settings);
         optionsCopy = JSON.parse(JSON.stringify(options));
         var dataURL = "";
-        if (params.selected == "") {return;}
+        if (params.selected === "") {return;}
         if (options.dropdownOptions) {
             dropdownOption = options.dropdownOptions[params.selected];
             for (key in dropdownOption) {
@@ -2426,12 +2487,7 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
         interfaceUtils.generateDataTabUI(optionsCopy);
     }
     var dropdownOptions;
-    if (options.autoLoad) {
-        dropdownOptions = [];
-    }
-    else {
-        dropdownOptions = [{"value":"","text":"Select from list"}];
-    }
+    dropdownOptions = [{"value":"","text":"Select from list"}];
     if (options.dropdownOptions) {
         options.dropdownOptions.forEach (function (dropdownOption, index) {
             dropdownOptions.push({
@@ -2448,9 +2504,16 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
             })
         });
     }
-    interfaceUtils.createDownloadDropdown(downloadRow, options.title, callback, options.comment, dropdownOptions);
+    row = interfaceUtils.createDownloadDropdown(downloadRow, options.title, callback, options.comment, dropdownOptions);
     if (options.autoLoad) {
-        setTimeout(function(){callback(null, {'selected':options["path"][0]})},500);
+        if (options.autoLoad === true) {
+            indexLoad = 0;
+        }
+        else {
+            indexLoad = options.autoLoad;
+        }
+        $(row).find(".chosen-select").val(indexLoad).trigger('chosen:updated');
+        setTimeout(function(){callback(null, {'selected':indexLoad})},500);
     }
 }
 

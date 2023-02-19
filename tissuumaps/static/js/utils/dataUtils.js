@@ -352,6 +352,11 @@ dataUtils.updateViewOptions = function(data_id, force_reload_all, reloadH5){
         if (data_obj["_edges_col"]=="null") {
             interfaceUtils.alert("No edges column selected. Impossible to update view.");return;
         }
+        data_obj["_sortby_col"]=(radios["sortby_check"].checked ? inputs["sortby_col"].value : null);
+        data_obj["_sortby_desc"]=(radios["sortby_check"].checked ? radios["sortby_desc_check"].checked : null);
+        if (data_obj["_sortby_col"]=="null") {
+            interfaceUtils.alert("No sort by column selected. Impossible to update view.");return;
+        }
         // Use scale colummn
         data_obj["_scale_col"]=(radios["scale_check"].checked ? inputs["scale_col"].value : null);
         if (data_obj["_scale_col"]=="null") {

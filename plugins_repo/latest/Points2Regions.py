@@ -4,6 +4,7 @@ import logging
 import os
 import tempfile
 
+import h5py
 import numpy as np
 import pandas as pd
 from flask import abort, make_response
@@ -75,7 +76,7 @@ def binary_mask_to_polygon(binary_mask, tolerance=0, offset=None, scale=None):
         binary_mask, pad_width=1, mode="constant", constant_values=0
     )
     contours = find_contours(padded_binary_mask, 0.5)
-    contours = [c-1 for c in contours]
+    contours = [c - 1 for c in contours]
     for contour in contours:
         contour = approximate_polygon(contour, tolerance)
         if len(contour) < 3:
@@ -133,12 +134,27 @@ class Plugin:
         if os.path.isfile(cacheFile):
             with open(cacheFile, "r") as f:
                 return make_response(f.read())
+        if jsonParam["filetype"] != "h5":
+            csvPath = os.path.abspath(
+                os.path.join(self.app.basedir, jsonParam["csv_path"])
+            )
 
-        csvPath = os.path.abspath(os.path.join(self.app.basedir, jsonParam["csv_path"]))
-
-        df = pd.read_csv(csvPath)
-        xy = df[[jsonParam["xKey"], jsonParam["yKey"]]].to_numpy()
-        labels = df[jsonParam["clusterKey"]].to_numpy()
+            df = pd.read_csv(csvPath)
+            xy = df[[jsonParam["xKey"], jsonParam["yKey"]]].to_numpy()
+            labels = df[jsonParam["clusterKey"]].to_numpy()
+        else:
+            h5Path = os.path.abspath(
+                os.path.join(self.app.basedir, jsonParam["csv_path"])
+            )
+            with h5py.File(h5Path, "r") as f:
+                xKey = jsonParam["xKey"].split(";")
+                yKey = jsonParam["yKey"].split(";")
+                x = f[xKey[0]][()][:, int(xKey[1])]
+                y = f[yKey[0]][()][:, int(yKey[1])]
+                xy = np.stack((x, y), axis=1)
+                categories = f.get(jsonParam["clusterKey"] + "/categories")[()]
+                codes = f.get(jsonParam["clusterKey"] + "/codes")[()]
+                labels = categories[codes]
 
         sigma = jsonParam["sigma"]
         stride = jsonParam["stride"]
@@ -252,7 +268,7 @@ class Rasterizer:
         pass
 
     def diffuse(self, sigma: float = 1.0):
-        #if self.bin_width is not None:
+        # if self.bin_width is not None:
         #    sigma = sigma / self.bin_width
         GX = csr_matrix(self.__make_gaussian(sigma, self.grid_shape[0]))
         GY = csr_matrix(self.__make_gaussian(sigma, self.grid_shape[1]).T)
