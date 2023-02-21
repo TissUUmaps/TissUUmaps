@@ -508,6 +508,9 @@ glUtils._regionsVS = `
 
 
 glUtils._regionsFS = `
+    #define ALPHA 1.0
+    #define SHOW_DEBUG 0
+
     precision mediump float;
 
     uniform sampler2D u_regionData;
@@ -526,9 +529,10 @@ glUtils._regionsFS = `
 
     void main()
     {
-    #if 0
+    #if SHOW_DEBUG
         vec4 color = vec4(0.0, 1.0, 0.0, 1.0);
 
+        // Show outline and visualize occupancy for this scanline
         float dx = dFdx(v_texCoord.x);
         float dy = dFdy(v_texCoord.y);
         if (abs(v_texCoord.x - 0.5) + abs(dx) < 0.5 &&
@@ -557,7 +561,9 @@ glUtils._regionsFS = `
             if (objectID != int(headerData.z)) {
                 // Use odd-even winding rule for inside test
                 if (windingNumber > 0 && (windingNumber & 1) == 1) {
-                    color = vec4(lds_r3(float(objectID) + 0.5), 1.0);  // Assign random color
+                    vec4 objectColor = vec4(lds_r3(float(objectID)), ALPHA);  // Assign random color
+                    color.a = objectColor.a + (1.0 - objectColor.a) * color.a;
+                    color.rgb = mix(color.rgb, objectColor.rgb, objectColor.a) / color.a;
                 }
                 windingNumber = 0;  // Reset intersection count
                 objectID = int(headerData.z);
@@ -578,7 +584,7 @@ glUtils._regionsFS = `
 
             offset += count;
         }
-    #endif
+    #endif  // SHOW_DEBUG
 
         out_color = color;
     }
