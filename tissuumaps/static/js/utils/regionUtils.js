@@ -1276,7 +1276,7 @@ regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
                 const numPoints = points.length;
                 if (numPoints <= 1) continue;
 
-                // Compute axis-aligned bounding box for object's path
+                // Compute axis-aligned bounding box for this path
                 let xMin = 99999, xMax = -99999, yMin = 99999, yMax = -99999;
                 for (let i = 0; i < numPoints; ++i) {
                     const v = points[i];
@@ -1287,8 +1287,8 @@ regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
                 }
 
                 // Create header elements for storing information about the number
-                // of edges within each scanline. We also want to store some other
-                // information such as object ID and bounds.
+                // of edges for path in overlapping scanlines. We also want to store
+                // some other information such as bounding box and parent object ID.
                 {
                     const lower = Math.max(Math.floor(yMin / scanlineHeight), 0);
                     const upper = Math.min(Math.floor(yMax / scanlineHeight), numScanlines - 1);
@@ -1299,7 +1299,7 @@ regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
                     }
                 }
 
-                // Create elements for storing vertex pairs for edges within each scanline
+                // Create elements for storing vertex pairs for edges in overlapping scanlines
                 for (let i = 0; i < numPoints - 1; ++i) {
                     const v0 = points[i + 0];
                     const v1 = points[i + 1];
