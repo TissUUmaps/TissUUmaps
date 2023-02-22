@@ -1,0 +1,4 @@
+_gitignore/
+bower_components/
+node_modules/
+docs/
