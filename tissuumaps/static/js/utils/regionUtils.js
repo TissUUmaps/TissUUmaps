@@ -14,6 +14,8 @@
  * @property {Number}   regionUtils._epsilonDistance - Distance at which a click from the first point will consider to close the region, 
  * @property {Object}   regionUtils._regions - Object that contains the regions in the viewer, 
  * @property {String}   regionUtils._drawingclass - String that accompanies the classes of the polygons in the interface"drawPoly", 
+ * @property {Object[]} regionUtils._edgeLists - Data structure used for rendering regions with WebGL
+ * @property {Object[]} regionUtils._regionToColorLUT - LUT for storing color and visibility per object ID
 */
 regionUtils = {
     _isNewRegion: true,
@@ -29,7 +31,8 @@ regionUtils = {
     _regions: {},
     _drawingclass: "drawPoly",
     _maxRegionsInMenu: 200,
-    _edgeLists: []  // Data structure used for WebGL drawing
+    _edgeLists: [],
+    _regionToColorLUT: []
 }
 
 /** 
@@ -1254,12 +1257,10 @@ regionUtils.JSONValToRegions= function(jsonVal){
 }
 
 
+// Build data structure for rendering region objects. The basic idea is to
+// divide the image region into scanlines, and bin edges from polygons into
+// those scanlines. Edges within scanlines will be ordered by object IDs.
 regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
-    // Build data structure for drawing region objects. The basic idea is to
-    // divide the image region into scanlines, and bin edges from polygons into
-    // those scanlines. Edges within scanlines will be ordered by object IDs.
-
-    const regionObjects = regionUtils._regions;
     const imageBounds = [0.0, 0.0, 5320.0, 3920.0];  // FIXME Hardcoded values
     const scanlineHeight = imageBounds[3] / numScanlines;
 
@@ -1268,8 +1269,8 @@ regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
         regionUtils._edgeLists[i] = [[], 0];
     }
 
-    let objectID = 1;
-    for (let region of Object.values(regionObjects)) {
+    let objectID = 0;
+    for (let region of Object.values(regionUtils._regions)) {
         for (let subregion of region.globalPoints) {
             for (let points of subregion) {
                 const numPoints = points.length;
@@ -1293,7 +1294,7 @@ regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
                     const upper = Math.min(Math.floor(yMax / scanlineHeight), numScanlines - 1);
                     for (let j = lower; j <= upper; ++j) {
                         const headerOffset = regionUtils._edgeLists[j][0].length;
-                        regionUtils._edgeLists[j][0].push(xMin, xMax, objectID, 0);
+                        regionUtils._edgeLists[j][0].push(xMin, xMax, objectID + 1, 0);
                         regionUtils._edgeLists[j][1] = headerOffset;
                     }
                 }
@@ -1314,4 +1315,24 @@ regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
         }
         objectID += 1;
     }
+}
+
+
+// Build lookup table used during render time for mapping object IDs generated
+// by regionUtils._generateEdgeListsForDrawing() to color and visibility
+regionUtils._generateRegionToColorLUT = function() {
+    regionUtils._regionToColorLUT = [];
+
+    let objectID = 0;
+    for (let region of Object.values(regionUtils._regions)) {
+        const hexColor = region.polycolor;
+        const r = Number("0x" + hexColor.substring(1,3));
+        const g = Number("0x" + hexColor.substring(3,5));
+        const b = Number("0x" + hexColor.substring(5,7));
+        const visibility = 127;  // FIXME Hardcoded value
+        console.log(r, g, b, visibility);
+        regionUtils._regionToColorLUT.push(r, g, b, visibility);
+        objectID += 1;
+    }
+    console.assert(regionUtils._regionToColorLUT.length == (objectID * 4));
 }

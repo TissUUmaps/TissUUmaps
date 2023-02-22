@@ -514,6 +514,7 @@ glUtils._regionsFS = `
     precision mediump float;
 
     uniform sampler2D u_regionData;
+    uniform sampler2D u_regionLUT;
 
     in highp vec2 v_texCoord;
     in highp vec2 v_localPos;
@@ -545,7 +546,7 @@ glUtils._regionsFS = `
 
         vec2 p = v_localPos;  // Current sample position
         vec4 headerData = texelFetch(u_regionData, ivec2(0, int(v_scanline)), 0);
-        int objectID = int(headerData.z), offset = 0, windingNumber = 0;
+        int objectID = int(headerData.z) - 1, offset = 0, windingNumber = 0;
 
         while (headerData.w != 0.0 && offset < 4096) {
 
@@ -558,15 +559,16 @@ glUtils._regionsFS = `
             offset += 1;  // Position pointer at first edge element
 
             // Check if we are done for this object ID and need to update the color value
-            if (objectID != int(headerData.z)) {
+            if (objectID != int(headerData.z) - 1) {
                 // Use odd-even winding rule for inside test
                 if (windingNumber > 0 && (windingNumber & 1) == 1) {
-                    vec4 objectColor = vec4(lds_r3(float(objectID)), ALPHA);  // Assign random color
+                    //vec4 objectColor = vec4(lds_r3(float(objectID) + 1.0), ALPHA);  // Assign random color
+                    vec4 objectColor = texelFetch(u_regionLUT, ivec2(objectID & 4095, objectID >> 12), 0);
                     color.a = objectColor.a + (1.0 - objectColor.a) * color.a;
                     color.rgb = mix(color.rgb, objectColor.rgb, objectColor.a) / color.a;
                 }
                 windingNumber = 0;  // Reset intersection count
-                objectID = int(headerData.z);
+                objectID = int(headerData.z) - 1;
             }
 
             // Do intersection tests with edge elements to update intersection count
@@ -1389,9 +1391,39 @@ glUtils._updateRegionDataTexture = function(gl, texture) {
         let texeldata = new Float32Array(4096 * 4);  // Zero-initialized
         if (regionUtils._edgeLists[i][0].length <= texeldata.length) {
             texeldata.set(regionUtils._edgeLists[i][0]);
+        } else {
+            console.warn("Edge list for regions exceeds allocated texture size")
         }
         gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, i, 4096, 1, gl.RGBA, gl.FLOAT, texeldata);
     }
+    gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
+
+glUtils._createRegionLUTTexture = function(gl) {
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, 4096, 64);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    return texture;
+}
+
+
+glUtils._updateRegionLUTTexture = function(gl, texture) {
+    let texeldata = new Uint8Array((4096 * 64) * 4);
+    if (regionUtils._regionToColorLUT.length <= texeldata.length) {
+        texeldata.set(regionUtils._regionToColorLUT);
+    } else {
+        console.warn("Color lookup table for regions exceeds allocated texture size");
+    }
+
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, 64, gl.RGBA, gl.UNSIGNED_BYTE, texeldata);
     gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
@@ -1719,6 +1751,9 @@ glUtils._drawRegionsColorPass = function(gl, viewportTransform) {
     gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
     gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"), 0);
     gl.uniform1i(gl.getUniformLocation(program, "u_numScanlines"), numScanlines);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionLUT"]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_regionLUT"), 2);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionData"]);
     gl.uniform1i(gl.getUniformLocation(program, "u_regionData"), 1);
@@ -1832,7 +1867,9 @@ glUtils.draw = function() {
     if (glUtils._showRegionsExperimental) {
         if (regionUtils._currentRegionId > 0 && regionUtils._edgeLists.length == 0) {
             regionUtils._generateEdgeListsForDrawing();
+            regionUtils._generateRegionToColorLUT();
             glUtils._updateRegionDataTexture(gl, glUtils._textures["regionData"]);
+            glUtils._updateRegionLUTTexture(gl, glUtils._textures["regionLUT"]);
         }
         glUtils._drawRegionsColorPass(gl, viewportTransform);
     }
@@ -1999,6 +2036,7 @@ glUtils.restoreLostContext = function(event) {
     glUtils._textures["shapeAtlas"] = glUtils._loadTextureFromImageURL(gl, glUtils._markershapes);
     glUtils._textures["transformLUT"] = glUtils._createTransformLUTTexture(gl);
     glUtils._textures["regionData"] = glUtils._createRegionDataTexture(gl);
+    glUtils._textures["regionLUT"] = glUtils._createRegionLUTTexture(gl);
     glUtils._vaos["empty"] = gl.createVertexArray();
 
     // Restore per-markers WebGL objects
@@ -2042,6 +2080,7 @@ glUtils.init = function() {
     this._textures["shapeAtlas"] = this._loadTextureFromImageURL(gl, glUtils._markershapes);
     this._textures["transformLUT"] = this._createTransformLUTTexture(gl);
     this._textures["regionData"] = this._createRegionDataTexture(gl);
+    this._textures["regionLUT"] = this._createRegionLUTTexture(gl);
     this._vaos["empty"] = gl.createVertexArray();
 
     this._createColorbarCanvas();  // The colorbar is drawn separately in a 2D-canvas
