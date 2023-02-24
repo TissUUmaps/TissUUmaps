@@ -1291,23 +1291,21 @@ regionUtils._generateEdgeListsForDrawing = function(imageBounds, numScanlines = 
                 let mask = [0, 0, 0, 0];
                 const lsb = Math.max(0, Math.min(63, Math.floor(xMin * (64.0 / imageBounds[2]))));
                 const msb = Math.max(0, Math.min(63, Math.floor(xMax * (64.0 / imageBounds[2]))));
-                for (let i = lsb; i <= msb; ++i) {
-                    mask[(i >> 4)] |= (1 << (i & 15));
+                for (let bitIndex = lsb; bitIndex <= msb; ++bitIndex) {
+                    mask[(bitIndex >> 4)] |= (1 << (bitIndex & 15));
                 }
 
                 // Create header elements for storing information about the number
                 // of edges for path in overlapping scanlines. We also want to store
                 // some other information such as bounding box and parent object ID.
-                {
-                    const lower = Math.max(Math.floor(yMin / scanlineHeight), 0);
-                    const upper = Math.min(Math.floor(yMax / scanlineHeight), numScanlines - 1);
-                    for (let j = lower; j <= upper; ++j) {
-                        const headerOffset = regionUtils._edgeLists[j][0].length;
-                        regionUtils._edgeLists[j][0].push(xMin, xMax, objectID + 1, 0);
-                        regionUtils._edgeLists[j][1] = headerOffset;
-                        for (let k = 0; k < 4; ++k) {
-                            regionUtils._edgeLists[j][0][k] |= mask[k];  // Update occupancy mask
-                        }
+                const lower = Math.max(Math.floor(yMin / scanlineHeight), 0);
+                const upper = Math.min(Math.floor(yMax / scanlineHeight), numScanlines - 1);
+                for (let i = lower; i <= upper; ++i) {
+                    const headerOffset = regionUtils._edgeLists[i][0].length;
+                    regionUtils._edgeLists[i][0].push(xMin, xMax, objectID + 1, 0);
+                    regionUtils._edgeLists[i][1] = headerOffset;
+                    for (let j = 0; j < 4; ++j) {
+                        regionUtils._edgeLists[i][0][j] |= mask[j];  // Update occupancy mask
                     }
                 }
 
@@ -1341,7 +1339,7 @@ regionUtils._generateRegionToColorLUT = function() {
         const r = Number("0x" + hexColor.substring(1,3));
         const g = Number("0x" + hexColor.substring(3,5));
         const b = Number("0x" + hexColor.substring(5,7));
-        const visibility = 127;  // FIXME Hardcoded value
+        const visibility = 255;  // FIXME Hardcoded value
         regionUtils._regionToColorLUT.push(r, g, b, visibility);
         objectID += 1;
     }

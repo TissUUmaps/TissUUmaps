@@ -60,6 +60,7 @@ glUtils = {
     _showEdgesExperimental: true,
     _edgeThicknessRatio: 0.1,     // Ratio between edge thickness and marker size
     _showRegionsExperimental: true,
+    _regionOpacity: 0.5,
     _logPerformance: false,       // Use GPU timer queries to log performance
     _piechartPalette: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
@@ -514,6 +515,7 @@ glUtils._regionsFS = `
 
     precision mediump float;
 
+    uniform float u_regionOpacity;
     uniform sampler2D u_regionData;
     uniform sampler2D u_regionLUT;
 
@@ -522,12 +524,6 @@ glUtils._regionsFS = `
     in float v_scanline;
 
     layout(location = 0) out vec4 out_color;
-
-    vec3 lds_r3(float n)
-    {
-        float phi = 1.0 / 1.2207440846;
-        return fract(n * vec3(phi, phi * phi, phi * phi * phi));
-    }
 
     void main()
     {
@@ -570,8 +566,8 @@ glUtils._regionsFS = `
             if (objectID != int(headerData.z) - 1) {
                 // Use odd-even winding rule for inside test
                 if (windingNumber > 0 && (windingNumber & 1) == 1) {
-                    //vec4 objectColor = vec4(lds_r3(float(objectID) + 1.0), ALPHA);  // Assign random color
                     vec4 objectColor = texelFetch(u_regionLUT, ivec2(objectID & 4095, objectID >> 12), 0);
+                    objectColor.a *= u_regionOpacity;
                     color.a = objectColor.a + (1.0 - objectColor.a) * color.a;
                     color.rgb = mix(color.rgb, objectColor.rgb, objectColor.a) / color.a;
                 }
@@ -1760,6 +1756,7 @@ glUtils._drawRegionsColorPass = function(gl, viewportTransform, imageBounds) {
     gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"), 0);
     gl.uniform4fv(gl.getUniformLocation(program, "u_imageBounds"), imageBounds);
     gl.uniform1i(gl.getUniformLocation(program, "u_numScanlines"), numScanlines);
+    gl.uniform1f(gl.getUniformLocation(program, "u_regionOpacity"), glUtils._regionOpacity);
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionLUT"]);
     gl.uniform1i(gl.getUniformLocation(program, "u_regionLUT"), 2);
