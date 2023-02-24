@@ -545,8 +545,15 @@ glUtils._regionsFS = `
         vec4 color = vec4(0.0);
 
         vec2 p = v_localPos;  // Current sample position
-        vec4 headerData = texelFetch(u_regionData, ivec2(0, int(v_scanline)), 0);
-        int objectID = int(headerData.z) - 1, offset = 0, windingNumber = 0;
+
+        // Do coarse empty space skipping first, by testing sample position against
+        // occupancy bitmask stored in the first texel of the scanline
+        uvec4 maskData = uvec4(texelFetch(u_regionData, ivec2(0, int(v_scanline)), 0));
+        int bitIndex = int(v_texCoord.x * 63.9999);
+        if ((maskData[bitIndex >> 4] & (1u << (bitIndex & 15))) == 0u) { discard; }
+
+        vec4 headerData = texelFetch(u_regionData, ivec2(1, int(v_scanline)), 0);
+        int objectID = int(headerData.z) - 1, offset = 1, windingNumber = 0;
 
         while (headerData.w != 0.0 && offset < 4096) {
 

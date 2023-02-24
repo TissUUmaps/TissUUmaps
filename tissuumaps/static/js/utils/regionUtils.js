@@ -1266,7 +1266,7 @@ regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
 
     regionUtils._edgeLists = [];
     for (let i = 0; i < numScanlines; ++i) {
-        regionUtils._edgeLists[i] = [[], 0];
+        regionUtils._edgeLists[i] = [[0, 0, 0, 0], 0];
     }
 
     let objectID = 0;
@@ -1286,6 +1286,15 @@ regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
                     yMax = Math.max(yMax, v.y);
                 }
 
+                // Rasterise bounding box into bitmask used for updating occupancy mask
+                // that will be stored in the first texel of each scanline during rendering
+                let mask = [0, 0, 0, 0];
+                const lsb = Math.max(0, Math.min(63, Math.floor(xMin * (64.0 / imageBounds[2]))));
+                const msb = Math.max(0, Math.min(63, Math.floor(xMax * (64.0 / imageBounds[2]))));
+                for (let i = lsb; i <= msb; ++i) {
+                    mask[(i >> 4)] |= (1 << (i & 15));
+                }
+
                 // Create header elements for storing information about the number
                 // of edges for path in overlapping scanlines. We also want to store
                 // some other information such as bounding box and parent object ID.
@@ -1296,6 +1305,9 @@ regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
                         const headerOffset = regionUtils._edgeLists[j][0].length;
                         regionUtils._edgeLists[j][0].push(xMin, xMax, objectID + 1, 0);
                         regionUtils._edgeLists[j][1] = headerOffset;
+                        for (let k = 0; k < 4; ++k) {
+                            regionUtils._edgeLists[j][0][k] |= mask[k];  // Update occupancy mask
+                        }
                     }
                 }
 
@@ -1330,7 +1342,6 @@ regionUtils._generateRegionToColorLUT = function() {
         const g = Number("0x" + hexColor.substring(3,5));
         const b = Number("0x" + hexColor.substring(5,7));
         const visibility = 127;  // FIXME Hardcoded value
-        console.log(r, g, b, visibility);
         regionUtils._regionToColorLUT.push(r, g, b, visibility);
         objectID += 1;
     }
