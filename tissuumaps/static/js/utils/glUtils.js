@@ -477,6 +477,7 @@ glUtils._edgesFS = `
 glUtils._regionsVS = `
     uniform mat2 u_viewportTransform;
     uniform float u_transformIndex;
+    uniform vec4 u_imageBounds;
     uniform int u_numScanlines;
 
     uniform sampler2D u_transformLUT;
@@ -493,8 +494,8 @@ glUtils._regionsVS = `
         vec4 imageTransform = texture(u_transformLUT, vec2(u_transformIndex / 255.0, 0));
 
         vec2 localPos;
-        localPos.x = v_texCoord.x * 5320.0;
-        localPos.y = (float(gl_InstanceID) + v_texCoord.y) * (3920.0 / float(u_numScanlines));
+        localPos.x = v_texCoord.x * u_imageBounds.z;
+        localPos.y = (float(gl_InstanceID) + v_texCoord.y) * (u_imageBounds.w / float(u_numScanlines));
         v_localPos = localPos;
 
         vec2 viewportPos = localPos * imageTransform.xy + imageTransform.zw;
@@ -1744,7 +1745,7 @@ glUtils._drawEdgesColorPass = function(gl, viewportTransform, markerScaleAdjuste
 }
 
 
-glUtils._drawRegionsColorPass = function(gl, viewportTransform) {
+glUtils._drawRegionsColorPass = function(gl, viewportTransform, imageBounds) {
     const numScanlines = regionUtils._edgeLists.length;
     if (numScanlines == 0) return;  // No regions to draw
 
@@ -1757,6 +1758,7 @@ glUtils._drawRegionsColorPass = function(gl, viewportTransform) {
     // Set per-scene uniforms
     gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
     gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"), 0);
+    gl.uniform4fv(gl.getUniformLocation(program, "u_imageBounds"), imageBounds);
     gl.uniform1i(gl.getUniformLocation(program, "u_numScanlines"), numScanlines);
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionLUT"]);
@@ -1872,13 +1874,19 @@ glUtils.draw = function() {
     }
 
     if (glUtils._showRegionsExperimental) {
+        // FIXME For now, regions are always assigned to the first image
+        const image = tmapp["ISS_viewer"].world.getItemAt(0);
+        const imageWidth = image ? image.getContentSize().x : 1;
+        const imageHeight = image ? image.getContentSize().y : 1;
+        const imageBounds = [0, 0, imageWidth, imageHeight];
+
         if (regionUtils._currentRegionId > 0 && regionUtils._edgeLists.length == 0) {
-            regionUtils._generateEdgeListsForDrawing();
+            regionUtils._generateEdgeListsForDrawing(imageBounds);
             regionUtils._generateRegionToColorLUT();
             glUtils._updateRegionDataTexture(gl, glUtils._textures["regionData"]);
             glUtils._updateRegionLUTTexture(gl, glUtils._textures["regionLUT"]);
         }
-        glUtils._drawRegionsColorPass(gl, viewportTransform);
+        glUtils._drawRegionsColorPass(gl, viewportTransform, imageBounds);
     }
 
     if (glUtils._showEdgesExperimental) {

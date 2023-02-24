@@ -1260,8 +1260,8 @@ regionUtils.JSONValToRegions= function(jsonVal){
 // Build data structure for rendering region objects. The basic idea is to
 // divide the image region into scanlines, and bin edges from polygons into
 // those scanlines. Edges within scanlines will be ordered by object IDs.
-regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
-    const imageBounds = [0.0, 0.0, 5320.0, 3920.0];  // FIXME Hardcoded values
+regionUtils._generateEdgeListsForDrawing = function(imageBounds, numScanlines = 512) {
+    console.assert(imageBounds.length == 4);
     const scanlineHeight = imageBounds[3] / numScanlines;
 
     regionUtils._edgeLists = [];
