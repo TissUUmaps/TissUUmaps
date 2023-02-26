@@ -490,15 +490,14 @@ glUtils._regionsVS = `
     void main()
     {
         v_texCoord = vec2(gl_VertexID & 1, (gl_VertexID >> 1) & 1);
-        v_scanline = float(gl_InstanceID);
-
-        vec4 imageTransform = texture(u_transformLUT, vec2(u_transformIndex / 255.0, 0));
+        v_scanline = v_texCoord.y * float(u_numScanlines);
 
         vec2 localPos;
         localPos.x = v_texCoord.x * u_imageBounds.z;
-        localPos.y = (float(gl_InstanceID) + v_texCoord.y) * (u_imageBounds.w / float(u_numScanlines));
+        localPos.y = v_texCoord.y * u_imageBounds.w;
         v_localPos = localPos;
 
+        vec4 imageTransform = texture(u_transformLUT, vec2(u_transformIndex / 255.0, 0));
         vec2 viewportPos = localPos * imageTransform.xy + imageTransform.zw;
         vec2 ndcPos = viewportPos * 2.0 - 1.0;
         ndcPos.y = -ndcPos.y;
@@ -511,7 +510,6 @@ glUtils._regionsVS = `
 
 glUtils._regionsFS = `
     #define ALPHA 1.0
-    #define SHOW_DEBUG 0
 
     precision mediump float;
 
@@ -525,23 +523,23 @@ glUtils._regionsFS = `
 
     layout(location = 0) out vec4 out_color;
 
+    float distPointToLine(vec2 p, vec2 v0, vec2 v1)
+    {
+        float a = length(v1 - v0);
+        float b = length(p - v0);
+        float c = length(p - v1);
+        float t = dot(p - v0, (v1 - v0) / (a + 1e-5));
+        return (0.0 < t && t < a) ? sqrt(b * b - t * t) : min(b, c);
+    }
+
     void main()
     {
-    #if SHOW_DEBUG
-        vec4 color = vec4(0.0, 1.0, 0.0, 1.0);
-
-        // Show outline and visualize occupancy for this scanline
-        float dx = dFdx(v_texCoord.x);
-        float dy = dFdy(v_texCoord.y);
-        if (abs(v_texCoord.x - 0.5) + abs(dx) < 0.5 &&
-            abs(v_texCoord.y - 0.5) + abs(dy * 0.5) < 0.5) {
-            color.rgb = texelFetch(u_regionData, ivec2(v_texCoord.x * 4095.99, v_scanline), 0).rgb / 1024.0;
-            if (all(equal(color.rgb, vec3(0.0)))) discard;
-        }
-    #else
         vec4 color = vec4(0.0);
 
         vec2 p = v_localPos;  // Current sample position
+
+        float edgeWidth = abs(dFdx(p.x));  // Edge width for outline rendering
+        float minEdgeDist = 99999.0;       // Distance to closest edge
 
         // Do coarse empty space skipping first, by testing sample position against
         // occupancy bitmask stored in the first texel of the scanline
@@ -557,7 +555,7 @@ glUtils._regionsFS = `
             // Find next path that might intersect this sample position
             while (headerData.w != 0.0 && offset < 4096) {
                 headerData = texelFetch(u_regionData, ivec2(offset, int(v_scanline)), 0);
-                if (headerData.x <= p.x && p.x <= headerData.y) { break; }
+                if (headerData.x <= (p.x + edgeWidth) && (p.x - edgeWidth) <= headerData.y) { break; }
                 offset += int(headerData.w) + 1;
             }
             offset += 1;  // Position pointer at first edge element
@@ -565,32 +563,35 @@ glUtils._regionsFS = `
             // Check if we are done for this object ID and need to update the color value
             if (objectID != int(headerData.z) - 1) {
                 // Use odd-even winding rule for inside test
-                if (windingNumber > 0 && (windingNumber & 1) == 1) {
+                if ((windingNumber > 0 && (windingNumber & 1) == 1) || minEdgeDist < edgeWidth) {
                     vec4 objectColor = texelFetch(u_regionLUT, ivec2(objectID & 4095, objectID >> 12), 0);
-                    objectColor.a *= u_regionOpacity;
+                    objectColor.a *= (minEdgeDist < edgeWidth) ? 1.0 : u_regionOpacity;
                     color.a = objectColor.a + (1.0 - objectColor.a) * color.a;
                     color.rgb = mix(color.rgb, objectColor.rgb, objectColor.a) / color.a;
                 }
                 windingNumber = 0;  // Reset intersection count
+                minEdgeDist = 99999.0;  // Reset distance to closest edge
                 objectID = int(headerData.z) - 1;
             }
 
-            // Do intersection tests with edge elements to update intersection count
+            // Do intersection tests with edge elements to update intersection count,
+            // and also update the edge distance needed for outline rendering
             int count = int(headerData.w);
             for (int i = 0; i < count; ++i) {
                 vec4 edgeData = texelFetch(u_regionData, ivec2(offset + i, int(v_scanline)), 0);
                 vec2 v0 = edgeData.xy;
                 vec2 v1 = edgeData.zw;
+
                 if (min(v0.y, v1.y) <= p.y && p.y < max(v0.y, v1.y)) {
                     float t = (p.y - v0.y) / (v1.y - v0.y + 1e-5);
                     float x = v0.x + (v1.x - v0.x) * t;
                     windingNumber += int(x - p.x > 0.0);
                 }
+                minEdgeDist = min(minEdgeDist, distPointToLine(p, v0, v1));
             }
 
             offset += count;
         }
-    #endif  // SHOW_DEBUG
 
         out_color = color;
     }
@@ -1769,7 +1770,8 @@ glUtils._drawRegionsColorPass = function(gl, viewportTransform, imageBounds) {
 
     // Draw rectangles that will each render a scanline segment of the region(s)
     gl.bindVertexArray(glUtils._vaos["empty"]);
-    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numScanlines);
+    //gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numScanlines);
+    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, 1);
 
     // Restore render pipeline state
     gl.bindVertexArray(null);
