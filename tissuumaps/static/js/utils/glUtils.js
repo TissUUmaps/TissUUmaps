@@ -563,12 +563,18 @@ glUtils._regionsFS = `
             // Check if we are done for this object ID and need to update the color value
             if (objectID != int(headerData.z) - 1) {
                 // Use odd-even winding rule for inside test
-                if ((windingNumber > 0 && (windingNumber & 1) == 1) || minEdgeDist < edgeWidth) {
+                bool isInside = (windingNumber > 0 && (windingNumber & 1) == 1);
+
+                if (isInside || minEdgeDist < 1.5 * edgeWidth) {
                     vec4 objectColor = texelFetch(u_regionLUT, ivec2(objectID & 4095, objectID >> 12), 0);
-                    objectColor.a *= (minEdgeDist < edgeWidth) ? 1.0 : u_regionOpacity;
+                    float edgeOpacity = smoothstep(edgeWidth, 0.5 * edgeWidth, minEdgeDist);
+                    float fillOpacity = float(isInside) * u_regionOpacity;
+                    objectColor.a *= clamp(edgeOpacity + fillOpacity, 0.0, 1.0);
+
                     color.a = objectColor.a + (1.0 - objectColor.a) * color.a;
-                    color.rgb = mix(color.rgb, objectColor.rgb, objectColor.a) / color.a;
+                    color.rgb = mix(color.rgb, objectColor.rgb, objectColor.a);
                 }
+
                 windingNumber = 0;  // Reset intersection count
                 minEdgeDist = 99999.0;  // Reset distance to closest edge
                 objectID = int(headerData.z) - 1;
@@ -594,6 +600,7 @@ glUtils._regionsFS = `
         }
 
         out_color = color;
+        out_color.rgb /= max(1e-5, out_color.a);
     }
 `;
 
