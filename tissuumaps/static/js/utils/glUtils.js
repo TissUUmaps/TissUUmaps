@@ -565,7 +565,7 @@ glUtils._regionsFS = `
                 // Use odd-even winding rule for inside test
                 bool isInside = (windingNumber > 0 && (windingNumber & 1) == 1);
 
-                if (isInside || minEdgeDist < 1.5 * edgeWidth) {
+                if (isInside || minEdgeDist < edgeWidth) {
                     vec4 objectColor = texelFetch(u_regionLUT, ivec2(objectID & 4095, objectID >> 12), 0);
                     float edgeOpacity = smoothstep(edgeWidth, 0.5 * edgeWidth, minEdgeDist);
                     float fillOpacity = float(isInside) * u_regionOpacity;
