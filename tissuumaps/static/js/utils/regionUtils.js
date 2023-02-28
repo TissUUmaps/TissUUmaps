@@ -1310,9 +1310,11 @@ regionUtils._generateEdgeListsForDrawing = function(imageBounds, numScanlines = 
                 }
 
                 // Create elements for storing vertex pairs for edges in overlapping scanlines
-                for (let i = 0; i < numPoints - 1; ++i) {
-                    const v0 = points[i + 0];
-                    const v1 = points[i + 1];
+                for (let i = 0; i < numPoints; ++i) {
+                    const v0 = points[(i + 0) % numPoints];
+                    const v1 = points[(i + 1) % numPoints];
+                    if (v0.x == v1.x && v0.y == v1.y) { continue; }
+
                     const lower = Math.max(Math.floor(Math.min(v0.y, v1.y) / scanlineHeight), 0);
                     const upper = Math.min(Math.floor(Math.max(v0.y, v1.y) / scanlineHeight), numScanlines - 1);
                     for (let j = lower; j <= upper; ++j) {
