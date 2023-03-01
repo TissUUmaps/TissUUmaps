@@ -279,6 +279,15 @@ def h5ad_to_tmap(basedir, path, library_id=None):
 
     new_tmap_project["layers"] = layers
     new_tmap_project["plugins"] = plugins
+    if "tmap" in list(adata.get("uns", [])):
+        new_tmap_project = json.loads(
+            adata.get(
+                f"/uns/tmap",
+                "{}",
+            )[()]
+        )
+        if "markerFiles" not in new_tmap_project.keys():
+            new_tmap_project["markerFiles"] = []
     new_tmap_project["markerFiles"].append(
         {
             "expectedHeader": {
