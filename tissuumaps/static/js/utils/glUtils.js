@@ -547,8 +547,9 @@ glUtils._regionsFS = `
 
         vec2 p = v_localPos;  // Current sample position
 
-        float edgeWidth = abs(dFdx(p.x));  // Edge width for outline rendering
-        float minEdgeDist = 99999.0;       // Distance to closest edge
+        float pixelWidth = abs(dFdx(p.x));
+        float strokeWidth = pixelWidth;  // Stroke width for outline rendering
+        float minEdgeDist = 99999.0;     // Distance to closest edge
 
         // Do coarse empty space skipping first, by testing sample position against
         // occupancy bitmask stored in the first texel of the scanline
@@ -564,7 +565,7 @@ glUtils._regionsFS = `
             // Find next path that might intersect this sample position
             while (headerData.w != 0.0 && offset < 4096) {
                 headerData = texelFetch(u_regionData, ivec2(offset, int(v_scanline)), 0);
-                if (headerData.x <= (p.x + edgeWidth) && (p.x - edgeWidth) <= headerData.y) { break; }
+                if (headerData.x <= (p.x + strokeWidth) && (p.x - strokeWidth) <= headerData.y) { break; }
                 offset += int(headerData.w) + 1;
             }
             offset += 1;  // Position pointer at first edge element
@@ -574,9 +575,9 @@ glUtils._regionsFS = `
                 // Use odd-even winding rule for inside test
                 bool isInside = (windingNumber > 0 && (windingNumber & 1) == 1);
 
-                if (isInside || minEdgeDist < edgeWidth) {
+                if (isInside || minEdgeDist < strokeWidth) {
                     vec4 objectColor = texelFetch(u_regionLUT, ivec2(objectID & 4095, objectID >> 12), 0);
-                    float edgeOpacity = smoothstep(edgeWidth, 0.5 * edgeWidth, minEdgeDist);
+                    float edgeOpacity = smoothstep(strokeWidth, strokeWidth - pixelWidth, minEdgeDist);
                     float fillOpacity = float(isInside) * u_regionOpacity;
                     objectColor.a *= clamp(edgeOpacity + fillOpacity, 0.0, 1.0);
 
