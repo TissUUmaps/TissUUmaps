@@ -2072,7 +2072,12 @@ glUtils.restoreLostContext = function(event) {
     // Restore per-markers WebGL objects
     for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
         delete glUtils._buffers[uid + "_markers"];
+        delete glUtils._buffers[uid + "_markers_secondary"];
+        delete glUtils._buffers[uid + "_markers_indices"];
         delete glUtils._vaos[uid + "_markers"];
+        delete glUtils._vaos[uid + "_markers_instanced"];
+        delete glUtils._buffers[uid + "_edges"];
+        delete glUtils._vaos[uid + "_edges"];
         delete glUtils._textures[uid + "_colorLUT"];
         delete glUtils._textures[uid + "_colorscale"];
         glUtils.loadMarkers(uid);
