@@ -86,9 +86,9 @@ glUtils._markersVS = `
     uniform bool u_useShapeFromMarker;
     uniform bool u_alphaPass;
     uniform int u_pickedMarker;
-    uniform sampler2D u_colorLUT;
-    uniform sampler2D u_colorscale;
-    uniform sampler2D u_transformLUT;
+    uniform highp sampler2D u_colorLUT;
+    uniform highp sampler2D u_colorscale;
+    uniform highp sampler2D u_transformLUT;
 
     layout(location = 0) in vec4 in_position;
     layout(location = 1) in int in_index;
@@ -102,7 +102,7 @@ glUtils._markersVS = `
     out vec2 v_shapeSector;
     out float v_shapeSize;
     #ifdef USE_INSTANCING
-    out highp vec2 v_texCoord;
+    out vec2 v_texCoord;
     #endif  // USE_INSTANCING
 
     vec3 hex_to_rgb(float v)
@@ -179,19 +179,20 @@ glUtils._markersFS = `
     #define UV_SCALE 0.7
     #define SHAPE_GRID_SIZE 4.0
 
-    precision mediump float;
+    precision highp float;
+    precision highp int;
 
     uniform bool u_markerOutline;
     uniform bool u_usePiechartFromMarker;
     uniform bool u_alphaPass;
-    uniform sampler2D u_shapeAtlas;
+    uniform highp sampler2D u_shapeAtlas;
 
     in vec4 v_color;
     in vec2 v_shapeOrigin;
     in vec2 v_shapeSector;
     in float v_shapeSize;
     #ifdef USE_INSTANCING
-    in highp vec2 v_texCoord;
+    in vec2 v_texCoord;
     #endif  // USE_INSTANCING
 
     layout(location = 0) out vec4 out_color;
@@ -271,9 +272,9 @@ glUtils._pickingVS = `
     uniform bool u_usePiechartFromMarker;
     uniform bool u_useShapeFromMarker;
     uniform int u_op;
-    uniform sampler2D u_colorLUT;
-    uniform sampler2D u_shapeAtlas;
-    uniform sampler2D u_transformLUT;
+    uniform highp sampler2D u_colorLUT;
+    uniform highp sampler2D u_shapeAtlas;
+    uniform highp sampler2D u_transformLUT;
 
     layout(location = 0) in vec4 in_position;
     layout(location = 1) in int in_index;
@@ -356,7 +357,8 @@ glUtils._pickingVS = `
 
 
 glUtils._pickingFS = `
-    precision mediump float;
+    precision highp float;
+    precision highp int;
 
     in vec4 v_color;
 
@@ -378,9 +380,8 @@ glUtils._edgesVS = `
     uniform float u_markerOpacity;
     uniform float u_maxPointSize;
     uniform float u_edgeThicknessRatio;
-
-    uniform sampler2D u_colorLUT;
-    uniform sampler2D u_transformLUT;
+    uniform highp sampler2D u_colorLUT;
+    uniform highp sampler2D u_transformLUT;
 
     layout(location = 0) in vec4 in_position;
     layout(location = 1) in int in_index;
@@ -388,7 +389,7 @@ glUtils._edgesVS = `
     layout(location = 5) in float in_transform;
 
     out vec4 v_color;
-    out highp vec2 v_texCoord;
+    out vec2 v_texCoord;
 
     void main()
     {
@@ -442,10 +443,11 @@ glUtils._edgesVS = `
 
 
 glUtils._edgesFS = `
-    precision mediump float;
+    precision highp float;
+    precision highp int;
 
     in vec4 v_color;
-    in highp vec2 v_texCoord;
+    in vec2 v_texCoord;
 
     layout(location = 0) out vec4 out_color;
 
@@ -480,11 +482,10 @@ glUtils._regionsVS = `
     uniform float u_transformIndex;
     uniform vec4 u_imageBounds;
     uniform int u_numScanlines;
+    uniform highp sampler2D u_transformLUT;
 
-    uniform sampler2D u_transformLUT;
-
-    out highp vec2 v_texCoord;
-    out highp vec2 v_localPos;
+    out vec2 v_texCoord;
+    out vec2 v_localPos;
     out float v_scanline;
 
     void main()
@@ -511,14 +512,15 @@ glUtils._regionsVS = `
 glUtils._regionsFS = `
     #define ALPHA 1.0
 
-    precision mediump float;
+    precision highp float;
+    precision highp int;
 
     uniform float u_regionOpacity;
-    uniform sampler2D u_regionData;
-    uniform sampler2D u_regionLUT;
+    uniform highp sampler2D u_regionData;
+    uniform highp sampler2D u_regionLUT;
 
-    in highp vec2 v_texCoord;
-    in highp vec2 v_localPos;
+    in vec2 v_texCoord;
+    in vec2 v_localPos;
     in float v_scanline;
 
     layout(location = 0) out vec4 out_color;
