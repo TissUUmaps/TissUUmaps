@@ -525,11 +525,18 @@ glUtils._regionsFS = `
 
     float distPointToLine(vec2 p, vec2 v0, vec2 v1)
     {
+        // Compute distance by first transforming the point p to the frame
+        // defined by the line segment (v0, v1) and its normal vector. This
+        // should be more robust and handle small distances to long line
+        // segments better than just projecting the point onto the line.
+
         float a = length(v1 - v0);
         float b = length(p - v0);
         float c = length(p - v1);
-        float t = dot(p - v0, (v1 - v0) / (a + 1e-5));
-        return (0.0 < t && t < a) ? sqrt(b * b - t * t) : min(b, c);
+        vec2 T = (v1 - v0) / (a + 1e-5);
+        vec2 N = vec2(T.y, -T.x);
+        vec2 t = mat2(T, N) * (p - v0);
+        return (0.0 < t.x && t.x < a) ? abs(t.y) : min(b, c);
     }
 
     void main()
