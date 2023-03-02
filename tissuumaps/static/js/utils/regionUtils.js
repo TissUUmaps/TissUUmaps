@@ -131,11 +131,13 @@ regionUtils.closePolygon = function () {
     regionUtils._isNewRegion = true;
     regionUtils.addRegion([[regionUtils._currentPoints]], regionid, hexcolor);
     regionUtils._currentPoints = null;
-    var strokeWstr = regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
-    regionsobj.append('path').attr("d", regionUtils.pointsToPath(regionUtils._regions[regionid].points)).attr("id", regionid + "_poly")
-        .attr("class", "regionpoly").attr("polycolor", hexcolor).attr('stroke-width', strokeWstr)
-        .style("stroke", hexcolor).style("fill", "none")
-        .append('title').text(regionid).attr("id","path-title-" + regionid);
+    if (!glUtils._showRegionsExperimental) {
+        var strokeWstr = regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
+        regionsobj.append('path').attr("d", regionUtils.pointsToPath(regionUtils._regions[regionid].points)).attr("id", regionid + "_poly")
+            .attr("class", "regionpoly").attr("polycolor", hexcolor).attr('stroke-width', strokeWstr)
+            .style("stroke", hexcolor).style("fill", "none")
+            .append('title').text(regionid).attr("id","path-title-" + regionid);
+    }
     regionUtils.updateAllRegionClassUI();
     $(document.getElementById("regionClass-")).collapse("show");
 
@@ -473,6 +475,7 @@ regionUtils.regionUI = function (regionid) {
         eventListeners: { click: function () {
             regionUtils._regions[regionid].filled = this.checked;
             regionUtils.fillRegion(regionid, regionUtils._regions[regionid].filled);
+            regionUtils.updateAllRegionClassUI();
         }}
     });
     tdPanel.appendChild(checkinput);
@@ -873,6 +876,7 @@ regionUtils.addRegionClassUI = function (regionClass) {
                         document.getElementById(region.id + "_fill_ta").checked = newFill;
                     regionUtils.fillRegion(region.id, newFill);
                 });
+                regionUtils.updateAllRegionClassUI();
             }}
         });
         tdPanel.appendChild(checkinput);
