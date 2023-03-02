@@ -297,19 +297,25 @@ regionUtils.geoJSON2regions = function (geoJSONObjects) {
         }
         regionUtils.addRegion(coordinates, regionId, hexColor, geoJSONObjClass);
         regionUtils._regions[regionId].regionName = regionName;
-        regionobj = d3.select(canvas).append('g').attr('class', "mydrawingclass");
-        var strokeWstr = regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
-        regionobj.append('path').attr("d", regionUtils.pointsToPath(regionUtils._regions[regionId].points)).attr("id", regionId + "_poly")
-            .attr("class", "regionpoly").attr("polycolor", hexColor).attr('stroke-width', strokeWstr)
-            .style("stroke", hexColor).style("fill", "none")
-            .append('title').text(regionName).attr("id","path-title-" + regionId);
-        
+        if (!glUtils._showRegionsExperimental) {
+            regionobj = d3.select(canvas).append('g').attr('class', "mydrawingclass");
+            var strokeWstr = regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
+            regionobj.append('path').attr("d", regionUtils.pointsToPath(regionUtils._regions[regionId].points)).attr("id", regionId + "_poly")
+                .attr("class", "regionpoly").attr("polycolor", hexColor).attr('stroke-width', strokeWstr)
+                .style("stroke", hexColor).style("fill", "none")
+                .append('title').text(regionName).attr("id","path-title-" + regionId);
+        }
         if (document.getElementById(regionId + "_class_ta")) {
             document.getElementById(regionId + "_class_ta").value = geoJSONObjClass;
             document.getElementById(regionId + "_name_ta").value = regionName;
             regionUtils.changeRegion(regionId);
         }
     });
+    if (glUtils._showRegionsExperimental) {
+        regionUtils._currentRegionId = Object.keys(regionUtils._regions).length;
+        regionUtils._edgeLists = [];
+        glUtils.draw();
+    }
     document.querySelector("#regionAccordions").classList.remove("d-none");
 }
 
@@ -406,26 +412,32 @@ regionUtils.regionUI = function (regionid) {
     var op = tmapp["object_prefix"];
     regionClass = regionUtils._regions[regionid].regionClass;
     if (regionClass) {
-        regionUtils.addRegionClassUI (regionClass)
         regionClassID = HTMLElementUtils.stringToId(regionClass);
-        var regionsPanel = document.getElementById("markers-regions-panel-" + regionClassID);
-        numRegions = Object.values(regionUtils._regions).filter(x => x.regionClass==regionClass).length
+        let regionsTR = document.querySelectorAll("#regionClassItem-" + regionClassID + " .regiontr")
+        let numRegions = (regionsTR === null) ? 0 : regionsTR.length;
         if (numRegions > regionUtils._maxRegionsInMenu) {
-            spanEl = document.getElementById("regionGroupWarning-" + regionClassID)
-            if (spanEl) spanEl.innerHTML = "<i class='bi bi-exclamation-triangle'></i> Max "+regionUtils._maxRegionsInMenu+" regions displayed below";
+            if (numRegions == regionUtils._maxRegionsInMenu + 1) {
+                spanEl = document.getElementById("regionGroupWarning-" + regionClassID)
+                if (spanEl) spanEl.innerHTML = "<i class='bi bi-exclamation-triangle'></i> Max "+regionUtils._maxRegionsInMenu+" regions displayed below";
+            }
             return;
         }
+        regionUtils.addRegionClassUI (regionClass)
+        var regionsPanel = document.getElementById("markers-regions-panel-" + regionClassID);
     }
     else {
-        regionUtils.addRegionClassUI (null)
         regionClassID = "";
-        var regionsPanel = document.getElementById("markers-regions-panel-");
-        numRegions = Object.values(regionUtils._regions).filter(x => x.regionClass==regionClass || x.regionClass=="undefined").length
+        let regionsTR = document.querySelectorAll("#regionClassItem-undefined .regiontr")
+        let numRegions = (regionsTR === null) ? 0 : regionsTR.length;
         if (numRegions > regionUtils._maxRegionsInMenu) {
-            spanEl = document.getElementById("regionGroupWarning-" + regionClassID)
-            if (spanEl) spanEl.innerHTML = "<i class='bi bi-exclamation-triangle'></i> Max "+regionUtils._maxRegionsInMenu+" regions displayed below";
+            if (numRegions == regionUtils._maxRegionsInMenu + 1) {
+                spanEl = document.getElementById("regionGroupWarning-" + regionClassID)
+                if (spanEl) spanEl.innerHTML = "<i class='bi bi-exclamation-triangle'></i> Max "+regionUtils._maxRegionsInMenu+" regions displayed below";
+            }
             return;
         }
+        regionUtils.addRegionClassUI (null);
+        var regionsPanel = document.getElementById("markers-regions-panel-");
     }
     var trPanel = HTMLElementUtils.createElement({
         kind: "tr",
@@ -510,6 +522,7 @@ regionUtils.regionUI = function (regionid) {
     });
     regioncolorinput.addEventListener('change', function () {
         regionUtils.changeRegion(regionid);
+        regionUtils.updateAllRegionClassUI();
     });
     if (document.getElementById(regionid + "_poly")) {
         var regionpoly = document.getElementById(regionid + "_poly");
@@ -678,25 +691,28 @@ regionUtils.fillRegion = function (regionid, value) {
         }
     }
     regionUtils._regions[regionid].filled=value;
-    var newregioncolor = regionUtils._regions[regionid].polycolor;
-    var d3color = d3.rgb(newregioncolor);
-    var newStyle="";
-    if(regionUtils._regions[regionid].filled){
-        newStyle = "stroke: " + d3color.rgb().toString()+";";
-        d3color.opacity=0.5;
-        newStyle +="fill: "+d3color.rgb().toString()+";";
-    }else{
-        newStyle = "stroke: " + d3color.rgb().toString() + "; fill: none;";
+    if (!glUtils._showRegionsExperimental) {
+        var newregioncolor = regionUtils._regions[regionid].polycolor;
+        var d3color = d3.rgb(newregioncolor);
+        var newStyle="";
+        if(regionUtils._regions[regionid].filled){
+            newStyle = "stroke: " + d3color.rgb().toString()+";";
+            d3color.opacity=0.5;
+            newStyle +="fill: "+d3color.rgb().toString()+";";
+        }else{
+            newStyle = "stroke: " + d3color.rgb().toString() + "; fill: none;";
+        }
+        document.getElementById(regionid + "_poly").setAttribute("style", newStyle);
     }
-    document.getElementById(regionid + "_poly").setAttribute("style", newStyle);
-
 }
 /** 
  * @param {String} regionid String id of region to delete
  * @summary Given a region id, deletes this region in the interface */
-regionUtils.deleteRegion = function (regionid) {
-    var regionPoly = document.getElementById(regionid + "_poly")
-    regionPoly.parentElement.removeChild(regionPoly);
+regionUtils.deleteRegion = function (regionid, skipUpdateAllRegionClassUI) {
+    if (!glUtils._showRegionsExperimental) {
+        var regionPoly = document.getElementById(regionid + "_poly")
+        regionPoly.parentElement.removeChild(regionPoly);
+    }
     delete regionUtils._regions[regionid];
     var op = tmapp["object_prefix"];
     var rPanel = document.getElementById(op + regionid + "_tr");
@@ -705,7 +721,9 @@ regionUtils.deleteRegion = function (regionid) {
         var rPanelHist = document.getElementById(op + regionid + "_tr_hist");
         rPanelHist.parentElement.removeChild(rPanelHist);
     }
-    regionUtils.updateAllRegionClassUI();
+    if(!skipUpdateAllRegionClassUI) {
+        regionUtils.updateAllRegionClassUI();
+    }
 }
 /** 
  * @param {String} regionid String id of region to delete
@@ -741,6 +759,11 @@ regionUtils.updateAllRegionClassUI = function (regionClass) {
             accordionItem.remove();
         }
     });
+    if (glUtils._showRegionsExperimental) {
+        regionUtils._currentRegionId = Object.keys(regionUtils._regions).length;
+        regionUtils._edgeLists = [];
+        glUtils.draw();
+    }
 }
 /** 
  *  @param {String} regionClass Region class
@@ -904,6 +927,7 @@ regionUtils.addRegionClassUI = function (regionClass) {
                     document.getElementById(region.id + "_color_input").value = newColor;
                 regionUtils.changeRegion(region.id);
             };
+            regionUtils.updateAllRegionClassUI();
         });
         var tdPanel = HTMLElementUtils.createElement({
             kind: "td",
@@ -928,8 +952,9 @@ regionUtils.addRegionClassUI = function (regionClass) {
                     groupRegions = Object.values(regionUtils._regions).filter(
                         x => x.regionClass==regionClass
                     ).forEach(function (region) {
-                        regionUtils.deleteRegion(region.id);
+                        regionUtils.deleteRegion(region.id, true);
                     });
+                    regionUtils.updateAllRegionClassUI();
                 }
             });
         });
@@ -993,7 +1018,9 @@ regionUtils.changeRegion = function (regionid) {
         var newregioncolor = document.getElementById(regionid + "_color_input").value;
         regionUtils._regions[regionid].polycolor = newregioncolor;
     }
-    regionUtils.updateRegionDraw(regionid);
+    if (! glUtils._showRegionsExperimental) {
+        regionUtils.updateRegionDraw(regionid);
+    }
 }
 
 /** 
