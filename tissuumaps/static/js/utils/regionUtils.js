@@ -229,6 +229,9 @@ regionUtils.geoJSON2regions = function (geoJSONObjects) {
     if (!Array.isArray(geoJSONObjects)) {
         geoJSONObjects = [geoJSONObjects];
     }
+    //geoJSONObjects = geoJSONObjects.slice(0,3000);
+    // Temporary hides the table for chrome issue with slowliness
+    document.querySelector("#regionAccordions").classList.add("d-none");
     geoJSONObjects.forEach(function(geoJSONObj, geoJSONObjIndex) {
         if (geoJSONObj.type == "FeatureCollection") {
             return regionUtils.geoJSON2regions(geoJSONObj.features);
@@ -307,6 +310,7 @@ regionUtils.geoJSON2regions = function (geoJSONObjects) {
             regionUtils.changeRegion(regionId);
         }
     });
+    document.querySelector("#regionAccordions").classList.remove("d-none");
 }
 
 /** 
