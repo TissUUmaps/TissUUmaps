@@ -61,6 +61,7 @@ glUtils = {
     _edgeThicknessRatio: 0.1,     // Ratio between edge thickness and marker size
     _showRegionsExperimental: true,
     _regionOpacity: 0.5,
+    _regionFillRule: "nonzero",   // Possible values: "never" | "nonzero" | "oddeven"
     _logPerformance: false,       // Use GPU timer queries to log performance
     _piechartPalette: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
@@ -511,11 +512,15 @@ glUtils._regionsVS = `
 
 glUtils._regionsFS = `
     #define ALPHA 1.0
+    #define FILL_RULE_NEVER 0
+    #define FILL_RULE_NONZERO 1
+    #define FILL_RULE_ODDEVEN 2
 
     precision highp float;
     precision highp int;
 
     uniform float u_regionOpacity;
+    uniform int u_regionFillRule;
     uniform highp sampler2D u_regionData;
     uniform highp sampler2D u_regionLUT;
 
@@ -572,8 +577,9 @@ glUtils._regionsFS = `
 
             // Check if we are done for this object ID and need to update the color value
             if (objectID != int(headerData.z) - 1) {
-                // Use odd-even winding rule for inside test
-                bool isInside = (windingNumber > 0 && (windingNumber & 1) == 1);
+                bool isInside = false;
+                if (u_regionFillRule == FILL_RULE_NONZERO) { isInside = windingNumber != 0; }
+                if (u_regionFillRule == FILL_RULE_ODDEVEN) { isInside = (windingNumber & 1) == 1; }
 
                 if (isInside || minEdgeDist < strokeWidth) {
                     vec4 objectColor = texelFetch(u_regionLUT, ivec2(objectID & 4095, objectID >> 12), 0);
@@ -601,7 +607,10 @@ glUtils._regionsFS = `
                 if (min(v0.y, v1.y) <= p.y && p.y < max(v0.y, v1.y)) {
                     float t = (p.y - v0.y) / (v1.y - v0.y + 1e-5);
                     float x = v0.x + (v1.x - v0.x) * t;
-                    windingNumber += int(x - p.x > 0.0);
+                    float weight = 0.0;
+                    if (u_regionFillRule == FILL_RULE_NONZERO) { weight = sign(v1.y - v0.y); }
+                    if (u_regionFillRule == FILL_RULE_ODDEVEN) { weight = 1.0; }
+                    windingNumber += int(float(x - p.x > 0.0) * weight);
                 }
                 minEdgeDist = min(minEdgeDist, distPointToLine(p, v0, v1));
             }
@@ -1763,6 +1772,8 @@ glUtils._drawRegionsColorPass = function(gl, viewportTransform, imageBounds) {
     const numScanlines = regionUtils._edgeLists.length;
     if (numScanlines == 0) return;  // No regions to draw
 
+    const fillRuleConstants = {"never" : 0, "nonzero" : 1, "oddeven" : 2};
+
     // Set up render pipeline
     const program = glUtils._programs["regions"];
     gl.useProgram(program);
@@ -1775,6 +1786,8 @@ glUtils._drawRegionsColorPass = function(gl, viewportTransform, imageBounds) {
     gl.uniform4fv(gl.getUniformLocation(program, "u_imageBounds"), imageBounds);
     gl.uniform1i(gl.getUniformLocation(program, "u_numScanlines"), numScanlines);
     gl.uniform1f(gl.getUniformLocation(program, "u_regionOpacity"), glUtils._regionOpacity);
+    gl.uniform1i(gl.getUniformLocation(program, "u_regionFillRule"),
+        fillRuleConstants[glUtils._regionFillRule]);
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionLUT"]);
     gl.uniform1i(gl.getUniformLocation(program, "u_regionLUT"), 2);
