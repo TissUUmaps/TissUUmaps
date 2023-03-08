@@ -2420,32 +2420,72 @@ interfaceUtils.createDownloadDropdown = function(downloadRow, innerText, callbac
     titleDiv.setAttribute("class", "col-12");
     titleDiv.innerHTML = `<b> ${innerText} </b>`
     row.appendChild(titleDiv);
-    
-    selectDiv.setAttribute("class", "col-6");
+    if (comment) {
+        selectDiv.setAttribute("class", "col-6");
+    }
+    else {
+        selectDiv.setAttribute("class", "col-12");
+    }
     row.appendChild(selectDiv);
-    random_chosen_id = (Math.random() + 1).toString(36).substring(7);
+    random_select2_id = (Math.random() + 1).toString(36).substring(7);
     var paramSelect = {
         // eventListeners: {"change":callback},
         // "class": "btn btn-primary",
         // innerText: innerText
-        options: dropdownOptions,
-        class: "chosen-select chosen-select_" + random_chosen_id
+        class: "select2-select select2-select_" + random_select2_id
     }
+    console.log("dropdownOptions", dropdownOptions);
     var DownloadDropdown = HTMLElementUtils.selectTypeDropDown(paramSelect);
-    DownloadDropdown.setAttribute("data-placeholder", "Choose a gene...")
+    DownloadDropdown.setAttribute("data-placeholder", "Select from list (" + dropdownOptions.length + " items)")
     DownloadDropdown.style.width = "100%";
     selectDiv.appendChild(DownloadDropdown);
-    
-    var commentDiv = document.createElement("div");
-    commentDiv.setAttribute("class", "col-6");
-    if (comment)
-        commentDiv.innerHTML = `<p style=" font-size:smaller; font-style: italic; color:#aaaaaa; padding-left:10px; margin-bottom: 0px;"> ${comment} </p>`
-    row.appendChild(commentDiv);
+    if (comment) {
+        var commentDiv = document.createElement("div");
+        commentDiv.setAttribute("class", "col-6");
+        if (comment)
+            commentDiv.innerHTML = `<p style=" font-size:smaller; font-style: italic; color:#aaaaaa; padding-left:10px; margin-bottom: 0px;"> ${comment} </p>`
+        row.appendChild(commentDiv);
+    }
 
     downloadRow.appendChild(row);
 
-    $(".chosen-select_" + random_chosen_id).chosen({disable_search_threshold: 10, search_contains: true, width: "100%"})
-    .change(callback);
+    var timer = null;
+    $(".select2-select_" + random_select2_id).select2({
+        minimumResultsForSearch: 10,
+        ajax: {
+            delay: 50,
+            cache: true,
+            transport: function(params, success, failure) {
+                let pageSize = 100;
+                console.log("params",params);
+                let term = (params.data.term || '').toLowerCase();
+                let page = (params.data.page || 1);
+                
+                if (timer)
+                    clearTimeout(timer);
+
+                timer = setTimeout(function(){
+                    timer = null;
+                    let results = dropdownOptions
+                    .filter(function(f){
+                        // your custom filtering here.
+                        return f.text.toLowerCase().includes(term);
+                    })
+
+                    let paged = results.slice((page -1) * pageSize, page * pageSize);
+
+                    let options = {
+                        results: paged,
+                        pagination: {
+                            more: results.length >= page * pageSize
+                        }
+                    };
+                    success(options);
+                }, params.delay);
+            }
+        },
+    })
+    .on('select2:select', callback);
     return row;
 }
 
@@ -2454,18 +2494,19 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
     interfaceUtils._mGenUIFuncs.generateUUID();
     if (!options.uid)
         options.uid=interfaceUtils._mGenUIFuncs.ctx.aUUID;
-    var callback = function(e, params){
+    var callback = function(e){
+        params = e.params;
         if (e) {
-            if ($('.chosen-select').not(e.target)) {
-                $('.chosen-select').not(e.target).val('').trigger('chosen:updated');
+            if ($('.select2-select').not(e.target)) {
+                $('.select2-select').not(e.target).val(null).trigger('change');
             }
         }
         projectUtils.applySettings(options.settings);
         optionsCopy = JSON.parse(JSON.stringify(options));
         var dataURL = "";
-        if (params.selected === "") {return;}
+        if (params.data.id === "") {return;}
         if (options.dropdownOptions) {
-            dropdownOption = options.dropdownOptions[params.selected];
+            dropdownOption = options.dropdownOptions[params.data.id];
             for (key in dropdownOption) {
                 option_shifted = optionsCopy;
                 var parameters = key.split(".");
@@ -2481,17 +2522,17 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
         }
         else {
             interfaceUtils._mGenUIFuncs.deleteTab(options.uid);
-            dataURL = options.path[params.selected];
+            dataURL = options.path[params.data.id];
             optionsCopy["path"] = dataURL;
         }
         interfaceUtils.generateDataTabUI(optionsCopy);
     }
     var dropdownOptions;
-    dropdownOptions = [{"value":"","text":"Select from list"}];
+    dropdownOptions = [];
     if (options.dropdownOptions) {
         options.dropdownOptions.forEach (function (dropdownOption, index) {
             dropdownOptions.push({
-                "value": index,
+                "id": index,
                 "text": dropdownOption.optionName
             })
         });
@@ -2499,7 +2540,7 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
     else {
         options["path"].forEach (function (dataURL, index) {
             dropdownOptions.push({
-                "value": index,
+                "id": index,
                 "text": dataURL.split('/').reverse()[0].replace(/_/g, ' ').replace('.csv', '')
             })
         });
@@ -2512,7 +2553,7 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
         else {
             indexLoad = options.autoLoad;
         }
-        $(row).find(".chosen-select").val(indexLoad).trigger('chosen:updated');
+        $(row).find(".select2-select").val(indexLoad).trigger('change');
         setTimeout(function(){callback(null, {'selected':indexLoad})},500);
     }
 }
@@ -2548,8 +2589,8 @@ interfaceUtils.createDownloadButtonMarkers = function(options) {
         options.uid=interfaceUtils._mGenUIFuncs.ctx.aUUID;
     var callback = function(e){
         if (e) {
-            if ($('.chosen-select').not(e.target)) {
-                $('.chosen-select').not(e.target).val('').trigger('chosen:updated')
+            if ($('.select2-select').not(e.target)) {
+                $('.select2-select').not(e.target).val(null).trigger('change');
             }
         };
         interfaceUtils._mGenUIFuncs.deleteTab(options.uid);
@@ -2565,9 +2606,10 @@ interfaceUtils.createDownloadButtonMarkers = function(options) {
 
 interfaceUtils.createDownloadDropdownRegions = function(options) {
     var downloadRow = document.getElementById("divRegionsDownloadButtons");
-    var callback = function(e, params){
+    var callback = function(e){
+        params = e.params
         projectUtils.applySettings(options.settings);
-        var dataURL = params.selected;
+        var dataURL = params.data.id;
         if (dataURL == "") return;
         regionUtils.JSONToRegions(dataURL)
     }
@@ -2576,11 +2618,11 @@ interfaceUtils.createDownloadDropdownRegions = function(options) {
         dropdownOptions = [];
     }
     else {
-        dropdownOptions = [{"value":"","text":"Select from list"}];
+        dropdownOptions = [];
     }
     options["path"].forEach (function (dataURL) {
         dropdownOptions.push({
-            "value": dataURL,
+            "id": dataURL,
             "text": dataURL.split('/').reverse()[0].replace(/_/g, '').replace('.json', '')
         })
     });
