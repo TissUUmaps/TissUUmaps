@@ -143,7 +143,7 @@ class H5AD_API  extends H5_API {
         
     getXRow_array (url, rowIndex, path) {
         return new Promise(resolve => {
-            this.get(url,{path:path, slice:[[],[rowIndex, rowIndex+1]]}).then((data_X) => {
+            this.get(url,{path:path, slice:[[],[parseInt(rowIndex), parseInt(rowIndex)+1]]}).then((data_X) => {
                 resolve(data_X.value);
             });
         });
@@ -168,7 +168,8 @@ class H5AD_API  extends H5_API {
                     return;
                 }
                 if (data_X.attrs === undefined) {
-                    this.get (url, {path:path}).then((data)=>{
+                    interfaceUtils.alert("data_X.attrs === undefined")
+                    return this.getXRow_array (url, rowIndex, path).then((data)=>{
                         resolve(data);
                     });
                 }
@@ -184,6 +185,7 @@ class H5AD_API  extends H5_API {
                     });
                 }
                 else if (data_X.attrs["encoding-type"] == "csr_matrix") {
+                    interfaceUtils.alert("csr sparse format not supported.")
                     resolve("csr sparse format not supported!")
                 }
                 else {
