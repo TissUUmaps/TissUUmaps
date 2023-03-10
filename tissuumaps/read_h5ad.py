@@ -78,6 +78,9 @@ def getObsList(adata):
     except:
         # if obs is NOT a dataframe:
         obsList = list(adata.get("obs"))
+    if "_index" in obsList:
+        obsList = [obs for obs in obsList if obs != "_index"]
+
     return obsList
 
 
