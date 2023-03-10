@@ -1879,10 +1879,21 @@ interfaceUtils._mGenUIFuncs.fillRadiosAndChecksIfExpectedCSV=function(uid,expect
  * @param {string} uid id in datautils.data
  * @summary Create the menu with the options to select marker, select shape and color to draw
 */
-interfaceUtils._mGenUIFuncs.groupUI=function(uid){
+interfaceUtils._mGenUIFuncs.groupUI=async function(uid, force){
     //if we arrive here it's because  agroupgarden exists, all the information is there, 
     //also we need some info on color and options, but we can get that.
     var data_obj = dataUtils.data[uid];
+    
+    if (force === undefined && Object.keys(data_obj["_groupgarden"]).length > 3000) {
+        let _confirm = await interfaceUtils.confirm("You are trying to load " + Object.keys(data_obj["_groupgarden"]).length + " different groups, which can be slow and make TissUUmaps unresponsive. Are you sure you want to continue?","Warning")
+        if (_confirm) {
+            return interfaceUtils._mGenUIFuncs.groupUI(uid, true);
+        }
+        else {
+            interfaceUtils._mGenUIFuncs.deleteTab(uid, true);
+            return null;
+        }
+    }
 
     var _selectedOptions=interfaceUtils._mGenUIFuncs.areRadiosAndChecksChecked(uid);
     var _selectedDropDown=interfaceUtils._mGenUIFuncs.getTabDropDowns(uid);
