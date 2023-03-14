@@ -2463,6 +2463,7 @@ interfaceUtils.createDownloadDropdown = function(downloadRow, innerText, callbac
     var timer = null;
     $(".select2-select_" + random_select2_id).select2({
         minimumResultsForSearch: 10,
+        dropdownParent: selectDiv,
         ajax: {
             delay: 50,
             cache: true,
