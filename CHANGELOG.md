@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.1.0.2
+
+- Fix crash on layer from a parent layer.
+- Change dropdown selection from Chosen to Select2 for faster loading.
+- Update docker to Alpine for security reasons.
+- Small fixes
+
 ## 3.1.0.1
 
 - Move docker to python-alpine for security reasons
