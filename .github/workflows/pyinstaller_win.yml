@@ -32,20 +32,6 @@ jobs:
         run: |
           cp dep/vips-dev-8.10/bin/* dist/TissUUmaps/
 
-      - name: Checkout fred
-        uses: actions/checkout@v2
-        with:
-          repository: "freenet/fred"
-          fetch-depth: 0
-          path: "fred"
-
-      - name: Download fred from the Github Release
-        uses: dsaltares/fetch-gh-release-asset@1.1.0
-        with:
-          repo: "freenet/fred"
-          version: "latest"
-          file: "freenet.jar"
-
       - name: Building the installer
         run: |
           "%programfiles(x86)%\Inno Setup 6\iscc.exe" "build_installer.iss"
