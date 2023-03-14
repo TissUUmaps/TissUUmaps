@@ -230,10 +230,6 @@ glUtils._markersFS = `
         vec4 shapeColor = texture(u_shapeAtlas, uv, -0.5);
         shapeColor = u_markerOutline ? shapeColor.rrrb : shapeColor.gggb;
 
-        // This bias avoids minified markers with outline becoming too dark
-        float shapeColorBias = max(0.0, 1.0 - v_shapeSize * 0.2);
-        shapeColor.rgb = clamp(shapeColor.rgb + shapeColorBias, 0.0, 1.0);
-
         if (u_usePiechartFromMarker && !u_alphaPass) {
             float delta = 0.25 / v_shapeSize;
         #ifdef USE_INSTANCING
