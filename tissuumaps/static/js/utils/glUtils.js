@@ -1399,6 +1399,28 @@ glUtils._updateTransformLUTTexture = function(texture) {
 }
 
 
+/**
+ * @summary Update the region data textures for all region datasets.
+ * This function is a callback and should not normally be called directly.
+ */
+glUtils.updateRegionDataTextures = function() {
+    const canvas = document.getElementById("gl_canvas");
+    const gl = canvas.getContext("webgl2", glUtils._options);
+
+    // FIXME For now, regions will always have the first image as parent
+    const image = tmapp["ISS_viewer"].world.getItemAt(0);
+    const imageWidth = image ? image.getContentSize().x : 1;
+    const imageHeight = image ? image.getContentSize().y : 1;
+    const imageBounds = [0, 0, imageWidth, imageHeight];
+
+    console.time("Update region edge lists");
+    regionUtils._generateEdgeListsForDrawing(imageBounds);
+    console.timeEnd("Update region edge lists");
+
+    glUtils._updateRegionDataTexture(gl, glUtils._textures["regionData"]);
+}
+
+
 glUtils._createRegionDataTexture = function(gl, maxNumScanlines=512) {
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -1428,6 +1450,22 @@ glUtils._updateRegionDataTexture = function(gl, texture) {
         gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, i, 4096, 1, gl.RGBA, gl.FLOAT, texeldata);
     }
     gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
+
+/**
+ * @summary Update the color/visibility LUTs for all region datasets.
+ * This function is a callback and should not normally be called directly.
+ */
+glUtils.updateRegionLUTTextures = function() {
+    const canvas = document.getElementById("gl_canvas");
+    const gl = canvas.getContext("webgl2", glUtils._options);
+
+    console.time("Update region LUT");
+    regionUtils._generateRegionToColorLUT();
+    console.timeEnd("Update region LUT");
+
+    glUtils._updateRegionLUTTexture(gl, glUtils._textures["regionLUT"]);
 }
 
 
@@ -1903,18 +1941,11 @@ glUtils.draw = function() {
     }
 
     if (glUtils._showRegionsExperimental) {
-        // FIXME For now, regions are always assigned to the first image
+        // FIXME For now, regions will always have the first image as parent
         const image = tmapp["ISS_viewer"].world.getItemAt(0);
         const imageWidth = image ? image.getContentSize().x : 1;
         const imageHeight = image ? image.getContentSize().y : 1;
         const imageBounds = [0, 0, imageWidth, imageHeight];
-
-        if (regionUtils._currentRegionId > 0 && regionUtils._edgeLists.length == 0) {
-            regionUtils._generateEdgeListsForDrawing(imageBounds);
-            regionUtils._generateRegionToColorLUT();
-            glUtils._updateRegionDataTexture(gl, glUtils._textures["regionData"]);
-            glUtils._updateRegionLUTTexture(gl, glUtils._textures["regionLUT"]);
-        }
         glUtils._drawRegionsColorPass(gl, viewportTransform, imageBounds);
     }
 

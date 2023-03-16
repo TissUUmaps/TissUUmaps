@@ -314,8 +314,8 @@ regionUtils.geoJSON2regions = function (geoJSONObjects) {
         }
     });
     if (glUtils._showRegionsExperimental) {
-        regionUtils._currentRegionId = Object.keys(regionUtils._regions).length;
-        regionUtils._edgeLists = [];
+        glUtils.updateRegionDataTextures();
+        glUtils.updateRegionLUTTextures();
         glUtils.draw();
     }
     document.querySelector("#regionAccordions").classList.remove("d-none");
@@ -763,8 +763,8 @@ regionUtils.updateAllRegionClassUI = function (regionClass) {
         }
     });
     if (glUtils._showRegionsExperimental) {
-        regionUtils._currentRegionId = Object.keys(regionUtils._regions).length;
-        regionUtils._edgeLists = [];
+        glUtils.updateRegionDataTextures();
+        glUtils.updateRegionLUTTextures();
         glUtils.draw();
     }
 }
