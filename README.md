@@ -9,3 +9,4 @@
 For installation and usage, read the [TissUUmaps online documentation](https://tissuumaps.github.io/TissUUmaps-docs/).
 
 For demo and tutorials, see the [TissUUmaps web page](https://tissuumaps.github.io).
+
