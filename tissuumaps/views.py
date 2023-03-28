@@ -444,12 +444,14 @@ def tmapFile_old(path, filename):
     return redirect(url_for("tmapFile", filename=filename) + "?path=" + path)
 
 
-@app.route("/<path:path>/<string:filename>.h5ad", methods=["GET", "POST"])
+@app.route(
+    "/<path:path>/<string:filename>.<any(h5ad, adata, h5):ext>", methods=["GET", "POST"]
+)
 @requires_auth
-def h5adFile_old(path, filename):
+def h5adFile_old(path, filename, ext):
     if path == "":
         path = "./"
-    return redirect(url_for("h5ad", filename=filename) + "?path=" + path)
+    return redirect(url_for("h5ad", filename=filename, ext=ext) + "?path=" + path)
 
 
 @app.route("/<string:filename>.tmap", methods=["GET", "POST"])
@@ -682,7 +684,7 @@ def send_file_partial(path):
     return rv
 
 
-@app.route("/<path:filename>.<any(h5ad, adata, h5):ext>")
+@app.route("/<string:filename>.<any(h5ad, adata, h5):ext>")
 @requires_auth
 def h5ad(filename, ext):
     path = request.args.get("path")
