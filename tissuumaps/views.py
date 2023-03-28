@@ -444,6 +444,14 @@ def tmapFile_old(path, filename):
     return redirect(url_for("tmapFile", filename=filename) + "?path=" + path)
 
 
+@app.route("/<path:path>/<string:filename>.h5ad", methods=["GET", "POST"])
+@requires_auth
+def h5adFile_old(path, filename):
+    if path == "":
+        path = "./"
+    return redirect(url_for("h5ad", filename=filename) + "?path=" + path)
+
+
 @app.route("/<string:filename>.tmap", methods=["GET", "POST"])
 @requires_auth
 def tmapFile(filename):
