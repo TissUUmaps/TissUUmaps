@@ -693,7 +693,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
                     const opacity = useOpacityFromMarker ? markerData[opacityPropertyName][markerIndex] : 1.0;
                     if (useCollectionItemFromMarker) collectionItemIndex = markerData[collectionItemPropertyName][markerIndex];
 
-                    if (useColorFromMarker) hexColor = markerData[colorPropertyName][i];
+                    if (useColorFromMarker) hexColor = markerData[colorPropertyName][markerIndex];
                     if (useColorFromColormap) {
                         scalarValue = markerData[scalarPropertyName][markerIndex];
                         // Update scalar range that will be used for normalizing the values
