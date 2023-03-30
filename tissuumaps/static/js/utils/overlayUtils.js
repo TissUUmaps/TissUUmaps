@@ -657,7 +657,39 @@ overlayUtils.savePNG=function() {
             });
         });
     }
+    function add_colorbar (ctx, resolution) {
+        var ctx_colorbar = document.querySelector("#colorbar_canvas").getContext("2d");
+        
+        // Set up CSS size.
+        ctx_colorbar.canvas.style.width = ctx_colorbar.canvas.style.width || ctx_colorbar.canvas.width + 'px';
+        ctx_colorbar.canvas.style.height = ctx_colorbar.canvas.style.height || ctx_colorbar.canvas.height + 'px';
 
+        // Resize canvas and scale future draws.
+        glUtils._updateColorbarCanvas(resolution)
+        var ctx_colorbar_width = ctx_colorbar.canvas.width;
+        var ctx_colorbar_height = ctx_colorbar.canvas.height;
+
+        var width = ctx.canvas.width;
+        var height = ctx.canvas.height;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+        ctx.beginPath();
+        ctx.fillRect(
+            width - ctx_colorbar_width * 1 - 10,
+            height - ctx_colorbar_height * 1 - 10,
+            ctx_colorbar_width * 1,
+            ctx_colorbar_height * 1,
+            5*resolution
+        );
+        
+        ctx.drawImage(
+            ctx_colorbar.canvas, 
+            width - ctx_colorbar_width * 1 - 10,
+            height - ctx_colorbar_height * 1 - 10,
+            ctx_colorbar_width * 1,
+            ctx_colorbar_height * 1
+        );
+        glUtils._updateColorbarCanvas(1);
+    }
     return new Promise((resolve, reject) => {
         if (tiling > 1) {
             var canvas = document.createElement("canvas");
@@ -668,6 +700,7 @@ overlayUtils.savePNG=function() {
             canvas.height = tiling * Math.min(ctx_osd.canvas.height, ctx_webgl.canvas.height);
             var bounds = tmapp.ISS_viewer.viewport.getBounds();
             getCanvasCtx_aux(0, tiling, ctx, bounds).then((ctx_tiling) => {
+                ctx = add_colorbar (ctx, tiling);
                 var png = ctx_tiling.canvas.toDataURL("image/png");
                 
                 var a = document.createElement("a"); //Create <a>
@@ -679,6 +712,7 @@ overlayUtils.savePNG=function() {
         }
         else {
             overlayUtils.getCanvasCtx().then((ctx)  =>{
+                ctx = add_colorbar (ctx, 1);
                 var png = ctx.canvas.toDataURL("image/png");
                 
                 var a = document.createElement("a"); //Create <a>
