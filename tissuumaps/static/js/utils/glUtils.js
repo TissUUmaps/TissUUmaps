@@ -1354,7 +1354,8 @@ glUtils._updateColorbarCanvas = function(resolution) {
             const r = Math.floor(colorscaleData[4 * index + 0]);
             const g = Math.floor(colorscaleData[4 * index + 1]);
             const b = Math.floor(colorscaleData[4 * index + 2]);
-            gradient.addColorStop(Math.min(1,normalized), "rgb(" + r + "," + g + "," + b + ")");
+            gradient.addColorStop(Math.min(1,normalized
+                ), "rgb(" + r + "," + g + "," + b + ")");
         }
         // Draw colorbar (with outline)
         ctx.fillStyle = gradient;
