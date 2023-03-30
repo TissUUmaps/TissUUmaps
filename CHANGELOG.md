@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.1.0.3
+
+- Fix h5 autocomplete on iframes
+- Fix wrong marker index for color column when more than 100k markers
+- Add colorbar canvas to png captures
+- Small fixes
+
 ## 3.1.0.2
 
 - Fix crash on layer from a parent layer.
