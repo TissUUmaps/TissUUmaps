@@ -672,6 +672,7 @@ interfaceUtils._mGenUIFuncs.intputToH5 = function(uid, inputDropDown){
     let options = {
         tabDisabled: true,
         minChars: 0,
+        appendTo: inputDropDown.parentNode,
         lookup: function (query, done) {
             // Do Ajax call or lookup locally, when done,
             // call the callback and pass your results:
