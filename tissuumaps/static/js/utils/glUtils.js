@@ -234,10 +234,6 @@ glUtils._markersFS = `
         vec4 shapeColor = texture(u_shapeAtlas, uv, -0.5);
         shapeColor = u_markerOutline ? shapeColor.rrrb : shapeColor.gggb;
 
-        // This bias avoids minified markers with outline becoming too dark
-        float shapeColorBias = max(0.0, 1.0 - v_shapeSize * 0.2);
-        shapeColor.rgb = clamp(shapeColor.rgb + shapeColorBias, 0.0, 1.0);
-
         if (u_usePiechartFromMarker && !u_alphaPass) {
             float delta = 0.25 / v_shapeSize;
         #ifdef USE_INSTANCING
@@ -848,7 +844,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
                     const opacity = useOpacityFromMarker ? markerData[opacityPropertyName][markerIndex] : 1.0;
                     if (useCollectionItemFromMarker) collectionItemIndex = markerData[collectionItemPropertyName][markerIndex];
 
-                    if (useColorFromMarker) hexColor = markerData[colorPropertyName][i];
+                    if (useColorFromMarker) hexColor = markerData[colorPropertyName][markerIndex];
                     if (useColorFromColormap) {
                         scalarValue = markerData[scalarPropertyName][markerIndex];
                         // Update scalar range that will be used for normalizing the values
@@ -1564,7 +1560,8 @@ glUtils._updateColorScaleTexture = function(gl, uid, texture) {
 }
 
 
-glUtils._updateColorbarCanvas = function() {
+glUtils._updateColorbarCanvas = function(resolution) {
+    if (resolution == undefined) resolution = 1.;
     const canvas = document.getElementById("colorbar_canvas");
     const ctx = canvas.getContext("2d");
 
@@ -1579,7 +1576,8 @@ glUtils._updateColorbarCanvas = function() {
     canvasHeight -= 10; // No margin for last colorbar 
 
     // Resize and clear canvas
-    ctx.canvas.height = canvasHeight;
+    ctx.canvas.height = canvasHeight * resolution;
+    ctx.canvas.width = 266 * resolution;
     ctx.canvas.style.marginTop = -canvasHeight + "px";
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     if (ctx.canvas.height == -10) {
@@ -1597,7 +1595,7 @@ glUtils._updateColorbarCanvas = function() {
         const colorscaleData = glUtils._colorscaleData[uid];
 
         // Define gradient for color scale
-        const gradient = ctx.createLinearGradient(5, 0, 256+5, 0);
+        const gradient = ctx.createLinearGradient(5* resolution, 0, (256+5)* resolution, 0);
         const numStops = 32;
         for (let i = 0; i < numStops; ++i) {
             const normalized = i / (numStops - 1);
@@ -1605,13 +1603,14 @@ glUtils._updateColorbarCanvas = function() {
             const r = Math.floor(colorscaleData[4 * index + 0]);
             const g = Math.floor(colorscaleData[4 * index + 1]);
             const b = Math.floor(colorscaleData[4 * index + 2]);
-            gradient.addColorStop(normalized, "rgb(" + r + "," + g + "," + b + ")");
+            gradient.addColorStop(Math.min(1,normalized
+                ), "rgb(" + r + "," + g + "," + b + ")");
         }
         // Draw colorbar (with outline)
         ctx.fillStyle = gradient;
-        ctx.fillRect(5, 48 + yOffset, 256, 16);
+        ctx.fillRect(5 * resolution, (48 + yOffset) * resolution, 256 * resolution, 16 * resolution);
         ctx.strokeStyle = "#555";
-        ctx.strokeRect(5, 48 + yOffset, 256, 16);
+        ctx.strokeRect(5 * resolution, (48 + yOffset) * resolution, 256 * resolution, 16 * resolution);
 
         // Convert range annotations to precision 7 and remove trailing zeros
         let propertyMin = propertyRange[0].toPrecision(7).replace(/\.([^0]+)0+$/,".$1");
@@ -1621,17 +1620,17 @@ glUtils._updateColorbarCanvas = function() {
         if (propertyMax.length > 9) propertyMax = propertyRange[1].toExponential(5);
         // Get marker tab name to show together with property name
         const tabName = interfaceUtils.getElementById(uid + "_marker-tab-name").textContent;
-        let label = tabName.substring(0, 15) + "." + propertyName.substring(0, 15);
-
+        // let label = tabName.substring(0, 15) + "." + propertyName.substring(0, 15);
+        let label = tabName.substring(0, 30);
         // Draw annotations (with drop shadow)
-        ctx.font = "16px Segoe UI";
+        ctx.font = (16 * resolution) + "px Segoe UI";
         ctx.textAlign = "center";
         ctx.fillStyle = "#000";  // Shadow color
-        ctx.fillText(label, ctx.canvas.width/2+1, 18+1 + yOffset);
+        ctx.fillText(label, (ctx.canvas.width/2+1), (18+1 + yOffset) * resolution);
         ctx.textAlign = "left";
-        ctx.fillText(propertyMin, ctx.canvas.width/2-128+1, 40+1 + yOffset);
+        ctx.fillText(propertyMin, (ctx.canvas.width/2-128*resolution+1), (40+1 + yOffset) * resolution);
         ctx.textAlign = "right";
-        ctx.fillText(propertyMax, ctx.canvas.width/2+128+1, 40+1 + yOffset);
+        ctx.fillText(propertyMax, (ctx.canvas.width/2+128*resolution+1), (40+1 + yOffset) * resolution);
         yOffset += rowHeight + 10;  // Move to next colorbar row
     }
 }
@@ -2033,7 +2032,7 @@ glUtils.pick = function(event) {
             interfaceUtils._mGenUIFuncs.ActivateTab(uid);
             var tr = document.querySelectorAll('[data-uid="'+uid+'"][data-key="'+groupName+'"]')[0];
             if (tr != null) {
-                tr.scrollIntoView({block: "center",inline: "nearest"});
+                tr.scrollIntoView({block: "nearest",inline: "nearest"});
                 tr.classList.remove("transition_background")
                 tr.classList.add("table-primary")
                 setTimeout(function(){tr.classList.add("transition_background");tr.classList.remove("table-primary");},400);

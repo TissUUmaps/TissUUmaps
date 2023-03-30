@@ -617,10 +617,9 @@ class webEngine(QWebEngineView):
             options=QFileDialog.Option.ShowDirsOnly,
         )
         try:
-            views.exportToStatic(state, folderpath, previouspath)
+            return views.exportToStatic(state, folderpath, previouspath)
         except:
             return {"success": False, "error": traceback.format_exc()}
-        return {"success": True}
 
     @pyqtSlot(str)
     def saveProject(self, state):

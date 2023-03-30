@@ -672,6 +672,7 @@ interfaceUtils._mGenUIFuncs.intputToH5 = function(uid, inputDropDown){
     let options = {
         tabDisabled: true,
         minChars: 0,
+        appendTo: inputDropDown.parentNode,
         lookup: function (query, done) {
             // Do Ajax call or lookup locally, when done,
             // call the callback and pass your results:
@@ -2463,6 +2464,7 @@ interfaceUtils.createDownloadDropdown = function(downloadRow, innerText, callbac
     var timer = null;
     $(".select2-select_" + random_select2_id).select2({
         minimumResultsForSearch: 10,
+        dropdownParent: selectDiv,
         ajax: {
             delay: 50,
             cache: true,

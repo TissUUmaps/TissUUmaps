@@ -444,6 +444,16 @@ def tmapFile_old(path, filename):
     return redirect(url_for("tmapFile", filename=filename) + "?path=" + path)
 
 
+@app.route(
+    "/<path:path>/<string:filename>.<any(h5ad, adata, h5):ext>", methods=["GET", "POST"]
+)
+@requires_auth
+def h5adFile_old(path, filename, ext):
+    if path == "":
+        path = "./"
+    return redirect(url_for("h5ad", filename=filename, ext=ext) + "?path=" + path)
+
+
 @app.route("/<string:filename>.tmap", methods=["GET", "POST"])
 @requires_auth
 def tmapFile(filename):
@@ -674,7 +684,7 @@ def send_file_partial(path):
     return rv
 
 
-@app.route("/<path:filename>.<any(h5ad, adata, h5):ext>")
+@app.route("/<string:filename>.<any(h5ad, adata, h5):ext>")
 @requires_auth
 def h5ad(filename, ext):
     path = request.args.get("path")
@@ -803,7 +813,7 @@ def exportToStatic(state, folderpath, previouspath):
         return state
 
     if not folderpath:
-        return {}
+        return {"success": False, "error": "Directory not found"}
     try:
         relativePath = os.path.relpath(previouspath, os.path.dirname(folderpath))
         state = addRelativePath(json.loads(state), relativePath)
@@ -867,10 +877,12 @@ def exportToStatic(state, folderpath, previouspath):
                 os.path.join(folderpath, "static", dir),
                 dirs_exist_ok=True,
             )
+
+        return {"success": True}
     except:
         import traceback
 
-        logging.error(traceback.format_exc())
+        return {"success": False, "error": traceback.format_exc()}
 
 
 def load_plugin(name):

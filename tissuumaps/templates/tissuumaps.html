@@ -537,7 +537,9 @@
       {% endif %} {% endfor %}
 
       if (tmapFile != null) {
-        projectUtils.loadProjectFileFromServer(tmapFile);
+        if (tmapFile != "null") {
+          projectUtils.loadProjectFileFromServer(tmapFile);
+        }
       }
       else {
         {% if jsonProject %}
