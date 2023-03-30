@@ -813,7 +813,7 @@ def exportToStatic(state, folderpath, previouspath):
         return state
 
     if not folderpath:
-        return {}
+        return {"success": False, "error": "Directory not found"}
     try:
         relativePath = os.path.relpath(previouspath, os.path.dirname(folderpath))
         state = addRelativePath(json.loads(state), relativePath)
@@ -877,10 +877,12 @@ def exportToStatic(state, folderpath, previouspath):
                 os.path.join(folderpath, "static", dir),
                 dirs_exist_ok=True,
             )
+
+        return {"success": True}
     except:
         import traceback
 
-        logging.error(traceback.format_exc())
+        return {"success": False, "error": traceback.format_exc()}
 
 
 def load_plugin(name):
