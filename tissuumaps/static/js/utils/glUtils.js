@@ -629,7 +629,9 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
           TRANSFORM_LOCATION = 5;
 
     const lastInputs = glUtils._markerInputsCached[uid];
-    if (forceUpdate || (lastInputs != JSON.stringify(newInputs))) {
+    if (forceUpdate || (lastInputs != JSON.stringify(newInputs)) || dataUtils.data[uid]["modified"]) {
+        dataUtils.data[uid]["modified"] = false;
+        forceUpdate = true;
         scalarRange = [1e9, -1e9];  // This range will be computed from the data
 
         // Extract and upload vertex data for markers. For datasets with tens of of
