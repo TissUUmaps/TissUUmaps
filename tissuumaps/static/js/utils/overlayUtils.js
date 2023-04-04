@@ -635,7 +635,7 @@ overlayUtils.savePNG=function() {
     }
     function add_colorbar (ctx, resolution) {
         var ctx_colorbar = document.querySelector("#colorbar_canvas").getContext("2d");
-        
+        if (ctx_colorbar.canvas.classList.contains("d-none")) return;
         // Set up CSS size.
         ctx_colorbar.canvas.style.width = ctx_colorbar.canvas.style.width || ctx_colorbar.canvas.width + 'px';
         ctx_colorbar.canvas.style.height = ctx_colorbar.canvas.style.height || ctx_colorbar.canvas.height + 'px';
