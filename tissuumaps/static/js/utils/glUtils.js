@@ -1333,7 +1333,7 @@ glUtils._updateColorbarCanvas = function(resolution) {
     ctx.canvas.width = 266 * resolution;
     ctx.canvas.style.marginTop = -canvasHeight + "px";
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    if (ctx.canvas.height == -10) {
+    if (canvasHeight == -10) {
         ctx.canvas.className = "d-none";
         return;  // Nothing more to do for empty canvas
     }
