@@ -356,8 +356,9 @@ overlayUtils.addLayer = function(layer, i, visible) {
                 setTimeout(function(){$(loadingModal).modal("hide");}, 500);
             }
             showModal = false;
-            if (filterUtils._compositeMode == "collection") {
+            if (overlayUtils._collectionMode) {
                 filterUtils.setCompositeOperation();
+                overlayUtils.setCollectionMode();
             }
         },
         error: function(i) {
