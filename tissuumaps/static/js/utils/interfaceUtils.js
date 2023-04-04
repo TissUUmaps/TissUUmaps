@@ -2534,7 +2534,7 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
             }
         }
         else {
-            interfaceUtils._mGenUIFuncs.deleteTab(options.uid);
+            //interfaceUtils._mGenUIFuncs.deleteTab(options.uid);
             dataURL = options.path[params.data.id];
             optionsCopy["path"] = dataURL;
         }
@@ -2606,7 +2606,7 @@ interfaceUtils.createDownloadButtonMarkers = function(options) {
                 $('.select2-select').not(e.target).val(null).trigger('change');
             }
         };
-        interfaceUtils._mGenUIFuncs.deleteTab(options.uid);
+        //interfaceUtils._mGenUIFuncs.deleteTab(options.uid);
         projectUtils.applySettings(options.settings);
         interfaceUtils.generateDataTabUI(options);
     }

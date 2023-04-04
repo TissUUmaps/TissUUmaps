@@ -480,6 +480,7 @@ dataUtils.readH5 = function(data_id, thecsv, options) {
     dataUtils.createDataset(data_id,{"name":data_id, "filetype":"h5"});
 
     let data_obj = dataUtils.data[data_id];
+    data_obj["modified"] = true;
     data_obj["_processeddata"] = undefined;
     data_obj["_isnan"] = {};
     data_obj["_csv_header"] = null;
@@ -527,12 +528,19 @@ dataUtils.getPath = function () {
 * @param {Object} thecsv csv file path
 */
 dataUtils.readCSV = function(data_id, thecsv, options) { 
-    dataUtils.createDataset(data_id,{"name":data_id, "filetype":"csv"});
-
+    if (dataUtils.data[data_id] === undefined){
+        dataUtils.createDataset(data_id,{"name":data_id, "filetype":"csv"});
+    }
     let data_obj = dataUtils.data[data_id];
-    data_obj["_processeddata"] = {};
-    data_obj["_isnan"] = {};
-    data_obj["_csv_header"] = null;
+    
+    let skip_download = (data_obj["_csv_path"] == options.path);
+
+    data_obj["modified"] = true;
+    if (!skip_download) {
+        data_obj["_processeddata"] = {};
+        data_obj["_isnan"] = {};
+        data_obj["_csv_header"] = null;
+    }
     data_obj["_csv_path"] = thecsv;
     if (options != undefined) {
         data_obj["_csv_path"] = options.path;
@@ -543,7 +551,11 @@ dataUtils.readCSV = function(data_id, thecsv, options) {
         let panel = interfaceUtils.getElementById(data_id+"_input_csv_col");
         panel.classList.add("d-none");
     }
-
+    if (skip_download) {
+        let columns = data_obj["_processeddata"].columns;
+        dataUtils.createMenuFromCSV(data_id, columns);
+        return;
+    }
     let progressParent=interfaceUtils.getElementById(data_id+"_csv_progress_parent");
     progressParent.classList.remove("d-none");
     let progressBar=interfaceUtils.getElementById(data_id+"_csv_progress");
