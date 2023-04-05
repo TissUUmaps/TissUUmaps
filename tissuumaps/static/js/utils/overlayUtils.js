@@ -282,7 +282,7 @@ overlayUtils.addLayerFromSelect = function() {
 
 /**
  * This method is used to add a layer */
-overlayUtils.addLayer = function(layer, i, visible) {
+overlayUtils.addLayer = async function(layer, i, visible) {
     const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString);
     const path = urlParams.get('path')
@@ -337,12 +337,99 @@ overlayUtils.addLayer = function(layer, i, visible) {
         layer.rotation = rotation;
         layer.flip = flip;
     }
-    
+    async function getH5Image (h5url,h5path) {
+        let keys, data;
+        try {
+            keys = await dataUtils._hdf5Api.get(h5url, {path:h5path}, "keys");
+            data = await dataUtils._hdf5Api.get(h5url, {path:h5path});
+        }
+        catch {
+            if (window[h5url] === undefined) {
+                window[h5url] = await dataUtils.relocateOnDisk(h5url)
+                h5url = window[h5url];
+                return await getH5Image (h5url,h5path);
+            }
+            else if (window[h5url] == h5url) {
+                interfaceUtils.alert ("Impossible to load " + h5url);
+                return;
+            }
+            else {
+                h5url = window[h5url];
+                return getH5Image (h5url,h5path);
+            }
+        }
+        let ArrayBuffer = data.value;
+        console.log(keys, ArrayBuffer, keys.shape[0]*keys.shape[1]);
+        /*var blob = new Blob( [ ArrayBuffer ], { type: "image/png" } );
+        var urlCreator = window.URL || window.webkitURL;
+        var imageUrl = urlCreator.createObjectURL( blob );
+        */
+        var output = new Uint8ClampedArray(keys.shape[0]*keys.shape[1]*4);
+        console.log(ArrayBuffer.length, keys.shape[0]*keys.shape[1], output.length);
+        if (ArrayBuffer.constructor === Float32Array) {
+            scale = 255;
+        }
+        else {
+            scale = 1;
+        }
+        if (ArrayBuffer.length == 3*keys.shape[0]*keys.shape[1]) {
+            for (var i = 0; i < ArrayBuffer.length/3; i++) {
+                output[i*4] = ArrayBuffer[i*3] * scale;
+                output[i*4+1] = ArrayBuffer[i*3+1] * scale;
+                output[i*4+2] = ArrayBuffer[i*3+2] * scale;
+                output[i*4+3] = 255;
+            }
+        }
+        else if (ArrayBuffer.length == 4*keys.shape[0]*keys.shape[1]) {
+            for (var i = 0; i < ArrayBuffer.length; i++) {
+                output[i] = ArrayBuffer[i] * scale;
+            }
+        }
+        else if (ArrayBuffer.length == keys.shape[0]*keys.shape[1]) {
+            for (var i = 0; i < ArrayBuffer.length; i++) {
+                output[i*4] = ArrayBuffer[i] * scale;
+                output[i*4+1] = ArrayBuffer[i] * scale;
+                output[i*4+2] = ArrayBuffer[i] * scale;
+                output[i*4+3] = 255;
+            }
+        }
+        
+        var canvas = document.createElement("canvas");
+        var ctx = canvas.getContext("2d");
+        ctx.canvas.width = keys.shape[1];
+        ctx.canvas.height = keys.shape[0];
+        var image = new ImageData(output, keys.shape[1], keys.shape[0], { colorSpace: "srgb" });
+        ctx.putImageData(image, 0, 0);
+
+        var imageUrl = ctx.canvas.toDataURL();
+        return [imageUrl, keys];
+    }
+    if (tileSource.includes("?h5path=")) {
+        let h5url = tileSource.split("?h5path=")[0];
+        let h5path = tileSource.split("?h5path=")[1];
+        console.log(h5url, h5path);
+        let h5Image = await getH5Image (h5url,h5path);
+        let imageUrl = h5Image[0];
+        let keys = h5Image[1];
+        tileSource = {
+            type: 'legacy-image-pyramid',
+                levels: [ {
+                    url: imageUrl,
+                    width: keys.shape[1],
+                    height: keys.shape[0],
+                    mimetype: 'image/png'
+                } ]
+        }
+    }
+    else {
+        tileSource = tmapp._url_suffix + tileSource;
+    }
+
     tmapp[vname].addTiledImage({
         index: i + 1,
         x: 0,
         y: 0,
-        tileSource: tmapp._url_suffix + tileSource,
+        tileSource: tileSource,
         opacity: opacity,
         success: function(i) {
             layer0X = tmapp[op + "_viewer"].world.getItemAt(0).getContentSize().x;

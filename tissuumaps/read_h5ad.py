@@ -187,38 +187,14 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                 f"/uns/spatial/{library_id}/scalefactors/tissue_{img_key}_scalef", 1
             )[()]
         )
-        os.makedirs(os.path.join(outputFolder, str(library_id), "img"), exist_ok=True)
-        outputImage = os.path.join(outputFolder, str(library_id), "img", "tissue.tif")
-        relOutputImage = os.path.join(
-            relOutputFolder, str(library_id), "img", "tissue.tif"
-        ).replace("\\", "/")
-        layers.append({"name": library_id, "tileSource": relOutputImage + ".dzi"})
-        if os.path.isfile(outputImage):
-            continue
-        try:
-            img = np.array(adata.get(f"/uns/spatial/{library_id}/images/{img_key}"))
-
-            if type(img) == str:
-                img = pyvips.Image.new_from_file(img)
-            else:
-                if img.max() <= 1:
-                    img *= 255
-                img = numpy2vips(img)
-            img.tiffsave(
-                outputImage,
-                pyramid=True,
-                tile=True,
-                tile_width=256,
-                tile_height=256,
-                compression="jpeg",
-                Q=90,
-                properties=True,
-            )
-        except:
-            img = None
-            import traceback
-
-            logging.error(traceback.format_exc())
+        layers.append(
+            {
+                "name": library_id,
+                "tileSource": os.path.basename(path)
+                + "?h5path="
+                + f"/uns/spatial/{library_id}/images/{img_key}",
+            }
+        )
 
     use_libraries = len(library_ids) > 1
 
