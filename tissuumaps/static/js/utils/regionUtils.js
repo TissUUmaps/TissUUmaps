@@ -1301,7 +1301,7 @@ regionUtils._generateEdgeListsForDrawing = function(imageBounds, numScanlines = 
 
     regionUtils._edgeLists = [];
     for (let i = 0; i < numScanlines; ++i) {
-        regionUtils._edgeLists[i] = [[0, 0, 0, 0], 0];
+        regionUtils._edgeLists[i] = [[0, 0, 0, 0, 0, 0, 0, 0], 0];
     }
 
     let objectID = 0;
@@ -1361,6 +1361,57 @@ regionUtils._generateEdgeListsForDrawing = function(imageBounds, numScanlines = 
             }
         }
         objectID += 1;
+    }
+}
+
+
+// Split each individual edge list around a pivot point into two new lists
+regionUtils._splitEdgeLists = function() {
+    const numScanlines = regionUtils._edgeLists.length;
+
+    regionUtils._edgeListsSplit = [];
+    for (let i = 0; i < numScanlines; ++i) {
+        regionUtils._edgeListsSplit[i] = [[], []];
+    }
+
+    for (let i = 0; i < numScanlines; ++i) {
+        const edgeList = regionUtils._edgeLists[i][0];
+        const numItems = edgeList.length / 4;
+
+        // Find pivot point (mean center of all bounding boxes) for left-right split
+        let accum = [0.0, 0.0];
+        for (let j = 2; j < numItems; ++j) {
+            const xMin = edgeList[j * 4 + 0];
+            const xMax = edgeList[j * 4 + 1];
+            const edgeCount = edgeList[j * 4 + 3];
+
+            accum[0] += (xMin + xMax) * 0.5; accum[1] += 1;
+            j += edgeCount;  // Position pointer before next bounding box
+        }
+        const pivot = accum[0] / Math.max(1, accum[1]);
+
+        // Copy occupancy mask, and also store the pivot point
+        for (let n = 0; n < 2; ++n) {
+            regionUtils._edgeListsSplit[i][n].push(...edgeList.slice(0, 4));
+            regionUtils._edgeListsSplit[i][n].push(pivot, 0, 0, 0);
+        }
+
+        // Do left-right split of edge data
+        for (let j = 2; j < numItems; ++j) {
+            const xMin = edgeList[j * 4 + 0];
+            const xMax = edgeList[j * 4 + 1];
+            const edgeCount = edgeList[j * 4 + 3];
+
+            if (xMin < pivot) {
+                regionUtils._edgeListsSplit[i][0].push(
+                    ...edgeList.slice(j * 4, (j + edgeCount + 1) * 4));
+            }
+            if (xMax > pivot) {
+                regionUtils._edgeListsSplit[i][1].push(
+                    ...edgeList.slice(j * 4, (j + edgeCount + 1) * 4));
+            }
+            j += edgeCount;  // Position pointer before next bounding box
+        }
     }
 }
 

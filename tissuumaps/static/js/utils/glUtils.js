@@ -62,6 +62,7 @@ glUtils = {
     _showRegionsExperimental: true,
     _regionOpacity: 0.5,
     _regionFillRule: "nonzero",   // Possible values: "never" | "nonzero" | "oddeven"
+    _regionUsePivotSplit: false,
     _logPerformance: false,       // Use GPU timer queries to log performance
     _piechartPalette: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
@@ -511,12 +512,14 @@ glUtils._regionsFS = `
     #define FILL_RULE_NEVER 0
     #define FILL_RULE_NONZERO 1
     #define FILL_RULE_ODDEVEN 2
+    #define SHOW_PIVOT_SPLIT_DEBUG 0
 
     precision highp float;
     precision highp int;
 
     uniform float u_regionOpacity;
     uniform int u_regionFillRule;
+    uniform int u_regionUsePivotSplit;
     uniform highp sampler2D u_regionData;
     uniform highp sampler2D u_regionLUT;
 
@@ -547,6 +550,7 @@ glUtils._regionsFS = `
         vec4 color = vec4(0.0);
 
         vec2 p = v_localPos;  // Current sample position
+        int scanline = int(v_scanline);
 
         float pixelWidth = abs(dFdx(p.x));
         float strokeWidth = pixelWidth;  // Stroke width for outline rendering
@@ -554,18 +558,25 @@ glUtils._regionsFS = `
 
         // Do coarse empty space skipping first, by testing sample position against
         // occupancy bitmask stored in the first texel of the scanline
-        uvec4 maskData = uvec4(texelFetch(u_regionData, ivec2(0, int(v_scanline)), 0));
+        uvec4 maskData = uvec4(texelFetch(u_regionData, ivec2(0, scanline), 0));
         int bitIndex = int(v_texCoord.x * 63.9999);
         if ((maskData[bitIndex >> 4] & (1u << (bitIndex & 15))) == 0u) { discard; }
 
-        vec4 headerData = texelFetch(u_regionData, ivec2(1, int(v_scanline)), 0);
-        int objectID = int(headerData.z) - 1, offset = 1, windingNumber = 0;
+        float scanDir = 1.0;  // Can be positive or negative along the X-axis
+        if (bool(u_regionUsePivotSplit)) {
+            float pivot = texelFetch(u_regionData, ivec2(1, scanline), 0).x;
+            scanDir = p.x < pivot ? -1.0 : 1.0;
+            scanline = p.x < pivot ? scanline : scanline + 512;  // TODO
+        }
+
+        vec4 headerData = texelFetch(u_regionData, ivec2(2, scanline), 0);
+        int objectID = int(headerData.z) - 1, offset = 2, windingNumber = 0;
 
         while (headerData.w != 0.0 && offset < 4096) {
 
             // Find next path that might intersect this sample position
             while (headerData.w != 0.0 && offset < 4096) {
-                headerData = texelFetch(u_regionData, ivec2(offset, int(v_scanline)), 0);
+                headerData = texelFetch(u_regionData, ivec2(offset, scanline), 0);
                 if (headerData.x <= (p.x + strokeWidth) && (p.x - strokeWidth) <= headerData.y) { break; }
                 offset += int(headerData.w) + 1;
             }
@@ -579,6 +590,11 @@ glUtils._regionsFS = `
 
                 if (isInside || minEdgeDist < strokeWidth) {
                     vec4 objectColor = texelFetch(u_regionLUT, ivec2(objectID & 4095, objectID >> 12), 0);
+                #if SHOW_PIVOT_SPLIT_DEBUG
+                    if (bool(u_regionUsePivotSplit)) {
+                        objectColor.rgb = scanDir > 0.0 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 1.0);
+                    }
+                #endif  // SHOW_PIVOT_SPLIT_DEBUG
                     float edgeOpacity = smoothstep(strokeWidth, strokeWidth - pixelWidth, minEdgeDist);
                     float fillOpacity = float(isInside) * u_regionOpacity;
                     objectColor.a *= clamp(edgeOpacity + fillOpacity, 0.0, 1.0);
@@ -596,7 +612,7 @@ glUtils._regionsFS = `
             // and also update the edge distance needed for outline rendering
             int count = int(headerData.w);
             for (int i = 0; i < count; ++i) {
-                vec4 edgeData = texelFetch(u_regionData, ivec2(offset + i, int(v_scanline)), 0);
+                vec4 edgeData = texelFetch(u_regionData, ivec2(offset + i, scanline), 0);
                 vec2 v0 = edgeData.xy;
                 vec2 v1 = edgeData.zw;
 
@@ -606,7 +622,7 @@ glUtils._regionsFS = `
                     float weight = 0.0;
                     if (u_regionFillRule == FILL_RULE_NONZERO) { weight = sign(v1.y - v0.y); }
                     if (u_regionFillRule == FILL_RULE_ODDEVEN) { weight = 1.0; }
-                    windingNumber += int(float(x - p.x > 0.0) * weight);
+                    windingNumber += int(float((x - p.x) * scanDir > 0.0) * weight);
                 }
                 minEdgeDist = min(minEdgeDist, distPointToLine(p, v0, v1));
             }
@@ -1415,11 +1431,18 @@ glUtils.updateRegionDataTextures = function() {
     regionUtils._generateEdgeListsForDrawing(imageBounds);
     console.timeEnd("Update region edge lists");
 
+    console.time("Split region edge lists");
+    regionUtils._splitEdgeLists();
+    console.timeEnd("Split region edge lists");
+
     glUtils._updateRegionDataTexture(gl, glUtils._textures["regionData"]);
+    glUtils._updateRegionDataSplitTexture(gl, glUtils._textures["regionDataSplit"]);
 }
 
 
 glUtils._createRegionDataTexture = function(gl, maxNumScanlines=512) {
+    console.assert(maxNumScanlines <= 4096);  // Since 4096 is the minimum MAX_TEXTURE_SIZE
+
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -1446,6 +1469,26 @@ glUtils._updateRegionDataTexture = function(gl, texture) {
             console.warn("Edge list for regions exceeds allocated texture size")
         }
         gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, i, 4096, 1, gl.RGBA, gl.FLOAT, texeldata);
+    }
+    gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
+
+glUtils._updateRegionDataSplitTexture = function(gl, texture) {
+    const numScanlines = regionUtils._edgeListsSplit.length;
+
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    for (let i = 0; i < numScanlines; ++i) {
+        for (let j = 0; j < 2; ++j) {
+            // Update single row of the texture
+            let texeldata = new Float32Array(4096 * 4);  // Zero-initialized
+            if (regionUtils._edgeListsSplit[i][j].length <= texeldata.length) {
+                texeldata.set(regionUtils._edgeListsSplit[i][j]);
+            } else {
+                console.warn("Edge list for regions exceeds allocated texture size")
+            }
+            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, i + (j * numScanlines), 4096, 1, gl.RGBA, gl.FLOAT, texeldata);
+        }
     }
     gl.bindTexture(gl.TEXTURE_2D, null);
 }
@@ -1827,11 +1870,16 @@ glUtils._drawRegionsColorPass = function(gl, viewportTransform, imageBounds) {
     gl.uniform1f(gl.getUniformLocation(program, "u_regionOpacity"), glUtils._regionOpacity);
     gl.uniform1i(gl.getUniformLocation(program, "u_regionFillRule"),
         fillRuleConstants[glUtils._regionFillRule]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_regionUsePivotSplit"), glUtils._regionUsePivotSplit);
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionLUT"]);
     gl.uniform1i(gl.getUniformLocation(program, "u_regionLUT"), 2);
     gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionData"]);
+    if (glUtils._regionUsePivotSplit) {
+        gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionDataSplit"]);
+    } else {
+        gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionData"]);
+    }
     gl.uniform1i(gl.getUniformLocation(program, "u_regionData"), 1);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["transformLUT"]);
@@ -2112,6 +2160,7 @@ glUtils.restoreLostContext = function(event) {
     glUtils._textures["shapeAtlas"] = glUtils._loadTextureFromImageURL(gl, glUtils._markershapes);
     glUtils._textures["transformLUT"] = glUtils._createTransformLUTTexture(gl);
     glUtils._textures["regionData"] = glUtils._createRegionDataTexture(gl);
+    glUtils._textures["regionDataSplit"] = glUtils._createRegionDataTexture(gl, 1024);
     glUtils._textures["regionLUT"] = glUtils._createRegionLUTTexture(gl);
     glUtils._vaos["empty"] = gl.createVertexArray();
 
@@ -2170,6 +2219,7 @@ glUtils.init = function() {
     this._textures["shapeAtlas"] = this._loadTextureFromImageURL(gl, glUtils._markershapes);
     this._textures["transformLUT"] = this._createTransformLUTTexture(gl);
     this._textures["regionData"] = this._createRegionDataTexture(gl);
+    this._textures["regionDataSplit"] = this._createRegionDataTexture(gl, 1024);
     this._textures["regionLUT"] = this._createRegionLUTTexture(gl);
     this._vaos["empty"] = gl.createVertexArray();
 
