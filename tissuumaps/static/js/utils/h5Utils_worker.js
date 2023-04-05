@@ -30,8 +30,17 @@ self.onmessage = async function (event) {
                 createLazyFile(FS, '/', 'current_file_with_range'+id+'.h5', true, false, config);
                 file[url] = new h5wasm.File('current_file_with_range'+id+'.h5');
             } catch (error) {
-                h5wasm.FS.createLazyFile('/', "current_file_without_range"+id+".h5", url, true, false);
-                file[url] = new h5wasm.File("current_file_without_range"+id+".h5");
+                try {
+                    h5wasm.FS.createLazyFile('/', "current_file_without_range"+id+".h5", url, true, false);
+                    file[url] = new h5wasm.File("current_file_without_range"+id+".h5");
+                } catch (error) {
+                    self.postMessage({
+                        id:id,
+                        type: "error",
+                        value: `item ${url} not found or not an H5 file.`
+                    })
+                    return;
+                }
             }
         }
         else {
@@ -41,7 +50,11 @@ self.onmessage = async function (event) {
             file[url.name] = new h5wasm.File(`/work/${url.name}`, 'r');
             url = url.name
         }
-        self.postMessage({id:id,data:file[url].keys()})
+        self.postMessage({
+            id:id,
+            type: "success",
+            data:file[url].keys()
+        })
     }
     else if (action === "keys") {
         await h5wasm.ready;

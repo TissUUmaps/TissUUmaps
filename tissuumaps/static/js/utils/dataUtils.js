@@ -470,6 +470,34 @@ dataUtils.createMenuFromCSV = function(data_id,datumExample) {
 }
 
 /** 
+*
+*/
+dataUtils.relocateOnDisk = function (path) {
+    return new Promise(resolve => {
+        modalUID = "h5modal"
+        
+        button1=HTMLElementUtils.createElement({"kind":"input", "id":"relocateH5onDisk","extraAttributes":{ "name":"relocateH5onDisk", 
+    "class":"form-control-file form-control form-control-sm", "type":"file", "accept":".csv,.tsv,.txt,.h5,.h5ad"}});
+
+        buttons=divpane=HTMLElementUtils.createElement({"kind":"div"});
+        buttons.appendChild(button1);
+        
+        button1.addEventListener("change",function(event) {
+            $(`#${modalUID}_modal`).modal('hide');
+            resolve(event.target.files[0]);
+        })
+        content=HTMLElementUtils.createElement({"kind":"div"});
+            row0=HTMLElementUtils.createElement({"kind":"p", "extraAttributes":{"class":"text-danger"}});
+            row0.innerHTML = "To allow browser access to the h5ad file, please select in on disk.<br/><br/>Path: " + path;
+            
+        content.appendChild(row0);
+        title = "Load AnnData object"
+        interfaceUtils.generateModal(title, content, buttons, modalUID);
+    })
+}
+
+
+/** 
 * Calls dataUtils.createDataset and loads and parses the csv using D3. 
 * then calls dataUtils.createMenuFromCSV to modify the interface in its own tab
 * @param {String} data_id The id of the data group like "U234345"
@@ -511,6 +539,27 @@ dataUtils.readH5 = function(data_id, thecsv, options) {
             dataUtils.updateViewOptions(data_id);
         }
     })
+    .catch((error) => {
+        console.log(error, window[thecsv], thecsv);
+        if (window[thecsv] === undefined) {
+            dataUtils.relocateOnDisk(url).then ((data)=>{
+                console.log(data);
+                window[thecsv] = data;
+                url = window[thecsv];
+                data_obj["_csv_path"] = url;
+                dataUtils.readH5 (data_id, thecsv, options);
+            })
+        }
+        else if (window[thecsv] == thecsv) {
+            interfaceUtils.alert ("Impossible to load " + thecsv);
+        }
+        else {
+            url = window[thecsv];
+            data_obj["_csv_path"] = url;
+            dataUtils.readH5 (data_id, url, options);
+        }
+        
+    });
 }
 
 

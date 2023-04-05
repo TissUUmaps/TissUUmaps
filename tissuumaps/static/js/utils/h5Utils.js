@@ -49,7 +49,12 @@ class H5_API {
         }
         this.status[urlName] = "loading";
         this.loadPromise(url).then((data)=>{
-            setTimeout(()=>{this.status[urlName] = "loaded";},50);
+            if (data.type == "success") {
+                setTimeout(()=>{this.status[urlName] = "loaded";},50);
+            }
+            else {
+                this.status[urlName] = "failed";
+            }
         })
     }
 
@@ -68,11 +73,17 @@ class H5_API {
         if (this.status[urlName] === undefined) {
             this.load(url);
         }
-        return new Promise(resolve => {
+        return new Promise((resolve, reject) => {
+            if (this.status[urlName] === "failed") {
+                reject("Impossible to load data");
+            }
             if (this.status[urlName] === "loading") {
                 sleep(50).then (()=>{
                     this.get(url, payload, action).then((data)=>{
                         resolve(data)
+                    })
+                    .catch((data)=>{
+                        reject("Impossible to load data")
                     })
                 });
                 return;
