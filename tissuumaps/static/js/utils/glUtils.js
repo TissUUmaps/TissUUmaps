@@ -62,7 +62,7 @@ glUtils = {
     _showRegionsExperimental: true,
     _regionOpacity: 0.5,
     _regionFillRule: "nonzero",   // Possible values: "never" | "nonzero" | "oddeven"
-    _regionUsePivotSplit: false,
+    _regionUsePivotSplit: true,   // Use split edge lists for faster region rendering and less risk of overflow
     _logPerformance: false,       // Use GPU timer queries to log performance
     _piechartPalette: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
