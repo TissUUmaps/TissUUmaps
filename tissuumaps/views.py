@@ -17,7 +17,7 @@ import threading
 import time
 from collections import OrderedDict
 from functools import wraps
-from shutil import copyfile, copytree
+from shutil import SameFileError, copyfile, copytree
 from threading import Lock
 from urllib.parse import parse_qs, unquote, urlparse
 
@@ -696,9 +696,8 @@ def h5ad(filename, ext):
     # Check if a .h5ad file exists:
     if not os.path.isfile(completePath):
         abort(404)
-    if "Referer" in request.headers.keys():
-        if "h5Utils_worker.js" in request.headers["Referer"]:
-            return send_file_partial(completePath)
+    if "Sec-Fetch-User" not in request.headers.keys():
+        return send_file_partial(completePath)
 
     state = read_h5ad.h5ad_to_tmap(
         app.basedir, os.path.join(path, filename) + "." + ext
@@ -746,7 +745,58 @@ def h5ad_csv(path, type, filename, ext):
     return send_from_directory(directory, filename)
 
 
-def exportToStatic(state, folderpath, previouspath):
+def bundleHTMLtoOneFile(htmlFile):
+    import base64
+    from pathlib import Path
+
+    from bs4 import BeautifulSoup
+
+    original_html_text = Path(htmlFile).read_text(encoding="utf-8")
+    soup = BeautifulSoup(original_html_text, "html.parser")
+
+    # Find link tags. example: <link rel="stylesheet" href="css/somestyle.css">
+    for tag in soup.find_all("link", href=True):
+        if tag.has_attr("href"):
+            file_text = Path(tag["href"]).read_text(encoding="utf-8")
+
+            # remove the tag from soup
+            tag.extract()
+
+            # insert style element
+            new_style = soup.new_tag("style")
+            new_style.string = "\n" + file_text + "\n\n"
+            soup.html.head.append(new_style)
+
+    # Find script tags. example: <script src="js/somescript.js"></script>
+    for tag in soup.find_all("script", src=True):
+        if tag.has_attr("src"):
+            file_text = Path(tag["src"]).read_text(encoding="utf-8")
+
+            # remove the tag from soup
+            tag.extract()
+
+            # insert script element
+            new_script = soup.new_tag("script")
+            new_script.string = "\n" + file_text + "\n"
+            soup.html.body.append(new_script)
+
+    # Find image tags.
+    for tag in soup.find_all("img", src=True):
+        if tag.has_attr("src"):
+            file_content = Path(tag["src"]).read_bytes()
+
+            # replace filename with base64 of the content of the file
+            base64_file_content = base64.b64encode(file_content)
+            tag["src"] = "data:image/png;base64, {}".format(
+                base64_file_content.decode("ascii")
+            )
+
+    # Save onefile
+    with open(htmlFile, "w", encoding="utf-8") as outfile:
+        outfile.write(str(soup))
+
+
+def exportToStatic(state, folderpath, previouspath, outputFile="index.html"):
     imgFiles = []
     otherFiles = []
 
@@ -761,30 +811,46 @@ def exportToStatic(state, folderpath, previouspath):
                 if path[0] not in state.keys():
                     return
                 if isinstance(state[path[0]], list):
-                    if isImg:
-                        imgFiles += [s for s in state[path[0]]]
-                        state[path[0]] = [
-                            "data/images/"
-                            + os.path.basename(s.replace("/", "_").replace("\\", "_"))
-                            for s in state[path[0]]
-                        ]
-                    else:
-                        otherFiles += [relativePath + "/" + s for s in state[path[0]]]
-                        state[path[0]] = [
-                            "data/files/" + os.path.basename(s) for s in state[path[0]]
-                        ]
+                    state[path[0]] = []
+                    for s in state[path[0]]:
+                        if isImg and ".h5ad?h5path=" not in s:
+                            imgFiles.append(s)
+                            state[path[0]].append(
+                                "data/images/"
+                                + os.path.basename(
+                                    s.replace("/", "_").replace("\\", "_")
+                                )
+                            )
+                        else:
+                            otherFiles.append(relativePath + "/" + s)
+                            if ".h5ad?h5path=" in s:
+                                (
+                                    state[path[0]].append(
+                                        os.path.basename(s.split("?h5path=")[0])
+                                    )
+                                    + "?h5path="
+                                    + s.split("?h5path=")[1]
+                                )
+                            else:
+                                state[path[0]].append(os.path.basename(s))
 
                 else:
-                    if isImg:
-                        imgFiles += [state[path[0]]]
-                        state[path[0]] = "data/images/" + os.path.basename(
+                    if isImg and ".h5ad?h5path=" not in state[path[0]]:
+                        imgFiles.append(state[path[0]])
+                        state[path[0]] = os.path.basename(
                             state[path[0]].replace("/", "_").replace("\\", "_")
                         )
                     else:
                         otherFiles += [state[path[0]]]
-                        state[path[0]] = "data/files/" + os.path.basename(
-                            state[path[0]]
-                        )
+                        if ".h5ad?h5path=" in state[path[0]]:
+                            state[path[0]] = (
+                                os.path.basename(state[path[0]].split("?h5path=")[0])
+                                + "?h5path="
+                                + state[path[0]].split("?h5path=")[1]
+                            )
+                        else:
+                            state[path[0]] = os.path.basename(state[path[0]])
+
                 return
             else:
                 if path[0] not in state.keys():
@@ -804,7 +870,9 @@ def exportToStatic(state, folderpath, previouspath):
                 ["regionFile"],
             ]
             for path in paths:
-                addRelativePath_aux(state, path, path[0] == "layers")
+                addRelativePath_aux(
+                    state, path, path[0] == "layers" and ".h5ad?h5path=" not in path[-1]
+                )
         except:
             import traceback
 
@@ -818,8 +886,10 @@ def exportToStatic(state, folderpath, previouspath):
         relativePath = os.path.relpath(previouspath, os.path.dirname(folderpath))
         state = addRelativePath(json.loads(state), relativePath)
 
-        os.makedirs(os.path.join(folderpath, "data/images"), exist_ok=True)
-        os.makedirs(os.path.join(folderpath, "data/files"), exist_ok=True)
+        if len(imgFiles) > 0:
+            os.makedirs(os.path.join(folderpath, "data/images"), exist_ok=True)
+        # if len(otherFiles) > 0:
+        #    os.makedirs(os.path.join(folderpath, "./"), exist_ok=True)
         for image in imgFiles:
             image = image.replace(".dzi", "")
             ImageConverter(
@@ -831,6 +901,7 @@ def exportToStatic(state, folderpath, previouspath):
                 ),
             ).convertToDZI()
         for file in set(otherFiles):
+            file = file.split("?h5path=")[0]
             m = re.match(
                 r"(.*)\.(h5ad|adata)_files(\/*|\\*)csv(\/*|\\*)(obs|var)(\/*|\\*)(.*).csv",
                 file,
@@ -845,11 +916,15 @@ def exportToStatic(state, folderpath, previouspath):
                     )
                 except:
                     pass
-            copyfile(
-                os.path.join(previouspath, file),
-                os.path.join(folderpath, "data/files", os.path.basename(file)),
-            )
-        import zipfile
+            try:
+                copyfile(
+                    os.path.join(previouspath, file).split("?h5path=")[0],
+                    os.path.join(
+                        folderpath, "./", os.path.basename(file).split("?h5path=")[0]
+                    ),
+                )
+            except SameFileError:
+                pass
 
         if getattr(sys, "frozen", False):
             mainFolderPath = sys._MEIPASS
@@ -868,7 +943,7 @@ def exportToStatic(state, folderpath, previouspath):
         # Replace /static with static:
         index = index.replace('"/static/', '"static/')
 
-        with open(folderpath + "/index.html", "w") as f:
+        with open(folderpath + f"/{outputFile}", "w") as f:
             f.write(index)
 
         for dir in ["css", "js", "misc", "vendor"]:
