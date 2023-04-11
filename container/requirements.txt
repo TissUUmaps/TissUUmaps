@@ -6,3 +6,4 @@ pyvips>=2.1.14
 matplotlib>=3.2.2
 pyyaml>=6.0
 h5py>=3.6.0
+beautifulsoup4>=4.12.2

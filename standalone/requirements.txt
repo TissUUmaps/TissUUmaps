@@ -8,3 +8,4 @@ matplotlib>=3.2.2
 pyyaml>=5.0
 h5py>=3.6.0
 scipy>=1.7.2
+beautifulsoup4>=4.12.2
