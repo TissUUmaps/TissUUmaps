@@ -1,3 +1,5 @@
+var stIsIE = /*@cc_on!@*/false;
+
 /*
   SortTable
   version 2
@@ -6,7 +8,6 @@
 
   Instructions:
   Download this file
-  Add <script src="sorttable.js"></script> to your HTML
   Add class="sortable" to any table you'd like to make sortable
   Click on the headers to sort
 
@@ -16,7 +17,6 @@
 */
 
 
-var stIsIE = /*@cc_on!@*/false;
 
 sorttable = {
   init: function() {
@@ -169,7 +169,7 @@ sorttable = {
     for (var i=0; i<table.tBodies[0].rows.length; i++) {
       text = sorttable.getInnerText(table.tBodies[0].rows[i].cells[column]);
       if (text != '') {
-        if (text.match(/^-?[£$¤]?[\d,.]+%?$/)) {
+        if (text.match(/^-?[ï¿½$ï¿½]?[\d,.]+%?$/)) {
           return sorttable.sort_numeric;
         }
         // check for a date: dd/mm/yyyy or dd/mm/yy

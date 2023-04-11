@@ -9,8 +9,7 @@
  * @property {Boolean} _initialized True when h5Utils has been initialized
  */
  h5Utils = {
-    worker_path: 'js/utils/h5Utils_worker.js',
-    relative_root: '../../'
+    relative_root: './'
  }
 
 class H5_API {
@@ -20,8 +19,9 @@ class H5_API {
         this.count = 0; // used later to generate unique ids
         this.status = {}
 
-        this.worker = new Worker(h5Utils.worker_path);
+        this.worker = new Worker(URL.createObjectURL(new Blob(["("+worker_function.toString()+")()"], {type: 'text/javascript'})));
         this.worker.addEventListener('message', (e) => {
+            console.log("Received:", e);
             let data = e.data;
             let id   = e.data["id"];
             this.resolvers[ id ](data);
@@ -35,7 +35,7 @@ class H5_API {
         let _url = url;
         if (typeof url === 'string' || url instanceof String)
             if (!_url.startsWith("https")) 
-                _url = h5Utils.relative_root + _url;
+                _url = window.location.origin + "/" + _url;
         this.worker.postMessage({id: id, action: "load", payload: {requestChunkSize, url:_url}});
         return new Promise(resolve => this.resolvers[id] = resolve);
     }
@@ -45,7 +45,7 @@ class H5_API {
             var urlName = url;
         }
         else {
-            var urlName = url.name;
+            var urlName = "file:" + url.name;
         }
         this.status[urlName] = "loading";
         this.loadPromise(url).then((data)=>{
@@ -64,7 +64,7 @@ class H5_API {
             return new Promise((resolve) => setTimeout(resolve, time));
         }
         if (!(typeof url === 'string' || url instanceof String)) {
-            var urlName = url.name;
+            var urlName = "file:" + url.name;
         }
         else {
             var urlName = url;
@@ -92,7 +92,7 @@ class H5_API {
             this.resolvers[id] = resolve
             if (typeof url === 'string' || url instanceof String) {
                 if (!url.startsWith("https")) {
-                    payload.url = h5Utils.relative_root + url;
+                    payload.url = window.location.origin + "/" + url;
                 }
                 else {
                     payload.url = url;

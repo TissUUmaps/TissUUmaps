@@ -488,11 +488,12 @@ dataUtils.relocateOnDisk = function (path) {
         })
         content=HTMLElementUtils.createElement({"kind":"div"});
             row0=HTMLElementUtils.createElement({"kind":"p", "extraAttributes":{"class":"text-danger"}});
-            row0.innerHTML = "To allow browser access to the h5ad file, please select in on disk.<br/><br/>Path: " + path;
+            row0.innerHTML = "To allow browser access to the h5ad file, please select it on disk.<br/><br/>Path: " + path;
             
         content.appendChild(row0);
         title = "Load AnnData object"
-        interfaceUtils.generateModal(title, content, buttons, modalUID);
+        modalWindow = interfaceUtils.generateModal(title, content, buttons, modalUID);
+        modalWindow.style.zIndex = 1060;
     })
 }
 
