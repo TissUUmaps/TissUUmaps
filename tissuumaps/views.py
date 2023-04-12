@@ -787,9 +787,14 @@ def bundleHTMLtoOneFile(htmlFile):
 
             # replace filename with base64 of the content of the file
             base64_file_content = base64.b64encode(file_content)
-            tag["src"] = "data:image/png;base64, {}".format(
-                base64_file_content.decode("ascii")
-            )
+            if tag["src"].endswith(".png"):
+                tag["src"] = "data:image/png;base64, {}".format(
+                    base64_file_content.decode("ascii")
+                )
+            elif tag["src"].endswith(".svg"):
+                tag["src"] = "data:image/svg+xml;base64, {}".format(
+                    base64_file_content.decode("ascii")
+                )
 
     # Save onefile
     with open(htmlFile, "w", encoding="utf-8") as outfile:
