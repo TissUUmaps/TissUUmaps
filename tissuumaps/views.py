@@ -696,7 +696,10 @@ def h5ad(filename, ext):
     # Check if a .h5ad file exists:
     if not os.path.isfile(completePath):
         abort(404)
-    if "Sec-Fetch-User" not in request.headers.keys():
+    if (
+        "Sec-Fetch-User" not in request.headers.keys()
+        and request.headers["Sec-Fetch-Dest"] != "iframe"
+    ):
         return send_file_partial(completePath)
 
     state = read_h5ad.h5ad_to_tmap(
