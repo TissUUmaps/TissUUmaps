@@ -6528,10 +6528,10 @@ self.onmessage = async function (event) {
             }
         }
         else {
-            FS.mkdir('/work');
-            FS.mount(FS.filesystems.WORKERFS, { files: [url] }, '/work');
+            FS.mkdir('/work_'+id);
+            FS.mount(FS.filesystems.WORKERFS, { files: [url] }, '/work_'+id);
 
-            file["file:" + url.name] = new h5wasm.File(`/work/${url.name}`, 'r');
+            file["file:" + url.name] = new h5wasm.File(`/work_`+id+`/${url.name}`, 'r');
             url = "file:" + url.name
         }
         self.postMessage({
