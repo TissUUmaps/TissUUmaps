@@ -151,6 +151,61 @@ class H5AD_API  extends H5_API {
             });
         });
     }
+
+    async getXRow_csr (url, colIndex, path) {
+        colIndex = parseInt(colIndex);
+        let indptr = await this.get(url,{path:path+"/indptr"});
+        indptr = indptr.value;
+        // Determine the number of rows in the CSR matrix
+        const numRows = indptr.length - 1;
+        console.log(numRows, indptr);
+        // Create a typed array to store the column values
+        const columnValues = new Float32Array(numRows);
+        
+        // Loop through the row indices
+        for (let i = 0; i < numRows; i++) {
+            if (i%10 == 0) console.log(i, numRows);
+            const rowStart = indptr[i];
+            const rowEnd = indptr[i + 1];
+        
+            // Use binary search to find the desired column in the current row
+            let low = rowStart;
+            let high = rowEnd - 1;
+        
+            while (low <= high) {
+                if (low > high || low < rowStart || high > rowEnd) {
+                    break;
+                }
+                if (high - low < 5000) {
+                    let cols = await this.get(url,{path:path+"/indices", slice:[[low,high+1]]})
+                    let col_i = cols.value.indexOf(colIndex);
+                    if (col_i == -1) break;
+                    let value = await this.get(url,{path:path+"/data", slice:[[low+col_i,low+col_i+1]]})
+                    columnValues[i] = value.value[0];
+                    break;
+                }
+                const mid = Math.floor((low + high) / 2);
+                let col = await this.get(url,{path:path+"/indices", slice:[[mid,mid+1]]})
+                col = col.value[0];
+                
+                if (col == colIndex) {
+                    // If the current value belongs to the desired column, store it
+                    let value = await this.get(url,{path:path+"/data", slice:[[mid,mid+1]]})
+                    columnValues[i] = value.value[0];
+                    break;
+                } else if (col > colIndex) {
+                    // If the current column is less than the desired column, search in the right half
+                    low = mid + 1;
+                } else {
+                    // If the current column is greater than the desired column, search in the left half
+                    high = mid - 1;
+                }
+            }
+        }
+        
+        // Return the column values as a typed array
+        return columnValues;
+    }
         
     getXRow_array (url, rowIndex, path) {
         return new Promise(resolve => {
@@ -196,8 +251,11 @@ class H5AD_API  extends H5_API {
                     });
                 }
                 else if (data_X.attrs["encoding-type"] == "csr_matrix") {
-                    interfaceUtils.alert("csr sparse format not supported.")
-                    resolve("csr sparse format not supported!")
+                    interfaceUtils.alert("CSR sparse format will be slow to read, please convert your data to CSC by using:<br/><code>st_adata.X = scipy.sparse.csc_matrix(st_adata.X)</code>")
+                    this.getXRow_csr (url, rowIndex, path).then((data)=>{
+                        resolve(data);
+                    });
+                    //resolve("csr sparse format not supported!")
                 }
                 else {
                     return this.getXRow_array (url, rowIndex, path).then((data)=>{
