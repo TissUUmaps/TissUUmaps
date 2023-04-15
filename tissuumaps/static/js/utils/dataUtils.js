@@ -474,23 +474,53 @@ dataUtils.createMenuFromCSV = function(data_id,datumExample) {
 */
 dataUtils.relocateOnDisk = function (path) {
     return new Promise(resolve => {
-        modalUID = "h5modal"
-        
-        button1=HTMLElementUtils.createElement({"kind":"input", "id":"relocateH5onDisk","extraAttributes":{ "name":"relocateH5onDisk", 
-    "class":"form-control-file form-control form-control-sm", "type":"file", "accept":".csv,.tsv,.txt,.h5,.h5ad"}});
+        let modalUID = "h5modal"
+        let pathText = "";
+        if (path != null) {
+            pathText = "<br/><i>Path: " + path + "</i>";
+        }
+        content=HTMLElementUtils.createElement({"kind":"div"});
+            row0=HTMLElementUtils.createRow({});
+                col01=HTMLElementUtils.createColumn({"width":12});
+                        label011=HTMLElementUtils.createElement({"kind":"label", "extraAttributes":{ "for":"relocateH5onDiskFile" }});
+                        label011.innerHTML="To allow browser access to the h5ad file, please select it on disk." + pathText;
+                        button012=HTMLElementUtils.createElement({"kind":"input", "id":"relocateH5onDiskFile","extraAttributes":{ "name":"relocateH5onDiskFile", 
+    "class":"form-control-file form-control form-control-sm", "type":"file", "accept":".h5,.h5ad"}});
 
+            row1=HTMLElementUtils.createRow({});
+                col11=HTMLElementUtils.createColumn({"width":12});
+                    label111=HTMLElementUtils.createElement({"kind":"label", "extraAttributes":{ "for":"relocateH5onDiskURL" }});
+                    label111.innerText="Or enter URL to a remote file:"
+                    file112=HTMLElementUtils.createElement({"kind":"input", "id":"relocateH5onDiskURL", "extraAttributes":{ "class":"form-text-input form-control", "type":"text", "value":""}});
+        
+        content.appendChild(row0);
+            row0.appendChild(col01);
+                col01.appendChild(label011);
+                col01.appendChild(button012);
+        content.appendChild(row1);
+            row1.appendChild(col11);
+                col11.appendChild(label111);
+                col11.appendChild(file112);
+        
+        button1=HTMLElementUtils.createButton({
+            id:"relocateH5onDisk",
+            extraAttributes: { class: "btn btn-primary mx-2" }
+        });
+        button1.innerText = "Load file";
+    
         buttons=divpane=HTMLElementUtils.createElement({"kind":"div"});
         buttons.appendChild(button1);
-        
-        button1.addEventListener("change",function(event) {
+            
+
+        button012.addEventListener("change",function(event) {
             $(`#${modalUID}_modal`).modal('hide');
             resolve(event.target.files[0]);
         })
-        content=HTMLElementUtils.createElement({"kind":"div"});
-            row0=HTMLElementUtils.createElement({"kind":"p", "extraAttributes":{"class":"text-danger"}});
-            row0.innerHTML = "To allow browser access to the h5ad file, please select it on disk.<br/><br/>Path: " + path;
-            
-        content.appendChild(row0);
+        button1.addEventListener("click",function(event) {
+            $(`#${modalUID}_modal`).modal('hide');
+            resolve($("#relocateH5onDiskURL").val());
+        })
+
         title = "Load AnnData object"
         modalWindow = interfaceUtils.generateModal(title, content, buttons, modalUID);
         modalWindow.style.zIndex = 1060;
