@@ -356,8 +356,9 @@ overlayUtils.addLayer = function(layer, i, visible) {
                 setTimeout(function(){$(loadingModal).modal("hide");}, 500);
             }
             showModal = false;
-            if (filterUtils._compositeMode == "collection") {
+            if (overlayUtils._collectionMode) {
                 filterUtils.setCompositeOperation();
+                overlayUtils.setCollectionMode();
             }
         },
         error: function(i) {
@@ -445,46 +446,21 @@ overlayUtils.areAllFullyLoaded = function () {
       }
     }
     return true;
-  }
-
-overlayUtils.waitLayersReady = function () {
-    function sleep (time) {
-        return new Promise((resolve) => setTimeout(resolve, time));
-    }
-    return new Promise((resolve, reject) => {
-        sleep(200).then (()=>{
-            var op = tmapp["object_prefix"];
-            if (!tmapp[op + "_viewer"].world || !tmapp[op + "_viewer"].world.getItemCount() != tmapp.layers.length) {
-                resolve();
-                return;
-            }
-            else {
-                overlayUtils.waitLayersReady().then(()=>{
-                    setTimeout(resolve,200);
-                    return;
-                });
-            }    
-        });
-    });
 }
-overlayUtils.waitFullyLoaded = function () {
-    function sleep (time) {
-        return new Promise((resolve) => setTimeout(resolve, time));
+
+overlayUtils.waitLayersReady = async function () {
+    var op = tmapp["object_prefix"];
+    await new Promise(r => setTimeout(r, 200));
+    while (!(!tmapp[op + "_viewer"].world || !tmapp[op + "_viewer"].world.getItemCount() != tmapp.layers.length)) {
+        await new Promise(r => setTimeout(r, 200));
     }
-    return new Promise((resolve, reject) => {
-        sleep(400).then (()=>{
-            if (overlayUtils.areAllFullyLoaded()) {
-                resolve();
-                return;
-            }
-            else {
-                overlayUtils.waitFullyLoaded().then(()=>{
-                    resolve();
-                    return;
-                });
-            }    
-        });
-    });
+}
+
+overlayUtils.waitFullyLoaded = async function () {
+    await new Promise(r => setTimeout(r, 200));
+    while (!overlayUtils.areAllFullyLoaded()) {
+        await new Promise(r => setTimeout(r, 200));
+    }
 }
 
 /** 
@@ -659,7 +635,7 @@ overlayUtils.savePNG=function() {
     }
     function add_colorbar (ctx, resolution) {
         var ctx_colorbar = document.querySelector("#colorbar_canvas").getContext("2d");
-        
+        if (ctx_colorbar.canvas.classList.contains("d-none")) return;
         // Set up CSS size.
         ctx_colorbar.canvas.style.width = ctx_colorbar.canvas.style.width || ctx_colorbar.canvas.width + 'px';
         ctx_colorbar.canvas.style.height = ctx_colorbar.canvas.style.height || ctx_colorbar.canvas.height + 'px';
