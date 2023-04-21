@@ -461,8 +461,14 @@ class webEngine(QWebEngineView):
             os.path.expanduser("~"), ".tissuumaps", "recents.json"
         )
         if os.path.isfile(recentFile):
-            with open(recentFile) as f:
-                recentFiles = json.load(f)
+            try:
+                with open(recentFile) as f:
+                    recentFiles = json.load(f)
+            except:
+                logging.warning(
+                    f"Impossible to load: {recentFile}. TissUUmaps will create a new one."
+                )
+                recentFiles = []
         else:
             recentFiles = []
         if path in recentFiles:
@@ -478,8 +484,14 @@ class webEngine(QWebEngineView):
             os.path.expanduser("~"), ".tissuumaps", "recents.json"
         )
         if os.path.isfile(recentFile):
-            with open(recentFile) as f:
-                recentFiles = json.load(f)
+            try:
+                with open(recentFile) as f:
+                    recentFiles = json.load(f)
+            except:
+                logging.warning(
+                    f"Impossible to load: {recentFile}. TissUUmaps will create a new one."
+                )
+                recentFiles = []
         else:
             recentFiles = []
 
