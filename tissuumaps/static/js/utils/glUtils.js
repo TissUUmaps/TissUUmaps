@@ -1486,7 +1486,7 @@ glUtils._drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
             // 1st pass: draw alpha for whole marker shapes
             gl.uniform1i(gl.getUniformLocation(program, "u_alphaPass"), true);
             if (useInstancing) {
-                gl.drawElementsInstanced(gl.TRIANGLE_STRIP, 4, gl.UNSIGNED_INT, 0, numPoints);
+                gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numPoints);
             } else {
                 gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_INT, 0);
             }
@@ -1494,14 +1494,17 @@ glUtils._drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
             gl.uniform1i(gl.getUniformLocation(program, "u_alphaPass"), false);
             gl.colorMask(true, true, true, false);
             if (useInstancing) {
-                gl.drawElementsInstanced(gl.TRIANGLE_STRIP, 4, gl.UNSIGNED_INT, 0, numPoints);
+                gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numPoints);
             } else {
                 gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_INT, 0);
             }
             gl.colorMask(true, true, true, true);
         } else {
             if (useInstancing) {
-                gl.drawElementsInstanced(gl.TRIANGLE_STRIP, 4, gl.UNSIGNED_INT, 0, numPoints);
+                // Note: drawElementsInstanced is for some reason much slower than
+                // drawArraysInstanced. So since sorting currently does not work
+                // with instancing, we can use faster non-indexed drawing here.
+                gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numPoints);
             } else {
                 gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_INT, 0);
             }
