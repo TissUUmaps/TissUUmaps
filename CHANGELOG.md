@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.1.0.4
+
+- Fix issue with slow rendering of web-gl using instancing
+- Hide colorbar on png captures when needed
+- Other minor fixes
+
 ## 3.1.0.3
 
 - Fix h5 autocomplete on iframes
