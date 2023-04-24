@@ -496,7 +496,7 @@ h5Utils.h5ad_to_tmap = async function(h5url) {
                 "/uns/spatial/" +
                 library_id +
                 "/images/" +
-                img_key,
+                img_key + "&scale=" + (1. / coord_factor),
         });
     }
 
@@ -504,7 +504,7 @@ h5Utils.h5ad_to_tmap = async function(h5url) {
 
     var library_col = "";
     if (use_libraries) {
-        // TODO
+        library_col = "/obs/library_id/codes";
     }
 
     var spatial_connectivities = "";
@@ -571,7 +571,7 @@ h5Utils.h5ad_to_tmap = async function(h5url) {
             "pie_col": "",
             "scale_col": "",
             "scale_factor": markerScale,
-            "coord_factor": coord_factor,
+            "coord_factor": 1.0,
             "shape_col": "",
             "shape_fixed": "disc",
             "shape_gr_dict": "",
@@ -618,7 +618,7 @@ h5Utils.h5ad_to_tmap = async function(h5url) {
             gb_col: "obs",
             opacity: "1",
             scale_factor: markerScale,
-            coord_factor: coord_factor,
+            coord_factor: 1.0,
             shape_fixed: "disc",
             edges_col: spatial_connectivities,
             collectionItem_col: library_col,
@@ -661,7 +661,7 @@ h5Utils.h5ad_to_tmap = async function(h5url) {
             cb_cmap: "interpolateViridis",
             cb_col: "",
             scale_factor: markerScale,
-            coord_factor: coord_factor,
+            coord_factor: 1.0,
             shape_fixed: "disc",
             edges_col: spatial_connectivities,
             collectionItem_col: library_col,

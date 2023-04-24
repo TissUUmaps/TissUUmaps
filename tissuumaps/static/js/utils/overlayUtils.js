@@ -405,9 +405,10 @@ overlayUtils.addLayer = async function(layer, i, visible) {
         return [imageUrl, keys];
     }
     if (tileSource.includes("?h5path=")) {
-        let h5url = tileSource.split("?h5path=")[0];
-        let h5path = tileSource.split("?h5path=")[1];
-        console.log(h5url, h5path);
+        let h5url = tileSource.split("?")[0];
+        let fakeURL = new URL("https://" + tileSource);
+        let h5path = fakeURL.searchParams.get("h5path");
+        let scale = Number(fakeURL.searchParams.get('scale'));
         let h5Image = await getH5Image (h5url,h5path);
         let imageUrl = h5Image[0];
         let keys = h5Image[1];
@@ -415,8 +416,8 @@ overlayUtils.addLayer = async function(layer, i, visible) {
             type: 'legacy-image-pyramid',
                 levels: [ {
                     url: imageUrl,
-                    width: keys.shape[1],
-                    height: keys.shape[0],
+                    width: keys.shape[1] * scale,
+                    height: keys.shape[0] * scale,
                     mimetype: 'image/png'
                 } ]
         }
@@ -439,21 +440,21 @@ overlayUtils.addLayer = async function(layer, i, visible) {
             tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setPosition(point);
             tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setRotation(rotation);
             tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setFlip(flip);
+            showModal = false;
             if (loadingModal) {
                 setTimeout(function(){$(loadingModal).modal("hide");}, 500);
             }
-            showModal = false;
             if (overlayUtils._collectionMode) {
                 filterUtils.setCompositeOperation();
                 overlayUtils.setCollectionMode();
             }
         },
         error: function(i) {
+            showModal = false;
             if (loadingModal) {
                 setTimeout(function(){$(loadingModal).modal("hide");}, 500);
             }
             interfaceUtils.alert("Impossible to load file.")
-            showModal = false;
         } 
     });
 }
