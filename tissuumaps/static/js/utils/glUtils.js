@@ -271,7 +271,7 @@ glUtils._pickingVS = `
     uniform sampler2D u_colorLUT;
     uniform sampler2D u_shapeAtlas;
 
-    layout(std140) uniform TransformUniforms {
+    layout(std140, row_major) uniform TransformUniforms {
         mat3x2 imageToViewport[256];
     } u_transformUBO;
 
@@ -380,7 +380,7 @@ glUtils._edgesVS = `
     uniform float u_edgeThicknessRatio;
     uniform sampler2D u_colorLUT;
 
-    layout(std140) uniform TransformUniforms {
+    layout(std140, row_major) uniform TransformUniforms {
         mat3x2 imageToViewport[256];
     } u_transformUBO;
 
