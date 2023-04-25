@@ -87,8 +87,8 @@ glUtils._markersVS = `
     uniform sampler2D u_colorLUT;
     uniform sampler2D u_colorscale;
 
-    layout(std140) uniform TransformUniforms {
-        vec4 imageToViewport[256];
+    layout(std140, row_major) uniform TransformUniforms {
+        mat3x2 imageToViewport[256];
     } u_transformUBO;
 
     layout(location = 0) in vec4 in_position;
@@ -116,8 +116,8 @@ glUtils._markersVS = `
     void main()
     {
         float transformIndex = u_transformIndex >= 0.0 ? u_transformIndex : in_transform;
-        vec4 imageToViewport = u_transformUBO.imageToViewport[int(transformIndex)];
-        vec2 viewportPos = in_position.xy * imageToViewport.xy + imageToViewport.zw;
+        mat3x2 imageToViewport = u_transformUBO.imageToViewport[int(transformIndex)];
+        vec2 viewportPos = imageToViewport * vec3(in_position.xy, 1.0);
         vec2 ndcPos = viewportPos * 2.0 - 1.0;
         ndcPos.y = -ndcPos.y;
         ndcPos = u_viewportTransform * ndcPos;
@@ -272,7 +272,7 @@ glUtils._pickingVS = `
     uniform sampler2D u_shapeAtlas;
 
     layout(std140) uniform TransformUniforms {
-        vec4 imageToViewport[256];
+        mat3x2 imageToViewport[256];
     } u_transformUBO;
 
     layout(location = 0) in vec4 in_position;
@@ -293,8 +293,8 @@ glUtils._pickingVS = `
     void main()
     {
         float transformIndex = u_transformIndex >= 0.0 ? u_transformIndex : in_transform;
-        vec4 imageToViewport = u_transformUBO.imageToViewport[int(transformIndex)];
-        vec2 viewportPos = in_position.xy * imageToViewport.xy + imageToViewport.zw;
+        mat3x2 imageToViewport = u_transformUBO.imageToViewport[int(transformIndex)];
+        vec2 viewportPos = imageToViewport * vec3(in_position.xy, 1.0);
         vec2 ndcPos = viewportPos * 2.0 - 1.0;
         ndcPos.y = -ndcPos.y;
         ndcPos = u_viewportTransform * ndcPos;
@@ -381,7 +381,7 @@ glUtils._edgesVS = `
     uniform sampler2D u_colorLUT;
 
     layout(std140) uniform TransformUniforms {
-        vec4 imageToViewport[256];
+        mat3x2 imageToViewport[256];
     } u_transformUBO;
 
     layout(location = 0) in vec4 in_position;
@@ -396,20 +396,20 @@ glUtils._edgesVS = `
     {
         float transformIndex0 = u_transformIndex >= 0.0 ? u_transformIndex : mod(in_transform, 256.0);
         float transformIndex1 = u_transformIndex >= 0.0 ? u_transformIndex : floor(in_transform / 256.0);
-        vec4 imageTransform0 = u_transformUBO.imageToViewport[int(transformIndex0)];
-        vec4 imageTransform1 = u_transformUBO.imageToViewport[int(transformIndex1)];
+        mat3x2 imageToViewport0 = u_transformUBO.imageToViewport[int(transformIndex0)];
+        mat3x2 imageToViewport1 = u_transformUBO.imageToViewport[int(transformIndex1)];
 
         vec2 localPos0 = in_position.xy;
         vec2 localPos1 = in_position.zw;
 
         // Transform 1st edge vertex
-        vec2 viewportPos0 = localPos0 * imageTransform0.xy + imageTransform0.zw;
+        vec2 viewportPos0 = imageToViewport0 * vec3(localPos0, 1.0);
         vec2 ndcPos0 = viewportPos0 * 2.0 - 1.0;
         ndcPos0.y = -ndcPos0.y;
         ndcPos0 = u_viewportTransform * ndcPos0;
 
         // Transform 2nd edge vertex
-        vec2 viewportPos1 = localPos1 * imageTransform1.xy + imageTransform1.zw;
+        vec2 viewportPos1 = imageToViewport1 * vec3(localPos1, 1.0);
         vec2 ndcPos1 = viewportPos1 * 2.0 - 1.0;
         ndcPos1.y = -ndcPos1.y;
         ndcPos1 = u_viewportTransform * ndcPos1;
@@ -1224,7 +1224,7 @@ glUtils._updateTransformUBO = function(buffer) {
 
     // Compute transforms that takes into account if collection mode viewing is
     // enabled for image layers
-    const imageTransforms = new Array(256 * 4);
+    const imageTransforms = new Array(256 * 8).fill(0);
     for (let i = 0; i < tmapp["ISS_viewer"].world.getItemCount(); ++i) {
         const bounds = tmapp["ISS_viewer"].viewport.getBounds();
         const image = tmapp["ISS_viewer"].world.getItemAt(i);
@@ -1232,11 +1232,13 @@ glUtils._updateTransformUBO = function(buffer) {
         const imageHeight = image.getContentSize().y;
         const imageBounds = image.getBounds();
 
-        // Compute the scale and shift to be applied to marker positions
-        imageTransforms[i * 4 + 0] = (imageBounds.width / imageWidth) / bounds.width;     // ScaleX
-        imageTransforms[i * 4 + 1] = (imageBounds.height / imageHeight) / bounds.height;  // ScaleY
-        imageTransforms[i * 4 + 2] = -(bounds.x - imageBounds.x) / bounds.width;          // ShiftX
-        imageTransforms[i * 4 + 3] = -(bounds.y - imageBounds.y) / bounds.height;         // ShiftY
+        // Construct 3x2 matrix (in row-major order) to be applied to marker positions.
+        // Note: each row in the matrix must be padded to a vec4, because of std140
+        // alignment rules for storing 3x2 matrices in arrays in UBOs.
+        imageTransforms[i * 8 + 0] = (imageBounds.width / imageWidth) / bounds.width;     // ScaleX
+        imageTransforms[i * 8 + 2] = -(bounds.x - imageBounds.x) / bounds.width;          // ShiftX
+        imageTransforms[i * 8 + 5] = (imageBounds.height / imageHeight) / bounds.height;  // ScaleY
+        imageTransforms[i * 8 + 6] = -(bounds.y - imageBounds.y) / bounds.height;         // ShiftY
     }
 
     const bytedata = new Float32Array(imageTransforms);
