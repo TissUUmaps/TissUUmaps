@@ -1231,25 +1231,29 @@ glUtils._updateTransformUBO = function(buffer) {
         const imageWidth = image.getContentSize().x;
         const imageHeight = image.getContentSize().y;
         const imageBounds = image.getBounds();
-        const imageFlip = false;  // image.getFlip(); (TODO)
+        const imageBounds2 = image.getBoundsNoRotate();
+        const imageFlip = image.getFlip();
         const imageOrientation = image.getRotation();
 
-        const theta = imageOrientation * (3.141592 / 180.0);
+        const theta = imageOrientation * (3.14159265 / 180.0);
         const flip = imageFlip ? -1.0 : 1.0;
-        const scaleX = (imageBounds.width / imageWidth) / bounds.width;
-        const scaleY = (imageBounds.height / imageHeight) / bounds.height;
+        const scaleX = (imageBounds2.width / imageWidth) / bounds.width;
+        const scaleY = (imageBounds2.height / imageHeight) / bounds.height;
         const shiftX = -(bounds.x - imageBounds.x) / bounds.width;
         const shiftY = -(bounds.y - imageBounds.y) / bounds.height;
+        // HACK: Extra constants for compensating for how OpenSeaDragon handles rotation.
+        const k0 = (imageOrientation >= 180.0) ? 1.0 : 0.0;
+        const k1 = (imageOrientation >= 90.0 && imageOrientation < 270.0) ? 1.0 : 0.0;
 
         // Construct 3x2 matrix (in row-major order) to be applied to marker positions.
         // Note: each row in the matrix must be padded to a vec4, because of std140
         // alignment rules for storing 3x2 matrices in arrays in UBOs.
         imageTransforms[i * 8 + 0] = flip * Math.cos(theta) * scaleX;
         imageTransforms[i * 8 + 1] = -Math.sin(theta) * scaleX;
-        imageTransforms[i * 8 + 2] = shiftX;
+        imageTransforms[i * 8 + 2] = shiftX - k0 * (scaleX * imageWidth) * Math.cos(theta) + k1 * (scaleX * imageHeight) * Math.sin(theta);
         imageTransforms[i * 8 + 4] = flip * Math.sin(theta) * scaleY;
         imageTransforms[i * 8 + 5] = Math.cos(theta) * scaleY;
-        imageTransforms[i * 8 + 6] = shiftY;
+        imageTransforms[i * 8 + 6] = shiftY - k0 * (scaleY * imageWidth) * Math.sin(theta) - k1 * (scaleY * imageHeight) * Math.cos(theta);
     }
 
     const bytedata = new Float32Array(imageTransforms);
