@@ -1233,7 +1233,9 @@ glUtils._updateTransformUBO = function(buffer) {
         const imageBounds = image.getBounds();
         const imageBounds2 = image.getBoundsNoRotate();
         const imageFlip = image.getFlip();
-        const imageOrientation = image.getRotation();
+        let imageOrientation = image.getRotation();
+        // Make sure rotation angle is in the range [0, 360) degrees
+        imageOrientation = imageOrientation - Math.floor(imageOrientation / 360.0) * 360.0;
 
         const theta = imageOrientation * (3.14159265 / 180.0);
         const flip = imageFlip ? -1.0 : 1.0;
