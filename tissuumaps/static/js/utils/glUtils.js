@@ -717,8 +717,8 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
                     if (useColorFromColormap) {
                         scalarValue = markerData[scalarPropertyName][markerIndex];
                         // Update scalar range that will be used for normalizing the values
-                        scalarRange[0] = Math.min(scalarRange[0], scalarValue);
-                        scalarRange[1] = Math.max(scalarRange[1], scalarValue);
+                        scalarRange[0] = Math.min(scalarRange[0], isNaN(scalarValue) ? Infinity : scalarValue);
+                        scalarRange[1] = Math.max(scalarRange[1], isNaN(scalarValue) ? -Infinity : scalarValue);
                     }
                     if (useShapeFromMarker) {
                         shapeIndex = markerData[shapePropertyName][markerIndex];
