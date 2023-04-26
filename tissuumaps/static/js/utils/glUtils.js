@@ -1244,7 +1244,7 @@ glUtils._updateTransformUBO = function(buffer) {
         const shiftX = -(bounds.x - imageBounds.x) / bounds.width;
         const shiftY = -(bounds.y - imageBounds.y) / bounds.height;
         // HACK: Extra constants for compensating for how OpenSeaDragon handles rotation.
-        const k0 = (imageOrientation >= 180.0) ? 1.0 : 0.0;
+        const k0 = (imageOrientation >= 180.0) ? (imageFlip ? 0.0 : 1.0) : (imageFlip ? -1.0 : 0.0);
         const k1 = (imageOrientation >= 90.0 && imageOrientation < 270.0) ? 1.0 : 0.0;
 
         // Construct 3x2 matrix (in row-major order) to be applied to marker positions.
