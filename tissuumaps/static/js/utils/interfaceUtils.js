@@ -2566,8 +2566,10 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
         else {
             indexLoad = options.autoLoad;
         }
-        $(row).find(".select2-select").val(indexLoad).trigger('change');
-        setTimeout(function(){callback(null, {'selected':indexLoad})},500);
+        $(row).find(".select2-select")
+        .select2("trigger", "select", {
+            data: { "id": dropdownOptions[indexLoad].id, "text":dropdownOptions[indexLoad].text }
+        });
     }
 }
 
