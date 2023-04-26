@@ -171,7 +171,7 @@ tmapp.options_osd = {
     navigatorPosition: "BOTTOM_LEFT",
     animationTime: 0.0,
     blendTime: 0,
-    minZoomImageRatio: 1,
+    minZoomImageRatio: 0.9,
     maxZoomPixelRatio: 30,
     immediateRender: false,
     zoomPerClick: 1.0,
