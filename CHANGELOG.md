@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.1.0.5
+
+- Add flip and rotation of markers for each collection item
+- Add transformation inputs in Image Layers menu
+- Fix colormap with NaN values
+
 ## 3.1.0.4
 
 - Fix issue with slow rendering of web-gl using instancing
