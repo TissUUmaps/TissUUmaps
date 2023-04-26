@@ -81,6 +81,31 @@ overlayUtils.addAllLayersSettings = function() {
 }
 
 /**
+ * Update position, scale, rotation and flip for a given layer */
+overlayUtils.updateTransform = function (layerIndex) {
+    var OSDviewer = tmapp[tmapp["object_prefix"] + "_viewer"];
+    const layer = tmapp.layers[layerIndex];
+    
+    const x = layer.x || 0;
+    const y = layer.y || 0;
+    const scale = layer.scale || 1;
+    const flip = layer.flip || false;
+    const rotation = layer.rotation || 0;
+  
+    const tiledImage1 = OSDviewer.world.getItemAt(0);
+    const tiledImage2 = OSDviewer.world.getItemAt(layerIndex);
+    
+    const layer0X = tiledImage1.getContentSize().x;
+    const layerNX = tiledImage2.getContentSize().x;
+    tiledImage2.setWidth(scale*layerNX/layer0X);
+    var point = new OpenSeadragon.Point(x/layer0X, y/layer0X);
+    tiledImage2.setPosition(point);
+    tiledImage2.setRotation(rotation);
+    tiledImage2.setFlip(flip);
+    glUtils.draw();
+}
+  
+/**
  * This method is used to add a layer */
 overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, checked) {
     var settingsPanel = document.getElementById("image-overlay-panel");
@@ -130,7 +155,14 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
     td_opacity.appendChild(opacity);
     td_opacity.classList.add("text-center");
     tileSource = tileSource.replace(/\\/g, '\\\\');
-    var td_name = HTMLElementUtils.createElement({kind:"td",extraAttributes:{"data-source":tileSource, "class":"layerSettingButton"}});
+    var td_name = HTMLElementUtils.createElement(
+        {kind:"td", extraAttributes:{
+            "data-bs-toggle":"collapse",
+            "data-bs-target":"#collapse_tranform_" + (layerIndex + 1),
+            "aria-expanded":"false",
+            "aria-controls":"collapse_tranform_" + (layerIndex + 1),
+            "class":"collapse_button_transform collapsed"
+        }});
     td_name.innerHTML = layerName;
     tr.appendChild(td_name);
     tr.appendChild(td_visible);
@@ -158,7 +190,6 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
 
         tr.appendChild(td_filterInput);
     }
-    layerTable.prepend(tr);
 
     visible.addEventListener("change", function(ev) {
         var layer = ev.srcElement.getAttribute("layer")
@@ -182,6 +213,99 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
         }
         overlayUtils.setItemOpacity(layer);
     });
+
+    // Add layer transformations:
+    
+    layerIndex = layerIndex + 1;
+    var layer = tmapp.layers[layerIndex];
+
+    var field_type = {
+      "x":"number",
+      "y":"number",
+      "scale":"number",
+      "rotation":"number",
+      "flip":"checkbox",
+    }
+    var field_default = {
+      "x":0,
+      "y":0,
+      "scale":1,
+      "rotation":0,
+      "flip":false,
+    }
+    
+    var tr_transform = document.createElement("tr");
+    tr_transform.id = "collapse_tranform_" + layerIndex;
+    tr_transform.classList.add("collapse")
+    var td_transform = document.createElement("td");
+    td_transform.setAttribute("colspan","100");
+    row = HTMLElementUtils.createRow({});
+    col1 = HTMLElementUtils.createColumn({
+        "width": "auto", 
+        "extraAttributes": {"data-source":tileSource, "class":"layerSettingButton"}
+    });
+    row.appendChild(col1);
+    for (var field in field_type) {
+      if (field_type[field] == "number") {
+        var form_class = "form-control form-text-input form-control-sm";
+      }
+      else {
+        var form_class = "form-control form-check-input ";
+      }
+      var input11 = HTMLElementUtils.createElement({
+        kind: "input",
+        id: "layer_" + layerIndex + "_" + field,
+        extraAttributes: {
+          class: form_class + " me-2",
+          type: field_type[field],
+          value: layer[field] || field_default[field],
+          style: "max-width:70px;",
+          data_field: field,
+          data_layerIndex: layerIndex,
+        },
+      });
+      if (field_type[field] == "checkbox") {
+        input11.checked = layer[field] || field_default[field];
+      }
+      input11.addEventListener("change", (event) => {
+        var layerIndex = parseInt(event.target.getAttribute("data_layerIndex"));
+        var field = event.target.getAttribute("data_field");
+        if (field_type[field] == "checkbox") {
+          tmapp.layers[layerIndex][field] = event.target.checked;
+        }
+        else {
+          tmapp.layers[layerIndex][field] = event.target.value;
+        }
+        overlayUtils.updateTransform(layerIndex);
+        glUtils.draw();
+      });
+      label12 = HTMLElementUtils.createElement({
+        kind: "label",
+        extraAttributes: { for: "layer_" + layerIndex + "_" + field},
+      });
+      label12.innerHTML = field + ":&nbsp;";
+    
+      col11 = HTMLElementUtils.createColumn({ width: "auto" });
+      col11.classList.add("p-0");
+      col12 = HTMLElementUtils.createColumn({ width: "auto" });
+      col12.classList.add("p-0");
+      col11.appendChild(label12);
+      col12.appendChild(input11);
+
+      row.appendChild(col11);
+      row.appendChild(col12);
+    }
+    tr_transform.appendChild(td_transform);
+    td_transform.appendChild(row);
+    row.classList.remove("p-2")
+    row.classList.add("ms-0")
+    layerTable.prepend(tr_transform);
+    // Empty tr to keep stripes in table:
+    var tr_empty = document.createElement("tr");
+    tr_empty.classList.add("d-none");
+    layerTable.prepend(tr_empty);
+    layerTable.prepend(tr);
+
     overlayUtils.addLayerSlider();
 }
 
