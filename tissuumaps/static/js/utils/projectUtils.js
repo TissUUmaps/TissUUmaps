@@ -412,6 +412,14 @@ projectUtils.loadProjectFileFromServer = function(path) {
     if (state.hideTabs) {
         document.getElementById("level-1-tabs").classList.add("d-none");
     }
+    if (state.hideChannelRange) {
+        overlayUtils.waitLayersReady().then(() => {
+            document.getElementsByClassName("channelRange")[0].classList.add("d-none");
+        })
+    }
+    if (state.hideNavigator) {
+        document.getElementsByClassName("navigator")[0].classList.add("d-none");
+    }
     if (state.menuButtons) {
         state.menuButtons.forEach(function(menuButton, i) {
             if ( Object.prototype.toString.call( menuButton.text ) !== '[object Array]' ) {
