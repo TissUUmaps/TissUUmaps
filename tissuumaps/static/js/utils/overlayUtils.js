@@ -495,10 +495,13 @@ overlayUtils.addLayer = function(layer, i, visible) {
                 setTimeout(function(){$(loadingModal).modal("hide");}, 500);
             }
             showModal = false;
-            if (overlayUtils._collectionMode) {
+            overlayUtils.waitLayersReady().then(()=>{
                 filterUtils.setCompositeOperation();
-                overlayUtils.setCollectionMode();
-            }
+                filterUtils.getFilterItems();
+                if (overlayUtils._collectionMode) {
+                    filterUtils.setCollectionMode();
+                }
+            })
         },
         error: function(i) {
             if (loadingModal) {
