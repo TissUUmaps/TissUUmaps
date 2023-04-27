@@ -87,7 +87,7 @@ glUtils._markersVS = `
     uniform sampler2D u_colorLUT;
     uniform sampler2D u_colorscale;
 
-    layout(std140, row_major) uniform TransformUniforms {
+    layout(std140) uniform TransformUniforms {
         mat3x2 imageToViewport[256];
     } u_transformUBO;
 
@@ -271,7 +271,7 @@ glUtils._pickingVS = `
     uniform sampler2D u_colorLUT;
     uniform sampler2D u_shapeAtlas;
 
-    layout(std140, row_major) uniform TransformUniforms {
+    layout(std140) uniform TransformUniforms {
         mat3x2 imageToViewport[256];
     } u_transformUBO;
 
@@ -380,7 +380,7 @@ glUtils._edgesVS = `
     uniform float u_edgeThicknessRatio;
     uniform sampler2D u_colorLUT;
 
-    layout(std140, row_major) uniform TransformUniforms {
+    layout(std140) uniform TransformUniforms {
         mat3x2 imageToViewport[256];
     } u_transformUBO;
 
@@ -1224,7 +1224,7 @@ glUtils._updateTransformUBO = function(buffer) {
 
     // Compute transforms that takes into account if collection mode viewing is
     // enabled for image layers
-    const imageTransforms = new Array(256 * 8).fill(0);
+    const imageTransforms = new Array(256 * 12).fill(0);
     for (let i = 0; i < tmapp["ISS_viewer"].world.getItemCount(); ++i) {
         const bounds = tmapp["ISS_viewer"].viewport.getBounds();
         const image = tmapp["ISS_viewer"].world.getItemAt(i);
@@ -1247,15 +1247,15 @@ glUtils._updateTransformUBO = function(buffer) {
         const k0 = (imageOrientation >= 180.0) ? (imageFlip ? 0.0 : 1.0) : (imageFlip ? -1.0 : 0.0);
         const k1 = (imageOrientation >= 90.0 && imageOrientation < 270.0) ? 1.0 : 0.0;
 
-        // Construct 3x2 matrix (in row-major order) to be applied to marker positions.
-        // Note: each row in the matrix must be padded to a vec4, because of std140
+        // Construct 3x2 matrix (in col-major order) to be applied to marker positions.
+        // Note: each col in the matrix must be padded to a vec4, because of std140
         // alignment rules for storing 3x2 matrices in arrays in UBOs.
-        imageTransforms[i * 8 + 0] = flip * Math.cos(theta) * scaleX;
-        imageTransforms[i * 8 + 1] = -Math.sin(theta) * scaleX;
-        imageTransforms[i * 8 + 2] = shiftX - k0 * (scaleX * imageWidth) * Math.cos(theta) + k1 * (scaleX * imageHeight) * Math.sin(theta);
-        imageTransforms[i * 8 + 4] = flip * Math.sin(theta) * scaleY;
-        imageTransforms[i * 8 + 5] = Math.cos(theta) * scaleY;
-        imageTransforms[i * 8 + 6] = shiftY - k0 * (scaleY * imageWidth) * Math.sin(theta) - k1 * (scaleY * imageHeight) * Math.cos(theta);
+        imageTransforms[i * 12 + 0] = flip * Math.cos(theta) * scaleX;
+        imageTransforms[i * 12 + 4] = -Math.sin(theta) * scaleX;
+        imageTransforms[i * 12 + 8] = shiftX - k0 * (scaleX * imageWidth) * Math.cos(theta) + k1 * (scaleX * imageHeight) * Math.sin(theta);
+        imageTransforms[i * 12 + 1] = flip * Math.sin(theta) * scaleY;
+        imageTransforms[i * 12 + 5] = Math.cos(theta) * scaleY;
+        imageTransforms[i * 12 + 9] = shiftY - k0 * (scaleY * imageWidth) * Math.sin(theta) - k1 * (scaleY * imageHeight) * Math.cos(theta);
     }
 
     const bytedata = new Float32Array(imageTransforms);
