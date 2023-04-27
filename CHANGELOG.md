@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.0.6
+
+- Minor fixes
+
 ## 3.1.0.5
 
 - Add flip and rotation of markers for each collection item
