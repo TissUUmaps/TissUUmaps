@@ -141,6 +141,8 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
     var td_visible = document.createElement("td");
     td_visible.appendChild(visible);
     td_visible.classList.add("text-center");
+    td_visible.classList.add("border-bottom-0");
+    td_visible.classList.add("p-1");
 
     var opacity = document.createElement("input");
     opacity.classList.add("overlay-slider");
@@ -154,6 +156,8 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
     var td_opacity = document.createElement("td");
     td_opacity.appendChild(opacity);
     td_opacity.classList.add("text-center");
+    td_opacity.classList.add("border-bottom-0");
+    td_opacity.classList.add("p-1");
     tileSource = tileSource.replace(/\\/g, '\\\\');
     var td_name = HTMLElementUtils.createElement(
         {kind:"td", extraAttributes:{
@@ -164,6 +168,8 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
             "class":"collapse_button_transform collapsed"
         }});
     td_name.innerHTML = layerName;
+    td_name.classList.add("border-bottom-0");
+    td_name.classList.add("p-1");
     tr.appendChild(td_name);
     tr.appendChild(td_visible);
     tr.appendChild(td_opacity);
@@ -186,6 +192,8 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
         }
         var td_filterInput = document.createElement("td");
         td_filterInput.classList.add("text-center");
+        td_filterInput.classList.add("border-bottom-0");
+        td_filterInput.classList.add("p-1");
         td_filterInput.appendChild(filterInput);
 
         tr.appendChild(td_filterInput);
@@ -235,15 +243,21 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
     }
     
     var tr_transform = document.createElement("tr");
-    tr_transform.id = "collapse_tranform_" + layerIndex;
-    tr_transform.classList.add("collapse")
     var td_transform = document.createElement("td");
+    td_transform.classList.add("p-0")
     td_transform.setAttribute("colspan","100");
+    collapse_div = document.createElement("div");
+    collapse_div.id = "collapse_tranform_" + layerIndex;
+    collapse_div.classList.add("collapse")
+    collapse_div.classList.add("container")
+    collapse_div.classList.add("p-0")
+    
     row = HTMLElementUtils.createRow({});
     col1 = HTMLElementUtils.createColumn({
         "width": "auto", 
         "extraAttributes": {"data-source":tileSource, "class":"layerSettingButton"}
     });
+    collapse_div.appendChild(row)
     row.appendChild(col1);
     for (var field in field_type) {
       if (field_type[field] == "number") {
@@ -266,6 +280,7 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
       });
       if (field_type[field] == "checkbox") {
         input11.checked = layer[field] || field_default[field];
+        input11.classList.add("p-0")
       }
       input11.addEventListener("change", (event) => {
         var layerIndex = parseInt(event.target.getAttribute("data_layerIndex"));
@@ -281,7 +296,7 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
       });
       label12 = HTMLElementUtils.createElement({
         kind: "label",
-        extraAttributes: { for: "layer_" + layerIndex + "_" + field},
+        extraAttributes: { for: "layer_" + layerIndex + "_" + field, class:"lh-lg"},
       });
       label12.innerHTML = field + ":&nbsp;";
     
@@ -296,7 +311,7 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
       row.appendChild(col12);
     }
     tr_transform.appendChild(td_transform);
-    td_transform.appendChild(row);
+    td_transform.appendChild(collapse_div);
     row.classList.remove("p-2")
     row.classList.add("ms-0")
     layerTable.prepend(tr_transform);
