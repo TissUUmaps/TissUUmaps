@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.0.7
+
+- Critical fix for Mac OS (see row_major in WebGL2)
+
 ## 3.1.0.6
 
 - Minor fixes
