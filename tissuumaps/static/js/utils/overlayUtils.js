@@ -253,6 +253,7 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
     collapse_div.classList.add("p-0")
     
     row = HTMLElementUtils.createRow({});
+    row.classList.add("row-cols-auto")
     col1 = HTMLElementUtils.createColumn({
         "width": "auto", 
         "extraAttributes": {"data-source":tileSource, "class":"layerSettingButton"}
@@ -270,10 +271,10 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
         kind: "input",
         id: "layer_" + layerIndex + "_" + field,
         extraAttributes: {
-          class: form_class + " me-2",
+          class: form_class + " me-1 small",
           type: field_type[field],
           value: layer[field] || field_default[field],
-          style: "max-width:70px;",
+          style: "max-width:60px;",
           data_field: field,
           data_layerIndex: layerIndex,
         },
@@ -295,20 +296,29 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
         glUtils.draw();
       });
       label12 = HTMLElementUtils.createElement({
-        kind: "label",
-        extraAttributes: { for: "layer_" + layerIndex + "_" + field, class:"lh-lg"},
-      });
-      label12.innerHTML = field + ":&nbsp;";
+        kind: "span",
+        extraAttributes: { for: "layer_" + layerIndex + "_" + field, class:"input-group-text py-1 px-2 small"},
+      });   
+      label12.innerHTML = field.replace("rotation", "rot.");
     
-      col11 = HTMLElementUtils.createColumn({ width: "auto" });
+      col11 = HTMLElementUtils.createElement({ kind: "div" });
+      col11.classList.add("col");
+      col11.classList.add("input-group");
       col11.classList.add("p-0");
-      col12 = HTMLElementUtils.createColumn({ width: "auto" });
-      col12.classList.add("p-0");
       col11.appendChild(label12);
-      col12.appendChild(input11);
-
+      if (field_type[field] == "checkbox") {
+        let input11_div = HTMLElementUtils.createElement({
+            kind: "div",
+            extraAttributes: { class:"input-group-text bg-white"},
+        });   
+        input11_div.appendChild(input11);
+        col11.appendChild(input11_div);
+      }
+      else {
+        col11.appendChild(input11);
+      }
+      
       row.appendChild(col11);
-      row.appendChild(col12);
     }
     tr_transform.appendChild(td_transform);
     td_transform.appendChild(collapse_div);
