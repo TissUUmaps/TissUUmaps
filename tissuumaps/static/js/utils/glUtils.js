@@ -68,6 +68,7 @@ glUtils._markersVS = `
     #define SHAPE_INDEX_CIRCLE 7.0
     #define SHAPE_INDEX_CIRCLE_NOSTROKE 16.0
     #define SHAPE_GRID_SIZE 4.0
+    #define MAX_NUM_IMAGES 192
     #define DISCARD_VERTEX { gl_Position = vec4(2.0, 2.0, 2.0, 0.0); return; }
 
     uniform mat2 u_viewportTransform;
@@ -88,7 +89,7 @@ glUtils._markersVS = `
     uniform sampler2D u_colorscale;
 
     layout(std140) uniform TransformUniforms {
-        mat3x2 imageToViewport[192];
+        mat3x2 imageToViewport[MAX_NUM_IMAGES];
     } u_transformUBO;
 
     layout(location = 0) in vec4 in_position;
@@ -252,6 +253,7 @@ glUtils._pickingVS = `
     #define UV_SCALE 0.7
     #define SHAPE_INDEX_CIRCLE_NOSTROKE 16.0
     #define SHAPE_GRID_SIZE 4.0
+    #define MAX_NUM_IMAGES 192
     #define DISCARD_VERTEX { gl_Position = vec4(2.0, 2.0, 2.0, 0.0); return; }
 
     #define OP_CLEAR 0
@@ -272,7 +274,7 @@ glUtils._pickingVS = `
     uniform sampler2D u_shapeAtlas;
 
     layout(std140) uniform TransformUniforms {
-        mat3x2 imageToViewport[256];
+        mat3x2 imageToViewport[MAX_NUM_IMAGES];
     } u_transformUBO;
 
     layout(location = 0) in vec4 in_position;
@@ -370,6 +372,8 @@ glUtils._pickingFS = `
 
 
 glUtils._edgesVS = `
+    #define MAX_NUM_IMAGES 192
+
     uniform mat2 u_viewportTransform;
     uniform vec2 u_canvasSize;
     uniform float u_transformIndex;
@@ -381,7 +385,7 @@ glUtils._edgesVS = `
     uniform sampler2D u_colorLUT;
 
     layout(std140) uniform TransformUniforms {
-        mat3x2 imageToViewport[256];
+        mat3x2 imageToViewport[MAX_NUM_IMAGES];
     } u_transformUBO;
 
     layout(location = 0) in vec4 in_position;
