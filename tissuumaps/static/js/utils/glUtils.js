@@ -88,7 +88,7 @@ glUtils._markersVS = `
     uniform sampler2D u_colorscale;
 
     layout(std140) uniform TransformUniforms {
-        mat3x2 imageToViewport[256];
+        mat3x2 imageToViewport[192];
     } u_transformUBO;
 
     layout(location = 0) in vec4 in_position;
