@@ -15,7 +15,7 @@
 
 class H5_API {
     constructor() {
-        this.chunkSize = 5 * 1024 * 1024;
+        this.chunkSize = 1024 * 1024;
         this.resolvers = {};
         this.count = 0; // used later to generate unique ids
         this.status = {}
