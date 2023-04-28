@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.1.0.8
+
+- Fix chunk size for h5 files
+- Fix iPhone not loading markers with > 192 collection items
+
 ## 3.1.0.7
 
 - Critical fix for Mac OS (see row_major in WebGL2)
