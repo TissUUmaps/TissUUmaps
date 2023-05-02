@@ -491,6 +491,11 @@ overlayUtils.addLayer = function(layer, i, visible) {
             tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setPosition(point);
             tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setRotation(rotation);
             tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setFlip(flip);
+            if(layer.clip) {
+                tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setClip(
+                    new OpenSeadragon.Rect(layer.clip.x,layer.clip.y,layer.clip.w,layer.clip.h,layer.clip.degrees)
+                );
+            }
             if (loadingModal) {
                 setTimeout(function(){$(loadingModal).modal("hide");}, 500);
             }
