@@ -25,6 +25,7 @@ glUtils = {
     // and is easy to delete when closing a marker tab...)
     _numPoints: {},              // {uid: numPoints, ...}
     _numEdges: {},               // {uid: numEdges, ...}
+    _zOrder: {},                 // {uid: float, ...}
     _markerScalarRange: {},      // {uid: [minval, maxval], ...}
     _markerScaleFactor: {},      // {uid: float}
     _markerScalarPropertyName: {},  // {uid: string, ...}
@@ -631,6 +632,8 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
     const useSortByCol = newInputs.useSortByCol = dataUtils.data[uid]["_sortby_col"] != null;
     const sortByDesc = newInputs.sortByDesc = dataUtils.data[uid]["_sortby_desc"];
 
+    const zOrder = (uid in glUtils._zOrder) ? glUtils._zOrder[uid] : 1.0;  // TODO
+
     // Additional info about the vertex format. Make sure to update also
     // NUM_BYTES_PER_MARKER and NUM_BYTES_PER_MARKER_SECONDARY when making
     // changes to the format! Two buffers will be used for the vertex data
@@ -884,6 +887,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
     // Update marker info and LUT + colormap textures
     glUtils._numPoints[uid] = numPoints * numSectors;
     glUtils._numEdges[uid] = numEdges;
+    glUtils._zOrder[uid] = zOrder;
     glUtils._markerScalarRange[uid] = scalarRange;
     glUtils._markerScalarPropertyName[uid] = scalarPropertyName;
     glUtils._markerScaleFactor[uid] = markerScaleFactor;
@@ -921,6 +925,7 @@ glUtils.deleteMarkers = function(uid) {
     // Delete marker settings and info for UID
     delete glUtils._numPoints[uid];
     delete glUtils._numEdges[uid];
+    delete glUtils._zOrder[uid];
     delete glUtils._markerScaleFactor[uid];
     delete glUtils._markerScalarRange[uid];
     delete glUtils._markerScalarPropertyName[uid];
@@ -1458,79 +1463,95 @@ glUtils._loadTextureFromImageURL = function(gl, src) {
 
 
 glUtils._drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
-    for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
-        if (numPoints == 0) continue;
+    let drawOrder = [];
+    for (let [uid, _] of Object.entries(glUtils._numPoints)) { drawOrder.push(uid); }
+    // Sort draws in descending z-order (Note: want stable sort so that
+    // we retain the old behaviour when z-order is the same for all UIDs)
+    drawOrder.sort((a, b) => glUtils._zOrder[b] - glUtils._zOrder[a]);
 
-        // Note: marker rendering is currently broken when both instancing and
-        // sorting are enabled at the same time. In that case, as workaround,
-        // we will fall back to using point sprites instead.
-        const useInstancing = glUtils._useInstancing && !glUtils._useSortByCol[uid];
+    // Draw markers and edges interleaved, to ensure correct overlap per UID
+    for (let uid of drawOrder) {
+        if (glUtils._showEdgesExperimental) {
+            glUtils._drawEdgesByUID(gl, viewportTransform, markerScaleAdjusted, uid);
+        }
+        glUtils._drawMarkersByUID(gl, viewportTransform, markerScaleAdjusted, uid);
+    }
+}
 
-        // Set up render pipeline
-        const program = glUtils._programs[useInstancing ? "markers_instanced" : "markers"];
-        gl.useProgram(program);
-        gl.enable(gl.BLEND);
-        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-        // Set per-scene uniforms
-        gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
-        gl.uniform2fv(gl.getUniformLocation(program, "u_canvasSize"), [gl.canvas.width, gl.canvas.height]);
-        gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
-        gl.uniform1f(gl.getUniformLocation(program, "u_maxPointSize"), useInstancing ? 2048 : 256);
-        gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, "TransformUniforms"), 0);
-        gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, glUtils._buffers["transformUBO"]);
-        gl.activeTexture(gl.TEXTURE2);
-        gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["shapeAtlas"]);
-        gl.uniform1i(gl.getUniformLocation(program, "u_shapeAtlas"), 2);
+glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted, uid) {
+    const numPoints = glUtils._numPoints[uid];
+    if (numPoints == 0) return;
 
-        gl.bindVertexArray(glUtils._vaos[uid + (useInstancing ? "_markers_instanced" : "_markers")]);
+    // Note: marker rendering is currently broken when both instancing and
+    // sorting are enabled at the same time. In that case, as workaround,
+    // we will fall back to using point sprites instead.
+    const useInstancing = glUtils._useInstancing && !glUtils._useSortByCol[uid];
 
-        // Set per-markerset uniforms
-        gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"),
-            glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
-        gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
-        gl.uniform2fv(gl.getUniformLocation(program, "u_markerScalarRange"), glUtils._markerScalarRange[uid]);
-        gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
-        gl.uniform1i(gl.getUniformLocation(program, "u_markerOutline"), glUtils._markerOutline[uid]);
-        gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromMarker"), glUtils._useColorFromMarker[uid]);
-        gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromColormap"), glUtils._useColorFromColormap[uid]);
-        gl.uniform1i(gl.getUniformLocation(program, "u_usePiechartFromMarker"), glUtils._usePiechartFromMarker[uid]);
-        gl.uniform1i(gl.getUniformLocation(program, "u_useShapeFromMarker"), glUtils._useShapeFromMarker[uid]);
-        gl.uniform1i(gl.getUniformLocation(program, "u_pickedMarker"),
-            glUtils._pickedMarker[0] == uid ? glUtils._pickedMarker[1] : -1);
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorscale"]);
-        gl.uniform1i(gl.getUniformLocation(program, "u_colorscale"), 1);
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorLUT"]);
-        gl.uniform1i(gl.getUniformLocation(program, "u_colorLUT"), 0);
+    // Set up render pipeline
+    const program = glUtils._programs[useInstancing ? "markers_instanced" : "markers"];
+    gl.useProgram(program);
+    gl.enable(gl.BLEND);
+    gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-        if (glUtils._usePiechartFromMarker[uid]) {
-            // 1st pass: draw alpha for whole marker shapes
-            gl.uniform1i(gl.getUniformLocation(program, "u_alphaPass"), true);
-            if (useInstancing) {
-                gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numPoints);
-            } else {
-                gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_INT, 0);
-            }
-            // 2nd pass: draw colors for individual piechart sectors
-            gl.uniform1i(gl.getUniformLocation(program, "u_alphaPass"), false);
-            gl.colorMask(true, true, true, false);
-            if (useInstancing) {
-                gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numPoints);
-            } else {
-                gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_INT, 0);
-            }
-            gl.colorMask(true, true, true, true);
+    // Set per-scene uniforms
+    gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
+    gl.uniform2fv(gl.getUniformLocation(program, "u_canvasSize"), [gl.canvas.width, gl.canvas.height]);
+    gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
+    gl.uniform1f(gl.getUniformLocation(program, "u_maxPointSize"), useInstancing ? 2048 : 256);
+    gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, "TransformUniforms"), 0);
+    gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, glUtils._buffers["transformUBO"]);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["shapeAtlas"]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_shapeAtlas"), 2);
+
+    gl.bindVertexArray(glUtils._vaos[uid + (useInstancing ? "_markers_instanced" : "_markers")]);
+
+    // Set per-markerset uniforms
+    gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"),
+        glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
+    gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
+    gl.uniform2fv(gl.getUniformLocation(program, "u_markerScalarRange"), glUtils._markerScalarRange[uid]);
+    gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_markerOutline"), glUtils._markerOutline[uid]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromMarker"), glUtils._useColorFromMarker[uid]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromColormap"), glUtils._useColorFromColormap[uid]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_usePiechartFromMarker"), glUtils._usePiechartFromMarker[uid]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_useShapeFromMarker"), glUtils._useShapeFromMarker[uid]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_pickedMarker"),
+        glUtils._pickedMarker[0] == uid ? glUtils._pickedMarker[1] : -1);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorscale"]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_colorscale"), 1);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorLUT"]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_colorLUT"), 0);
+
+    if (glUtils._usePiechartFromMarker[uid]) {
+        // 1st pass: draw alpha for whole marker shapes
+        gl.uniform1i(gl.getUniformLocation(program, "u_alphaPass"), true);
+        if (useInstancing) {
+            gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numPoints);
         } else {
-            if (useInstancing) {
-                // Note: drawElementsInstanced is for some reason much slower than
-                // drawArraysInstanced. So since sorting currently does not work
-                // with instancing, we can use faster non-indexed drawing here.
-                gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numPoints);
-            } else {
-                gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_INT, 0);
-            }
+            gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_INT, 0);
+        }
+        // 2nd pass: draw colors for individual piechart sectors
+        gl.uniform1i(gl.getUniformLocation(program, "u_alphaPass"), false);
+        gl.colorMask(true, true, true, false);
+        if (useInstancing) {
+            gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numPoints);
+        } else {
+            gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_INT, 0);
+        }
+        gl.colorMask(true, true, true, true);
+    } else {
+        if (useInstancing) {
+            // Note: drawElementsInstanced is for some reason much slower than
+            // drawArraysInstanced. So since sorting currently does not work
+            // with instancing, we can use faster non-indexed drawing here.
+            gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numPoints);
+        } else {
+            gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_INT, 0);
         }
     }
 
@@ -1542,7 +1563,10 @@ glUtils._drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
 }
 
 
-glUtils._drawEdgesColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
+glUtils._drawEdgesByUID = function(gl, viewportTransform, markerScaleAdjusted, uid) {
+    const numEdges = glUtils._numEdges[uid];
+    if (numEdges == 0) return;
+
     // Set up render pipeline
     const program = glUtils._programs["edges"];
     gl.useProgram(program);
@@ -1558,22 +1582,19 @@ glUtils._drawEdgesColorPass = function(gl, viewportTransform, markerScaleAdjuste
     gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, "TransformUniforms"), 0);
     gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, glUtils._buffers["transformUBO"]);
 
-    for (let [uid, numEdges] of Object.entries(glUtils._numEdges)) {
-        if (numEdges == 0) continue;
-        gl.bindVertexArray(glUtils._vaos[uid + "_edges"]);
+    gl.bindVertexArray(glUtils._vaos[uid + "_edges"]);
 
-        // Set per-markerset uniforms
-        gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
-        gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
-        gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"),
-            glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
+    // Set per-markerset uniforms
+    gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
+    gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
+    gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"),
+        glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
 
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorLUT"]);
-        gl.uniform1i(gl.getUniformLocation(program, "u_colorLUT"), 0);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorLUT"]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_colorLUT"), 0);
 
-        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numEdges);
-    }
+    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numEdges);
 
     // Restore render pipeline state
     gl.bindVertexArray(null);
@@ -1601,8 +1622,17 @@ glUtils._drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) 
     gl.uniform1i(gl.getUniformLocation(program, "u_shapeAtlas"), 2);
 
     glUtils._pickedMarker = [-1, -1];  // Reset to no picked marker
-    for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
+
+    let drawOrder = [];
+    for (let [uid, _] of Object.entries(glUtils._numPoints)) { drawOrder.push(uid); }
+    // Sort draws in descending z-order (Note: want stable sort so that
+    // we retain the old behaviour when z-order is the same for all UIDs)
+    drawOrder.sort((a, b) => glUtils._zOrder[b] - glUtils._zOrder[a]);
+
+    for (let uid of drawOrder) {
+        const numPoints = glUtils._numPoints[uid];
         if (numPoints == 0) continue;
+
         gl.bindVertexArray(glUtils._vaos[uid + "_markers"]);
 
         // Set per-markerset uniforms
@@ -1671,13 +1701,6 @@ glUtils.draw = function() {
     if (glUtils._pickingEnabled) {
         glUtils._drawPickingPass(gl, viewportTransform, markerScaleAdjusted);
         glUtils._pickingEnabled = false;  // Clear flag until next click event
-    }
-
-    if (glUtils._showEdgesExperimental) {
-        // Note: Edges should ideally be drawn interleaved with the markers (for
-        // correct overlap, if multiple markersets have spatial connectivity
-        // data) but for now we just draw them first a separate rendering pass
-        glUtils._drawEdgesColorPass(gl, viewportTransform, markerScaleAdjusted);
     }
 
     const query = glUtils._query;
