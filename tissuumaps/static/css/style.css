@@ -10311,3 +10311,7 @@ html {
 .collapse_button_transform {
   padding-left: 26px !important;
 }
+
+.openseadragon-canvas {
+  outline: none;
+}
