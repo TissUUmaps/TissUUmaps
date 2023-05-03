@@ -632,7 +632,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
     const useSortByCol = newInputs.useSortByCol = dataUtils.data[uid]["_sortby_col"] != null;
     const sortByDesc = newInputs.sortByDesc = dataUtils.data[uid]["_sortby_desc"];
 
-    const zOrder = (uid in glUtils._zOrder) ? glUtils._zOrder[uid] : 1.0;  // TODO
+    const zOrder = dataUtils.data[uid]["_z_order"];
 
     // Additional info about the vertex format. Make sure to update also
     // NUM_BYTES_PER_MARKER and NUM_BYTES_PER_MARKER_SECONDARY when making
@@ -1465,9 +1465,9 @@ glUtils._loadTextureFromImageURL = function(gl, src) {
 glUtils._drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
     let drawOrder = [];
     for (let [uid, _] of Object.entries(glUtils._numPoints)) { drawOrder.push(uid); }
-    // Sort draws in descending z-order (Note: want stable sort so that
+    // Sort draws in ascending z-order (Note: want stable sort so that
     // we retain the old behaviour when z-order is the same for all UIDs)
-    drawOrder.sort((a, b) => glUtils._zOrder[b] - glUtils._zOrder[a]);
+    drawOrder.sort((a, b) => glUtils._zOrder[a] - glUtils._zOrder[b]);
 
     // Draw markers and edges interleaved, to ensure correct overlap per UID
     for (let uid of drawOrder) {
@@ -1625,9 +1625,9 @@ glUtils._drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) 
 
     let drawOrder = [];
     for (let [uid, _] of Object.entries(glUtils._numPoints)) { drawOrder.push(uid); }
-    // Sort draws in descending z-order (Note: want stable sort so that
+    // Sort draws in ascending z-order (Note: want stable sort so that
     // we retain the old behaviour when z-order is the same for all UIDs)
-    drawOrder.sort((a, b) => glUtils._zOrder[b] - glUtils._zOrder[a]);
+    drawOrder.sort((a, b) => glUtils._zOrder[a] - glUtils._zOrder[b]);
 
     for (let uid of drawOrder) {
         const numPoints = glUtils._numPoints[uid];
