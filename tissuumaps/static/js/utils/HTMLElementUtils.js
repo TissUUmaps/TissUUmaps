@@ -135,6 +135,11 @@ HTMLElementUtils.selectTypeDropDown = function (params) {
             select.addEventListener(message, eventListeners[message]);
         }
     }
+    if (params.extraAttributes) {
+        for (var attr in params.extraAttributes) {
+            select.setAttribute(attr, params.extraAttributes[attr]);
+        }
+    }
     return select;
 }
 
