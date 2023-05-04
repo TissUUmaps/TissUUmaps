@@ -490,11 +490,16 @@ glUtils._edgesFS = `
 
 
 glUtils._regionsVS = `
+    #define MAX_NUM_IMAGES 192
+
     uniform mat2 u_viewportTransform;
     uniform float u_transformIndex;
     uniform vec4 u_imageBounds;
     uniform int u_numScanlines;
-    uniform highp sampler2D u_transformLUT;
+
+    layout(std140) uniform TransformUniforms {
+        mat3x2 imageToViewport[MAX_NUM_IMAGES];
+    } u_transformUBO;
 
     out vec2 v_texCoord;
     out vec2 v_localPos;
@@ -510,8 +515,8 @@ glUtils._regionsVS = `
         localPos.y = v_texCoord.y * u_imageBounds.w;
         v_localPos = localPos;
 
-        vec4 imageTransform = texture(u_transformLUT, vec2(u_transformIndex / 255.0, 0));
-        vec2 viewportPos = localPos * imageTransform.xy + imageTransform.zw;
+        mat3x2 imageToViewport = u_transformUBO.imageToViewport[int(u_transformIndex)];
+        vec2 viewportPos = imageToViewport * vec3(localPos, 1.0);
         vec2 ndcPos = viewportPos * 2.0 - 1.0;
         ndcPos.y = -ndcPos.y;
         ndcPos = u_viewportTransform * ndcPos;
@@ -2101,6 +2106,8 @@ glUtils._drawRegionsColorPass = function(gl, viewportTransform, imageBounds) {
     gl.uniform1i(gl.getUniformLocation(program, "u_regionFillRule"),
         fillRuleConstants[glUtils._regionFillRule]);
     gl.uniform1i(gl.getUniformLocation(program, "u_regionUsePivotSplit"), glUtils._regionUsePivotSplit);
+    gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, "TransformUniforms"), 0);
+    gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, glUtils._buffers["transformUBO"]);
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionLUT"]);
     gl.uniform1i(gl.getUniformLocation(program, "u_regionLUT"), 2);
@@ -2111,9 +2118,6 @@ glUtils._drawRegionsColorPass = function(gl, viewportTransform, imageBounds) {
         gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionData"]);
     }
     gl.uniform1i(gl.getUniformLocation(program, "u_regionData"), 1);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["transformLUT"]);
-    gl.uniform1i(gl.getUniformLocation(program, "u_transformLUT"), 0);
 
     // Draw rectangles that will each render a scanline segment of the region(s)
     gl.bindVertexArray(glUtils._vaos["empty"]);
