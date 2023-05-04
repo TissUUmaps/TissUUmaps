@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.1.1
+
+- Move to OpenSeadragon 4.0.0
+- Move docker to python-alpine for security reasons
+- Add sorting options of markers (applied automatically on AnnData observations)
+- Add zOrder parameter for draw order between datasets
+- Make Update View button always visible
+- Add colorbar canvas to png captures
+- Add flip and rotation of markers for each collection item
+- Add transformation inputs in Image Layers menu
+- Add background color input
+- Add gaussian marker shape
+- Fix flask deprecated function
+- Minor fixes
+
 ## 3.1.0.8
 
 - Fix chunk size for h5 files
