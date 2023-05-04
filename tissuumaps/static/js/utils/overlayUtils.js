@@ -69,7 +69,7 @@ overlayUtils.addAllLayersSettings = function() {
     });
     label11.innerHTML = "&nbsp;Collection mode";
     var row = HTMLElementUtils.createRow({ id: "setCollectionModeRow"});
-    var col1 = HTMLElementUtils.createColumn({ width: 12 });
+    var col1 = HTMLElementUtils.createColumn({ width: 6 });
     col1.appendChild(input11);
     col1.appendChild(label11);
     row.appendChild(col1);
@@ -77,6 +77,45 @@ overlayUtils.addAllLayersSettings = function() {
     input11.addEventListener("change", (event) => {
         projectUtils._activeState.collectionMode = event.target.checked;
         overlayUtils.setCollectionMode();
+    });
+    
+    // Add background color input:
+    var extraAttributes = {
+        "style":"width:50px;",
+        "class":"form-control form-control-sm"
+    };
+    if (projectUtils._activeState.backgroundColor) {
+        extraAttributes.value = projectUtils._activeState.backgroundColor;
+    }
+    var input11 = HTMLElementUtils.inputTypeColor(
+        {
+            "id": "setBackgroundColor", 
+            extraAttributes: extraAttributes}
+    );
+
+    /*<div class="input-group" style="
+    display: flex;
+    width: 125px;
+">
+        <span class="input-group-text">
+            x
+        </span>
+        <input type="text" class="form-control" placeholder="x">
+    </div>*/
+    var label11 = HTMLElementUtils.createElement({
+        kind: "label",
+        extraAttributes: { for: "setBackgroundColor", class:"input-group-text py-1 px-2 small" },
+    });
+    label11.innerHTML = "Background color";
+    var col1 = HTMLElementUtils.createColumn({ width: "auto" });
+    col1.classList.add("input-group");
+    col1.appendChild(label11);
+    col1.appendChild(input11);
+    row.appendChild(col1);
+    //settingsPanel.after(row);
+    input11.addEventListener("input", (event) => {
+        projectUtils._activeState.backgroundColor = event.target.value;
+        $(".openseadragon-canvas")[0].style.backgroundColor=event.target.value;
     });
 }
 
@@ -872,7 +911,15 @@ overlayUtils.savePNG=function() {
 
         // Copy the image contents to the canvas
         var ctx = canvas.getContext("2d");
-        
+        if (projectUtils._activeState.backgroundColor) {
+            ctx.fillStyle = projectUtils._activeState.backgroundColor;
+            ctx.fillRect(
+                0,
+                0,
+                canvas.width,
+                canvas.height
+            );
+        }
         ctx.drawImage(ctx_osd.canvas, 0, 0, canvas.width, canvas.height);
         ctx.drawImage(ctx_webgl.canvas, 0, 0, canvas.width, canvas.height);
         
