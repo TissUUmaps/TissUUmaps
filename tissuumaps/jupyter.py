@@ -283,6 +283,7 @@ class TissUUmapsServer:
         views.app.config["SLIDE_DIR"] = slideDir
 
         def startServer():
+            views.setup(views.app)
             views.app.run(host="0.0.0.0", port=self.port, threaded=True, debug=False)
 
         if TissUUmapsServer.is_port_in_use(self.port):
