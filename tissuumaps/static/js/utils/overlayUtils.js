@@ -69,7 +69,7 @@ overlayUtils.addAllLayersSettings = function() {
     });
     label11.innerHTML = "&nbsp;Collection mode";
     var row = HTMLElementUtils.createRow({ id: "setCollectionModeRow"});
-    var col1 = HTMLElementUtils.createColumn({ width: 12 });
+    var col1 = HTMLElementUtils.createColumn({ width: 6 });
     col1.appendChild(input11);
     col1.appendChild(label11);
     row.appendChild(col1);
@@ -78,8 +78,72 @@ overlayUtils.addAllLayersSettings = function() {
         projectUtils._activeState.collectionMode = event.target.checked;
         overlayUtils.setCollectionMode();
     });
+    
+    // Add background color input:
+    var extraAttributes = {
+        "style":"width:50px;",
+        "class":"form-control form-control-sm"
+    };
+    if (projectUtils._activeState.backgroundColor) {
+        extraAttributes.value = projectUtils._activeState.backgroundColor;
+    }
+    var input11 = HTMLElementUtils.inputTypeColor(
+        {
+            "id": "setBackgroundColor", 
+            extraAttributes: extraAttributes}
+    );
+
+    /*<div class="input-group" style="
+    display: flex;
+    width: 125px;
+">
+        <span class="input-group-text">
+            x
+        </span>
+        <input type="text" class="form-control" placeholder="x">
+    </div>*/
+    var label11 = HTMLElementUtils.createElement({
+        kind: "label",
+        extraAttributes: { for: "setBackgroundColor", class:"input-group-text py-1 px-2 small" },
+    });
+    label11.innerHTML = "Background color";
+    var col1 = HTMLElementUtils.createColumn({ width: "auto" });
+    col1.classList.add("input-group");
+    col1.appendChild(label11);
+    col1.appendChild(input11);
+    row.appendChild(col1);
+    //settingsPanel.after(row);
+    input11.addEventListener("input", (event) => {
+        projectUtils._activeState.backgroundColor = event.target.value;
+        $(".openseadragon-canvas")[0].style.backgroundColor=event.target.value;
+    });
 }
 
+/**
+ * Update position, scale, rotation and flip for a given layer */
+overlayUtils.updateTransform = function (layerIndex) {
+    var OSDviewer = tmapp[tmapp["object_prefix"] + "_viewer"];
+    const layer = tmapp.layers[layerIndex];
+    
+    const x = layer.x || 0;
+    const y = layer.y || 0;
+    const scale = layer.scale || 1;
+    const flip = layer.flip || false;
+    const rotation = layer.rotation || 0;
+  
+    const tiledImage1 = OSDviewer.world.getItemAt(0);
+    const tiledImage2 = OSDviewer.world.getItemAt(layerIndex);
+    
+    const layer0X = tiledImage1.getContentSize().x;
+    const layerNX = tiledImage2.getContentSize().x;
+    tiledImage2.setWidth(scale*layerNX/layer0X);
+    var point = new OpenSeadragon.Point(x/layer0X, y/layer0X);
+    tiledImage2.setPosition(point);
+    tiledImage2.setRotation(rotation);
+    tiledImage2.setFlip(flip);
+    glUtils.draw();
+}
+  
 /**
  * This method is used to add a layer */
 overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, checked) {
@@ -116,6 +180,8 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
     var td_visible = document.createElement("td");
     td_visible.appendChild(visible);
     td_visible.classList.add("text-center");
+    td_visible.classList.add("border-bottom-0");
+    td_visible.classList.add("p-1");
 
     var opacity = document.createElement("input");
     opacity.classList.add("overlay-slider");
@@ -129,9 +195,20 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
     var td_opacity = document.createElement("td");
     td_opacity.appendChild(opacity);
     td_opacity.classList.add("text-center");
+    td_opacity.classList.add("border-bottom-0");
+    td_opacity.classList.add("p-1");
     tileSource = tileSource.replace(/\\/g, '\\\\');
-    var td_name = HTMLElementUtils.createElement({kind:"td",extraAttributes:{"data-source":tileSource, "class":"layerSettingButton"}});
+    var td_name = HTMLElementUtils.createElement(
+        {kind:"td", extraAttributes:{
+            "data-bs-toggle":"collapse",
+            "data-bs-target":"#collapse_tranform_" + (layerIndex + 1),
+            "aria-expanded":"false",
+            "aria-controls":"collapse_tranform_" + (layerIndex + 1),
+            "class":"collapse_button_transform collapsed"
+        }});
     td_name.innerHTML = layerName;
+    td_name.classList.add("border-bottom-0");
+    td_name.classList.add("p-1");
     tr.appendChild(td_name);
     tr.appendChild(td_visible);
     tr.appendChild(td_opacity);
@@ -154,11 +231,12 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
         }
         var td_filterInput = document.createElement("td");
         td_filterInput.classList.add("text-center");
+        td_filterInput.classList.add("border-bottom-0");
+        td_filterInput.classList.add("p-1");
         td_filterInput.appendChild(filterInput);
 
         tr.appendChild(td_filterInput);
     }
-    layerTable.prepend(tr);
 
     visible.addEventListener("change", function(ev) {
         var layer = ev.srcElement.getAttribute("layer")
@@ -182,6 +260,116 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
         }
         overlayUtils.setItemOpacity(layer);
     });
+
+    // Add layer transformations:
+    
+    layerIndex = layerIndex + 1;
+    var layer = tmapp.layers[layerIndex];
+
+    var field_type = {
+      "x":"number",
+      "y":"number",
+      "scale":"number",
+      "rotation":"number",
+      "flip":"checkbox",
+    }
+    var field_default = {
+      "x":0,
+      "y":0,
+      "scale":1,
+      "rotation":0,
+      "flip":false,
+    }
+    
+    var tr_transform = document.createElement("tr");
+    var td_transform = document.createElement("td");
+    td_transform.classList.add("p-0")
+    td_transform.setAttribute("colspan","100");
+    collapse_div = document.createElement("div");
+    collapse_div.id = "collapse_tranform_" + layerIndex;
+    collapse_div.classList.add("collapse")
+    collapse_div.classList.add("container")
+    collapse_div.classList.add("p-0")
+    
+    row = HTMLElementUtils.createRow({});
+    row.classList.add("row-cols-auto")
+    col1 = HTMLElementUtils.createColumn({
+        "width": "auto", 
+        "extraAttributes": {"data-source":tileSource, "class":"layerSettingButton"}
+    });
+    collapse_div.appendChild(row)
+    row.appendChild(col1);
+    for (var field in field_type) {
+      if (field_type[field] == "number") {
+        var form_class = "form-control form-text-input form-control-sm";
+      }
+      else {
+        var form_class = "form-control form-check-input ";
+      }
+      var input11 = HTMLElementUtils.createElement({
+        kind: "input",
+        id: "layer_" + layerIndex + "_" + field,
+        extraAttributes: {
+          class: form_class + " me-1 small",
+          type: field_type[field],
+          value: layer[field] || field_default[field],
+          style: "max-width:60px;",
+          data_field: field,
+          data_layerIndex: layerIndex,
+        },
+      });
+      if (field_type[field] == "checkbox") {
+        input11.checked = layer[field] || field_default[field];
+        input11.classList.add("p-0")
+      }
+      input11.addEventListener("change", (event) => {
+        var layerIndex = parseInt(event.target.getAttribute("data_layerIndex"));
+        var field = event.target.getAttribute("data_field");
+        if (field_type[field] == "checkbox") {
+          tmapp.layers[layerIndex][field] = event.target.checked;
+        }
+        else {
+          tmapp.layers[layerIndex][field] = event.target.value;
+        }
+        overlayUtils.updateTransform(layerIndex);
+        glUtils.draw();
+      });
+      label12 = HTMLElementUtils.createElement({
+        kind: "span",
+        extraAttributes: { for: "layer_" + layerIndex + "_" + field, class:"input-group-text py-1 px-2 small"},
+      });   
+      label12.innerHTML = field.replace("rotation", "rot.");
+    
+      col11 = HTMLElementUtils.createElement({ kind: "div" });
+      col11.classList.add("col");
+      col11.classList.add("input-group");
+      col11.classList.add("p-0");
+      col11.appendChild(label12);
+      if (field_type[field] == "checkbox") {
+        let input11_div = HTMLElementUtils.createElement({
+            kind: "div",
+            extraAttributes: { class:"input-group-text bg-white"},
+        });   
+        input11_div.appendChild(input11);
+        col11.appendChild(input11_div);
+      }
+      else {
+        col11.appendChild(input11);
+      }
+      
+      row.appendChild(col11);
+    }
+    tr_transform.appendChild(td_transform);
+    td_transform.appendChild(collapse_div);
+    row.classList.remove("p-2")
+    row.classList.add("ms-0")
+    layerTable.prepend(tr_transform);
+    // Empty tr to keep stripes in table:
+    var tr_empty = document.createElement("tr");
+    tr_empty.classList.add("d-none");
+    layerTable.prepend(tr_empty);
+    layerTable.prepend(tr);
+
     overlayUtils.addLayerSlider();
 }
 
@@ -352,14 +540,22 @@ overlayUtils.addLayer = function(layer, i, visible) {
             tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setPosition(point);
             tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setRotation(rotation);
             tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setFlip(flip);
+            if(layer.clip) {
+                tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1).setClip(
+                    new OpenSeadragon.Rect(layer.clip.x,layer.clip.y,layer.clip.w,layer.clip.h,layer.clip.degrees)
+                );
+            }
             if (loadingModal) {
                 setTimeout(function(){$(loadingModal).modal("hide");}, 500);
             }
             showModal = false;
-            if (overlayUtils._collectionMode) {
+            overlayUtils.waitLayersReady().then(()=>{
                 filterUtils.setCompositeOperation();
-                overlayUtils.setCollectionMode();
-            }
+                filterUtils.getFilterItems();
+                if (overlayUtils._collectionMode) {
+                    filterUtils.setCollectionMode();
+                }
+            })
         },
         error: function(i) {
             if (loadingModal) {
@@ -715,7 +911,15 @@ overlayUtils.savePNG=function() {
 
         // Copy the image contents to the canvas
         var ctx = canvas.getContext("2d");
-        
+        if (projectUtils._activeState.backgroundColor) {
+            ctx.fillStyle = projectUtils._activeState.backgroundColor;
+            ctx.fillRect(
+                0,
+                0,
+                canvas.width,
+                canvas.height
+            );
+        }
         ctx.drawImage(ctx_osd.canvas, 0, 0, canvas.width, canvas.height);
         ctx.drawImage(ctx_webgl.canvas, 0, 0, canvas.width, canvas.height);
         

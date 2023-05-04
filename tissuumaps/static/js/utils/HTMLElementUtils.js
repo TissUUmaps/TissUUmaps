@@ -135,6 +135,11 @@ HTMLElementUtils.selectTypeDropDown = function (params) {
             select.addEventListener(message, eventListeners[message]);
         }
     }
+    if (params.extraAttributes) {
+        for (var attr in params.extraAttributes) {
+            select.setAttribute(attr, params.extraAttributes[attr]);
+        }
+    }
     return select;
 }
 
@@ -226,11 +231,11 @@ HTMLElementUtils.createColumn = function (params) {
         column.setAttribute("class", "col-xs-" + width + " col-sm-" + width + " col-md-" + width + " col-lg-" + width);
     }
     if (params.extraAttributes) {
-        for (var attr in extraAttributes) {
+        for (var attr in params.extraAttributes) {
             if (attr == "class")
-                element.setAttribute('class', element.getAttribute('class') + ' ' + extraAttributes[attr]);
+                column.setAttribute('class', column.getAttribute('class') + ' ' + params.extraAttributes[attr]);
             else
-                row.setAttribute(attr, extraAttributes[attr]);
+                column.setAttribute(attr, params.extraAttributes[attr]);
         }
     }
     return column;

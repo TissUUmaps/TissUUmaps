@@ -25,6 +25,7 @@ glUtils = {
     // and is easy to delete when closing a marker tab...)
     _numPoints: {},              // {uid: numPoints, ...}
     _numEdges: {},               // {uid: numEdges, ...}
+    _zOrder: {},                 // {uid: float, ...}
     _markerScalarRange: {},      // {uid: [minval, maxval], ...}
     _markerScaleFactor: {},      // {uid: float}
     _markerScalarPropertyName: {},  // {uid: string, ...}
@@ -72,6 +73,7 @@ glUtils._markersVS = `
     #define SHAPE_INDEX_CIRCLE 7.0
     #define SHAPE_INDEX_CIRCLE_NOSTROKE 16.0
     #define SHAPE_GRID_SIZE 4.0
+    #define MAX_NUM_IMAGES 192
     #define DISCARD_VERTEX { gl_Position = vec4(2.0, 2.0, 2.0, 0.0); return; }
 
     uniform mat2 u_viewportTransform;
@@ -88,9 +90,12 @@ glUtils._markersVS = `
     uniform bool u_useShapeFromMarker;
     uniform bool u_alphaPass;
     uniform int u_pickedMarker;
-    uniform highp sampler2D u_colorLUT;
-    uniform highp sampler2D u_colorscale;
-    uniform highp sampler2D u_transformLUT;
+    uniform sampler2D u_colorLUT;
+    uniform sampler2D u_colorscale;
+
+    layout(std140) uniform TransformUniforms {
+        mat3x2 imageToViewport[MAX_NUM_IMAGES];
+    } u_transformUBO;
 
     layout(location = 0) in vec4 in_position;
     layout(location = 1) in int in_index;
@@ -117,8 +122,8 @@ glUtils._markersVS = `
     void main()
     {
         float transformIndex = u_transformIndex >= 0.0 ? u_transformIndex : in_transform;
-        vec4 imageTransform = texture(u_transformLUT, vec2(transformIndex / 255.0, 0));
-        vec2 viewportPos = in_position.xy * imageTransform.xy + imageTransform.zw;
+        mat3x2 imageToViewport = u_transformUBO.imageToViewport[int(transformIndex)];
+        vec2 viewportPos = imageToViewport * vec3(in_position.xy, 1.0);
         vec2 ndcPos = viewportPos * 2.0 - 1.0;
         ndcPos.y = -ndcPos.y;
         ndcPos = u_viewportTransform * ndcPos;
@@ -254,6 +259,7 @@ glUtils._pickingVS = `
     #define UV_SCALE 0.7
     #define SHAPE_INDEX_CIRCLE_NOSTROKE 16.0
     #define SHAPE_GRID_SIZE 4.0
+    #define MAX_NUM_IMAGES 192
     #define DISCARD_VERTEX { gl_Position = vec4(2.0, 2.0, 2.0, 0.0); return; }
 
     #define OP_CLEAR 0
@@ -270,9 +276,12 @@ glUtils._pickingVS = `
     uniform bool u_usePiechartFromMarker;
     uniform bool u_useShapeFromMarker;
     uniform int u_op;
-    uniform highp sampler2D u_colorLUT;
-    uniform highp sampler2D u_shapeAtlas;
-    uniform highp sampler2D u_transformLUT;
+    uniform sampler2D u_colorLUT;
+    uniform sampler2D u_shapeAtlas;
+
+    layout(std140) uniform TransformUniforms {
+        mat3x2 imageToViewport[MAX_NUM_IMAGES];
+    } u_transformUBO;
 
     layout(location = 0) in vec4 in_position;
     layout(location = 1) in int in_index;
@@ -292,8 +301,8 @@ glUtils._pickingVS = `
     void main()
     {
         float transformIndex = u_transformIndex >= 0.0 ? u_transformIndex : in_transform;
-        vec4 imageTransform = texture(u_transformLUT, vec2(transformIndex / 255.0, 0));
-        vec2 viewportPos = in_position.xy * imageTransform.xy + imageTransform.zw;
+        mat3x2 imageToViewport = u_transformUBO.imageToViewport[int(transformIndex)];
+        vec2 viewportPos = imageToViewport * vec3(in_position.xy, 1.0);
         vec2 ndcPos = viewportPos * 2.0 - 1.0;
         ndcPos.y = -ndcPos.y;
         ndcPos = u_viewportTransform * ndcPos;
@@ -370,6 +379,8 @@ glUtils._pickingFS = `
 
 
 glUtils._edgesVS = `
+    #define MAX_NUM_IMAGES 192
+
     uniform mat2 u_viewportTransform;
     uniform vec2 u_canvasSize;
     uniform float u_transformIndex;
@@ -378,8 +389,11 @@ glUtils._edgesVS = `
     uniform float u_markerOpacity;
     uniform float u_maxPointSize;
     uniform float u_edgeThicknessRatio;
-    uniform highp sampler2D u_colorLUT;
-    uniform highp sampler2D u_transformLUT;
+    uniform sampler2D u_colorLUT;
+
+    layout(std140) uniform TransformUniforms {
+        mat3x2 imageToViewport[MAX_NUM_IMAGES];
+    } u_transformUBO;
 
     layout(location = 0) in vec4 in_position;
     layout(location = 1) in int in_index;
@@ -393,20 +407,20 @@ glUtils._edgesVS = `
     {
         float transformIndex0 = u_transformIndex >= 0.0 ? u_transformIndex : mod(in_transform, 256.0);
         float transformIndex1 = u_transformIndex >= 0.0 ? u_transformIndex : floor(in_transform / 256.0);
-        vec4 imageTransform0 = texture(u_transformLUT, vec2(transformIndex0 / 255.0, 0));
-        vec4 imageTransform1 = texture(u_transformLUT, vec2(transformIndex1 / 255.0, 0));
+        mat3x2 imageToViewport0 = u_transformUBO.imageToViewport[int(transformIndex0)];
+        mat3x2 imageToViewport1 = u_transformUBO.imageToViewport[int(transformIndex1)];
 
         vec2 localPos0 = in_position.xy;
         vec2 localPos1 = in_position.zw;
 
         // Transform 1st edge vertex
-        vec2 viewportPos0 = localPos0 * imageTransform0.xy + imageTransform0.zw;
+        vec2 viewportPos0 = imageToViewport0 * vec3(localPos0, 1.0);
         vec2 ndcPos0 = viewportPos0 * 2.0 - 1.0;
         ndcPos0.y = -ndcPos0.y;
         ndcPos0 = u_viewportTransform * ndcPos0;
 
         // Transform 2nd edge vertex
-        vec2 viewportPos1 = localPos1 * imageTransform1.xy + imageTransform1.zw;
+        vec2 viewportPos1 = imageToViewport1 * vec3(localPos1, 1.0);
         vec2 ndcPos1 = viewportPos1 * 2.0 - 1.0;
         ndcPos1.y = -ndcPos1.y;
         ndcPos1 = u_viewportTransform * ndcPos1;
@@ -688,6 +702,16 @@ glUtils._createIndexBuffer = function(gl, numBytes) {
 }
 
 
+glUtils._createUniformBuffer = function(gl, numBytes=16384) {
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(gl.UNIFORM_BUFFER, buffer); 
+    gl.bufferData(gl.UNIFORM_BUFFER, numBytes, gl.DYNAMIC_DRAW);
+    gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+
+    return buffer;
+}
+
+
 // Create a list of normalized sector angles in format (TODO)
 glUtils._createPiechartAngles = function(sectors) {
     let angles = [], sum = 0.0;
@@ -775,6 +799,8 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
     const sortByCol = newInputs.sortByCol = dataUtils.data[uid]["_sortby_col"];
     const useSortByCol = newInputs.useSortByCol = dataUtils.data[uid]["_sortby_col"] != null;
     const sortByDesc = newInputs.sortByDesc = dataUtils.data[uid]["_sortby_desc"];
+
+    const zOrder = dataUtils.data[uid]["_z_order"];
 
     // Additional info about the vertex format. Make sure to update also
     // NUM_BYTES_PER_MARKER and NUM_BYTES_PER_MARKER_SECONDARY when making
@@ -866,8 +892,8 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
                     if (useColorFromColormap) {
                         scalarValue = markerData[scalarPropertyName][markerIndex];
                         // Update scalar range that will be used for normalizing the values
-                        scalarRange[0] = Math.min(scalarRange[0], scalarValue);
-                        scalarRange[1] = Math.max(scalarRange[1], scalarValue);
+                        scalarRange[0] = Math.min(scalarRange[0], isNaN(scalarValue) ? Infinity : scalarValue);
+                        scalarRange[1] = Math.max(scalarRange[1], isNaN(scalarValue) ? -Infinity : scalarValue);
                     }
                     if (useShapeFromMarker) {
                         shapeIndex = markerData[shapePropertyName][markerIndex];
@@ -1029,6 +1055,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
     // Update marker info and LUT + colormap textures
     glUtils._numPoints[uid] = numPoints * numSectors;
     glUtils._numEdges[uid] = numEdges;
+    glUtils._zOrder[uid] = zOrder;
     glUtils._markerScalarRange[uid] = scalarRange;
     glUtils._markerScalarPropertyName[uid] = scalarPropertyName;
     glUtils._markerScaleFactor[uid] = markerScaleFactor;
@@ -1066,6 +1093,7 @@ glUtils.deleteMarkers = function(uid) {
     // Delete marker settings and info for UID
     delete glUtils._numPoints[uid];
     delete glUtils._numEdges[uid];
+    delete glUtils._zOrder[uid];
     delete glUtils._markerScaleFactor[uid];
     delete glUtils._markerScalarRange[uid];
     delete glUtils._markerScalarPropertyName[uid];
@@ -1367,48 +1395,175 @@ glUtils.updateColorLUTTextures = function() {
 }
 
 
-glUtils._createTransformLUTTexture = function(gl) {
-    const imageTransforms = new Array(256 * 4);  // TODO
-    const bytedata = new Float32Array(imageTransforms);
-
-    const texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 256, 1, 0, gl.RGBA, gl.FLOAT, bytedata);
-    gl.bindTexture(gl.TEXTURE_2D, null);
-
-    return texture;
-}
-
-
-glUtils._updateTransformLUTTexture = function(texture) {
+glUtils._updateTransformUBO = function(buffer) {
     const canvas = document.getElementById("gl_canvas");
     const gl = canvas.getContext("webgl2", glUtils._options);
 
     // Compute transforms that takes into account if collection mode viewing is
     // enabled for image layers
-    const imageTransforms = new Array(256 * 4);
+    const imageTransforms = new Array(256 * 12).fill(0);
     for (let i = 0; i < tmapp["ISS_viewer"].world.getItemCount(); ++i) {
         const bounds = tmapp["ISS_viewer"].viewport.getBounds();
         const image = tmapp["ISS_viewer"].world.getItemAt(i);
         const imageWidth = image.getContentSize().x;
         const imageHeight = image.getContentSize().y;
         const imageBounds = image.getBounds();
+        const imageBounds2 = image.getBoundsNoRotate();
+        const imageFlip = image.getFlip();
+        let imageOrientation = image.getRotation();
+        // Make sure rotation angle is in the range [0, 360) degrees
+        imageOrientation = imageOrientation - Math.floor(imageOrientation / 360.0) * 360.0;
 
-        // Compute the scale and shift to be applied to marker positions
-        imageTransforms[i * 4 + 0] = (imageBounds.width / imageWidth) / bounds.width;     // ScaleX
-        imageTransforms[i * 4 + 1] = (imageBounds.height / imageHeight) / bounds.height;  // ScaleY
-        imageTransforms[i * 4 + 2] = -(bounds.x - imageBounds.x) / bounds.width;          // ShiftX
-        imageTransforms[i * 4 + 3] = -(bounds.y - imageBounds.y) / bounds.height;         // ShiftY
+        const theta = imageOrientation * (3.14159265 / 180.0);
+        const flip = imageFlip ? -1.0 : 1.0;
+        const scaleX = (imageBounds2.width / imageWidth) / bounds.width;
+        const scaleY = (imageBounds2.height / imageHeight) / bounds.height;
+        const shiftX = -(bounds.x - imageBounds.x) / bounds.width;
+        const shiftY = -(bounds.y - imageBounds.y) / bounds.height;
+        // HACK: Extra constants for compensating for how OpenSeaDragon handles rotation.
+        const k0 = (imageOrientation >= 180.0) ? (imageFlip ? 0.0 : 1.0) : (imageFlip ? -1.0 : 0.0);
+        const k1 = (imageOrientation >= 90.0 && imageOrientation < 270.0) ? 1.0 : 0.0;
+
+        // Construct 3x2 matrix (in col-major order) to be applied to marker positions.
+        // Note: each col in the matrix must be padded to a vec4, because of std140
+        // alignment rules for storing 3x2 matrices in arrays in UBOs.
+        imageTransforms[i * 12 + 0] = flip * Math.cos(theta) * scaleX;
+        imageTransforms[i * 12 + 4] = -Math.sin(theta) * scaleX;
+        imageTransforms[i * 12 + 8] = shiftX - k0 * (scaleX * imageWidth) * Math.cos(theta) + k1 * (scaleX * imageHeight) * Math.sin(theta);
+        imageTransforms[i * 12 + 1] = flip * Math.sin(theta) * scaleY;
+        imageTransforms[i * 12 + 5] = Math.cos(theta) * scaleY;
+        imageTransforms[i * 12 + 9] = shiftY - k0 * (scaleY * imageWidth) * Math.sin(theta) - k1 * (scaleY * imageHeight) * Math.cos(theta);
     }
 
     const bytedata = new Float32Array(imageTransforms);
 
+    gl.bindBuffer(gl.UNIFORM_BUFFER, buffer);
+    gl.bufferSubData(gl.UNIFORM_BUFFER, 0, bytedata);
+    gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+}
+
+
+/**
+ * @summary Update the region data textures for all region datasets.
+ * This function is a callback and should not normally be called directly.
+ */
+glUtils.updateRegionDataTextures = function() {
+    const canvas = document.getElementById("gl_canvas");
+    const gl = canvas.getContext("webgl2", glUtils._options);
+
+    // FIXME For now, regions will always have the first image as parent
+    const image = tmapp["ISS_viewer"].world.getItemAt(0);
+    const imageWidth = image ? image.getContentSize().x : 1;
+    const imageHeight = image ? image.getContentSize().y : 1;
+    const imageBounds = [0, 0, imageWidth, imageHeight];
+
+    console.time("Update region edge lists");
+    regionUtils._generateEdgeListsForDrawing(imageBounds);
+    console.timeEnd("Update region edge lists");
+
+    console.time("Split region edge lists");
+    regionUtils._splitEdgeLists();
+    console.timeEnd("Split region edge lists");
+
+    glUtils._updateRegionDataTexture(gl, glUtils._textures["regionData"]);
+    glUtils._updateRegionDataSplitTexture(gl, glUtils._textures["regionDataSplit"]);
+}
+
+
+glUtils._createRegionDataTexture = function(gl, maxNumScanlines=512) {
+    console.assert(maxNumScanlines <= 4096);  // Since 4096 is the minimum MAX_TEXTURE_SIZE
+
+    const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 256, 1, 0, gl.RGBA, gl.FLOAT, bytedata);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); 
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA32F, 4096, maxNumScanlines);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    return texture;
+}
+
+
+glUtils._updateRegionDataTexture = function(gl, texture) {
+    const numScanlines = regionUtils._edgeLists.length;
+
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    for (let i = 0; i < numScanlines; ++i) {
+        // Update single row of the texture
+        let texeldata = new Float32Array(4096 * 4);  // Zero-initialized
+        if (regionUtils._edgeLists[i][0].length <= texeldata.length) {
+            texeldata.set(regionUtils._edgeLists[i][0]);
+        } else {
+            console.warn("Edge list for regions exceeds allocated texture size")
+        }
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, i, 4096, 1, gl.RGBA, gl.FLOAT, texeldata);
+    }
+    gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
+
+glUtils._updateRegionDataSplitTexture = function(gl, texture) {
+    const numScanlines = regionUtils._edgeListsSplit.length;
+
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    for (let i = 0; i < numScanlines; ++i) {
+        for (let j = 0; j < 2; ++j) {
+            // Update single row of the texture
+            let texeldata = new Float32Array(4096 * 4);  // Zero-initialized
+            if (regionUtils._edgeListsSplit[i][j].length <= texeldata.length) {
+                texeldata.set(regionUtils._edgeListsSplit[i][j]);
+            } else {
+                console.warn("Edge list for regions exceeds allocated texture size")
+            }
+            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, i + (j * numScanlines), 4096, 1, gl.RGBA, gl.FLOAT, texeldata);
+        }
+    }
+    gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
+
+/**
+ * @summary Update the color/visibility LUTs for all region datasets.
+ * This function is a callback and should not normally be called directly.
+ */
+glUtils.updateRegionLUTTextures = function() {
+    const canvas = document.getElementById("gl_canvas");
+    const gl = canvas.getContext("webgl2", glUtils._options);
+
+    console.time("Update region LUT");
+    regionUtils._generateRegionToColorLUT();
+    console.timeEnd("Update region LUT");
+
+    glUtils._updateRegionLUTTexture(gl, glUtils._textures["regionLUT"]);
+}
+
+
+glUtils._createRegionLUTTexture = function(gl) {
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, 4096, 64);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    return texture;
+}
+
+
+glUtils._updateRegionLUTTexture = function(gl, texture) {
+    let texeldata = new Uint8Array((4096 * 64) * 4);
+    if (regionUtils._regionToColorLUT.length <= texeldata.length) {
+        texeldata.set(regionUtils._regionToColorLUT);
+    } else {
+        console.warn("Color lookup table for regions exceeds allocated texture size");
+    }
+
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, 64, gl.RGBA, gl.UNSIGNED_BYTE, texeldata);
     gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
@@ -1726,80 +1881,105 @@ glUtils._loadTextureFromImageURL = function(gl, src) {
 
 
 glUtils._drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
-    for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
-        if (numPoints == 0) continue;
+    let drawOrder = [];
+    for (let [uid, _] of Object.entries(glUtils._numPoints)) { drawOrder.push(uid); }
+    // Sort draws in ascending z-order (Note: want stable sort so that
+    // we retain the old behaviour when z-order is the same for all UIDs)
+    drawOrder.sort((a, b) => glUtils._zOrder[a] - glUtils._zOrder[b]);
 
-        // Note: marker rendering is currently broken when both instancing and
-        // sorting are enabled at the same time. In that case, as workaround,
-        // we will fall back to using point sprites instead.
-        const useInstancing = glUtils._useInstancing && !glUtils._useSortByCol[uid];
+    // Draw markers and edges interleaved, to ensure correct overlap per UID
+    for (let uid of drawOrder) {
+        if (glUtils._showEdgesExperimental) {
+            glUtils._drawEdgesByUID(gl, viewportTransform, markerScaleAdjusted, uid);
+        }
+        glUtils._drawMarkersByUID(gl, viewportTransform, markerScaleAdjusted, uid);
+    }
 
-        // Set up render pipeline
-        const program = glUtils._programs[useInstancing ? "markers_instanced" : "markers"];
-        gl.useProgram(program);
-        gl.enable(gl.BLEND);
-        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    // Draw regions last, to make them appear on top (same behaviour as for SVG regions)
+    if (glUtils._showRegionsExperimental) {
+        // FIXME For now, regions will always have the first image as parent
+        const image = tmapp["ISS_viewer"].world.getItemAt(0);
+        const imageWidth = image ? image.getContentSize().x : 1;
+        const imageHeight = image ? image.getContentSize().y : 1;
+        const imageBounds = [0, 0, imageWidth, imageHeight];
+        glUtils._drawRegionsColorPass(gl, viewportTransform, imageBounds);
+    }
+}
 
-        // Set per-scene uniforms
-        gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
-        gl.uniform2fv(gl.getUniformLocation(program, "u_canvasSize"), [gl.canvas.width, gl.canvas.height]);
-        gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
-        gl.uniform1f(gl.getUniformLocation(program, "u_maxPointSize"), useInstancing ? 2048 : 256);
-        gl.activeTexture(gl.TEXTURE3);
-        gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["transformLUT"]);
-        gl.uniform1i(gl.getUniformLocation(program, "u_transformLUT"), 3);
-        gl.activeTexture(gl.TEXTURE2);
-        gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["shapeAtlas"]);
-        gl.uniform1i(gl.getUniformLocation(program, "u_shapeAtlas"), 2);
 
-        gl.bindVertexArray(glUtils._vaos[uid + (useInstancing ? "_markers_instanced" : "_markers")]);
+glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted, uid) {
+    const numPoints = glUtils._numPoints[uid];
+    if (numPoints == 0) return;
 
-        // Set per-markerset uniforms
-        gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"),
-            glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
-        gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
-        gl.uniform2fv(gl.getUniformLocation(program, "u_markerScalarRange"), glUtils._markerScalarRange[uid]);
-        gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
-        gl.uniform1i(gl.getUniformLocation(program, "u_markerOutline"), glUtils._markerOutline[uid]);
-        gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromMarker"), glUtils._useColorFromMarker[uid]);
-        gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromColormap"), glUtils._useColorFromColormap[uid]);
-        gl.uniform1i(gl.getUniformLocation(program, "u_usePiechartFromMarker"), glUtils._usePiechartFromMarker[uid]);
-        gl.uniform1i(gl.getUniformLocation(program, "u_useShapeFromMarker"), glUtils._useShapeFromMarker[uid]);
-        gl.uniform1i(gl.getUniformLocation(program, "u_pickedMarker"),
-            glUtils._pickedMarker[0] == uid ? glUtils._pickedMarker[1] : -1);
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorscale"]);
-        gl.uniform1i(gl.getUniformLocation(program, "u_colorscale"), 1);
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorLUT"]);
-        gl.uniform1i(gl.getUniformLocation(program, "u_colorLUT"), 0);
+    // Note: marker rendering is currently broken when both instancing and
+    // sorting are enabled at the same time. In that case, as workaround,
+    // we will fall back to using point sprites instead.
+    const useInstancing = glUtils._useInstancing && !glUtils._useSortByCol[uid];
 
-        if (glUtils._usePiechartFromMarker[uid]) {
-            // 1st pass: draw alpha for whole marker shapes
-            gl.uniform1i(gl.getUniformLocation(program, "u_alphaPass"), true);
-            if (useInstancing) {
-                gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numPoints);
-            } else {
-                gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_INT, 0);
-            }
-            // 2nd pass: draw colors for individual piechart sectors
-            gl.uniform1i(gl.getUniformLocation(program, "u_alphaPass"), false);
-            gl.colorMask(true, true, true, false);
-            if (useInstancing) {
-                gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numPoints);
-            } else {
-                gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_INT, 0);
-            }
-            gl.colorMask(true, true, true, true);
+    // Set up render pipeline
+    const program = glUtils._programs[useInstancing ? "markers_instanced" : "markers"];
+    gl.useProgram(program);
+    gl.enable(gl.BLEND);
+    gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+
+    // Set per-scene uniforms
+    gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
+    gl.uniform2fv(gl.getUniformLocation(program, "u_canvasSize"), [gl.canvas.width, gl.canvas.height]);
+    gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
+    gl.uniform1f(gl.getUniformLocation(program, "u_maxPointSize"), useInstancing ? 2048 : 256);
+    gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, "TransformUniforms"), 0);
+    gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, glUtils._buffers["transformUBO"]);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["shapeAtlas"]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_shapeAtlas"), 2);
+
+    gl.bindVertexArray(glUtils._vaos[uid + (useInstancing ? "_markers_instanced" : "_markers")]);
+
+    // Set per-markerset uniforms
+    gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"),
+        glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
+    gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
+    gl.uniform2fv(gl.getUniformLocation(program, "u_markerScalarRange"), glUtils._markerScalarRange[uid]);
+    gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_markerOutline"), glUtils._markerOutline[uid]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromMarker"), glUtils._useColorFromMarker[uid]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromColormap"), glUtils._useColorFromColormap[uid]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_usePiechartFromMarker"), glUtils._usePiechartFromMarker[uid]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_useShapeFromMarker"), glUtils._useShapeFromMarker[uid]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_pickedMarker"),
+        glUtils._pickedMarker[0] == uid ? glUtils._pickedMarker[1] : -1);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorscale"]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_colorscale"), 1);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorLUT"]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_colorLUT"), 0);
+
+    if (glUtils._usePiechartFromMarker[uid]) {
+        // 1st pass: draw alpha for whole marker shapes
+        gl.uniform1i(gl.getUniformLocation(program, "u_alphaPass"), true);
+        if (useInstancing) {
+            gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numPoints);
         } else {
-            if (useInstancing) {
-                // Note: drawElementsInstanced is for some reason much slower than
-                // drawArraysInstanced. So since sorting currently does not work
-                // with instancing, we can use faster non-indexed drawing here.
-                gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numPoints);
-            } else {
-                gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_INT, 0);
-            }
+            gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_INT, 0);
+        }
+        // 2nd pass: draw colors for individual piechart sectors
+        gl.uniform1i(gl.getUniformLocation(program, "u_alphaPass"), false);
+        gl.colorMask(true, true, true, false);
+        if (useInstancing) {
+            gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numPoints);
+        } else {
+            gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_INT, 0);
+        }
+        gl.colorMask(true, true, true, true);
+    } else {
+        if (useInstancing) {
+            // Note: drawElementsInstanced is for some reason much slower than
+            // drawArraysInstanced. So since sorting currently does not work
+            // with instancing, we can use faster non-indexed drawing here.
+            gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numPoints);
+        } else {
+            gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_INT, 0);
         }
     }
 
@@ -1811,7 +1991,10 @@ glUtils._drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
 }
 
 
-glUtils._drawEdgesColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
+glUtils._drawEdgesByUID = function(gl, viewportTransform, markerScaleAdjusted, uid) {
+    const numEdges = glUtils._numEdges[uid];
+    if (numEdges == 0) return;
+
     // Set up render pipeline
     const program = glUtils._programs["edges"];
     gl.useProgram(program);
@@ -1824,26 +2007,70 @@ glUtils._drawEdgesColorPass = function(gl, viewportTransform, markerScaleAdjuste
     gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
     gl.uniform1f(gl.getUniformLocation(program, "u_maxPointSize"), glUtils._useInstancing ? 2048 : 256);
     gl.uniform1f(gl.getUniformLocation(program, "u_edgeThicknessRatio"), glUtils._edgeThicknessRatio);
-    gl.activeTexture(gl.TEXTURE3);
-    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["transformLUT"]);
-    gl.uniform1i(gl.getUniformLocation(program, "u_transformLUT"), 3);
+    gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, "TransformUniforms"), 0);
+    gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, glUtils._buffers["transformUBO"]);
 
-    for (let [uid, numEdges] of Object.entries(glUtils._numEdges)) {
-        if (numEdges == 0) continue;
-        gl.bindVertexArray(glUtils._vaos[uid + "_edges"]);
+    gl.bindVertexArray(glUtils._vaos[uid + "_edges"]);
 
-        // Set per-markerset uniforms
-        gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
-        gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
-        gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"),
-            glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
+    // Set per-markerset uniforms
+    gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
+    gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
+    gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"),
+        glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
 
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorLUT"]);
-        gl.uniform1i(gl.getUniformLocation(program, "u_colorLUT"), 0);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorLUT"]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_colorLUT"), 0);
 
-        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numEdges);
+    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numEdges);
+
+    // Restore render pipeline state
+    gl.bindVertexArray(null);
+    gl.blendFunc(gl.ONE, gl.ONE);
+    gl.disable(gl.BLEND);
+    gl.useProgram(null);
+}
+
+
+glUtils._drawRegionsColorPass = function(gl, viewportTransform, imageBounds) {
+    const numScanlines = regionUtils._edgeLists.length;
+    if (numScanlines == 0) return;  // No regions to draw
+
+    const fillRuleConstants = {"never" : 0, "nonzero" : 1, "oddeven" : 2};
+
+    // Set up render pipeline
+    const program = glUtils._programs["regions"];
+    gl.useProgram(program);
+    gl.enable(gl.BLEND);
+    gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+
+    // Set per-scene uniforms
+    gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
+    gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"), 0);
+    gl.uniform4fv(gl.getUniformLocation(program, "u_imageBounds"), imageBounds);
+    gl.uniform1i(gl.getUniformLocation(program, "u_numScanlines"), numScanlines);
+    gl.uniform1f(gl.getUniformLocation(program, "u_regionOpacity"), glUtils._regionOpacity);
+    gl.uniform1i(gl.getUniformLocation(program, "u_regionFillRule"),
+        fillRuleConstants[glUtils._regionFillRule]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_regionUsePivotSplit"), glUtils._regionUsePivotSplit);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionLUT"]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_regionLUT"), 2);
+    gl.activeTexture(gl.TEXTURE1);
+    if (glUtils._regionUsePivotSplit) {
+        gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionDataSplit"]);
+    } else {
+        gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionData"]);
     }
+    gl.uniform1i(gl.getUniformLocation(program, "u_regionData"), 1);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["transformLUT"]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_transformLUT"), 0);
+
+    // Draw rectangles that will each render a scanline segment of the region(s)
+    gl.bindVertexArray(glUtils._vaos["empty"]);
+    //gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numScanlines);
+    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, 1);
 
     // Restore render pipeline state
     gl.bindVertexArray(null);
@@ -1912,16 +2139,24 @@ glUtils._drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) 
     gl.uniform2fv(gl.getUniformLocation(program, "u_pickingLocation"), glUtils._pickingLocation);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
     gl.uniform1f(gl.getUniformLocation(program, "u_maxPointSize"), glUtils._useInstancing ? 2048 : 256);
-    gl.activeTexture(gl.TEXTURE3);
-    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["transformLUT"]);
-    gl.uniform1i(gl.getUniformLocation(program, "u_transformLUT"), 3);
+    gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, "TransformUniforms"), 0);
+    gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, glUtils._buffers["transformUBO"]);
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["shapeAtlas"]);
     gl.uniform1i(gl.getUniformLocation(program, "u_shapeAtlas"), 2);
 
     glUtils._pickedMarker = [-1, -1];  // Reset to no picked marker
-    for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
+
+    let drawOrder = [];
+    for (let [uid, _] of Object.entries(glUtils._numPoints)) { drawOrder.push(uid); }
+    // Sort draws in ascending z-order (Note: want stable sort so that
+    // we retain the old behaviour when z-order is the same for all UIDs)
+    drawOrder.sort((a, b) => glUtils._zOrder[a] - glUtils._zOrder[b]);
+
+    for (let uid of drawOrder) {
+        const numPoints = glUtils._numPoints[uid];
         if (numPoints == 0) continue;
+
         gl.bindVertexArray(glUtils._vaos[uid + "_markers"]);
 
         // Set per-markerset uniforms
@@ -1970,7 +2205,7 @@ glUtils.draw = function() {
 
     // Update per-image transforms that take into account if collection mode
     // viewing is enabled for the image layers
-    glUtils._updateTransformLUTTexture(glUtils._textures["transformLUT"]);
+    glUtils._updateTransformUBO(glUtils._buffers["transformUBO"]);
 
     // The OSD viewer can be rotated, so need to also apply rotation to markers
     const orientationDegrees = tmapp["ISS_viewer"].viewport.getRotation();
@@ -1990,22 +2225,6 @@ glUtils.draw = function() {
     if (glUtils._pickingEnabled) {
         glUtils._drawPickingPass(gl, viewportTransform, markerScaleAdjusted);
         glUtils._pickingEnabled = false;  // Clear flag until next click event
-    }
-
-    if (glUtils._showRegionsExperimental) {
-        // FIXME For now, regions will always have the first image as parent
-        const image = tmapp["ISS_viewer"].world.getItemAt(0);
-        const imageWidth = image ? image.getContentSize().x : 1;
-        const imageHeight = image ? image.getContentSize().y : 1;
-        const imageBounds = [0, 0, imageWidth, imageHeight];
-        glUtils._drawRegionsColorPass(gl, viewportTransform, imageBounds);
-    }
-
-    if (glUtils._showEdgesExperimental) {
-        // Note: Edges should ideally be drawn interleaved with the markers (for
-        // correct overlap, if multiple markersets have spatial connectivity
-        // data) but for now we just draw them first a separate rendering pass
-        glUtils._drawEdgesColorPass(gl, viewportTransform, markerScaleAdjusted);
     }
 
     const query = glUtils._query;
@@ -2161,7 +2380,7 @@ glUtils.restoreLostContext = function(event) {
     glUtils._programs["edges"] = glUtils._loadShaderProgram(gl, glUtils._edgesVS, glUtils._edgesFS);
     glUtils._programs["regions"] = glUtils._loadShaderProgram(gl, glUtils._regionsVS, glUtils._regionsFS);
     glUtils._textures["shapeAtlas"] = glUtils._loadTextureFromImageURL(gl, glUtils._markershapes);
-    glUtils._textures["transformLUT"] = glUtils._createTransformLUTTexture(gl);
+    glUtils._buffers["transformUBO"] = glUtils._createUniformBuffer(gl);
     glUtils._textures["regionData"] = glUtils._createRegionDataTexture(gl);
     glUtils._textures["regionDataSplit"] = glUtils._createRegionDataTexture(gl, 1024);
     glUtils._textures["regionLUT"] = glUtils._createRegionLUTTexture(gl);
@@ -2220,7 +2439,7 @@ glUtils.init = function() {
     this._programs["edges"] = this._loadShaderProgram(gl, this._edgesVS, this._edgesFS);
     this._programs["regions"] = this._loadShaderProgram(gl, this._regionsVS, this._regionsFS);
     this._textures["shapeAtlas"] = this._loadTextureFromImageURL(gl, glUtils._markershapes);
-    this._textures["transformLUT"] = this._createTransformLUTTexture(gl);
+    this._buffers["transformUBO"] = this._createUniformBuffer(gl);
     this._textures["regionData"] = this._createRegionDataTexture(gl);
     this._textures["regionDataSplit"] = this._createRegionDataTexture(gl, 1024);
     this._textures["regionLUT"] = this._createRegionLUTTexture(gl);

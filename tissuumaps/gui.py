@@ -976,6 +976,7 @@ def main():
     logging.info("Ending port detection " + str(port))
 
     def flaskThread():
+        views.setup(views.app)
         views.app.run(host="127.0.0.1", port=port, threaded=True, debug=False)
 
     threading.Thread(target=flaskThread, daemon=True).start()

@@ -10,8 +10,8 @@
 markerUtils = {
     //type must be like d3.symbolVoss
     _d3Symbols: [d3.symbolCross, d3.symbolDiamond, d3.symbolSquare, d3.symbolTriangle, d3.symbolStar, d3.symbolWye, d3.symbolCircle],  // Not used
-    _symbolStrings: ["cross", "diamond", "square", "triangle up", "star", "clobber", "disc", "hbar", "vbar", "tailed arrow", "triangle down", "ring", "x", "arrow"],
-    _symbolUnicodes: ["＋ cross", "◆ diamond", "■ square", "▲ triangle up", "★ star", "✇ clobber", "● disc", "▬ hbar", "▮ vbar", "➔ tailed arrow", "▼ triangle down", "○ ring", "⨯ x", "> arrow"],
+    _symbolStrings: ["cross", "diamond", "square", "triangle up", "star", "clobber", "disc", "hbar", "vbar", "tailed arrow", "triangle down", "ring", "x", "arrow", "gaussian"],
+    _symbolUnicodes: ["＋ cross", "◆ diamond", "■ square", "▲ triangle up", "★ star", "✇ clobber", "● disc", "▬ hbar", "▮ vbar", "➔ tailed arrow", "▼ triangle down", "○ ring", "⨯ x", "> arrow", "◌ gaussian"],
 }
 
 /** Adding piechart legend in the upper left corner */
