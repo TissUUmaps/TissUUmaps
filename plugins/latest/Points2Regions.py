@@ -147,10 +147,18 @@ class Plugin:
                 os.path.join(self.app.basedir, jsonParam["csv_path"])
             )
             with h5py.File(h5Path, "r") as f:
-                xKey = jsonParam["xKey"].split(";")
-                yKey = jsonParam["yKey"].split(";")
-                x = f[xKey[0]][()][:, int(xKey[1])]
-                y = f[yKey[0]][()][:, int(yKey[1])]
+                if ";" not in jsonParam["xKey"]:
+                    xKey = jsonParam["xKey"]
+                    x = f[xKey]
+                else:
+                    xKey = jsonParam["xKey"].split(";")
+                    x = f[xKey[0]][()][:, int(xKey[1])]
+                if ";" not in jsonParam["yKey"]:
+                    yKey = jsonParam["yKey"]
+                    y = f[yKey]
+                else:
+                    yKey = jsonParam["yKey"].split(";")
+                    y = f[yKey[0]][()][:, int(yKey[1])]
                 xy = np.stack((x, y), axis=1)
                 categories = f.get(jsonParam["clusterKey"] + "/categories")[()]
                 codes = f.get(jsonParam["clusterKey"] + "/codes")[()]
