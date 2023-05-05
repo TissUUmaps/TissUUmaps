@@ -1,5 +1,45 @@
 # Changelog
 
+## 3.1.1
+
+- Move to OpenSeadragon 4.0.0
+- Move docker to python-alpine for security reasons
+- Add sorting options of markers (applied automatically on AnnData observations)
+- Add zOrder parameter for draw order between datasets
+- Make Update View button always visible
+- Add colorbar canvas to png captures
+- Add flip and rotation of markers for each collection item
+- Add transformation inputs in Image Layers menu
+- Add background color input
+- Add gaussian marker shape
+- Fix flask deprecated function
+- Minor fixes
+
+## 3.1.0.8
+
+- Fix chunk size for h5 files
+- Fix iPhone not loading markers with > 192 collection items
+
+## 3.1.0.7
+
+- Critical fix for Mac OS (see row_major in WebGL2)
+
+## 3.1.0.6
+
+- Minor fixes
+
+## 3.1.0.5
+
+- Add flip and rotation of markers for each collection item
+- Add transformation inputs in Image Layers menu
+- Fix colormap with NaN values
+
+## 3.1.0.4
+
+- Fix issue with slow rendering of web-gl using instancing
+- Hide colorbar on png captures when needed
+- Other minor fixes
+
 ## 3.1.0.3
 
 - Fix h5 autocomplete on iframes

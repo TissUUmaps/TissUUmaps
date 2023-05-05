@@ -354,6 +354,8 @@ dataUtils.updateViewOptions = async function(data_id, force_reload_all, reloadH5
     }
     data_obj["_sortby_col"]=(radios["sortby_check"].checked ? inputs["sortby_col"].value : null);
     data_obj["_sortby_desc"]=(radios["sortby_check"].checked ? radios["sortby_desc_check"].checked : null);
+    data_obj["_z_order"]=parseFloat(inputs["z_order"].value);
+
     if (data_obj["_sortby_col"]=="null") {
         interfaceUtils.alert("No sort by column selected. Impossible to update view.");return;
     }

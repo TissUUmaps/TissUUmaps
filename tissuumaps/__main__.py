@@ -126,6 +126,7 @@ def main():
         log.setLevel(logging.ERROR)
         warnings.filterwarnings("ignore")
 
+    views.setup(views.app)
     views.app.run(
         host=opts.host, port=opts.port, threaded=True, debug=False, use_reloader=False
     )

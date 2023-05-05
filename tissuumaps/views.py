@@ -295,11 +295,6 @@ def setup(app):
     app.cache = _SlideCache(app.config["SLIDE_CACHE_SIZE"], opts)
 
 
-@app.before_first_request
-def _setup():
-    setup(app)
-
-
 @app.errorhandler(404)
 def page_not_found(e):
     # note that we set the 404 status explicitly

@@ -98,3 +98,5 @@ getPluginInFolder(app.config["PLUGIN_FOLDER"])
 app.config["isStandalone"] = False
 
 from . import views
+
+views.setup(app)

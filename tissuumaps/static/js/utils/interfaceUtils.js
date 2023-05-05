@@ -822,6 +822,7 @@ interfaceUtils._mGenUIFuncs.getTabDropDowns = function(uid, only_csvColumns){
     allinputs["shape_col"]=interfaceUtils.getElementById(uid+"_shape-col-value");
     allinputs["collectionItem_col"]=interfaceUtils.getElementById(uid+"_collectionItem-col-value");
     if (!only_csvColumns) {
+        allinputs["z_order"]=interfaceUtils.getElementById(uid+"_z-order");
         allinputs["cb_gr_dict"]=interfaceUtils.getElementById(uid+"_cb-bygroup-dict-val");
         allinputs["cb_cmap"]=interfaceUtils.getElementById(uid+"_cb-cmap-value");
         allinputs["scale_factor"]=interfaceUtils.getElementById(uid+"_scale-factor");
@@ -1702,6 +1703,11 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
                 label0121=HTMLElementUtils.createElement({"kind":"label", "id":generated+"sortby-desc-label", "extraAttributes":{ "for":generated+"_sortby-desc" }});
                 label0121.innerText="Use descending order"
 
+        col10=HTMLElementUtils.createColumn({"width":6});
+            label101=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":generated+"_z-order"}});
+            label101.innerHTML="Z-order value:&nbsp;";
+            input102=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_z-order","extraAttributes":{ "class":"form-text-input", "type":"number", "value":1, "step":0.05, "min":0, "max":1}});
+        
     inputcheck0000.addEventListener("change", (event)=>{
         var value=event.target.checked;
         //var doms=["_gb-single","_gb-col","_gb-feature-value","_cb-colormap","_cb-bypoint","_cb-bygroup","_gb-feature-value",
@@ -1729,6 +1735,10 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
             divformcheck012.appendChild(inputcheck0120);
             divformcheck012.appendChild(label0121);
 
+    row0.appendChild(col10)
+        col10.appendChild(label101);
+        col10.appendChild(input102);
+    
     return row0;
 }
 
@@ -2566,8 +2576,10 @@ interfaceUtils.createDownloadDropdownMarkers = function(options) {
         else {
             indexLoad = options.autoLoad;
         }
-        $(row).find(".select2-select").val(indexLoad).trigger('change');
-        setTimeout(function(){callback(null, {'selected':indexLoad})},500);
+        $(row).find(".select2-select")
+        .select2("trigger", "select", {
+            data: { "id": dropdownOptions[indexLoad].id, "text":dropdownOptions[indexLoad].text }
+        });
     }
 }
 
