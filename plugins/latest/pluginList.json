@@ -19,7 +19,7 @@
         "js": "Feature_Space.js",
         "name": "Feature Space",
         "py": "Feature_Space.py",
-        "version": 1.2,
+        "version": "1.2.1",
         "yml": "Feature_Space.yml"
     },
     {
