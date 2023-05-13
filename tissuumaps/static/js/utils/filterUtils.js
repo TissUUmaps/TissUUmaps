@@ -255,11 +255,46 @@
                     return OpenSeadragon.Filters.COLORMAP(cmap, 128);
                 }
             }
+        },
+        "SplitChannel":{
+            // Note: this filter will use the same colormaps as those for the markers
+            params:{
+                type:"select",
+                options: ["None","R","G","B"],
+                value:"None"
+            },
+            filterFunction: function (value) {
+                console.log(value);
+                if (value == 0) { return function (context, callback) {callback();}}
+                else {
+                    return function(context, callback) {
+                        Caman(context.canvas, function() {
+                            this.splitChannel(value);
+                            this.render(callback);
+                        });
+                    }
+                }
+            }
         }
     },
     _filterItems:{},
     _compositeMode:"source-over"
 }
+
+Caman.Filter.register("splitChannel", function (channelValue) {
+    this.process("splitChannel", function (rgba) {
+        let channel = null;
+        if (channelValue == 1) {channel = rgba.r};
+        if (channelValue == 2) {channel = rgba.g};
+        if (channelValue == 3) {channel = rgba.b};
+        rgba.r = channel;
+        rgba.g = channel;
+        rgba.b = channel;
+    
+        // Return the modified RGB values
+        return rgba;
+    });
+});
 
 /** 
  * Initialize list of filters
