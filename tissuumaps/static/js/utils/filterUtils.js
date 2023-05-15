@@ -13,7 +13,8 @@
  */
  filterUtils = {
     // Choose between ["Brightness", "Exposure", "Hue", "Contrast", "Vibrance", "Noise", 
-    //                 "Saturation","Gamma","Invert","Greyscale","Threshold","Erosion","Dilation"]
+    //                 "Saturation","Gamma","Invert","Greyscale","Threshold","Erosion","Dilation",
+    //                 "Colormap", "SplitChannel"]
     _filtersUsed: ["Saturation","Brightness","Contrast"],
     _filters: {
         "Color":{
@@ -257,7 +258,6 @@
             }
         },
         "SplitChannel":{
-            // Note: this filter will use the same colormaps as those for the markers
             params:{
                 type:"select",
                 options: ["None","R","G","B"],
