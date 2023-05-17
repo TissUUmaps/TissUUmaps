@@ -679,6 +679,20 @@ def send_file_partial(path):
     return rv
 
 
+@app.route("/<path:filename>.zarr/<path:zarr_path>")
+@requires_auth
+def zarr(filename, zarr_path):
+    path = request.args.get("path")
+    if not path:
+        path = "./"
+    completePath = os.path.abspath(
+        os.path.join(app.basedir, path, filename + ".zarr", zarr_path)
+    )
+    if not os.path.isfile(completePath):
+        abort(404)
+    return send_file_partial(completePath)
+
+
 @app.route("/<string:filename>.<any(h5ad, adata, h5):ext>")
 @requires_auth
 def h5ad(filename, ext):
