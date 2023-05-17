@@ -538,8 +538,10 @@ dataUtils.readCSV = function(data_id, thecsv, options) {
         dataUtils.createDataset(data_id,{"name":data_id, "filetype":"csv"});
     }
     let data_obj = dataUtils.data[data_id];
-    
-    let skip_download = (data_obj["_csv_path"] == options.path);
+    let skip_download = false;
+    if (options != undefined) {
+        skip_download = (data_obj["_csv_path"] == options.path);
+    }
 
     data_obj["modified"] = true;
     if (!skip_download) {
