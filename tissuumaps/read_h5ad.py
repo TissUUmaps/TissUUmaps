@@ -8,6 +8,8 @@ import numpy as np
 import pyvips
 from scipy import sparse
 
+os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+
 
 def numpy2vips(a):
     dtype_to_format = {
@@ -135,7 +137,7 @@ def h5ad_to_tmap(basedir, path, library_id=None):
     #    ):
     #        path = path_out
 
-    adata = h5py.File(os.path.join(basedir, path), "r")
+    adata = h5py.File(os.path.join(basedir, path), "r", locking=False)
     outputFolder = os.path.join(basedir, path) + "_files"
     relOutputFolder = os.path.basename(path) + "_files"
 
