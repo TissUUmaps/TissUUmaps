@@ -13,7 +13,8 @@
  */
  filterUtils = {
     // Choose between ["Brightness", "Exposure", "Hue", "Contrast", "Vibrance", "Noise", 
-    //                 "Saturation","Gamma","Invert","Greyscale","Threshold","Erosion","Dilation"]
+    //                 "Saturation","Gamma","Invert","Greyscale","Threshold","Erosion","Dilation",
+    //                 "Colormap", "SplitChannel"]
     _filtersUsed: ["Saturation","Brightness","Contrast"],
     _filters: {
         "Color":{
@@ -227,11 +228,73 @@
                 if (value == 1) {  return function (context, callback) {callback();}}
                 return OpenSeadragon.Filters.MORPHOLOGICAL_OPERATION(value, Math.max);
             }
+        },
+        "Colormap":{
+            // Note: this filter will use the same colormaps as those for the markers
+            params:{
+                type:"select",
+                options: ["None"].concat(dataUtils._d3LUTs.map(function(str) {
+                    return str.replace("interpolate", "");
+                })),
+                value:"0"
+            },
+            filterFunction: function (value) {
+                if (value == 0) { return function (context, callback) {callback();}}
+                else {
+                    let colorscaleName = dataUtils._d3LUTs[value - 1];
+                    console.assert(colorscaleName != undefined);
+
+                    let cmap = [];
+                    for (let i = 0; i < 256; ++i) {
+                        const color = d3[colorscaleName](i / 255.0);
+                        const hexColor = glUtils._formatHex(color);  // D3 sometimes returns RGB strings
+                        const r = Number("0x" + hexColor.substring(1,3));
+                        const g = Number("0x" + hexColor.substring(3,5));
+                        const b = Number("0x" + hexColor.substring(5,7));
+                        cmap.push([r, g, b]);
+                    }
+                    return OpenSeadragon.Filters.COLORMAP(cmap, 128);
+                }
+            }
+        },
+        "SplitChannel":{
+            params:{
+                type:"select",
+                options: ["None","R","G","B"],
+                value:"None"
+            },
+            filterFunction: function (value) {
+                console.log(value);
+                if (value == 0) { return function (context, callback) {callback();}}
+                else {
+                    return function(context, callback) {
+                        Caman(context.canvas, function() {
+                            this.splitChannel(value);
+                            this.render(callback);
+                        });
+                    }
+                }
+            }
         }
     },
     _filterItems:{},
     _compositeMode:"source-over"
 }
+
+Caman.Filter.register("splitChannel", function (channelValue) {
+    this.process("splitChannel", function (rgba) {
+        let channel = null;
+        if (channelValue == 1) {channel = rgba.r};
+        if (channelValue == 2) {channel = rgba.g};
+        if (channelValue == 3) {channel = rgba.b};
+        rgba.r = channel;
+        rgba.g = channel;
+        rgba.b = channel;
+    
+        // Return the modified RGB values
+        return rgba;
+    });
+});
 
 /** 
  * Initialize list of filters

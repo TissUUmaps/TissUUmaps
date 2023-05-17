@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.1.1.2
+
+- Make load of HDF5 data parallel
+- Add Colormaps and Channel splitting filters
+
 ## 3.1.1
 
 - Move to OpenSeadragon 4.0.0
