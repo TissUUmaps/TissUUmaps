@@ -63,7 +63,7 @@
         "js": "Points2Regions.js",
         "name": "Points2Regions",
         "py": "Points2Regions.py",
-        "version": "0.5.0",
+        "version": "0.6.0",
         "yml": "Points2Regions.yml"
     },
     {
