@@ -312,7 +312,7 @@ class MainWindow(QMainWindow):
         file.addSeparator()
 
         _settings = QAction(
-            self.style().standardIcon(QStyle.SP_FileDialogDetailedView),
+            self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView),
             "Settings",
             self,
         )
@@ -448,7 +448,7 @@ class SettingsDialog(QDialog):
         self.quality_val.setMinimum(0)
 
         self.button_box = QDialogButtonBox(
-            QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
