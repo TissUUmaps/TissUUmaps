@@ -954,7 +954,7 @@ overlayUtils.savePNG=function() {
     }
     function add_colorbar (ctx, resolution) {
         var ctx_colorbar = document.querySelector("#colorbar_canvas").getContext("2d");
-        if (ctx_colorbar.canvas.classList.contains("d-none")) return;
+        if (ctx_colorbar.canvas.classList.contains("d-none")) return ctx;
         // Set up CSS size.
         ctx_colorbar.canvas.style.width = ctx_colorbar.canvas.style.width || ctx_colorbar.canvas.width + 'px';
         ctx_colorbar.canvas.style.height = ctx_colorbar.canvas.style.height || ctx_colorbar.canvas.height + 'px';
@@ -984,6 +984,7 @@ overlayUtils.savePNG=function() {
             ctx_colorbar_height * 1
         );
         glUtils._updateColorbarCanvas(1);
+        return ctx;
     }
     return new Promise((resolve, reject) => {
         if (tiling > 1) {
@@ -995,9 +996,11 @@ overlayUtils.savePNG=function() {
             canvas.height = tiling * Math.min(ctx_osd.canvas.height, ctx_webgl.canvas.height);
             var bounds = tmapp.ISS_viewer.viewport.getBounds();
             getCanvasCtx_aux(0, tiling, ctx, bounds).then((ctx_tiling) => {
-                ctx = add_colorbar (ctx, tiling);
-                var png = ctx_tiling.canvas.toDataURL("image/png");
+                ctx_tiling = add_colorbar (ctx_tiling, tiling);
                 
+                
+                var png = ctx_tiling.canvas.toDataURL("image/png");
+
                 var a = document.createElement("a"); //Create <a>
                 a.href = png; //Image Base64 Goes here
                 a.download = "TissUUmaps_capture.png"; //File name Here
