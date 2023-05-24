@@ -337,10 +337,14 @@ regionUtils.distance = function (p1, p2) {
 regionUtils.addRegion = function (points, regionid, color, regionClass) {
     if (!regionClass) regionClass = "";
     var op = tmapp["object_prefix"];
-    var imageWidth = OSDViewerUtils.getImageWidth();
+    var viewer = tmapp[tmapp["object_prefix"] + "_viewer"]
+    //var imageWidth = OSDViewerUtils.getImageWidth();
     var region = { "id": regionid, "points": [], "globalPoints": [], "regionName": regionid, "regionClass": regionClass, "barcodeHistogram": [] };
     region.len = points.length;
-    var _xmin = points[0][0][0][0], _xmax = points[0][0][0][0], _ymin = points[0][0][0][1], _ymax = points[0][0][0][1];
+    var _xmin = parseFloat(points[0][0][0][0]), 
+        _xmax = parseFloat(points[0][0][0][0]),
+        _ymin = parseFloat(points[0][0][0][1]),
+        _ymax = parseFloat(points[0][0][0][1]);
     var objectPointsArray = [];
     for (var i = 0; i < region.len; i++) {
         subregion = [];
@@ -349,12 +353,19 @@ regionUtils.addRegion = function (points, regionid, color, regionClass) {
             polygon = [];
             globalPolygon = [];
             for (var k = 0; k < points[i][j].length; k++) {
-                if (points[i][j][k][0] > _xmax) _xmax = points[i][j][k][0];
-                if (points[i][j][k][0] < _xmin) _xmin = points[i][j][k][0];
-                if (points[i][j][k][1] > _ymax) _ymax = points[i][j][k][1];
-                if (points[i][j][k][1] < _ymin) _ymin = points[i][j][k][1];
-                polygon.push({ "x": points[i][j][k][0], "y": points[i][j][k][1] });
-                globalPolygon.push({ "x": points[i][j][k][0] * imageWidth, "y": points[i][j][k][1] * imageWidth });
+                let x = parseFloat(points[i][j][k][0]);
+                let y = parseFloat(points[i][j][k][1]);
+                
+                if (x > _xmax) _xmax = x;
+                if (x < _xmin) _xmin = x;
+                if (y > _ymax) _ymax = y;
+                if (y < _ymin) _ymin = y;
+                polygon.push({ "x": x, "y": y });
+                let tiledImage = viewer.world.getItemAt(0);
+                let imageCoord = tiledImage.viewportToImageCoordinates(
+                    x, y, true
+                );
+                globalPolygon.push({ "x": imageCoord.x, "y": imageCoord.y });
             }
             subregion.push(polygon);
             globalSubregion.push(globalPolygon);
@@ -363,7 +374,16 @@ regionUtils.addRegion = function (points, regionid, color, regionClass) {
         region.globalPoints.push(globalSubregion);
     }
     region._xmin = _xmin, region._xmax = _xmax, region._ymin = _ymin, region._ymax = _ymax;
-    region._gxmin = _xmin * imageWidth, region._gxmax = _xmax * imageWidth, region._gymin = _ymin * imageWidth, region._gymax = _ymax * imageWidth;
+    let tiledImage = viewer.world.getItemAt(0);
+    let _min_imageCoord = tiledImage.viewportToImageCoordinates(
+        _xmin,
+        _ymin
+    );
+    let _max_imageCoord = tiledImage.viewportToImageCoordinates(
+        _xmax,
+        _ymax
+    );
+    region._gxmin = _min_imageCoord.x, region._gxmax = _max_imageCoord.x, region._gymin = _min_imageCoord.y, region._gymax = _max_imageCoord.y;
     region.polycolor = color;
 
     regionUtils._regions[regionid] = region;
@@ -392,7 +412,7 @@ regionUtils.regionUI = function (regionid) {
         regionUtils.addRegionClassUI (null)
         regionClassID = "";
         var regionsPanel = document.getElementById("markers-regions-panel-");
-        numRegions = Object.values(regionUtils._regions).filter(x => x.regionClass==regionClass).length
+        numRegions = Object.values(regionUtils._regions).filter(x => x.regionClass==regionClass || x.regionClass=="undefined").length
         if (numRegions > regionUtils._maxRegionsInMenu) {
             spanEl = document.getElementById("regionGroupWarning-" + regionClassID)
             if (spanEl) spanEl.innerHTML = "<i class='bi bi-exclamation-triangle'></i> Max "+regionUtils._maxRegionsInMenu+" regions displayed below";
@@ -598,7 +618,9 @@ regionUtils.searchTreeForPointsInRegion = function (quadtree, x0, y0, x3, y3, re
     }else{
         throw {name : "NotImplementedError", message : "ViewerPointInPath not yet implemented."}; 
     }
-    var imageWidth = OSDViewerUtils.getImageWidth();
+
+    var op = tmapp["object_prefix"];
+    var viewer = tmapp[op + "_viewer"]
     var countsInsideRegion = 0;
     var pointsInside=[];
     regionPath=document.getElementById(regionid + "_poly");
@@ -607,7 +629,11 @@ regionUtils.searchTreeForPointsInRegion = function (quadtree, x0, y0, x3, y3, re
     tmpPoint = svg.createSVGPoint();
     pointInBbox = regionUtils.searchTreeForPointsInBbox(quadtree, x0, y0, x3, y3, options);
     for (d of pointInBbox) {
-        if (pointInPath(d[xselector] / imageWidth, d[yselector] / imageWidth, regionPath, tmpPoint)) {
+        let tiledImage = viewer.world.getItemAt(0);
+        let x = d[xselector];
+        let y = d[yselector];
+        viewport_coord = tiledImage.imageToViewportCoordinates(x,y)
+        if (pointInPath(viewport_coord.x, viewport_coord.y, regionPath, tmpPoint)) {
             countsInsideRegion += 1;
             pointsInside.push(d);
         }
@@ -1003,25 +1029,37 @@ regionUtils.analyzeRegion = function (regionid) {
     regionUtils._regions[regionid].associatedPoints=[];
     regionUtils._regions[regionid].barcodeHistogram=[];
     allDatasets = Object.keys(dataUtils.data);
-    for (var dataset of allDatasets) {
-        var allkeys=Object.keys(dataUtils.data[dataset]["_groupgarden"]);
+    for (var uid of allDatasets) {
+        var allkeys=Object.keys(dataUtils.data[uid]["_groupgarden"]);
+
+        var datapath = dataUtils.data[uid]["_csv_path"];
+        if (datapath.includes(".csv") || datapath.includes(".CSV")) {
+            // Strip everything except the filename, to save a bit of memory
+            // and reduce the filesize when exporting to CSV
+            datapath = dataUtils.data[uid]["_csv_path"].split("/").pop();
+        } else if (datapath.includes("base64")) {
+            // If the file is encoded in the path as a Base64 string, use
+            // the name of the marker tab as identifier in the output CSV
+            datapath = dataUtils.data[uid]["_name"];
+        }
+
         for (var codeIndex in allkeys) {
             var code = allkeys[codeIndex];
 
-            var pointsInside=regionUtils.searchTreeForPointsInRegion(dataUtils.data[dataset]["_groupgarden"][code],
+            var pointsInside=regionUtils.searchTreeForPointsInRegion(dataUtils.data[uid]["_groupgarden"][code],
                 regionUtils._regions[regionid]._gxmin,regionUtils._regions[regionid]._gymin,
                 regionUtils._regions[regionid]._gxmax,regionUtils._regions[regionid]._gymax,
                 regionid, {
                     "globalCoords":true,
-                    "xselector":dataUtils.data[dataset]["_X"],
-                    "yselector":dataUtils.data[dataset]["_Y"],
-                    "dataset":dataset
+                    "xselector":dataUtils.data[uid]["_X"],
+                    "yselector":dataUtils.data[uid]["_Y"],
+                    "dataset":uid
                 });
             if(pointsInside.length>0){
                 pointsInside.forEach(function(p){
                     var pin=clone(p);
                     pin.regionid=regionid;
-                    pin.dataset=dataUtils.data[dataset]["_csv_path"];
+                    pin.dataset=datapath
                     regionUtils._regions[regionid].associatedPoints.push(pin)
                 });
             }
@@ -1107,6 +1145,7 @@ regionUtils.pointsInRegionsToCSV=function(){
             alldata.push(p);
         });
     }
+
     var csvRows=[];
     var headers=alldata.reduce(function(arr, o) {
         return Object.keys(o).reduce(function(a, k) {
@@ -1114,18 +1153,27 @@ regionUtils.pointsInRegionsToCSV=function(){
           return a;
         }, arr)
       }, []);
-    
     csvRows.push(headers.join(','));
     
-
     for(var row of alldata){
         var values=[];
         headers.forEach(function(header){
-            values.push(row[header]);
+            const value = row[header];
+            if (isNaN(value) && typeof(value) == "string" &&
+                (value.includes(",") || value.includes("\""))) {
+                // Make sure that commas and quotation marks are properly escaped
+                let escaped = value;
+                if (escaped.includes(",") || escaped.includes("\""))
+                    escaped = "\"" + escaped.replaceAll("\"", "\"\"") + "\"";
+                values.push(escaped);
+            } else {
+                values.push(value);
+            }
         });
         csvRows.push(values.join(","));
     }
     var theblobdata=csvRows.join('\n');
+
     regionUtils.downloadPointsInRegionsCSV(theblobdata);
 
 }
@@ -1167,6 +1215,12 @@ regionUtils.regionsToJSON= function(){
 
 regionUtils.JSONToRegions= function(filepath){
     if(filepath!==undefined){
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        const path = urlParams.get('path')
+        if (path != null) {
+            filepath = path + "/" + filepath;
+        }
         fetch(filepath)
         .then((response) => {
             return response.json();

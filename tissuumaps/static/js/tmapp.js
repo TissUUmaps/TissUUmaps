@@ -119,13 +119,18 @@ tmapp.init = function () {
             $(this).attr('stroke-width', regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
         });
         var op = tmapp["object_prefix"];
-        if (tmapp[op + "_viewer"].world.getItemAt(0).viewportToImageZoom(tmapp[op + "_viewer"].viewport.getZoom()) > 0.05) {
+        let homeZoom = tmapp[op + "_viewer"].viewport.getHomeZoom()
+        if (tmapp[op + "_viewer"].viewport.getZoom() > homeZoom * 4) {
+            tmapp[op + "_viewer"].drawer.setImageSmoothingEnabled(false);
             var count = tmapp[op + "_viewer"].world.getItemCount();
             for (var i = 0; i < count; i++) {
                 var tiledImage = tmapp[op + "_viewer"].world.getItemAt(i);
                 tiledImage.immediateRender = true;
             }
             tmapp[op + "_viewer"].imageLoaderLimit = 50;
+        }
+        else {
+            tmapp[op + "_viewer"].drawer.setImageSmoothingEnabled(true);
         }
         if (document.getElementById("zoomDiv") == undefined) {
             var elt = document.createElement('div');
@@ -180,6 +185,10 @@ tmapp.init = function () {
     } else {
         console.log("Using CPU-based marker drawing (SVG canvas)")
     }
+    
+    if (dataUtils._hdf5Api === undefined) {
+        dataUtils._hdf5Api = new H5AD_API()
+    }
 } //finish init
 
 /**
@@ -194,15 +203,15 @@ tmapp.options_osd = {
     navigatorPosition: "BOTTOM_LEFT",
     animationTime: 0.0,
     blendTime: 0,
-    minZoomImageRatio: 1,
+    minZoomImageRatio: 0.9,
     maxZoomPixelRatio: 30,
     immediateRender: false,
     zoomPerClick: 1.0,
     constrainDuringPan: true,
-    visibilityRatio: 0.85,
+    visibilityRatio: 0.5,
     showNavigationControl: false,
     maxImageCacheCount:2000,
-    imageSmoothingEnabled:false,
+    imageSmoothingEnabled:true,
     preserveImageSizeOnResize: true,
     imageLoaderLimit: 50,
     gestureSettingsUnknown: {
@@ -290,6 +299,8 @@ $( document ).ready(function() {
                 $("#"+key+"_all_check").click();
                 $("#"+key+"_All_check").click();
             }
+        } else if (event.key === "r") {
+            $("#ISS_fillregions_btn").click();
         }
     });
 });

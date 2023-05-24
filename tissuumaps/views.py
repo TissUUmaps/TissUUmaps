@@ -8,13 +8,18 @@ import importlib
 import io
 import json
 import logging
+import mimetypes
 import os
+import pathlib
+import re
+import sys
 import threading
 import time
 from collections import OrderedDict
 from functools import wraps
+from shutil import copyfile, copytree
 from threading import Lock
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 import pyvips
 
@@ -27,12 +32,13 @@ from flask import (
     redirect,
     render_template,
     request,
+    send_file,
     send_from_directory,
     url_for,
 )
 
 import tissuumaps.tiffslide as tiffslide
-from tissuumaps import app
+from tissuumaps import app, read_h5ad
 from tissuumaps.flask_filetree import filetree
 from tissuumaps.tiffslide import TiffSlide
 from tissuumaps.tiffslide.deepzoom import DeepZoomGenerator
@@ -49,6 +55,8 @@ def _fnfilter(filename):
     elif imghdr.what(filename):
         return True
     elif ".tmap" in filename.lower():
+        return True
+    elif ".h5ad" in filename.lower():
         return True
     return False
 
@@ -128,7 +136,9 @@ class ImageConverter:
 
     def convert(self):
         logging.debug(" ".join(["Converting: ", self.inputImage, self.outputImage]))
-        if not os.path.isfile(self.outputImage):
+        if not os.path.isfile(self.outputImage) or (
+            os.path.getmtime(self.inputImage) > os.path.getmtime(self.outputImage)
+        ):
 
             def convertThread():
                 try:
@@ -302,16 +312,34 @@ def setup(app):
     app.cache = _SlideCache(app.config["SLIDE_CACHE_SIZE"], opts)
 
 
-@app.before_first_request
-def _setup():
-    setup(app)
-
-
 @app.errorhandler(404)
 def page_not_found(e):
     # note that we set the 404 status explicitly
-    # return render_template("tissuumaps.html", isStandalone=app.config["isStandalone"], message="Impossible to load this file", readOnly=app.config["READ_ONLY"])
-    return redirect("/404"), 404, {"Refresh": "1; url=/"}
+    return (
+        render_template(
+            "tissuumaps.html",
+            isStandalone=app.config["isStandalone"],
+            message="File not found or corrupted.",
+            readOnly=app.config["READ_ONLY"],
+        ),
+        404,
+    )
+    return redirect("/"), 404, {"Refresh": "1; url=/"}
+
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    # note that we set the 500 status explicitly
+    return (
+        render_template(
+            "tissuumaps.html",
+            isStandalone=app.config["isStandalone"],
+            message="Internal Server Error<br/>The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.",
+            readOnly=app.config["READ_ONLY"],
+        ),
+        500,
+    )
+    return redirect("/"), 500, {"Refresh": "1; url=/"}
 
 
 def _get_slide(path, page=None, originalPath=None):
@@ -359,8 +387,10 @@ def index():
         return send_from_directory(directory, filename)
     return render_template(
         "tissuumaps.html",
+        plugins=[p["module"] for p in app.config["PLUGINS"]],
         isStandalone=app.config["isStandalone"],
         readOnly=app.config["READ_ONLY"],
+        version=app.config["VERSION"],
     )
 
 
@@ -422,6 +452,12 @@ def getProjectFromImage(path):
         return jsonProject
 
 
+@app.route("/<path:path>.html")
+@requires_auth
+def base_static_redirect(path):
+    return redirect("/web/" + path + ".html")
+
+
 @app.route("/<path:filename>")
 @requires_auth
 def slide(filename):
@@ -429,14 +465,16 @@ def slide(filename):
     if not path:
         path = "./"
     path = os.path.abspath(os.path.join(app.basedir, path, filename))
+    if not os.path.isfile(path) and not os.path.isfile(path + ".dzi"):
+        abort(404)
     jsonProject = getProjectFromImage(path)
-
     return render_template(
         "tissuumaps.html",
         plugins=[p["module"] for p in app.config["PLUGINS"]],
         jsonProject=jsonProject,
         isStandalone=app.config["isStandalone"],
         readOnly=app.config["READ_ONLY"],
+        version=app.config["VERSION"],
     )
 
 
@@ -462,14 +500,26 @@ def getPathFromReferrer(request, filename):
 @app.route("/<path:path>/<string:filename>.tmap", methods=["GET", "POST"])
 @requires_auth
 def tmapFile_old(path, filename):
+    if path == "":
+        path = "./"
     return redirect(url_for("tmapFile", filename=filename) + "?path=" + path)
+
+
+@app.route(
+    "/<path:path>/<string:filename>.<any(h5ad, adata, h5):ext>", methods=["GET", "POST"]
+)
+@requires_auth
+def h5adFile_old(path, filename, ext):
+    if path == "":
+        path = "./"
+    return redirect(url_for("h5ad", filename=filename, ext=ext) + "?path=" + path)
 
 
 @app.route("/<string:filename>.tmap", methods=["GET", "POST"])
 @requires_auth
 def tmapFile(filename):
     path = request.args.get("path")
-    if not path:
+    if not path or path == "null":
         path = "./"
     jsonFilename = os.path.abspath(os.path.join(app.basedir, path, filename) + ".tmap")
 
@@ -501,6 +551,7 @@ def tmapFile(filename):
             jsonProject=state,
             isStandalone=app.config["isStandalone"],
             readOnly=app.config["READ_ONLY"],
+            version=app.config["VERSION"],
         )
 
 
@@ -656,6 +707,263 @@ def tile_asso(path, associated_name, level, col, row, format):
     resp = make_response(buf.getvalue())
     resp.mimetype = "image/%s" % format
     return resp
+
+
+def send_file_partial(path):
+    """
+    Simple wrapper around send_file which handles HTTP 206 Partial Content
+    (byte ranges)
+    TODO: handle all send_file args, mirror send_file's error handling
+    (if it has any)
+    """
+    range_header = request.headers.get("Range", None)
+    if not range_header:
+        from flask import make_response, send_file
+
+        response = make_response(send_file(path))
+        response.headers["Accept-Ranges"] = "bytes"
+        return response
+
+    size = os.path.getsize(path)
+    byte1, byte2 = 0, None
+    m = re.search("(\d+)-(\d*)", range_header)
+    g = m.groups()
+
+    if g[0]:
+        byte1 = int(g[0])
+    if g[1]:
+        byte2 = int(g[1])
+
+    length = size - byte1
+    if byte2 is not None:
+        length = byte2 - byte1
+
+    data = None
+    with open(path, "rb") as f:
+        f.seek(byte1)
+        data = f.read(length + 1)
+
+    rv = Response(
+        data, 206, mimetype=mimetypes.guess_type(path)[0], direct_passthrough=True
+    )
+    rv.headers["Accept-Ranges"] = "bytes"
+    # rv.headers.add('Content-Range', 'bytes {0}-{1}/{2}'.format(byte1, byte1 + length - 1, size))
+    rv.headers.add(
+        "Content-Range", "bytes {0}-{1}/{2}".format(byte1, byte1 + length, size)
+    )
+
+    logging.debug(
+        " ".join(
+            [
+                "Sent!",
+                str(range_header),
+                str(size),
+                "bytes {0}-{1}/{2}".format(byte1, byte1 + length, size),
+            ]
+        )
+    )
+    return rv
+
+
+@app.route("/<string:filename>.<any(h5ad, adata, h5):ext>")
+@requires_auth
+def h5ad(filename, ext):
+    path = request.args.get("path")
+    if not path:
+        path = "./"
+    completePath = os.path.abspath(
+        os.path.join(app.basedir, path, filename) + "." + ext
+    )
+    # Check if a .h5ad file exists:
+    if not os.path.isfile(completePath):
+        abort(404)
+    if "Referer" in request.headers.keys():
+        if "h5Utils_worker.js" in request.headers["Referer"]:
+            return send_file_partial(completePath)
+
+    state = read_h5ad.h5ad_to_tmap(
+        app.basedir, os.path.join(path, filename) + "." + ext
+    )
+
+    plugins = [p["module"] for p in app.config["PLUGINS"]]
+    return render_template(
+        "tissuumaps.html",
+        plugins=plugins,
+        jsonProject=state,
+        isStandalone=app.config["isStandalone"],
+        readOnly=app.config["READ_ONLY"],
+        version=app.config["VERSION"],
+    )
+
+
+@app.route(
+    "/<path:path>.<any(h5ad, adata):ext>_files/csv/<string:type>/<string:filename>.csv"
+)
+def h5ad_csv(path, type, filename, ext):
+    completePath = os.path.join(app.basedir, path + "." + ext)
+    filename = unquote(filename)
+    csvPath = f"{completePath}_files/csv/{type}/{filename}.csv"
+    generate_csv = True
+    if os.path.isfile(csvPath):
+        if os.path.getmtime(completePath) > os.path.getmtime(csvPath):
+            # In this case, the h5ad file has been recently modified and the csv file is
+            # stale, so it must be regenerated.
+            generate_csv = True
+        else:
+            generate_csv = False
+    logging.info("Generate_csv: " + str(generate_csv))
+    if generate_csv:
+        if type == "obs":
+            read_h5ad.h5ad_obs_to_csv(app.basedir, path + "." + ext, filename)
+        elif type == "var":
+            read_h5ad.h5ad_var_to_csv(app.basedir, path + "." + ext, filename)
+        elif type == "uns":
+            read_h5ad.h5ad_uns_to_csv(app.basedir, path + "." + ext, filename)
+
+    if not os.path.isfile(csvPath):
+        abort(404)
+    directory = os.path.dirname(csvPath)
+    filename = os.path.basename(csvPath)
+    return send_from_directory(directory, filename)
+
+
+def exportToStatic(state, folderpath, previouspath):
+    imgFiles = []
+    otherFiles = []
+
+    def addRelativePath(state, relativePath):
+        nonlocal imgFiles, otherFiles
+
+        def addRelativePath_aux(state, path, isImg):
+            nonlocal imgFiles, otherFiles
+            if not path[0] in state.keys():
+                return
+            if len(path) == 1:
+                if path[0] not in state.keys():
+                    return
+                if isinstance(state[path[0]], list):
+                    if isImg:
+                        imgFiles += [s for s in state[path[0]]]
+                        state[path[0]] = [
+                            "data/images/"
+                            + os.path.basename(s.replace("/", "_").replace("\\", "_"))
+                            for s in state[path[0]]
+                        ]
+                    else:
+                        otherFiles += [relativePath + "/" + s for s in state[path[0]]]
+                        state[path[0]] = [
+                            "data/files/" + os.path.basename(s) for s in state[path[0]]
+                        ]
+
+                else:
+                    if isImg:
+                        imgFiles += [state[path[0]]]
+                        state[path[0]] = "data/images/" + os.path.basename(
+                            state[path[0]].replace("/", "_").replace("\\", "_")
+                        )
+                    else:
+                        otherFiles += [state[path[0]]]
+                        state[path[0]] = "data/files/" + os.path.basename(
+                            state[path[0]]
+                        )
+                return
+            else:
+                if path[0] not in state.keys():
+                    return
+                if isinstance(state[path[0]], list):
+                    for state_ in state[path[0]]:
+                        addRelativePath_aux(state_, path[1:], isImg)
+                else:
+                    addRelativePath_aux(state[path[0]], path[1:], isImg)
+
+        try:
+            relativePath = relativePath.replace("\\", "/")
+            paths = [
+                ["layers", "tileSource"],
+                ["markerFiles", "path"],
+                ["regionFiles", "path"],
+                ["regionFile"],
+            ]
+            for path in paths:
+                addRelativePath_aux(state, path, path[0] == "layers")
+        except:
+            import traceback
+
+            logging.error(traceback.format_exc())
+
+        return state
+
+    if not folderpath:
+        return {"success": False, "error": "Directory not found"}
+    try:
+        relativePath = os.path.relpath(previouspath, os.path.dirname(folderpath))
+        state = addRelativePath(json.loads(state), relativePath)
+
+        os.makedirs(os.path.join(folderpath, "data/images"), exist_ok=True)
+        os.makedirs(os.path.join(folderpath, "data/files"), exist_ok=True)
+        for image in imgFiles:
+            image = image.replace(".dzi", "")
+            ImageConverter(
+                os.path.join(previouspath, image),
+                os.path.join(
+                    folderpath,
+                    "data/images",
+                    os.path.basename(image.replace("/", "_").replace("\\", "_")),
+                ),
+            ).convertToDZI()
+        for file in set(otherFiles):
+            m = re.match(
+                r"(.*)\.(h5ad|adata)_files(\/*|\\*)csv(\/*|\\*)(obs|var)(\/*|\\*)(.*).csv",
+                file,
+            )
+            if m is not None:
+                try:
+                    h5ad_csv(
+                        previouspath + "/" + m.group(1),
+                        m.group(5),
+                        m.group(7),
+                        m.group(2),
+                    )
+                except:
+                    pass
+            copyfile(
+                os.path.join(previouspath, file),
+                os.path.join(folderpath, "data/files", os.path.basename(file)),
+            )
+        import zipfile
+
+        if getattr(sys, "frozen", False):
+            mainFolderPath = sys._MEIPASS
+        else:
+            mainFolderPath = os.path.dirname(pathlib.Path(__file__))
+
+        with app.app_context():
+            index = render_template(
+                "tissuumaps.html",
+                plugins=[],
+                jsonProject=state,
+                isStandalone=False,
+                readOnly=True,
+                version=app.config["VERSION"],
+            )
+        # Replace /static with static:
+        index = index.replace('"/static/', '"static/')
+
+        with open(folderpath + "/index.html", "w") as f:
+            f.write(index)
+
+        for dir in ["css", "js", "misc", "vendor"]:
+            copytree(
+                os.path.join(mainFolderPath, "static", dir),
+                os.path.join(folderpath, "static", dir),
+                dirs_exist_ok=True,
+            )
+
+        return {"success": True}
+    except:
+        import traceback
+
+        return {"success": False, "error": traceback.format_exc()}
 
 
 def load_plugin(name):

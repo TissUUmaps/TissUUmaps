@@ -135,6 +135,11 @@ HTMLElementUtils.selectTypeDropDown = function (params) {
             select.addEventListener(message, eventListeners[message]);
         }
     }
+    if (params.extraAttributes) {
+        for (var attr in params.extraAttributes) {
+            select.setAttribute(attr, params.extraAttributes[attr]);
+        }
+    }
     return select;
 }
 
@@ -226,11 +231,11 @@ HTMLElementUtils.createColumn = function (params) {
         column.setAttribute("class", "col-xs-" + width + " col-sm-" + width + " col-md-" + width + " col-lg-" + width);
     }
     if (params.extraAttributes) {
-        for (var attr in extraAttributes) {
+        for (var attr in params.extraAttributes) {
             if (attr == "class")
-                element.setAttribute('class', element.getAttribute('class') + ' ' + extraAttributes[attr]);
+                column.setAttribute('class', column.getAttribute('class') + ' ' + params.extraAttributes[attr]);
             else
-                row.setAttribute(attr, extraAttributes[attr]);
+                column.setAttribute(attr, params.extraAttributes[attr]);
         }
     }
     return column;
@@ -301,9 +306,7 @@ HTMLElementUtils.determinsticHTMLColor = function (key) {
     var U = 0; var V = 0; var y = 128;
 
     if (!isNaN(parseInt(key))) {
-        console.log("b",key);
         key = parseInt(key,10).toString(4).split("").reverse().join("");
-        console.log("a",key);
     }
     
     var maincolor = key.charAt(0).toLowerCase();

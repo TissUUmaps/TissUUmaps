@@ -1,14 +1,21 @@
 import logging
+import sys
+import traceback
 import warnings
 
+debug_logger = logging.getLogger("root")
+debug_logger.write = debug_logger.debug  # consider all prints as debug information
+debug_logger.flush = lambda: None  # this may be called when printing
+sys.stdout = debug_logger
+
 try:
-    from PyQt5 import QtGui
-    from PyQt5.QtCore import *
-    from PyQt5.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
-    from PyQt5.QtWebChannel import QWebChannel
-    from PyQt5.QtWebEngineWidgets import *
-    from PyQt5.QtWidgets import (
-        QAction,
+    from PyQt6 import QtGui
+    from PyQt6.QtCore import *
+    from PyQt6.QtGui import QAction, QDesktopServices, QStandardItem, QStandardItemModel
+    from PyQt6.QtWebChannel import QWebChannel
+    from PyQt6.QtWebEngineCore import *
+    from PyQt6.QtWebEngineWidgets import *
+    from PyQt6.QtWidgets import (
         QApplication,
         QDialog,
         QDialogButtonBox,
@@ -30,7 +37,8 @@ try:
 
 except ImportError:
     # dependency missing, issue a warning
-    logging.error("dependency not found, please install PyQt5 to enable gui")
+    logging.error("dependency not found, please install PyQt6 to enable gui")
+    logging.error(traceback.format_exc())
     import sys
 
     sys.exit()
@@ -38,7 +46,9 @@ except ImportError:
 import json
 import os
 import pathlib
+import platform
 import random
+import re
 import socket
 import string
 import subprocess
@@ -50,7 +60,6 @@ import urllib.request
 from functools import partial
 from optparse import OptionParser
 from pathlib import Path
-from shutil import copyfile
 from urllib.parse import parse_qs, urlparse
 
 # Don't remove this line.  The idna encoding
@@ -120,7 +129,9 @@ class SelectPluginWindow(QDialog):
             form = QFormLayout(self)
             form.addRow(QLabel("Plugin site:"))
             self.textbox = QLineEdit(self)
-            self.textbox.setText("https://tissuumaps.github.io/TissUUmaps/plugins/")
+            self.textbox.setText(
+                "https://tissuumaps.github.io/TissUUmaps/plugins/latest/"
+            )
             form.addRow(self.textbox)
 
             # Create a button in the window
@@ -135,7 +146,10 @@ class SelectPluginWindow(QDialog):
             form.addRow(self.listView)
 
             buttonBox = QDialogButtonBox(
-                QDialogButtonBox.Ok | QDialogButtonBox.Cancel, Qt.Horizontal, self
+                QDialogButtonBox.StandardButton.Ok
+                | QDialogButtonBox.StandardButton.Cancel,
+                Qt.Orientation.Horizontal,
+                self,
             )
             form.addRow(buttonBox)
             buttonBox.accepted.connect(self.accept)
@@ -143,8 +157,6 @@ class SelectPluginWindow(QDialog):
 
             self.getPlugins()
         except:
-            import traceback
-
             logging.error(traceback.format_exc())
 
     def getPlugins(self):
@@ -180,7 +192,9 @@ class SelectPluginWindow(QDialog):
                     standardItem = QStandardItem(item["name"])
 
                 standardItem.setCheckState(
-                    Qt.Checked if not updateAvailable else Qt.Unchecked
+                    Qt.CheckState.Checked
+                    if not updateAvailable
+                    else Qt.CheckState.Unchecked
                 )
                 if updateAvailable:
                     standardItem.setCheckable(True)
@@ -189,8 +203,6 @@ class SelectPluginWindow(QDialog):
                 model.appendRow(standardItem)
             self.listView.setModel(model)
         except:
-            import traceback
-
             try:
                 QMessageBox.warning(self, "Error", traceback.format_exc())
             except:
@@ -231,7 +243,9 @@ class MainWindow(QMainWindow):
         file = self.bar.addMenu("File")
 
         _open = QAction(
-            self.style().standardIcon(QStyle.SP_DialogOpenButton), "Open", self
+            self.style().standardIcon(QStyle.StandardPixmap.SP_DialogOpenButton),
+            "Open",
+            self,
         )
         _open.setShortcut("Ctrl+O")
         file.addAction(_open)
@@ -249,7 +263,9 @@ class MainWindow(QMainWindow):
         self.browser.updateRecent()
 
         _save = QAction(
-            self.style().standardIcon(QStyle.SP_DialogSaveButton), "Save project", self
+            self.style().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton),
+            "Save project",
+            self,
         )
         _save.setShortcut("Ctrl+S")
         file.addAction(_save)
@@ -260,7 +276,7 @@ class MainWindow(QMainWindow):
         _save.triggered.connect(trigger)
 
         _close = QAction(
-            self.style().standardIcon(QStyle.SP_DockWidgetCloseButton),
+            self.style().standardIcon(QStyle.StandardPixmap.SP_DockWidgetCloseButton),
             "Close file",
             self,
         )
@@ -270,7 +286,7 @@ class MainWindow(QMainWindow):
         file.addSeparator()
 
         _export = QAction(
-            self.style().standardIcon(QStyle.SP_FileDialogListView),
+            self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogListView),
             "Capture viewport",
             self,
         )
@@ -282,7 +298,7 @@ class MainWindow(QMainWindow):
         _export.triggered.connect(trigger)
 
         _export = QAction(
-            self.style().standardIcon(QStyle.SP_DirLinkIcon),
+            self.style().standardIcon(QStyle.StandardPixmap.SP_DirLinkIcon),
             "Export to static webpage",
             self,
         )
@@ -306,7 +322,9 @@ class MainWindow(QMainWindow):
         file.addSeparator()
 
         _exit = QAction(
-            self.style().standardIcon(QStyle.SP_DialogCancelButton), "Exit", self
+            self.style().standardIcon(QStyle.StandardPixmap.SP_DialogCancelButton),
+            "Exit",
+            self,
         )
         _exit.setShortcut("Ctrl+Q")
         file.addAction(_exit)
@@ -327,7 +345,9 @@ class MainWindow(QMainWindow):
 
         about = self.bar.addMenu("About")
         _help = QAction(
-            self.style().standardIcon(QStyle.SP_DialogHelpButton), "Help", self
+            self.style().standardIcon(QStyle.StandardPixmap.SP_DialogHelpButton),
+            "Help",
+            self,
         )
         about.addAction(_help)
 
@@ -336,7 +356,9 @@ class MainWindow(QMainWindow):
 
         _help.triggered.connect(trigger)
         _version = QAction(
-            self.style().standardIcon(QStyle.SP_FileDialogInfoView), "Version", self
+            self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogInfoView),
+            "Version",
+            self,
         )
         about.addAction(_version)
 
@@ -355,7 +377,9 @@ class MainWindow(QMainWindow):
         if self.app.config["DEBUG_CLI"]:
             debug = self.bar.addMenu("Debug")
             _debugpage = QAction(
-                self.style().standardIcon(QStyle.SP_FileDialogContentsView),
+                self.style().standardIcon(
+                    QStyle.StandardPixmap.SP_FileDialogContentsView
+                ),
                 "Open external debugging",
                 self,
             )
@@ -385,7 +409,7 @@ class MainWindow(QMainWindow):
         logging.debug("Adding plugins")
         try:
             dial = SelectPluginWindow(self.app, self)
-            if dial.exec_() == QDialog.Accepted:
+            if dial.exec() == QDialog.DialogCode.Accepted:
                 changed = False
                 for plugin in dial.itemsSelected():
                     if plugin["updateAvailable"]:
@@ -407,8 +431,6 @@ class MainWindow(QMainWindow):
                         "The new plugins will only be available after restarting TissUUmaps.",
                     )
         except:
-            import traceback
-
             logging.error(traceback.format_exc())
 
 
@@ -485,11 +507,12 @@ class webEngine(QWebEngineView):
         self.args = args
         self.maxRecent = 25
         self.setMinimumSize(800, 400)
-        self.setContextMenuPolicy(Qt.NoContextMenu)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         self.lastdir = str(Path.home())
         profile = QWebEngineProfile().defaultProfile()
-        profile.setHttpCacheType(QWebEngineProfile.DiskHttpCache)
-        self.setPage(CustomWebEnginePage(profile, self))
+
+        # profile.setHttpCacheType(QWebEngineProfile.DiskHttpCache)
+        # self.setPage(CustomWebEnginePage(profile, self))
         self.webchannel = QWebChannel()
         self.page().setWebChannel(self.webchannel)
         self.webchannel.registerObject("backend", self)
@@ -497,14 +520,16 @@ class webEngine(QWebEngineView):
         self.mainWin = mainWin
 
         self.mainWin.setWindowTitle("TissUUmaps")
-        self.mainWin.resize(1024, 800)
-        self.setZoomFactor(1.0)
-        profile.clearHttpCache()
+        # self.mainWin.resize(1024, 800)
+        # self.setZoomFactor(1.0)
+        # profile.clearHttpCache()
         profile.downloadRequested.connect(self.on_downloadRequested)
-        self.settings().setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)
+        self.settings().setAttribute(
+            QWebEngineSettings.WebAttribute.FullScreenSupportEnabled, True
+        )
 
         def setfullscreen(request):
-            if self.mainWin.windowState() & Qt.WindowFullScreen:
+            if self.mainWin.windowState() & Qt.WindowState.WindowFullScreen:
                 self.mainWin.showMaximized()
                 self.mainWin.bar.setVisible(True)
             else:
@@ -515,7 +540,6 @@ class webEngine(QWebEngineView):
         self.page().fullScreenRequested.connect(setfullscreen)
 
         self.mainWin.setWindowIcon(QtGui.QIcon("static/misc/favicon.ico"))
-        # self.showMaximized()
 
     def addRecent(self, path):
         os.makedirs(os.path.join(os.path.expanduser("~"), ".tissuumaps"), exist_ok=True)
@@ -523,8 +547,14 @@ class webEngine(QWebEngineView):
             os.path.expanduser("~"), ".tissuumaps", "recents.json"
         )
         if os.path.isfile(recentFile):
-            with open(recentFile) as f:
-                recentFiles = json.load(f)
+            try:
+                with open(recentFile) as f:
+                    recentFiles = json.load(f)
+            except:
+                logging.warning(
+                    f"Impossible to load: {recentFile}. TissUUmaps will create a new one."
+                )
+                recentFiles = []
         else:
             recentFiles = []
         if path in recentFiles:
@@ -540,8 +570,14 @@ class webEngine(QWebEngineView):
             os.path.expanduser("~"), ".tissuumaps", "recents.json"
         )
         if os.path.isfile(recentFile):
-            with open(recentFile) as f:
-                recentFiles = json.load(f)
+            try:
+                with open(recentFile) as f:
+                    recentFiles = json.load(f)
+            except:
+                logging.warning(
+                    f"Impossible to load: {recentFile}. TissUUmaps will create a new one."
+                )
+                recentFiles = []
         else:
             recentFiles = []
 
@@ -568,14 +604,14 @@ class webEngine(QWebEngineView):
 
     def dragMoveEvent(self, event):
         if event.mimeData().hasUrls:
-            event.setDropAction(Qt.CopyAction)
+            event.setDropAction(Qt.DropAction.CopyAction)
             event.accept()
         else:
             event.ignore()
 
     def dropEvent(self, event):
         if event.mimeData().hasUrls:
-            event.setDropAction(Qt.CopyAction)
+            event.setDropAction(Qt.DropAction.CopyAction)
             event.accept()
             links = []
             for url in event.mimeData().urls():
@@ -583,6 +619,8 @@ class webEngine(QWebEngineView):
             for link in links:
                 filename, file_extension = os.path.splitext(link)
                 if file_extension == ".tmap":
+                    self.openImagePath(link)
+                elif file_extension == ".h5ad":
                     self.openImagePath(link)
                 elif file_extension == ".csv":
                     self.page().runJavaScript(f'flask.standalone.addCSV("{link}");')
@@ -593,13 +631,16 @@ class webEngine(QWebEngineView):
             event.ignore()
 
     def on_downloadRequested(self, download):
-        old_path = download.path()  # download.path()
-        suffix = QFileInfo(old_path).suffix()
+        old_path = os.path.join(
+            download.downloadDirectory(), download.downloadFileName()
+        )
+        suffix = os.path.splitext(old_path)[1]
         path, _ = QFileDialog.getSaveFileName(
             self, "Save File", old_path, "*." + suffix
         )
         if path:
-            download.setPath(path)
+            download.setDownloadDirectory(os.path.dirname(path))
+            download.setDownloadFileName(os.path.basename(path))
             download.accept()
 
             def openImageThread():
@@ -617,9 +658,6 @@ class webEngine(QWebEngineView):
                     subprocess.call([opener, os.path.normpath(path)])
 
             threading.Thread(target=openImageThread, daemon=True).start()
-
-    def run(self):
-        sys.exit(self.qt_app.exec_())
 
     def setLocation(self, location):
         self.location = location
@@ -643,123 +681,29 @@ class webEngine(QWebEngineView):
         self.openImagePath(folderpath)
 
     def closeImage(self):
+        self.app.basedir = os.path.abspath(self.app.config["SLIDE_DIR"])
         self.load(QUrl(self.location))
         self.mainWin.setWindowTitle("TissUUmaps")
 
-    @pyqtSlot(str)
+    @pyqtSlot(str, result="QJsonObject")
     def exportToStatic(self, state):
-        imgFiles = []
-        otherFiles = []
-
-        def addRelativePath(state, relativePath):
-            nonlocal imgFiles, otherFiles
-
-            def addRelativePath_aux(state, path, isImg):
-                nonlocal imgFiles, otherFiles
-                if not path[0] in state.keys():
-                    return
-                if len(path) == 1:
-                    if path[0] not in state.keys():
-                        return
-                    if isinstance(state[path[0]], list):
-                        if isImg:
-                            imgFiles += [s for s in state[path[0]]]
-                            state[path[0]] = [
-                                "data/images/" + os.path.basename(s)
-                                for s in state[path[0]]
-                            ]
-                        else:
-                            otherFiles += [
-                                relativePath + "/" + s for s in state[path[0]]
-                            ]
-                            state[path[0]] = [
-                                "data/files/" + os.path.basename(s)
-                                for s in state[path[0]]
-                            ]
-
-                    else:
-                        if isImg:
-                            imgFiles += [state[path[0]]]
-                            state[path[0]] = "data/images/" + os.path.basename(
-                                state[path[0]]
-                            )
-                        else:
-                            otherFiles += [state[path[0]]]
-                            state[path[0]] = "data/files/" + os.path.basename(
-                                state[path[0]]
-                            )
-                    return
-                else:
-                    if path[0] not in state.keys():
-                        return
-                    if isinstance(state[path[0]], list):
-                        for state_ in state[path[0]]:
-                            addRelativePath_aux(state_, path[1:], isImg)
-                    else:
-                        addRelativePath_aux(state[path[0]], path[1:], isImg)
-
-            try:
-                relativePath = relativePath.replace("\\", "/")
-                paths = [
-                    ["layers", "tileSource"],
-                    ["markerFiles", "path"],
-                    ["regionFiles", "path"],
-                    ["regionFile"],
-                ]
-                for path in paths:
-                    addRelativePath_aux(state, path, path[0] == "layers")
-            except:
-                import traceback
-
-                logging.error(traceback.format_exc())
-
-            return state
-
-        parsed_url = urlparse(self.url().toString())
-        previouspath = parse_qs(parsed_url.query)["path"][0]
+        try:
+            parsed_url = urlparse(self.url().toString())
+            previouspath = parse_qs(parsed_url.query)["path"][0]
+        except:
+            previouspath = "./"
         previouspath = os.path.abspath(os.path.join(self.app.basedir, previouspath))
 
         folderpath = QFileDialog.getExistingDirectory(
             self,
             "Select webpage directory",
             self.lastdir,
-            options=QFileDialog.ShowDirsOnly,
+            options=QFileDialog.Option.ShowDirsOnly,
         )
-
-        if not folderpath:
-            return {}
         try:
-            relativePath = os.path.relpath(previouspath, os.path.dirname(folderpath))
-            state = addRelativePath(json.loads(state), relativePath)
-
-            with open(folderpath + "/project.tmap", "w") as f:
-                json.dump(state, f, indent=4)
-            os.makedirs(os.path.join(folderpath, "data/images"), exist_ok=True)
-            os.makedirs(os.path.join(folderpath, "data/files"), exist_ok=True)
-            for image in imgFiles:
-                image = image.replace(".dzi", "")
-                views.ImageConverter(
-                    os.path.join(previouspath, image),
-                    os.path.join(folderpath, "data/images", os.path.basename(image)),
-                ).convertToDZI()
-            for file in otherFiles:
-                copyfile(
-                    os.path.join(previouspath, file),
-                    os.path.join(folderpath, "data/files", os.path.basename(file)),
-                )
-            import zipfile
-
-            if getattr(sys, "frozen", False):
-                folderPath = sys._MEIPASS
-            else:
-                folderPath = os.path.dirname(pathlib.Path(__file__))
-            with zipfile.ZipFile(os.path.join(folderPath, "web.zip"), "r") as zip_ref:
-                zip_ref.extractall(folderpath)
-            # QMessageBox.about(self, "Information", "Export done!")
+            return views.exportToStatic(state, folderpath, previouspath)
         except:
-            import traceback
-
-            logging.error(traceback.format_exc())
+            return {"success": False, "error": traceback.format_exc()}
 
     @pyqtSlot(str)
     def saveProject(self, state):
@@ -799,8 +743,6 @@ class webEngine(QWebEngineView):
                 for path in paths:
                     addRelativePath_aux(state, path)
             except:
-                import traceback
-
                 logging.error(traceback.format_exc())
 
             return state
@@ -830,7 +772,7 @@ class webEngine(QWebEngineView):
         self.addRecent(folderpath)
         parts = Path(folderpath).parts
         if not hasattr(self.app, "cache"):
-            setup(self.app)
+            views.setup(self.app)
         self.app.basedir = parts[0]
         imgPath = os.path.join(*parts[1:])
         imgPath = imgPath.replace("\\", "/")
@@ -861,6 +803,7 @@ class webEngine(QWebEngineView):
 
         filename = os.path.basename(imgPath)
         path = os.path.dirname(imgPath)
+        self.page().runJavaScript("flask.server.loading('Opening image...');")
         self.load(QUrl(self.location + filename + "?path=" + path))
         self.mainWin.setWindowTitle("TissUUmaps - " + os.path.basename(folderpath))
         return True
@@ -868,7 +811,6 @@ class webEngine(QWebEngineView):
     @pyqtSlot()
     def exit(self):
         self.close()
-        # sys.exit()
 
     @pyqtSlot(str, str, result="QJsonObject")
     def addCSV(self, path, csvpath):
@@ -878,29 +820,28 @@ class webEngine(QWebEngineView):
             returnDict = {"markerFile": None}
             return returnDict
         parts = Path(csvpath).parts
-        if self.app.basedir != parts[0]:
-            if not self.app.basedir == "C:\mnt\data\shared":
-                QMessageBox.warning(
-                    self, "Error", "All files must be in the same drive."
-                )
-                returnDict = {"markerFile": None}
-                return returnDict
-            else:
-                self.app.basedir = parts[0]
-        imgPath = os.path.join(*parts[1:])
+        if parts[0] == "https:":
+            imgPath = parts[-1]
+            relativePath = "/".join(parts[:-1])
 
-        path = os.path.abspath(os.path.join(self.app.basedir, path))
-        imgPath = os.path.abspath(os.path.join(self.app.basedir, imgPath))
+        else:
+            if self.app.basedir != parts[0]:
+                if not self.app.basedir == os.path.abspath(
+                    self.app.config["SLIDE_DIR"]
+                ):
+                    QMessageBox.warning(
+                        self, "Error", "All files must be in the same drive."
+                    )
+                    returnDict = {"markerFile": None}
+                    return returnDict
+                else:
+                    self.app.basedir = parts[0]
+            imgPath = os.path.join(*parts[1:])
 
-        relativePath = os.path.relpath(os.path.dirname(imgPath), path)
+            path = os.path.abspath(os.path.join(self.app.basedir, path))
+            imgPath = os.path.abspath(os.path.join(self.app.basedir, imgPath))
 
-        if ".." in relativePath:
-            QMessageBox.warning(
-                self, "Error", "Impossible to add files from a parent folder."
-            )
-            returnDict = {"markerFile": None}
-            return returnDict
-
+            relativePath = os.path.relpath(os.path.dirname(imgPath), path)
         returnDict = {
             "markerFile": {
                 "name": os.path.basename(imgPath),
@@ -919,14 +860,13 @@ class webEngine(QWebEngineView):
             return returnDict
         parts = Path(layerpath).parts
         if self.app.basedir != parts[0]:
-            if not self.app.basedir == "C:\mnt\data\shared":
+            if not self.app.basedir == os.path.abspath(self.app.config["SLIDE_DIR"]):
                 reply = QMessageBox.question(
                     self,
                     "Error",
                     "All layers must be in the same drive. Would you like to open this image only?",
                 )
-                reply = reply == QMessageBox.Yes
-                if reply:
+                if reply == QMessageBox.StandardButton.Yes:
                     self.openImagePath(layerpath)
                 returnDict = {"dzi": None, "name": None}
                 return returnDict
@@ -938,8 +878,6 @@ class webEngine(QWebEngineView):
         try:
             views._get_slide(imgPath)
         except:
-            import traceback
-
             logging.error(traceback.format_exc())
             QMessageBox.about(
                 self, "Error", "TissUUmaps did not manage to open this image."
@@ -1098,25 +1036,24 @@ def main():
     qInstallMessageHandler(lambda x, y, z: None)
 
     fmt = QtGui.QSurfaceFormat()
-    fmt.setColorSpace(QtGui.QSurfaceFormat.sRGBColorSpace)
-    fmt.setVersion(4, 1)
-
-    fmt.setProfile(QtGui.QSurfaceFormat.CoreProfile)
-    fmt.setSamples(4)
+    if platform.system() == "Darwin":
+        fmt.setProfile(QtGui.QSurfaceFormat.OpenGLContextProfile.CoreProfile)
+        fmt.setVersion(4, 1)
+    fmt.setSwapBehavior(QtGui.QSurfaceFormat.SwapBehavior.DoubleBuffer)
     QtGui.QSurfaceFormat.setDefaultFormat(fmt)
+    QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
 
-    vp = QtGui.QOpenGLVersionProfile(fmt)
-    os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--no-sandbox"
+    os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--no-sandbox --ignore-gpu-blacklist"
     qt_app = QApplication(sys.argv)
 
     logo = QtGui.QPixmap("static/misc/design/logo.png")
-    logo = logo.scaledToWidth(512, Qt.SmoothTransformation)
-    splash = QSplashScreen(logo, Qt.WindowStaysOnTopHint)
+    logo = logo.scaledToWidth(512, Qt.TransformationMode.SmoothTransformation)
+    splash = QSplashScreen(logo, Qt.WindowType.WindowStaysOnTopHint)
 
-    desktop = qt_app.desktop()
-    scrn = desktop.screenNumber(QtGui.QCursor.pos())
-    currentDesktopsCenter = desktop.availableGeometry(scrn).center()
-    splash.move(currentDesktopsCenter - splash.rect().center())
+    # desktop = qt_app.desktop()
+    # scrn = desktop.screenNumber(QtGui.QCursor.pos())
+    # currentDesktopsCenter = desktop.availableGeometry(scrn).center()
+    # splash.move(currentDesktopsCenter - splash.rect().center())
 
     splash.show()
     # splash.showMessage('Loading TissUUmaps...',Qt.AlignBottom | Qt.AlignCenter,Qt.white)
@@ -1132,6 +1069,7 @@ def main():
     logging.info("Ending port detection " + str(port))
 
     def flaskThread():
+        views.setup(views.app)
         views.app.run(host="127.0.0.1", port=port, threaded=True, debug=False)
 
     threading.Thread(target=flaskThread, daemon=True).start()
@@ -1140,7 +1078,7 @@ def main():
     ui.browser.setLocation("http://127.0.0.1:" + str(port) + "/")
 
     QTimer.singleShot(1000, splash.close)
-    ui.browser.run()
+    qt_app.exec()
 
 
 if __name__ == "__main__":

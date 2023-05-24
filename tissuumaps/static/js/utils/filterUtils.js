@@ -9,10 +9,12 @@
  * @property {Bool}   filterUtils._filtersUsed - 
  * @property {Object} filterUtils._filters - 
  * @property {Object} filterUtils._filterItems - 
+ * @property {String} filterUtils._compositeMode - 
  */
  filterUtils = {
     // Choose between ["Brightness", "Exposure", "Hue", "Contrast", "Vibrance", "Noise", 
-    //                 "Saturation","Gamma","Invert","Greyscale","Threshold","Erosion","Dilation"]
+    //                 "Saturation","Gamma","Invert","Greyscale","Threshold","Erosion","Dilation",
+    //                 "Colormap", "SplitChannel"]
     _filtersUsed: ["Saturation","Brightness","Contrast"],
     _filters: {
         "Color":{
@@ -226,11 +228,74 @@
                 if (value == 1) {  return function (context, callback) {callback();}}
                 return OpenSeadragon.Filters.MORPHOLOGICAL_OPERATION(value, Math.max);
             }
+        },
+        "Colormap":{
+            // Note: this filter will use the same colormaps as those for the markers
+            params:{
+                type:"select",
+                options: ["None"].concat(dataUtils._d3LUTs.map(function(str) {
+                    return str.replace("interpolate", "");
+                })),
+                value:"0"
+            },
+            filterFunction: function (value) {
+                if (value == 0) { return function (context, callback) {callback();}}
+                else {
+                    let colorscaleName = dataUtils._d3LUTs[value - 1];
+                    console.assert(colorscaleName != undefined);
+
+                    let cmap = [];
+                    for (let i = 0; i < 256; ++i) {
+                        const color = d3[colorscaleName](i / 255.0);
+                        const hexColor = glUtils._formatHex(color);  // D3 sometimes returns RGB strings
+                        const r = Number("0x" + hexColor.substring(1,3));
+                        const g = Number("0x" + hexColor.substring(3,5));
+                        const b = Number("0x" + hexColor.substring(5,7));
+                        cmap.push([r, g, b]);
+                    }
+                    return OpenSeadragon.Filters.COLORMAP(cmap, 128);
+                }
+            }
+        },
+        "SplitChannel":{
+            params:{
+                type:"select",
+                options: ["None","R","G","B"],
+                value:"None"
+            },
+            filterFunction: function (value) {
+                console.log(value);
+                if (value == 0) { return function (context, callback) {callback();}}
+                else {
+                    return function(context, callback) {
+                        Caman(context.canvas, function() {
+                            this.splitChannel(value);
+                            this.render(callback);
+                        });
+                    }
+                }
+            }
         }
     },
     _filterItems:{},
+    _lastFilters:{},
     _compositeMode:"source-over"
 }
+
+Caman.Filter.register("splitChannel", function (channelValue) {
+    this.process("splitChannel", function (rgba) {
+        let channel = null;
+        if (channelValue == 1) {channel = rgba.r};
+        if (channelValue == 2) {channel = rgba.g};
+        if (channelValue == 3) {channel = rgba.b};
+        rgba.r = channel;
+        rgba.g = channel;
+        rgba.b = channel;
+    
+        // Return the modified RGB values
+        return rgba;
+    });
+});
 
 /** 
  * Initialize list of filters
@@ -285,8 +350,31 @@
         },
         id: "filterCompositeMode",
         options:[
-            {text:"Channels", value:"source-over"},
-            {text:"Composite", value:"lighter"}
+            {text:"source-over", value:"source-over"},
+            {text:"lighter", value:"lighter"},
+            {text:"darken", value:"darken"},
+            {text:"source-atop", value:"source-atop"},
+            {text:"source-in", value:"source-in"},
+            {text:"source-out", value:"source-out"},
+            {text:"destination-over", value:"destination-over"},
+            {text:"destination-atop", value:"destination-atop"},
+            {text:"destination-in", value:"destination-in"},
+            {text:"destination-out", value:"destination-out"},
+            {text:"copy", value:"copy"},
+            {text:"xor", value:"xor"},
+            {text:"multiply", value:"multiply"},
+            {text:"screen", value:"screen"},
+            {text:"overlay", value:"overlay"},
+            {text:"color-dodge", value:"color-dodge"},
+            {text:"color-burn", value:"color-burn"},
+            {text:"hard-light", value:"hard-light"},
+            {text:"soft-light", value:"soft-light"},
+            {text:"difference", value:"difference"},
+            {text:"exclusion", value:"exclusion"},
+            {text:"hue", value:"hue"},
+            {text:"saturation", value:"saturation"},
+            {text:"color", value:"color"},
+            {text:"luminosity", value:"luminosity"}
         ]
     }
     var label = document.createElement("label");
@@ -330,34 +418,43 @@ filterUtils.getFilterFunction = function(filterName) {
 	caman.Store.put = function() {};
 
     var op = tmapp["object_prefix"];
-    if (!tmapp[op + "_viewer"].world || !tmapp[op + "_viewer"].world.getItemAt(Object.keys(filterUtils._filterItems).length-1)) {
-        setTimeout(function() {
-            if (calledItems == filterUtils._filterItems)
-                filterUtils.applyFilterItems(calledItems);
-        }, 100);
-        return;
-    }
-    filters = [];
-    for (const layer in filterUtils._filterItems) {
-        processors = [];
-        for(var filterIndex=0;filterIndex<filterUtils._filterItems[layer].length;filterIndex++) {
-            processors.push(
-                filterUtils._filterItems[layer][filterIndex].filterFunction(filterUtils._filterItems[layer][filterIndex].value)
-            );
+    overlayUtils.waitLayersReady().then(() => {    
+        if (JSON.stringify(filterUtils._lastFilters) == JSON.stringify(filterUtils._filterItems)) {
+            return;
         }
-        filters.push({
-            items: tmapp[op + "_viewer"].world.getItemAt(layer),
-            processors: processors
+        filters = [];
+        for (const layer in filterUtils._filterItems) {
+            processors = [];
+            for(var filterIndex=0;filterIndex<filterUtils._filterItems[layer].length;filterIndex++) {
+                processors.push(
+                    filterUtils._filterItems[layer][filterIndex].filterFunction(filterUtils._filterItems[layer][filterIndex].value)
+                );
+            }
+            filters.push({
+                items: tmapp[op + "_viewer"].world.getItemAt(layer),
+                processors: processors,
+                toReset: true //JSON.stringify(filterUtils._lastFilters[layer]) != JSON.stringify(filterUtils._filterItems[layer])
+            });
+        };
+        tmapp[op + "_viewer"].setFilterOptions({
+            filters: filters,
+            loadMode: "async"
         });
-    };
-    tmapp[op + "_viewer"].setFilterOptions({
-        filters: filters,
-        loadMode: "async"
-    });
-    for ( var i = 0; i < tmapp[op + "_viewer"].world._items.length; i++ ) {
-        tmapp[op + "_viewer"].world._items[i].tilesMatrix={};
-        tmapp[op + "_viewer"].world._items[i]._needsDraw = true;
-    }
+        for ( var i = 0; i < tmapp[op + "_viewer"].world._items.length; i++ ) {
+            if (filterUtils._lastFilters[i]) {
+                console.log(filters[i].toReset)
+                if (! filters[i].toReset) {
+                    continue;
+                }
+            }
+            tmapp[op + "_viewer"].world._items[i].tilesMatrix={};
+            tmapp[op + "_viewer"].world._items[i]._needsDraw = true;
+        }
+        filterUtils._lastFilters = {}
+        Object.keys(filterUtils._filterItems).forEach(function(key, index) {
+            filterUtils._lastFilters[key] = JSON.parse(JSON.stringify(filterUtils._filterItems[key]));
+        });
+    })
 }
 
 /** 
@@ -380,6 +477,7 @@ filterUtils.getFilterFunction = function(filterName) {
                         return hex.length == 1 ? "0" + hex : hex;
                     }
                     function rgbToHex(rgb) {
+                        if (rgb == "0" || rgb == 0) {return "#FFFFFF";}
                         var array = rgb.split(',');
                         return "#" + componentToHex(array[0]) + componentToHex(array[1]) + componentToHex(array[2]);
                     }
@@ -397,70 +495,59 @@ filterUtils.getFilterFunction = function(filterName) {
  *  */
 filterUtils.getFilterItems = function() {
     var op = tmapp["object_prefix"];
-    if (!tmapp[op + "_viewer"].world || !tmapp[op + "_viewer"].world.getItemAt(tmapp[op + "_viewer"].world.getItemCount()-1)) {
-        setTimeout(function() {
-            filterUtils.getFilterItems();
-        }, 100);
-        return;
-    }
-    filterInputsRanges = document.getElementsByClassName("filterInput");
-    items = {};
-    for (i = 0; i < filterInputsRanges.length; i++) {
-        var filterLayer = filterInputsRanges[i].getAttribute("layer");
-        items[filterLayer] = []
-    }
-    for (i = 0; i < filterInputsRanges.length; i++) {
-        var filterName = filterInputsRanges[i].getAttribute("filter");
-        var filterLayer = filterInputsRanges[i].getAttribute("layer");
-        var filterFunction = filterUtils.getFilterFunction(filterName);
-        
-        if (filterInputsRanges[i].type == "range" || filterInputsRanges[i].type == "select-one")
-            inputValue = filterInputsRanges[i].value;
-        else if (filterInputsRanges[i].type == "checkbox")
-            inputValue = filterInputsRanges[i].checked;
-        else if (filterInputsRanges[i].type == "color") {
-            function hex2RGB(hex) {
-                const color = hex
-                const r = Math.floor(100*parseInt(color.substr(1,2), 16)/255)
-                const g = Math.floor(100*parseInt(color.substr(3,2), 16)/255)
-                const b = Math.floor(100*parseInt(color.substr(5,2), 16)/255)
-                console.log(hex, r+","+g+","+b);
-                return r+","+g+","+b
-              }
-            inputValue = hex2RGB(filterInputsRanges[i].value);
+    
+    overlayUtils.waitLayersReady().then(() => {    
+        filterInputsRanges = document.getElementsByClassName("filterInput");
+        items = {};
+        for (i = 0; i < filterInputsRanges.length; i++) {
+            var filterLayer = filterInputsRanges[i].getAttribute("layer");
+            items[filterLayer] = []
         }
-        if (inputValue) {
-            items[filterLayer].push(
-                {
-                    filterFunction: filterFunction,
-                    value: inputValue,
-                    name: filterName
+        for (i = 0; i < filterInputsRanges.length; i++) {
+            var filterName = filterInputsRanges[i].getAttribute("filter");
+            var filterLayer = filterInputsRanges[i].getAttribute("layer");
+            var filterFunction = filterUtils.getFilterFunction(filterName);
+            
+            if (filterInputsRanges[i].type == "range" || filterInputsRanges[i].type == "select-one")
+                inputValue = filterInputsRanges[i].value;
+            else if (filterInputsRanges[i].type == "checkbox")
+                inputValue = filterInputsRanges[i].checked;
+            else if (filterInputsRanges[i].type == "color") {
+                function hex2RGB(hex) {
+                    const color = hex
+                    const r = Math.floor(100*parseInt(color.substr(1,2), 16)/255)
+                    const g = Math.floor(100*parseInt(color.substr(3,2), 16)/255)
+                    const b = Math.floor(100*parseInt(color.substr(5,2), 16)/255)
+                    console.log(hex, r+","+g+","+b);
+                    return r+","+g+","+b
                 }
-            );
+                inputValue = hex2RGB(filterInputsRanges[i].value);
+            }
+            if (inputValue) {
+                items[filterLayer].push(
+                    {
+                        filterFunction: filterFunction,
+                        value: inputValue,
+                        name: filterName
+                    }
+                );
+            }
         }
-    }
-    filterUtils._filterItems = items;
-    filterUtils.applyFilterItems(items);
+        filterUtils._filterItems = items;
+        filterUtils.applyFilterItems(items);
+    })
 }
 
-filterUtils.setCompositeOperation = function(restart) {
+filterUtils.setCompositeOperation = function() {
     var op = tmapp["object_prefix"];
-    if (!tmapp[op + "_viewer"].world || !tmapp[op + "_viewer"].world.getItemAt(Object.keys(filterUtils._filterItems).length-1)) {
-        setTimeout(function() {
-            if (restart == undefined){
-                restart = 10;
-            }
-            if (restart > 0)
-                filterUtils.setCompositeOperation(restart-1);
-        }, 100);
-        return;
-    }
-    var filterCompositeMode = document.getElementById("filterCompositeMode");
-    filterCompositeMode.value = filterUtils._compositeMode;
-    tmapp[op + "_viewer"].compositeOperation = filterUtils._compositeMode;
-    for (i = 0; i < tmapp[op + "_viewer"].world.getItemCount(); i++) {
-        tmapp[op + "_viewer"].world.getItemAt(i).setCompositeOperation(filterUtils._compositeMode);
-    }
+    overlayUtils.waitLayersReady().then(() => {
+        var filterCompositeMode = document.getElementById("filterCompositeMode");
+        filterCompositeMode.value = filterUtils._compositeMode;
+        tmapp[op + "_viewer"].compositeOperation = filterUtils._compositeMode;
+        for (i = 0; i < tmapp[op + "_viewer"].world.getItemCount(); i++) {
+            tmapp[op + "_viewer"].world.getItemAt(i).setCompositeOperation(filterUtils._compositeMode);
+        }
+    })
 }
 
 /** Create an HTML filter */

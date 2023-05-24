@@ -10,8 +10,16 @@
     <script src="static/vendor/d3/d3.v4.min.js"></script>
     <script src="static/vendor/d3-plugins/d3-scale-chromaticV3.js"></script>
     <script src="static/vendor/jquery-3.5.1/jquery-3.5.1.min.js"></script>
-    <script src="static/vendor/chosen/chosen.jquery.min.js"></script>
-    <link rel="stylesheet" href="static/vendor/chosen/chosen.min.css" />
+    <script src="static/vendor/select2-4.1.0-rc.0/dist/js/select2.full.min.js"></script>
+    <script src="static/vendor/jquery-3.5.1/jquery.autocomplete.min.js"></script>
+    <link
+      href="static/vendor/select2-4.1.0-rc.0/dist/css/select2.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="static/vendor/jquery-3.5.1/jquery.autocomplete.css"
+    />
     <link
       rel="stylesheet"
       href="static/vendor/bootstrap-5.1.1/dist/css/bootstrap.min.css"
@@ -32,6 +40,7 @@
       class="container-fluid px-0 d-flex flex-column vh-100 overflow-hidden"
     >
       <nav
+        id="main-navbar"
         class="navbar navbar-expand-lg navbar-dark border-bottom border-dark flex-shrink-0 {% if isStandalone %}d-none{% endif %}"
       >
         <div class="container-fluid">
@@ -106,7 +115,19 @@
 
       <div class="row mx-0 flex-grow-1 overflow-hidden">
         <!-- Row for viewer  -->
-        <div class="col px-0" id="ISS_viewer_container">
+        <div class="col px-0 position-relative" id="ISS_viewer_container">
+          <a
+            id="floating-navbar-toggler"
+            class="hook in floating-menu-btn shadow navbar-dark p-2 d-none"
+            data-bs-toggle="collapse"
+            data-bs-target="#main-navbar"
+            role="button"
+            aria-expanded="false"
+            aria-controls="main-navbar"
+            href="#"
+          >
+            <span class="navbar-toggler-icon"></span>
+          </a>
           <!-- The id is what OSD will look for to draw the viewer, the class is our own css to stylize
                 The ID will give the prefix for all the objects related to the viewer in this case ISS-->
           <div id="ISS_viewer" class="ISS_viewer h-100"></div>
@@ -443,17 +464,32 @@
       <!-- end of single row -->
     </div>
     <!-- end of container-fuild-->
+    <div
+      id="powered_by_tissuumaps"
+      class="d-none"
+      style="left: 10px; bottom: 10px; z-index: 100"
+    >
+      <div class="px-1 me-3 viewer-layer">
+        <small
+          ><img src="static/misc/logo.svg" height="22px" /> Powered by
+          <a href="https://tissuumaps.github.io/" target="_blank"
+            >TissUUmaps</a
+          ></small
+        >
+      </div>
+    </div>
   </body>
   <script src="static/vendor/bootstrap-5.1.1/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="static/vendor/openseadragon-bin-3.0.0/openseadragon.min.js"></script>
+  <script src="static/vendor/openseadragon-bin-4.0.0/openseadragon.min.js"></script>
   <script src="static/vendor/openseadragon-plugins/openseadragon-filtering.js"></script>
   <script src="static/vendor/openseadragon-plugins/openseadragon-svg-overlay.js"></script>
   <script src="static/vendor/openseadragon-plugins/openseadragon-scalebar.js"></script>
   <script src="static/vendor/CamanJS-4.1.2/dist/caman.min.js"></script>
-  <script src="static/vendor/PapaParse-5.0.2/papaparse.min.js"></script>
+  <script src="static/vendor/PapaParse-5.3.0/papaparse.min.js"></script>
   <script src="static/vendor/sorttable/sorttable.js"></script>
   <script src="static/js/utils/interfaceUtils.js"></script>
   <script src="static/js/utils/dataUtils.js"></script>
+  <script src="static/js/utils/h5Utils.js"></script>
   <script src="static/js/utils/markerUtils.js"></script>
   <script src="static/js/utils/OSDViewerUtils.js"></script>
   <script src="static/js/utils/HTMLElementUtils.js"></script>
@@ -467,32 +503,51 @@
   <script src="static/js/flask.js"></script>
   <script>
 
+    if (window!=window.top) {
+      /* I'm in a frame! */
+      document.getElementById("main-navbar").classList.add("collapse");
+      document
+        .getElementById("floating-navbar-toggler")
+        .classList.remove("d-none");
+      //document.html.style.zoom=0.6
+      document.getElementById("ISS_menu").style.zoom = 0.7;
+      document.getElementById("ISS_menu").classList.remove("col-xl-4");
+      document.getElementById("ISS_menu").classList.remove("col-lg-5");
+      document.getElementById("ISS_menu").classList.remove("col-md-6");
+      document.getElementById("ISS_menu").classList.remove("col-sm-8");
+      document.getElementById("ISS_menu").classList.add("col-xl-2");
+      document.getElementById("ISS_menu").classList.add("col-lg-3");
+      document.getElementById("ISS_menu").classList.add("col-md-4");
+      document.getElementById("ISS_menu").classList.add("col-sm-6");
+    }
     // ----------
     $(document).ready(function () {
       const queryString = window.location.search;
       const urlParams = new URLSearchParams(queryString);
       const tmapFile = urlParams.get('tmap')
-      if (tmapFile != null) {
-        projectUtils.loadProjectFileFromServer(tmapFile);
-      }
-      else {
-        /*tmapp.layers =[
-            {name:"Fluo",tileSource:"data/breastcancer/fluo.dzi"},
-            {name:"HE",tileSource:"data/breastcancer/HE.dzi"}
-        ];*/
-      }
+
       glUtils._markershapes = "/static/misc/markershapes.png"
+      h5Utils.worker_path = "/static/js/utils/h5Utils_worker.js";
+      h5Utils.relative_root = "../../../";
       tmapp.registerActions();
       tmapp.init();
-
+      tmapp.version = "{{ version | safe }}";
       {% for plugin in plugins %} {% if plugin %}
       pluginUtils.addPlugin("{{ plugin }}");
       {% endif %} {% endfor %}
 
-      {% if jsonProject %}
-      jsonState = {{ jsonProject | tojson | safe }}
-      projectUtils.loadProject(jsonState);
-      {% endif %}
+      if (tmapFile != null) {
+        if (tmapFile != "null") {
+          projectUtils.loadProjectFileFromServer(tmapFile);
+        }
+      }
+      else {
+        {% if jsonProject %}
+        jsonState = {{ jsonProject | tojson | safe }}
+        projectUtils.loadProject(jsonState);
+        {% endif %}
+      }
+
       {% if isStandalone %}
       flask.standalone.init();
       {% elif readOnly %}
@@ -503,6 +558,13 @@
       {% if message %}
       interfaceUtils.alert("{{message|safe}}");
       {% endif %}
+      if (window!=window.top) {
+          elt = document.getElementById("powered_by_tissuumaps");
+          tmapp["ISS_viewer"].addControl(elt,{
+              anchor: OpenSeadragon.ControlAnchor.BOTTOM_LEFT,
+          });
+          elt.classList.remove("d-none");
+      }
       });
   </script>
 </html>

@@ -10,8 +10,8 @@
 markerUtils = {
     //type must be like d3.symbolVoss
     _d3Symbols: [d3.symbolCross, d3.symbolDiamond, d3.symbolSquare, d3.symbolTriangle, d3.symbolStar, d3.symbolWye, d3.symbolCircle],  // Not used
-    _symbolStrings: ["cross", "diamond", "square", "triangle up", "star", "clobber", "disc", "hbar", "vbar", "tailed arrow", "triangle down", "ring", "x", "arrow"],
-    _symbolUnicodes: ["＋ cross", "◆ diamond", "■ square", "▲ triangle up", "★ star", "✇ clobber", "● disc", "▬ hbar", "▮ vbar", "➔ tailed arrow", "▼ triangle down", "○ ring", "⨯ x", "> arrow"],
+    _symbolStrings: ["cross", "diamond", "square", "triangle up", "star", "clobber", "disc", "hbar", "vbar", "tailed arrow", "triangle down", "ring", "x", "arrow", "gaussian"],
+    _symbolUnicodes: ["＋ cross", "◆ diamond", "■ square", "▲ triangle up", "★ star", "✇ clobber", "● disc", "▬ hbar", "▮ vbar", "➔ tailed arrow", "▼ triangle down", "○ ring", "⨯ x", "> arrow", "◌ gaussian"],
 }
 
 /** Adding piechart legend in the upper left corner */
@@ -99,7 +99,6 @@ markerUtils.makePiechartTable = function(uid, markerIndex, sectorsPropertyName) 
             return b[0]-a[0];
         }
     );
-    console.dir(sortedSectors);
     sortedSectors.forEach(function (sector) {
         outText += "<span style='border:2px solid " + glUtils._piechartPalette[sector[2] % glUtils._piechartPalette.length] + ";padding:3px;margin:2px;display: inline-block;'>" + sector[1] + ": " + (sector[0] * 100).toFixed(1) + " %</span> ";
     })

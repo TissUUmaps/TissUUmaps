@@ -1,5 +1,114 @@
 # Changelog
 
+## 3.1.1.2
+
+- Make load of HDF5 data parallel
+- Add Colormaps and Channel splitting filters
+
+## 3.1.1
+
+- Move to OpenSeadragon 4.0.0
+- Move docker to python-alpine for security reasons
+- Add sorting options of markers (applied automatically on AnnData observations)
+- Add zOrder parameter for draw order between datasets
+- Make Update View button always visible
+- Add colorbar canvas to png captures
+- Add flip and rotation of markers for each collection item
+- Add transformation inputs in Image Layers menu
+- Add background color input
+- Add gaussian marker shape
+- Fix flask deprecated function
+- Minor fixes
+
+## 3.1.0.8
+
+- Fix chunk size for h5 files
+- Fix iPhone not loading markers with > 192 collection items
+
+## 3.1.0.7
+
+- Critical fix for Mac OS (see row_major in WebGL2)
+
+## 3.1.0.6
+
+- Minor fixes
+
+## 3.1.0.5
+
+- Add flip and rotation of markers for each collection item
+- Add transformation inputs in Image Layers menu
+- Fix colormap with NaN values
+
+## 3.1.0.4
+
+- Fix issue with slow rendering of web-gl using instancing
+- Hide colorbar on png captures when needed
+- Other minor fixes
+
+## 3.1.0.3
+
+- Fix h5 autocomplete on iframes
+- Fix wrong marker index for color column when more than 100k markers
+- Add colorbar canvas to png captures
+- Small fixes
+
+## 3.1.0.2
+
+- Fix crash on layer from a parent layer.
+- Change dropdown selection from Chosen to Select2 for faster loading.
+- Update docker to Alpine for security reasons.
+- Small fixes
+
+## 3.1.0.1
+
+- Move docker to python-alpine for security reasons
+- Add sorting options of markers (applied automatically on AnnData observations)
+- Make Update View button always visible
+- Minor fixes
+
+## 3.1
+
+- Adding HDF5 support on the client side
+- Adding AnnData support on the server side / GUI
+- Adding Network diagram visualization
+- Tabs now saved automatically even without buttons
+- Adding Plugin helpers in javascript
+- Many fixes on the interface
+- Move to PyQt6
+
+## 3.0.10.4
+
+- Fix path issue on json loading from server
+
+## 3.0.10.3
+
+- Reset all input dropdowns when new data selected
+
+## 3.0.10.2
+
+- Add scale factor for coordinates of markers
+
+## 3.0.10.1
+
+- Add optional offset (x, y) and scale properties to tmap.layers
+
+## 3.0.10
+
+- Add collection mode (to display images next to each other with markers correctly placed)
+- IFrame mode (to hide navbar and make menu smaller when TissUUmaps is run inside an iFrame)
+
+## 3.0.9.6
+
+- Add debug menu when running in debug mode, with debug access in javascript
+- Fix linux bugs with Qt displaying all blank
+- Fix empty columns in marker csv file
+
+## 3.0.9.5
+
+- Add / fix key shortcuts (https://tissuumaps.github.io/TissUUmaps-docs/docs/starting/shortcuts.html)
+- Change default GUI port to avoid collisions with server
+- Add plugin support to docker server
+
 ## 3.0.9.3
 
 - Go back to webGL 1 for compatibility issue with Safari 14

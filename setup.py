@@ -22,17 +22,18 @@ setuptools.setup(
     install_requires=[
         "Flask>=2.0.0",
         "Pillow>=8.2.0",
-        "ipython>=7.28.0",
+        "ipython>=7.0",
         "pyvips>=2.1.14",
         "pyyaml>=6.0",
+        "h5py>=3.6.0",
         "tifffile>=2022.5.4",
         "zarr>=2.11.3",
         "fsspec>=2022.5.0",
         "imagecodecs>=2022.2.22",
     ],
     extras_require={
-        "pyqt5": ["PyQt5>=5.15.4", "PyQtWebEngine>=5.15.4"],
-        "full": ["PyQt5>=5.15.4", "PyQtWebEngine>=5.15.4"],
+        "pyqt6": ["PyQt6>=6.3.0", "PyQt6-WebEngine>=6.3.0"],
+        "full": ["PyQt6>=6.3.0", "PyQt6-WebEngine>=6.3.0"],
     },
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -47,6 +48,6 @@ setuptools.setup(
         ]
     }  # ,
     # data_files=[
-    #    ('tissuumaps',['tissuumaps/VERSION','tissuumaps/web.zip']),
+    #    ('tissuumaps',['tissuumaps/VERSION']),
     # ],
 )

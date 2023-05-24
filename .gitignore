@@ -11,7 +11,6 @@ TissUUmaps.egg-info
 tests
 .tissuumaps
 .ipynb_checkpoints
-plugins_repo/index.html
 plugins_repo/pluginList.json
 tissuumaps/web/
 plugins

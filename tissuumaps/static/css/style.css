@@ -10206,6 +10206,18 @@ html {
   font-size: 12px;
   z-index: 100; }
 
+.floating-menu-btn {
+  display: block;
+  position: absolute;
+  z-index: 100;
+  top: 10px;
+  left: 10px;
+  border-radius: 50%;
+  line-height: normal;
+  cursor: pointer;
+  zoom: 0.8;
+  width: fit-content; }
+
 .regions_table {
   user-select: none;
   font-size: 13px; }
@@ -10232,4 +10244,74 @@ html {
 .progress-bar {
   transition: width 0s ease !important; }
 
+.marker-tab-button span {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width: 12vw;
+  display: inline-block;
+  vertical-align: bottom;
+  white-space: nowrap; }
+
+.updateViewRow {
+  position: sticky;
+  bottom: 0px;
+  background: #ffffffaa;
+  backdrop-filter: blur(3px);
+  border-top: 1px solid #cccccc; }
+
+/* ============ desktop view ============ */
+@media all and (min-width: 992px) {
+  .dropdown-menu li {
+    position: relative; }
+
+  .dropdown-menu .dropdown-submenu {
+    display: none;
+    position: absolute;
+    left: 100%;
+    top: -7px; }
+
+  .dropdown-menu .dropdown-submenu-left {
+    right: 100%;
+    left: auto; }
+
+  .dropdown-menu > li:hover {
+    background-color: #f1f1f1; }
+
+  .dropdown-menu > li:hover > .dropdown-submenu {
+    display: block; } }
+/* ============ desktop view .end// ============ */
+/* ============ small devices ============ */
+@media (max-width: 991px) {
+  .dropdown-menu .dropdown-menu {
+    margin-left: 0.7rem;
+    margin-right: 0.7rem;
+    margin-bottom: .5rem; } }
+/* ============ small devices .end// ============ */
+
 /*# sourceMappingURL=style.css.map */
+
+.collapse_button_transform::before {
+  position: inherit;
+  content: '';
+  display: inline-block;
+  width: 0;
+  height: 0px;
+  border: .4em solid transparent;
+  border-left-color: gray;
+  transform-origin: 0 50%;
+  transform: rotate(90deg);
+  transition: transform .25s;
+  margin-left: -13px;
+  margin-top: 5px;
+}
+.collapse_button_transform.collapsed::before {
+  transform: rotate(00deg);
+  transition: transform .25s;
+}
+.collapse_button_transform {
+  padding-left: 26px !important;
+}
+
+.openseadragon-canvas {
+  outline: none;
+}
