@@ -278,6 +278,7 @@
         }
     },
     _filterItems:{},
+    _lastFilters:{},
     _compositeMode:"source-over"
 }
 
@@ -418,6 +419,9 @@ filterUtils.getFilterFunction = function(filterName) {
 
     var op = tmapp["object_prefix"];
     overlayUtils.waitLayersReady().then(() => {    
+        if (JSON.stringify(filterUtils._lastFilters) == JSON.stringify(filterUtils._filterItems)) {
+            return;
+        }
         filters = [];
         for (const layer in filterUtils._filterItems) {
             processors = [];
@@ -428,7 +432,8 @@ filterUtils.getFilterFunction = function(filterName) {
             }
             filters.push({
                 items: tmapp[op + "_viewer"].world.getItemAt(layer),
-                processors: processors
+                processors: processors,
+                toReset: JSON.stringify(filterUtils._lastFilters[layer]) != JSON.stringify(filterUtils._filterItems[layer])
             });
         };
         tmapp[op + "_viewer"].setFilterOptions({
@@ -436,9 +441,19 @@ filterUtils.getFilterFunction = function(filterName) {
             loadMode: "async"
         });
         for ( var i = 0; i < tmapp[op + "_viewer"].world._items.length; i++ ) {
+            if (filterUtils._lastFilters[i]) {
+                console.log(filters[i].toReset)
+                if (! filters[i].toReset) {
+                    continue;
+                }
+            }
             tmapp[op + "_viewer"].world._items[i].tilesMatrix={};
             tmapp[op + "_viewer"].world._items[i]._needsDraw = true;
         }
+        filterUtils._lastFilters = {}
+        Object.keys(filterUtils._filterItems).forEach(function(key, index) {
+            filterUtils._lastFilters[key] = JSON.parse(JSON.stringify(filterUtils._filterItems[key]));
+        });
     })
 }
 
