@@ -56,6 +56,11 @@ Points2Regions = {
       default: "GeoJSON polygons",
       options: ["GeoJSON polygons", "New label per marker"],
     },
+    _server: {
+      label: "Run Points2Regions on the server",
+      type: "checkbox",
+      default: true,
+    },
     _run: {
       label: "Run Points2Regions",
       type: "button",
@@ -73,15 +78,113 @@ Points2Regions = {
 Points2Regions.init = function (container) {
   Points2Regions.inputTrigger("_refresh");
   Points2Regions.container = container;
-  Points2Regions.initPython();
+  // Points2Regions.initPython()
+  Points2Regions._api(
+    "checkServer",
+    null,
+    function (data) {
+      if (data["return"] == "error") {
+        Points2Regions.set("_server", false);
+        Points2Regions.initPython();
+        let serverCheckBoxID = Points2Regions.getInputID("_server");
+        let serverCheckbox = document.getElementById(serverCheckBoxID);
+        serverCheckbox.disabled = true;
+        serverCheckbox.parentElement.title = data["message"];
+        var tooltip = new bootstrap.Tooltip(serverCheckbox.parentElement, {
+          placement: "right",
+        });
+        tooltip.enable();
+      }
+    },
+    function () {
+      Points2Regions.set("_server", false);
+      Points2Regions.initPython();
+      let serverCheckBoxID = Points2Regions.getInputID("_server");
+      let serverCheckbox = document.getElementById(serverCheckBoxID);
+      serverCheckbox.disabled = true;
+      serverCheckbox.parentElement.title =
+        "Unable to run on server, check that you have all dependencies installed (scikit-learn).";
+      var tooltip = new bootstrap.Tooltip(serverCheckbox.parentElement, {
+        placement: "right",
+      });
+      tooltip.enable();
+    }
+  );
 };
 
 Points2Regions.run = function () {
-  var content = `
+  if (Points2Regions.get("_server")) {
+    var csvFile = dataUtils.data[Points2Regions.get("_dataset")]._csv_path;
+    if (typeof csvFile === "object") {
+      interfaceUtils.alert(
+        "This plugin can only run on datasets generated from buttons. Please convert your dataset to a button (Markers > Advanced Options > Generate button from tab)"
+      );
+      return;
+    }
+    // Get the path from url:
+    if (dataUtils.data[Points2Regions.get("_dataset")]._filetype != "h5") {
+      const path = dataUtils.getPath();
+      if (path != null) {
+        csvFile = path + "/" + csvFile;
+      }
+    }
+    loadingModal = interfaceUtils.loadingModal(
+      "Points2Regions... Please wait."
+    );
+    $.ajax({
+      type: "post",
+      url: "/plugins/Points2Regions/Points2Regions",
+      contentType: "application/json; charset=utf-8",
+      data: JSON.stringify({
+        xKey: dataUtils.data[Points2Regions.get("_dataset")]._X,
+        yKey: dataUtils.data[Points2Regions.get("_dataset")]._Y,
+        clusterKey: Points2Regions.get("_clusterKey"),
+        nclusters: Points2Regions.get("_nclusters"),
+        expression_threshold: Points2Regions.get("_expression_threshold"),
+        sigma: Points2Regions.get("_sigma"),
+        stride: Points2Regions.get("_stride"),
+        region_name: Points2Regions.get("_region_name"),
+        seed: Points2Regions.get("_seed"),
+        format: Points2Regions.get("_format"),
+        csv_path: csvFile,
+        filetype: dataUtils.data[Points2Regions.get("_dataset")]._filetype,
+      }),
+      success: function (data) {
+        if (Points2Regions.get("_format") == "GeoJSON polygons") {
+          Points2Regions.loadRegions(data);
+        } else {
+          console.log(data);
+          data = data.substring(1, data.length - 1);
+          let clusters = data.split(",").map(function (x) {
+            return parseInt(x);
+          });
+          console.log(clusters);
+          Points2Regions.loadClusters(clusters);
+        }
+        setTimeout(function () {
+          $(loadingModal).modal("hide");
+        }, 500);
+      },
+      complete: function (data) {
+        // do something, not critical.
+      },
+      error: function (data) {
+        console.log("Error:", data);
+        setTimeout(function () {
+          $(loadingModal).modal("hide");
+        }, 500);
+        interfaceUtils.alert(
+          "Error during Points2Regions, check logs. This plugin only works on a pip installation of TissUUmaps, with the extra packages: pandas, sklearn, skimage"
+        );
+      },
+    });
+  } else {
+    var content = `
 from typing import Union
 from sklearn.cluster import MiniBatchKMeans as KMeans
 from sklearn.preprocessing import normalize
 from scipy.sparse import eye, vstack, spmatrix
+from scipy.ndimage import zoom
 import numpy as np
 
 COLORS = [
@@ -141,10 +244,10 @@ def binary_mask_to_polygon(binary_mask: np.ndarray, tolerance: float=0, offset: 
 
     polygons = []
     # pad mask to close contours of shapes which start and end at an edge
+    binary_mask = zoom(binary_mask, 3, order=0, grid_mode=True)
     padded_binary_mask = np.pad(
         binary_mask, pad_width=1, mode="constant", constant_values=0
     )
-
     contours = find_contours(padded_binary_mask, 0.5)
     contours = [c-1 for c in contours]
     #contours = np.subtract(contours, 1)
@@ -152,11 +255,13 @@ def binary_mask_to_polygon(binary_mask: np.ndarray, tolerance: float=0, offset: 
         contour = approximate_polygon(contour, tolerance)
         if len(contour) < 3:
             continue
-
+        contour = contour / 3
+        contour = np.rint(contour)
         if scale is not None:
             contour = contour * scale
         if offset is not None:
             contour = contour + offset  # .ravel().tolist()
+
         # after padding and subtracting 1 we may get -0.5 points in our segmentation
         polygons.append(contour.tolist())
 
@@ -176,17 +281,16 @@ def labelmask2geojson(
     # Make JSON
     polygons = []
     cluster_names = [f"Region {l+1}" for l in np.arange(1,nclusters+1)]
-    for region in regionprops(labelmask):
+    for index, region in enumerate(regionprops(labelmask)):
         # take regions with large enough areas
         contours = binary_mask_to_polygon(
             region.image,
-            offset=scale*np.array(region.bbox[0:2]) + offset + 0.5*scale,
+            offset=scale*np.array(region.bbox[0:2]) + offset,
             scale=scale
         )
         polygons.append(contours)
     json = polygons2json(polygons, region_name, cluster_names, colors=colors)
     return json
-
 
 
 def map2numeric(data: np.ndarray) -> np.ndarray:
@@ -227,8 +331,8 @@ def create_features(xy: np.ndarray, labels: np.ndarray, unique_labels:np.ndarray
 
 
 def predict(kmeans_model, features: spmatrix, good_bins: np.ndarray, back_map: np.ndarray):
-    clusters = np.zeros(features.shape[0], dtype='int')
-    clusters[good_bins] = kmeans_model.predict(features[good_bins,:])+1
+    clusters = np.zeros(features.shape[0], dtype='int') - 1
+    clusters[good_bins] = kmeans_model.predict(features[good_bins,:])
     return clusters[back_map], clusters
 
 def points2regions(xy: np.ndarray, labels: np.ndarray, sigma: float, n_clusters: int, bin_width: Union[float, str, None] = 'auto', min_genes_per_bin:int = 0, library_id_column: Union[np.ndarray,None] = None, convert_to_geojson: bool = False, seed:int=42, region_name:str="My regions"):
@@ -715,19 +819,20 @@ else:
 Points2Regions.setMessage("")
 
 `;
-  if (Points2Regions.get("_dataset") === "") {
-    Points2Regions.set("_dataset", Object.keys(dataUtils.data)[0]);
+    if (Points2Regions.get("_dataset") === "") {
+      Points2Regions.set("_dataset", Object.keys(dataUtils.data)[0]);
+    }
+    if (Points2Regions.get("_clusterKey") === undefined) {
+      Points2Regions.set(
+        "_clusterKey",
+        dataUtils.data[Points2Regions.get("_dataset")]._gb_col
+      );
+    }
+    Points2Regions.setMessage("Running Python code...");
+    setTimeout(() => {
+      Points2Regions.executePythonString(content);
+    }, 10);
   }
-  if (Points2Regions.get("_clusterKey") === undefined) {
-    Points2Regions.set(
-      "_clusterKey",
-      dataUtils.data[Points2Regions.get("_dataset")]._gb_col
-    );
-  }
-  Points2Regions.setMessage("Running Python code...");
-  setTimeout(() => {
-    Points2Regions.executePythonString(content);
-  }, 10);
 };
 
 Points2Regions.inputTrigger = function (parameterName) {
@@ -778,6 +883,10 @@ Points2Regions.inputTrigger = function (parameterName) {
     Points2Regions.run();
   } else if (parameterName == "_downloadCSV") {
     Points2Regions.downloadCSV();
+  } else if (parameterName == "_server") {
+    if (!Points2Regions.get("_server")) {
+      Points2Regions.initPython();
+    }
   }
 };
 
@@ -941,4 +1050,28 @@ Points2Regions.downloadCSV = function () {
     rows.map((fields) => fields.join(",")).join("\n");
 
   regionUtils.downloadPointsInRegionsCSV(csv);
+};
+
+Points2Regions._api = function (endpoint, data, success, error) {
+  $.ajax({
+    // Post select to url.
+    type: "post",
+    url: "/plugins/Points2Regions" + "/" + endpoint,
+    contentType: "application/json; charset=utf-8",
+    data: JSON.stringify(data),
+    success: function (data) {
+      success(data);
+    },
+    complete: function (data) {
+      // do something, not critical.
+    },
+    error: error
+      ? error
+      : function (data) {
+          interfaceUtils.alert(
+            data.responseText.replace("\n", "<br/>"),
+            "Error on the plugin's server response:"
+          );
+        },
+  });
 };
