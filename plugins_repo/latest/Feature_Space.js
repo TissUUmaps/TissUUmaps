@@ -196,13 +196,19 @@ async function copyDataset(dataIn, dataOut) {
   );
   dataOut["expectedHeader"]["X"] = Feature_Space._UMAP1;
   dataOut["expectedHeader"]["Y"] = Feature_Space._UMAP2;
+  dataOut["expectedHeader"]["coord_factor"] = 1.0;
   dataOut["expectedRadios"]["collectionItem_col"] = false;
   dataOut["expectedRadios"]["collectionItem_fixed"] = true;
   for (var key of Object.keys(dataIn)) {
     if (
-      ["_X", "_Y", "expectedHeader", "expectedRadios", "_groupgarden"].indexOf(
-        key
-      ) == -1
+      [
+        "_X",
+        "_Y",
+        "expectedHeader",
+        "expectedRadios",
+        "_groupgarden",
+        "_coord_factor",
+      ].indexOf(key) == -1
     ) {
       dataOut[key] = dataIn[key];
     } else if (key == "_X") {
@@ -252,8 +258,11 @@ Feature_Space.run = async function () {
   $(".openseadragon-container")[0].style.width = "60%";
 
   Feature_Space_Control.addEventListener("load", (ev) => {
-    Feature_Space_Control.contentWindow.projectUtils.loadProject =
-      function () {};
+    //loadProject = Feature_Space_Control.contentWindow.projectUtils.loadProject;
+    //Feature_Space_Control.contentWindow.projectUtils.loadProject = function(){};
+    //loadProject({"layers":[]})
+    //Feature_Space_Control.contentWindow.tmapp["ISS_viewer"].world.removeAll();
+
     Feature_Space_Control.classList.add("d-none");
     var timeout = setInterval(function () {
       var newwin = Feature_Space_Control.contentWindow;
@@ -375,9 +384,14 @@ Feature_Space.run = async function () {
         }
       );
 
-      newwin.projectUtils._activeState = JSON.parse(
+      /*newwin.projectUtils._activeState = JSON.parse(
         JSON.stringify(projectUtils._activeState)
+      );*/
+      newwin.projectUtils._activeState["markerFiles"] = JSON.parse(
+        JSON.stringify(projectUtils._activeState["markerFiles"])
       );
+      newwin.tmapp["ISS_viewer"].close();
+
       newwin.filterUtils._compositeMode = filterUtils._compositeMode;
       newwin.interfaceUtils.generateDataTabUI({
         uid: Feature_Space.get("_dataset"),
@@ -513,7 +527,10 @@ Feature_Space.run = async function () {
   });
 
   Feature_Space_Control.classList.add("d-none");
-  Feature_Space_Control.setAttribute("src", window.location.href);
+  Feature_Space_Control.setAttribute(
+    "src",
+    window.location.href.replace(/#.*$/, "") + "&tmap=null"
+  );
 };
 
 Feature_Space.clear = function () {
@@ -757,8 +774,8 @@ Feature_Space.analyzeRegion = function (points, win) {
     LUTindex = LUTindex % worldCount;
     const image = win.tmapp["ISS_viewer"].world.getItemAt(LUTindex);
     var viewportCoord = image.imageToViewportCoordinates(
-      markerData[xselector][d],
-      markerData[yselector][d]
+      markerData[xselector][d] * win.dataUtils.data[dataset]._coord_factor,
+      markerData[yselector][d] * win.dataUtils.data[dataset]._coord_factor
     );
     if (
       viewportCoord.x < x0 ||

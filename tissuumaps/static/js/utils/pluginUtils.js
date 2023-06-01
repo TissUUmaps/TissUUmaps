@@ -66,7 +66,7 @@ pluginUtils.loadParameters = function (pluginID, pluginDiv, parameters) {
         var parameterID = pluginID + "_" + paramName;
         return parameterID;
     }
-    window[pluginID].api = function(endpoint, data, success) {
+    window[pluginID].api = function(endpoint, data, success, error) {
         $.ajax({
             // Post select to url.
             type: "post",
@@ -79,7 +79,7 @@ pluginUtils.loadParameters = function (pluginID, pluginDiv, parameters) {
             complete: function (data) {
               // do something, not critical.
             },
-            error: function (data) {
+            error: (error) ? error : function (data) {
               interfaceUtils.alert(data.responseText.replace("\n","<br/>"),"Error on the plugin's server response:");
             },
           });
