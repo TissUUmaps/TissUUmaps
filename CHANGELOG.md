@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.1.3
+
+- Minor fixes
+
 ## 3.1.1.2
 
 - Make load of HDF5 data parallel
