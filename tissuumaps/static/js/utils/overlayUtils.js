@@ -553,7 +553,7 @@ overlayUtils.addLayer = function(layer, i, visible) {
                 filterUtils.setCompositeOperation();
                 filterUtils.getFilterItems();
                 if (overlayUtils._collectionMode) {
-                    filterUtils.setCollectionMode();
+                    overlayUtils.setCollectionMode();
                 }
             })
         },
