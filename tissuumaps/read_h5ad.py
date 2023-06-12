@@ -348,6 +348,7 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                     "name": obs,
                     "expectedHeader.cb_col": f"/obs/{obs}",
                     "expectedHeader.sortby_col": f"/obs/{obs}",
+                    "expectedRadios.cb_gr_dict": False,
                     "expectedRadios.cb_col": True,
                     "expectedRadios.cb_gr": False,
                     "expectedRadios.cb_gr_key": False,
@@ -400,9 +401,10 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                     "name": obs,
                     "expectedHeader.gb_col": f"/obs/{obs}",
                     "expectedHeader.cb_gr_dict": palette[obs],
+                    "expectedRadios.cb_gr_dict": True,
                     "expectedRadios.cb_col": False,
                     "expectedRadios.cb_gr": True,
-                    "expectedRadios.cb_gr_key": True,
+                    "expectedRadios.cb_gr_key": False,
                     "expectedRadios.sortby_check": False,
                 }
                 for obs in obsListCategorical
@@ -452,6 +454,7 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                     "expectedHeader.cb_col": f"/X;{index}",
                     "expectedHeader.sortby_col": f"/X;{index}",
                     "expectedHeader.cb_gr_dict": "",
+                    "expectedRadios.cb_gr_dict": False,
                     "expectedHeader.gb_col": "",
                     "expectedRadios.cb_col": True,
                     "expectedRadios.cb_gr": False,
