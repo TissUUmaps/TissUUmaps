@@ -2435,6 +2435,24 @@ interfaceUtils.generateModal = function(title, content, buttons, uid, noClose) {
     return modalWindow;
 }
 
+interfaceUtils.closeModal = async function (modalWindow) {
+    for (var i = 0; i < 40; i++) {
+        console.log(i, modalWindow, modalWindow.classList);
+        if (modalWindow.classList.contains("show")) {
+            break;
+        }
+        await new Promise(r => setTimeout(r, 50));
+    }
+    if (modalWindow.classList.contains("show")) {
+        $(modalWindow).modal("hide");
+        // We repeat the process because sometimes the modal is not closed
+        await new Promise(r => setTimeout(r, 500));
+        $(modalWindow).modal("hide");
+        await new Promise(r => setTimeout(r, 500));
+        $(modalWindow).modal("hide");
+    }
+}
+
 interfaceUtils.createDownloadDropdown = function(downloadRow, innerText, callback, comment, dropdownOptions) {
     var row = HTMLElementUtils.createRow(null);
     var selectDiv = document.createElement("div");

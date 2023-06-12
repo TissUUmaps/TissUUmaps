@@ -489,8 +489,8 @@ overlayUtils.addLayer = function(layer, i, visible) {
     var loadingModal = null;
     setTimeout(function(){
         if (showModal)
-            loadingModal = interfaceUtils.loadingModal("Converting image, please wait...");
-    },800);
+            loadingModal = interfaceUtils.loadingModal("Loading image, please wait...");
+    },500);
     if (tmapp["ISS_viewer"].world.getItemCount() != 0) {
         if (tmapp["ISS_viewer"].world.getItemAt(0).source.getTileUrl(0,0,0) == null) {
             tmapp["ISS_viewer"].close();
@@ -546,7 +546,7 @@ overlayUtils.addLayer = function(layer, i, visible) {
                 );
             }
             if (loadingModal) {
-                setTimeout(function(){$(loadingModal).modal("hide");}, 500);
+                interfaceUtils.closeModal(loadingModal);
             }
             showModal = false;
             overlayUtils.waitLayersReady().then(()=>{
@@ -559,7 +559,7 @@ overlayUtils.addLayer = function(layer, i, visible) {
         },
         error: function(i) {
             if (loadingModal) {
-                setTimeout(function(){$(loadingModal).modal("hide");}, 500);
+                interfaceUtils.closeModal(loadingModal);
             }
             interfaceUtils.alert("Impossible to load file.")
             showModal = false;
@@ -774,7 +774,7 @@ overlayUtils.savePNG=function() {
                 regionUtils._polygonStrokeWidth = strokeWidth;
                 tmapp.ISS_viewer.world.getItemAt(0).immediateRender = false
                 tmapp.ISS_viewer.viewport.fitBounds(bounds, true);
-                setTimeout(()=>{$(loading).modal("hide");}, 300);
+                interfaceUtils.closeModal(loading);
                 
                 document.getElementById("ISS_viewer").style.setProperty("visibility", "unset");
             })
