@@ -261,17 +261,18 @@ def h5ad_to_tmap(basedir, path, library_id=None):
         spatial_connectivities = ""
 
     encodingType = None
-    if "encoding-type" in adata.get("X").attrs.keys():
-        encodingType = "encoding-type"
-    elif "h5sparse_format" in adata.get("X").attrs.keys():
-        encodingType = "h5sparse_format"
-    if encodingType:
-        if adata.get("X").attrs[encodingType] == "csr_matrix":
-            if not write_adata:
-                write_adata = True
-                adata, path = get_write_adata(adata, path, basedir)
+    if adata.get("X"):
+        if "encoding-type" in adata.get("X").attrs.keys():
+            encodingType = "encoding-type"
+        elif "h5sparse_format" in adata.get("X").attrs.keys():
+            encodingType = "h5sparse_format"
+        if encodingType:
+            if adata.get("X").attrs[encodingType] == "csr_matrix":
+                if not write_adata:
+                    write_adata = True
+                    adata, path = get_write_adata(adata, path, basedir)
 
-            to_csc_sparse(adata)
+                to_csc_sparse(adata)
 
     varList = getVarList(adata)
     obsList = getObsList(adata)
