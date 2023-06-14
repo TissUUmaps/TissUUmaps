@@ -103,7 +103,17 @@ def main():
     views.app.config.from_object(opts)
 
     try:
-        views.app.config["SLIDE_DIR"] = os.path.abspath(args[0]) + "/"
+        if os.path.isdir(args[0]):
+            views.app.config["SLIDE_DIR"] = os.path.abspath(args[0]) + "/"
+        elif os.path.isfile(args[0]):
+            views.app.config["SLIDE_DIR"] = (
+                os.path.dirname(os.path.abspath(args[0])) + "/"
+            )
+            views.app.config["DEFAULT_PROJECT"] = os.path.basename(
+                os.path.abspath(args[0])
+            )
+        else:
+            pass
     except IndexError:
         pass
 
