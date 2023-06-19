@@ -489,8 +489,8 @@ overlayUtils.addLayer = function(layer, i, visible) {
     var loadingModal = null;
     setTimeout(function(){
         if (showModal)
-            loadingModal = interfaceUtils.loadingModal("Converting image, please wait...");
-    },800);
+            loadingModal = interfaceUtils.loadingModal("Loading image, please wait...");
+    },500);
     if (tmapp["ISS_viewer"].world.getItemCount() != 0) {
         if (tmapp["ISS_viewer"].world.getItemAt(0).source.getTileUrl(0,0,0) == null) {
             tmapp["ISS_viewer"].close();
@@ -546,20 +546,20 @@ overlayUtils.addLayer = function(layer, i, visible) {
                 );
             }
             if (loadingModal) {
-                setTimeout(function(){$(loadingModal).modal("hide");}, 500);
+                interfaceUtils.closeModal(loadingModal);
             }
             showModal = false;
             overlayUtils.waitLayersReady().then(()=>{
                 filterUtils.setCompositeOperation();
                 filterUtils.getFilterItems();
                 if (overlayUtils._collectionMode) {
-                    filterUtils.setCollectionMode();
+                    overlayUtils.setCollectionMode();
                 }
             })
         },
         error: function(i) {
             if (loadingModal) {
-                setTimeout(function(){$(loadingModal).modal("hide");}, 500);
+                interfaceUtils.closeModal(loadingModal);
             }
             interfaceUtils.alert("Impossible to load file.")
             showModal = false;
@@ -647,7 +647,7 @@ overlayUtils.areAllFullyLoaded = function () {
 overlayUtils.waitLayersReady = async function () {
     var op = tmapp["object_prefix"];
     await new Promise(r => setTimeout(r, 200));
-    while (!(!tmapp[op + "_viewer"].world || !tmapp[op + "_viewer"].world.getItemCount() != tmapp.layers.length)) {
+    while (!tmapp[op + "_viewer"].world || tmapp[op + "_viewer"].world.getItemCount() != tmapp.layers.length) {
         await new Promise(r => setTimeout(r, 200));
     }
 }
@@ -774,7 +774,7 @@ overlayUtils.savePNG=function() {
                 regionUtils._polygonStrokeWidth = strokeWidth;
                 tmapp.ISS_viewer.world.getItemAt(0).immediateRender = false
                 tmapp.ISS_viewer.viewport.fitBounds(bounds, true);
-                setTimeout(()=>{$(loading).modal("hide");}, 300);
+                interfaceUtils.closeModal(loading);
                 
                 document.getElementById("ISS_viewer").style.setProperty("visibility", "unset");
             })
@@ -831,7 +831,7 @@ overlayUtils.savePNG=function() {
     }
     function add_colorbar (ctx, resolution) {
         var ctx_colorbar = document.querySelector("#colorbar_canvas").getContext("2d");
-        if (ctx_colorbar.canvas.classList.contains("d-none")) return;
+        if (ctx_colorbar.canvas.classList.contains("d-none")) return ctx;
         // Set up CSS size.
         ctx_colorbar.canvas.style.width = ctx_colorbar.canvas.style.width || ctx_colorbar.canvas.width + 'px';
         ctx_colorbar.canvas.style.height = ctx_colorbar.canvas.style.height || ctx_colorbar.canvas.height + 'px';
@@ -861,6 +861,7 @@ overlayUtils.savePNG=function() {
             ctx_colorbar_height * 1
         );
         glUtils._updateColorbarCanvas(1);
+        return ctx;
     }
     return new Promise((resolve, reject) => {
         if (tiling > 1) {
@@ -872,7 +873,7 @@ overlayUtils.savePNG=function() {
             canvas.height = tiling * Math.min(ctx_osd.canvas.height, ctx_webgl.canvas.height);
             var bounds = tmapp.ISS_viewer.viewport.getBounds();
             getCanvasCtx_aux(0, tiling, ctx, bounds).then((ctx_tiling) => {
-                ctx = add_colorbar (ctx, tiling);
+                ctx_tiling = add_colorbar (ctx_tiling, tiling);
                 var png = ctx_tiling.canvas.toDataURL("image/png");
                 
                 var a = document.createElement("a"); //Create <a>

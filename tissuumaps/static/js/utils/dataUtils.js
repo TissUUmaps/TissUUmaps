@@ -482,14 +482,18 @@ dataUtils.createMenuFromCSV = function(data_id,datumExample) {
 * @param {Object} thecsv csv file path
 */
 dataUtils.readH5 = function(data_id, thecsv, options) { 
-    interfaceUtils._mGenUIFuncs.dataTabUIToH5(data_id);
-    dataUtils.createDataset(data_id,{"name":data_id, "filetype":"h5"});
-
+    if (dataUtils.data[data_id] === undefined){
+        interfaceUtils._mGenUIFuncs.dataTabUIToH5(data_id);
+        dataUtils.createDataset(data_id,{"name":data_id, "filetype":"h5"});
+    }
     let data_obj = dataUtils.data[data_id];
+    let skip_download = (data_obj["_csv_path"] == thecsv);
     data_obj["modified"] = true;
-    data_obj["_processeddata"] = undefined;
-    data_obj["_isnan"] = {};
-    data_obj["_csv_header"] = null;
+    if (!skip_download) {
+        data_obj["_processeddata"] = undefined;
+        data_obj["_isnan"] = {};
+        data_obj["_csv_header"] = null;
+    }
     data_obj["_csv_path"] = thecsv;
     if (options != undefined) {
         //data_obj["_csv_path"] = options.path;

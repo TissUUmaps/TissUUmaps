@@ -36,6 +36,8 @@ from flask import (
     send_from_directory,
     url_for,
 )
+from werkzeug.exceptions import MethodNotAllowed, NotFound
+from werkzeug.routing import RequestRedirect
 
 from tissuumaps import app, read_h5ad
 from tissuumaps.flask_filetree import filetree
@@ -356,9 +358,40 @@ def _get_slide(path, originalPath=None):
             abort(404)
 
 
+def get_view_function(url, method="GET"):
+    """Match a url and return the view and arguments
+    it will be called with, or None if there is no view.
+    """
+
+    adapter = app.url_map.bind("localhost")
+
+    try:
+        match = adapter.match(url, method=method)
+    except RequestRedirect as e:
+        # recursively match redirects
+        return get_view_function(e.new_url, method)
+    except (MethodNotAllowed, NotFound):
+        # no match
+        return None
+
+    try:
+        # return the view function and arguments
+        return app.view_functions[match[0]], match[1]
+    except KeyError:
+        # no view is associated with the endpoint
+        return None
+
+
 @app.route("/")
 @requires_auth
 def index():
+    if app.config["DEFAULT_PROJECT"]:
+        view_function = get_view_function(
+            "/" + app.config["DEFAULT_PROJECT"], method="GET"
+        )
+        if view_function:
+            return view_function[0](**view_function[1])
+
     indexPath = os.path.abspath(os.path.join(app.basedir, "index.html"))
     if os.path.isfile(indexPath) and app.config["READ_ONLY"]:
         directory = os.path.dirname(indexPath)

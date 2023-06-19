@@ -181,6 +181,7 @@
             $.isArray(filters) ? filters : [filters];
         for (var i = 0; i < instance.filters.length; i++) {
             var filter = instance.filters[i];
+            if (!filter.toReset) continue;
             if (!filter.processors) {
                 throw new Error('Filter processors must be specified.');
             }
@@ -195,6 +196,7 @@
             var itemsToReset = [];
             for (var i = 0; i < instance.filters.length; i++) {
                 var filter = instance.filters[i];
+                if (!filter.toReset) continue;
                 if (!filter.items) {
                     itemsToReset = getAllItems(instance.viewer.world);
                     break;
