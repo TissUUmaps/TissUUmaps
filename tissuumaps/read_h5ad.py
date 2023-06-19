@@ -8,6 +8,8 @@ import numpy as np
 import pyvips
 from scipy import sparse
 
+os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+
 
 def numpy2vips(a):
     dtype_to_format = {
@@ -42,22 +44,18 @@ tmap_template = {
 }
 
 
-def getPalette(adata):
+def getPalette(adata, obs):
     palette = {}
-    for uns in list(adata.get("uns", [])):
-        if "_colors" in uns:
-            uns_name = uns.replace("_colors", "")
-
-            try:
-                new_palette = dict(
-                    zip(
-                        adata.get(f"/obs/{uns_name}/categories").asstr()[...],
-                        [x[:7] for x in adata.get(f"uns/{uns}/").asstr()[...]],
-                    )
-                )
-                palette = dict(palette, **new_palette)
-            except:
-                pass
+    try:
+        new_palette = dict(
+            zip(
+                adata.get(f"/obs/{obs}/categories").asstr()[...],
+                [x[:7] for x in adata.get(f"uns/{obs}_colors/").asstr()[...]],
+            )
+        )
+        palette = dict(palette, **new_palette)
+    except:
+        pass
     return palette
 
 
@@ -135,7 +133,7 @@ def h5ad_to_tmap(basedir, path, library_id=None):
     #    ):
     #        path = path_out
 
-    adata = h5py.File(os.path.join(basedir, path), "r")
+    adata = h5py.File(os.path.join(basedir, path), "r", locking=False)
     outputFolder = os.path.join(basedir, path) + "_files"
     relOutputFolder = os.path.basename(path) + "_files"
 
@@ -263,22 +261,21 @@ def h5ad_to_tmap(basedir, path, library_id=None):
         spatial_connectivities = ""
 
     encodingType = None
-    if "encoding-type" in adata.get("X").attrs.keys():
-        encodingType = "encoding-type"
-    elif "h5sparse_format" in adata.get("X").attrs.keys():
-        encodingType = "h5sparse_format"
-    if encodingType:
-        if adata.get("X").attrs[encodingType] == "csr_matrix":
-            if not write_adata:
-                write_adata = True
-                adata, path = get_write_adata(adata, path, basedir)
+    if adata.get("X"):
+        if "encoding-type" in adata.get("X").attrs.keys():
+            encodingType = "encoding-type"
+        elif "h5sparse_format" in adata.get("X").attrs.keys():
+            encodingType = "h5sparse_format"
+        if encodingType:
+            if adata.get("X").attrs[encodingType] == "csr_matrix":
+                if not write_adata:
+                    write_adata = True
+                    adata, path = get_write_adata(adata, path, basedir)
 
-            to_csc_sparse(adata)
+                to_csc_sparse(adata)
 
     varList = getVarList(adata)
     obsList = getObsList(adata)
-    palette = getPalette(adata)
-
     new_tmap_project = copy.deepcopy(tmap_template)
 
     new_tmap_project["layers"] = layers
@@ -292,6 +289,18 @@ def h5ad_to_tmap(basedir, path, library_id=None):
         )
         if "markerFiles" not in new_tmap_project.keys():
             new_tmap_project["markerFiles"] = []
+    obsListCategorical = []
+    obsListNumerical = []
+    palette = {}
+
+    for obs in obsList:
+        if adata.get(f"/obs/{obs}/categories") is not None:
+            obsListCategorical.append(obs)
+            p = getPalette(adata, obs)
+            palette[obs] = p
+        else:
+            obsListNumerical.append(obs)
+
     new_tmap_project["markerFiles"].append(
         {
             "expectedHeader": {
@@ -340,10 +349,13 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                     "name": obs,
                     "expectedHeader.cb_col": f"/obs/{obs}",
                     "expectedHeader.sortby_col": f"/obs/{obs}",
+                    "expectedRadios.cb_gr_dict": False,
+                    "expectedRadios.cb_col": True,
+                    "expectedRadios.cb_gr": False,
+                    "expectedRadios.cb_gr_key": False,
+                    "expectedRadios.sortby_check": True,
                 }
-                for obs in obsList
-                if adata.get(f"/obs/{obs}/categories") is None
-                and adata.get(f"/obs/__categories/{obs}") is None
+                for obs in obsListNumerical
             ],
             "title": "Numerical observations",
             "uid": "mainTab",
@@ -385,10 +397,18 @@ def h5ad_to_tmap(basedir, path, library_id=None):
             "name": "Categorical observations",
             "path": os.path.basename(path),
             "dropdownOptions": [
-                {"optionName": obs, "name": obs, "expectedHeader.gb_col": f"/obs/{obs}"}
-                for obs in obsList
-                if adata.get(f"/obs/{obs}/categories") is not None
-                or adata.get(f"/obs/__categories/{obs}") is not None
+                {
+                    "optionName": obs,
+                    "name": obs,
+                    "expectedHeader.gb_col": f"/obs/{obs}",
+                    "expectedHeader.cb_gr_dict": palette[obs],
+                    "expectedRadios.cb_gr_dict": True,
+                    "expectedRadios.cb_col": False,
+                    "expectedRadios.cb_gr": True,
+                    "expectedRadios.cb_gr_key": False,
+                    "expectedRadios.sortby_check": False,
+                }
+                for obs in obsListCategorical
             ],
             "title": "Categorical observations",
             "uid": "mainTab",
@@ -434,6 +454,13 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                     "name": "Gene expression: " + gene,
                     "expectedHeader.cb_col": f"/X;{index}",
                     "expectedHeader.sortby_col": f"/X;{index}",
+                    "expectedHeader.cb_gr_dict": "",
+                    "expectedRadios.cb_gr_dict": False,
+                    "expectedHeader.gb_col": "",
+                    "expectedRadios.cb_col": True,
+                    "expectedRadios.cb_gr": False,
+                    "expectedRadios.cb_gr_key": False,
+                    "expectedRadios.sortby_check": True,
                 }
                 for index, gene in enumerate(varList)
             ],

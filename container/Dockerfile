@@ -1,7 +1,6 @@
 FROM python:3.10-alpine
 
 COPY ./container/requirements.txt /requirements.txt
-COPY ./container/tissuumaps.cfg /tissuumaps.cfg
 
 # Install libvips
 
@@ -40,6 +39,7 @@ RUN apk add --no-cache --virtual .build-deps2 build-base \
 
 RUN pip3 install gunicorn gevent
 
+COPY ./container/tissuumaps.cfg /tissuumaps.cfg
 COPY ./tissuumaps/ /app/tissuumaps
 WORKDIR /app/
 ENV PYTHONPATH /app

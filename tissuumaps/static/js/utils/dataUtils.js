@@ -130,7 +130,7 @@ dataUtils.processRawData = function(data_id, rawdata) {
 
 }
 
-dataUtils.getAllH5Data = function(data_id, alldrops){
+dataUtils.getAllH5Data = async function(data_id, alldrops){
     var data_obj = dataUtils.data[data_id];
 
     let getH5Data = function(drop){
@@ -180,20 +180,24 @@ dataUtils.getAllH5Data = function(data_id, alldrops){
     }
     let progressBar=interfaceUtils.getElementById(data_id+"_csv_progress");
     progressBar.style.width = "10%";
-    // We get H5 data for each field, sequentially:
-    return namesymbols.reduce(function(p, drop, drop_index) {
-        return p.then(function(results) {
-            return getH5Data(drop).then(function(data) {
-                let perc=100 * (drop_index+1) / namesymbols.length;
-                perc=perc.toString()+"%";
-                console.log(drop_index, namesymbols.length,perc);
-                progressBar.style.width = perc;
-                results.push(data);
-                return results;
-            },
-            function(error) {return results});
+    let dataLoaded = 0;
+    
+    // We get H5 data for each field, in parallel:
+    for (drop_index in namesymbols) {
+        let drop = namesymbols[drop_index];
+        console.log(drop_index);
+        getH5Data(drop).then(function(data) {
+            dataLoaded += 1;
+            let perc=100 * dataLoaded / namesymbols.length;
+            let perc_s=perc.toString()+"%";
+            progressBar.style.width = perc_s;
         });
-    }, Promise.resolve([]));
+    }
+    // Wait until all data is loaded:
+    while (true) {
+        await new Promise(r => setTimeout(r, 100));
+        if (dataLoaded == namesymbols.length) return;
+    }
 }
 
 /** 
@@ -478,14 +482,18 @@ dataUtils.createMenuFromCSV = function(data_id,datumExample) {
 * @param {Object} thecsv csv file path
 */
 dataUtils.readH5 = function(data_id, thecsv, options) { 
-    interfaceUtils._mGenUIFuncs.dataTabUIToH5(data_id);
-    dataUtils.createDataset(data_id,{"name":data_id, "filetype":"h5"});
-
+    if (dataUtils.data[data_id] === undefined){
+        interfaceUtils._mGenUIFuncs.dataTabUIToH5(data_id);
+        dataUtils.createDataset(data_id,{"name":data_id, "filetype":"h5"});
+    }
     let data_obj = dataUtils.data[data_id];
+    let skip_download = (data_obj["_csv_path"] == thecsv);
     data_obj["modified"] = true;
-    data_obj["_processeddata"] = undefined;
-    data_obj["_isnan"] = {};
-    data_obj["_csv_header"] = null;
+    if (!skip_download) {
+        data_obj["_processeddata"] = undefined;
+        data_obj["_isnan"] = {};
+        data_obj["_csv_header"] = null;
+    }
     data_obj["_csv_path"] = thecsv;
     if (options != undefined) {
         //data_obj["_csv_path"] = options.path;
@@ -534,8 +542,10 @@ dataUtils.readCSV = function(data_id, thecsv, options) {
         dataUtils.createDataset(data_id,{"name":data_id, "filetype":"csv"});
     }
     let data_obj = dataUtils.data[data_id];
-    
-    let skip_download = (data_obj["_csv_path"] == options.path);
+    let skip_download = false;
+    if (options != undefined) {
+        skip_download = (data_obj["_csv_path"] == options.path);
+    }
 
     data_obj["modified"] = true;
     if (!skip_download) {
