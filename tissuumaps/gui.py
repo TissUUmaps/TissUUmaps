@@ -825,6 +825,19 @@ def is_port_in_use(port):
         return s.connect_ex(("localhost", port)) == 0
 
 
+class FlaskAPI(QObject):
+    def __init__(self, port):
+        """
+        Run Flask API and set the example route.
+        """
+        super(FlaskAPI, self).__init__()
+        self.port = port
+
+    def start(self):
+        views.setup(views.app)
+        views.app.run(host="127.0.0.1", port=self.port, threaded=True, debug=False)
+
+
 def main():
     parser = OptionParser(usage="Usage: %prog [options] [slide-directory]")
     parser.add_option(
@@ -973,17 +986,21 @@ def main():
             exit(0)
     logging.info("Ending port detection " + str(port))
 
-    def flaskThread():
-        views.setup(views.app)
-        views.app.run(host="127.0.0.1", port=port, threaded=True, debug=False)
+    thread = QThread()
+    thread.setPriority(QThread.Priority.LowestPriority)
+    QThread.currentThread().setPriority(QThread.Priority.HighestPriority)
 
-    threading.Thread(target=flaskThread, daemon=True).start()
+    api = FlaskAPI(port)
+    api.moveToThread(thread)
+    thread.started.connect(api.start)
+    thread.start()
 
     ui = MainWindow(qt_app, views.app, args)
     ui.browser.setLocation("http://127.0.0.1:" + str(port) + "/")
 
     QTimer.singleShot(1000, splash.close)
     qt_app.exec()
+    thread.terminate()
 
 
 if __name__ == "__main__":
