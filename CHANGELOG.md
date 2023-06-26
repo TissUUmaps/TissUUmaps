@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.1.1.4
+
+- Fix bug of modal not hiding properly
+- Fix capture with scale of 1
+- Fix loading of AnnData files without X matrix
+- Add DEFAULT_PROJECT parameter for docker and server
+
+## 3.1.1.3
+
+- Minor fixes
+
 ## 3.1.1.2
 
 - Make load of HDF5 data parallel

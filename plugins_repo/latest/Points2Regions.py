@@ -199,6 +199,9 @@ def points2regions(
     seed: int = 42,
     region_name: str = "My regions",
 ):
+
+    # Force float
+    xy = np.array(xy, dtype="float32")
     print(
         "xy",
         xy,
