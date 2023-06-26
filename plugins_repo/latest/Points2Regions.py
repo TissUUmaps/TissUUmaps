@@ -11,8 +11,7 @@ from flask import abort, make_response
 from scipy.ndimage import zoom
 from scipy.sparse import eye, spmatrix, vstack
 from sklearn.cluster import MiniBatchKMeans as KMeans
-from sklearn.neighbors import kneighbors_graph, radius_neighbors_graph
-from sklearn.preprocessing import OneHotEncoder, normalize
+from sklearn.preprocessing import normalize
 
 COLORS = [
     [0.9019607843137255, 0.09803921568627451, 0.29411764705882354],
@@ -62,9 +61,6 @@ def polygons2json(polygons, cluster_class, cluster_names, colors=None):
     return jsonROIs
 
 
-index = 0
-
-
 def binary_mask_to_polygon(
     binary_mask: np.ndarray,
     tolerance: float = 0,
@@ -77,7 +73,6 @@ def binary_mask_to_polygon(
         tolerance: Maximum distance from original points of polygon to approximated
             polygonal chain. If tolerance is 0, the original coordinate array is returned.
     """
-    global index
     from skimage.measure import approximate_polygon, find_contours
 
     polygons = []
@@ -86,7 +81,6 @@ def binary_mask_to_polygon(
     padded_binary_mask = np.pad(
         binary_mask, pad_width=1, mode="constant", constant_values=0
     )
-    index += 1
     contours = find_contours(padded_binary_mask, 0.5)
     contours = [c - 1 for c in contours]
     # contours = np.subtract(contours, 1)
@@ -158,12 +152,14 @@ def create_features(
         )
     else:
         B = eye(len(xy))
-
+    B = B.astype("float32")
     # Find center of mass for each point
     xy = ((B @ xy) / (B.sum(axis=1))).A
 
     # Create attribute matrix (ngenes x nuniques)
     attributes, _ = attribute_matrix(labels, unique_labels)
+    attributes = attributes.astype("bool")
+
     features, adj = kde_per_label(xy, B @ attributes, sigma, return_neighbors=True)
 
     # Compute bin size
@@ -199,9 +195,6 @@ def points2regions(
     seed: int = 42,
     region_name: str = "My regions",
 ):
-
-    # Force float
-    xy = np.array(xy, dtype="float32")
     print(
         "xy",
         xy,
@@ -222,6 +215,8 @@ def points2regions(
         "seed",
         seed,
     )
+    xy = np.array(xy, dtype="float32")
+
     # Iterate data by library ids
     if library_id_column is not None:
         unique_library_id = np.unique(library_id_column)
@@ -292,6 +287,12 @@ def points2regions(
         return (output_column, None)
 
 
+from typing import Any, List, Literal, Optional, Union
+
+from sklearn.neighbors import kneighbors_graph, radius_neighbors_graph
+from sklearn.preprocessing import OneHotEncoder
+
+
 def connectivity_matrix(
     xy: np.ndarray,
     method="knn",
@@ -323,9 +324,9 @@ def connectivity_matrix(
             connected.
     """
     if method == "knn":
-        A = kneighbors_graph(xy, k, include_self=include_self)
+        A = kneighbors_graph(xy, k, include_self=include_self).astype("bool")
     else:
-        A = radius_neighbors_graph(xy, r, include_self=include_self)
+        A = radius_neighbors_graph(xy, r, include_self=include_self).astype("bool")
     return A
 
 
@@ -375,138 +376,6 @@ def attribute_matrix(
     if return_encoder:
         return y, categories, encoder
     return y, categories
-
-
-def degree_matrix(A: sp.spmatrix) -> sp.spmatrix:
-    """
-    Calculates the degree matrix of a given matrix.
-
-    Parameters:
-    -----------
-    A : sp.spmatrix
-        The input matrix.
-
-    Returns:
-    --------
-    sp.spmatrix
-        The degree matrix of the input matrix.
-    """
-    D = np.array(A.sum(axis=1)).ravel()
-    return sp.csr_matrix(sp.diags(D, 0))
-
-
-def _adj2laplacian(A: sp.spmatrix, return_degree: bool = False) -> sp.spmatrix:
-    """
-    Converts a sparse matrix representation of an affinity graph to a Laplacian matrix.
-
-    Parameters:
-    -----------
-    A : sp.spmatrix
-        The input affinity matrix.
-    return_degree : bool, optional
-        If True, returns both the Laplacian matrix and the degree matrix. Default is
-        False.
-
-    Returns:
-    --------
-    sp.spmatrix or tuple
-        If \`return_degree\` is False, returns the Laplacian matrix.
-        If \`return_degree\` is True, returns a tuple containing the Laplacian matrix and
-        the degree matrix.
-    """
-    aff_tilde = A + sp.eye(*A.shape)
-    D = degree_matrix(aff_tilde)
-    L = D - aff_tilde
-    return (L, D) if return_degree else L
-
-
-def proximity_matrix(A: sp.spmatrix, gamma: float = 1.0, hops: int = 1) -> sp.spmatrix:
-    """
-    Calculates the proximity matrix of a given matrix.
-
-    Parameters:
-    -----------
-    A : sp.spmatrix
-        The input matrix.
-    gamma : float, optional
-        The decay factor for the proximity matrix. Default is 1.0.
-    hops : int, optional
-        The number of hops to calculate. Default is 1.
-
-    Returns:
-    --------
-    sp.spmatrix
-        The proximity matrix of the input matrix.
-    """
-    L, D = _adj2laplacian(A, return_degree=True)
-    _I = sp.eye(*D.shape)
-    D_inv = sp.csr_matrix(sp.diags(1.0 / (D.diagonal() + 1e-12), 0))
-    P = (_I - gamma * D_inv @ L) ** hops
-    return P
-
-
-def proximity_matrix_multiply(
-    A: sp.spmatrix, y: sp.spmatrix, gamma: float = 1.0, hops: int = 1
-) -> sp.spmatrix:
-    """
-    Calculates the proximity matrix of a given matrix.
-
-    Parameters:
-    -----------
-    A : sp.spmatrix
-        The input matrix.
-    y : sp.spmatrix
-        The matrix that is to be multiplied by the proximity matrix
-    gamma : float, optional
-        The decay factor for the proximity matrix. Default is 1.0.
-    hops : int, optional
-        The number of hops to calculate. Default is 1.
-
-    Returns:
-    --------
-    sp.spmatrix
-        The multiplication of the proximity matrix and y.
-    """
-    P = proximity_matrix(A, gamma, hops=1)
-    out = P @ y
-    if hops > 1:
-        for _ in range(hops - 1):
-            out = P @ out
-    return out
-
-
-def maximal_degree_matrix(A: sp.spmatrix) -> sp.spmatrix:
-    """
-    Given an adjacency matrix A, returns a binary matrix representing a maximal
-    independent set of the graph described by A. A maximal independent set is a set of
-    vertices such that no two vertices are connected by an edge, and it is not possible
-    to add any vertices to the set.
-
-    Parameters:
-    A (sp.spmatrix): The input adjacency matrix.
-
-    Returns:
-    sp.spmatrix: A binary matrix representing a maximal independent set of the graph
-        described by A.
-
-    """
-    # Sort vertices based on degree
-    degree = A.sum(axis=1).A.ravel()
-    vertices_sorted = np.flip(np.argsort(degree))
-    independent, dependent = set({}), set({})
-    neighbors = A.tolil(copy=True).rows
-    for i in vertices_sorted:
-        neighbor = neighbors[i]
-        if i not in dependent:
-            independent.add(i)
-            dependent.update(neighbor)
-        dependent.add(i)
-    # Format output as a sparse matrix
-    n = len(independent)
-    values = np.ones(n)
-    cols = np.sort(list(independent))
-    rows = np.arange(n)
-    return sp.csr_matrix((values, (rows, cols)), shape=(n, A.shape[0]))
 
 
 def spatial_binning_matrix(
@@ -600,12 +469,13 @@ def kde_per_label(
         - \`unique_labels\`: A 1D numpy array containing the unique labels found in
             \`labels\`.
     """
-    print(xy)
-    adj = connectivity_matrix(xy, method="radius", r=3.0 * sigma)
+    adj = connectivity_matrix(xy, method="radius", r=2.0 * sigma, include_self=True)
     row, col = adj.nonzero()
-    d2 = np.linalg.norm(xy[row] - xy[col], axis=1) ** 2
-    a2 = np.exp(-d2 / (2 * sigma * sigma))
-    aff = sp.csr_matrix((a2, (row, col)), shape=adj.shape)
+    d2 = (xy[row, 0] - xy[col, 0]) ** 2
+    d2 = d2 + (xy[row, 1] - xy[col, 1]) ** 2
+    d2 = np.sqrt(d2)
+    d2 = np.exp(-d2 / (2 * sigma * sigma))
+    aff = sp.csr_matrix((d2, (row, col)), shape=adj.shape, dtype="float32")
     if not return_neighbors:
         return aff @ features
     else:
@@ -733,14 +603,17 @@ class Plugin:
                 except:
                     labels = f.get(jsonParam["clusterKey"])[()]
                 labels = labels.astype(str)
-        sigma = float(jsonParam["sigma"])
         stride = float(jsonParam["stride"])
-        region_name = jsonParam["region_name"]
+        sigma = float(jsonParam["sigma"])
         nclusters = int(jsonParam["nclusters"])
         expression_threshold = float(jsonParam["expression_threshold"])
         seed = int(jsonParam["seed"])
+        region_name = jsonParam["region_name"]
         format = jsonParam["format"]
-
+        if format == "GeoJSON polygons":
+            compute_regions = True
+        else:
+            compute_regions = False
         c, r = points2regions(
             xy,
             labels,
@@ -749,7 +622,7 @@ class Plugin:
             stride,
             expression_threshold,
             None,
-            True,
+            compute_regions,
             seed,
             region_name,
         )
