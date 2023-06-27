@@ -207,7 +207,8 @@ class Plugin:
             if not jsonParam:
                 logging.error("No arguments, aborting.")
                 abort(500, "No arguments, aborting.")
-
+            if jsonParam["path"] == None:
+                jsonParam["path"] = "./"
             bbox = jsonParam["bbox"]
             show_trace = jsonParam["show_trace"]
             layers = jsonParam["layers"]
@@ -295,6 +296,8 @@ class Plugin:
         if not jsonParam:
             logging.error("No arguments, aborting.")
             abort(500, "No arguments, aborting.")
+        if jsonParam["path"] == None:
+            jsonParam["path"] = "./"
         relativepath = unquote(jsonParam["path"])
         pathFormat = unquote(jsonParam["pathFormat"])
         if relativepath != "":
