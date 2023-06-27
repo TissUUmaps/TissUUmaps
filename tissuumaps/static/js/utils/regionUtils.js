@@ -1112,7 +1112,6 @@ regionUtils.exportRegionsToJSON = function () {
 /** 
  *  regionUtils */
 regionUtils.importRegionsFromJSON = function () {
-    regionUtils.deleteAllRegions();
     regionUtils.JSONToRegions();
 }
 
