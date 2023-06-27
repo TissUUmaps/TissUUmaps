@@ -131,13 +131,7 @@ regionUtils.closePolygon = function () {
     regionUtils._isNewRegion = true;
     regionUtils.addRegion([[regionUtils._currentPoints]], regionid, hexcolor);
     regionUtils._currentPoints = null;
-    if (!glUtils._showRegionsExperimental) {
-        var strokeWstr = regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
-        regionsobj.append('path').attr("d", regionUtils.pointsToPath(regionUtils._regions[regionid].points)).attr("id", regionid + "_poly")
-            .attr("class", "regionpoly").attr("polycolor", hexcolor).attr('stroke-width', strokeWstr)
-            .style("stroke", hexcolor).style("fill", "none")
-            .append('title').text(regionid).attr("id","path-title-" + regionid);
-    }
+
     regionUtils.updateAllRegionClassUI();
     $(document.getElementById("regionClass-")).collapse("show");
 
@@ -299,25 +293,15 @@ regionUtils.geoJSON2regions = function (geoJSONObjects) {
         }
         regionUtils.addRegion(coordinates, regionId, hexColor, geoJSONObjClass);
         regionUtils._regions[regionId].regionName = regionName;
-        if (!glUtils._showRegionsExperimental) {
-            regionobj = d3.select(canvas).append('g').attr('class', "mydrawingclass");
-            var strokeWstr = regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
-            regionobj.append('path').attr("d", regionUtils.pointsToPath(regionUtils._regions[regionId].points)).attr("id", regionId + "_poly")
-                .attr("class", "regionpoly").attr("polycolor", hexColor).attr('stroke-width', strokeWstr)
-                .style("stroke", hexColor).style("fill", "none")
-                .append('title').text(regionName).attr("id","path-title-" + regionId);
-        }
         if (document.getElementById(regionId + "_class_ta")) {
             document.getElementById(regionId + "_class_ta").value = geoJSONObjClass;
             document.getElementById(regionId + "_name_ta").value = regionName;
             regionUtils.changeRegion(regionId);
         }
     });
-    if (glUtils._showRegionsExperimental) {
-        glUtils.updateRegionDataTextures();
-        glUtils.updateRegionLUTTextures();
-        glUtils.draw();
-    }
+    glUtils.updateRegionDataTextures();
+    glUtils.updateRegionLUTTextures();
+    glUtils.draw();
     document.querySelector("#regionAccordions").classList.remove("d-none");
 }
 
@@ -355,7 +339,15 @@ regionUtils.addRegion = function (points, regionid, color, regionClass) {
     var op = tmapp["object_prefix"];
     var viewer = tmapp[tmapp["object_prefix"] + "_viewer"]
     //var imageWidth = OSDViewerUtils.getImageWidth();
-    var region = { "id": regionid, "points": [], "globalPoints": [], "regionName": regionid, "regionClass": regionClass, "barcodeHistogram": [] };
+    var region = { 
+        "id": regionid, 
+        "points": [], 
+        "globalPoints": [], 
+        "regionName": regionid, 
+        "regionClass": regionClass, 
+        "barcodeHistogram": [],
+        "visibility": true
+    };
     region.len = points.length;
     var _xmin = parseFloat(points[0][0][0][0]), 
         _xmax = parseFloat(points[0][0][0][0]),
@@ -471,11 +463,12 @@ regionUtils.regionUI = function (regionid) {
     var checkinput = HTMLElementUtils.inputTypeCheckbox({
         id: regionid + "_fill_ta",
         class: "form-check-input",
-        value: regionUtils._regions[regionid].filled,
+        checked: regionUtils._regions[regionid].visibility ? "checked" : "",
         eventListeners: { click: function () {
-            regionUtils._regions[regionid].filled = this.checked;
-            regionUtils.fillRegion(regionid, regionUtils._regions[regionid].filled);
-            regionUtils.updateAllRegionClassUI();
+            regionUtils._regions[regionid].visibility = this.checked;
+            //regionUtils.updateAllRegionClassUI();
+            glUtils.updateRegionLUTTextures();
+            glUtils.draw();
         }}
     });
     tdPanel.appendChild(checkinput);
@@ -670,52 +663,23 @@ regionUtils.searchTreeForPointsInRegion = function (quadtree, x0, y0, x3, y3, re
 
 /** Fill all regions  */
 regionUtils.fillAllRegions=function(){
-    var allFilled = Object.values(regionUtils._regions).map(function(e) { return e.filled; }).includes(false);
-    for(var regionid in regionUtils._regions){
-        if (regionUtils._regions.hasOwnProperty(regionid)) {
-            regionUtils.fillRegion(regionid, allFilled);
-            if(document.getElementById(regionid + "_fill_ta"))
-                document.getElementById(regionid + "_fill_ta").checked = allFilled;
-        }
+    glUtils._regionFillRule = glUtils._regionFillRule == "never" ? "nonzero" : "never";
+    
+    let regionIcon = document.getElementById('ISS_fillregions_icon');
+    if (glUtils._regionFillRule != "never") {
+        regionIcon.classList.remove("bi-circle");
+        regionIcon.classList.add("bi-check-circle");
+    } else {
+        regionIcon.classList.remove("bi-check-circle");
+        regionIcon.classList.add("bi-circle");
     }
+    glUtils.draw();    
 }
 
-/** 
- * @param {String} regionid String id of region to fill
- * @summary Given a region id, fill this region in the interface */
-regionUtils.fillRegion = function (regionid, value) {
-    if (value === undefined) {
-        // we toggle
-        if(regionUtils._regions[regionid].filled === 'undefined'){
-            value = true;
-        }
-        else {
-            value = !regionUtils._regions[regionid].filled;
-        }
-    }
-    regionUtils._regions[regionid].filled=value;
-    if (!glUtils._showRegionsExperimental) {
-        var newregioncolor = regionUtils._regions[regionid].polycolor;
-        var d3color = d3.rgb(newregioncolor);
-        var newStyle="";
-        if(regionUtils._regions[regionid].filled){
-            newStyle = "stroke: " + d3color.rgb().toString()+";";
-            d3color.opacity=0.5;
-            newStyle +="fill: "+d3color.rgb().toString()+";";
-        }else{
-            newStyle = "stroke: " + d3color.rgb().toString() + "; fill: none;";
-        }
-        document.getElementById(regionid + "_poly").setAttribute("style", newStyle);
-    }
-}
 /** 
  * @param {String} regionid String id of region to delete
  * @summary Given a region id, deletes this region in the interface */
 regionUtils.deleteRegion = function (regionid, skipUpdateAllRegionClassUI) {
-    if (!glUtils._showRegionsExperimental) {
-        var regionPoly = document.getElementById(regionid + "_poly")
-        regionPoly.parentElement.removeChild(regionPoly);
-    }
     delete regionUtils._regions[regionid];
     var op = tmapp["object_prefix"];
     var rPanel = document.getElementById(op + regionid + "_tr");
@@ -762,11 +726,9 @@ regionUtils.updateAllRegionClassUI = function (regionClass) {
             accordionItem.remove();
         }
     });
-    if (glUtils._showRegionsExperimental) {
-        glUtils.updateRegionDataTextures();
-        glUtils.updateRegionLUTTextures();
-        glUtils.draw();
-    }
+    glUtils.updateRegionDataTextures();
+    glUtils.updateRegionLUTTextures();
+    glUtils.draw();
 }
 /** 
  *  @param {String} regionClass Region class
@@ -842,7 +804,7 @@ regionUtils.addRegionClassUI = function (regionClass) {
         var tblHead = document.createElement("thead");
         var tblHeadTr = document.createElement("tr");
         tblHead.appendChild(tblHeadTr);
-        tblHeadTr.appendChild(HTMLElementUtils.createElement({kind:"th",innerText:"Fill"}));
+        tblHeadTr.appendChild(HTMLElementUtils.createElement({kind:"th",innerText:""}));
         tblHeadTr.appendChild(HTMLElementUtils.createElement({kind:"th",innerText:"Name"}));
         tblHeadTr.appendChild(HTMLElementUtils.createElement({kind:"th",innerText:"Class"}));
         tblHeadTr.appendChild(HTMLElementUtils.createElement({kind:"th",innerText:"Color"}));
@@ -865,19 +827,18 @@ regionUtils.addRegionClassUI = function (regionClass) {
         var checkinput = HTMLElementUtils.inputTypeCheckbox({
             class: "form-check-input",
             id: regionClassID + "_group_fill_ta",
-            value: false,
+            checked: true,
             eventListeners: { click: function () {
-                var newFill = this.checked;
-                groupRegions = Object.values(regionUtils._regions).filter(
+                let newVisibility = this.checked;
+                let groupRegions = Object.values(regionUtils._regions).filter(
                     x => x.regionClass==regionClass
                 ).forEach(function (region) {
-                    region.filled = newFill;
+                    region.visibility = newVisibility;
                     if (document.getElementById(region.id + "_fill_ta"))
-                        document.getElementById(region.id + "_fill_ta").checked = newFill;
-                    regionUtils.fillRegion(region.id, newFill);
+                        document.getElementById(region.id + "_fill_ta").checked = newVisibility;
                 });
-                regionUtils.updateAllRegionClassUI();
-            }}
+                glUtils.updateRegionLUTTextures();
+                glUtils.draw();            }}
         });
         tdPanel.appendChild(checkinput);
         trPanel.appendChild(tdPanel);
@@ -1022,29 +983,10 @@ regionUtils.changeRegion = function (regionid) {
         var newregioncolor = document.getElementById(regionid + "_color_input").value;
         regionUtils._regions[regionid].polycolor = newregioncolor;
     }
-    if (! glUtils._showRegionsExperimental) {
-        regionUtils.updateRegionDraw(regionid);
-    }
 }
 
 /** 
- *  @param {String} regionid Region identifier
- *  @summary Change the region properties like color, class name or region name */
- regionUtils.updateRegionDraw = function (regionid) {
-    var newregioncolor = regionUtils._regions[regionid].polycolor;
-    var d3color = d3.rgb(newregioncolor);
-    var newStyle = "stroke: " + d3color.rgb().toString() + "; fill: none;";
-    document.getElementById(regionid + "_poly").setAttribute("style", newStyle);
-    if (regionUtils._regions[regionid].filled === undefined)
-        regionUtils._regions[regionid].filled = false;
-    regionUtils.fillRegion(regionid, regionUtils._regions[regionid].filled);
-    if (regionUtils._regions[regionid].regionName) {rName = regionUtils._regions[regionid].regionName;}
-    else {rName = regionid;}
-    document.getElementById("path-title-" + regionid).innerHTML = rName;
- }
-
-/** 
- *  regionUtils */
+ *  TODO */
 regionUtils.analyzeRegion = function (regionid) {
     var op = tmapp["object_prefix"];
 
@@ -1170,7 +1112,6 @@ regionUtils.exportRegionsToJSON = function () {
 /** 
  *  regionUtils */
 regionUtils.importRegionsFromJSON = function () {
-    regionUtils.deleteAllRegions();
     regionUtils.JSONToRegions();
 }
 
@@ -1427,7 +1368,7 @@ regionUtils._generateRegionToColorLUT = function() {
         const r = Number("0x" + hexColor.substring(1,3));
         const g = Number("0x" + hexColor.substring(3,5));
         const b = Number("0x" + hexColor.substring(5,7));
-        const visibility = 255;  // FIXME Hardcoded value
+        const visibility = region.visibility ? 255 : 0;
         regionUtils._regionToColorLUT.push(r, g, b, visibility);
         objectID += 1;
     }

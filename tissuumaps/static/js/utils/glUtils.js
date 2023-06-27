@@ -60,9 +60,8 @@ glUtils = {
     _useInstancing: true,         // Use instancing and gl.TRIANGLE_STRIP to avoid size limit of gl.POINTS
     _showEdgesExperimental: true,
     _edgeThicknessRatio: 0.1,     // Ratio between edge thickness and marker size
-    _showRegionsExperimental: true,
     _regionOpacity: 0.5,
-    _regionFillRule: "nonzero",   // Possible values: "never" | "nonzero" | "oddeven"
+    _regionFillRule: "never",   // Possible values: "never" | "nonzero" | "oddeven"
     _regionUsePivotSplit: true,   // Use split edge lists for faster region rendering and less risk of overflow
     _logPerformance: false,       // Use GPU timer queries to log performance
     _piechartPalette: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
@@ -1901,14 +1900,12 @@ glUtils._drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
     }
 
     // Draw regions last, to make them appear on top (same behaviour as for SVG regions)
-    if (glUtils._showRegionsExperimental) {
-        // FIXME For now, regions will always have the first image as parent
-        const image = tmapp["ISS_viewer"].world.getItemAt(0);
-        const imageWidth = image ? image.getContentSize().x : 1;
-        const imageHeight = image ? image.getContentSize().y : 1;
-        const imageBounds = [0, 0, imageWidth, imageHeight];
-        glUtils._drawRegionsColorPass(gl, viewportTransform, imageBounds);
-    }
+    // FIXME For now, regions will always have the first image as parent
+    const image = tmapp["ISS_viewer"].world.getItemAt(0);
+    const imageWidth = image ? image.getContentSize().x : 1;
+    const imageHeight = image ? image.getContentSize().y : 1;
+    const imageBounds = [0, 0, imageWidth, imageHeight];
+    glUtils._drawRegionsColorPass(gl, viewportTransform, imageBounds);
 }
 
 
