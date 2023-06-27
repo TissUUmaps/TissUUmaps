@@ -45,7 +45,14 @@ flask.standalone.init = function () {
     });
     flask.standalone.pixelFlickering = HTMLElementUtils.createElement({"kind":"div", extraAttributes:{"style":"position:absolute;right:0px;bottom:0px;width:1px;height:1px;line-height:1px;background-color:#FFFFFF"}});
     document.body.append(flask.standalone.pixelFlickering)
-
+    function refreshAnimation() {
+        if (flask.standalone.pixelFlickering.style.backgroundColor=="rgb(255, 255, 255)")
+            flask.standalone.pixelFlickering.style.backgroundColor="rgb(255, 255, 254)";
+        else 
+            flask.standalone.pixelFlickering.style.backgroundColor="rgb(255, 255, 255)";
+        requestIdleCallback(refreshAnimation)
+    }
+    refreshAnimation();
     var plusButton = document.getElementById("plus-1-button");
     var clone = plusButton.cloneNode(true); plusButton.replaceWith(clone); 
     document.getElementById("plus-1-button").addEventListener("click", function(event) {
