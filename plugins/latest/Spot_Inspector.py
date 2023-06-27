@@ -1,26 +1,23 @@
-try:
-    import glob
-    import os
-    from io import BytesIO
+import glob
+import os
+from io import BytesIO
 
-    import matplotlib
-    from flask import abort, make_response
-    from PIL import Image
+import matplotlib
+from flask import abort, make_response
+from PIL import Image
 
-    matplotlib.use("Agg")
+matplotlib.use("Agg")
 
-    import base64
-    import logging
-    import re
-    from urllib.parse import unquote
+import base64
+import logging
+import re
+from urllib.parse import unquote
 
-    import matplotlib.pyplot as plt
-    import numpy as np
-    import pyvips
+import matplotlib.pyplot as plt
+import numpy as np
+import pyvips
 
-    import tissuumaps.views as tv
-except:
-    pass
+import tissuumaps.views as tv
 
 
 class PILBytesIO(BytesIO):
@@ -210,7 +207,8 @@ class Plugin:
             if not jsonParam:
                 logging.error("No arguments, aborting.")
                 abort(500, "No arguments, aborting.")
-
+            if jsonParam["path"] == None:
+                jsonParam["path"] = "./"
             bbox = jsonParam["bbox"]
             show_trace = jsonParam["show_trace"]
             layers = jsonParam["layers"]
@@ -298,6 +296,8 @@ class Plugin:
         if not jsonParam:
             logging.error("No arguments, aborting.")
             abort(500, "No arguments, aborting.")
+        if jsonParam["path"] == None:
+            jsonParam["path"] = "./"
         relativepath = unquote(jsonParam["path"])
         pathFormat = unquote(jsonParam["pathFormat"])
         if relativepath != "":
