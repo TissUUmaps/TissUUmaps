@@ -16,6 +16,7 @@
  * @property {String}   regionUtils._drawingclass - String that accompanies the classes of the polygons in the interface"drawPoly", 
  * @property {Object[]} regionUtils._edgeLists - Data structure used for rendering regions with WebGL
  * @property {Object[]} regionUtils._regionToColorLUT - LUT for storing color and visibility per object ID
+ * @property {Object{}} regionUtils._regionIDToIndex - Mapping between region ID (string) and object ID (index)
 */
 regionUtils = {
     _isNewRegion: true,
@@ -32,7 +33,8 @@ regionUtils = {
     _drawingclass: "drawPoly",
     _maxRegionsInMenu: 200,
     _edgeLists: [],
-    _regionToColorLUT: []
+    _regionToColorLUT: [],
+    _regionIDToIndex: {}
 }
 
 /** 
@@ -568,18 +570,6 @@ regionUtils.regionUI = function (regionid) {
     trPanelHist.appendChild(row);
 }
 
-/**
- * @param {*} x X coordinate of the point to check
- * @param {*} y Y coordinate of the point to check
- * @param {*} path SVG path
- * @param {*} tmpPoint Temporary point to check if in path. This is only for speed.
- */
- regionUtils.globalPointInPath=function(x,y,path,tmpPoint) {
-    tmpPoint.x = x;
-    tmpPoint.y = y;
-    return path.isPointInFill(tmpPoint);
-};
-
 /** 
  *  @param {Object} quadtree d3.quadtree where the points are stored
  *  @param {Number} x0 X coordinate of one point in a bounding box
@@ -629,28 +619,30 @@ regionUtils.regionUI = function (regionid) {
  *  @summary Search for points inside a particular region */
 regionUtils.searchTreeForPointsInRegion = function (quadtree, x0, y0, x3, y3, regionid, options) {    
     if (options.globalCoords) {
-        var pointInPath = regionUtils.globalPointInPath;
         var xselector = options.xselector;
         var yselector = options.yselector;
     }else{
         throw {name : "NotImplementedError", message : "ViewerPointInPath not yet implemented."}; 
     }
 
-    var op = tmapp["object_prefix"];
-    var viewer = tmapp[op + "_viewer"]
-    var countsInsideRegion = 0;
-    var pointsInside=[];
-    regionPath=document.getElementById(regionid + "_poly");
-    var svgovname = tmapp["object_prefix"] + "_svgov";
-    var svg = tmapp[svgovname]._svg;
-    tmpPoint = svg.createSVGPoint();
-    pointInBbox = regionUtils.searchTreeForPointsInBbox(quadtree, x0, y0, x3, y3, options);
+    // FIXME: For now, regions will always have the first image as parent
+    const image = tmapp["ISS_viewer"].world.getItemAt(0);
+    const imageWidth = image ? image.getContentSize().x : 1;
+    const imageHeight = image ? image.getContentSize().y : 1;
+    const imageBounds = [0, 0, imageWidth, imageHeight];
+
+    // Note: searchTreeForPointsInBbox() currently returns a list of points
+    // in array-of-structs format. This will make the memory usage explode for
+    // large markersets (or for markers with many attributes), so it would be
+    // better to just return a list of point indices instead.
+    const pointInBbox = regionUtils.searchTreeForPointsInBbox(quadtree, x0, y0, x3, y3, options);
+
+    let countsInsideRegion = 0;
+    let pointsInside = [];
     for (d of pointInBbox) {
-        let tiledImage = viewer.world.getItemAt(0);
-        let x = d[xselector];
-        let y = d[yselector];
-        viewport_coord = tiledImage.imageToViewportCoordinates(x,y)
-        if (pointInPath(viewport_coord.x, viewport_coord.y, regionPath, tmpPoint)) {
+        const x = d[xselector];
+        const y = d[yselector];
+        if (regionUtils._pointInRegion(x, y, regionid, imageBounds)) {
             countsInsideRegion += 1;
             pointsInside.push(d);
         }
@@ -1245,8 +1237,13 @@ regionUtils._generateEdgeListsForDrawing = function(imageBounds, numScanlines = 
         regionUtils._edgeLists[i] = [[0, 0, 0, 0, 0, 0, 0, 0], 0];
     }
 
+    regionUtils._regionIDToIndex = {};
+
     let objectID = 0;
-    for (let region of Object.values(regionUtils._regions)) {
+    for (let regionID of Object.keys(regionUtils._regions)) {
+        const region = regionUtils._regions[regionID];
+        regionUtils._regionIDToIndex[regionID] = objectID;  // Update mapping
+
         for (let subregion of region.globalPoints) {
             for (let points of subregion) {
                 const numPoints = points.length;
@@ -1354,6 +1351,55 @@ regionUtils._splitEdgeLists = function() {
             j += edgeCount;  // Position pointer before next bounding box
         }
     }
+}
+
+
+// Check if point is inside or outside a region, by computing the winding
+// number for paths in a scanline of the edge list data structure
+regionUtils._pointInRegion = function(px, py, regionID, imageBounds) {
+    console.assert(imageBounds.length == 4);
+    const numScanlines = regionUtils._edgeLists.length;
+    const scanlineHeight = imageBounds[3] / numScanlines;
+    const scanline = Math.floor(py / scanlineHeight);
+
+    const objectID = regionUtils._regionIDToIndex[regionID];
+
+    let isInside = false;
+    if (scanline >= 0 && scanline < numScanlines) {
+        const edgeList = regionUtils._edgeLists[scanline][0];
+        const numItems = edgeList.length / 4;
+
+        // Traverse edge list until we find first path for object ID
+        let offset = 2;  // Offset starts at two because of occupancy mask
+        while (offset < numItems && (edgeList[offset * 4 + 2] - 1) != objectID) {
+            const count = edgeList[offset * 4 + 3];
+            offset += Math.max(1, count);
+        }
+
+        // Compute winding number from all edges with stored for the object ID
+        let windingNumber = 0;
+        while (offset < numItems && (edgeList[offset * 4 + 2] - 1) == objectID) {
+            const count = edgeList[offset * 4 + 3];
+            for (let i = 0; i < count; ++i) {
+                const x0 = edgeList[(offset + 1 + i) * 4 + 0];
+                const y0 = edgeList[(offset + 1 + i) * 4 + 1];
+                const x1 = edgeList[(offset + 1 + i) * 4 + 2];
+                const y1 = edgeList[(offset + 1 + i) * 4 + 3];
+
+                if (Math.min(y0, y1) <= py && py < Math.max(y0, y1)) {
+                    const t = (py - y0) / (y1 - y0 + 1e-5);
+                    const x = x0 + (x1 - x0) * t;
+                    const weight = Math.sign(y1 - y0);
+                    windingNumber += ((x - px) > 0.0 ? weight : 0);
+                }
+            }
+            offset += count + 1;  // Position pointer at next path
+        }
+
+        // Apply non-zero fill rule for inside test
+        isInside = windingNumber != 0;
+    }
+    return isInside;
 }
 
 
