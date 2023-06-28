@@ -570,6 +570,19 @@ regionUtils.regionUI = function (regionid) {
     trPanelHist.appendChild(row);
 }
 
+/**
+ * @deprecated Kept for backward compatibility
+ * @param {*} x X coordinate of the point to check
+ * @param {*} y Y coordinate of the point to check
+ * @param {*} path SVG path
+ * @param {*} tmpPoint Temporary point to check if in path. This is only for speed.
+ */
+regionUtils.globalPointInPath=function(x,y,path,tmpPoint) {
+    tmpPoint.x = x;
+    tmpPoint.y = y;
+    return path.isPointInFill(tmpPoint);
+}
+
 /** 
  *  @param {Object} quadtree d3.quadtree where the points are stored
  *  @param {Number} x0 X coordinate of one point in a bounding box
