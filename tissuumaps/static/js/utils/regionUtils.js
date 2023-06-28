@@ -1373,7 +1373,7 @@ regionUtils._pointInRegion = function(px, py, regionID, imageBounds) {
         let offset = 2;  // Offset starts at two because of occupancy mask
         while (offset < numItems && (edgeList[offset * 4 + 2] - 1) != objectID) {
             const count = edgeList[offset * 4 + 3];
-            offset += Math.max(1, count);
+            offset += count + 1;
         }
 
         // Compute winding number from all edges with stored for the object ID
