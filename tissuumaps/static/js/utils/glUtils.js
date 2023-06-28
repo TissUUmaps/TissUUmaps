@@ -527,6 +527,7 @@ glUtils._regionsVS = `
 
 glUtils._regionsFS = `
     #define ALPHA 1.0
+    #define STROKE_WIDTH 1.5
     #define FILL_RULE_NEVER 0
     #define FILL_RULE_NONZERO 1
     #define FILL_RULE_ODDEVEN 2
@@ -571,8 +572,8 @@ glUtils._regionsFS = `
         int scanline = int(v_scanline);
 
         float pixelWidth = abs(dFdx(p.x));
-        float strokeWidth = pixelWidth;  // Stroke width for outline rendering
-        float minEdgeDist = 99999.0;     // Distance to closest edge
+        float strokeWidth = STROKE_WIDTH * pixelWidth;  // Stroke width for outlines
+        float minEdgeDist = 99999.0;                    // Distance to closest edge
 
         // Do coarse empty space skipping first, by testing sample position against
         // occupancy bitmask stored in the first texel of the scanline
