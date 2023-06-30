@@ -12,6 +12,7 @@ from scipy.ndimage import zoom
 from scipy.sparse import eye, spmatrix, vstack
 from sklearn.cluster import MiniBatchKMeans as KMeans
 from sklearn.preprocessing import normalize
+import pandas as pd
 
 COLORS = [
     [0.9019607843137255, 0.09803921568627451, 0.29411764705882354],
