@@ -574,8 +574,9 @@ class Plugin:
             csvPath = os.path.abspath(
                 os.path.join(self.app.basedir, jsonParam["csv_path"])
             )
-            
+
             import pandas as pd
+
             df = pd.read_csv(csvPath)
             xy = df[[jsonParam["xKey"], jsonParam["yKey"]]].to_numpy()
             labels = df[jsonParam["clusterKey"]].to_numpy()
