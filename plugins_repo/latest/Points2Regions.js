@@ -11,6 +11,38 @@ var Points2Regions;
 Points2Regions = {
   name: "Points2Regions Plugin",
   parameters: {
+    _nclusters: {
+      label: "Number of clusters:",
+      type: "number",
+      default: 8,
+    },
+    _expression_threshold: {
+      label: "Min points per bin (increase to avoid regions with few markers):",
+      type: "number",
+      default: 1,
+    },
+    _stride: {
+      label: "Bin size (increase/decrease for coarser/finer regions):",
+      type: "number",
+      default: 100,
+    },
+    _selectStride: {
+      label: "Select stride on tissue (optional)",
+      type: "button",
+    },
+    _run: {
+      label: "Run Points2Regions",
+      type: "button",
+    },
+    _downloadCSV: {
+      label: "Download data as CSV",
+      type: "button",
+    },
+    _advancedSection: {
+      label: "Only change these settings if you know what you are doing!",
+      title: "Advanced settings",
+      type: "section",
+    },
     _refresh: {
       label: "Refresh drop-down lists based on loaded markers",
       type: "button",
@@ -24,25 +56,10 @@ Points2Regions = {
       label: "Select Points2Regions Key:",
       type: "select",
     },
-    _nclusters: {
-      label: "Number of clusters:",
-      type: "number",
-      default: 8,
-    },
-    _expression_threshold: {
-      label: "Min points per bin (increase to avoid regions with few markers):",
-      type: "number",
-      default: 1,
-    },
     _sigma: {
       label: "Amount of smoothing between bins (default 1):",
       type: "number",
-      default: 1,
-    },
-    _stride: {
-      label: "Bin size (increase/decrease for coarser/finer regions):",
-      type: "number",
-      default: 100,
+      default: 1.5,
     },
     _seed: {
       label: "Random seed (used during KMeans):",
@@ -53,21 +70,13 @@ Points2Regions = {
     _format: {
       label: "Output regions as",
       type: "select",
-      default: "GeoJSON polygons",
+      default: "New label per marker",
       options: ["GeoJSON polygons", "New label per marker"],
     },
     _server: {
       label: "Run Points2Regions on the server",
       type: "checkbox",
       default: true,
-    },
-    _run: {
-      label: "Run Points2Regions",
-      type: "button",
-    },
-    _downloadCSV: {
-      label: "Download data as CSV",
-      type: "button",
     },
   },
   _region_name: "Clusters",
@@ -110,6 +119,39 @@ Points2Regions.init = function (container) {
       tooltip.enable();
     }
   );
+  let advancedSectionIndex = 7;
+
+  let advancedSectionElement = document.querySelector(
+    `#plugin-Points2Regions div:nth-child(${advancedSectionIndex}) div h6`
+  );
+  advancedSectionElement?.setAttribute("data-bs-toggle", "collapse");
+  advancedSectionElement?.setAttribute("data-bs-target", "#collapse_advanced");
+  advancedSectionElement?.setAttribute("aria-expanded", "false");
+  advancedSectionElement?.setAttribute("aria-controls", "collapse_advanced");
+  advancedSectionElement?.setAttribute(
+    "class",
+    "collapse_button_transform border-bottom-0 p-1 collapsed"
+  );
+  advancedSectionElement?.setAttribute("style", "cursor: pointer;");
+  advancedSectionElement?.setAttribute("title", "Click to expand");
+  let newDiv = document.createElement("div");
+  newDiv.setAttribute("id", "collapse_advanced");
+  newDiv.setAttribute("class", "collapse");
+  $("#plugin-Points2Regions").append(newDiv);
+  let advancedSectionSubtitle = document.querySelector(
+    `#plugin-Points2Regions div:nth-child(${advancedSectionIndex}) div p`
+  );
+  newDiv.appendChild(advancedSectionSubtitle);
+  for (
+    let indexElement = advancedSectionIndex + 1;
+    indexElement < Object.keys(Points2Regions.parameters).length + 1;
+    indexElement++
+  ) {
+    let element = document.querySelector(
+      `#plugin-Points2Regions div:nth-child(${advancedSectionIndex + 1})`
+    );
+    newDiv.appendChild(element);
+  }
 };
 
 Points2Regions.run = function () {
@@ -309,12 +351,14 @@ def create_features(xy: np.ndarray, labels: np.ndarray, unique_labels:np.ndarray
         B, grid_props = spatial_binning_matrix(xy, box_width=bin_width, return_grid_props=True)
     else:
         B = eye(len(xy))
-
+    B = B.astype('float32')
     # Find center of mass for each point
     xy = ((B @ xy) / (B.sum(axis=1))).A
 
     # Create attribute matrix (ngenes x nuniques)
     attributes, _ = attribute_matrix(labels, unique_labels)
+    attributes = attributes.astype('bool')
+
     features, adj = kde_per_label(xy, B @ attributes, sigma, return_neighbors = True)
 
     # Compute bin size
@@ -339,6 +383,8 @@ def points2regions(xy: np.ndarray, labels: np.ndarray, sigma: float, n_clusters:
     print (
         "xy",xy, "labels", labels,"sigma",sigma, "n_clusters", n_clusters, "bin_width", bin_width, "min_genes_per_bin", min_genes_per_bin, "library_id_column", library_id_column, "convert_to_geojson", convert_to_geojson, "seed", seed
     )
+    xy = np.array(xy, dtype="float32")
+
     # Iterate data by library ids
     if library_id_column is not None:
         unique_library_id = np.unique(library_id_column)
@@ -444,9 +490,9 @@ def connectivity_matrix(
             connected.
     """
     if method == "knn":
-        A = kneighbors_graph(xy, k, include_self=include_self)
+        A = kneighbors_graph(xy, k, include_self=include_self).astype('bool')
     else:
-        A = radius_neighbors_graph(xy, r, include_self=include_self)
+        A = radius_neighbors_graph(xy, r, include_self=include_self).astype('bool')
     return A
 
 
@@ -498,136 +544,6 @@ def attribute_matrix(
     return y, categories
 
 
-def degree_matrix(A: sp.spmatrix) -> sp.spmatrix:
-    """
-    Calculates the degree matrix of a given matrix.
-
-    Parameters:
-    -----------
-    A : sp.spmatrix
-        The input matrix.
-
-    Returns:
-    --------
-    sp.spmatrix
-        The degree matrix of the input matrix.
-    """
-    D = np.array(A.sum(axis=1)).ravel()
-    return sp.csr_matrix(sp.diags(D, 0))
-
-
-def _adj2laplacian(A: sp.spmatrix, return_degree: bool = False) -> sp.spmatrix:
-    """
-    Converts a sparse matrix representation of an affinity graph to a Laplacian matrix.
-
-    Parameters:
-    -----------
-    A : sp.spmatrix
-        The input affinity matrix.
-    return_degree : bool, optional
-        If True, returns both the Laplacian matrix and the degree matrix. Default is
-        False.
-
-    Returns:
-    --------
-    sp.spmatrix or tuple
-        If \`return_degree\` is False, returns the Laplacian matrix.
-        If \`return_degree\` is True, returns a tuple containing the Laplacian matrix and
-        the degree matrix.
-    """
-    aff_tilde = A + sp.eye(*A.shape)
-    D = degree_matrix(aff_tilde)
-    L = D - aff_tilde
-    return (L, D) if return_degree else L
-
-
-def proximity_matrix(A: sp.spmatrix, gamma: float = 1.0, hops: int = 1) -> sp.spmatrix:
-    """
-    Calculates the proximity matrix of a given matrix.
-
-    Parameters:
-    -----------
-    A : sp.spmatrix
-        The input matrix.
-    gamma : float, optional
-        The decay factor for the proximity matrix. Default is 1.0.
-    hops : int, optional
-        The number of hops to calculate. Default is 1.
-
-    Returns:
-    --------
-    sp.spmatrix
-        The proximity matrix of the input matrix.
-    """
-    L, D = _adj2laplacian(A, return_degree=True)
-    _I = sp.eye(*D.shape)
-    D_inv = sp.csr_matrix(sp.diags(1.0 / (D.diagonal() + 1e-12), 0))
-    P = (_I - gamma * D_inv @ L) ** hops
-    return P
-
-
-def proximity_matrix_multiply(
-    A: sp.spmatrix, y: sp.spmatrix, gamma: float = 1.0, hops: int = 1
-) -> sp.spmatrix:
-    """
-    Calculates the proximity matrix of a given matrix.
-
-    Parameters:
-    -----------
-    A : sp.spmatrix
-        The input matrix.
-    y : sp.spmatrix
-        The matrix that is to be multiplied by the proximity matrix
-    gamma : float, optional
-        The decay factor for the proximity matrix. Default is 1.0.
-    hops : int, optional
-        The number of hops to calculate. Default is 1.
-
-    Returns:
-    --------
-    sp.spmatrix
-        The multiplication of the proximity matrix and y.
-    """
-    P = proximity_matrix(A, gamma, hops=1)
-    out = P @ y
-    if hops > 1:
-        for _ in range(hops - 1):
-            out = P @ out
-    return out
-
-
-def maximal_degree_matrix(A: sp.spmatrix) -> sp.spmatrix:
-    """
-    Given an adjacency matrix A, returns a binary matrix representing a maximal
-    independent set of the graph described by A. A maximal independent set is a set of
-    vertices such that no two vertices are connected by an edge, and it is not possible
-    to add any vertices to the set.
-
-    Parameters:
-    A (sp.spmatrix): The input adjacency matrix.
-
-    Returns:
-    sp.spmatrix: A binary matrix representing a maximal independent set of the graph
-        described by A.
-
-    """
-    # Sort vertices based on degree
-    degree = A.sum(axis=1).A.ravel()
-    vertices_sorted = np.flip(np.argsort(degree))
-    independent, dependent = set({}), set({})
-    neighbors = A.tolil(copy=True).rows
-    for i in vertices_sorted:
-        neighbor = neighbors[i]
-        if i not in dependent:
-            independent.add(i)
-            dependent.update(neighbor)
-        dependent.add(i)
-    # Format output as a sparse matrix
-    n = len(independent)
-    values = np.ones(n)
-    cols = np.sort(list(independent))
-    rows = np.arange(n)
-    return sp.csr_matrix((values, (rows, cols)), shape=(n, A.shape[0]))
 
 
 def spatial_binning_matrix(
@@ -719,11 +635,13 @@ def kde_per_label(xy: np.ndarray, features: sp.spmatrix, sigma: float, return_ne
         - \`unique_labels\`: A 1D numpy array containing the unique labels found in
             \`labels\`.
     """
-    adj = connectivity_matrix(xy, method="radius", r=3.0 * sigma)
+    adj = connectivity_matrix(xy, method="radius", r=2.0 * sigma, include_self=True)
     row, col = adj.nonzero()
-    d2 = np.linalg.norm(xy[row] - xy[col], axis=1) ** 2
-    a2 = np.exp(-d2 / (2 * sigma * sigma))
-    aff = sp.csr_matrix((a2, (row, col)), shape=adj.shape)
+    d2 = (xy[row,0] - xy[col,0])**2
+    d2 = d2 + (xy[row,1] - xy[col,1])**2
+    d2 = np.sqrt(d2)
+    d2 = np.exp(-d2 / (2 * sigma * sigma))
+    aff = sp.csr_matrix((d2, (row, col)), shape=adj.shape, dtype='float32')
     if not return_neighbors:
         return aff @ features
     else:
@@ -768,6 +686,8 @@ def distance_filter(xy):
     fg_index = np.where(labels == fg_label)[0]
     return fg_index
 
+
+
 from js import dataUtils
 from js import Points2Regions
 from pyodide.ffi import to_js
@@ -780,8 +700,8 @@ processeddata = dict(data_obj._processeddata.object_entries())
 x_field = data_obj._X
 y_field = data_obj._Y
 
-x = np.asarray(processeddata[x_field].to_py())
-y = np.asarray(processeddata[y_field].to_py())
+x = np.asarray(processeddata[x_field].to_py(), dtype="float32")
+y = np.asarray(processeddata[y_field].to_py(), dtype="float32")
 if (data_obj._collectionItem_col in processeddata.keys()):
     lib_id = np.asarray(processeddata[data_obj._collectionItem_col].to_py())
     x += lib_id * max(x) * 1.1
@@ -797,6 +717,10 @@ nclusters = int(Points2Regions.get("_nclusters"))
 expression_threshold = float(Points2Regions.get("_expression_threshold"))
 seed = int(Points2Regions.get("_seed"))
 region_name = Points2Regions.get("_region_name")
+if (Points2Regions.get("_format")== "GeoJSON polygons"):
+    compute_regions = True
+else:
+    compute_regions = False
 
 c,r = points2regions(
     xy,
@@ -806,7 +730,7 @@ c,r = points2regions(
     stride,
     expression_threshold,
     None,
-    True,
+    compute_regions,
     seed,
     region_name
     )
@@ -854,6 +778,9 @@ Points2Regions.inputTrigger = function (parameterName) {
     interfaceUtils
       .getElementById(Points2Regions.getInputID("_dataset"))
       .dispatchEvent(event);
+    if (dataUtils.data[Points2Regions.get("_dataset")]._processeddata) {
+      Points2Regions.estimateBinSize();
+    }
   } else if (parameterName == "_dataset") {
     if (!dataUtils.data[Points2Regions.get("_dataset")]) return;
     interfaceUtils.cleanSelect(Points2Regions.getInputID("_clusterKey"));
@@ -879,6 +806,8 @@ Points2Regions.inputTrigger = function (parameterName) {
         Points2Regions.set("_clusterKey", select311.value);
       });
     }
+  } else if (parameterName == "_selectStride") {
+    Points2Regions.selectStride();
   } else if (parameterName == "_run") {
     Points2Regions.run();
   } else if (parameterName == "_downloadCSV") {
@@ -888,6 +817,100 @@ Points2Regions.inputTrigger = function (parameterName) {
       Points2Regions.initPython();
     }
   }
+};
+
+Points2Regions.estimateBinSize = function (parameterName) {
+  let data_obj = dataUtils.data[Points2Regions.get("_dataset")];
+  let XKey = dataUtils.data[Points2Regions.get("_dataset")]._X;
+  let YKey = dataUtils.data[Points2Regions.get("_dataset")]._Y;
+  let X = data_obj._processeddata[XKey];
+  let Y = data_obj._processeddata[YKey];
+  let width = Quartile_75(X) - Quartile_25(X);
+  let height = Quartile_75(Y) - Quartile_25(Y);
+  let bin_width = 2 * width * X.length ** (-1 / 3);
+  let bin_height = 2 * height * Y.length ** (-1 / 3);
+  console.log(width, height, bin_width, bin_height, X.length, Y.length);
+  Points2Regions.set("_stride", (bin_width + bin_height) / 2);
+};
+
+Points2Regions.selectStride = function (parameterName) {
+  var startSelection = null;
+  var pressHandler = function (event) {
+    console.log("Pressed!");
+    var OSDviewer = tmapp["ISS_viewer"];
+    startSelection = OSDviewer.viewport.pointFromPixel(event.position);
+  };
+  var moveHandler = function (event) {
+    if (startSelection == null) return;
+    let OSDviewer = tmapp["ISS_viewer"];
+
+    let normCoords = OSDviewer.viewport.pointFromPixel(event.position);
+    let tiledImage = OSDviewer.world.getItemAt(0);
+    let rectangle = tiledImage.viewportToImageRectangle(
+      new OpenSeadragon.Rect(
+        startSelection.x,
+        startSelection.y,
+        normCoords.x - startSelection.x,
+        normCoords.y - startSelection.y
+      )
+    );
+    let canvas =
+      overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
+    let regionobj = d3
+      .select(canvas)
+      .append("g")
+      .attr("class", "_stride_region");
+    let elements = document.getElementsByClassName("stride_region");
+    for (let element of elements) element.parentNode.removeChild(element);
+
+    if (rectangle.width <= 0) {
+      return;
+    }
+    let width = Math.max(
+      normCoords.x - startSelection.x,
+      normCoords.y - startSelection.y
+    );
+    console.log(width, normCoords.x, normCoords.y);
+    let polyline = regionobj
+      .append("rect")
+      .attr("width", width)
+      .attr("height", width)
+      .attr("x", startSelection.x)
+      .attr("y", startSelection.y)
+      .attr("fill", "#ADD8E6")
+      .attr("stroke", "#ADD8E6")
+      .attr("fill-opacity", 0.3)
+      .attr("stroke-opacity", 0.7)
+      .attr("stroke-width", 0.002 / tmapp["ISS_viewer"].viewport.getZoom())
+      .attr(
+        "stroke-dasharray",
+        0.004 / tmapp["ISS_viewer"].viewport.getZoom() +
+          "," +
+          0.004 / tmapp["ISS_viewer"].viewport.getZoom()
+      )
+      .attr("class", "stride_region");
+    Points2Regions.set("_stride", rectangle.width);
+    return;
+  };
+  var dragHandler = function (event) {
+    event.preventDefaultAction = true;
+  };
+  var releaseHandler = function (event) {
+    console.log("Released!", pressHandler, releaseHandler, dragHandler);
+    startSelection = null;
+    tmapp["ISS_viewer"].removeHandler("canvas-press", pressHandler);
+    tmapp["ISS_viewer"].removeHandler("canvas-release", releaseHandler);
+    tmapp["ISS_viewer"].removeHandler("canvas-drag", dragHandler);
+    var elements = document.getElementsByClassName("stride_region");
+    for (var element of elements) element.parentNode.removeChild(element);
+  };
+  tmapp["ISS_viewer"].addHandler("canvas-press", pressHandler);
+  tmapp["ISS_viewer"].addHandler("canvas-release", releaseHandler);
+  tmapp["ISS_viewer"].addHandler("canvas-drag", dragHandler);
+  new OpenSeadragon.MouseTracker({
+    element: tmapp["ISS_viewer"].canvas,
+    moveHandler: (event) => moveHandler(event),
+  }).setTracking(true);
 };
 
 Points2Regions.loadClusters = function (data) {
@@ -1075,3 +1098,62 @@ Points2Regions._api = function (endpoint, data, success, error) {
         },
   });
 };
+
+//adapted from https://blog.poettner.de/2011/06/09/simple-statistics-with-php/
+
+function Quartile_25(data) {
+  return Quartile(data, 0.25);
+}
+
+function Quartile_75(data) {
+  return Quartile(data, 0.75);
+}
+
+function Quartile(data, q) {
+  data = Array_Sort_Numbers(data);
+  var pos = (data.length - 1) * q;
+  var base = Math.floor(pos);
+  var rest = pos - base;
+  if (data[base + 1] !== undefined) {
+    return data[base] + rest * (data[base + 1] - data[base]);
+  } else {
+    return data[base];
+  }
+}
+
+function Array_Sort_Numbers(inputarray) {
+  var sortedarray = inputarray.slice(0);
+  return sortedarray.sort(function (a, b) {
+    return a - b;
+  });
+}
+
+function Array_Sum(t) {
+  return t.reduce(function (a, b) {
+    return a + b;
+  }, 0);
+}
+
+function Array_Average(data) {
+  return Array_Sum(data) / data.length;
+}
+
+function Array_Stdev(tab) {
+  var i,
+    j,
+    total = 0,
+    mean = 0,
+    diffSqredArr = [];
+  for (i = 0; i < tab.length; i += 1) {
+    total += tab[i];
+  }
+  mean = total / tab.length;
+  for (j = 0; j < tab.length; j += 1) {
+    diffSqredArr.push(Math.pow(tab[j] - mean, 2));
+  }
+  return Math.sqrt(
+    diffSqredArr.reduce(function (firstEl, nextEl) {
+      return firstEl + nextEl;
+    }) / tab.length
+  );
+}

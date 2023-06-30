@@ -675,11 +675,13 @@ class webEngine(QWebEngineView):
 
             return state
 
-        folderpath = QFileDialog.getSaveFileName(self, "Save project as", self.lastdir)[
-            0
-        ]
-        if not folderpath:
+        projectFilename = QFileDialog.getSaveFileName(
+            self, "Save project as", self.lastdir
+        )[0]
+        if not projectFilename:
             return {}
+        if not projectFilename.endswith(".tmap"):
+            projectFilename += ".tmap"
         try:
             parsed_url = urlparse(self.url().toString())
             previouspath = parse_qs(parsed_url.query)["path"][0]
@@ -687,11 +689,11 @@ class webEngine(QWebEngineView):
         except:
             previouspath = self.app.basedir
         state = addRelativePath(
-            json.loads(state), previouspath, os.path.dirname(folderpath)
+            json.loads(state), previouspath, os.path.dirname(projectFilename)
         )
-        with open(folderpath, "w") as f:
+        with open(projectFilename, "w") as f:
             json.dump(state, f, indent=4)
-        self.addRecent(folderpath)
+        self.addRecent(projectFilename)
 
     def openImagePath(self, folderpath):
         self.lastdir = os.path.dirname(folderpath)
