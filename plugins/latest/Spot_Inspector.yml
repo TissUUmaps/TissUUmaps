@@ -13,4 +13,4 @@ description:
   The In Situ Transcriptomic (IST) quality control plugin Spot Inspection allows the user to interactively click anywhere on an image displayed in TissUUmaps. This interaction opens a gridded figure displaying image content from multiple image rounds and channels as well as traces indicating the barcoded labels. The plugin enables an effective and interactive way for visualizing and interpreting errors introduced in IST pipelines. The Spot Inspector plugin is available for the TissUUmaps desktop client. It is implemented using Python with a JavaScript interface for communicating with the main TissUUmaps module.
   <br/>
   <br/>
-  The source code of the plugin is available under <a href="https://github.com/TissUUmaps/TissUUmaps/tree/master/plugins_repo">https://github.com/TissUUmaps/TissUUmaps/tree/master/plugins_repo</a>.
+  The source code of the plugin is available under <a target="_blank" href="https://github.com/TissUUmaps/TissUUmaps/tree/master/plugins_repo">https://github.com/TissUUmaps/TissUUmaps/tree/master/plugins_repo</a>.
