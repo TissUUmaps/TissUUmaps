@@ -10310,6 +10310,7 @@ html {
 }
 .collapse_button_transform {
   padding-left: 26px !important;
+  cursor: pointer;
 }
 
 .openseadragon-canvas {
