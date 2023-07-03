@@ -74,13 +74,15 @@ from urllib.parse import parse_qs, urlparse
 if getattr(sys, "frozen", False):
     template_folder = os.path.join(sys._MEIPASS, "templates")
     static_folder = os.path.join(sys._MEIPASS, "static")
+    plugins_folder = os.path.join(sys._MEIPASS, "plugins")
+    version_file = os.path.join(sys._MEIPASS, "VERSION")
     os.chdir(sys._MEIPASS)
-else:  # if __file__:
-    # template_folder="templates_standalone"
+else:
     folderPath = os.path.dirname(pathlib.Path(__file__))
     template_folder = os.path.join(folderPath, "templates")
     static_folder = os.path.join(folderPath, "static")
-    os.chdir(folderPath)
+    plugins_folder = os.path.join(folderPath, "plugins")
+    version_file = os.path.join(folderPath, "VERSION")
 
 from tissuumaps import views
 
@@ -453,7 +455,9 @@ class webEngine(QWebEngineView):
 
         self.page().fullScreenRequested.connect(setfullscreen)
 
-        self.mainWin.setWindowIcon(QtGui.QIcon("static/misc/favicon.ico"))
+        self.mainWin.setWindowIcon(
+            QtGui.QIcon(os.path.join(static_folder, "misc/favicon.ico"))
+        )
 
     def addRecent(self, path):
         os.makedirs(os.path.join(os.path.expanduser("~"), ".tissuumaps"), exist_ok=True)
@@ -675,11 +679,13 @@ class webEngine(QWebEngineView):
 
             return state
 
-        folderpath = QFileDialog.getSaveFileName(self, "Save project as", self.lastdir)[
-            0
-        ]
-        if not folderpath:
+        projectFilename = QFileDialog.getSaveFileName(
+            self, "Save project as", self.lastdir
+        )[0]
+        if not projectFilename:
             return {}
+        if not projectFilename.endswith(".tmap"):
+            projectFilename += ".tmap"
         try:
             parsed_url = urlparse(self.url().toString())
             previouspath = parse_qs(parsed_url.query)["path"][0]
@@ -687,11 +693,11 @@ class webEngine(QWebEngineView):
         except:
             previouspath = self.app.basedir
         state = addRelativePath(
-            json.loads(state), previouspath, os.path.dirname(folderpath)
+            json.loads(state), previouspath, os.path.dirname(projectFilename)
         )
-        with open(folderpath, "w") as f:
+        with open(projectFilename, "w") as f:
             json.dump(state, f, indent=4)
-        self.addRecent(folderpath)
+        self.addRecent(projectFilename)
 
     def openImagePath(self, folderpath):
         self.lastdir = os.path.dirname(folderpath)
@@ -964,7 +970,7 @@ def main():
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--no-sandbox --ignore-gpu-blacklist"
     qt_app = QApplication(sys.argv)
 
-    logo = QtGui.QPixmap("static/misc/design/logo.png")
+    logo = QtGui.QPixmap(os.path.join(static_folder, "misc/design/logo.png"))
     logo = logo.scaledToWidth(512, Qt.TransformationMode.SmoothTransformation)
     splash = QSplashScreen(logo, Qt.WindowType.WindowStaysOnTopHint)
 
