@@ -702,9 +702,9 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
                         const k = (i * numSectors + j);
                         const sectorIndex = j;
                         hexColor = piechartPalette[j % piechartPalette.length];
-
-                        bytedata_point[4 * k + 0] = markerData[xPosName][markerIndex];
-                        bytedata_point[4 * k + 1] = markerData[yPosName][markerIndex];
+                        
+                        bytedata_point[4 * k + 0] = markerData[xPosName][markerIndex] * markerCoordFactor;
+                        bytedata_point[4 * k + 1] = markerData[yPosName][markerIndex] * markerCoordFactor;
                         bytedata_point[4 * k + 2] = lutIndex + sectorIndex * 4096.0;
                         bytedata_point[4 * k + 3] = Number("0x" + hexColor.substring(1,7));
                         bytedata_index[k] = markerIndex;  // Store index needed for picking
