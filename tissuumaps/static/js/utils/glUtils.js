@@ -37,6 +37,7 @@ glUtils = {
     _useOpacityFromMarker: {},   // {uid: boolean, ...}
     _usePiechartFromMarker: {},  // {uid: boolean, ...}
     _useShapeFromMarker: {},     // {uid: boolean, ...}
+    _piechartPalette: {},        // {uid: array or dict of colors, ...}
     _useSortByCol: {},           // {uid: boolean, ...}
     _colorscaleName: {},         // {uid: colorscaleName, ...}
     _colorscaleData: {},         // {uid: array of RGBA values, ...}
@@ -61,7 +62,7 @@ glUtils = {
     _showEdgesExperimental: true,
     _edgeThicknessRatio: 0.1,     // Ratio between edge thickness and marker size
     _logPerformance: false,       // Use GPU timer queries to log performance
-    _piechartPalette: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
+    _piechartPaletteDefault: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
 
 
@@ -601,16 +602,19 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
     
     const sectorsPropertyName = newInputs.sectorsPropertyName = dataUtils.data[uid]["_pie_col"];
     const usePiechartFromMarker = dataUtils.data[uid]["_pie_col"] != null;
+    let piechartPalette = [...glUtils._piechartPaletteDefault];
     if (dataUtils.data[uid]["_pie_dict"] && sectorsPropertyName) {
-        glUtils._piechartPalette = JSON.parse(dataUtils.data[uid]["_pie_dict"])
-        if (typeof glUtils._piechartPalette === "object") {
-            glUtils._piechartPalette = sectorsPropertyName.split(";").map(function(sector) {
-                return glUtils._piechartPalette[sector];
-            })
+        const sectorNames = sectorsPropertyName.split(";");
+        for (let i = 0; i < sectorNames.length; ++i) {
+            const key = (Array.isArray(dataUtils.data[uid]["_pie_dict"]))?i:sectorNames[i];
+            console.log(key, i, dataUtils.data[uid]["_pie_dict"])
+            if (dataUtils.data[uid]["_pie_dict"].hasOwnProperty(key)) {
+                piechartPalette[i] = dataUtils.data[uid]["_pie_dict"][key];
+            }
         }
     }
-    const piechartPalette = glUtils._piechartPalette;
-    const numSectors = usePiechartFromMarker ? markerData[sectorsPropertyName][0].split(";").length : 1;
+    newInputs.piechartPalette = piechartPalette;
+    const numSectors = usePiechartFromMarker ? markerData[sectorsPropertyName][0].toString().split(";").length : 1;
 
     const shapePropertyName = newInputs.shapePropertyName = dataUtils.data[uid]["_shape_col"];
     const useShapeFromMarker = newInputs.useShapeFromMarker = dataUtils.data[uid]["_shape_col"] != null;
@@ -688,7 +692,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
 
                 for (let i = 0; i < chunkSize; ++i) {
                     const markerIndex = i + offset;
-                    const sectors = markerData[sectorsPropertyName][markerIndex].split(";");
+                    const sectors = markerData[sectorsPropertyName][markerIndex].toString().split(";");
                     const piechartAngles = glUtils._createPiechartAngles(sectors);
                     const lutIndex = (keyName != null) ? barcodeToLUTIndex[markerData[keyName][markerIndex]] : 0;
                     const opacity = useOpacityFromMarker ? markerData[opacityPropertyName][markerIndex] : 1.0;
@@ -898,6 +902,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
     glUtils._useOpacityFromMarker[uid] = useOpacityFromMarker;
     glUtils._usePiechartFromMarker[uid] = usePiechartFromMarker;
     glUtils._useShapeFromMarker[uid] = useShapeFromMarker;
+    glUtils._piechartPalette[uid] = piechartPalette;
     glUtils._useSortByCol[uid] = useSortByCol;
     glUtils._colorscaleName[uid] = colorscaleName;
     glUtils._collectionItemIndex[uid] = collectionItemFixed;
@@ -936,6 +941,7 @@ glUtils.deleteMarkers = function(uid) {
     delete glUtils._useOpacityFromMarker[uid];
     delete glUtils._usePiechartFromMarker[uid];
     delete glUtils._useShapeFromMarker[uid];
+    delete glUtils._piechartPalette[uid];
     delete glUtils._useSortByCol[uid];
     delete glUtils._colorscaleName[uid];
     delete glUtils._colorscaleData[uid];

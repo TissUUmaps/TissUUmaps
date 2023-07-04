@@ -348,7 +348,7 @@ dataUtils.updateViewOptions = async function(data_id, force_reload_all, reloadH5
     }
     // Use piecharts column
     data_obj["_pie_col"]=(radios["pie_check"].checked ? inputs["pie_col"].value : null);
-    data_obj["_pie_dict"]=inputs["pie_dict"].value;
+    data_obj["_pie_dict"]=inputs["pie_dict"].value?JSON.parse(inputs["pie_dict"].value):[];
     if (data_obj["_pie_col"]=="null") {
         interfaceUtils.alert("No piechart column selected. Impossible to update view.");return;
     }
