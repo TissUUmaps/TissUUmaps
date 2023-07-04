@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.1.1.5
+
+- Fix multiple images dropped on empty project
+- Change threading to allow higher priority to GUI than to server side
+- Add .tmap extension to all saved projects
+- Fix pie charts display update and colors
+- Add error message if update view fails
+
 ## 3.1.1.4
 
 - Fix bug of modal not hiding properly
