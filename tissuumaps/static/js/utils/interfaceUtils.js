@@ -1123,7 +1123,7 @@ interfaceUtils._mGenUIFuncs.generateColorByAccordion2= function(){
                 inputradiocbgrdict=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_cb-bygroup-dict","extraAttributes":{ "name":generated+"_flexRadioColorByGroup", "class":"form-check-input", "type":"radio"}});
                 labelcbgroupdict=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":generated+"_cb-bygroup-dict"}});
                 labelcbgroupdict.innerHTML="Use color from dictionary<br>";
-                inputtextcbgrdict=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_cb-bygroup-dict-val","extraAttributes":{ "class":"form-text-input", "type":"text", "placeholder":"{'key1':''#FFFFFF',...}"}});
+                inputtextcbgrdict=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_cb-bygroup-dict-val","extraAttributes":{ "class":"form-text-input", "type":"text", "placeholder":"{\"key1\":\"#FFFFFF\",...}"}});
                 inputtextcbgrdict.disabled=true
 
         divoptionscol=HTMLElementUtils.createElement({"kind":"div","id":generated+"_cb-col-options","extraAttributes":{"class": "renderOptionContainer d-none"}});
@@ -1368,7 +1368,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
                     inputradioshapegrdict=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_shape-bygroup-dict","extraAttributes":{ "name":generated+"_flexRadioShapeByGroup", "class":"form-check-input", "type":"radio"}});
                     labelshapegroupdict=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":generated+"_shape-bygroup-dict"}});
                     labelshapegroupdict.innerHTML="Use shape from dictionary<br>";
-                    inputtextshapegrdict=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_shape-bygroup-dict-val","extraAttributes":{ "class":"form-text-input", "type":"text", "placeholder":"{'key1':''#FFFFFF',...}"}});
+                    inputtextshapegrdict=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_shape-bygroup-dict-val","extraAttributes":{ "class":"form-text-input", "type":"text", "placeholder":"{\"key1\":\"disc\",...}"}});
                     inputtextshapegrdict.disabled=true
     
             divoptionscol=HTMLElementUtils.createElement({"kind":"div","id":generated+"_shape-col-options","extraAttributes":{"class": "renderOptionContainer d-none"}});
@@ -1534,7 +1534,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
             select011.disabled=true
             label012=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_piechart-dict-label", "extraAttributes":{ "class":"d-none", "for":generated+"_piechart-dict" }});
             label012.innerText="Pie-chart colors"
-            input013=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_piechart-dict-val","extraAttributes":{ "class":"d-none form-text-input", "type":"text", "placeholder":"{'key1':''#FFFFFF',...}"}});            
+            input013=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_piechart-dict-val","extraAttributes":{ "class":"d-none form-text-input", "type":"text", "placeholder":"{\"key1\":\"#FFFFFF\",...}"}});            
 
     inputcheck0000.addEventListener("change", (event)=>{
         var value=event.target.checked;
