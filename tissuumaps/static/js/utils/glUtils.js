@@ -610,7 +610,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
         }
     }
     const piechartPalette = glUtils._piechartPalette;
-    let numSectors = 1;
+    const numSectors = usePiechartFromMarker ? markerData[sectorsPropertyName][0].split(";").length : 1;
 
     const shapePropertyName = newInputs.shapePropertyName = dataUtils.data[uid]["_shape_col"];
     const useShapeFromMarker = newInputs.useShapeFromMarker = dataUtils.data[uid]["_shape_col"] != null;
@@ -679,7 +679,6 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
             if (usePiechartFromMarker) {
                 // For piecharts, we need to create one marker per piechart sector,
                 // so also have to allocate additional space for the vertex data
-                numSectors = markerData[sectorsPropertyName][0].split(";").length;
                 bytedata_point = new Float32Array(chunkSize * numSectors * 4);
                 bytedata_index = new Int32Array(chunkSize * numSectors * 1);
                 bytedata_scale = new Float32Array(chunkSize * numSectors * 1);
