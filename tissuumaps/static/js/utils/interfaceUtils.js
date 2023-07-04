@@ -2929,7 +2929,7 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
     for (i of Object.keys(singleRegionClasses.sort())) {
         let regionClass = singleRegionClasses[i];
         let regionClassID = HTMLElementUtils.stringToId("region_" + regionClass);
-        numRegions = allRegionClasses.filter(x => x==regionClass).length
+        let numRegions = allRegionClasses.filter(x => x==regionClass).length
 
         //row
         var tr=HTMLElementUtils.createElement({"kind":"tr",extraAttributes:{"data-escapedID":regionClassID}});
@@ -3007,7 +3007,18 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         td3.appendChild(label3);        
 
         let lastColor = interfaceUtils.getElementById("regionUI_"+regionClassID+"_color", false);
-        if (lastColor == null) lastColor = "#FF0000";
+        if (lastColor == null) {
+            let groupRegions = Object.values(regionUtils._regions).filter(
+                x => x.regionClass==regionClass
+            );
+            if (groupRegions.length > 0) {
+                console.log(groupRegions[0]);
+                lastColor = groupRegions[0].polycolor;
+            }
+            else {
+                lastColor = "#FF0000";
+            }
+        }
         else lastColor = lastColor.value;
         var regioncolorinput = HTMLElementUtils.inputTypeColor({
             id: "regionUI_"+regionClassID+"_color",
