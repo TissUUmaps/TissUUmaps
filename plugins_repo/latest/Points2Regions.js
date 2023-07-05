@@ -822,6 +822,7 @@ Points2Regions.inputTrigger = function (parameterName) {
 };
 
 Points2Regions.estimateBinSize = function (parameterName) {
+  /*
   let data_obj = dataUtils.data[Points2Regions.get("_dataset")];
   let XKey = dataUtils.data[Points2Regions.get("_dataset")]._X;
   let YKey = dataUtils.data[Points2Regions.get("_dataset")]._Y;
@@ -833,6 +834,7 @@ Points2Regions.estimateBinSize = function (parameterName) {
   let bin_height = 2 * height * Y.length ** (-1 / 3);
   console.log(width, height, bin_width, bin_height, X.length, Y.length);
   Points2Regions.set("_stride", (bin_width + bin_height) / 2);
+  */
 };
 
 Points2Regions.selectStride = function (parameterName) {
@@ -891,7 +893,7 @@ Points2Regions.selectStride = function (parameterName) {
           0.004 / tmapp["ISS_viewer"].viewport.getZoom()
       )
       .attr("class", "stride_region");
-    Points2Regions.set("_stride", rectangle.width);
+    Points2Regions.set("_sigma", rectangle.width);
     return;
   };
   var dragHandler = function (event) {
