@@ -12,7 +12,7 @@ Points2Regions = {
   name: "Points2Regions Plugin",
   parameters: {
     _nclusters: {
-      label: "Number of clusters:",
+      label: "Number of clusters (default 8):",
       type: "number",
       default: 8,
     },
@@ -21,13 +21,13 @@ Points2Regions = {
       type: "number",
       default: 1,
     },
-    _stride: {
-      label: "Bin size (increase/decrease for coarser/finer regions):",
+    _sigma: {
+      label: "Spatial resolution (increase/decrease for coarser/finer regions):",
       type: "number",
       default: 100,
     },
     _selectStride: {
-      label: "Select stride on tissue (optional)",
+      label: "Select spatial resolution on tissue (optional)",
       type: "button",
     },
     _run: {
@@ -56,10 +56,10 @@ Points2Regions = {
       label: "Select Points2Regions Key:",
       type: "select",
     },
-    _sigma: {
-      label: "Amount of smoothing between bins (default 1):",
+    _bins_per_res: {
+      label: "Number of bins per `resolution` (default 3):",
       type: "number",
-      default: 1.5,
+      default: 3,
     },
     _seed: {
       label: "Random seed (used during KMeans):",
@@ -184,7 +184,7 @@ Points2Regions.run = function () {
         nclusters: Points2Regions.get("_nclusters"),
         expression_threshold: Points2Regions.get("_expression_threshold"),
         sigma: Points2Regions.get("_sigma"),
-        stride: Points2Regions.get("_stride"),
+        bins_per_res: Points2Regions.get("_bins_per_res"),
         region_name: Points2Regions.get("_region_name"),
         seed: Points2Regions.get("_seed"),
         format: Points2Regions.get("_format"),
@@ -711,12 +711,14 @@ labels = np.asarray(processeddata[Points2Regions.get("_clusterKey")].to_py())
 from os.path import join
 
 Points2Regions.setMessage("Run failed.")
-stride = float(Points2Regions.get("_stride"))
+bins_per_res = float(Points2Regions.get("_bins_per_res"))
 sigma = float(Points2Regions.get("_sigma"))
 nclusters = int(Points2Regions.get("_nclusters"))
 expression_threshold = float(Points2Regions.get("_expression_threshold"))
 seed = int(Points2Regions.get("_seed"))
 region_name = Points2Regions.get("_region_name")
+stride = sigma / bins_per_res
+
 if (Points2Regions.get("_format")== "GeoJSON polygons"):
     compute_regions = True
 else:
@@ -725,7 +727,7 @@ else:
 c,r = points2regions(
     xy,
     labels,
-    sigma * stride,
+    sigma,
     nclusters,
     stride,
     expression_threshold,
@@ -820,6 +822,7 @@ Points2Regions.inputTrigger = function (parameterName) {
 };
 
 Points2Regions.estimateBinSize = function (parameterName) {
+  /*
   let data_obj = dataUtils.data[Points2Regions.get("_dataset")];
   let XKey = dataUtils.data[Points2Regions.get("_dataset")]._X;
   let YKey = dataUtils.data[Points2Regions.get("_dataset")]._Y;
@@ -831,6 +834,7 @@ Points2Regions.estimateBinSize = function (parameterName) {
   let bin_height = 2 * height * Y.length ** (-1 / 3);
   console.log(width, height, bin_width, bin_height, X.length, Y.length);
   Points2Regions.set("_stride", (bin_width + bin_height) / 2);
+  */
 };
 
 Points2Regions.selectStride = function (parameterName) {
@@ -889,7 +893,7 @@ Points2Regions.selectStride = function (parameterName) {
           0.004 / tmapp["ISS_viewer"].viewport.getZoom()
       )
       .attr("class", "stride_region");
-    Points2Regions.set("_stride", rectangle.width);
+    Points2Regions.set("_sigma", rectangle.width);
     return;
   };
   var dragHandler = function (event) {
