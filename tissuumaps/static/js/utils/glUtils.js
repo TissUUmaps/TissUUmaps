@@ -63,7 +63,7 @@ glUtils = {
     _regionOpacity: 0.5,
     _regionFillRule: "never",   // Possible values: "never" | "nonzero" | "oddeven"
     _regionUsePivotSplit: true,   // Use split edge lists for faster region rendering and less risk of overflow
-    _regionUseColorByID: false,   // Map region object IDs to unique colors
+    _regionUseColorByID: true,   // Map region object IDs to unique colors
     _logPerformance: false,       // Use GPU timer queries to log performance
     _piechartPalette: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
@@ -613,7 +613,7 @@ glUtils._regionsFS = `
                     vec4 objectColor = texelFetch(u_regionLUT, ivec2(objectID & 4095, objectID >> 12), 0);
                     if (bool(u_regionUseColorByID)) {
                         // Map object ID to a unique color from low-discrepancy sequence
-                        objectColor.rgb = fract(sqrt(vec3(2.0, 3.0, 5.0)) * float(objectID));
+                        objectColor.rgb = fract(sqrt(vec3(2.0, 3.0, 5.0)) * float(objectID + 1));
                     }
                 #if SHOW_PIVOT_SPLIT_DEBUG
                     if (bool(u_regionUsePivotSplit)) {
