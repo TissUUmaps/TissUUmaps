@@ -63,6 +63,7 @@ glUtils = {
     _regionOpacity: 0.5,
     _regionFillRule: "never",   // Possible values: "never" | "nonzero" | "oddeven"
     _regionUsePivotSplit: true,   // Use split edge lists for faster region rendering and less risk of overflow
+    _regionUseColorByID: false,   // Map region object IDs to unique colors
     _logPerformance: false,       // Use GPU timer queries to log performance
     _piechartPalette: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
@@ -539,6 +540,7 @@ glUtils._regionsFS = `
     uniform float u_regionOpacity;
     uniform int u_regionFillRule;
     uniform int u_regionUsePivotSplit;
+    uniform int u_regionUseColorByID;
     uniform highp sampler2D u_regionData;
     uniform highp sampler2D u_regionLUT;
 
@@ -609,6 +611,10 @@ glUtils._regionsFS = `
 
                 if (isInside || minEdgeDist < strokeWidth) {
                     vec4 objectColor = texelFetch(u_regionLUT, ivec2(objectID & 4095, objectID >> 12), 0);
+                    if (bool(u_regionUseColorByID)) {
+                        // Map object ID to a unique color from low-discrepancy sequence
+                        objectColor.rgb = fract(sqrt(vec3(2.0, 3.0, 5.0)) * float(objectID));
+                    }
                 #if SHOW_PIVOT_SPLIT_DEBUG
                     if (bool(u_regionUsePivotSplit)) {
                         objectColor.rgb = scanDir > 0.0 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 1.0);
@@ -1931,6 +1937,7 @@ glUtils._drawRegionsColorPass = function(gl, viewportTransform, imageBounds) {
     gl.uniform1i(gl.getUniformLocation(program, "u_regionFillRule"),
         fillRuleConstants[glUtils._regionFillRule]);
     gl.uniform1i(gl.getUniformLocation(program, "u_regionUsePivotSplit"), glUtils._regionUsePivotSplit);
+    gl.uniform1i(gl.getUniformLocation(program, "u_regionUseColorByID"), glUtils._regionUseColorByID);
     gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, "TransformUniforms"), 0);
     gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, glUtils._buffers["transformUBO"]);
     gl.activeTexture(gl.TEXTURE2);
