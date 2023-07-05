@@ -1931,54 +1931,6 @@ glUtils._drawRegionsColorPass = function(gl, viewportTransform, imageBounds) {
     gl.uniform1i(gl.getUniformLocation(program, "u_regionFillRule"),
         fillRuleConstants[glUtils._regionFillRule]);
     gl.uniform1i(gl.getUniformLocation(program, "u_regionUsePivotSplit"), glUtils._regionUsePivotSplit);
-    gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionLUT"]);
-    gl.uniform1i(gl.getUniformLocation(program, "u_regionLUT"), 2);
-    gl.activeTexture(gl.TEXTURE1);
-    if (glUtils._regionUsePivotSplit) {
-        gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionDataSplit"]);
-    } else {
-        gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionData"]);
-    }
-    gl.uniform1i(gl.getUniformLocation(program, "u_regionData"), 1);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["transformLUT"]);
-    gl.uniform1i(gl.getUniformLocation(program, "u_transformLUT"), 0);
-
-    // Draw rectangles that will each render a scanline segment of the region(s)
-    gl.bindVertexArray(glUtils._vaos["empty"]);
-    //gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numScanlines);
-    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, 1);
-
-    // Restore render pipeline state
-    gl.bindVertexArray(null);
-    gl.blendFunc(gl.ONE, gl.ONE);
-    gl.disable(gl.BLEND);
-    gl.useProgram(null);
-}
-
-
-glUtils._drawRegionsColorPass = function(gl, viewportTransform, imageBounds) {
-    const numScanlines = regionUtils._edgeLists.length;
-    if (numScanlines == 0) return;  // No regions to draw
-
-    const fillRuleConstants = {"never" : 0, "nonzero" : 1, "oddeven" : 2};
-
-    // Set up render pipeline
-    const program = glUtils._programs["regions"];
-    gl.useProgram(program);
-    gl.enable(gl.BLEND);
-    gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-
-    // Set per-scene uniforms
-    gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
-    gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"), 0);
-    gl.uniform4fv(gl.getUniformLocation(program, "u_imageBounds"), imageBounds);
-    gl.uniform1i(gl.getUniformLocation(program, "u_numScanlines"), numScanlines);
-    gl.uniform1f(gl.getUniformLocation(program, "u_regionOpacity"), glUtils._regionOpacity);
-    gl.uniform1i(gl.getUniformLocation(program, "u_regionFillRule"),
-        fillRuleConstants[glUtils._regionFillRule]);
-    gl.uniform1i(gl.getUniformLocation(program, "u_regionUsePivotSplit"), glUtils._regionUsePivotSplit);
     gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, "TransformUniforms"), 0);
     gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, glUtils._buffers["transformUBO"]);
     gl.activeTexture(gl.TEXTURE2);
