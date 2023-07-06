@@ -1491,6 +1491,11 @@ glUtils._createRegionDataTexture = function(gl, maxNumScanlines=512) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); 
     gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA32F, 4096, maxNumScanlines);
+    // Do explicit initialization with zeros, to avoid Firefox warning about
+    // "Tex image TEXTURE_2D level 0 is incurring lazy initialization."
+    // when texSubImage2D() is used to only partially update the texture
+    let zeros = new Float32Array(4096 * maxNumScanlines * 4);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, maxNumScanlines, gl.RGBA, gl.FLOAT, zeros);
     gl.bindTexture(gl.TEXTURE_2D, null);
 
     return texture;
