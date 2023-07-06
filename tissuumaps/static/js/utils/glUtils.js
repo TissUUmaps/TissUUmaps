@@ -2263,11 +2263,6 @@ glUtils.init = function() {
     if (!(gl instanceof WebGL2RenderingContext)) {
         interfaceUtils.alert("Error: TissUUmaps requires a web browser that supports WebGL 2.0");
     }
-    if (gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT).precision < 23 ||
-        gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_INT).rangeMin < 31) {
-        interfaceUtils.alert("Warning: TissUUmaps might not render correctly, since this system's " +
-                             "GPU does not support highp precision in WebGL fragment shaders");
-    }
 
     // Place marker canvas under the OSD canvas. Doing this also enables proper
     // compositing with the minimap and other OSD elements.
