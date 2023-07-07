@@ -79,7 +79,7 @@ glUtils._markersVS = `
 
     uniform mat2 u_viewportTransform;
     uniform vec2 u_canvasSize;
-    uniform float u_transformIndex;
+    uniform int u_transformIndex;
     uniform float u_markerScale;
     uniform float u_globalMarkerScale;
     uniform vec2 u_markerScalarRange;
@@ -122,8 +122,8 @@ glUtils._markersVS = `
 
     void main()
     {
-        float transformIndex = u_transformIndex >= 0.0 ? u_transformIndex : in_transform;
-        mat3x2 imageToViewport = u_transformUBO.imageToViewport[int(transformIndex)];
+        int transformIndex = u_transformIndex >= 0 ? u_transformIndex : int(in_transform);
+        mat3x2 imageToViewport = u_transformUBO.imageToViewport[transformIndex];
         vec2 viewportPos = imageToViewport * vec3(in_position.xy, 1.0);
         vec2 ndcPos = viewportPos * 2.0 - 1.0;
         ndcPos.y = -ndcPos.y;
@@ -269,7 +269,7 @@ glUtils._pickingVS = `
     uniform mat2 u_viewportTransform;
     uniform vec2 u_canvasSize;
     uniform vec2 u_pickingLocation;
-    uniform float u_transformIndex;
+    uniform int u_transformIndex;
     uniform float u_markerScale;
     uniform float u_globalMarkerScale;
     uniform float u_markerOpacity;
@@ -301,8 +301,8 @@ glUtils._pickingVS = `
 
     void main()
     {
-        float transformIndex = u_transformIndex >= 0.0 ? u_transformIndex : in_transform;
-        mat3x2 imageToViewport = u_transformUBO.imageToViewport[int(transformIndex)];
+        int transformIndex = u_transformIndex >= 0 ? u_transformIndex : int(in_transform);
+        mat3x2 imageToViewport = u_transformUBO.imageToViewport[transformIndex];
         vec2 viewportPos = imageToViewport * vec3(in_position.xy, 1.0);
         vec2 ndcPos = viewportPos * 2.0 - 1.0;
         ndcPos.y = -ndcPos.y;
@@ -384,7 +384,7 @@ glUtils._edgesVS = `
 
     uniform mat2 u_viewportTransform;
     uniform vec2 u_canvasSize;
-    uniform float u_transformIndex;
+    uniform int u_transformIndex;
     uniform float u_markerScale;
     uniform float u_globalMarkerScale;
     uniform float u_markerOpacity;
@@ -406,10 +406,10 @@ glUtils._edgesVS = `
 
     void main()
     {
-        float transformIndex0 = u_transformIndex >= 0.0 ? u_transformIndex : mod(in_transform, 256.0);
-        float transformIndex1 = u_transformIndex >= 0.0 ? u_transformIndex : floor(in_transform / 256.0);
-        mat3x2 imageToViewport0 = u_transformUBO.imageToViewport[int(transformIndex0)];
-        mat3x2 imageToViewport1 = u_transformUBO.imageToViewport[int(transformIndex1)];
+        int transformIndex0 = u_transformIndex >= 0 ? u_transformIndex : int(mod(in_transform, 256.0));
+        int transformIndex1 = u_transformIndex >= 0 ? u_transformIndex : int(floor(in_transform / 256.0));
+        mat3x2 imageToViewport0 = u_transformUBO.imageToViewport[transformIndex0];
+        mat3x2 imageToViewport1 = u_transformUBO.imageToViewport[transformIndex1];
 
         vec2 localPos0 = in_position.xy;
         vec2 localPos1 = in_position.zw;
@@ -494,7 +494,7 @@ glUtils._regionsVS = `
     #define MAX_NUM_IMAGES 192
 
     uniform mat2 u_viewportTransform;
-    uniform float u_transformIndex;
+    uniform int u_transformIndex;
     uniform vec4 u_imageBounds;
     uniform int u_numScanlines;
 
@@ -521,7 +521,7 @@ glUtils._regionsVS = `
         localPos.y = v_texCoord.y * u_imageBounds.w;
         v_localPos = localPos;
 
-        mat3x2 imageToViewport = u_transformUBO.imageToViewport[int(u_transformIndex)];
+        mat3x2 imageToViewport = u_transformUBO.imageToViewport[u_transformIndex];
         vec2 viewportPos = imageToViewport * vec3(localPos, 1.0);
         vec2 ndcPos = viewportPos * 2.0 - 1.0;
         ndcPos.y = -ndcPos.y;
@@ -1849,7 +1849,7 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
     gl.bindVertexArray(glUtils._vaos[uid + (useInstancing ? "_markers_instanced" : "_markers")]);
 
     // Set per-markerset uniforms
-    gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"),
+    gl.uniform1i(gl.getUniformLocation(program, "u_transformIndex"),
         glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
     gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
     gl.uniform2fv(gl.getUniformLocation(program, "u_markerScalarRange"), glUtils._markerScalarRange[uid]);
@@ -1928,7 +1928,7 @@ glUtils._drawEdgesByUID = function(gl, viewportTransform, markerScaleAdjusted, u
     // Set per-markerset uniforms
     gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
-    gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"),
+    gl.uniform1i(gl.getUniformLocation(program, "u_transformIndex"),
         glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
 
     gl.activeTexture(gl.TEXTURE0);
@@ -1959,7 +1959,7 @@ glUtils._drawRegionsColorPass = function(gl, viewportTransform, imageBounds) {
 
     // Set per-scene uniforms
     gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
-    gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"), 0);
+    gl.uniform1i(gl.getUniformLocation(program, "u_transformIndex"), 0);
     gl.uniform4fv(gl.getUniformLocation(program, "u_imageBounds"), imageBounds);
     gl.uniform1i(gl.getUniformLocation(program, "u_numScanlines"), numScanlines);
     gl.uniform1f(gl.getUniformLocation(program, "u_regionOpacity"), glUtils._regionOpacity);
@@ -2029,7 +2029,7 @@ glUtils._drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) 
         gl.bindVertexArray(glUtils._vaos[uid + "_markers"]);
 
         // Set per-markerset uniforms
-        gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"),
+        gl.uniform1i(gl.getUniformLocation(program, "u_transformIndex"),
             glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
         gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
         gl.uniform1i(gl.getUniformLocation(program, "u_usePiechartFromMarker"), glUtils._usePiechartFromMarker[uid]);
