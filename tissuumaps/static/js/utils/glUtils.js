@@ -2227,7 +2227,7 @@ glUtils.restoreLostContext = function(event) {
     glUtils._textures["regionLUT"] = glUtils._createRegionLUTTexture(gl);
     glUtils._vaos["empty"] = gl.createVertexArray();
 
-    // Restore per-markers WebGL objects
+    // Restore per-markersset WebGL objects
     for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
         delete glUtils._buffers[uid + "_markers"];
         delete glUtils._buffers[uid + "_markers_secondary"];
@@ -2241,7 +2241,14 @@ glUtils.restoreLostContext = function(event) {
         glUtils.loadMarkers(uid);
     }
 
-    glUtils.draw();  // Make sure markers are redrawn
+    // Restore per-image WebGL objects for drawing regions (currently only the
+    // first image layer can have regions, but this might change in the future)
+    if (regionUtils._edgeLists.length) {  // Only do update if there is region data
+        glUtils.updateRegionDataTextures();
+        glUtils.updateRegionLUTTextures();
+    }
+
+    glUtils.draw();  // Make sure markers and other objects are redrawn
 }
 
 
