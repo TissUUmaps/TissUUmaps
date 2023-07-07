@@ -95,7 +95,7 @@ glUtils._markersVS = `
     uniform sampler2D u_colorscale;
 
     layout(std140) uniform TransformUniforms {
-        mat3x2 imageToViewport[MAX_NUM_IMAGES];
+        mat2x4 imageToViewport[MAX_NUM_IMAGES];
     } u_transformUBO;
 
     layout(location = 0) in vec4 in_position;
@@ -123,7 +123,7 @@ glUtils._markersVS = `
     void main()
     {
         int transformIndex = u_transformIndex >= 0 ? u_transformIndex : int(in_transform);
-        mat3x2 imageToViewport = u_transformUBO.imageToViewport[transformIndex];
+        mat3x2 imageToViewport = mat3x2(transpose(u_transformUBO.imageToViewport[transformIndex]));
         vec2 viewportPos = imageToViewport * vec3(in_position.xy, 1.0);
         vec2 ndcPos = viewportPos * 2.0 - 1.0;
         ndcPos.y = -ndcPos.y;
@@ -281,7 +281,7 @@ glUtils._pickingVS = `
     uniform sampler2D u_shapeAtlas;
 
     layout(std140) uniform TransformUniforms {
-        mat3x2 imageToViewport[MAX_NUM_IMAGES];
+        mat2x4 imageToViewport[MAX_NUM_IMAGES];
     } u_transformUBO;
 
     layout(location = 0) in vec4 in_position;
@@ -302,7 +302,7 @@ glUtils._pickingVS = `
     void main()
     {
         int transformIndex = u_transformIndex >= 0 ? u_transformIndex : int(in_transform);
-        mat3x2 imageToViewport = u_transformUBO.imageToViewport[transformIndex];
+        mat3x2 imageToViewport = mat3x2(transpose(u_transformUBO.imageToViewport[transformIndex]));
         vec2 viewportPos = imageToViewport * vec3(in_position.xy, 1.0);
         vec2 ndcPos = viewportPos * 2.0 - 1.0;
         ndcPos.y = -ndcPos.y;
@@ -393,7 +393,7 @@ glUtils._edgesVS = `
     uniform sampler2D u_colorLUT;
 
     layout(std140) uniform TransformUniforms {
-        mat3x2 imageToViewport[MAX_NUM_IMAGES];
+        mat2x4 imageToViewport[MAX_NUM_IMAGES];
     } u_transformUBO;
 
     layout(location = 0) in vec4 in_position;
@@ -408,8 +408,8 @@ glUtils._edgesVS = `
     {
         int transformIndex0 = u_transformIndex >= 0 ? u_transformIndex : int(mod(in_transform, 256.0));
         int transformIndex1 = u_transformIndex >= 0 ? u_transformIndex : int(floor(in_transform / 256.0));
-        mat3x2 imageToViewport0 = u_transformUBO.imageToViewport[transformIndex0];
-        mat3x2 imageToViewport1 = u_transformUBO.imageToViewport[transformIndex1];
+        mat3x2 imageToViewport0 = mat3x2(transpose(u_transformUBO.imageToViewport[transformIndex0]));
+        mat3x2 imageToViewport1 = mat3x2(transpose(u_transformUBO.imageToViewport[transformIndex1]));
 
         vec2 localPos0 = in_position.xy;
         vec2 localPos1 = in_position.zw;
@@ -499,7 +499,7 @@ glUtils._regionsVS = `
     uniform int u_numScanlines;
 
     layout(std140) uniform TransformUniforms {
-        mat3x2 imageToViewport[MAX_NUM_IMAGES];
+        mat2x4 imageToViewport[MAX_NUM_IMAGES];
     } u_transformUBO;
 
     // Need to have attribute 0 enabled, otherwise some browsers (QtWebEngine)
@@ -521,7 +521,7 @@ glUtils._regionsVS = `
         localPos.y = v_texCoord.y * u_imageBounds.w;
         v_localPos = localPos;
 
-        mat3x2 imageToViewport = u_transformUBO.imageToViewport[u_transformIndex];
+        mat3x2 imageToViewport = mat3x2(transpose(u_transformUBO.imageToViewport[u_transformIndex]));
         vec2 viewportPos = imageToViewport * vec3(localPos, 1.0);
         vec2 ndcPos = viewportPos * 2.0 - 1.0;
         ndcPos.y = -ndcPos.y;
@@ -1422,7 +1422,7 @@ glUtils._updateTransformUBO = function(buffer) {
 
     // Compute transforms that takes into account if collection mode viewing is
     // enabled for image layers
-    const imageTransforms = new Array(256 * 12).fill(0);
+    const imageTransforms = new Array(256 * 8).fill(0);
     for (let i = 0; i < tmapp["ISS_viewer"].world.getItemCount(); ++i) {
         const bounds = tmapp["ISS_viewer"].viewport.getBounds();
         const image = tmapp["ISS_viewer"].world.getItemAt(i);
@@ -1445,15 +1445,15 @@ glUtils._updateTransformUBO = function(buffer) {
         const k0 = (imageOrientation >= 180.0) ? (imageFlip ? 0.0 : 1.0) : (imageFlip ? -1.0 : 0.0);
         const k1 = (imageOrientation >= 90.0 && imageOrientation < 270.0) ? 1.0 : 0.0;
 
-        // Construct 3x2 matrix (in col-major order) to be applied to marker positions.
-        // Note: each col in the matrix must be padded to a vec4, because of std140
-        // alignment rules for storing 3x2 matrices in arrays in UBOs.
-        imageTransforms[i * 12 + 0] = flip * Math.cos(theta) * scaleX;
-        imageTransforms[i * 12 + 4] = -Math.sin(theta) * scaleX;
-        imageTransforms[i * 12 + 8] = shiftX - k0 * (scaleX * imageWidth) * Math.cos(theta) + k1 * (scaleX * imageHeight) * Math.sin(theta);
-        imageTransforms[i * 12 + 1] = flip * Math.sin(theta) * scaleY;
-        imageTransforms[i * 12 + 5] = Math.cos(theta) * scaleY;
-        imageTransforms[i * 12 + 9] = shiftY - k0 * (scaleY * imageWidth) * Math.sin(theta) - k1 * (scaleY * imageHeight) * Math.cos(theta);
+        // Construct 3x2 matrix for transform. The matrix is stored transposed
+        // in a 2x4 matrix with column-major order, to comply with std140
+        // alignment rules for storing matrices in arrays in UBOs.
+        imageTransforms[i * 8 + 0] = flip * Math.cos(theta) * scaleX;
+        imageTransforms[i * 8 + 1] = -Math.sin(theta) * scaleX;
+        imageTransforms[i * 8 + 2] = shiftX - k0 * (scaleX * imageWidth) * Math.cos(theta) + k1 * (scaleX * imageHeight) * Math.sin(theta);
+        imageTransforms[i * 8 + 4] = flip * Math.sin(theta) * scaleY;
+        imageTransforms[i * 8 + 5] = Math.cos(theta) * scaleY;
+        imageTransforms[i * 8 + 6] = shiftY - k0 * (scaleY * imageWidth) * Math.sin(theta) - k1 * (scaleY * imageHeight) * Math.cos(theta);
     }
 
     const bytedata = new Float32Array(imageTransforms);
