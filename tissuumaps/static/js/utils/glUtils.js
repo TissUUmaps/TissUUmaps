@@ -502,13 +502,18 @@ glUtils._regionsVS = `
         mat3x2 imageToViewport[MAX_NUM_IMAGES];
     } u_transformUBO;
 
+    // Need to have attribute 0 enabled, otherwise some browsers (QtWebEngine)
+    // will give performance warnings. It would otherwise have been simpler to
+    // just compute the position/texcoord from gl_VertexID.
+    layout(location = 0) in vec2 in_position;
+
     out vec2 v_texCoord;
     out vec2 v_localPos;
     out float v_scanline;
 
     void main()
     {
-        v_texCoord = vec2(gl_VertexID & 1, (gl_VertexID >> 1) & 1);
+        v_texCoord = in_position;
         v_scanline = v_texCoord.y * float(u_numScanlines);
 
         vec2 localPos;
@@ -694,7 +699,7 @@ glUtils._loadShaderProgram = function(gl, vertSource, fragSource, definitions=""
 }
 
 
-glUtils._createMarkerBuffer = function(gl, numBytes) {
+glUtils._createVertexBuffer = function(gl, numBytes) {
     const buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer); 
     gl.bufferData(gl.ARRAY_BUFFER, numBytes, gl.STATIC_DRAW);
@@ -935,10 +940,10 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
 
             // Create WebGL objects (if this has not already been done)
             if (!(uid + "_markers" in glUtils._buffers))
-                glUtils._buffers[uid + "_markers"] = glUtils._createMarkerBuffer(
+                glUtils._buffers[uid + "_markers"] = glUtils._createVertexBuffer(
                     gl, numPoints * numSectors * NUM_BYTES_PER_MARKER);
             if (!(uid + "_markers_secondary" in glUtils._buffers))
-                glUtils._buffers[uid + "_markers_secondary"] = glUtils._createMarkerBuffer(
+                glUtils._buffers[uid + "_markers_secondary"] = glUtils._createVertexBuffer(
                     gl, numPoints * numSectors * NUM_BYTES_PER_MARKER_SECONDARY);
             if (!(uid + "_markers_indices" in glUtils._buffers))
                 glUtils._buffers[uid + "_markers_indices"] = glUtils._createIndexBuffer(
@@ -1273,7 +1278,7 @@ glUtils._loadEdges = function(uid, forceUpdate) {
 
             // Create WebGL objects (if this has not already been done)
             if (!(uid + "_edges" in glUtils._buffers))
-                glUtils._buffers[uid + "_edges"] = glUtils._createMarkerBuffer(gl, numEdges * NUM_BYTES_PER_EDGE);
+                glUtils._buffers[uid + "_edges"] = glUtils._createVertexBuffer(gl, numEdges * NUM_BYTES_PER_EDGE);
             if (!(uid + "_edges" in glUtils._vaos))
                 glUtils._vaos[uid + "_edges"] = gl.createVertexArray();
 
@@ -1747,6 +1752,20 @@ glUtils._createColorbarCanvas = function() {
 }
 
 
+glUtils._createQuad = function(gl) {
+    // Create geometry for drawing a single quad
+    const vertices = [0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0];
+    const bytedata = new Float32Array(vertices);
+
+    const buffer = glUtils._createVertexBuffer(gl, bytedata.byteLength);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, bytedata);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+    return buffer;
+}
+
+
 // Creates WebGL canvas for drawing the markers
 glUtils._createMarkerWebGLCanvas = function() {
     const canvas = document.createElement("canvas");
@@ -1961,10 +1980,14 @@ glUtils._drawRegionsColorPass = function(gl, viewportTransform, imageBounds) {
     }
     gl.uniform1i(gl.getUniformLocation(program, "u_regionData"), 1);
 
-    // Draw rectangles that will each render a scanline segment of the region(s)
+    // Draw rectangle that will render the regions in the fragment shader
     gl.bindVertexArray(glUtils._vaos["empty"]);
-    //gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numScanlines);
+    gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers["quad"]);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, 1);
+    gl.disableVertexAttribArray(0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
     // Restore render pipeline state
     gl.bindVertexArray(null);
@@ -2226,6 +2249,7 @@ glUtils.restoreLostContext = function(event) {
     glUtils._programs["edges"] = glUtils._loadShaderProgram(gl, glUtils._edgesVS, glUtils._edgesFS);
     glUtils._programs["regions"] = glUtils._loadShaderProgram(gl, glUtils._regionsVS, glUtils._regionsFS);
     glUtils._textures["shapeAtlas"] = glUtils._loadTextureFromImageURL(gl, glUtils._markershapes);
+    glUtils._buffers["quad"] = glUtils._createQuad(gl);
     glUtils._buffers["transformUBO"] = glUtils._createUniformBuffer(gl);
     glUtils._textures["regionData"] = glUtils._createRegionDataTexture(gl);
     glUtils._textures["regionDataSplit"] = glUtils._createRegionDataTexture(gl, 1024);
@@ -2287,6 +2311,7 @@ glUtils.init = function() {
     this._programs["edges"] = this._loadShaderProgram(gl, this._edgesVS, this._edgesFS);
     this._programs["regions"] = this._loadShaderProgram(gl, this._regionsVS, this._regionsFS);
     this._textures["shapeAtlas"] = this._loadTextureFromImageURL(gl, glUtils._markershapes);
+    this._buffers["quad"] = this._createQuad(gl);
     this._buffers["transformUBO"] = this._createUniformBuffer(gl);
     this._textures["regionData"] = this._createRegionDataTexture(gl);
     this._textures["regionDataSplit"] = this._createRegionDataTexture(gl, 1024);
