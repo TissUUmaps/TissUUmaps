@@ -27,11 +27,12 @@ markerUtils.updatePiechartLegend = function() {
     elt.style.display="block";
     elt.innerHTML = "";
 
-    let markerData = undefined, sectorsPropertyName = undefined;
+    let markerData = undefined, sectorsPropertyName = undefined, piechartPalette = undefined;
     for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
         if (glUtils._usePiechartFromMarker[uid]) {
             markerData = dataUtils.data[uid]["_processeddata"];
             sectorsPropertyName = dataUtils.data[uid]["_pie_col"];
+            piechartPalette = glUtils._piechartPalette[uid];
         }
     }
     if (markerData == undefined || sectorsPropertyName == undefined) return;
@@ -45,7 +46,7 @@ markerUtils.updatePiechartLegend = function() {
     elt.appendChild(table);
 
     let sectors = [];
-    const numSectors = markerData[sectorsPropertyName][0].split(";").length;
+    const numSectors = markerData[sectorsPropertyName][0].toString().split(";").length;
     if (sectorsPropertyName.split(";").length == numSectors) {
         sectors = sectorsPropertyName.split(";");  // Use sector labels from CSV header
     } else {
@@ -58,7 +59,7 @@ markerUtils.updatePiechartLegend = function() {
         let row = HTMLElementUtils.createElement({ kind: "tr"});
         row.style.paddingBottom = "4px";
         let colortd = HTMLElementUtils.createElement({ kind: "td", innerHTML: "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"});
-        colortd.style.backgroundColor = glUtils._piechartPalette[index % glUtils._piechartPalette.length];
+        colortd.style.backgroundColor = piechartPalette[index % piechartPalette.length];
         colortd.style.maxWidth = "70px";
         colortd.style.borderWidth= "1px";
         colortd.style.borderColor= "black";
@@ -76,7 +77,7 @@ markerUtils.makePiechartTable = function(uid, markerIndex, sectorsPropertyName) 
     const markerData = dataUtils.data[uid]["_processeddata"];
 
     let sectors = [];
-    const numSectors = markerData[sectorsPropertyName][markerIndex].split(";").length;
+    const numSectors = markerData[sectorsPropertyName][markerIndex].toString().split(";").length;
     if (sectorsPropertyName.split(";").length == numSectors) {
         sectors = sectorsPropertyName.split(";");  // Use sector labels from CSV header
     } else {
@@ -89,7 +90,7 @@ markerUtils.makePiechartTable = function(uid, markerIndex, sectorsPropertyName) 
     if (dataUtils.data[uid]["_tooltip_fmt"]) {
         outText += "<b>" + markerUtils.getMarkerTooltip(uid, markerIndex) + ":</b><br/>";
     }
-    let sectorValues = markerData[sectorsPropertyName][markerIndex].split(";");
+    let sectorValues = markerData[sectorsPropertyName][markerIndex].toString().split(";");
     let sortedSectors = [];
     sectors.forEach(function (sector, index) {
         sortedSectors.push([parseFloat(sectorValues[index]), sector, index])
@@ -99,8 +100,9 @@ markerUtils.makePiechartTable = function(uid, markerIndex, sectorsPropertyName) 
             return b[0]-a[0];
         }
     );
+    let piechartPalette = glUtils._piechartPalette[uid];
     sortedSectors.forEach(function (sector) {
-        outText += "<span style='border:2px solid " + glUtils._piechartPalette[sector[2] % glUtils._piechartPalette.length] + ";padding:3px;margin:2px;display: inline-block;'>" + sector[1] + ": " + (sector[0] * 100).toFixed(1) + " %</span> ";
+        outText += "<span style='border:2px solid " + piechartPalette[sector[2] % piechartPalette.length] + ";padding:3px;margin:2px;display: inline-block;'>" + sector[1] + ": " + (sector[0] * 100).toFixed(1) + " %</span> ";
     })
     return outText;
 }
