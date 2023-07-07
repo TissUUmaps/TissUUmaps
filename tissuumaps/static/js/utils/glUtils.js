@@ -579,7 +579,7 @@ glUtils._regionsFS = `
         vec2 p = v_localPos;  // Current sample position
         int scanline = int(v_scanline);
 
-        float pixelWidth = abs(dFdx(p.x));
+        float pixelWidth = length(dFdx(p.xy));
         float strokeWidth = STROKE_WIDTH * pixelWidth;  // Stroke width for outlines
         float minEdgeDist = 99999.0;                    // Distance to closest edge
 
