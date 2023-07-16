@@ -601,10 +601,16 @@ glUtils._regionsFS = `
 
         while (headerData.w != 0.0 && offset < 4096) {
 
-            // Find next path that might intersect this sample position
+            // Find next path with bounding box overlapping this sample position
             while (headerData.w != 0.0 && offset < 4096) {
                 headerData = texelFetch(u_regionData, ivec2(offset, scanline), 0);
-                if (headerData.x <= (p.x + strokeWidth) && (p.x - strokeWidth) <= headerData.y) { break; }
+                bool isPathBbox = headerData.z > 0.0;
+                bool isClusterBbox = headerData.z == 0.0;
+
+                if (headerData.x <= (p.x + strokeWidth) && (p.x - strokeWidth) <= headerData.y) {
+                    if (isPathBbox) { break; }
+                    if (isClusterBbox) { offset -= int(headerData.w); }
+                }
                 offset += int(headerData.w) + 1;
             }
             offset += 1;  // Position pointer at first edge element
