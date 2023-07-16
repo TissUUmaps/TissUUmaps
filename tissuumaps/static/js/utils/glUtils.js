@@ -1492,6 +1492,10 @@ glUtils.updateRegionDataTextures = function() {
     regionUtils._splitEdgeLists();
     console.timeEnd("Split region edge lists");
 
+    console.time("Add clusters to region edge lists");
+    regionUtils._addClustersToEdgeLists(imageBounds);
+    console.timeEnd("Add clusters to region edge lists");
+
     glUtils._updateRegionDataTexture(gl, glUtils._textures["regionData"]);
     glUtils._updateRegionDataSplitTexture(gl, glUtils._textures["regionDataSplit"]);
 }

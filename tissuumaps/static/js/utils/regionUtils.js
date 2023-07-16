@@ -963,6 +963,12 @@ regionUtils._splitEdgeLists = function() {
 }
 
 
+// Add cluster information to edge lists (WIP)
+regionUtils._addClustersToEdgeLists = function(imageBounds) {
+    // STUB
+}
+
+
 // Check if point is inside or outside a region, by computing the winding
 // number for paths in a scanline of the edge list data structure
 regionUtils._pointInRegion = function(px, py, regionID, imageBounds) {
