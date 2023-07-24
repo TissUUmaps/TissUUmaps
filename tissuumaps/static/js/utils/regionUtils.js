@@ -742,6 +742,117 @@ regionUtils.freeHandRegionsOnOff = function () {
     }
 };
 
+regionUtils.freeHandManager = function (event) {
+    function onCanvasRelease(){
+        // Get OSDViewer
+        const OSDViewer = tmapp[tmapp["object_prefix"] + "_viewer"];
+        // Remove mouse dragging handler
+        OSDViewer.removeHandler(
+          "canvas-drag",
+          createRegionFromCanvasDrag
+        );
+        // Remove release handler
+        OSDViewer.removeHandler(
+          "canvas-release",
+          onCanvasRelease
+        );
+        // If there is only one point, there is no region to be drawn, 
+        // reset and stop here
+        if (regionUtils._currentPoints < 1) { 
+          regionUtils.resetManager(); 
+          return;
+        }
+        // Close the region if initial point and final point are close enough
+        if (
+          regionUtils.distance(
+            regionUtils._currentPoints[regionUtils._currentPoints.length - 1],
+            regionUtils._currentPoints[0]
+          ) <
+          (10 * regionUtils._epsilonDistance) /
+            tmapp["ISS_viewer"].viewport.getZoom()
+        ) {
+          regionUtils.closePolygon();
+          return;
+        }
+        // If initial point and final point are not close enough, reset
+        regionUtils.resetManager();
+    }
+    
+      function createRegionFromCanvasDrag(event) {
+        const drawingclass = regionUtils._drawingclass;
+        // Get OSDViewer
+        const OSDviewer = tmapp[tmapp["object_prefix"] + "_viewer"];
+        const canvas =
+          overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
+        // Block viewer panning
+        event.preventDefaultAction = true;
+        // Get region's next point coordinates from event position 
+        const normCoords = OSDviewer.viewport.pointFromPixel(event.position);
+        // Get stroke width depending on currently applied zoom to image
+        const strokeWstr =
+          regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
+        let regionobj;
+        if (regionUtils._isNewRegion) {
+          regionUtils._currentPoints = [];
+          regionUtils._isNewRegion = false;
+          regionUtils._currentRegionId += 1;
+          const idregion = regionUtils._currentRegionId;
+          const startPoint = [normCoords.x, normCoords.y];
+          regionUtils._currentPoints.push(startPoint);
+          // Create a group to store region
+          regionobj = d3.select(canvas).append("g").attr("class", drawingclass);
+          // Draw a circle in the position of the first point of the region
+          regionobj
+            .append("circle")
+            .attr(
+              "r",
+              (10 * regionUtils._handleRadius) /
+                tmapp["ISS_viewer"].viewport.getZoom()
+            )
+            .attr("fill", regionUtils._colorActiveHandle)
+            .attr("stroke", "#ff0000")
+            .attr("stroke-width", strokeWstr)
+            .attr("class", "region" + idregion)
+            .attr("id", "handle-0-region" + idregion)
+            .attr(
+              "transform",
+              "translate(" +
+                startPoint[0].toString() +
+                "," +
+                startPoint[1].toString() +
+                ") scale(" +
+                regionUtils._scaleHandle +
+                ")"
+            )
+            .attr("is-handle", "true")
+            .style({ cursor: "pointer" });
+            return 
+        } 
+        const idregion = regionUtils._currentRegionId;
+        const nextpoint = [normCoords.x, normCoords.y];
+        regionUtils._currentPoints.push(nextpoint);
+        regionobj = d3.select("." + drawingclass);
+        regionobj.select("polyline").remove();
+        regionobj
+          .append("polyline")
+          .attr("points", regionUtils._currentPoints)
+          .style("fill", "none")
+          .attr("stroke-width", strokeWstr)
+          .attr("stroke", "#ff0000")
+          .attr("class", "region" + idregion);
+        
+    };  
+    // Get OSDViewer
+    const OSDViewer = tmapp[tmapp["object_prefix"] + "_viewer"];
+    // Add region creation handler while mouse is pressed.
+    // Capture the drag events to get the mouse position as the
+    // left button.
+    // Build the region based on the position of those events.
+    OSDViewer.addHandler("canvas-drag", createRegionFromCanvasDrag);
+    // Finish region drawing when mouse is released
+    OSDViewer.addHandler("canvas-release", onCanvasRelease);
+};
+
 /**
  * 
  * @param {string} cursorType 

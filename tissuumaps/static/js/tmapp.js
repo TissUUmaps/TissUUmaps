@@ -101,13 +101,20 @@ tmapp.init = function () {
         }
     };
 
+    function pressHandler(event) {
+        if (overlayUtils._freeHandDrawRegions) {
+          // Call region creator and drawer
+          regionUtils.freeHandManager(event);
+        }
+    }
+
     //OSD handlers are not registered manually they have to be registered
     //using MouseTracker OSD objects 
     /*var ISS_mouse_tracker = new OpenSeadragon.MouseTracker({
         element: tmapp[vname].canvas,
         clickHandler: click_handler
     }).setTracking(true);*/
-    
+    tmapp["ISS_viewer"].addHandler("canvas-press", pressHandler);
     tmapp["ISS_viewer"].addHandler('canvas-click', click_handler);
     tmapp["ISS_viewer"].addHandler("animation-finish", function animationFinishHandler(event){
         d3.selectAll("." + regionUtils._drawingclass).selectAll('polyline').each(function(el) {
