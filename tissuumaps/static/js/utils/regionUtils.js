@@ -128,7 +128,7 @@ regionUtils.closePolygon = function () {
     d3.select("." + drawingclass).remove();
     regionsobj = d3.select(canvas);
 
-    var hexcolor = overlayUtils.randomColor("hex");    
+    var hexcolor = "#FF0000"; //overlayUtils.randomColor("hex");    
 
     regionUtils._isNewRegion = true;
     regionUtils.addRegion([[regionUtils._currentPoints]], regionid, hexcolor);
@@ -206,15 +206,10 @@ regionUtils.closePolygon = function () {
 /** 
  * @param {Object} GeoJSON formatted region to import
  * @summary When regions are imported, create all objects for it from a region object */
-regionUtils.geoJSON2regions = function (geoJSONObjects) {
+regionUtils.geoJSON2regions = async function (geoJSONObjects) {
     // Helper functions for converting colors to hexadecimal
     var viewer = tmapp[tmapp["object_prefix"] + "_viewer"]
-    if (!viewer.world || !viewer.world.getItemAt(0)) {
-        setTimeout(function() {
-            regionUtils.geoJSON2regions(geoJSONObjects);
-        }, 100);
-        return;
-    }
+    await overlayUtils.waitLayersReady();
     function rgbToHex(rgb) {
         return "#" + ((1 << 24) + (rgb[0] << 16) + (rgb[1] << 8) + rgb[2]).toString(16).slice(1);
     }
@@ -222,7 +217,6 @@ regionUtils.geoJSON2regions = function (geoJSONObjects) {
         if (number < 0){ number = 0xFFFFFFFF + number + 1; }
         return "#" + number.toString(16).toUpperCase().substring(2, 8);
     }
-    var canvas = overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
     geoJSONObjects = regionUtils.oldRegions2GeoJSON(geoJSONObjects);
     if (!Array.isArray(geoJSONObjects)) {
         geoJSONObjects = [geoJSONObjects];
@@ -230,12 +224,14 @@ regionUtils.geoJSON2regions = function (geoJSONObjects) {
     //geoJSONObjects = geoJSONObjects.slice(0,3000);
     // Temporary hides the table for chrome issue with slowliness
     document.querySelector("#regionAccordions").classList.add("d-none");
-    geoJSONObjects.forEach(function(geoJSONObj, geoJSONObjIndex) {
+    console.log(geoJSONObjects.length + " regions to import");
+    for (let geoJSONObjIndex in geoJSONObjects) {
+        let geoJSONObj = geoJSONObjects[geoJSONObjIndex];
         if (geoJSONObj.type == "FeatureCollection") {
-            return regionUtils.geoJSON2regions(geoJSONObj.features);
+            return await regionUtils.geoJSON2regions(geoJSONObj.features);
         }
         if (geoJSONObj.type == "GeometryCollection") {
-            return regionUtils.geoJSON2regions(geoJSONObj.geometries);
+            return await regionUtils.geoJSON2regions(geoJSONObj.geometries);
         }
         /*if (geoJSONObj.type != "Feature") {
             return;
@@ -300,7 +296,7 @@ regionUtils.geoJSON2regions = function (geoJSONObjects) {
             document.getElementById(regionId + "_name_ta").value = regionName;
             regionUtils.changeRegion(regionId);
         }
-    });
+    };
     glUtils.updateRegionDataTextures();
     glUtils.updateRegionLUTTextures();
     glUtils.draw();
@@ -398,177 +394,8 @@ regionUtils.addRegion = function (points, regionid, color, regionClass) {
 
     regionUtils._regions[regionid] = region;
     regionUtils._regions[regionid].associatedPoints=[];
-    regionUtils.regionUI(regionid);
 }
-/** 
- *  @param {String} regionid Region identifier to be searched in regionUtils._regions
- *  @summary Create the whole UI for a region in the side panel */
-regionUtils.regionUI = function (regionid) {
 
-    var op = tmapp["object_prefix"];
-    regionClass = regionUtils._regions[regionid].regionClass;
-    if (regionClass) {
-        regionClassID = HTMLElementUtils.stringToId(regionClass);
-        let regionsTR = document.querySelectorAll("#regionClassItem-" + regionClassID + " .regiontr")
-        let numRegions = (regionsTR === null) ? 0 : regionsTR.length;
-        if (numRegions > regionUtils._maxRegionsInMenu) {
-            if (numRegions == regionUtils._maxRegionsInMenu + 1) {
-                spanEl = document.getElementById("regionGroupWarning-" + regionClassID)
-                if (spanEl) spanEl.innerHTML = "<i class='bi bi-exclamation-triangle'></i> Max "+regionUtils._maxRegionsInMenu+" regions displayed below";
-            }
-            return;
-        }
-        regionUtils.addRegionClassUI (regionClass)
-        var regionsPanel = document.getElementById("markers-regions-panel-" + regionClassID);
-    }
-    else {
-        regionClassID = "";
-        let regionsTR = document.querySelectorAll("#regionClassItem-undefined .regiontr")
-        let numRegions = (regionsTR === null) ? 0 : regionsTR.length;
-        if (numRegions > regionUtils._maxRegionsInMenu) {
-            if (numRegions == regionUtils._maxRegionsInMenu + 1) {
-                spanEl = document.getElementById("regionGroupWarning-" + regionClassID)
-                if (spanEl) spanEl.innerHTML = "<i class='bi bi-exclamation-triangle'></i> Max "+regionUtils._maxRegionsInMenu+" regions displayed below";
-            }
-            return;
-        }
-        regionUtils.addRegionClassUI (null);
-        var regionsPanel = document.getElementById("markers-regions-panel-");
-    }
-    var trPanel = HTMLElementUtils.createElement({
-        kind: "tr",
-        extraAttributes: {
-            class: "regiontr",
-            id: op + regionid + "_tr"
-        }
-    });
-    regionsPanel.appendChild(trPanel);
-    
-    // Get Class name and Region name
-    if (regionUtils._regions[regionid].regionClass) {
-        rClass = regionUtils._regions[regionid].regionClass;
-        //regionclasstext.value = rClass;
-    }
-    else {
-        rClass = "";
-    }
-    if (regionUtils._regions[regionid].regionName) {
-        rName = regionUtils._regions[regionid].regionName;
-        //if (regionUtils._regions[regionid].regionName != regionid)
-        //    regionnametext.value = rName;
-    } else {
-        rName = regionid;
-    }
-    var tdPanel = HTMLElementUtils.createElement({
-        kind: "td",
-    });
-    var checkinput = HTMLElementUtils.inputTypeCheckbox({
-        id: regionid + "_fill_ta",
-        class: "form-check-input",
-        checked: regionUtils._regions[regionid].visibility ? "checked" : "",
-        eventListeners: { click: function () {
-            regionUtils._regions[regionid].visibility = this.checked;
-            //regionUtils.updateAllRegionClassUI();
-            glUtils.updateRegionLUTTextures();
-            glUtils.draw();
-        }}
-    });
-    tdPanel.appendChild(checkinput);
-    trPanel.appendChild(tdPanel);
-    
-    var tdPanel = HTMLElementUtils.createElement({
-        kind: "td",
-        id: op + regionid + "_name",
-    });
-    var regionnametext = HTMLElementUtils.inputTypeText({
-        id: regionid + "_name_ta",
-        extraAttributes: {
-            size:9,
-            placeholder: "name",
-            value: rName,
-            class: "col mx-1 input-sm form-control form-control-sm"
-        }
-    });
-    regionnametext.addEventListener('change', function () {
-        regionUtils.changeRegion(regionid);
-    });
-    tdPanel.appendChild(regionnametext);
-    trPanel.appendChild(tdPanel);
-    var tdPanel = HTMLElementUtils.createElement({
-        kind: "td",
-    });
-    var regionclasstext = HTMLElementUtils.inputTypeText({
-        id: regionid + "_class_ta",
-        extraAttributes: {
-            size: 9,
-            placeholder: "class",
-            value: rClass,
-            class: "col mx-1 input-sm form-control form-control-sm"
-        }
-    });
-    regionclasstext.addEventListener('change', function () {
-        regionUtils.changeRegion(regionid);
-    });
-    tdPanel.appendChild(regionclasstext);
-    trPanel.appendChild(tdPanel);
-
-    var regioncolorinput = HTMLElementUtils.inputTypeColor({
-        id: regionid + "_color_input",
-        extraAttributes: {
-            class: "mx-1 form-control form-control-sm form-control-color-sm"
-        }
-    });
-    regioncolorinput.addEventListener('change', function () {
-        regionUtils.changeRegion(regionid);
-        regionUtils.updateAllRegionClassUI();
-    });
-    if (document.getElementById(regionid + "_poly")) {
-        var regionpoly = document.getElementById(regionid + "_poly");
-        regioncolorinput.setAttribute("value", regionpoly.getAttribute("polycolor"));
-    } else if (regionUtils._regions[regionid].polycolor) {
-        regioncolorinput.setAttribute("value", regionUtils._regions[regionid].polycolor);
-    }
-    var tdPanel = HTMLElementUtils.createElement({
-        kind: "td",
-    });
-    tdPanel.appendChild(regioncolorinput);
-    trPanel.appendChild(tdPanel);
-
-    trPanel.appendChild(tdPanel);
-    var tdPanel = HTMLElementUtils.createElement({
-        kind: "td"
-    });
-    var regionsdeletebutton = HTMLElementUtils.createButton({
-        id: regionid + "_delete_btn",
-        innerText: "<i class='bi bi-trash'></i>",
-        extraAttributes: {
-            parentRegion: regionid,
-            class: "col btn btn-sm btn-primary form-control-sm mx-1"
-        }
-    });
-    regionsdeletebutton.addEventListener('click', function () {
-        regionUtils.deleteRegion(regionid);
-    });
-    tdPanel.appendChild(regionsdeletebutton);
-    trPanel.appendChild(tdPanel);
-    
-    var trPanelHist = HTMLElementUtils.createElement({
-        kind: "tr",
-        extraAttributes: {
-            id: op + regionid + "_tr_hist"
-        }
-    });
-    trPanelHist.style.display="none";
-    regionsPanel.appendChild(trPanelHist);
-    var row = HTMLElementUtils.createElement({
-        kind: "td",
-        extraAttributes: {
-            class: "region-histogram my-1",
-            colspan: "52"
-        }
-    });
-    trPanelHist.appendChild(row);
-}
 
 /**
  * @deprecated Kept for backward compatibility
@@ -693,9 +520,9 @@ regionUtils.deleteRegion = function (regionid, skipUpdateAllRegionClassUI) {
         var rPanelHist = document.getElementById(op + regionid + "_tr_hist");
         rPanelHist.parentElement.removeChild(rPanelHist);
     }
-    if(!skipUpdateAllRegionClassUI) {
-        regionUtils.updateAllRegionClassUI();
-    }
+    //if(!skipUpdateAllRegionClassUI) {
+    //    regionUtils.updateAllRegionClassUI();
+    //}
 }
 /** 
  * @param {String} regionid String id of region to delete
@@ -711,249 +538,18 @@ regionUtils.deleteAllRegions = function () {
     regionsPanel.innerText = "";
     regionUtils._regions = {};
 }
-regionUtils.updateAllRegionClassUI = function (regionClass) {
-    // get all region classes
-    var allRegionClasses = Object.values(regionUtils._regions).map(function(e) { return e.regionClass; })
-    // get only unique values
-    var singleRegionClasses = allRegionClasses.filter((v, i, a) => a.indexOf(v) === i);
-    singleRegionClasses.forEach(function (regionClass) {
-        regionClassID = HTMLElementUtils.stringToId(regionClass);
-        numRegions = allRegionClasses.filter(x => x==regionClass).length
-        spanEl = document.getElementById("numRegions-" + regionClassID)
-        if (spanEl) {
-            spanEl.innerText = numRegions;
-            spanElS = document.getElementById("numRegionsS-" + regionClassID)
-            if (numRegions > 1) spanElS.innerText = "s"; else spanElS.innerText = ""; 
-        }
-    })
-    Array.from(document.getElementsByClassName("region-accordion")).forEach(function(accordionItem) {
-        if (Array.from(accordionItem.getElementsByClassName("regiontr")).length == 0) {
-            accordionItem.remove();
-        }
-    });
+regionUtils.updateAllRegionClassUI = function () {
+    setTimeout(()=>{
+        let regionUI = interfaceUtils._rGenUIFuncs.createTable();
+        menuui=interfaceUtils.getElementById("markers-regions-panel");
+        menuui.classList.remove("d-none")
+        menuui.innerText="";
+
+        menuui.appendChild(regionUI);
+    },10);
     glUtils.updateRegionDataTextures();
     glUtils.updateRegionLUTTextures();
     glUtils.draw();
-}
-/** 
- *  @param {String} regionClass Region class
- *  @summary Add accordion for a new region class */
-regionUtils.addRegionClassUI = function (regionClass) {
-    if (regionClass == null) regionClass = "";
-    var op = tmapp["object_prefix"];
-    var regionClassID = HTMLElementUtils.stringToId(regionClass);
-    var accordion_item = document.getElementById("regionClassItem-" + regionClassID);
-    if (!accordion_item) {
-        var regionAccordions = document.getElementById("regionAccordions");
-        var accordion_item = HTMLElementUtils.createElement({
-            kind: "div",
-            extraAttributes: {
-                class: "accordion-item region-accordion",
-                id: "regionClassItem-" + regionClassID
-            }
-        });
-        regionAccordions.appendChild(accordion_item);
-        var accordion_header = HTMLElementUtils.createElement({
-            kind: "h2",
-            extraAttributes: {
-                class: "accordion-header",
-                id: "regionClassHeading-" + regionClassID
-            }
-        });
-        accordion_item.appendChild(accordion_header);
-        if (!regionClass) regionClassName = "Unclassified"; else regionClassName = regionClass;
-        var accordion_header_button = HTMLElementUtils.createElement({
-            kind: "button",
-            innerHTML: "<i class='bi bi-pentagon'></i>&nbsp;" + regionClassName + " (<span id='numRegions-" + regionClassID + "'>1</span>&nbsp;region<span id='numRegionsS-" + regionClassID + "'></span>)&nbsp;<span class='text-warning' id='regionGroupWarning-" + regionClassID + "'></span>",
-            extraAttributes: {
-                "type": "button",
-                "class": "accordion-button collapsed",
-                "id": "regionClassHeading-" + regionClassID,
-                "data-bs-toggle": "collapse",
-                "data-bs-target": "#" + "regionClass-" + regionClassID,
-                "aria-expanded": "true",
-                "aria-controls": "collapseOne"
-            }
-        });
-        accordion_header.appendChild(accordion_header_button);
-        
-        var accordion_content = HTMLElementUtils.createElement({
-            kind: "div",
-            extraAttributes: {
-                class: "accordion-collapse collapse px-2",
-                id: "regionClass-" + regionClassID,
-                "aria-labelledby":"headingOne",
-                "data-bs-parent":"#regionAccordions"
-            }
-        });
-        accordion_item.appendChild(accordion_content);
-        var buttonRow = HTMLElementUtils.createElement({
-            kind: "div",
-            extraAttributes: {
-                class: "row my-1 mx-2"
-            }
-        });
-        accordion_content.appendChild(buttonRow);
-        
-        var regionTable = HTMLElementUtils.createElement({
-            kind: "table",
-            extraAttributes: {
-                class: "table regions_table",
-                id: "markers-regions-table-" + regionClassID
-            }
-        });
-        accordion_content.appendChild(regionTable);
-        var colg=document.createElement ("colgroup");
-        colg.innerHTML='<col width="5%"><col width="38%"><col width="37%"><col width="10%"><col width="10%">';
-        regionTable.appendChild(colg);
-        var tblHead = document.createElement("thead");
-        var tblHeadTr = document.createElement("tr");
-        tblHead.appendChild(tblHeadTr);
-        tblHeadTr.appendChild(HTMLElementUtils.createElement({kind:"th",innerText:""}));
-        tblHeadTr.appendChild(HTMLElementUtils.createElement({kind:"th",innerText:"Name"}));
-        tblHeadTr.appendChild(HTMLElementUtils.createElement({kind:"th",innerText:"Class"}));
-        tblHeadTr.appendChild(HTMLElementUtils.createElement({kind:"th",innerText:"Color"}));
-        tblHeadTr.appendChild(HTMLElementUtils.createElement({kind:"th",innerText:"Delete"}));
-        regionTable.appendChild(tblHead);
-        var regionTbody = HTMLElementUtils.createElement({
-            kind: "tbody",
-            id: "markers-regions-panel-" + regionClassID
-        });
-        regionTable.appendChild(regionTbody);
-            
-        var trPanel = HTMLElementUtils.createElement({
-            kind: "tr"
-        });
-        regionTbody.appendChild(trPanel);
-        
-        var tdPanel = HTMLElementUtils.createElement({
-            kind: "td",
-        });
-        var checkinput = HTMLElementUtils.inputTypeCheckbox({
-            class: "form-check-input",
-            id: regionClassID + "_group_fill_ta",
-            checked: true,
-            eventListeners: { click: function () {
-                let newVisibility = this.checked;
-                let groupRegions = Object.values(regionUtils._regions).filter(
-                    x => x.regionClass==regionClass
-                ).forEach(function (region) {
-                    region.visibility = newVisibility;
-                    if (document.getElementById(region.id + "_fill_ta"))
-                        document.getElementById(region.id + "_fill_ta").checked = newVisibility;
-                });
-                glUtils.updateRegionLUTTextures();
-                glUtils.draw();            }}
-        });
-        tdPanel.appendChild(checkinput);
-        trPanel.appendChild(tdPanel);
-        
-        var tdPanel = HTMLElementUtils.createElement({
-            kind: "td",
-            innerHTML: "<label style='cursor:pointer' for='"+regionClassID+"_group_fill_ta'>All</label>"
-        });
-        trPanel.appendChild(tdPanel);
-        var tdPanel = HTMLElementUtils.createElement({
-            kind: "td",
-        });
-        if (regionClass) rClass = regionClass; else rClass = "";
-        var regionclasstext = HTMLElementUtils.inputTypeText({
-            extraAttributes: {
-                size: 9,
-                placeholder: "class",
-                value: rClass,
-                class: "col mx-1 input-sm form-control form-control-sm"
-            }
-        });
-        regionclasstext.addEventListener('change', function () {
-            var newClass = this.value;
-            groupRegions = Object.values(regionUtils._regions).filter(
-                x => x.regionClass==regionClass
-            );
-            for (region of groupRegions) {
-                if (document.getElementById(region.id + "_class_ta"))
-                    document.getElementById(region.id + "_class_ta").value = newClass;
-                regionUtils.changeRegion(region.id);
-                region.regionClass = newClass;
-            };
-            regionUtils.updateAllRegionClassUI();
-        });
-        tdPanel.appendChild(regionclasstext);
-        trPanel.appendChild(tdPanel);
-    
-        var regioncolorinput = HTMLElementUtils.inputTypeColor({
-            extraAttributes: {
-                class: "mx-1 form-control form-control-sm form-control-color-sm"
-            }
-        });
-        regioncolorinput.addEventListener('change', function () {
-            var newColor = this.value;
-            groupRegions = Object.values(regionUtils._regions).filter(
-                x => x.regionClass==regionClass
-            )
-            for (region of groupRegions) {
-                region.polycolor = newColor;
-                if (document.getElementById(region.id + "_color_input"))
-                    document.getElementById(region.id + "_color_input").value = newColor;
-                regionUtils.changeRegion(region.id);
-            };
-            regionUtils.updateAllRegionClassUI();
-        });
-        var tdPanel = HTMLElementUtils.createElement({
-            kind: "td",
-        });
-        tdPanel.appendChild(regioncolorinput);
-        trPanel.appendChild(tdPanel);
-    
-        trPanel.appendChild(tdPanel);
-        var tdPanel = HTMLElementUtils.createElement({
-            kind: "td"
-        });
-        var regionsdeletebutton = HTMLElementUtils.createButton({
-            innerText: "<i class='bi bi-trash'></i>",
-            extraAttributes: {
-                class: "col btn btn-sm btn-primary form-control-sm mx-1"
-            }
-        });
-        regionsdeletebutton.addEventListener('click', function () {
-            interfaceUtils.confirm('Are you sure you want to delete the whole '+regionClass+' group?')
-            .then(function(_confirm){
-                if (_confirm) {
-                    groupRegions = Object.values(regionUtils._regions).filter(
-                        x => x.regionClass==regionClass
-                    ).forEach(function (region) {
-                        regionUtils.deleteRegion(region.id, true);
-                    });
-                    regionUtils.updateAllRegionClassUI();
-                }
-            });
-        });
-        tdPanel.appendChild(regionsdeletebutton);
-        trPanel.appendChild(tdPanel);
-
-        var regionanalyzebutton = HTMLElementUtils.createButton({
-            id: regionClassID + "_analyze_btn",
-            innerText: "Analyze group",
-            extraAttributes: {
-                parentRegion: regionClassID,
-                class: "col btn btn-primary btn-sm form-control mx-1"
-            }
-        });
-        
-        regionanalyzebutton.addEventListener('click', function () {
-            if (Object.keys(dataUtils.data).length == 0) {
-                interfaceUtils.alert("Load markers first");
-                return;
-            }
-            Object.values(regionUtils._regions).filter(
-                x => x.regionClass==regionClass
-            ).forEach(function(region){
-                regionUtils.analyzeRegion(region.id);
-            });
-        });
-        buttonRow.appendChild(regionanalyzebutton);
-
-    }
 }
 
 /** 
@@ -967,16 +563,16 @@ regionUtils.changeRegion = function (regionid) {
         if (regionUtils._regions[regionid].regionClass != document.getElementById(regionid + "_class_ta").value) {
             if (document.getElementById(regionid + "_class_ta").value) {
                 regionUtils._regions[regionid].regionClass = document.getElementById(regionid + "_class_ta").value;
-                classID = HTMLElementUtils.stringToId(regionUtils._regions[regionid].regionClass);
-                regionUtils.addRegionClassUI (regionUtils._regions[regionid].regionClass)
-                $(rPanel).detach().appendTo('#markers-regions-panel-' + classID)
-                $(rPanel_hist).detach().appendTo('#markers-regions-panel-' + classID)
+                //classID = HTMLElementUtils.stringToId(regionUtils._regions[regionid].regionClass);
+                //regionUtils.addRegionClassUI (regionUtils._regions[regionid].regionClass)
+                //$(rPanel).detach().appendTo('#markers-regions-panel-' + classID)
+                //$(rPanel_hist).detach().appendTo('#markers-regions-panel-' + classID)
             } else {
                 regionUtils._regions[regionid].regionClass = null;
-                regionUtils.addRegionClassUI (null)
-                classID = HTMLElementUtils.stringToId(regionUtils._regions[regionid].regionClass);
-                $(rPanel).detach().appendTo('#markers-regions-panel-')
-                $(rPanel_hist).detach().appendTo('#markers-regions-panel-')
+                //regionUtils.addRegionClassUI (null)
+                //classID = HTMLElementUtils.stringToId(regionUtils._regions[regionid].regionClass);
+                //$(rPanel).detach().appendTo('#markers-regions-panel-')
+                //$(rPanel_hist).detach().appendTo('#markers-regions-panel-')
             }
             regionUtils.updateAllRegionClassUI();
         }
@@ -1229,10 +825,10 @@ regionUtils.JSONToRegions= function(filepath){
     }
 }
 
-regionUtils.JSONValToRegions= function(jsonVal){
+regionUtils.JSONValToRegions= async function(jsonVal){
     // The file's text will be printed here
     var regions=jsonVal;
-    regionUtils.geoJSON2regions(regions);
+    await regionUtils.geoJSON2regions(regions);
     regionUtils.updateAllRegionClassUI();
     $('[data-bs-target="#markers-regions-project-gui"]').tab('show');
 }
@@ -1364,6 +960,12 @@ regionUtils._splitEdgeLists = function() {
             j += edgeCount;  // Position pointer before next bounding box
         }
     }
+}
+
+
+// Add cluster information to edge lists (WIP)
+regionUtils._addClustersToEdgeLists = function(imageBounds) {
+    // STUB
 }
 
 
