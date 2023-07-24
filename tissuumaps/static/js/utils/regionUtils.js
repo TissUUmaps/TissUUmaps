@@ -693,18 +693,106 @@ regionUtils.analyzeRegion = function (regionid) {
 /** 
  *  regionUtils */
 regionUtils.regionsOnOff = function () {
+    // Toggle off other region modes
+    if (overlayUtils._freeHandDrawRegions) {
+        regionUtils.freeHandRegionsOnOff();
+    }
     overlayUtils._drawRegions = !overlayUtils._drawRegions;
     var op = tmapp["object_prefix"];
     let regionIcon = document.getElementById(op + '_drawregions_icon');
     if (overlayUtils._drawRegions) {
         regionIcon.classList.remove("bi-circle");
         regionIcon.classList.add("bi-check-circle");
+        // Set region drawing cursor and show hint
+        regionUtils.setViewerCursor("crosshair")
+        regionUtils.showHint("Click to draw regions")
     } else {
         regionUtils.resetManager();
         regionIcon.classList.remove("bi-check-circle");
         regionIcon.classList.add("bi-circle");
+         // Reset cursor and hide hint
+        regionUtils.setViewerCursor("auto")
+        regionUtils.hideHint();
     }
 }
+
+regionUtils.freeHandRegionsOnOff = function () {
+    // Toggle off other region modes
+    if (overlayUtils._drawRegions) {
+        regionUtils.regionsOnOff();
+    }
+    overlayUtils._freeHandDrawRegions = !overlayUtils._freeHandDrawRegions;
+    const op = tmapp["object_prefix"];
+    let freeHandButtonIcon = document.getElementById(
+        op + "_draw_regions_free_hand_icon"
+    );
+    if (overlayUtils._freeHandDrawRegions) {
+        freeHandButtonIcon.classList.remove("bi-circle");
+        freeHandButtonIcon.classList.add("bi-check-circle");
+        // Set region drawing cursor and show hint
+        regionUtils.setViewerCursor("crosshair");
+        regionUtils.showHint("Drag the mouse to draw regions");
+    } else {
+        regionUtils.resetManager();
+        freeHandButtonIcon.classList.remove("bi-check-circle");
+        freeHandButtonIcon.classList.add("bi-circle");
+        // Reset cursor and hide hint
+        regionUtils.setViewerCursor("auto");
+        regionUtils.hideHint();
+    }
+};
+
+/**
+ * 
+ * @param {string} cursorType 
+ * @summary Set the OSD Viewer cursor type 
+ */
+regionUtils.setViewerCursor = function(cursorType){
+    // Get OSDViewer HTML element
+    const OSDViewerElement = tmapp[tmapp["object_prefix"] + "_viewer"].element
+    // Set the cursor type 
+    OSDViewerElement.style.cursor = cursorType
+}
+
+/**
+ * 
+ * @param {string} message 
+ * @summary Show a hint in the regions tab  
+ */
+regionUtils.showHint = function(message){
+    // Get region buttons container
+    const regionsButtonsContainer = document.getElementById("regionButtons")
+    // Check if banner is already visible, if not, create it 
+    let hintBanner = document.getElementById("regionHintBanner")
+    if(!hintBanner) {
+        hintBanner = document.createElement("div")
+        hintBanner.setAttribute("id", "regionHintBanner")
+    } 
+    // Set banner styles
+    hintBanner.innerText = message
+    hintBanner.style.width = "100%"
+    hintBanner.style.textAlign = "center"
+    hintBanner.style.background = "rgba(239,239,240, 1)"
+    hintBanner.style.padding = "8px 0 8px 0"
+    hintBanner.style.margin = "8px 0 8px 0"
+    hintBanner.style.color = "green"
+    // Add banner to region buttons container
+    regionsButtonsContainer.append(hintBanner)
+}
+
+/**
+ * 
+ * @summary Hide regions tab hint 
+ */
+regionUtils.hideHint = function(){
+    // Get hint element
+    const hintBanner = document.getElementById("regionHintBanner")
+    // If banner does not exist, return
+    if(!hintBanner) return 
+    // Remove hint element
+    hintBanner.remove()
+}
+
 /** 
  *  regionUtils */
 regionUtils.exportRegionsToJSON = function () {
