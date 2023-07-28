@@ -388,12 +388,12 @@ def points2regions(xy: np.ndarray, labels: np.ndarray, sigma: float, n_clusters:
     # Iterate data by library ids
     if library_id_column is not None:
         unique_library_id = np.unique(library_id_column)
-        iterdata = {
-            lib_id: (
+        iterdata = [
+            (lib_id, (
                 xy[library_id_column==lib_id],
-                labels[library_id_column==lib_id],
-            ) for lib_id in unique_library_id
-        }
+                labels[library_id_column==lib_id]
+            )) for lib_id in unique_library_id
+        ]
         get_slice = lambda library_id, data: data == library_id
     else:
         iterdata = [('id', (xy, labels))]
@@ -431,7 +431,7 @@ def points2regions(xy: np.ndarray, labels: np.ndarray, sigma: float, n_clusters:
     # Add clusters to dataframe
     output_column = np.zeros(len(xy), dtype='int')
     for library_id in results.keys():
-        if library_id_column:
+        if library_id_column is not None:
             library_id_slice_ind = get_slice(library_id, library_id_column)
         else:
             library_id_slice_ind = get_slice(library_id, xy)
@@ -704,7 +704,8 @@ x = np.asarray(processeddata[x_field].to_py(), dtype="float32")
 y = np.asarray(processeddata[y_field].to_py(), dtype="float32")
 if (data_obj._collectionItem_col in processeddata.keys()):
     lib_id = np.asarray(processeddata[data_obj._collectionItem_col].to_py())
-    x += lib_id * max(x) * 1.1
+else:
+    lib_id = None
 xy = np.vstack((x,y)).T
 
 labels = np.asarray(processeddata[Points2Regions.get("_clusterKey")].to_py())
@@ -731,7 +732,7 @@ c,r = points2regions(
     nclusters,
     stride,
     expression_threshold,
-    None,
+    lib_id,
     compute_regions,
     seed,
     region_name

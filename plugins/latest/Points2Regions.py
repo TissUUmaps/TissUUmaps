@@ -221,13 +221,13 @@ def points2regions(
     # Iterate data by library ids
     if library_id_column is not None:
         unique_library_id = np.unique(library_id_column)
-        iterdata = {
-            lib_id: (
+        iterdata = [
+            (lib_id, (
                 xy[library_id_column == lib_id],
                 labels[library_id_column == lib_id],
-            )
+            ))
             for lib_id in unique_library_id
-        }
+        ]
         get_slice = lambda library_id, data: data == library_id
     else:
         iterdata = [("id", (xy, labels))]
@@ -262,7 +262,7 @@ def points2regions(
     # Add clusters to dataframe
     output_column = np.zeros(len(xy), dtype="int")
     for library_id in results.keys():
-        if library_id_column:
+        if library_id_column is not None:
             library_id_slice_ind = get_slice(library_id, library_id_column)
         else:
             library_id_slice_ind = get_slice(library_id, xy)
