@@ -15,7 +15,7 @@
     // Choose between ["Brightness", "Exposure", "Hue", "Contrast", "Vibrance", "Noise", 
     //                 "Saturation","Gamma","Invert","Greyscale","Threshold","Erosion","Dilation",
     //                 "Colormap", "SplitChannel"]
-    _filtersUsed: ["Saturation","Brightness","Contrast"],
+    _filtersUsed: ["Saturation","Brightness","Contrast","Min","Max"],
     _filters: {
         "Color":{
             params:{
@@ -275,13 +275,64 @@
                     }
                 }
             }
+        },
+        "Min":{
+            params:{
+                type:"range",
+                min:0,
+                max:100,
+                step:1,
+                value:0
+            },
+            filterFunction: function (value) {
+                if (value == 1) {  return function (context, callback) {callback();}}
+                return RESCALE(value,filterUtils.getFilterParams('Max').value);
+            }
+        },
+        "Max":{
+            params:{
+                type:"range",
+                min:1,
+                max:255,
+                step:1,
+                value:255
+            },
+            filterFunction: function (value) {
+                if (value == 1) {  return function (context, callback) {callback();}}
+                return RESCALE(filterUtils.getFilterParams('Min').value,value);
+            }
         }
     },
     _filterItems:{},
     _lastFilters:{},
     _compositeMode:"source-over"
 }
-
+RESCALE = function(vmin,vmax) {
+            if (vmin < 0 || vmax>255) {
+                throw new Error('Contrast adjustment must be positive.');
+            }
+            var range = (vmax-vmin)/255
+            var precomputedContrast = [];
+            for (var i = 0; i < 256; i++) {
+                var val = (i - vmin)/range;
+                if (val<0){val=0};
+                if (val>255){val=255};
+                precomputedContrast[i] = val
+            }
+            return function(context, callback) {
+                var imgData = context.getImageData(
+                    0, 0, context.canvas.width, context.canvas.height);
+                var pixels = imgData.data;
+                for (var i = 0; i < pixels.length; i += 4) {
+                    pixels[i] = precomputedContrast[pixels[i]];
+                    pixels[i + 1] = precomputedContrast[pixels[i + 1]];
+                    pixels[i + 2] = precomputedContrast[pixels[i + 2]];
+                }
+                context.putImageData(imgData, 0, 0);
+                callback();
+            };
+        },
+        
 Caman.Filter.register("splitChannel", function (channelValue) {
     this.process("splitChannel", function (rgba) {
         let channel = null;
@@ -291,7 +342,7 @@ Caman.Filter.register("splitChannel", function (channelValue) {
         rgba.r = channel;
         rgba.g = channel;
         rgba.b = channel;
-    
+
         // Return the modified RGB values
         return rgba;
     });
