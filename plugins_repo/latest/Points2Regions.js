@@ -22,7 +22,8 @@ Points2Regions = {
       default: 1,
     },
     _sigma: {
-      label: "Spatial resolution (increase/decrease for coarser/finer regions):",
+      label:
+        "Spatial resolution (increase/decrease for coarser/finer regions):",
       type: "number",
       default: 100,
     },
