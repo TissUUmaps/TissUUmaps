@@ -15,7 +15,7 @@
     // Choose between ["Brightness", "Exposure", "Hue", "Contrast", "Vibrance", "Noise", 
     //                 "Saturation","Gamma","Invert","Greyscale","Threshold","Erosion","Dilation",
     //                 "Colormap", "SplitChannel"]
-    _filtersUsed: ["Saturation","Brightness","Contrast","Min","Max"],
+    _filtersUsed: ["Saturation","Brightness","Contrast"],
     _filters: {
         "Color":{
             params:{
