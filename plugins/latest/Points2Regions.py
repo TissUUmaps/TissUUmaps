@@ -6,13 +6,13 @@ from typing import Any, List, Literal, Optional, Union
 
 import h5py
 import numpy as np
+import pandas as pd
 import scipy.sparse as sp
 from flask import abort, make_response
 from scipy.ndimage import zoom
 from scipy.sparse import eye, spmatrix, vstack
 from sklearn.cluster import MiniBatchKMeans as KMeans
 from sklearn.preprocessing import normalize
-import pandas as pd
 
 COLORS = [
     [0.9019607843137255, 0.09803921568627451, 0.29411764705882354],
@@ -222,10 +222,13 @@ def points2regions(
     if library_id_column is not None:
         unique_library_id = np.unique(library_id_column)
         iterdata = [
-            (lib_id, (
-                xy[library_id_column == lib_id],
-                labels[library_id_column == lib_id],
-            ))
+            (
+                lib_id,
+                (
+                    xy[library_id_column == lib_id],
+                    labels[library_id_column == lib_id],
+                ),
+            )
             for lib_id in unique_library_id
         ]
         get_slice = lambda library_id, data: data == library_id
