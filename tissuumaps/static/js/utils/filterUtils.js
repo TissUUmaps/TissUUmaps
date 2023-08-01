@@ -285,7 +285,7 @@
                 value:0
             },
             filterFunction: function (value) {
-                if (value == 1) {  return function (context, callback) {callback();}}
+                if (value == 0) {  return function (context, callback) {callback();}}
                 return RESCALE(value,filterUtils.getFilterParams('Max').value);
             }
         },
@@ -298,7 +298,7 @@
                 value:255
             },
             filterFunction: function (value) {
-                if (value == 1) {  return function (context, callback) {callback();}}
+                if (value == 255) {  return function (context, callback) {callback();}}
                 return RESCALE(filterUtils.getFilterParams('Min').value,value);
             }
         }
