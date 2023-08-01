@@ -30,6 +30,8 @@ glUtils = {
     _markerScaleFactor: {},      // {uid: float}
     _markerScalarPropertyName: {},  // {uid: string, ...}
     _markerOpacity: {},          // {uid: alpha, ...}
+    _markerStrokeWidth: {},      // {uid: float, ...}
+    _markerFilled: {},           // {uid: boolean, ...}
     _markerOutline: {},          // {uid: boolean, ...}
     _useColorFromMarker: {},     // {uid: boolean, ...}
     _useColorFromColormap: {},   // {uid: boolean, ...}
@@ -190,6 +192,8 @@ glUtils._markersFS = `
     precision highp float;
     precision highp int;
 
+    uniform float u_markerStrokeWidth;
+    uniform bool u_markerFilled;
     uniform bool u_markerOutline;
     uniform bool u_usePiechartFromMarker;
     uniform bool u_alphaPass;
@@ -235,11 +239,22 @@ glUtils._markersFS = `
     #endif  // USE_INSTANCING
         uv = (uv + v_shapeOrigin) * (1.0 / SHAPE_GRID_SIZE);
 
-        // Sample shape texture in which the blue channel encodes alpha and the
-        // red and green channels encode grayscale for marker shape with and
-        // without outline, respectively
-        vec4 shapeColor = texture(u_shapeAtlas, uv, -0.5);
-        shapeColor = u_markerOutline ? shapeColor.rrrb : shapeColor.gggb;
+        // Sample shape texture and reconstruct marker shape from signed
+        // distance field (SDF) encoded in the red channel. Distance values
+        // are assumed to be pre-multiplied by a scale factor 8.0 before
+        // being quantized into 8-bit. Other channels in the texture are
+        // currently ignored, but could be used for storing additional shapes
+        // in the future!
+
+        float pixelWidth = dFdx(uv.x) * float(textureSize(u_shapeAtlas, 0).x) * 8.0;
+        float distShape = (texture(u_shapeAtlas, uv, -0.5).r - 0.5) * 255.0;
+        float distOutline = (u_markerStrokeWidth * 8.0) - abs(distShape);
+        float alpha = clamp(distShape / pixelWidth + 0.5, 0.0, 1.0) * float(u_markerFilled);
+        float alpha2 = clamp(distOutline / pixelWidth + 0.5, 0.0, 1.0) * float(u_markerOutline);
+        vec4 shapeColor = vec4(vec3(mix(1.0, 0.7, alpha2)), max(alpha, alpha2));
+        if (!u_markerFilled && u_markerOutline) {
+            shapeColor.rgb = vec3(1.0);  // Use brighter outline to show actual marker color 
+        }
 
         if (u_usePiechartFromMarker && !u_alphaPass) {
             float delta = 0.25 / v_shapeSize;
@@ -339,13 +354,15 @@ glUtils._pickingVS = `
             if (abs(uv.x - 0.5) > 0.5 || abs(uv.y - 0.5) > 0.5) DISCARD_VERTEX;
 
             // Do fine-grained inside/outside test by sampling the shape texture
-            // with alpha encoded in the blue channel
+            // with signed distance field (SDF) encoded in the red channel.
+            // Currently, this does not take settings for fill and outline into
+            // account, so all markers are assumed to be filled (TODO).
             vec2 shapeOrigin = vec2(0.0);
             shapeOrigin.x = mod((shapeID + 0.00001) * 255.0 - 1.0, SHAPE_GRID_SIZE);
             shapeOrigin.y = floor(((shapeID + 0.00001) * 255.0 - 1.0) / SHAPE_GRID_SIZE);
             uv = (uv - 0.5) * UV_SCALE + 0.5;
             uv = (uv + shapeOrigin) * (1.0 / SHAPE_GRID_SIZE);
-            if (texture(u_shapeAtlas, uv).b < 0.5) DISCARD_VERTEX;
+            if (texture(u_shapeAtlas, uv).r < 0.5) DISCARD_VERTEX;
 
             // Also do a quick alpha-test to avoid picking non-visible markers
             if (in_opacity * u_markerOpacity <= 0.0) DISCARD_VERTEX
@@ -815,6 +832,8 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
     const useOpacityFromMarker = newInputs.useOpacityFromMarker = dataUtils.data[uid]["_opacity_col"] != null;
     const markerOpacityFactor = dataUtils.data[uid]["_opacity"];
 
+    const markerStrokeWidth = dataUtils.data[uid]["_stroke_width"];
+    const markerFilled = !dataUtils.data[uid]["_no_fill"];
     const markerOutline = !dataUtils.data[uid]["_no_outline"];
 
     const collectionItemPropertyName = newInputs.collectionItemPropertyName = dataUtils.data[uid]["_collectionItem_col"];
@@ -1085,6 +1104,8 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
     glUtils._markerScalarPropertyName[uid] = scalarPropertyName;
     glUtils._markerScaleFactor[uid] = markerScaleFactor;
     glUtils._markerOpacity[uid] = markerOpacityFactor;
+    glUtils._markerStrokeWidth[uid] = markerStrokeWidth;
+    glUtils._markerFilled[uid] = markerFilled;
     glUtils._markerOutline[uid] = markerOutline;
     glUtils._useColorFromMarker[uid] = useColorFromMarker;
     glUtils._useColorFromColormap[uid] = useColorFromColormap;
@@ -1124,6 +1145,8 @@ glUtils.deleteMarkers = function(uid) {
     delete glUtils._markerScalarRange[uid];
     delete glUtils._markerScalarPropertyName[uid];
     delete glUtils._markerOpacity[uid];
+    delete glUtils._markerStrokeWidth[uid];
+    delete glUtils._markerFilled[uid];
     delete glUtils._markerOutline[uid];
     delete glUtils._useColorFromMarker[uid];
     delete glUtils._useColorFromColormap[uid];
@@ -1864,6 +1887,8 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
     gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
     gl.uniform2fv(gl.getUniformLocation(program, "u_markerScalarRange"), glUtils._markerScalarRange[uid]);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
+    gl.uniform1f(gl.getUniformLocation(program, "u_markerStrokeWidth"), glUtils._markerStrokeWidth[uid]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_markerFilled"), glUtils._markerFilled[uid]);
     gl.uniform1i(gl.getUniformLocation(program, "u_markerOutline"), glUtils._markerOutline[uid]);
     gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromMarker"), glUtils._useColorFromMarker[uid]);
     gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromColormap"), glUtils._useColorFromColormap[uid]);
