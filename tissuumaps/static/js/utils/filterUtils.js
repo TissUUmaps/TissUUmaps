@@ -280,7 +280,7 @@
             params:{
                 type:"range",
                 min:0,
-                max:100,
+                max:255,
                 step:1,
                 value:0
             },
@@ -292,7 +292,7 @@
         "Max":{
             params:{
                 type:"range",
-                min:1,
+                min:0,
                 max:255,
                 step:1,
                 value:255
