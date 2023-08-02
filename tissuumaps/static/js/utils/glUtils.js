@@ -77,6 +77,8 @@ glUtils._markersVS = `
     #define SHAPE_INDEX_CIRCLE_NOSTROKE 16.0
     #define SHAPE_GRID_SIZE 4.0
     #define MAX_NUM_IMAGES 192
+    #define UV_SCALE 0.8
+    #define SCALE_FIX (UV_SCALE / 0.7)  // For compatibility with old UV_SCALE
     #define DISCARD_VERTEX { gl_Position = vec4(2.0, 2.0, 2.0, 0.0); return; }
 
     uniform mat2 u_viewportTransform;
@@ -160,7 +162,7 @@ glUtils._markersVS = `
         }
 
         gl_Position = vec4(ndcPos, 0.0, 1.0);
-        gl_PointSize = in_scale * u_markerScale * u_globalMarkerScale;
+        gl_PointSize = (in_scale * u_markerScale * u_globalMarkerScale) * SCALE_FIX;
         float alphaFactorSize = clamp(gl_PointSize, 0.2, 1.0); 
         gl_PointSize = clamp(gl_PointSize, 1.0, u_maxPointSize);
 
@@ -186,7 +188,7 @@ glUtils._markersVS = `
 
 
 glUtils._markersFS = `
-    #define UV_SCALE 0.7
+    #define UV_SCALE 0.8
     #define SHAPE_GRID_SIZE 4.0
 
     precision highp float;
@@ -247,10 +249,14 @@ glUtils._markersFS = `
         // in the future!
 
         float pixelWidth = dFdx(uv.x) * float(textureSize(u_shapeAtlas, 0).x) * 8.0;
+        float markerStrokeWidth = min(14.0, u_markerStrokeWidth);  // Keep within SDF limits
         float distShape = (texture(u_shapeAtlas, uv, -0.5).r - 0.5) * 255.0;
-        float distOutline = (u_markerStrokeWidth * 8.0) - abs(distShape);
+        float distOutline = (markerStrokeWidth * 8.0) - abs(distShape);
         float alpha = clamp(distShape / pixelWidth + 0.5, 0.0, 1.0) * float(u_markerFilled);
         float alpha2 = clamp(distOutline / pixelWidth + 0.5, 0.0, 1.0) * float(u_markerOutline);
+        if (distOutline < (markerStrokeWidth + 0.5) * 8.0 - 127.5) {
+            alpha2 = 0.0;  // Fixes problem with alpha bleeding on minification
+        }
         vec4 shapeColor = vec4(vec3(mix(1.0, 0.7, alpha2)), max(alpha, alpha2));
         if (!u_markerFilled && u_markerOutline) {
             shapeColor.rgb = vec3(1.0);  // Use brighter outline to show actual marker color 
@@ -272,7 +278,8 @@ glUtils._markersFS = `
 
 
 glUtils._pickingVS = `
-    #define UV_SCALE 0.7
+    #define UV_SCALE 0.8
+    #define SCALE_FIX (UV_SCALE / 0.7)  // For compatibility with old UV_SCALE
     #define SHAPE_INDEX_CIRCLE_NOSTROKE 16.0
     #define SHAPE_GRID_SIZE 4.0
     #define MAX_NUM_IMAGES 192
@@ -345,7 +352,7 @@ glUtils._pickingVS = `
 
             vec2 canvasPos = (ndcPos * 0.5 + 0.5) * u_canvasSize;
             canvasPos.y = (u_canvasSize.y - canvasPos.y);  // Y-axis is inverted
-            float pointSize = in_scale * u_markerScale * u_globalMarkerScale;
+            float pointSize = (in_scale * u_markerScale * u_globalMarkerScale) * SCALE_FIX;
             pointSize = clamp(pointSize, 2.0, u_maxPointSize);
 
             // Do coarse inside/outside test against bounding box for marker
