@@ -75,6 +75,7 @@ glUtils = {
 glUtils._markersVS = `
     #define SHAPE_INDEX_CIRCLE 7.0
     #define SHAPE_INDEX_CIRCLE_NOSTROKE 16.0
+    #define SHAPE_INDEX_GAUSSIAN 15.0
     #define SHAPE_GRID_SIZE 4.0
     #define MAX_NUM_IMAGES 192
     #define UV_SCALE 0.8
@@ -112,6 +113,7 @@ glUtils._markersVS = `
     out vec4 v_color;
     out vec2 v_shapeOrigin;
     out vec2 v_shapeSector;
+    flat out float v_shapeIndex;
     out float v_shapeSize;
     #ifdef USE_INSTANCING
     out vec2 v_texCoord;
@@ -166,8 +168,9 @@ glUtils._markersVS = `
         float alphaFactorSize = clamp(gl_PointSize, 0.2, 1.0); 
         gl_PointSize = clamp(gl_PointSize, 1.0, u_maxPointSize);
 
-        v_shapeOrigin.x = mod((v_color.a + 0.00001) * 255.0 - 1.0, SHAPE_GRID_SIZE);
-        v_shapeOrigin.y = floor(((v_color.a + 0.00001) * 255.0 - 1.0) / SHAPE_GRID_SIZE);
+        v_shapeIndex = floor((v_color.a + 1e-5) * 255.0);
+        v_shapeOrigin.x = mod(v_shapeIndex - 1.0, SHAPE_GRID_SIZE);
+        v_shapeOrigin.y = floor((v_shapeIndex - 1.0) / SHAPE_GRID_SIZE);
         v_shapeSize = gl_PointSize;
 
     #ifdef USE_INSTANCING
@@ -189,6 +192,7 @@ glUtils._markersVS = `
 
 glUtils._markersFS = `
     #define UV_SCALE 0.8
+    #define SHAPE_INDEX_GAUSSIAN 15.0
     #define SHAPE_GRID_SIZE 4.0
 
     precision highp float;
@@ -204,6 +208,7 @@ glUtils._markersFS = `
     in vec4 v_color;
     in vec2 v_shapeOrigin;
     in vec2 v_shapeSector;
+    flat in float v_shapeIndex;
     in float v_shapeSize;
     #ifdef USE_INSTANCING
     in vec2 v_texCoord;
@@ -260,6 +265,9 @@ glUtils._markersFS = `
         vec4 shapeColor = vec4(vec3(mix(1.0, 0.7, alpha2)), max(alpha, alpha2));
         if (!u_markerFilled && u_markerOutline) {
             shapeColor.rgb = vec3(1.0);  // Use brighter outline to show actual marker color 
+        }
+        if (v_shapeIndex == SHAPE_INDEX_GAUSSIAN) {
+            shapeColor = vec4(vec3(1.0), smoothstep(0.5, 0.0, length(v_texCoord - 0.5)));
         }
 
         if (u_usePiechartFromMarker && !u_alphaPass) {
