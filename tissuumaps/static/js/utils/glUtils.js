@@ -212,6 +212,8 @@ glUtils._markersFS = `
     in float v_shapeSize;
     #ifdef USE_INSTANCING
     in vec2 v_texCoord;
+    #else
+    #define v_texCoord gl_PointCoord
     #endif  // USE_INSTANCING
 
     layout(location = 0) out vec4 out_color;
@@ -239,12 +241,10 @@ glUtils._markersFS = `
 
     void main()
     {
-    #ifdef USE_INSTANCING
         vec2 uv = (v_texCoord - 0.5) * UV_SCALE + 0.5;
-    #else
-        vec2 uv = (gl_PointCoord - 0.5) * UV_SCALE + 0.5;
-    #endif  // USE_INSTANCING
         uv = (uv + v_shapeOrigin) * (1.0 / SHAPE_GRID_SIZE);
+
+        vec4 shapeColor = vec4(0.0);
 
         // Sample shape texture and reconstruct marker shape from signed
         // distance field (SDF) encoded in the red channel. Distance values
@@ -254,29 +254,29 @@ glUtils._markersFS = `
         // in the future!
 
         float pixelWidth = dFdx(uv.x) * float(textureSize(u_shapeAtlas, 0).x) * 8.0;
-        float markerStrokeWidth = min(14.0, u_markerStrokeWidth);  // Keep within SDF limits
-        float distShape = (texture(u_shapeAtlas, uv, -0.5).r - 0.5) * 255.0;
-        float distOutline = (markerStrokeWidth * 8.0) - abs(distShape);
+        float markerStrokeWidth = min(14.0, u_markerStrokeWidth) * 8.0;  // Keep within SDF range
+        float distBias = u_markerFilled ? -pixelWidth * 0.25 : 0.0;  // Minification distance bias
+
+        float distShape = (texture(u_shapeAtlas, uv, -2.0).r - 0.5) * 255.0 + distBias;
+        float distOutline = markerStrokeWidth - abs(distShape);
         float alpha = clamp(distShape / pixelWidth + 0.5, 0.0, 1.0) * float(u_markerFilled);
         float alpha2 = clamp(distOutline / pixelWidth + 0.5, 0.0, 1.0) * float(u_markerOutline);
-        if (distOutline < (markerStrokeWidth + 0.5) * 8.0 - 127.5) {
+        if (distOutline < (markerStrokeWidth + 4.0) - 127.5) {
             alpha2 = 0.0;  // Fixes problem with alpha bleeding on minification
         }
-        vec4 shapeColor = vec4(vec3(mix(1.0, 0.7, alpha2)), max(alpha, alpha2));
+        shapeColor = vec4(vec3(mix(1.0, 0.7, alpha2)), max(alpha, alpha2));
         if (!u_markerFilled && u_markerOutline) {
             shapeColor.rgb = vec3(1.0);  // Use brighter outline to show actual marker color 
         }
+
+        // Handle special types of shapes (Gaussians and piecharts)
+
         if (v_shapeIndex == SHAPE_INDEX_GAUSSIAN) {
             shapeColor = vec4(vec3(1.0), smoothstep(0.5, 0.0, length(v_texCoord - 0.5)));
         }
-
         if (u_usePiechartFromMarker && !u_alphaPass) {
             float delta = 0.25 / v_shapeSize;
-        #ifdef USE_INSTANCING
             shapeColor.a *= sectorToAlphaAA(v_shapeSector, v_texCoord, delta);
-        #else
-            shapeColor.a *= sectorToAlphaAA(v_shapeSector, gl_PointCoord, delta);
-        #endif  // USE_INSTANCING
         }
 
         out_color = shapeColor * v_color;
