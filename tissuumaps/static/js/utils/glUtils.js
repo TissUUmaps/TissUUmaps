@@ -110,11 +110,11 @@ glUtils._markersVS = `
     layout(location = 4) in float in_opacity;
     layout(location = 5) in float in_transform;
 
-    out vec4 v_color;
-    out vec2 v_shapeOrigin;
-    out vec2 v_shapeSector;
+    flat out vec4 v_color;
+    flat out vec2 v_shapeOrigin;
+    flat out vec2 v_shapeSector;
     flat out float v_shapeIndex;
-    out float v_shapeSize;
+    flat out float v_shapeSize;
     #ifdef USE_INSTANCING
     out vec2 v_texCoord;
     #endif  // USE_INSTANCING
@@ -205,11 +205,11 @@ glUtils._markersFS = `
     uniform bool u_alphaPass;
     uniform highp sampler2D u_shapeAtlas;
 
-    in vec4 v_color;
-    in vec2 v_shapeOrigin;
-    in vec2 v_shapeSector;
+    flat in vec4 v_color;
+    flat in vec2 v_shapeOrigin;
+    flat in vec2 v_shapeSector;
     flat in float v_shapeIndex;
-    in float v_shapeSize;
+    flat in float v_shapeSize;
     #ifdef USE_INSTANCING
     in vec2 v_texCoord;
     #else
@@ -320,7 +320,7 @@ glUtils._pickingVS = `
     layout(location = 4) in float in_opacity;
     layout(location = 5) in float in_transform;
 
-    out vec4 v_color;
+    flat out vec4 v_color;
 
     vec3 hex_to_rgb(float v)
     {
@@ -400,7 +400,7 @@ glUtils._pickingFS = `
     precision highp float;
     precision highp int;
 
-    in vec4 v_color;
+    flat in vec4 v_color;
 
     layout(location = 0) out vec4 out_color;
 
@@ -433,7 +433,7 @@ glUtils._edgesVS = `
     layout(location = 4) in float in_opacity;
     layout(location = 5) in float in_transform;
 
-    out vec4 v_color;
+    flat out vec4 v_color;
     out vec2 v_texCoord;
 
     void main()
@@ -491,7 +491,7 @@ glUtils._edgesFS = `
     precision highp float;
     precision highp int;
 
-    in vec4 v_color;
+    flat in vec4 v_color;
     in vec2 v_texCoord;
 
     layout(location = 0) out vec4 out_color;
