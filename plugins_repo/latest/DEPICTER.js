@@ -8,6 +8,9 @@
  * @classdesc The root namespace for DEPICTER.
  */
 var DEPICTER;
+var url = window.location.pathname;
+var filename = url.substring(url.lastIndexOf("/") + 1).replace(".tmap", "");
+
 DEPICTER = {
   name: "DEPICTER",
   _numberOfClasses: 0,
@@ -64,6 +67,9 @@ DEPICTER = {
  * The container element is a div where the plugin options will be displayed.
  * @summary After setting up the tmapp object, initialize it*/
 DEPICTER.init = async function (container) {
+  while (Object.keys(dataUtils.data).length == 0) {
+    await new Promise((r) => setTimeout(r, 2000));
+  }
   DEPICTER.container = container;
   if (glUtils.temp_pick === undefined) {
     glUtils.temp_pick = glUtils.pick;
@@ -108,7 +114,7 @@ DEPICTER.init = async function (container) {
 
   $("#" + DEPICTER._dataset + "_shape-fixed-value")[0].value = "square";
   $("#" + DEPICTER._dataset + "_shape-fixed")[0].checked = false;
-  $("#" + DEPICTER._dataset + "_scale-factor").val(5.2);
+  $("#" + DEPICTER._dataset + "_scale-factor").val(2.5);
   $("#" + DEPICTER._dataset + "_shape-fixed")[0].click();
   dataUtils.updateViewOptions(DEPICTER._dataset);
 
@@ -434,7 +440,19 @@ DEPICTER.downloadCSV = function () {
     "\n" +
     rows.map((fields) => fields.join(",")).join("\n");
 
-  regionUtils.downloadPointsInRegionsCSV(csv);
+  DEPICTER.downloadPointsInRegionsCSV(csv);
+};
+
+DEPICTER.downloadPointsInRegionsCSV = function (data) {
+  var blob = new Blob([data], { kind: "text/csv" });
+  var url = window.URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.setAttribute("hidden", "");
+  a.setAttribute("href", url);
+  a.setAttribute("download", filename + ".csv");
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 };
 
 /*
