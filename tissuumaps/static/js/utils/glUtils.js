@@ -257,8 +257,8 @@ glUtils._markersFS = `
         float markerStrokeWidth = min(14.0, u_markerStrokeWidth) * 8.0;  // Keep within SDF range
         float distBias = u_markerFilled ? -pixelWidth * 0.25 : 0.0;  // Minification distance bias
 
-        float distShape = (texture(u_shapeAtlas, uv, -2.0).r - 0.5) * 255.0 + distBias;
-        float distOutline = markerStrokeWidth - abs(distShape) + distBias;  // Add extra bias to fix darkening
+        float distShape = (texture(u_shapeAtlas, uv, -2.0).r - 0.5) * 255.0;
+        float distOutline = markerStrokeWidth - abs(distShape) + distBias;  // Add bias to fix darkening
         float alpha = clamp(distShape / pixelWidth + 0.5, 0.0, 1.0) * float(u_markerFilled);
         float alpha2 = clamp(distOutline / pixelWidth + 0.5, 0.0, 1.0) * float(u_markerOutline);
         if (distOutline < (markerStrokeWidth + 4.0) - 127.5) {
