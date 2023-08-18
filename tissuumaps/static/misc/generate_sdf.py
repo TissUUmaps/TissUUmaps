@@ -173,7 +173,7 @@ def main():
     scalar_factor = settings["scalar_factor"]
     crop_to_shape_tile = settings["crop_to_shape_tile"]
 
-    print("Loading and rasterising marker atlas from markershaps.svg...")
+    print("Loading and rasterising marker atlas from markershapes.svg...")
     cairosvg.svg2png(
         url="markershapes.svg",
         output_width=output_res,
