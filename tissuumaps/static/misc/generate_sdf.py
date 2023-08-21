@@ -204,12 +204,15 @@ def main():
         image_hq = image_atlas_hq[y : y + tile_size, x : x + tile_size]
 
     print("Computing SDF from rasterised marker atlas...")
-    sdf = sdf_edt_upscaled_averaging(image, factor=2.0, num_thresholds=8)
+    sdf = sdf_edt_averaging(image, num_thresholds=8)
+
+    print("Saving truncated SDF to markershapes.png")
     sdf_truncated = np.maximum(
         0.0, np.minimum(1.0, sdf * (scalar_factor / 255.0) + 0.5)
     )
-
-    print("Saving output SDF to markershapes.png")
+    # Applying a bit of smoothing to the SDF before quantization to 8-bit
+    # format makes the resulting contours look nicer
+    sdf_truncated = sp.ndimage.gaussian_filter(sdf_truncated, sigma=0.5, mode="nearest")
     plt.imsave("markershapes.png", sdf_truncated, cmap="gray", vmin=0.0, vmax=1.0)
 
     if settings["show_comparison"]:
