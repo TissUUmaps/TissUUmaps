@@ -1,0 +1,12 @@
+<svg width="30" height="20" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <clipPath id="mask_left">
+            <circle r="8.5" id="circle_right" cy="10" cx="20" stroke-width="1.5"  stroke="#000" fill="none"/>
+        </clipPath>
+    </defs>
+    <g>
+        <circle r="8.5" id="center" cy="10" cx="10" fill="white" clip-path="url(#mask_left)"/>
+        <circle r="8.5" id="circle_left" cy="10" cx="10" stroke-width="1.5" stroke="white" fill="none" />
+        <circle r="8.5" id="circle_right" cy="10" cx="20" stroke-width="1.5"  stroke="white" fill="none"/>
+    </g>
+</svg>

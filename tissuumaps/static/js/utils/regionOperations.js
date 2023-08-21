@@ -1,5 +1,37 @@
 regionUtils._selectedRegions = {};
 
+regionUtils.regionOperationsOnOff = function () {
+    overlayUtils._selectRegions = !overlayUtils._selectRegions;
+    const op = tmapp["object_prefix"];
+    const operationsRegionButtonIcon = document.getElementById(
+        op + "_operations_regions_icon"
+    );
+    const regionAccordions = document.getElementById("regionAccordions")
+    const regionOpertationsList = document.getElementById("regionOperationsList")
+    if (overlayUtils._selectRegions) {
+        operationsRegionButtonIcon.classList.remove("bi-circle");
+        operationsRegionButtonIcon.classList.add("bi-check-circle");
+        regionUtils.showHint("Select regions");
+        // Hide region accordions
+        regionAccordions.style.display = "none"
+        // Show region selection list 
+        regionOpertationsList.classList.remove("d-none")
+        // Add region selection UI
+        regionUtils.addRegionOperationsUI()
+    } else {
+        regionUtils.resetSelection();
+        operationsRegionButtonIcon.classList.remove("bi-check-circle");
+        operationsRegionButtonIcon.classList.add("bi-circle");
+        // Show region accordions
+        regionAccordions.style.display = "block";
+        // Remove region selection list contents
+        regionOpertationsList.innerHTML = "";
+        // Hide region selection UI
+        regionOpertationsList.classList.add("d-none");
+        regionUtils.hideHint();
+    }
+};
+
 /**
  * @summary Draws a path given a set of points and an Id
  * @param {*} points Region points used to construct the path
