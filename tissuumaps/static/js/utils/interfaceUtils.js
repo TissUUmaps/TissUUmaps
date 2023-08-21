@@ -3774,22 +3774,31 @@ interfaceUtils._rGenUIFuncs.createRegionOperationsRow=function(regionId){
         regionRow.style.background = "#E6DFF4";
         const strokeWstr =
           regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
-        const path = d3.select(`#${region.id}_poly`);
-        path.attr("stroke-width", strokeWstr * 2);
-        const highLightColor = "#39FF14";
-        const d3Color = d3.rgb(highLightColor);
-        d3Color.opacity = 0.8;
-        path.style("fill", d3Color.rgb().toString());
+        region.previewsColor = region.polycolor;
+        region.polycolor =  "#39FF14";
+        console.log(region)
+        // const path = d3.select(`#${region.id}_poly`);
+        // path.attr("stroke-width", strokeWstr * 2);
+        // const highLightColor = "#39FF14";
+        // const d3Color = d3.rgb(highLightColor);
+        // d3Color.opacity = 0.8;
+        // path.style("fill", d3Color.rgb().toString());
+        // glUtils.updateRegionDataTextures();
+        glUtils.updateRegionLUTTextures();
+        glUtils.draw();
       };
       regionRow.onmouseout = function () {
+        region.polycolor = region.previewsColor;
         regionRow.style.background = "white";
-        const strokeWstr =
-          regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
-        d3.select(`#${region.id}_poly`).attr("stroke-width", strokeWstr);
-        if (regionUtils._selectedRegions[region.id]) return;
-        region.filled
-          ? regionUtils.fillRegion(region.id, true)
-          : regionUtils.fillRegion(region.id, false);
+        // const strokeWstr =
+        //   regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
+        // d3.select(`#${region.id}_poly`).attr("stroke-width", strokeWstr);
+        // if (regionUtils._selectedRegions[region.id]) return;
+        // region.filled
+        //   ? regionUtils.fillRegion(region.id, true)
+        //   : regionUtils.fillRegion(region.id, false);
+        glUtils.updateRegionLUTTextures();
+        glUtils.draw();
       };
     //   table.appendChild(regionRow);
     //   const regionClassCounter = document.getElementById(
