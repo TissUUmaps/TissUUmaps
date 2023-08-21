@@ -8,6 +8,7 @@ self.onmessage = function (event) {
 };
 
 function offsetRegion(region, offset) {
+    console.log(region)
   const multiPolygon = objectToArrayPoints(region.points);
   function createOffsetPolygon(multipolygon, offset) {
     const turfMultipolygon = turf.multiPolygon(multipolygon);
@@ -20,8 +21,10 @@ function offsetRegion(region, offset) {
     const result = createOffsetPolygon(multiPolygon, offset);
     let points =
       result.type === "Polygon" ? [result.coordinates] : result.coordinates;
+      console.log("returning points", points)
     self.postMessage(points);
-  } catch {
+  } catch(e) {
+      console.log("returnin null", e)
     self.postMessage(null);
   }
 }

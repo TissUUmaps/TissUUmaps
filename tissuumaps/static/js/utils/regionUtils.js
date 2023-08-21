@@ -131,10 +131,14 @@ regionUtils.closePolygon = function () {
     var hexcolor = "#FF0000"; //overlayUtils.randomColor("hex");    
 
     regionUtils._isNewRegion = true;
+    regionUtils._currentPoints.push(regionUtils._currentPoints[0]);
     regionUtils.addRegion([[regionUtils._currentPoints]], regionid, hexcolor);
     regionUtils._currentPoints = null;
 
     regionUtils.updateAllRegionClassUI();
+    if(overlayUtils._regionOperations){
+        regionUtils.updateRegionOperationsListUI();
+    }
     $(document.getElementById("regionClass-")).collapse("show");
 
 }

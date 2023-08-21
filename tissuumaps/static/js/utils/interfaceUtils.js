@@ -3325,7 +3325,7 @@ interfaceUtils._rGenUIFuncs.createRegionOperationsTable=function(){
     console.log("singleRegionClasses", singleRegionClasses);
     //I do this to know if I have name selected, and also to know where to draw the 
     //color from
-    var groupUI=HTMLElementUtils.createElement({"kind":"div"});
+    const groupUI = HTMLElementUtils.createElement({"kind":"div", extraAttributes: {id: "region-operations-list"}});
     
     var table=HTMLElementUtils.createElement({"kind":"table","extraAttributes":{"class":"table table-striped marker_table"}});
     var thead=HTMLElementUtils.createElement({"kind":"thead"});
@@ -3738,8 +3738,10 @@ interfaceUtils._rGenUIFuncs.createRegionOperationsRow=function(regionId){
                 const offset =
                   (regionOffsetInput.value / OSDViewerUtils.getImageWidth()) *
                   distance;
+                  console.log(region, "region passed to worker")
                 worker.postMessage([region, offset]);
                 worker.onmessage = function (event) {
+                    console.log(event, "this is what the worker returns")
                   regionUtils.drawRegionPath(
                     regionUtils.arrayToObjectPoints(event.data),
                     id
