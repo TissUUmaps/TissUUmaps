@@ -7,7 +7,7 @@
     <g>
         <circle r="8.5" id="circle_left" cy="10" cx="10" fill="white" />
         <circle r="8.5" id="circle_right" cy="10" cx="20" fill="white"/>
-        <circle r="8.5" id="center" cy="10" cx="10" fill="#540a99" clip-path="url(#mask_left)"/>
+        <circle r="8.5" id="center" cy="10" cx="10" fill="#ad1d28" clip-path="url(#mask_left)"/>
     </g>
 </svg>   
 
