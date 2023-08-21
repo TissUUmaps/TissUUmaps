@@ -1,14 +1,14 @@
 regionUtils._selectedRegions = {};
 
 regionUtils.regionOperationsOnOff = function () {
-    overlayUtils._selectRegions = !overlayUtils._selectRegions;
+    overlayUtils._regionOperations = !overlayUtils._regionOperations;
     const op = tmapp["object_prefix"];
     const operationsRegionButtonIcon = document.getElementById(
         op + "_operations_regions_icon"
     );
-    const regionAccordions = document.getElementById("regionAccordions")
+    const regionAccordions = document.getElementById("markers-regions-div")
     const regionOpertationsList = document.getElementById("regionOperationsList")
-    if (overlayUtils._selectRegions) {
+    if (overlayUtils._regionOperations) {
         operationsRegionButtonIcon.classList.remove("bi-circle");
         operationsRegionButtonIcon.classList.add("bi-check-circle");
         regionUtils.showHint("Select regions");
@@ -65,7 +65,7 @@ regionUtils.deleteRegions = function (regionIds) {
   regionIds.forEach((id) => {
     regionUtils.deleteRegion(id);
   });
-  if (overlayUtils._selectRegions) {
+  if (overlayUtils._regionOperations) {
     regionUtils.deleteRegionSelectionItems(regionIds);
   }
   regionUtils.updateAllRegionClassUI();

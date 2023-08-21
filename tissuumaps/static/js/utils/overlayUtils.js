@@ -14,6 +14,7 @@
 overlayUtils = {
     _drawRegions: false,
     _freeHandDrawRegions: false,
+    _regionOperations: false,
     _d3nodes: {},
     _percentageForSubsample: 0.25,
     _zoomForSubsample:5.15,
