@@ -6,9 +6,10 @@ regionUtils.regionOperationsOnOff = function () {
     const operationsRegionButtonIcon = document.getElementById(
         op + "_operations_regions_icon"
     );
-    const regionAccordions = document.getElementById("markers-regions-div")
-    const regionOpertationsList = document.getElementById("regionOperationsList")
+    const regionAccordions = document.getElementById("markers-regions-panel")
+    const regionOpertationsList = document.getElementById("region-operations-panel")
     if (overlayUtils._regionOperations) {
+        console.log("adding ui")
         operationsRegionButtonIcon.classList.remove("bi-circle");
         operationsRegionButtonIcon.classList.add("bi-check-circle");
         regionUtils.showHint("Select regions");
@@ -29,7 +30,7 @@ regionUtils.regionOperationsOnOff = function () {
         // Hide region selection UI
         regionOpertationsList.classList.add("d-none");
         regionUtils.hideHint();
-    }
+    } 
 };
 
 /**
@@ -341,95 +342,104 @@ regionUtils.mergeRegions = function (regions) {
   regionUtils.addRegionSelectionItem(regionUtils._regions[newRegionId]);
 };
 
+// /**
+//  * @summary Generates the region selection menu UI
+//  */
+// regionUtils.addRegionOperationsUI = function () {
+//   const operationsListContainer = document.getElementById(
+//     "regionOperationsList"
+//   );
+//   operationsListContainer.innerHTML = "";
+//   const buttonsContainer = document.createElement("div");
+//   buttonsContainer.classList.add(
+//     "d-flex",
+//     "flex-wrap",
+//     "justify-content-end",
+//     "mt-2",
+//     "py-1",
+//     "border-bottom"
+//   );
+//   const mergeButton = HTMLElementUtils.createButton({
+//     extraAttributes: { class: "btn btn-primary m-2" },
+//   });
+//   mergeButton.onclick = function () {
+//     const regions = Object.values(regionUtils._selectedRegions);
+//     if (regions.length < 2) return;
+//     regionUtils.mergeRegions(Object.values(regions));
+//     regionUtils.resetSelection();
+//   };
+//   mergeButton.style.width = "150px";
+//   mergeButton.innerHTML =
+//     '<img style="width: 30px; height: 20px;" src="static/misc/union.svg" /> Merge';
+//   const differenceButton = HTMLElementUtils.createButton({
+//     extraAttributes: { class: "btn btn-primary m-2" },
+//   });
+//   differenceButton.onclick = function () {
+//     const regions = Object.values(regionUtils._selectedRegions);
+//     if (regions.length < 2) return;
+//     regionUtils.regionsDifference(Object.values(regions));
+//     regionUtils.resetSelection();
+//   };
+//   differenceButton.style.width = "150px";
+//   differenceButton.innerHTML =
+//     '<img style="width: 30px; height: 20px;" src="static/misc/difference.svg" /> Difference';
+//   const intersectionButton = HTMLElementUtils.createButton({
+//     extraAttributes: { class: "btn btn-primary m-2" },
+//   });
+//   intersectionButton.onclick = function () {
+//     const regions = Object.values(regionUtils._selectedRegions);
+//     if (regions.length < 2) return;
+//     regionUtils.regionsIntersection(Object.values(regions));
+//     regionUtils.resetSelection();
+//   };
+//   intersectionButton.style.width = "150px";
+//   intersectionButton.innerHTML =
+//     '<img style="width: 30px; height: 20px;" src="static/misc/intersection.svg" /> Intersection';
+//   const duplicateButton = HTMLElementUtils.createButton({
+//     extraAttributes: { class: "btn btn-primary m-2" },
+//   });
+//   duplicateButton.onclick = function () {
+//     const regions = Object.values(regionUtils._selectedRegions);
+//     regionUtils.duplicateRegions(Object.values(regions));
+//     regionUtils.resetSelection();
+//   };
+//   duplicateButton.style.width = "150px";
+//   duplicateButton.innerHTML = '<i class="bi bi-back"></i> Duplicate';
+//   const deleteButton = HTMLElementUtils.createButton({
+//     extraAttributes: { class: "btn btn-primary m-2" },
+//   });
+//   deleteButton.onclick = function () {
+//     const regions = Object.values(regionUtils._selectedRegions);
+//     regionUtils.deleteRegions(
+//       Object.values(regions).map((region) => region.id)
+//     );
+//     regionUtils.resetSelection();
+//   };
+//   deleteButton.style.width = "150px";
+//   deleteButton.innerHTML = '<i class="bi bi-trash"></i> Delete';
+//   buttonsContainer.appendChild(deleteButton);
+//   buttonsContainer.appendChild(duplicateButton);
+//   buttonsContainer.appendChild(intersectionButton);
+//   buttonsContainer.appendChild(differenceButton);
+//   buttonsContainer.appendChild(mergeButton);
+//   operationsListContainer.appendChild(buttonsContainer);
+//   const regionsArray = Object.values(regionUtils._regions);
+//   const regionClasses = new Set(
+//     regionsArray.map((region) => region.regionClass)
+//   );
+//   regionClasses.forEach((regionClass) =>
+//     regionUtils.addRegionClassSelectionAccordion(regionClass)
+//   );
+//   regionsArray.forEach((region) => regionUtils.addRegionSelectionItem(region));
+// };
+
 /**
  * @summary Generates the region selection menu UI
  */
 regionUtils.addRegionOperationsUI = function () {
-  const operationsListContainer = document.getElementById(
-    "regionOperationsList"
-  );
-  operationsListContainer.innerHTML = "";
-  const buttonsContainer = document.createElement("div");
-  buttonsContainer.classList.add(
-    "d-flex",
-    "flex-wrap",
-    "justify-content-end",
-    "mt-2",
-    "py-1",
-    "border-bottom"
-  );
-  const mergeButton = HTMLElementUtils.createButton({
-    extraAttributes: { class: "btn btn-primary m-2" },
-  });
-  mergeButton.onclick = function () {
-    const regions = Object.values(regionUtils._selectedRegions);
-    if (regions.length < 2) return;
-    regionUtils.mergeRegions(Object.values(regions));
-    regionUtils.resetSelection();
-  };
-  mergeButton.style.width = "150px";
-  mergeButton.innerHTML =
-    '<img style="width: 30px; height: 20px;" src="static/misc/union.svg" /> Merge';
-  const differenceButton = HTMLElementUtils.createButton({
-    extraAttributes: { class: "btn btn-primary m-2" },
-  });
-  differenceButton.onclick = function () {
-    const regions = Object.values(regionUtils._selectedRegions);
-    if (regions.length < 2) return;
-    regionUtils.regionsDifference(Object.values(regions));
-    regionUtils.resetSelection();
-  };
-  differenceButton.style.width = "150px";
-  differenceButton.innerHTML =
-    '<img style="width: 30px; height: 20px;" src="static/misc/difference.svg" /> Difference';
-  const intersectionButton = HTMLElementUtils.createButton({
-    extraAttributes: { class: "btn btn-primary m-2" },
-  });
-  intersectionButton.onclick = function () {
-    const regions = Object.values(regionUtils._selectedRegions);
-    if (regions.length < 2) return;
-    regionUtils.regionsIntersection(Object.values(regions));
-    regionUtils.resetSelection();
-  };
-  intersectionButton.style.width = "150px";
-  intersectionButton.innerHTML =
-    '<img style="width: 30px; height: 20px;" src="static/misc/intersection.svg" /> Intersection';
-  const duplicateButton = HTMLElementUtils.createButton({
-    extraAttributes: { class: "btn btn-primary m-2" },
-  });
-  duplicateButton.onclick = function () {
-    const regions = Object.values(regionUtils._selectedRegions);
-    regionUtils.duplicateRegions(Object.values(regions));
-    regionUtils.resetSelection();
-  };
-  duplicateButton.style.width = "150px";
-  duplicateButton.innerHTML = '<i class="bi bi-back"></i> Duplicate';
-  const deleteButton = HTMLElementUtils.createButton({
-    extraAttributes: { class: "btn btn-primary m-2" },
-  });
-  deleteButton.onclick = function () {
-    const regions = Object.values(regionUtils._selectedRegions);
-    regionUtils.deleteRegions(
-      Object.values(regions).map((region) => region.id)
-    );
-    regionUtils.resetSelection();
-  };
-  deleteButton.style.width = "150px";
-  deleteButton.innerHTML = '<i class="bi bi-trash"></i> Delete';
-  buttonsContainer.appendChild(deleteButton);
-  buttonsContainer.appendChild(duplicateButton);
-  buttonsContainer.appendChild(intersectionButton);
-  buttonsContainer.appendChild(differenceButton);
-  buttonsContainer.appendChild(mergeButton);
-  operationsListContainer.appendChild(buttonsContainer);
-  const regionsArray = Object.values(regionUtils._regions);
-  const regionClasses = new Set(
-    regionsArray.map((region) => region.regionClass)
-  );
-  regionClasses.forEach((regionClass) =>
-    regionUtils.addRegionClassSelectionAccordion(regionClass)
-  );
-  regionsArray.forEach((region) => regionUtils.addRegionSelectionItem(region));
+    const regionOperationsUIContainer = interfaceUtils.getElementById("region-operations-panel");
+    const regionOperationsUI = interfaceUtils._rGenUIFuncs.createRegionOperationsTable();
+    regionOperationsUIContainer.appendChild(regionOperationsUI)
 };
 
 /**
