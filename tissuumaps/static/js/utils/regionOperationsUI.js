@@ -4,7 +4,7 @@ regionUtils.createRegionOperationsTable = function () {
   ) {
     return e.regionClass;
   });
-  const singleRegionClasses = allRegionClasses.filter(
+  const regionClasses = allRegionClasses.filter(
     (v, i, a) => a.indexOf(v) === i
   );
 
@@ -20,13 +20,16 @@ regionUtils.createRegionOperationsTable = function () {
   const theadrow = HTMLElementUtils.createElement({ kind: "tr" });
   const tbody = HTMLElementUtils.createElement({ kind: "tbody" });
 
-  const headerLabels = [
+  const headerLabels = ["Show", "Class"];
+
+  const operationLabels = [
     "Show",
     "Select",
+    "Name",
     "Scale (%)",
     "Dilation/Erosion (Pixels)",
-    "",
-  ]; //,""];
+  ];
+
   const sortable = {
     "": "sorttable_nosort",
     Counts: "sorttable_sort",
@@ -68,7 +71,7 @@ regionUtils.createRegionOperationsTable = function () {
   regionsVisibilityCheck.addEventListener("input", (event) => {
     visible = event.target.checked;
     clist = interfaceUtils.getElementsByClassName("regionUI-region-input");
-    for (var i = 0; i < clist.length; ++i) {
+    for (let i = 0; i < clist.length; ++i) {
       clist[i].checked = visible;
     }
     groupRegions = Object.values(regionUtils._regions);
@@ -79,18 +82,29 @@ regionUtils.createRegionOperationsTable = function () {
     glUtils.draw();
   });
 
-  for (i of Object.keys(singleRegionClasses.sort())) {
-    let regionClass = singleRegionClasses[i];
-    let regionClassID = HTMLElementUtils.stringToId("region_" + regionClass);
-    let numRegions = allRegionClasses.filter((x) => x == regionClass).length;
+  for (i of Object.keys(regionClasses.sort())) {
+    const regionClass = regionClasses[i];
+    const regionClassID = HTMLElementUtils.stringToId("region_" + regionClass);
+    const numberOfRegions = allRegionClasses.filter(
+      (x) => x == regionClass
+    ).length;
+
+    const regionClassLabel = HTMLElementUtils.createElement({
+      kind: "p",
+      extraAttributes: { class: "mb-0", type: "checkbox" },
+    });
+
+    regionClassLabel.innerText = `${
+      regionClasses[i] !== "" ? regionClasses[i] : "Unclassified"
+    } - ${numberOfRegions}`;
 
     //row
-    var tr = HTMLElementUtils.createElement({
+    const regionClassRow = HTMLElementUtils.createElement({
       kind: "tr",
       extraAttributes: { "data-escapedID": regionClassID },
     });
 
-    var td0 = HTMLElementUtils.createElement({
+    const td0 = HTMLElementUtils.createElement({
       kind: "td",
       extraAttributes: {
         "data-bs-toggle": "collapse",
@@ -100,20 +114,14 @@ regionUtils.createRegionOperationsTable = function () {
         class: "collapse_button_transform collapsed",
       },
     });
-    var td1 = HTMLElementUtils.createElement({ kind: "td" });
-    var td2 = HTMLElementUtils.createElement({ kind: "td" });
-    var td3 = HTMLElementUtils.createElement({ kind: "td" });
-    var td4 = HTMLElementUtils.createElement({ kind: "td" });
-    var td5 = HTMLElementUtils.createElement({ kind: "td" });
-    //var td6=HTMLElementUtils.createElement({"kind":"td"});
+    const td1 = HTMLElementUtils.createElement({ kind: "td" });
+    const td2 = HTMLElementUtils.createElement({ kind: "td" });
 
-    tr.appendChild(td0);
-    tr.appendChild(td1);
-    tr.appendChild(td2);
-    tr.appendChild(td3);
-    tr.appendChild(td4);
-    tr.appendChild(td5);
-    //tr.appendChild(td6);
+    td2.appendChild(regionClassLabel);
+
+    regionClassRow.appendChild(td0);
+    regionClassRow.appendChild(td1);
+    regionClassRow.appendChild(td2);
 
     var check0 = HTMLElementUtils.createElement({
       kind: "input",
@@ -155,10 +163,10 @@ regionUtils.createRegionOperationsTable = function () {
       glUtils.draw();
     });
 
-    var tr_subregions = document.createElement("tr");
-    var td_subregions = document.createElement("td");
-    td_subregions.classList.add("p-0");
-    td_subregions.setAttribute("colspan", "100");
+    const regionItemsRow = document.createElement("tr");
+    const regionItemsCol = document.createElement("td");
+    regionItemsCol.classList.add("p-0");
+    regionItemsCol.setAttribute("colspan", "100");
     let table_subregions = HTMLElementUtils.createElement({
       kind: "table",
       extraAttributes: { class: "table marker_table" },
@@ -189,6 +197,21 @@ regionUtils.createRegionOperationsTable = function () {
         );
         let subGroupRegions = groupRegions.slice(0, numberOfItemsPerPage);
         regionDetails = document.createDocumentFragment();
+        const labelRow = HTMLElementUtils.createElement({
+          kind: "tr",
+          extraAttributes: {
+            style:
+              "font-weight: bold; position: sticky; top: 0; background-color: var(--bs-primary); color: white;",
+          },
+        });
+        operationLabels.forEach((opt) => {
+          const col = HTMLElementUtils.createElement({
+            kind: "td",
+          });
+          col.innerText = opt;
+          labelRow.appendChild(col);
+        });
+        regionDetails.appendChild(labelRow);
         for (region of subGroupRegions) {
           regionDetails.appendChild(
             regionUtils.createRegionOperationsRow(region.id)
@@ -218,6 +241,7 @@ regionUtils.createRegionOperationsTable = function () {
             );
             regionDetails = document.createDocumentFragment();
             for (region of subGroupRegions) {
+              console.log("iteration");
               regionDetails.appendChild(
                 regionUtils.createRegionOperationsRow(region.id)
               );
@@ -230,13 +254,13 @@ regionUtils.createRegionOperationsTable = function () {
       }
     });
 
-    tr_subregions.appendChild(td_subregions);
-    td_subregions.appendChild(collapse_div);
+    regionItemsRow.appendChild(regionItemsCol);
+    regionItemsCol.appendChild(collapse_div);
     collapse_div.appendChild(table_subregions);
     table_subregions.appendChild(tbody_subregions);
 
-    tbody.appendChild(tr);
-    tbody.appendChild(tr_subregions);
+    tbody.appendChild(regionClassRow);
+    tbody.appendChild(regionItemsRow);
   }
 
   table.appendChild(thead);
@@ -267,7 +291,7 @@ regionUtils.createRegionOperationsRow = function (regionId) {
   });
   var td1 = HTMLElementUtils.createElement({ kind: "td" });
 
-  regionRow.appendChild(td0);
+  //regionRow.appendChild(td0);
   regionRow.appendChild(td1);
   // regionRow.appendChild(td2);
   // regionRow.appendChild(td3);
@@ -289,7 +313,6 @@ regionUtils.createRegionOperationsRow = function (regionId) {
 
   check0.addEventListener("input", function (event) {
     var visible = event.target.checked;
-    console.log(region, visible);
     region.visibility = visible;
     glUtils.updateRegionLUTTextures();
     glUtils.draw();
@@ -331,10 +354,6 @@ regionUtils.createRegionOperationsRow = function (regionId) {
   };
   const regionNameCol = HTMLElementUtils.createElement({
     kind: "td",
-    size: 4,
-    extraAttributes: {
-      style: "-webkit-line-clamp: 1;",
-    },
   });
   regionNameCol.appendChild(regionNameInput);
   const regionScaleInput = HTMLElementUtils.inputTypeNumber({
@@ -354,7 +373,6 @@ regionUtils.createRegionOperationsRow = function (regionId) {
   const regionScaleCol = HTMLElementUtils.createElement({
     kind: "td",
     extraAttributes: {
-      size: 3,
       class: "px-2 py-2",
     },
   });
@@ -476,7 +494,6 @@ regionUtils.createRegionOperationsRow = function (regionId) {
             const offset =
               (regionOffsetInput.value / OSDViewerUtils.getImageWidth()) *
               distance;
-            console.log(region, "region passed to worker");
             worker.postMessage([region, offset]);
             worker.onmessage = function (event) {
               console.log(event, "this is what the worker returns");
@@ -516,7 +533,6 @@ regionUtils.createRegionOperationsRow = function (regionId) {
       regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
     region.previewsColor = region.polycolor;
     region.polycolor = "#39FF14";
-    console.log(region);
     // const path = d3.select(`#${region.id}_poly`);
     // path.attr("stroke-width", strokeWstr * 2);
     // const highLightColor = "#39FF14";
@@ -551,7 +567,6 @@ regionUtils.createRegionOperationsRow = function (regionId) {
   //     );
   //     regionsLabel.innerText = "s";
   //   }
-  console.log(regionRow);
   return regionRow;
 };
 
