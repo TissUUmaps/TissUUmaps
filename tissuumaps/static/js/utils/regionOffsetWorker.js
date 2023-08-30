@@ -1,5 +1,5 @@
 importScripts(
-  "https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"
+  "../../vendor/turf-6.5.0/turf.min.js"
 );
 
 self.onmessage = function (event) {
