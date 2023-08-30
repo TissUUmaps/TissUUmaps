@@ -591,7 +591,6 @@ regionUtils.addRegionOperationsUI = function () {
   buttonsContainer.classList.add(
     "d-flex",
     "flex-wrap",
-    "justify-content-end",
     "mt-2",
     "py-1",
     "border-bottom"
