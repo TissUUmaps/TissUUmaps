@@ -1,7 +1,7 @@
 /** 
 * @param {HTMLEvent} event event that triggered function
 * @summary Delete all trace of a tab including datautils.data.key*/
-interfaceUtils._rGenUIFuncs.createRegionOperationsTable=function(){
+regionUtils.createRegionOperationsTable=function(){
     let allRegionClasses = Object.values(regionUtils._regions).map(function(e) { return e.regionClass; })
     let singleRegionClasses = allRegionClasses.filter((v, i, a) => a.indexOf(v) === i);
     console.log("singleRegionClasses", singleRegionClasses);

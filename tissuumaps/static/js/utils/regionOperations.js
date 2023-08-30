@@ -2,7 +2,7 @@ regionUtils._selectedRegions = {};
 
 regionUtils.updateRegionOperationsListUI = function () {
   setTimeout(() => {
-    const regionUI = interfaceUtils._rGenUIFuncs.createRegionOperationsTable();
+    const regionUI = regionUtils.createRegionOperationsTable();
     const container = interfaceUtils.getElementById("region-operations-list");
     container.innerHTML = "";
     container.appendChild(regionUI);
@@ -488,7 +488,7 @@ regionUtils.addRegionOperationsUI = function () {
   buttonsContainer.appendChild(mergeButton);
   regionOperationsUIContainer.appendChild(buttonsContainer);
   const regionOperationsUI =
-    interfaceUtils._rGenUIFuncs.createRegionOperationsTable();
+    regionUtils.createRegionOperationsTable();
   regionOperationsUIContainer.appendChild(regionOperationsUI);
 };
 
