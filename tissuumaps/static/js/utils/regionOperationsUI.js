@@ -241,7 +241,6 @@ regionUtils.createRegionOperationsTable = function () {
             );
             regionDetails = document.createDocumentFragment();
             for (region of subGroupRegions) {
-              console.log("iteration");
               regionDetails.appendChild(
                 regionUtils.createRegionOperationsRow(region.id)
               );
@@ -496,7 +495,6 @@ regionUtils.createRegionOperationsRow = function (regionId) {
               distance;
             worker.postMessage([region, offset]);
             worker.onmessage = function (event) {
-              console.log(event, "this is what the worker returns");
               regionUtils.drawRegionPath(
                 regionUtils.arrayToObjectPoints(event.data),
                 id
@@ -528,7 +526,7 @@ regionUtils.createRegionOperationsRow = function (regionId) {
   regionRow.appendChild(regionScaleCol);
   regionRow.appendChild(regionOffsetCol);
   regionRow.onmouseover = function () {
-    regionRow.style.background = "#E6DFF4";
+    regionRow.style.background = "var(--bs-primary-light)";
     const strokeWstr =
       regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
     region.previewsColor = region.polycolor;
