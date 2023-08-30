@@ -1,17 +1,5 @@
 regionUtils._selectedRegions = {};
 
-regionUtils.updateRegionOperationsListUI = function () {
-  setTimeout(() => {
-    const regionUI = regionUtils.createRegionOperationsTable();
-    const container = interfaceUtils.getElementById("region-operations-list");
-    container.innerHTML = "";
-    container.appendChild(regionUI);
-  }, 10);
-  glUtils.updateRegionDataTextures();
-  glUtils.updateRegionLUTTextures();
-  glUtils.draw();
-};
-
 regionUtils.regionOperationsOnOff = function () {
   overlayUtils._regionOperations = !overlayUtils._regionOperations;
   const op = tmapp["object_prefix"];
@@ -407,90 +395,7 @@ regionUtils.mergeRegions = function (regions) {
   glUtils.draw();
 };
 
-/**
- * @summary Generates the region selection menu UI
- */
-regionUtils.addRegionOperationsUI = function () {
-  const regionOperationsUIContainer = interfaceUtils.getElementById(
-    "region-operations-panel"
-  );
-  const buttonsContainer = document.createElement("div");
-  buttonsContainer.classList.add(
-    "d-flex",
-    "flex-wrap",
-    "justify-content-end",
-    "mt-2",
-    "py-1",
-    "border-bottom"
-  );
-  const mergeButton = HTMLElementUtils.createButton({
-    extraAttributes: { class: "btn btn-primary m-2" },
-  });
-  mergeButton.onclick = function () {
-    const regions = Object.values(regionUtils._selectedRegions);
-    if (regions.length < 2) return;
-    regionUtils.mergeRegions(Object.values(regions));
-    regionUtils.resetSelection();
-  };
-  mergeButton.style.width = "150px";
-  mergeButton.innerHTML =
-    '<img style="width: 30px; height: 20px;" src="static/misc/union.svg" /> Merge';
-  const differenceButton = HTMLElementUtils.createButton({
-    extraAttributes: { class: "btn btn-primary m-2" },
-  });
-  differenceButton.onclick = function () {
-    const regions = Object.values(regionUtils._selectedRegions);
-    if (regions.length < 2) return;
-    regionUtils.regionsDifference(Object.values(regions));
-    regionUtils.resetSelection();
-  };
-  differenceButton.style.width = "150px";
-  differenceButton.innerHTML =
-    '<img style="width: 30px; height: 20px;" src="static/misc/difference.svg" /> Difference';
-  const intersectionButton = HTMLElementUtils.createButton({
-    extraAttributes: { class: "btn btn-primary m-2" },
-  });
-  intersectionButton.onclick = function () {
-    const regions = Object.values(regionUtils._selectedRegions);
-    if (regions.length < 2) return;
-    regionUtils.regionsIntersection(Object.values(regions));
-    regionUtils.resetSelection();
-  };
-  intersectionButton.style.width = "150px";
-  intersectionButton.innerHTML =
-    '<img style="width: 30px; height: 20px;" src="static/misc/intersection.svg" /> Intersection';
-  const duplicateButton = HTMLElementUtils.createButton({
-    extraAttributes: { class: "btn btn-primary m-2" },
-  });
-  duplicateButton.onclick = function () {
-    const regions = Object.values(regionUtils._selectedRegions);
-    regionUtils.duplicateRegions(Object.values(regions));
-    regionUtils.resetSelection();
-  };
-  duplicateButton.style.width = "150px";
-  duplicateButton.innerHTML = '<i class="bi bi-back"></i> Duplicate';
-  const deleteButton = HTMLElementUtils.createButton({
-    extraAttributes: { class: "btn btn-primary m-2" },
-  });
-  deleteButton.onclick = function () {
-    const regions = Object.values(regionUtils._selectedRegions);
-    regionUtils.deleteRegions(
-      Object.values(regions).map((region) => region.id)
-    );
-    regionUtils.resetSelection();
-  };
-  deleteButton.style.width = "150px";
-  deleteButton.innerHTML = '<i class="bi bi-trash"></i> Delete';
-  buttonsContainer.appendChild(deleteButton);
-  buttonsContainer.appendChild(duplicateButton);
-  buttonsContainer.appendChild(intersectionButton);
-  buttonsContainer.appendChild(differenceButton);
-  buttonsContainer.appendChild(mergeButton);
-  regionOperationsUIContainer.appendChild(buttonsContainer);
-  const regionOperationsUI =
-    regionUtils.createRegionOperationsTable();
-  regionOperationsUIContainer.appendChild(regionOperationsUI);
-};
+
 
 /**
  * @summary Deletes the selection items of the regions corresponding to the ids
