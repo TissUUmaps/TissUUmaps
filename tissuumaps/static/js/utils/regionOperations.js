@@ -141,8 +141,7 @@ regionUtils.regionsIntersection = function (regions) {
     //   newRegionId
     // );
     regionUtils.updateAllRegionClassUI();
-    regionUtils.updateRegionOperationsListUI();
-    // regionUtils.addRegionSelectionItem(regionUtils._regions[newRegionId]);
+    regionUtils.addRegionOperationsRow(newRegionId)
   } catch {
     interfaceUtils.alert(
       "The selected regions have no interception between them"
@@ -170,8 +169,7 @@ regionUtils.regionsDifference = function (regions) {
   //     newRegionId
   //   );
   regionUtils.updateAllRegionClassUI();
-  regionUtils.updateRegionOperationsListUI();
-  //regionUtils.addRegionSelectionItem(regionUtils._regions[newRegionId]);
+  regionUtils.addRegionOperationsRow(newRegionId)
   glUtils.updateRegionDataTextures();
   glUtils.updateRegionLUTTextures();
   glUtils.draw();
@@ -429,8 +427,7 @@ regionUtils.mergeRegions = function (regions) {
   //     .text(newRegionId)
   //     .attr("id", "path-title-" + newRegionId);
   regionUtils.updateAllRegionClassUI();
-  regionUtils.updateRegionOperationsListUI();
-  // regionUtils.addRegionSelectionItem(regionUtils._regions[newRegionId]);
+  regionUtils.addRegionOperationsRow(newRegionId)
   glUtils.updateRegionDataTextures();
   glUtils.updateRegionLUTTextures();
   glUtils.draw();
