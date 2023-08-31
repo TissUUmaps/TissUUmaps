@@ -11,7 +11,6 @@ regionUtils.regionOperationsOnOff = function () {
     "region-operations-panel"
   );
   if (overlayUtils._regionOperations) {
-    console.log("adding ui");
     operationsRegionButtonIcon.classList.remove("bi-circle");
     operationsRegionButtonIcon.classList.add("bi-check-circle");
     regionUtils.showHint("Select regions");
@@ -263,6 +262,8 @@ regionUtils.resizeRegion = function (regionId, scale) {
 
     return [centroidX, centroidY];
   }
+
+  
   glUtils.updateRegionDataTextures();
   glUtils.updateRegionLUTTextures();
   glUtils.draw();
@@ -395,17 +396,13 @@ regionUtils.mergeRegions = function (regions) {
   glUtils.draw();
 };
 
-
-
 /**
  * @summary Deletes the selection items of the regions corresponding to the ids
  * @param {*} regionIds Ids of the regions that will get their selection item removed
  */
 regionUtils.deleteRegionSelectionItems = function (regionIds) {
-  const op = tmapp["object_prefix"];
-  regionIds.forEach((id) => {
-    document.getElementById(op + id + "_tr").remove();
-  });
+  regionUtils.updateAllRegionClassUI();
+  regionUtils.updateRegionOperationsListUI();
 };
 
 /**
