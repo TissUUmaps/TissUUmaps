@@ -272,11 +272,10 @@ regionUtils.createRegionOperationsTable = function () {
 };
 
 regionUtils.createRegionOperationsRow = function (regionId) {
-  var region = regionUtils._regions[regionId];
-  let regionClass = region.regionClass;
-  let regionClassID = HTMLElementUtils.stringToId("region_" + regionClass);
+  const region = regionUtils._regions[regionId];
+  const regionClass = region.regionClass;
+  const regionClassID = HTMLElementUtils.stringToId("region_" + regionClass);
 
-  //row
   const regionRow = HTMLElementUtils.createElement({
     kind: "tr",
     extraAttributes: { "data-escapedID": regionId },
@@ -288,15 +287,9 @@ regionUtils.createRegionOperationsRow = function (regionId) {
       style: "width: 41.11px;",
     },
   });
-  var td1 = HTMLElementUtils.createElement({ kind: "td" });
+  const toggleVisibilityCheckCol = HTMLElementUtils.createElement({ kind: "td" });
 
-  //regionRow.appendChild(td0);
-  regionRow.appendChild(td1);
-  // regionRow.appendChild(td2);
-  // regionRow.appendChild(td3);
-  // regionRow.appendChild(td4);
-
-  var check0 = HTMLElementUtils.createElement({
+  const visibilityCheck = HTMLElementUtils.createElement({
     kind: "input",
     id: "singleRegionUI_" + regionId + "_check",
     extraAttributes: {
@@ -307,10 +300,12 @@ regionUtils.createRegionOperationsRow = function (regionId) {
       type: "checkbox",
     },
   });
-  check0.checked = true;
-  td1.appendChild(check0);
+  visibilityCheck.checked = true;
+  toggleVisibilityCheckCol.appendChild(visibilityCheck);
 
-  check0.addEventListener("input", function (event) {
+  regionRow.appendChild(toggleVisibilityCheckCol);
+
+  visibilityCheck.addEventListener("input", function (event) {
     var visible = event.target.checked;
     region.visibility = visible;
     glUtils.updateRegionLUTTextures();
