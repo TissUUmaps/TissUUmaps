@@ -137,7 +137,7 @@ regionUtils.closePolygon = function () {
 
     regionUtils.updateAllRegionClassUI();
     if(overlayUtils._regionOperations){
-        regionUtils.updateRegionOperationsListUI();
+        regionUtils.addRegionOperationsRow(regionid)
     }
     $(document.getElementById("regionClass-")).collapse("show");
 

@@ -118,11 +118,9 @@ regionUtils.duplicateRegions = function (regions) {
       region.regionClass,
       region.scale
     );
-    //regionUtils.drawRegionPath(region.points, newRegionId);
-    //regionUtils.addRegionSelectionItem(regionUtils._regions[newRegionId]);
+    regionUtils.addRegionOperationsRow(newRegionId);
   });
   regionUtils.updateAllRegionClassUI();
-  regionUtils.updateRegionOperationsListUI();
 };
 
 /**

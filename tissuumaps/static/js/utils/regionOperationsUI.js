@@ -18,9 +18,12 @@ regionUtils.createRegionOperationsTable = function () {
   });
   const thead = HTMLElementUtils.createElement({ kind: "thead" });
   const theadrow = HTMLElementUtils.createElement({ kind: "tr" });
-  const tbody = HTMLElementUtils.createElement({ kind: "tbody" });
+  const tbody = HTMLElementUtils.createElement({
+    kind: "tbody",
+    extraAttributes: { id: "operations_accordion_table" },
+  });
 
-  const headerLabels = ["Show", "Class"];
+  const headerLabels = ["Show", "Class", "Count"];
 
   const operationLabels = [
     "Show",
@@ -91,12 +94,27 @@ regionUtils.createRegionOperationsTable = function () {
 
     const regionClassLabel = HTMLElementUtils.createElement({
       kind: "p",
-      extraAttributes: { class: "mb-0", type: "checkbox" },
+      extraAttributes: {
+        class: "mb-0",
+        style: "font-weight: bold;",
+        type: "checkbox",
+      },
     });
 
     regionClassLabel.innerText = `${
       regionClasses[i] !== "" ? regionClasses[i] : "Unclassified"
-    } - ${numberOfRegions}`;
+    }`;
+
+    const regionClassCountLabel = HTMLElementUtils.createElement({
+      kind: "p",
+      extraAttributes: {
+        class: "mb-0",
+        type: "checkbox",
+        id: regionClasses[i] + "_operations_count",
+      },
+    });
+
+    regionClassCountLabel.innerText = numberOfRegions;
 
     //row
     const regionClassRow = HTMLElementUtils.createElement({
@@ -116,12 +134,15 @@ regionUtils.createRegionOperationsTable = function () {
     });
     const td1 = HTMLElementUtils.createElement({ kind: "td" });
     const td2 = HTMLElementUtils.createElement({ kind: "td" });
+    const countCol = HTMLElementUtils.createElement({ kind: "td" });
 
     td2.appendChild(regionClassLabel);
+    countCol.appendChild(regionClassCountLabel);
 
     regionClassRow.appendChild(td0);
     regionClassRow.appendChild(td1);
     regionClassRow.appendChild(td2);
+    regionClassRow.appendChild(countCol);
 
     var check0 = HTMLElementUtils.createElement({
       kind: "input",
@@ -279,13 +300,9 @@ regionUtils.createRegionOperationsRow = function (regionId) {
     extraAttributes: { "data-escapedID": regionId },
   });
 
-  var td0 = HTMLElementUtils.createElement({
+  const toggleVisibilityCheckCol = HTMLElementUtils.createElement({
     kind: "td",
-    extraAttributes: {
-      style: "width: 41.11px;",
-    },
   });
-  const toggleVisibilityCheckCol = HTMLElementUtils.createElement({ kind: "td" });
 
   const visibilityCheck = HTMLElementUtils.createElement({
     kind: "input",
@@ -528,11 +545,236 @@ regionUtils.createRegionOperationsRow = function (regionId) {
   regionRow.onmouseout = function () {
     region.polycolor = region.previousColor;
     regionRow.style.background = "white";
-   
+
     glUtils.updateRegionLUTTextures();
     glUtils.draw();
   };
   return regionRow;
+};
+
+regionUtils.addRegionOperationsRow = function (regionId) {
+  const operationLabels = [
+    "Show",
+    "Select",
+    "Name",
+    "Scale (%)",
+    "Dilation/Erosion (Pixels)",
+  ];
+  const region = regionUtils._regions[regionId];
+  const row = regionUtils.createRegionOperationsRow(regionId);
+  const regionClassTable = document.getElementById(
+    "tbody_subregions_operations_region_" + region.regionClass
+  );
+  if (!regionClassTable) {
+    const allRegionClasses = Object.values(regionUtils._regions).map(function (
+      e
+    ) {
+      return e.regionClass;
+    });
+    const table = document.getElementById("operations_accordion_table");
+    const regionClassID = HTMLElementUtils.stringToId(
+      "region_" + region.regionClass
+    );
+    const numberOfRegions = allRegionClasses.filter(
+      (x) => x == region.regionClass
+    ).length;
+    const regionClassLabel = HTMLElementUtils.createElement({
+      kind: "p",
+      extraAttributes: {
+        class: "mb-0",
+        style: "font-weight: bold;",
+        type: "checkbox",
+      },
+    });
+
+    regionClassLabel.innerText = `${
+      region.regionClass !== "" ? region.regionClass : "Unclassified"
+    }`;
+
+    const regionClassCountLabel = HTMLElementUtils.createElement({
+      kind: "p",
+      extraAttributes: {
+        class: "mb-0",
+        type: "checkbox",
+        id: region.regionClass + "_operations_count",
+      },
+    });
+
+    regionClassCountLabel.innerText = numberOfRegions;
+
+    const regionClassRow = HTMLElementUtils.createElement({
+      kind: "tr",
+      extraAttributes: { "data-escapedID": regionClassID },
+    });
+
+    const td0 = HTMLElementUtils.createElement({
+      kind: "td",
+      extraAttributes: {
+        "data-bs-toggle": "collapse",
+        "data-bs-target": "#collapse_region_" + region.regionClass,
+        "aria-expanded": "false",
+        "aria-controls": "collapse_region_" + region.regionClass,
+        class: "collapse_button_transform collapsed",
+      },
+    });
+    const td1 = HTMLElementUtils.createElement({ kind: "td" });
+    const td2 = HTMLElementUtils.createElement({ kind: "td" });
+    const countCol = HTMLElementUtils.createElement({ kind: "td" });
+
+    td2.appendChild(regionClassLabel);
+    countCol.appendChild(regionClassCountLabel);
+
+    regionClassRow.appendChild(td0);
+    regionClassRow.appendChild(td1);
+    regionClassRow.appendChild(td2);
+    regionClassRow.appendChild(countCol);
+
+    var check0 = HTMLElementUtils.createElement({
+      kind: "input",
+      id: "regionUI_operations" + regionClassID + "_check",
+      extraAttributes: {
+        class: "form-check-input regionUI-region-input",
+        type: "checkbox",
+      },
+    });
+    check0.checked = true;
+    td1.appendChild(check0);
+
+    var check1 = HTMLElementUtils.createElement({
+      kind: "input",
+      id: "regionUI_operations" + regionClassID + "_hidden",
+      extraAttributes: {
+        class: "form-check-input region-hidden d-none regionUI-region-hidden",
+        type: "checkbox",
+      },
+    });
+    check1.checked = true;
+    td1.appendChild(check1);
+
+    check0.addEventListener("input", function (event) {
+      var visible = event.target.checked;
+      clist = interfaceUtils.getElementsByClassName(
+        "regionUI-region-" + regionClassID + "-input"
+      );
+      for (var i = 0; i < clist.length; ++i) {
+        clist[i].checked = visible;
+      }
+      groupRegions = Object.values(regionUtils._regions).filter(
+        (x) => x.regionClass == region.regionClass
+      );
+      for (let item of groupRegions) {
+        item.visibility = visible;
+      }
+      glUtils.updateRegionLUTTextures();
+      glUtils.draw();
+    });
+
+    const regionItemsRow = document.createElement("tr");
+    const regionItemsCol = document.createElement("td");
+    regionItemsCol.classList.add("p-0");
+    regionItemsCol.setAttribute("colspan", "100");
+    let table_subregions = HTMLElementUtils.createElement({
+      kind: "table",
+      extraAttributes: { class: "table marker_table" },
+    });
+    var tbody_subregions = HTMLElementUtils.createElement({
+      kind: "tbody",
+      id: "tbody_subregions_operations_" + regionClassID,
+    });
+    let collapse_div = HTMLElementUtils.createElement({ kind: "div" });
+    collapse_div.id = "collapse_region_" + region.regionClass;
+    collapse_div.setAttribute("data-region-class", region.regionClass);
+    collapse_div.setAttribute("data-region-classID", regionClassID);
+    collapse_div.classList.add("collapse");
+    collapse_div.classList.add("container");
+    collapse_div.classList.add("p-0");
+    $(collapse_div).on("show.bs.collapse", function () {
+      let selectedRegionClass = this.getAttribute("data-region-class");
+      let selectedRegionClassID = this.getAttribute("data-region-classID");
+      let tbody_subregions = document.getElementById(
+        "tbody_subregions_operations_" + selectedRegionClassID
+      );
+
+      if (tbody_subregions.innerHTML == "") {
+        var groupContainer = this;
+        var numberOfItemsPerPage = 1000;
+        let groupRegions = Object.values(regionUtils._regions).filter(
+          (x) => x.regionClass == selectedRegionClass
+        );
+        let subGroupRegions = groupRegions.slice(0, numberOfItemsPerPage);
+        regionDetails = document.createDocumentFragment();
+        const labelRow = HTMLElementUtils.createElement({
+          kind: "tr",
+          extraAttributes: {
+            style:
+              "font-weight: bold; position: sticky; top: 0; background-color: var(--bs-primary); color: white;",
+          },
+        });
+        operationLabels.forEach((opt) => {
+          const col = HTMLElementUtils.createElement({
+            kind: "td",
+          });
+          col.innerText = opt;
+          labelRow.appendChild(col);
+        });
+        regionDetails.appendChild(labelRow);
+        for (let item of subGroupRegions) {
+          regionDetails.appendChild(
+            regionUtils.createRegionOperationsRow(item.id)
+          );
+        }
+        tbody_subregions.appendChild(regionDetails);
+        groupContainer.setAttribute("data-region-count", numberOfItemsPerPage);
+        $(groupContainer).bind("scroll", function () {
+          let tbody_subregions = document.getElementById(
+            "tbody_subregions_operations_" + selectedRegionClassID
+          );
+          if (
+            $(groupContainer).scrollTop() + $(this).innerHeight() >=
+            $(this)[0].scrollHeight - 500
+          ) {
+            maxItem = parseInt(
+              groupContainer.getAttribute("data-region-count")
+            );
+            groupContainer.setAttribute(
+              "data-region-count",
+              maxItem + numberOfItemsPerPage
+            );
+            if (maxItem >= groupRegions.length) return;
+            let subGroupRegions = groupRegions.slice(
+              maxItem,
+              maxItem + numberOfItemsPerPage
+            );
+            regionDetails = document.createDocumentFragment();
+            for (region of subGroupRegions) {
+              regionDetails.appendChild(
+                regionUtils.createRegionOperationsRow(region.id)
+              );
+            }
+            tbody_subregions.appendChild(regionDetails);
+          }
+        });
+        groupContainer.style.maxHeight = "400px";
+        groupContainer.style.overflowY = "scroll";
+      }
+    });
+
+    regionItemsRow.appendChild(regionItemsCol);
+    regionItemsCol.appendChild(collapse_div);
+    collapse_div.appendChild(table_subregions);
+    table_subregions.appendChild(tbody_subregions);
+
+    table.appendChild(regionClassRow);
+    table.appendChild(regionItemsRow);
+    return;
+  }
+  const count = document.getElementById(
+    region.regionClass + "_operations_count"
+  );
+  count.innerText = parseInt(count.innerText) + 1;
+  try {
+    regionClassTable.insertBefore(row, regionClassTable.firstChild.nextSibling);
+  } catch {}
 };
 
 regionUtils.updateRegionOperationsListUI = function () {
