@@ -35,35 +35,6 @@ regionUtils.regionOperationsOnOff = function () {
 };
 
 /**
- * @param {String} regionid String id of region to fill
- * @summary Given a region id, fill this region in the interface */
-regionUtils.fillRegion = function (regionid, value) {
-  // if (value === undefined) {
-  //     // we toggle
-  //     if(regionUtils._regions[regionid].filled === 'undefined'){
-  //         value = true;
-  //     }
-  //     else {
-  //         value = !regionUtils._regions[regionid].filled;
-  //     }
-  // }
-  // regionUtils._regions[regionid].filled=value;
-  // if (!glUtils._showRegionsExperimental) {
-  //     var newregioncolor = regionUtils._regions[regionid].polycolor;
-  //     var d3color = d3.rgb(newregioncolor);
-  //     var newStyle="";
-  //     if(regionUtils._regions[regionid].filled){
-  //         newStyle = "stroke: " + d3color.rgb().toString()+";";
-  //         d3color.opacity=0.5;
-  //         newStyle +="fill: "+d3color.rgb().toString()+";";
-  //     }else{
-  //         newStyle = "stroke: " + d3color.rgb().toString() + "; fill: none;";
-  //     }
-  //     document.getElementById(regionid + "_poly").setAttribute("style", newStyle);
-  // }
-};
-
-/**
  * @summary Draws a path given a set of points and an Id
  * @param {*} points Region points used to construct the path
  * @param {*} regionId Id of the region
@@ -136,10 +107,6 @@ regionUtils.regionsIntersection = function (regions) {
     const newRegionId = "region" + regionUtils._currentRegionId;
     const hexColor = overlayUtils.randomColor("hex");
     regionUtils.addRegion(intersectionPoints, newRegionId, hexColor, "", "100");
-    // regionUtils.drawRegionPath(
-    //   regionUtils.arrayToObjectPoints(intersectionPoints),
-    //   newRegionId
-    // );
     regionUtils.updateAllRegionClassUI();
     regionUtils.addRegionOperationsRow(newRegionId)
   } catch {
@@ -164,10 +131,6 @@ regionUtils.regionsDifference = function (regions) {
   const newRegionId = "region" + regionUtils._currentRegionId;
   const hexColor = overlayUtils.randomColor("hex");
   regionUtils.addRegion(differencePoints, newRegionId, hexColor, "", "100");
-  //   regionUtils.drawRegionPath(
-  //     regionUtils.arrayToObjectPoints(differencePoints),
-  //     newRegionId
-  //   );
   regionUtils.updateAllRegionClassUI();
   regionUtils.addRegionOperationsRow(newRegionId)
   glUtils.updateRegionDataTextures();
@@ -406,26 +369,6 @@ regionUtils.mergeRegions = function (regions) {
   const newRegionId = "region" + regionUtils._currentRegionId;
   const hexColor = overlayUtils.randomColor("hex");
   regionUtils.addRegion(mergedPoints, newRegionId, hexColor, "", "100");
-  //   const canvasNode =
-  //     overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
-  //   const canvas = d3.select(canvasNode);
-  //   const strokeWstr =
-  //     regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
-  //   canvas
-  //     .append("path")
-  //     .attr(
-  //       "d",
-  //       regionUtils.pointsToPath(regionUtils.arrayToObjectPoints(mergedPoints))
-  //     )
-  //     .attr("id", newRegionId + "_poly")
-  //     .attr("class", "regionpoly")
-  //     .attr("polycolor", "#FF0000")
-  //     .attr("stroke-width", strokeWstr)
-  //     .style("stroke", "#FF0000")
-  //     .style("fill", "none")
-  //     .append("title")
-  //     .text(newRegionId)
-  //     .attr("id", "path-title-" + newRegionId);
   regionUtils.updateAllRegionClassUI();
   regionUtils.addRegionOperationsRow(newRegionId)
   glUtils.updateRegionDataTextures();
