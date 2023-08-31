@@ -263,11 +263,9 @@ regionUtils.createRegionOperationsTable = function () {
   }
 
   table.appendChild(thead);
-  //   table.appendChild(thead2);
   table.appendChild(tbody);
   tableContainer.appendChild(table);
 
-  //sorttable.makeSortable(table);
   return tableContainer;
 };
 
@@ -522,44 +520,18 @@ regionUtils.createRegionOperationsRow = function (regionId) {
   regionRow.appendChild(regionOffsetCol);
   regionRow.onmouseover = function () {
     regionRow.style.background = "var(--bs-primary-light)";
-    const strokeWstr =
-      regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
     region.previousColor = region.polycolor;
     region.polycolor = "#39FF14";
-    // const path = d3.select(`#${region.id}_poly`);
-    // path.attr("stroke-width", strokeWstr * 2);
-    // const highLightColor = "#39FF14";
-    // const d3Color = d3.rgb(highLightColor);
-    // d3Color.opacity = 0.8;
-    // path.style("fill", d3Color.rgb().toString());
-    // glUtils.updateRegionDataTextures();
     glUtils.updateRegionLUTTextures();
     glUtils.draw();
   };
   regionRow.onmouseout = function () {
     region.polycolor = region.previousColor;
     regionRow.style.background = "white";
-    // const strokeWstr =
-    //   regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
-    // d3.select(`#${region.id}_poly`).attr("stroke-width", strokeWstr);
-    // if (regionUtils._selectedRegions[region.id]) return;
-    // region.filled
-    //   ? regionUtils.fillRegion(region.id, true)
-    //   : regionUtils.fillRegion(region.id, false);
+   
     glUtils.updateRegionLUTTextures();
     glUtils.draw();
   };
-  //   table.appendChild(regionRow);
-  //   const regionClassCounter = document.getElementById(
-  //     "numRegionsSelection-" + HTMLElementUtils.stringToId(region.regionClass)
-  //   );
-  //   regionClassCounter.innerHTML = parseInt(regionClassCounter.innerHTML) + 1;
-  //   if (parseInt(regionClassCounter.innerHTML) > 1) {
-  //     const regionsLabel = document.getElementById(
-  //       "numRegionsSelectionS-" + HTMLElementUtils.stringToId(region.regionClass)
-  //     );
-  //     regionsLabel.innerText = "s";
-  //   }
   return regionRow;
 };
 

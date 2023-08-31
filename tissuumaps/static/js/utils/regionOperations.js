@@ -345,11 +345,7 @@ regionUtils.drawOffsettedRegion = function (region, points, onlyBorder) {
     region.regionClass,
     region.scale
   );
-  //   regionUtils.drawRegionPath(
-  //     regionUtils.arrayToObjectPoints(points),
-  //     newRegionId
-  //   );
-  //regionUtils.addRegionSelectionItem(regionUtils._regions[newRegionId]);
+
   regionUtils.updateRegionOperationsListUI();
   glUtils.updateRegionDataTextures();
   glUtils.updateRegionLUTTextures();
