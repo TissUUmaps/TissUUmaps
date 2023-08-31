@@ -237,12 +237,6 @@ regionUtils.resizeRegion = function (regionId, scale) {
   regionUtils._regions[regionId].points =
     regionUtils.arrayToObjectPoints(points);
 
-  // Adjust regions path to new coordinates
-  d3.select(`#${regionId}_poly`).attr(
-    "d",
-    regionUtils.pointsToPath(regionUtils.arrayToObjectPoints(points))
-  );
-
   // Returns the center of a given polygon
   function calculatePolygonCentroid(polygon) {
     let sumX = 0;
@@ -263,7 +257,8 @@ regionUtils.resizeRegion = function (regionId, scale) {
     return [centroidX, centroidY];
   }
 
-  
+  console.log(regionUtils._regions[regionId])
+
   glUtils.updateRegionDataTextures();
   glUtils.updateRegionLUTTextures();
   glUtils.draw();

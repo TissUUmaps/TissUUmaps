@@ -524,7 +524,7 @@ regionUtils.createRegionOperationsRow = function (regionId) {
     regionRow.style.background = "var(--bs-primary-light)";
     const strokeWstr =
       regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
-    region.previewsColor = region.polycolor;
+    region.previousColor = region.polycolor;
     region.polycolor = "#39FF14";
     // const path = d3.select(`#${region.id}_poly`);
     // path.attr("stroke-width", strokeWstr * 2);
@@ -537,7 +537,7 @@ regionUtils.createRegionOperationsRow = function (regionId) {
     glUtils.draw();
   };
   regionRow.onmouseout = function () {
-    region.polycolor = region.previewsColor;
+    region.polycolor = region.previousColor;
     regionRow.style.background = "white";
     // const strokeWstr =
     //   regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
