@@ -257,11 +257,63 @@ regionUtils.resizeRegion = function (regionId, scale) {
     return [centroidX, centroidY];
   }
 
-  console.log(regionUtils._regions[regionId])
+  regionUtils._regions[regionId] = regionUtils.updateRegionCoordinates(
+    regionUtils._regions[regionId]
+  );
 
   glUtils.updateRegionDataTextures();
   glUtils.updateRegionLUTTextures();
   glUtils.draw();
+};
+
+regionUtils.updateRegionCoordinates = function (region) {
+  const points = regionUtils.objectToArrayPoints(region.points);
+  const newPoints = [];
+  const newGlobalPoints = [];
+  const viewer = tmapp[tmapp["object_prefix"] + "_viewer"];
+  let _xmin = parseFloat(points[0][0][0][0]),
+    _xmax = parseFloat(points[0][0][0][0]),
+    _ymin = parseFloat(points[0][0][0][1]),
+    _ymax = parseFloat(points[0][0][0][1]);
+  for (let i = 0; i < points.length; i++) {
+    subregion = [];
+    globalSubregion = [];
+    for (let j = 0; j < points[i].length; j++) {
+      polygon = [];
+      globalPolygon = [];
+      for (let k = 0; k < points[i][j].length; k++) {
+        let x = parseFloat(points[i][j][k][0]);
+        let y = parseFloat(points[i][j][k][1]);
+
+        if (x > _xmax) _xmax = x;
+        if (x < _xmin) _xmin = x;
+        if (y > _ymax) _ymax = y;
+        if (y < _ymin) _ymin = y;
+        polygon.push({ x: x, y: y });
+        let tiledImage = viewer.world.getItemAt(0);
+        let imageCoord = tiledImage.viewportToImageCoordinates(x, y, true);
+        globalPolygon.push({ x: imageCoord.x, y: imageCoord.y });
+      }
+      subregion.push(polygon);
+      globalSubregion.push(globalPolygon);
+    }
+    newPoints.push(subregion);
+    newGlobalPoints.push(globalSubregion);
+  }
+  (region._xmin = _xmin),
+    (region._xmax = _xmax),
+    (region._ymin = _ymin),
+    (region._ymax = _ymax);
+  const tiledImage = viewer.world.getItemAt(0);
+  const _min_imageCoord = tiledImage.viewportToImageCoordinates(_xmin, _ymin);
+  const _max_imageCoord = tiledImage.viewportToImageCoordinates(_xmax, _ymax);
+  (region._gxmin = _min_imageCoord.x),
+    (region._gxmax = _max_imageCoord.x),
+    (region._gymin = _min_imageCoord.y),
+    (region._gymax = _max_imageCoord.y);
+  region.points = newPoints;
+  region.globalPoints = newGlobalPoints;
+  return region;
 };
 
 /**
@@ -319,7 +371,6 @@ regionUtils.objectToArrayPoints = function (points) {
  * @param {*} points GeoJson points to be converted into object points with x and y properties
  */
 regionUtils.arrayToObjectPoints = function (points) {
-  console.log(points);
   return points.map((arr) =>
     arr.map((secondArr) =>
       secondArr.map((coordinates) => {
