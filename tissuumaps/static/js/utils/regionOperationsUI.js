@@ -552,17 +552,11 @@ regionUtils.createRegionOperationsRow = function (regionId) {
   regionRow.appendChild(regionOffsetCol);
   regionRow.onmouseover = function () {
     regionRow.style.background = "var(--bs-primary-light)";
-    region.previousColor = region.polycolor;
-    region.polycolor = "#39FF14";
-    glUtils.updateRegionLUTTextures();
-    glUtils.draw();
+    regionUtils.drawRegionPath(region.points, region.id, "#39FF14")
   };
   regionRow.onmouseout = function () {
-    region.polycolor = region.previousColor;
     regionRow.style.background = "white";
-
-    glUtils.updateRegionLUTTextures();
-    glUtils.draw();
+    d3.select("#" + region.id + "_poly").remove();
   };
   return regionRow;
 };

@@ -42,7 +42,7 @@ regionUtils.regionOperationsOnOff = function () {
  * @param {*} points Region points used to construct the path
  * @param {*} regionId Id of the region
  */
-regionUtils.drawRegionPath = function (points, regionId) {
+regionUtils.drawRegionPath = function (points, regionId, borderColor, fillColor) {
   const canvasNode =
     overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
   const canvas = d3.select(canvasNode);
@@ -53,10 +53,9 @@ regionUtils.drawRegionPath = function (points, regionId) {
     .attr("d", regionUtils.pointsToPath(points))
     .attr("id", regionId + "_poly")
     .attr("class", "regionpoly")
-    .attr("polycolor", "#FF0000")
     .attr("stroke-width", strokeWstr)
-    .style("stroke", "#FF0000")
-    .style("fill", "none")
+    .style("stroke", borderColor ? borderColor :"#FF0000")
+    .style("fill", fillColor ? fillColor : "none")
     .append("title")
     .text(regionId)
     .attr("id", "path-title-" + regionId);
