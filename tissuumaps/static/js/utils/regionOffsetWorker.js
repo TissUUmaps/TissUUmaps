@@ -7,8 +7,12 @@ self.onmessage = function (event) {
   offsetRegion(region, offset);
 };
 
+/**
+ * @summary Posts a message with the offsetted points
+ * @param {*} region Region that will be offsetted
+ * @param {*} offset Offset amount 
+ */
 function offsetRegion(region, offset) {
-    console.log(region)
   const multiPolygon = objectToArrayPoints(region.points);
   function createOffsetPolygon(multipolygon, offset) {
     const turfMultipolygon = turf.multiPolygon(multipolygon);
