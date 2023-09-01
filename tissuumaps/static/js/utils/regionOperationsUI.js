@@ -449,11 +449,10 @@ regionUtils.createRegionOperationsRow = function (regionId) {
               return;
             }
             regionUtils.drawOffsettedRegion(region, event.data, true);
-            document.getElementById(region.id + "_show_preview").innerHTML =
-              "Show preview";
+            regionUtils.deleteRegion(region.id)
+            glUtils.updateRegionDataTextures();
+            glUtils.draw();
             d3.select("#" + region.id + "preview" + "_poly").remove();
-            button.disabled = false;
-            button.innerHTML = "Type";
           };
           regionOffsetInput.value = "";
         },
@@ -478,19 +477,18 @@ regionUtils.createRegionOperationsRow = function (regionId) {
           worker.postMessage([region, offset]);
           worker.onmessage = function (event) {
             if (!event.data) {
-              interfaceUtils.alert(
-                "An error ocurred applying the selected offset amount, for negative offsets, please make sure that the region is big enough to be offseted by that amount"
-              );
-              button.disabled = false;
-              button.innerHTML = "Type";
-              return;
-            }
-            regionUtils.drawOffsettedRegion(region, event.data, false);
-            document.getElementById(region.id + "_show_preview").innerHTML =
-              "Show preview";
-            d3.select("#" + region.id + "preview" + "_poly").remove();
-            button.disabled = false;
-            button.innerHTML = "Type";
+                interfaceUtils.alert(
+                  "An error ocurred applying the selected offset amount, for negative offsets, please make sure that the region is big enough to be offseted by that amount"
+                );
+                button.disabled = false;
+                button.innerHTML = "Type";
+                return;
+              }
+              regionUtils.drawOffsettedRegion(region, event.data, false);
+              regionUtils.deleteRegion(region.id);
+              glUtils.updateRegionDataTextures();
+              glUtils.draw();
+              d3.select("#" + region.id + "preview" + "_poly").remove();
           };
           regionOffsetInput.value = "";
         },
