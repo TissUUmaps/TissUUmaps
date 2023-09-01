@@ -67,11 +67,6 @@ regionUtils.deleteRegions = function (regionIds) {
   regionIds.forEach((id) => {
     regionUtils.deleteRegion(id);
   });
-  if (overlayUtils._regionOperations) {
-    regionUtils.deleteRegionSelectionItems(regionIds);
-  }
-  regionUtils.updateAllRegionClassUI();
-  regionUtils.updateRegionOperationsListUI();
 };
 
 /**
@@ -375,15 +370,6 @@ regionUtils.mergeRegions = function (regions) {
   glUtils.updateRegionDataTextures();
   glUtils.updateRegionLUTTextures();
   glUtils.draw();
-};
-
-/**
- * @summary Deletes the selection items of the regions corresponding to the ids
- * @param {*} regionIds Ids of the regions that will get their selection item removed
- */
-regionUtils.deleteRegionSelectionItems = function (regionIds) {
-  regionUtils.updateAllRegionClassUI();
-  regionUtils.updateRegionOperationsListUI();
 };
 
 /**

@@ -524,6 +524,16 @@ regionUtils.deleteRegion = function (regionid, skipUpdateAllRegionClassUI) {
         var rPanelHist = document.getElementById(op + regionid + "_tr_hist");
         rPanelHist.parentElement.removeChild(rPanelHist);
     }
+    if(!overlayUtils._regionOperations) return; 
+    regionUtils.deleteRegionOperationRows(regionid);  
+    if(!regionUtils._selectedRegions[regionid]) return; 
+    const regionClass = regionUtils._selectedRegions[regionid].regionClass;
+    delete regionUtils._selectedRegions[regionid];
+    const remainingClassRegions = Object.values(regionUtils._regions).filter((region) => region.regionClass === regionClass);
+    if(remainingClassRegions.length === 0){
+        regionUtils.deleteRegionOperationsAccordion(regionClass);
+    }
+    regionUtils.updateAllRegionClassUI();
     //if(!skipUpdateAllRegionClassUI) {
     //    regionUtils.updateAllRegionClassUI();
     //}

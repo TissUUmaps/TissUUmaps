@@ -119,16 +119,19 @@ regionUtils.createRegionOperationsTable = function () {
     //row
     const regionClassRow = HTMLElementUtils.createElement({
       kind: "tr",
-      extraAttributes: { "data-escapedID": regionClassID },
+      extraAttributes: {
+        "data-escapedID": regionClassID,
+        id: `region_class_operations_accordion_${regionClass}`,
+      },
     });
 
     const td0 = HTMLElementUtils.createElement({
       kind: "td",
       extraAttributes: {
         "data-bs-toggle": "collapse",
-        "data-bs-target": "#collapse_region_" + (i + 1),
+        "data-bs-target": "#operations_collapse_region_" + regionClass,
         "aria-expanded": "false",
-        "aria-controls": "collapse_region_" + (i + 1),
+        "aria-controls": "operations_collapse_region_" + regionClass,
         class: "collapse_button_transform collapsed",
       },
     });
@@ -197,7 +200,7 @@ regionUtils.createRegionOperationsTable = function () {
       id: "tbody_subregions_operations_" + regionClassID,
     });
     let collapse_div = HTMLElementUtils.createElement({ kind: "div" });
-    collapse_div.id = "collapse_region_" + (i + 1);
+    collapse_div.id = "operations_collapse_region_" + regionClass;
     collapse_div.setAttribute("data-region-class", regionClass);
     collapse_div.setAttribute("data-region-classID", regionClassID);
     collapse_div.classList.add("collapse");
@@ -297,7 +300,10 @@ regionUtils.createRegionOperationsRow = function (regionId) {
 
   const regionRow = HTMLElementUtils.createElement({
     kind: "tr",
-    extraAttributes: { "data-escapedID": regionId },
+    extraAttributes: {
+      "data-escapedID": regionId,
+      id: `operations_row_${regionId}`,
+    },
   });
 
   const toggleVisibilityCheckCol = HTMLElementUtils.createElement({
@@ -604,16 +610,19 @@ regionUtils.addRegionOperationsRow = function (regionId) {
 
     const regionClassRow = HTMLElementUtils.createElement({
       kind: "tr",
-      extraAttributes: { "data-escapedID": regionClassID },
+      extraAttributes: {
+        "data-escapedID": regionClassID,
+        id: `region_class_operations_accordion_${region.regionClass}`,
+      },
     });
 
     const td0 = HTMLElementUtils.createElement({
       kind: "td",
       extraAttributes: {
         "data-bs-toggle": "collapse",
-        "data-bs-target": "#collapse_region_" + region.regionClass,
+        "data-bs-target": "#operations_collapse_region_" + region.regionClass,
         "aria-expanded": "false",
-        "aria-controls": "collapse_region_" + region.regionClass,
+        "aria-controls": "operations_collapse_region_" + region.regionClass,
         class: "collapse_button_transform collapsed",
       },
     });
@@ -682,7 +691,7 @@ regionUtils.addRegionOperationsRow = function (regionId) {
       id: "tbody_subregions_operations_" + regionClassID,
     });
     let collapse_div = HTMLElementUtils.createElement({ kind: "div" });
-    collapse_div.id = "collapse_region_" + region.regionClass;
+    collapse_div.id = "operations_collapse_region_" + region.regionClass;
     collapse_div.setAttribute("data-region-class", region.regionClass);
     collapse_div.setAttribute("data-region-classID", regionClassID);
     collapse_div.classList.add("collapse");
@@ -870,4 +879,19 @@ regionUtils.addRegionOperationsUI = function () {
   regionOperationsUIContainer.appendChild(buttonsContainer);
   const regionOperationsUI = regionUtils.createRegionOperationsTable();
   regionOperationsUIContainer.appendChild(regionOperationsUI);
+};
+
+/**
+ * @summary Deletes the rows of the regions corresponding to the ids
+ * @param {*} regionIds Ids of the regions that will get their selection item removed
+ */
+regionUtils.deleteRegionOperationRows = function (regionId) {
+    document.getElementById(`operations_row_${regionId}`).remove();
+};
+
+regionUtils.deleteRegionOperationsAccordion = function (regionClass) {
+  document
+    .getElementById(`region_class_operations_accordion_${regionClass}`)
+    .remove();
+  document.getElementById(`operations_collapse_region_${regionClass}`).remove();
 };
