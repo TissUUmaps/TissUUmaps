@@ -79,8 +79,9 @@ regionUtils.deleteRegions = function (regionIds) {
  * @param {*} regions Array of regions to be duplicated
  */
 regionUtils.duplicateRegions = function (regions) {
-  Object.values(regionUtils._regions).forEach((region) => {
-    const newRegionId = region.id + "duplicate";
+  regions.forEach((region) => {
+    const newRegionId = "region" + (regionUtils._currentRegionId + 1);
+    regionUtils._currentRegionId++;
     const hexColor = overlayUtils.randomColor("hex");
     regionUtils.addRegion(
       regionUtils.objectToArrayPoints(region.points),
@@ -108,7 +109,7 @@ regionUtils.regionsIntersection = function (regions) {
     const hexColor = overlayUtils.randomColor("hex");
     regionUtils.addRegion(intersectionPoints, newRegionId, hexColor, "", "100");
     regionUtils.updateAllRegionClassUI();
-    regionUtils.addRegionOperationsRow(newRegionId)
+    regionUtils.addRegionOperationsRow(newRegionId);
   } catch {
     interfaceUtils.alert(
       "The selected regions have no interception between them"
@@ -132,7 +133,7 @@ regionUtils.regionsDifference = function (regions) {
   const hexColor = overlayUtils.randomColor("hex");
   regionUtils.addRegion(differencePoints, newRegionId, hexColor, "", "100");
   regionUtils.updateAllRegionClassUI();
-  regionUtils.addRegionOperationsRow(newRegionId)
+  regionUtils.addRegionOperationsRow(newRegionId);
   glUtils.updateRegionDataTextures();
   glUtils.updateRegionLUTTextures();
   glUtils.draw();
@@ -370,7 +371,7 @@ regionUtils.mergeRegions = function (regions) {
   const hexColor = overlayUtils.randomColor("hex");
   regionUtils.addRegion(mergedPoints, newRegionId, hexColor, "", "100");
   regionUtils.updateAllRegionClassUI();
-  regionUtils.addRegionOperationsRow(newRegionId)
+  regionUtils.addRegionOperationsRow(newRegionId);
   glUtils.updateRegionDataTextures();
   glUtils.updateRegionLUTTextures();
   glUtils.draw();
@@ -401,10 +402,6 @@ regionUtils.resetSelection = function () {
   selectedRegions.forEach((region) => {
     const checkBox = document.getElementById(`${region.id}_selection_check`);
     checkBox.checked = false;
-    const path = d3.select(`#${region.id}_poly`);
-    region.filled
-      ? regionUtils.fillRegion(region.id, true)
-      : regionUtils.fillRegion(region.id, false);
   });
   regionUtils._selectedRegions = {};
 };
