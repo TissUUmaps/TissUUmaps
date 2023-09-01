@@ -6,6 +6,7 @@ from typing import Any, List, Literal, Optional, Union
 
 import h5py
 import numpy as np
+import pandas as pd
 import scipy.sparse as sp
 from flask import abort, make_response
 from scipy.ndimage import zoom
@@ -220,13 +221,16 @@ def points2regions(
     # Iterate data by library ids
     if library_id_column is not None:
         unique_library_id = np.unique(library_id_column)
-        iterdata = {
-            lib_id: (
-                xy[library_id_column == lib_id],
-                labels[library_id_column == lib_id],
+        iterdata = [
+            (
+                lib_id,
+                (
+                    xy[library_id_column == lib_id],
+                    labels[library_id_column == lib_id],
+                ),
             )
             for lib_id in unique_library_id
-        }
+        ]
         get_slice = lambda library_id, data: data == library_id
     else:
         iterdata = [("id", (xy, labels))]
@@ -261,7 +265,7 @@ def points2regions(
     # Add clusters to dataframe
     output_column = np.zeros(len(xy), dtype="int")
     for library_id in results.keys():
-        if library_id_column:
+        if library_id_column is not None:
             library_id_slice_ind = get_slice(library_id, library_id_column)
         else:
             library_id_slice_ind = get_slice(library_id, xy)
@@ -575,8 +579,6 @@ class Plugin:
                 os.path.join(self.app.basedir, jsonParam["csv_path"])
             )
 
-            import pandas as pd
-
             df = pd.read_csv(csvPath)
             xy = df[[jsonParam["xKey"], jsonParam["yKey"]]].to_numpy()
             labels = df[jsonParam["clusterKey"]].to_numpy()
@@ -605,13 +607,15 @@ class Plugin:
                 except:
                     labels = f.get(jsonParam["clusterKey"])[()]
                 labels = labels.astype(str)
-        stride = float(jsonParam["stride"])
+        bins_per_res = float(jsonParam["_bins_per_res"])
         sigma = float(jsonParam["sigma"])
         nclusters = int(jsonParam["nclusters"])
         expression_threshold = float(jsonParam["expression_threshold"])
         seed = int(jsonParam["seed"])
         region_name = jsonParam["region_name"]
         format = jsonParam["format"]
+        stride = sigma / bins_per_res
+
         if format == "GeoJSON polygons":
             compute_regions = True
         else:
@@ -619,7 +623,7 @@ class Plugin:
         c, r = points2regions(
             xy,
             labels,
-            sigma * stride,
+            sigma,
             nclusters,
             stride,
             expression_threshold,
