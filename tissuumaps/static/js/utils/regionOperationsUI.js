@@ -357,7 +357,7 @@ regionUtils.createRegionOperationsRow = function (regionId) {
       click: function () {
         this.checked
           ? regionUtils.selectRegion(region)
-          : delete regionUtils._selectedRegions[region.id];
+          : regionUtils.deSelectRegion(region.id);
       },
     },
   });

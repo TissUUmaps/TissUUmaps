@@ -528,7 +528,7 @@ regionUtils.deleteRegion = function (regionid, skipUpdateAllRegionClassUI) {
     regionUtils.deleteRegionOperationRows(regionid);  
     if(!regionUtils._selectedRegions[regionid]) return; 
     const regionClass = regionUtils._selectedRegions[regionid].regionClass;
-    delete regionUtils._selectedRegions[regionid];
+    regionUtils.deSelectRegion(regionid); 
     const remainingClassRegions = Object.values(regionUtils._regions).filter((region) => region.regionClass === regionClass);
     if(remainingClassRegions.length === 0){
         regionUtils.deleteRegionOperationsAccordion(regionClass);

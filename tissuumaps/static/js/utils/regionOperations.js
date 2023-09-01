@@ -120,6 +120,7 @@ regionUtils.regionsIntersection = function (regions) {
       "The selected regions have no interception between them"
     );
   }
+  regionUtils.resetSelection();
   glUtils.updateRegionDataTextures();
   glUtils.updateRegionLUTTextures();
   glUtils.draw();
@@ -142,6 +143,7 @@ regionUtils.regionsDifference = function (regions) {
   regions.forEach((region) => {
     regionUtils.deleteRegion(region.id);
   });
+  regionUtils.resetSelection();
   glUtils.updateRegionDataTextures();
   glUtils.updateRegionLUTTextures();
   glUtils.draw();
@@ -389,6 +391,7 @@ regionUtils.mergeRegions = function (regions) {
   regions.forEach((region) => {
     regionUtils.deleteRegion(region.id);
   });
+  regionUtils.resetSelection();
   glUtils.updateRegionDataTextures();
   glUtils.updateRegionLUTTextures();
   glUtils.draw();
@@ -400,6 +403,12 @@ regionUtils.mergeRegions = function (regions) {
  */
 regionUtils.selectRegion = function (region) {
   regionUtils._selectedRegions[region.id] = region;
+  regionUtils.drawRegionPath(region.points, region.id + "_selected", "#0165fc")
+};
+
+regionUtils.deSelectRegion = function (regionId) {
+    delete regionUtils._selectedRegions[regionId];
+    d3.select("#" + regionId + "_selected" + "_poly").remove();
 };
 
 /**
@@ -410,6 +419,7 @@ regionUtils.resetSelection = function () {
   selectedRegions.forEach((region) => {
     const checkBox = document.getElementById(`${region.id}_selection_check`);
     checkBox.checked = false;
+    d3.select("#" + region.id + "_selected" + "_poly").remove();
   });
   regionUtils._selectedRegions = {};
 };
