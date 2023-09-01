@@ -1,5 +1,8 @@
 regionUtils._selectedRegions = {};
 
+/**
+ * @summary Toggles the region operations menu on and off
+ */
 regionUtils.regionOperationsOnOff = function () {
   overlayUtils._regionOperations = !overlayUtils._regionOperations;
   const op = tmapp["object_prefix"];
@@ -221,6 +224,11 @@ regionUtils.resizeRegion = function (regionId, scale) {
   glUtils.draw();
 };
 
+/**
+ * @summary Recalculates region coordinates from the current region points.
+ * Used before re-drawing a region when its points have been updated
+ * @param {*} region Region to be updated
+ */
 regionUtils.updateRegionCoordinates = function (region) {
   const points = regionUtils.objectToArrayPoints(region.points);
   const newPoints = [];
