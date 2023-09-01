@@ -42,7 +42,12 @@ regionUtils.regionOperationsOnOff = function () {
  * @param {*} points Region points used to construct the path
  * @param {*} regionId Id of the region
  */
-regionUtils.drawRegionPath = function (points, regionId, borderColor, fillColor) {
+regionUtils.drawRegionPath = function (
+  points,
+  regionId,
+  borderColor,
+  fillColor
+) {
   const canvasNode =
     overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
   const canvas = d3.select(canvasNode);
@@ -54,7 +59,7 @@ regionUtils.drawRegionPath = function (points, regionId, borderColor, fillColor)
     .attr("id", regionId + "_poly")
     .attr("class", "regionpoly")
     .attr("stroke-width", strokeWstr)
-    .style("stroke", borderColor ? borderColor :"#FF0000")
+    .style("stroke", borderColor ? borderColor : "#FF0000")
     .style("fill", fillColor ? fillColor : "none")
     .append("title")
     .text(regionId)
@@ -107,6 +112,9 @@ regionUtils.regionsIntersection = function (regions) {
     regionUtils.addRegion(intersectionPoints, newRegionId, hexColor, "", "100");
     regionUtils.updateAllRegionClassUI();
     regionUtils.addRegionOperationsRow(newRegionId);
+    regions.forEach((region) => {
+      regionUtils.deleteRegion(region.id);
+    });
   } catch {
     interfaceUtils.alert(
       "The selected regions have no interception between them"
@@ -131,6 +139,9 @@ regionUtils.regionsDifference = function (regions) {
   regionUtils.addRegion(differencePoints, newRegionId, hexColor, "", "100");
   regionUtils.updateAllRegionClassUI();
   regionUtils.addRegionOperationsRow(newRegionId);
+  regions.forEach((region) => {
+    regionUtils.deleteRegion(region.id);
+  });
   glUtils.updateRegionDataTextures();
   glUtils.updateRegionLUTTextures();
   glUtils.draw();
@@ -375,6 +386,9 @@ regionUtils.mergeRegions = function (regions) {
   regionUtils.addRegion(mergedPoints, newRegionId, hexColor, "", "100");
   regionUtils.updateAllRegionClassUI();
   regionUtils.addRegionOperationsRow(newRegionId);
+  regions.forEach((region) => {
+    regionUtils.deleteRegion(region.id);
+  });
   glUtils.updateRegionDataTextures();
   glUtils.updateRegionLUTTextures();
   glUtils.draw();
