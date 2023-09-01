@@ -1043,6 +1043,9 @@ regionUtils.JSONValToRegions= async function(jsonVal){
     var regions=jsonVal;
     await regionUtils.geoJSON2regions(regions);
     regionUtils.updateAllRegionClassUI();
+    if(overlayUtils._regionOperations){
+        regionUtils.updateRegionOperationsListUI();
+    }
     $('[data-bs-target="#markers-regions-project-gui"]').tab('show');
 }
 
