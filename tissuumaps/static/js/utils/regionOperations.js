@@ -406,6 +406,10 @@ regionUtils.selectRegion = function (region) {
   regionUtils.drawRegionPath(region.points, region.id + "_selected", "#0165fc")
 };
 
+/**
+ * @summary Removes a region to selected list
+ * @param {*} region Region to be removed from selection collection
+ */
 regionUtils.deSelectRegion = function (regionId) {
     delete regionUtils._selectedRegions[regionId];
     d3.select("#" + regionId + "_selected" + "_poly").remove();
