@@ -1,3 +1,7 @@
+/**
+ * @summary Generates region class accordions and region rows when regions
+ * operations mode is toggled on
+ */
 regionUtils.createRegionOperationsTable = function () {
   const allRegionClasses = Object.values(regionUtils._regions).map(function (
     e
@@ -293,6 +297,11 @@ regionUtils.createRegionOperationsTable = function () {
   return tableContainer;
 };
 
+/**
+ * @summary Creates a row for a region
+ * @param {*} regionId Id of the region
+ * @returns The row of the region
+ */
 regionUtils.createRegionOperationsRow = function (regionId) {
   const region = regionUtils._regions[regionId];
   const regionClass = region.regionClass;
@@ -558,6 +567,10 @@ regionUtils.createRegionOperationsRow = function (regionId) {
   return regionRow;
 };
 
+/**
+ * @summary Adds a region row to its corresponding region class accordion
+ * @param {*} regionId Id of the region
+ */
 regionUtils.addRegionOperationsRow = function (regionId) {
   const operationLabels = [
     "Show",
@@ -799,7 +812,7 @@ regionUtils.updateRegionOperationsListUI = function () {
 };
 
 /**
- * @summary Generates the region selection menu UI
+ * @summary Adds the regions operations UI
  */
 regionUtils.addRegionOperationsUI = function () {
   const regionOperationsUIContainer = interfaceUtils.getElementById(
@@ -883,12 +896,16 @@ regionUtils.addRegionOperationsUI = function () {
 
 /**
  * @summary Deletes the rows of the regions corresponding to the ids
- * @param {*} regionIds Ids of the regions that will get their selection item removed
+ * @param {*} regionIds Ids of the regions that will get their row removed
  */
 regionUtils.deleteRegionOperationRows = function (regionId) {
-    document.getElementById(`operations_row_${regionId}`).remove();
+  document.getElementById(`operations_row_${regionId}`).remove();
 };
 
+/**
+ * @summary Deletes the region class accordion in the region operations UI
+ * @param {*} regionClass Name of the class that will have its accordion removed
+ */
 regionUtils.deleteRegionOperationsAccordion = function (regionClass) {
   document
     .getElementById(`region_class_operations_accordion_${regionClass}`)
