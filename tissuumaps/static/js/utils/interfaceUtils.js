@@ -1844,6 +1844,7 @@ interfaceUtils._mGenUIFuncs.fillDropDownsIfExpectedCSV=function(uid,expectedHead
         for(d in expectedHeader){
             if(dropdowns[d]){
                 needle=expectedHeader[d];
+                if (needle === undefined || needle === null) needle = "";
                 if (typeof needle === 'object') needle = JSON.stringify(needle);
                 opts=dropdowns[d].options;
                 if (!opts) {
