@@ -2201,7 +2201,7 @@ interfaceUtils._mGenUIFuncs.groupUI=async function(uid, force){
         const trs = table.querySelectorAll('tbody tr')
         const filter = this.value
         const regex = new RegExp(filter, 'i')
-        const isFoundInTds = td => regex.test(td.innerText)
+        const isFoundInTds = td => regex.test(td.querySelector('label')?.innerText??"")
         const isFound = childrenArr => childrenArr.some(isFoundInTds)
         const setTrStyleDisplay = (element) => {
             if (isFound([
@@ -3315,3 +3315,6 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     
     return tr;
 }
+
+
+

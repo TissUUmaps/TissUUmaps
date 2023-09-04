@@ -36,6 +36,34 @@ HTMLElementUtils.inputTypeCheckbox = function (params) {
     return checkbox;
 }
 
+/** Create a number input  */
+HTMLElementUtils.inputTypeNumber = function (params) {
+    if (!params) {
+        var numberInput = document.createElement("input");
+        numberInput.type = "number";
+        return numberInput
+    }
+    var numberInput = document.createElement("input");
+    numberInput.type = "number";
+    (params.id || null ? numberInput.setAttribute("id", params.id) : null);
+    (params["class"] || null ? numberInput.setAttribute("class", params["class"]) : null);
+    (params.min || null ? numberInput.setAttribute("min", params.min) : null);
+    (params.max || null ? numberInput.setAttribute("max", params.max) : null);
+    (params.value || null ? numberInput.setAttribute("value", params.value) : null);
+    var eventListeners = params.eventListeners || null;
+    if (eventListeners) {
+        for (var message in eventListeners) {
+            numberInput.addEventListener(message, eventListeners[message]);
+        }
+    }
+    if (params.extraAttributes) {
+        for (let attr in params.extraAttributes) {
+            numberInput.setAttribute(attr, params.extraAttributes[attr]);
+        }
+    }
+    return numberInput;
+}
+
 /** Create a color input  */
 HTMLElementUtils.inputTypeColor = function (params) {
     if (!params) {

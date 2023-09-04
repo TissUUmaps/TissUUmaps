@@ -24,6 +24,8 @@ tmapp.registerActions = function () {
 
     interfaceUtils.listen(op + '_collapse_btn','click', function () { interfaceUtils.toggleRightPanel() },false);
     interfaceUtils.listen(op + '_drawregions_btn','click', function () { regionUtils.regionsOnOff() },false);
+    interfaceUtils.listen(op + "_draw_regions_free_hand_btn", "click", function () { regionUtils.freeHandRegionsOnOff(); }, false);
+    interfaceUtils.listen(op + "_operations_regions_btn", "click", function () { regionUtils.regionOperationsOnOff(); }, false);
     interfaceUtils.listen(op + '_export_regions','click', function () { regionUtils.exportRegionsToJSON() },false);
     interfaceUtils.listen(op + '_import_regions','click', function () { regionUtils.importRegionsFromJSON() },false);
     interfaceUtils.listen(op + '_export_regions_csv','click', function () { regionUtils.pointsInRegionsToCSV() },false);
@@ -100,13 +102,20 @@ tmapp.init = function () {
         }
     };
 
+    function pressHandler(event) {
+        if (overlayUtils._freeHandDrawRegions) {
+          // Call region creator and drawer
+          regionUtils.freeHandManager(event);
+        }
+    }
+
     //OSD handlers are not registered manually they have to be registered
     //using MouseTracker OSD objects 
     /*var ISS_mouse_tracker = new OpenSeadragon.MouseTracker({
         element: tmapp[vname].canvas,
         clickHandler: click_handler
     }).setTracking(true);*/
-    
+    tmapp["ISS_viewer"].addHandler("canvas-press", pressHandler);
     tmapp["ISS_viewer"].addHandler('canvas-click', click_handler);
     tmapp["ISS_viewer"].addHandler("animation-finish", function animationFinishHandler(event){
         d3.selectAll("." + regionUtils._drawingclass).selectAll('polyline').each(function(el) {

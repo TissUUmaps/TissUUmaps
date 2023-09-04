@@ -12,7 +12,7 @@ Points2Regions = {
   name: "Points2Regions Plugin",
   parameters: {
     _nclusters: {
-      label: "Number of clusters:",
+      label: "Number of clusters (default 8):",
       type: "number",
       default: 8,
     },
@@ -21,13 +21,14 @@ Points2Regions = {
       type: "number",
       default: 1,
     },
-    _stride: {
-      label: "Bin size (increase/decrease for coarser/finer regions):",
+    _sigma: {
+      label:
+        "Spatial resolution (increase/decrease for coarser/finer regions):",
       type: "number",
       default: 100,
     },
     _selectStride: {
-      label: "Select stride on tissue (optional)",
+      label: "Select spatial resolution on tissue (optional)",
       type: "button",
     },
     _run: {
@@ -56,10 +57,10 @@ Points2Regions = {
       label: "Select Points2Regions Key:",
       type: "select",
     },
-    _sigma: {
-      label: "Amount of smoothing between bins (default 1):",
+    _bins_per_res: {
+      label: "Number of bins per `resolution` (default 3):",
       type: "number",
-      default: 1.5,
+      default: 3,
     },
     _seed: {
       label: "Random seed (used during KMeans):",
@@ -184,7 +185,7 @@ Points2Regions.run = function () {
         nclusters: Points2Regions.get("_nclusters"),
         expression_threshold: Points2Regions.get("_expression_threshold"),
         sigma: Points2Regions.get("_sigma"),
-        stride: Points2Regions.get("_stride"),
+        bins_per_res: Points2Regions.get("_bins_per_res"),
         region_name: Points2Regions.get("_region_name"),
         seed: Points2Regions.get("_seed"),
         format: Points2Regions.get("_format"),
@@ -388,12 +389,12 @@ def points2regions(xy: np.ndarray, labels: np.ndarray, sigma: float, n_clusters:
     # Iterate data by library ids
     if library_id_column is not None:
         unique_library_id = np.unique(library_id_column)
-        iterdata = {
-            lib_id: (
+        iterdata = [
+            (lib_id, (
                 xy[library_id_column==lib_id],
-                labels[library_id_column==lib_id],
-            ) for lib_id in unique_library_id
-        }
+                labels[library_id_column==lib_id]
+            )) for lib_id in unique_library_id
+        ]
         get_slice = lambda library_id, data: data == library_id
     else:
         iterdata = [('id', (xy, labels))]
@@ -431,7 +432,7 @@ def points2regions(xy: np.ndarray, labels: np.ndarray, sigma: float, n_clusters:
     # Add clusters to dataframe
     output_column = np.zeros(len(xy), dtype='int')
     for library_id in results.keys():
-        if library_id_column:
+        if library_id_column is not None:
             library_id_slice_ind = get_slice(library_id, library_id_column)
         else:
             library_id_slice_ind = get_slice(library_id, xy)
@@ -704,19 +705,22 @@ x = np.asarray(processeddata[x_field].to_py(), dtype="float32")
 y = np.asarray(processeddata[y_field].to_py(), dtype="float32")
 if (data_obj._collectionItem_col in processeddata.keys()):
     lib_id = np.asarray(processeddata[data_obj._collectionItem_col].to_py())
-    x += lib_id * max(x) * 1.1
+else:
+    lib_id = None
 xy = np.vstack((x,y)).T
 
 labels = np.asarray(processeddata[Points2Regions.get("_clusterKey")].to_py())
 from os.path import join
 
 Points2Regions.setMessage("Run failed.")
-stride = float(Points2Regions.get("_stride"))
+bins_per_res = float(Points2Regions.get("_bins_per_res"))
 sigma = float(Points2Regions.get("_sigma"))
 nclusters = int(Points2Regions.get("_nclusters"))
 expression_threshold = float(Points2Regions.get("_expression_threshold"))
 seed = int(Points2Regions.get("_seed"))
 region_name = Points2Regions.get("_region_name")
+stride = sigma / bins_per_res
+
 if (Points2Regions.get("_format")== "GeoJSON polygons"):
     compute_regions = True
 else:
@@ -725,11 +729,11 @@ else:
 c,r = points2regions(
     xy,
     labels,
-    sigma * stride,
+    sigma,
     nclusters,
     stride,
     expression_threshold,
-    None,
+    lib_id,
     compute_regions,
     seed,
     region_name
@@ -820,6 +824,7 @@ Points2Regions.inputTrigger = function (parameterName) {
 };
 
 Points2Regions.estimateBinSize = function (parameterName) {
+  /*
   let data_obj = dataUtils.data[Points2Regions.get("_dataset")];
   let XKey = dataUtils.data[Points2Regions.get("_dataset")]._X;
   let YKey = dataUtils.data[Points2Regions.get("_dataset")]._Y;
@@ -831,6 +836,7 @@ Points2Regions.estimateBinSize = function (parameterName) {
   let bin_height = 2 * height * Y.length ** (-1 / 3);
   console.log(width, height, bin_width, bin_height, X.length, Y.length);
   Points2Regions.set("_stride", (bin_width + bin_height) / 2);
+  */
 };
 
 Points2Regions.selectStride = function (parameterName) {
@@ -889,7 +895,7 @@ Points2Regions.selectStride = function (parameterName) {
           0.004 / tmapp["ISS_viewer"].viewport.getZoom()
       )
       .attr("class", "stride_region");
-    Points2Regions.set("_stride", rectangle.width);
+    Points2Regions.set("_sigma", rectangle.width);
     return;
   };
   var dragHandler = function (event) {

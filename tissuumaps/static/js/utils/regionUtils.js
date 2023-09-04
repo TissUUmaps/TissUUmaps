@@ -131,10 +131,14 @@ regionUtils.closePolygon = function () {
     var hexcolor = "#FF0000"; //overlayUtils.randomColor("hex");    
 
     regionUtils._isNewRegion = true;
+    regionUtils._currentPoints.push(regionUtils._currentPoints[0]);
     regionUtils.addRegion([[regionUtils._currentPoints]], regionid, hexcolor);
     regionUtils._currentPoints = null;
 
     regionUtils.updateAllRegionClassUI();
+    if(overlayUtils._regionOperations){
+        regionUtils.addRegionOperationsRow(regionid)
+    }
     $(document.getElementById("regionClass-")).collapse("show");
 
 }
@@ -520,6 +524,16 @@ regionUtils.deleteRegion = function (regionid, skipUpdateAllRegionClassUI) {
         var rPanelHist = document.getElementById(op + regionid + "_tr_hist");
         rPanelHist.parentElement.removeChild(rPanelHist);
     }
+    if(!overlayUtils._regionOperations) return; 
+    regionUtils.deleteRegionOperationRows(regionid);  
+    if(!regionUtils._selectedRegions[regionid]) return; 
+    const regionClass = regionUtils._selectedRegions[regionid].regionClass;
+    regionUtils.deSelectRegion(regionid); 
+    const remainingClassRegions = Object.values(regionUtils._regions).filter((region) => region.regionClass === regionClass);
+    if(remainingClassRegions.length === 0){
+        regionUtils.deleteRegionOperationsAccordion(regionClass);
+    }
+    regionUtils.updateAllRegionClassUI();
     //if(!skipUpdateAllRegionClassUI) {
     //    regionUtils.updateAllRegionClassUI();
     //}
@@ -693,18 +707,217 @@ regionUtils.analyzeRegion = function (regionid) {
 /** 
  *  regionUtils */
 regionUtils.regionsOnOff = function () {
+    // Toggle off other region modes
+    if (overlayUtils._freeHandDrawRegions) {
+        regionUtils.freeHandRegionsOnOff();
+    }
     overlayUtils._drawRegions = !overlayUtils._drawRegions;
     var op = tmapp["object_prefix"];
     let regionIcon = document.getElementById(op + '_drawregions_icon');
     if (overlayUtils._drawRegions) {
         regionIcon.classList.remove("bi-circle");
         regionIcon.classList.add("bi-check-circle");
+        // Set region drawing cursor and show hint
+        regionUtils.setViewerCursor("crosshair")
+        regionUtils.showHint("Click to draw regions")
     } else {
         regionUtils.resetManager();
         regionIcon.classList.remove("bi-check-circle");
         regionIcon.classList.add("bi-circle");
+         // Reset cursor and hide hint
+        regionUtils.setViewerCursor("auto")
+        regionUtils.hideHint();
     }
 }
+
+regionUtils.freeHandRegionsOnOff = function () {
+    // Toggle off other region modes
+    if (overlayUtils._drawRegions) {
+        regionUtils.regionsOnOff();
+    }
+    overlayUtils._freeHandDrawRegions = !overlayUtils._freeHandDrawRegions;
+    const op = tmapp["object_prefix"];
+    let freeHandButtonIcon = document.getElementById(
+        op + "_draw_regions_free_hand_icon"
+    );
+    if (overlayUtils._freeHandDrawRegions) {
+        freeHandButtonIcon.classList.remove("bi-circle");
+        freeHandButtonIcon.classList.add("bi-check-circle");
+        // Set region drawing cursor and show hint
+        regionUtils.setViewerCursor("crosshair");
+        regionUtils.showHint("Drag the mouse to draw regions");
+    } else {
+        regionUtils.resetManager();
+        freeHandButtonIcon.classList.remove("bi-check-circle");
+        freeHandButtonIcon.classList.add("bi-circle");
+        // Reset cursor and hide hint
+        regionUtils.setViewerCursor("auto");
+        regionUtils.hideHint();
+    }
+};
+
+regionUtils.freeHandManager = function (event) {
+    function onCanvasRelease(){
+        // Get OSDViewer
+        const OSDViewer = tmapp[tmapp["object_prefix"] + "_viewer"];
+        // Remove mouse dragging handler
+        OSDViewer.removeHandler(
+          "canvas-drag",
+          createRegionFromCanvasDrag
+        );
+        // Remove release handler
+        OSDViewer.removeHandler(
+          "canvas-release",
+          onCanvasRelease
+        );
+        // If there is only one point, there is no region to be drawn, 
+        // reset and stop here
+        if (regionUtils._currentPoints < 1) { 
+          regionUtils.resetManager(); 
+          return;
+        }
+        // Close the region if initial point and final point are close enough
+        if (
+          regionUtils.distance(
+            regionUtils._currentPoints[regionUtils._currentPoints.length - 1],
+            regionUtils._currentPoints[0]
+          ) <
+          (10 * regionUtils._epsilonDistance) /
+            tmapp["ISS_viewer"].viewport.getZoom()
+        ) {
+          regionUtils.closePolygon();
+          return;
+        }
+        // If initial point and final point are not close enough, reset
+        regionUtils.resetManager();
+    }
+    
+      function createRegionFromCanvasDrag(event) {
+        const drawingclass = regionUtils._drawingclass;
+        // Get OSDViewer
+        const OSDviewer = tmapp[tmapp["object_prefix"] + "_viewer"];
+        const canvas =
+          overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
+        // Block viewer panning
+        event.preventDefaultAction = true;
+        // Get region's next point coordinates from event position 
+        const normCoords = OSDviewer.viewport.pointFromPixel(event.position);
+        // Get stroke width depending on currently applied zoom to image
+        const strokeWstr =
+          regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
+        let regionobj;
+        if (regionUtils._isNewRegion) {
+          regionUtils._currentPoints = [];
+          regionUtils._isNewRegion = false;
+          regionUtils._currentRegionId += 1;
+          const idregion = regionUtils._currentRegionId;
+          const startPoint = [normCoords.x, normCoords.y];
+          regionUtils._currentPoints.push(startPoint);
+          // Create a group to store region
+          regionobj = d3.select(canvas).append("g").attr("class", drawingclass);
+          // Draw a circle in the position of the first point of the region
+          regionobj
+            .append("circle")
+            .attr(
+              "r",
+              (10 * regionUtils._handleRadius) /
+                tmapp["ISS_viewer"].viewport.getZoom()
+            )
+            .attr("fill", regionUtils._colorActiveHandle)
+            .attr("stroke", "#ff0000")
+            .attr("stroke-width", strokeWstr)
+            .attr("class", "region" + idregion)
+            .attr("id", "handle-0-region" + idregion)
+            .attr(
+              "transform",
+              "translate(" +
+                startPoint[0].toString() +
+                "," +
+                startPoint[1].toString() +
+                ") scale(" +
+                regionUtils._scaleHandle +
+                ")"
+            )
+            .attr("is-handle", "true")
+            .style({ cursor: "pointer" });
+            return 
+        } 
+        const idregion = regionUtils._currentRegionId;
+        const nextpoint = [normCoords.x, normCoords.y];
+        regionUtils._currentPoints.push(nextpoint);
+        regionobj = d3.select("." + drawingclass);
+        regionobj.select("polyline").remove();
+        regionobj
+          .append("polyline")
+          .attr("points", regionUtils._currentPoints)
+          .style("fill", "none")
+          .attr("stroke-width", strokeWstr)
+          .attr("stroke", "#ff0000")
+          .attr("class", "region" + idregion);
+        
+    };  
+    // Get OSDViewer
+    const OSDViewer = tmapp[tmapp["object_prefix"] + "_viewer"];
+    // Add region creation handler while mouse is pressed.
+    // Capture the drag events to get the mouse position as the
+    // left button.
+    // Build the region based on the position of those events.
+    OSDViewer.addHandler("canvas-drag", createRegionFromCanvasDrag);
+    // Finish region drawing when mouse is released
+    OSDViewer.addHandler("canvas-release", onCanvasRelease);
+};
+
+/**
+ * 
+ * @param {string} cursorType 
+ * @summary Set the OSD Viewer cursor type 
+ */
+regionUtils.setViewerCursor = function(cursorType){
+    // Get OSDViewer HTML element
+    const OSDViewerElement = tmapp[tmapp["object_prefix"] + "_viewer"].element
+    // Set the cursor type 
+    OSDViewerElement.style.cursor = cursorType
+}
+
+/**
+ * 
+ * @param {string} message 
+ * @summary Show a hint in the regions tab  
+ */
+regionUtils.showHint = function(message){
+    // Get region buttons container
+    const regionsButtonsContainer = document.getElementById("regionButtons")
+    // Check if banner is already visible, if not, create it 
+    let hintBanner = document.getElementById("regionHintBanner")
+    if(!hintBanner) {
+        hintBanner = document.createElement("div")
+        hintBanner.setAttribute("id", "regionHintBanner")
+    } 
+    // Set banner styles
+    hintBanner.innerText = message
+    hintBanner.style.width = "100%"
+    hintBanner.style.textAlign = "center"
+    hintBanner.style.background = "rgba(239,239,240, 1)"
+    hintBanner.style.padding = "8px 0 8px 0"
+    hintBanner.style.margin = "8px 0 8px 0"
+    hintBanner.style.color = "green"
+    // Add banner to region buttons container
+    regionsButtonsContainer.append(hintBanner)
+}
+
+/**
+ * 
+ * @summary Hide regions tab hint 
+ */
+regionUtils.hideHint = function(){
+    // Get hint element
+    const hintBanner = document.getElementById("regionHintBanner")
+    // If banner does not exist, return
+    if(!hintBanner) return 
+    // Remove hint element
+    hintBanner.remove()
+}
+
 /** 
  *  regionUtils */
 regionUtils.exportRegionsToJSON = function () {
@@ -830,6 +1043,9 @@ regionUtils.JSONValToRegions= async function(jsonVal){
     var regions=jsonVal;
     await regionUtils.geoJSON2regions(regions);
     regionUtils.updateAllRegionClassUI();
+    if(overlayUtils._regionOperations){
+        regionUtils.updateRegionOperationsListUI();
+    }
     $('[data-bs-target="#markers-regions-project-gui"]').tab('show');
 }
 

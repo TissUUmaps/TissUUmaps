@@ -280,38 +280,88 @@
                           class="tab-pane show active"
                           id="markers-regions-project-gui"
                         >
-                          <div class="panel panel-default">
+                        <div class="panel panel-default">
                             <div class="panel-body">
                               <div id="divRegionsDownloadButtons"></div>
-                              <div class="row my-1">
-                                <button
-                                  id="ISS_drawregions_btn"
-                                  class="btn btn-primary col mx-1"
-                                  type="button"
+                              <div id="regionButtons" class="py-2 px-0 d-flex flex-wrap border rounded" style="margin: 12px 0; background-color: var(--bs-primary-light);" >
+                                  <div 
+                                    class="mx-2 w-100 mb-2"
+                                    style="display: grid; grid-template-columns: 50% 50%; gap: 8px"
+                                  >
+                                    <p class="fs-5 m-0 fw-bold" style="grid-column: span 2;">Region Drawing</p>
+                                    <div class="me-2">
+                                        <button
+                                        id="ISS_drawregions_btn"
+                                        class="btn btn-primary w-100"
+                                        type="button"
+                                        >
+                                            <i
+                                                id="ISS_drawregions_icon"
+                                                class="bi bi-circle"
+                                            ></i>
+                                        Point Based
+                                        </button>
+                                    </div>
+                                    <div class="me-2">
+                                        <button
+                                        id="ISS_draw_regions_free_hand_btn"
+                                        class="btn btn-primary w-100"
+                                        type="button"
+                                        >
+                                            <i
+                                                id="ISS_draw_regions_free_hand_icon"
+                                                class="bi bi-circle"
+                                            ></i>
+                                        Free Hand
+                                        </button>
+                                    </div>
+                                   
+                                  </div>
+                                <div 
+                                    class="px-2 w-100 mb-2"
+                                    style="display: grid; grid-template-columns: 50% 50%; gap: 8px"  
                                 >
-                                  <i
-                                    id="ISS_drawregions_icon"
-                                    class="bi bi-circle"
-                                  ></i>
-                                  Draw regions
-                                </button>
-                                <button
-                                  id="ISS_fillregions_btn"
-                                  class="btn btn-primary col mx-1"
-                                  type="button"
-                                >
-                                  <i
-                                    id="ISS_fillregions_icon"
-                                    class="bi bi-circle"
-                                  ></i>
-                                  Fill all regions
-                                </button>
+                                    <p class="fs-5 m-0 fw-bold" style="grid-column: span 2;">Region Manipulation</p>
+                                    <div class="me-2">
+                                        <button
+                                        id="ISS_operations_regions_btn"
+                                        class="btn btn-primary w-100"
+                                        type="button"
+                                        
+                                        >
+                                            <i
+                                            id="ISS_operations_regions_icon"
+                                            class="bi bi-circle"
+                                            ></i>
+                                        Operations
+                                        </button>
+                                    </div>
+                                    <div class="me-2">
+                                        <button
+                                        id="ISS_fillregions_btn"
+                                        class="btn btn-primary w-100"
+                                        type="button"
+                                        
+                                    >
+                                        <i
+                                        id="ISS_fillregions_icon"
+                                        class="bi bi-circle"
+                                        ></i>
+                                        Fill all
+                                    </button>
+                                    </div>
+                                </div>
                               </div>
                               <div id="regionAccordions"></div>
+                             
                               <div id="markers-regions-div">
                                 <div
                                   class="my-1"
                                   id="markers-regions-panel"
+                                ></div>
+                                <div
+                                  class="my-1 d-none"
+                                  id="region-operations-panel"
                                 ></div>
                               </div>
                             </div>
@@ -483,6 +533,8 @@
       </div>
     </div>
   </body>
+  <script src="static/vendor/turf-6.5.0/turf.min.js"></script>
+  <script src="static/vendor/polygon-clipping-0.15.3/polygon-clipping.min.js"></script>
   <script src="static/vendor/bootstrap-5.1.1/dist/js/bootstrap.bundle.min.js"></script>
   <script src="static/vendor/openseadragon-bin-4.0.0/openseadragon.min.js"></script>
   <script src="static/vendor/openseadragon-plugins/openseadragon-filtering.js"></script>
@@ -492,12 +544,15 @@
   <script src="static/vendor/PapaParse-5.3.0/papaparse.min.js"></script>
   <script src="static/vendor/sorttable/sorttable.js"></script>
   <script src="static/js/utils/interfaceUtils.js"></script>
+  <script src="static/js/utils/customElementUtils.js"></script>
   <script src="static/js/utils/dataUtils.js"></script>
   <script src="static/js/utils/h5Utils.js"></script>
   <script src="static/js/utils/markerUtils.js"></script>
   <script src="static/js/utils/OSDViewerUtils.js"></script>
   <script src="static/js/utils/HTMLElementUtils.js"></script>
   <script src="static/js/utils/regionUtils.js"></script>
+  <script src="static/js/utils/regionOperations.js"></script>
+  <script src="static/js/utils/regionOperationsUI.js"></script>
   <script src="static/js/utils/overlayUtils.js"></script>
   <script src="static/js/utils/filterUtils.js"></script>
   <script src="static/js/utils/glUtils.js"></script>
