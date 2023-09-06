@@ -59,12 +59,12 @@ Spot_Inspector = {
     _marker_row: {
       label: "Select {row} column of markers",
       type: "select",
-      default: "channels",
+      default: "rounds",
     },
     _marker_col: {
       label: "Select {col} column of markers",
       type: "select",
-      default: "rounds",
+      default: "channels",
     },
     _layername: {
       label: "Or select column with corresponding layer name",
