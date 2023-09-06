@@ -113,6 +113,8 @@ Spot_Inspector.inputTrigger = function (parameterName) {
   } else if (parameterName == "_cmap") {
     Spot_Inspector.setFilters();
   } else if (parameterName == "_importImages") {
+    $(".Spot_Inspector_overlay").remove();
+    $("#ISS_Spot_Inspector_viewer").remove();
     interfaceUtils
       .prompt(
         "<i>This will replace all layers of the current project.</i><br/>Give the path format of your images, use * for numbers:",
@@ -258,6 +260,7 @@ Spot_Inspector.loadImages = function (pathFormat) {
       else projectUtils.loadProject(data);
       setTimeout(function () {
         Spot_Inspector.updateLayerFormat(false);
+        Spot_Inspector.getMatrix();
       }, 500);
     },
     complete: function (data) {
