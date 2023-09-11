@@ -606,7 +606,7 @@ class Plugin:
                 except:
                     labels = f.get(jsonParam["clusterKey"])[()]
                 labels = labels.astype(str)
-        bins_per_res = float(jsonParam["_bins_per_res"])
+        bins_per_res = float(jsonParam["bins_per_res"])
         sigma = float(jsonParam["sigma"])
         nclusters = int(jsonParam["nclusters"])
         expression_threshold = float(jsonParam["expression_threshold"])
