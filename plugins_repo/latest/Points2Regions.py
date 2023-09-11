@@ -277,7 +277,7 @@ def points2regions(
             grid_props = result["grid_props"]
             clusters = result["cluster_per_bin"]
             label_mask = np.zeros(grid_props["grid_size"], dtype="uint8")
-            label_mask[tuple(ind for ind in grid_props["grid_coords"])] = clusters
+            label_mask[tuple(ind for ind in grid_props["grid_coords"])] = clusters + 1
             label_mask = label_mask
             geojson = labelmask2geojson(
                 label_mask,
