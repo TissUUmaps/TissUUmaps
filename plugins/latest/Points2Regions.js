@@ -445,7 +445,7 @@ def points2regions(xy: np.ndarray, labels: np.ndarray, sigma: float, n_clusters:
             grid_props = result['grid_props']
             clusters = result['cluster_per_bin']
             label_mask = np.zeros(grid_props['grid_size'], dtype='uint8')
-            label_mask[tuple(ind for ind in grid_props['grid_coords'])] = clusters
+            label_mask[tuple(ind for ind in grid_props['grid_coords'])] = clusters + 1
             label_mask = label_mask
             geojson = labelmask2geojson(label_mask, region_name=region_name, scale=1.0/grid_props['grid_scale'], offset=grid_props['grid_offset'])
             geojsons.append(geojson)
@@ -640,7 +640,6 @@ def kde_per_label(xy: np.ndarray, features: sp.spmatrix, sigma: float, return_ne
     row, col = adj.nonzero()
     d2 = (xy[row,0] - xy[col,0])**2
     d2 = d2 + (xy[row,1] - xy[col,1])**2
-    d2 = np.sqrt(d2)
     d2 = np.exp(-d2 / (2 * sigma * sigma))
     aff = sp.csr_matrix((d2, (row, col)), shape=adj.shape, dtype='float32')
     if not return_neighbors:
