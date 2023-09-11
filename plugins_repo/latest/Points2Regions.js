@@ -640,7 +640,6 @@ def kde_per_label(xy: np.ndarray, features: sp.spmatrix, sigma: float, return_ne
     row, col = adj.nonzero()
     d2 = (xy[row,0] - xy[col,0])**2
     d2 = d2 + (xy[row,1] - xy[col,1])**2
-    d2 = np.sqrt(d2)
     d2 = np.exp(-d2 / (2 * sigma * sigma))
     aff = sp.csr_matrix((d2, (row, col)), shape=adj.shape, dtype='float32')
     if not return_neighbors:
