@@ -491,8 +491,8 @@ regionUtils.globalPointInPath=function(x,y,path,tmpPoint) {
             const markerData = dataUtils.data[options.dataset]["_processeddata"];
             const columns = dataUtils.data[options.dataset]["_csv_header"];
             for (const d of node.data) {
-                const x = markerData[xselector][d];
-                const y = markerData[yselector][d];
+                const x = markerData[xselector][d] * options.coordFactor;
+                const y = markerData[yselector][d] * options.coordFactor;
                 if (x >= x0 && x < x3 && y >= y0 && y < y3) {
                     // Note: expanding each point into a full object will be
                     // very inefficient memory-wise for large datasets, so
@@ -540,8 +540,8 @@ regionUtils.searchTreeForPointsInRegion = function (quadtree, x0, y0, x3, y3, re
     let countsInsideRegion = 0;
     let pointsInside = [];
     for (d of pointInBbox) {
-        const x = d[xselector];
-        const y = d[yselector];
+        const x = d[xselector] * options.coordFactor;
+        const y = d[yselector] * options.coordFactor;
         if (regionUtils._pointInRegion(x, y, regionid, imageBounds)) {
             countsInsideRegion += 1;
             pointsInside.push(d);
@@ -705,7 +705,8 @@ regionUtils.analyzeRegion = function (regionid) {
                     "globalCoords":true,
                     "xselector":dataUtils.data[uid]["_X"],
                     "yselector":dataUtils.data[uid]["_Y"],
-                    "dataset":uid
+                    "dataset":uid,
+                    "coordFactor":dataUtils.data[uid]["_coord_factor"]
                 });
             if(pointsInside.length>0){
                 pointsInside.forEach(function(p){
