@@ -1313,12 +1313,6 @@ regionUtils._findRegionByPoint = function(px, py, imageBounds) {
 
     let foundRegion = -1;
     while (offset < numItems) {
-        // Traverse edge list to find first path of next object ID
-        while (offset < numItems && (edgeList[offset * 4 + 2] - 1) != objectID) {
-            const count = edgeList[offset * 4 + 3];
-            offset += count + 1;
-        }
-
         // (TODO Add bounding box test to check if object can be skipped)
 
         // Compute winding number from all edges stored for the object ID
@@ -1344,6 +1338,8 @@ regionUtils._findRegionByPoint = function(px, py, imageBounds) {
         // Apply non-zero fill rule for inside test
         const isInside = windingNumber != 0;
         if (isInside) { foundRegion = objectID; }
+
+        objectID = offset < numItems ? (edgeList[offset * 4 + 2] - 1) : -1;
     }
     return foundRegion >= 0 ? regionUtils._regionIndexToID[foundRegion] : null;
 }
