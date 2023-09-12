@@ -85,12 +85,13 @@ regionUtils.duplicateRegions = function (regions) {
     const newRegionId = "region" + (regionUtils._currentRegionId + 1);
     regionUtils._currentRegionId++;
     const hexColor = overlayUtils.randomColor("hex");
+    let viewportPoints = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
     regionUtils.addRegion(
-      regionUtils.objectToArrayPoints(region.points),
+      regionUtils.objectToArrayPoints(viewportPoints),
       newRegionId,
       hexColor,
       region.regionClass,
-      region.scale
+      region.collectionIndex
     );
     regionUtils.addRegionOperationsRow(newRegionId);
   });
@@ -104,12 +105,17 @@ regionUtils.duplicateRegions = function (regions) {
 regionUtils.regionsIntersection = function (regions) {
   try {
     const intersectionPoints = polygonClipping.intersection(
-      ...regions.map((region) => regionUtils.objectToArrayPoints(region.points))
+      ...regions.map((region) => {
+        let viewportPoints = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
+        return regionUtils.objectToArrayPoints(viewportPoints)
+      })
     );
+    // TODO: Check that all regions have the same collection index. We can not intersect regions from different layers.
+    const newRegionLayerIndex = regions[0].collectionIndex;
     regionUtils._currentRegionId += 1;
     const newRegionId = "region" + regionUtils._currentRegionId;
     const hexColor = overlayUtils.randomColor("hex");
-    regionUtils.addRegion(intersectionPoints, newRegionId, hexColor, "", "100");
+    regionUtils.addRegion(intersectionPoints, newRegionId, hexColor, "", newRegionLayerIndex);
     regionUtils.updateAllRegionClassUI();
     regionUtils.addRegionOperationsRow(newRegionId);
     regions.forEach((region) => {
@@ -132,12 +138,17 @@ regionUtils.regionsIntersection = function (regions) {
  */
 regionUtils.regionsDifference = function (regions) {
   const differencePoints = polygonClipping.xor(
-    ...regions.map((region) => regionUtils.objectToArrayPoints(region.points))
+    ...regions.map((region) => {
+      let viewportPoints = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
+      return regionUtils.objectToArrayPoints(viewportPoints)
+    })
   );
+  // TODO: Check that all regions have the same collection index. We can not intersect regions from different layers.
+  const newRegionLayerIndex = regions[0].collectionIndex;
   regionUtils._currentRegionId += 1;
   const newRegionId = "region" + regionUtils._currentRegionId;
   const hexColor = overlayUtils.randomColor("hex");
-  regionUtils.addRegion(differencePoints, newRegionId, hexColor, "", "100");
+  regionUtils.addRegion(differencePoints, newRegionId, hexColor, "", newRegionLayerIndex);
   regionUtils.updateAllRegionClassUI();
   regionUtils.addRegionOperationsRow(newRegionId);
   regions.forEach((region) => {
@@ -157,8 +168,12 @@ regionUtils.regionsDifference = function (regions) {
  */
 regionUtils.resizeRegion = function (regionId, scale) {
   const scaleFactor = scale / 100;
+  let viewportPoints = regionUtils.globalPointsToViewportPoints(
+    regionUtils._regions[regionId].globalPoints, 
+    regionUtils._regions[regionId].collectionIndex
+  );
   const points = regionUtils.objectToArrayPoints(
-    regionUtils._regions[regionId].points
+    viewportPoints
   );
 
   //Iterate through each of the polygons in the multipolygon
@@ -265,7 +280,7 @@ regionUtils.updateRegionCoordinates = function (region) {
         if (y > _ymax) _ymax = y;
         if (y < _ymin) _ymin = y;
         polygon.push({ x: x, y: y });
-        let tiledImage = viewer.world.getItemAt(0);
+        let tiledImage = viewer.world.getItemAt(region.collectionIndex);
         let imageCoord = tiledImage.viewportToImageCoordinates(x, y, true);
         globalPolygon.push({ x: imageCoord.x, y: imageCoord.y });
       }
@@ -279,7 +294,7 @@ regionUtils.updateRegionCoordinates = function (region) {
     (region._xmax = _xmax),
     (region._ymin = _ymin),
     (region._ymax = _ymax);
-  const tiledImage = viewer.world.getItemAt(0);
+  const tiledImage = viewer.world.getItemAt(region.collectionIndex);
   const _min_imageCoord = tiledImage.viewportToImageCoordinates(_xmin, _ymin);
   const _max_imageCoord = tiledImage.viewportToImageCoordinates(_xmax, _ymax);
   (region._gxmin = _min_imageCoord.x),
@@ -301,8 +316,9 @@ regionUtils.updateRegionCoordinates = function (region) {
  */
 regionUtils.drawOffsettedRegion = function (region, points, onlyBorder) {
   if (onlyBorder) {
+    let viewportPoints = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
     points = polygonClipping.xor(
-      regionUtils.objectToArrayPoints(region.points),
+      regionUtils.objectToArrayPoints(viewportPoints),
       points
     );
   }
@@ -318,7 +334,7 @@ regionUtils.drawOffsettedRegion = function (region, points, onlyBorder) {
     newRegionId,
     hexColor,
     region.regionClass,
-    region.scale
+    region.collectionIndex
   );
 
   regionUtils.addRegionOperationsRow(newRegionId);
@@ -380,12 +396,17 @@ regionUtils.stringToFloatPoints = function (points) {
  */
 regionUtils.mergeRegions = function (regions) {
   const mergedPoints = polygonClipping.union(
-    ...regions.map((region) => regionUtils.objectToArrayPoints(region.points))
+    ...regions.map((region) => {
+      let viewportPoints = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
+      return regionUtils.objectToArrayPoints(viewportPoints)
+    })
   );
+  // TODO: Check that all regions have the same collection index. We can not intersect regions from different layers.
+  const newRegionLayerIndex = regions[0].collectionIndex;
   regionUtils._currentRegionId += 1;
   const newRegionId = "region" + regionUtils._currentRegionId;
   const hexColor = overlayUtils.randomColor("hex");
-  regionUtils.addRegion(mergedPoints, newRegionId, hexColor, "", "100");
+  regionUtils.addRegion(mergedPoints, newRegionId, hexColor, "", newRegionLayerIndex);
   regionUtils.updateAllRegionClassUI();
   regionUtils.addRegionOperationsRow(newRegionId);
   regions.forEach((region) => {
@@ -403,7 +424,8 @@ regionUtils.mergeRegions = function (regions) {
  */
 regionUtils.selectRegion = function (region) {
   regionUtils._selectedRegions[region.id] = region;
-  regionUtils.drawRegionPath(region.points, region.id + "_selected", "#0165fc")
+  let points = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
+  regionUtils.drawRegionPath(points, region.id + "_selected", "#0165fc")
 };
 
 /**
