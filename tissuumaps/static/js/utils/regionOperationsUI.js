@@ -438,7 +438,11 @@ regionUtils.createRegionOperationsRow = function (regionId) {
           const offset =
             (regionOffsetInput.value / OSDViewerUtils.getImageWidth()) *
             distance;
-          worker.postMessage([region, offset]);
+          let viewportPoints = regionUtils.globalPointsToViewportPoints(
+            region.globalPoints,
+            region.collectionIndex
+          );
+          worker.postMessage([viewportPoints, offset]);
           worker.onmessage = function (event) {
             if (!event.data) {
               interfaceUtils.alert(
@@ -474,7 +478,11 @@ regionUtils.createRegionOperationsRow = function (regionId) {
           const offset =
             (regionOffsetInput.value / OSDViewerUtils.getImageWidth()) *
             distance;
-          worker.postMessage([region, offset]);
+          let viewportPoints = regionUtils.globalPointsToViewportPoints(
+            region.globalPoints,
+            region.collectionIndex
+          );
+          worker.postMessage([viewportPoints, offset]);
           worker.onmessage = function (event) {
             if (!event.data) {
                 interfaceUtils.alert(
@@ -516,7 +524,11 @@ regionUtils.createRegionOperationsRow = function (regionId) {
             const offset =
               (regionOffsetInput.value / OSDViewerUtils.getImageWidth()) *
               distance;
-            worker.postMessage([region, offset]);
+            let viewportPoints = regionUtils.globalPointsToViewportPoints(
+              region.globalPoints,
+              region.collectionIndex
+            );
+            worker.postMessage([viewportPoints, offset]);
             worker.onmessage = function (event) {
               regionUtils.drawRegionPath(
                 regionUtils.arrayToObjectPoints(event.data),
@@ -550,7 +562,8 @@ regionUtils.createRegionOperationsRow = function (regionId) {
   regionRow.appendChild(regionOffsetCol);
   regionRow.onmouseover = function () {
     regionRow.style.background = "var(--bs-primary-light)";
-    regionUtils.drawRegionPath(region.points, region.id, "#39FF14")
+    let viewportPoints = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
+    regionUtils.drawRegionPath(viewportPoints, region.id, "#39FF14")
   };
   regionRow.onmouseout = function () {
     regionRow.style.background = "white";

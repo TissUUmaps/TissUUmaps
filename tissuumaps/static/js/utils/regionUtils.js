@@ -66,6 +66,36 @@ regionUtils.getLayerFromCoord = function (coordinates) {
     }
     return 0;
 }
+/**
+ * Get viewport coordinates from image coordinates for a given layer
+ * @param {Object} globalPoints 
+ * @param {Number} layerIndex
+ * @returns viewportPoints
+ */
+regionUtils.globalPointsToViewportPoints = function (globalPoints, layerIndex) {
+    var op = tmapp["object_prefix"];
+    var viewer = tmapp[op + "_viewer"];
+    var viewportPoints = [];
+    for (var i = 0; i < globalPoints.length; i++) {
+        var subregion = [];
+        for (var j = 0; j < globalPoints[i].length; j++) {
+            var polygon = [];
+            for (var k = 0; k < globalPoints[i][j].length; k++) {
+                let x = globalPoints[i][j][k].x;
+                let y = globalPoints[i][j][k].y;
+                let tiledImage = viewer.world.getItemAt(layerIndex);
+                let imageCoord = tiledImage.imageToViewportCoordinates(
+                    x, y, true
+                );
+                polygon.push({ "x": imageCoord.x, "y": imageCoord.y });
+            }
+            subregion.push(polygon);
+        }
+        viewportPoints.push(subregion);
+    }
+    return viewportPoints;
+}
+
 /** 
  *  When a region is being drawn, this function takes care of the creation of the region */
 regionUtils.manager = function (event) {

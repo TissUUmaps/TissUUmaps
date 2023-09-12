@@ -3,17 +3,18 @@ importScripts(
 );
 
 self.onmessage = function (event) {
-  const [region, offset] = event.data;
-  offsetRegion(region, offset);
+  const [viewportPoints, offset] = event.data;
+  offsetRegion(viewportPoints, offset);
 };
 
 /**
  * @summary Posts a message with the offsetted points
- * @param {*} region Region that will be offsetted
+ * @param {*} viewportPoints Coordinates that will be offsetted
  * @param {*} offset Offset amount 
  */
-function offsetRegion(region, offset) {
-  const multiPolygon = objectToArrayPoints(region.points);
+function offsetRegion(viewportPoints, offset) {
+  const multiPolygon = objectToArrayPoints(viewportPoints);
+
   function createOffsetPolygon(multipolygon, offset) {
     const turfMultipolygon = turf.multiPolygon(multipolygon);
     const offsetPolygon = turf.buffer(turfMultipolygon, offset, {
@@ -35,6 +36,10 @@ function offsetRegion(region, offset) {
 
 function objectToArrayPoints(points) {
   return points.map((arr) =>
-    arr.map((polygon) => polygon.map((point) => [point.x, point.y]))
+    arr.map((polygon) => {
+      let p = polygon.map((point) => [point.x, point.y]);
+      p.push(p[0]);
+      return p;
+    })
   );
 }
