@@ -3196,12 +3196,14 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     var td2=HTMLElementUtils.createElement({"kind":"td"});
     var td3=HTMLElementUtils.createElement({"kind":"td"});
     var td4=HTMLElementUtils.createElement({"kind":"td"});
+    var td5=HTMLElementUtils.createElement({"kind":"td"});
 
     tr.appendChild(td0);
     tr.appendChild(td1);
     tr.appendChild(td2);
     tr.appendChild(td3);
     tr.appendChild(td4);
+    tr.appendChild(td5);
     
     var check0=HTMLElementUtils.createElement({"kind":"input", "id":"singleRegionUI_"+regionId+"_check","extraAttributes":{"class":"form-check-input regionUI-region-input regionUI-region-"+regionClassID+"-input","type":"checkbox" }});
     check0.checked = true;
@@ -3255,6 +3257,58 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     });
     td3.appendChild(regionnametext);
 
+    var regionshistobutton = HTMLElementUtils.createButton({
+        innerText: "<i class='bi bi-bar-chart-fill'></i>",
+        extraAttributes: {
+            class: "col btn btn-sm btn-primary form-control-sm mx-1"
+        }
+    });
+    regionshistobutton.addEventListener('click', function () {
+        regionUtils.analyzeRegion(region.id);
+        console.log("Done!");
+        console.log(regionUtils._regions[region.id].barcodeHistogram);
+        
+        var rpanelbody = HTMLElementUtils.createElement({ kind: "div" });
+
+        var div = HTMLElementUtils.createElement({ kind: "div", id: region.id + "_histogram" });
+        var histogram = regionUtils._regions[region.id].barcodeHistogram;
+        var table = div.appendChild(HTMLElementUtils.createElement({
+            kind: "table",
+            extraAttributes: {
+                class: "table table-striped",
+                style: "overflow-y: auto;max-height:600px;display:block;"
+            }
+        }));
+        thead = HTMLElementUtils.createElement({kind: "thead"});
+        thead.innerHTML = `<tr>
+        <th scope="col">Key</th>
+        <th scope="col">Name</th>
+        <th scope="col">Count</th>
+        </tr>`;
+        tbody = HTMLElementUtils.createElement({kind: "tbody"});
+        table.appendChild(thead);
+        table.appendChild(tbody);
+
+        for (var i in histogram) {
+            var innerHTML = "";
+            innerHTML += "<td>" + histogram[i].key + "</td>";
+            innerHTML += "<td>" + histogram[i].name + "</td>";
+            innerHTML += "<td>" + histogram[i].count + "</td>";
+            tbody.appendChild(HTMLElementUtils.createElement({
+                kind: "tr",
+                "innerHTML": innerHTML
+            }));
+        }
+        rpanelbody.appendChild(div);
+        interfaceUtils.alert(
+            rpanelbody.innerHTML,
+            "Barcode Histogram"
+        );
+        
+    });
+    td4.appendChild(regionshistobutton);
+    td4.style.width = "1px";
+
     var regionsdeletebutton = HTMLElementUtils.createButton({
         innerText: "<i class='bi bi-trash'></i>",
         extraAttributes: {
@@ -3265,7 +3319,8 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
         regionUtils.deleteRegion(region.id, true);
         regionUtils.updateAllRegionClassUI();
     });
-    td4.appendChild(regionsdeletebutton);
+    td5.appendChild(regionsdeletebutton);
+    td5.style.width = "1px";
     /*
     button6 = HTMLElementUtils.createElement({"kind":"div", extraAttributes:{"data-escapedID":regionClassID, "class":"btn btn-light btn-sm mx-1"}});
     button6.innerHTML = "<i class='bi bi-eye'></i>";

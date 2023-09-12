@@ -719,47 +719,6 @@ regionUtils.analyzeRegion = function (regionid) {
         }
     }
     regionUtils._regions[regionid].barcodeHistogram.sort(compare);
-
-    var rPanel = document.getElementById(op + regionid + "_tr_hist");
-    if (rPanel) {
-        var rpanelbody = rPanel.getElementsByClassName("region-histogram")[0];
-        histodiv = document.getElementById(regionid + "_histogram");
-        if (histodiv) {
-            histodiv.parentNode.removeChild(histodiv);
-        }
-
-        var div = HTMLElementUtils.createElement({ kind: "div", id: regionid + "_histogram" });
-        var histogram = regionUtils._regions[regionid].barcodeHistogram;
-        var table = div.appendChild(HTMLElementUtils.createElement({
-            kind: "table",
-            extraAttributes: {
-                class: "table table-striped",
-                style: "overflow-y: auto;"
-            }
-        }));
-        thead = HTMLElementUtils.createElement({kind: "thead"});
-        thead.innerHTML = `<tr>
-        <th scope="col">Key</th>
-        <th scope="col">Name</th>
-        <th scope="col">Count</th>
-        </tr>`;
-        tbody = HTMLElementUtils.createElement({kind: "tbody"});
-        table.appendChild(thead);
-        table.appendChild(tbody);
-
-        for (var i in histogram) {
-            var innerHTML = "";
-            innerHTML += "<td>" + histogram[i].key + "</td>";
-            innerHTML += "<td>" + histogram[i].name + "</td>";
-            innerHTML += "<td>" + histogram[i].count + "</td>";
-            tbody.appendChild(HTMLElementUtils.createElement({
-                kind: "tr",
-                "innerHTML": innerHTML
-            }));
-        }
-        rpanelbody.appendChild(div);
-        $(rPanel).show();
-    }
 }
 /** 
  *  regionUtils */
