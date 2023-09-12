@@ -133,9 +133,9 @@ regionUtils.createRegionOperationsTable = function () {
       kind: "td",
       extraAttributes: {
         "data-bs-toggle": "collapse",
-        "data-bs-target": "#operations_collapse_region_" + regionClass,
+        "data-bs-target": "#operations_collapse_region_" + regionClassID,
         "aria-expanded": "false",
-        "aria-controls": "operations_collapse_region_" + regionClass,
+        "aria-controls": "operations_collapse_region_" + regionClassID,
         class: "collapse_button_transform collapsed",
       },
     });
@@ -204,7 +204,7 @@ regionUtils.createRegionOperationsTable = function () {
       id: "tbody_subregions_operations_" + regionClassID,
     });
     let collapse_div = HTMLElementUtils.createElement({ kind: "div" });
-    collapse_div.id = "operations_collapse_region_" + regionClass;
+    collapse_div.id = "operations_collapse_region_" + regionClassID;
     collapse_div.setAttribute("data-region-class", regionClass);
     collapse_div.setAttribute("data-region-classID", regionClassID);
     collapse_div.classList.add("collapse");
@@ -625,9 +625,9 @@ regionUtils.addRegionOperationsRow = function (regionId) {
       kind: "td",
       extraAttributes: {
         "data-bs-toggle": "collapse",
-        "data-bs-target": "#operations_collapse_region_" + region.regionClass,
+        "data-bs-target": "#operations_collapse_region_" + regionClassID,
         "aria-expanded": "false",
-        "aria-controls": "operations_collapse_region_" + region.regionClass,
+        "aria-controls": "operations_collapse_region_" + regionClassID,
         class: "collapse_button_transform collapsed",
       },
     });
