@@ -30,6 +30,8 @@ glUtils = {
     _markerScaleFactor: {},      // {uid: float}
     _markerScalarPropertyName: {},  // {uid: string, ...}
     _markerOpacity: {},          // {uid: alpha, ...}
+    _markerStrokeWidth: {},      // {uid: float, ...}
+    _markerFilled: {},           // {uid: boolean, ...}
     _markerOutline: {},          // {uid: boolean, ...}
     _useColorFromMarker: {},     // {uid: boolean, ...}
     _useColorFromColormap: {},   // {uid: boolean, ...}
@@ -65,6 +67,7 @@ glUtils = {
     _regionFillRule: "never",   // Possible values: "never" | "nonzero" | "oddeven"
     _regionUsePivotSplit: true,   // Use split edge lists for faster region rendering and less risk of overflow
     _regionUseColorByID: false,   // Map region object IDs to unique colors
+    _regionDataTexSize: 4096,     // Note: should not be set above context's MAX_TEXTURE_SIZE
     _logPerformance: false,       // Use GPU timer queries to log performance
     _piechartPaletteDefault: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
@@ -73,8 +76,11 @@ glUtils = {
 glUtils._markersVS = `
     #define SHAPE_INDEX_CIRCLE 7.0
     #define SHAPE_INDEX_CIRCLE_NOSTROKE 16.0
+    #define SHAPE_INDEX_GAUSSIAN 15.0
     #define SHAPE_GRID_SIZE 4.0
     #define MAX_NUM_IMAGES 192
+    #define UV_SCALE 0.8
+    #define SCALE_FIX (UV_SCALE / 0.7)  // For compatibility with old UV_SCALE
     #define DISCARD_VERTEX { gl_Position = vec4(2.0, 2.0, 2.0, 0.0); return; }
 
     uniform mat2 u_viewportTransform;
@@ -105,10 +111,11 @@ glUtils._markersVS = `
     layout(location = 4) in float in_opacity;
     layout(location = 5) in float in_transform;
 
-    out vec4 v_color;
-    out vec2 v_shapeOrigin;
-    out vec2 v_shapeSector;
-    out float v_shapeSize;
+    flat out vec4 v_color;
+    flat out vec2 v_shapeOrigin;
+    flat out vec2 v_shapeSector;
+    flat out float v_shapeIndex;
+    flat out float v_shapeSize;
     #ifdef USE_INSTANCING
     out vec2 v_texCoord;
     #endif  // USE_INSTANCING
@@ -158,12 +165,13 @@ glUtils._markersVS = `
         }
 
         gl_Position = vec4(ndcPos, 0.0, 1.0);
-        gl_PointSize = in_scale * u_markerScale * u_globalMarkerScale;
+        gl_PointSize = (in_scale * u_markerScale * u_globalMarkerScale) * SCALE_FIX;
         float alphaFactorSize = clamp(gl_PointSize, 0.2, 1.0); 
         gl_PointSize = clamp(gl_PointSize, 1.0, u_maxPointSize);
 
-        v_shapeOrigin.x = mod((v_color.a + 0.00001) * 255.0 - 1.0, SHAPE_GRID_SIZE);
-        v_shapeOrigin.y = floor(((v_color.a + 0.00001) * 255.0 - 1.0) / SHAPE_GRID_SIZE);
+        v_shapeIndex = floor((v_color.a + 1e-5) * 255.0);
+        v_shapeOrigin.x = mod(v_shapeIndex - 1.0, SHAPE_GRID_SIZE);
+        v_shapeOrigin.y = floor((v_shapeIndex - 1.0) / SHAPE_GRID_SIZE);
         v_shapeSize = gl_PointSize;
 
     #ifdef USE_INSTANCING
@@ -184,23 +192,29 @@ glUtils._markersVS = `
 
 
 glUtils._markersFS = `
-    #define UV_SCALE 0.7
+    #define UV_SCALE 0.8
+    #define SHAPE_INDEX_GAUSSIAN 15.0
     #define SHAPE_GRID_SIZE 4.0
 
     precision highp float;
     precision highp int;
 
+    uniform float u_markerStrokeWidth;
+    uniform bool u_markerFilled;
     uniform bool u_markerOutline;
     uniform bool u_usePiechartFromMarker;
     uniform bool u_alphaPass;
     uniform highp sampler2D u_shapeAtlas;
 
-    in vec4 v_color;
-    in vec2 v_shapeOrigin;
-    in vec2 v_shapeSector;
-    in float v_shapeSize;
+    flat in vec4 v_color;
+    flat in vec2 v_shapeOrigin;
+    flat in vec2 v_shapeSector;
+    flat in float v_shapeIndex;
+    flat in float v_shapeSize;
     #ifdef USE_INSTANCING
     in vec2 v_texCoord;
+    #else
+    #define v_texCoord gl_PointCoord
     #endif  // USE_INSTANCING
 
     layout(location = 0) out vec4 out_color;
@@ -228,26 +242,42 @@ glUtils._markersFS = `
 
     void main()
     {
-    #ifdef USE_INSTANCING
         vec2 uv = (v_texCoord - 0.5) * UV_SCALE + 0.5;
-    #else
-        vec2 uv = (gl_PointCoord - 0.5) * UV_SCALE + 0.5;
-    #endif  // USE_INSTANCING
         uv = (uv + v_shapeOrigin) * (1.0 / SHAPE_GRID_SIZE);
 
-        // Sample shape texture in which the blue channel encodes alpha and the
-        // red and green channels encode grayscale for marker shape with and
-        // without outline, respectively
-        vec4 shapeColor = texture(u_shapeAtlas, uv, -0.5);
-        shapeColor = u_markerOutline ? shapeColor.rrrb : shapeColor.gggb;
+        vec4 shapeColor = vec4(0.0);
 
+        // Sample shape texture and reconstruct marker shape from signed
+        // distance field (SDF) encoded in the red channel. Distance values
+        // are assumed to be pre-multiplied by a scale factor 8.0 before
+        // being quantized into 8-bit. Other channels in the texture are
+        // currently ignored, but could be used for storing additional shapes
+        // in the future!
+
+        float pixelWidth = dFdx(uv.x) * float(textureSize(u_shapeAtlas, 0).x) * 8.0;
+        float markerStrokeWidth = min(14.0, u_markerStrokeWidth) * 8.0;  // Keep within SDF range
+        float distBias = u_markerFilled ? -pixelWidth * 0.25 : 0.0;  // Minification distance bias
+
+        float distShape = (texture(u_shapeAtlas, uv, -2.0).r - 0.5) * 255.0;
+        float distOutline = markerStrokeWidth - abs(distShape) + distBias;  // Add bias to fix darkening
+        float alpha = clamp(distShape / pixelWidth + 0.5, 0.0, 1.0) * float(u_markerFilled);
+        float alpha2 = clamp(distOutline / pixelWidth + 0.5, 0.0, 1.0) * float(u_markerOutline);
+        if (distOutline < (markerStrokeWidth + 4.0) - 127.5) {
+            alpha2 = 0.0;  // Fixes problem with alpha bleeding on minification
+        }
+        shapeColor = vec4(vec3(mix(1.0, 0.7, alpha2)), max(alpha, alpha2));
+        if (!u_markerFilled && u_markerOutline) {
+            shapeColor.rgb = vec3(1.0);  // Use brighter outline to show actual marker color 
+        }
+
+        // Handle special types of shapes (Gaussians and piecharts)
+
+        if (v_shapeIndex == SHAPE_INDEX_GAUSSIAN) {
+            shapeColor = vec4(vec3(1.0), smoothstep(0.5, 0.0, length(v_texCoord - 0.5)));
+        }
         if (u_usePiechartFromMarker && !u_alphaPass) {
             float delta = 0.25 / v_shapeSize;
-        #ifdef USE_INSTANCING
             shapeColor.a *= sectorToAlphaAA(v_shapeSector, v_texCoord, delta);
-        #else
-            shapeColor.a *= sectorToAlphaAA(v_shapeSector, gl_PointCoord, delta);
-        #endif  // USE_INSTANCING
         }
 
         out_color = shapeColor * v_color;
@@ -257,7 +287,8 @@ glUtils._markersFS = `
 
 
 glUtils._pickingVS = `
-    #define UV_SCALE 0.7
+    #define UV_SCALE 0.8
+    #define SCALE_FIX (UV_SCALE / 0.7)  // For compatibility with old UV_SCALE
     #define SHAPE_INDEX_CIRCLE_NOSTROKE 16.0
     #define SHAPE_GRID_SIZE 4.0
     #define MAX_NUM_IMAGES 192
@@ -290,7 +321,7 @@ glUtils._pickingVS = `
     layout(location = 4) in float in_opacity;
     layout(location = 5) in float in_transform;
 
-    out vec4 v_color;
+    flat out vec4 v_color;
 
     vec3 hex_to_rgb(float v)
     {
@@ -330,7 +361,7 @@ glUtils._pickingVS = `
 
             vec2 canvasPos = (ndcPos * 0.5 + 0.5) * u_canvasSize;
             canvasPos.y = (u_canvasSize.y - canvasPos.y);  // Y-axis is inverted
-            float pointSize = in_scale * u_markerScale * u_globalMarkerScale;
+            float pointSize = (in_scale * u_markerScale * u_globalMarkerScale) * SCALE_FIX;
             pointSize = clamp(pointSize, 2.0, u_maxPointSize);
 
             // Do coarse inside/outside test against bounding box for marker
@@ -339,13 +370,15 @@ glUtils._pickingVS = `
             if (abs(uv.x - 0.5) > 0.5 || abs(uv.y - 0.5) > 0.5) DISCARD_VERTEX;
 
             // Do fine-grained inside/outside test by sampling the shape texture
-            // with alpha encoded in the blue channel
+            // with signed distance field (SDF) encoded in the red channel.
+            // Currently, this does not take settings for fill and outline into
+            // account, so all markers are assumed to be filled (TODO).
             vec2 shapeOrigin = vec2(0.0);
             shapeOrigin.x = mod((shapeID + 0.00001) * 255.0 - 1.0, SHAPE_GRID_SIZE);
             shapeOrigin.y = floor(((shapeID + 0.00001) * 255.0 - 1.0) / SHAPE_GRID_SIZE);
             uv = (uv - 0.5) * UV_SCALE + 0.5;
             uv = (uv + shapeOrigin) * (1.0 / SHAPE_GRID_SIZE);
-            if (texture(u_shapeAtlas, uv).b < 0.5) DISCARD_VERTEX;
+            if (texture(u_shapeAtlas, uv).r < 0.5) DISCARD_VERTEX;
 
             // Also do a quick alpha-test to avoid picking non-visible markers
             if (in_opacity * u_markerOpacity <= 0.0) DISCARD_VERTEX
@@ -368,7 +401,7 @@ glUtils._pickingFS = `
     precision highp float;
     precision highp int;
 
-    in vec4 v_color;
+    flat in vec4 v_color;
 
     layout(location = 0) out vec4 out_color;
 
@@ -401,7 +434,7 @@ glUtils._edgesVS = `
     layout(location = 4) in float in_opacity;
     layout(location = 5) in float in_transform;
 
-    out vec4 v_color;
+    flat out vec4 v_color;
     out vec2 v_texCoord;
 
     void main()
@@ -459,7 +492,7 @@ glUtils._edgesFS = `
     precision highp float;
     precision highp int;
 
-    in vec4 v_color;
+    flat in vec4 v_color;
     in vec2 v_texCoord;
 
     layout(location = 0) out vec4 out_color;
@@ -543,6 +576,7 @@ glUtils._regionsFS = `
     precision highp float;
     precision highp int;
 
+    uniform int u_numScanlines;
     uniform float u_regionOpacity;
     uniform int u_regionFillRule;
     uniform int u_regionUsePivotSplit;
@@ -578,6 +612,7 @@ glUtils._regionsFS = `
 
         vec2 p = v_localPos;  // Current sample position
         int scanline = int(v_scanline);
+        ivec2 regionDataTexSize = textureSize(u_regionData, 0).xy;
 
         float pixelWidth = length(dFdx(p.xy));
         float strokeWidth = STROKE_WIDTH * pixelWidth;  // Stroke width for outlines
@@ -593,16 +628,16 @@ glUtils._regionsFS = `
         if (bool(u_regionUsePivotSplit)) {
             float pivot = texelFetch(u_regionData, ivec2(1, scanline), 0).x;
             scanDir = p.x < pivot ? -1.0 : 1.0;
-            scanline = p.x < pivot ? scanline : scanline + 512;  // TODO
+            scanline = p.x < pivot ? scanline : scanline + u_numScanlines;
         }
 
         vec4 headerData = texelFetch(u_regionData, ivec2(2, scanline), 0);
         int objectID = int(headerData.z) - 1, offset = 2, windingNumber = 0;
 
-        while (headerData.w != 0.0 && offset < 4096) {
+        while (headerData.w != 0.0 && offset < regionDataTexSize.x) {
 
             // Find next path with bounding box overlapping this sample position
-            while (headerData.w != 0.0 && offset < 4096) {
+            while (headerData.w != 0.0 && offset < regionDataTexSize.x) {
                 headerData = texelFetch(u_regionData, ivec2(offset, scanline), 0);
                 bool isPathBbox = headerData.z > 0.0;
                 bool isClusterBbox = headerData.z == 0.0;
@@ -815,6 +850,8 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
     const useOpacityFromMarker = newInputs.useOpacityFromMarker = dataUtils.data[uid]["_opacity_col"] != null;
     const markerOpacityFactor = dataUtils.data[uid]["_opacity"];
 
+    const markerStrokeWidth = dataUtils.data[uid]["_stroke_width"];
+    const markerFilled = !dataUtils.data[uid]["_no_fill"];
     const markerOutline = !dataUtils.data[uid]["_no_outline"];
 
     const collectionItemPropertyName = newInputs.collectionItemPropertyName = dataUtils.data[uid]["_collectionItem_col"];
@@ -1085,6 +1122,8 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
     glUtils._markerScalarPropertyName[uid] = scalarPropertyName;
     glUtils._markerScaleFactor[uid] = markerScaleFactor;
     glUtils._markerOpacity[uid] = markerOpacityFactor;
+    glUtils._markerStrokeWidth[uid] = markerStrokeWidth;
+    glUtils._markerFilled[uid] = markerFilled;
     glUtils._markerOutline[uid] = markerOutline;
     glUtils._useColorFromMarker[uid] = useColorFromMarker;
     glUtils._useColorFromColormap[uid] = useColorFromColormap;
@@ -1124,6 +1163,8 @@ glUtils.deleteMarkers = function(uid) {
     delete glUtils._markerScalarRange[uid];
     delete glUtils._markerScalarPropertyName[uid];
     delete glUtils._markerOpacity[uid];
+    delete glUtils._markerStrokeWidth[uid];
+    delete glUtils._markerFilled[uid];
     delete glUtils._markerOutline[uid];
     delete glUtils._useColorFromMarker[uid];
     delete glUtils._useColorFromColormap[uid];
@@ -1502,7 +1543,8 @@ glUtils.updateRegionDataTextures = function() {
 
 
 glUtils._createRegionDataTexture = function(gl, maxNumScanlines=512) {
-    console.assert(maxNumScanlines <= 4096);  // Since 4096 is the minimum MAX_TEXTURE_SIZE
+    const regionDataTexSize = glUtils._regionDataTexSize;
+    console.assert(maxNumScanlines <= regionDataTexSize);
 
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -1510,12 +1552,12 @@ glUtils._createRegionDataTexture = function(gl, maxNumScanlines=512) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); 
-    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA32F, 4096, maxNumScanlines);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA32F, regionDataTexSize, maxNumScanlines);
     // Do explicit initialization with zeros, to avoid Firefox warning about
     // "Tex image TEXTURE_2D level 0 is incurring lazy initialization."
     // when texSubImage2D() is used to only partially update the texture
-    let zeros = new Float32Array(4096 * maxNumScanlines * 4);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, maxNumScanlines, gl.RGBA, gl.FLOAT, zeros);
+    let zeros = new Float32Array(regionDataTexSize * maxNumScanlines * 4);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, regionDataTexSize, maxNumScanlines, gl.RGBA, gl.FLOAT, zeros);
     gl.bindTexture(gl.TEXTURE_2D, null);
 
     return texture;
@@ -1523,37 +1565,41 @@ glUtils._createRegionDataTexture = function(gl, maxNumScanlines=512) {
 
 
 glUtils._updateRegionDataTexture = function(gl, texture) {
+    const regionDataTexSize = glUtils._regionDataTexSize;
     const numScanlines = regionUtils._edgeLists.length;
+    console.assert(numScanlines <= regionDataTexSize);
 
     gl.bindTexture(gl.TEXTURE_2D, texture);
     for (let i = 0; i < numScanlines; ++i) {
         // Update single row of the texture
-        let texeldata = new Float32Array(4096 * 4);  // Zero-initialized
+        let texeldata = new Float32Array(regionDataTexSize * 4);  // Zero-initialized
         if (regionUtils._edgeLists[i][0].length <= texeldata.length) {
             texeldata.set(regionUtils._edgeLists[i][0]);
         } else {
             console.warn("Edge list for regions exceeds allocated texture size")
         }
-        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, i, 4096, 1, gl.RGBA, gl.FLOAT, texeldata);
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, i, regionDataTexSize, 1, gl.RGBA, gl.FLOAT, texeldata);
     }
     gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
 
 glUtils._updateRegionDataSplitTexture = function(gl, texture) {
+    const regionDataTexSize = glUtils._regionDataTexSize;
     const numScanlines = regionUtils._edgeListsSplit.length;
+    console.assert(numScanlines <= regionDataTexSize / 2);
 
     gl.bindTexture(gl.TEXTURE_2D, texture);
     for (let i = 0; i < numScanlines; ++i) {
         for (let j = 0; j < 2; ++j) {
             // Update single row of the texture
-            let texeldata = new Float32Array(4096 * 4);  // Zero-initialized
+            let texeldata = new Float32Array(regionDataTexSize * 4);  // Zero-initialized
             if (regionUtils._edgeListsSplit[i][j].length <= texeldata.length) {
                 texeldata.set(regionUtils._edgeListsSplit[i][j]);
             } else {
                 console.warn("Edge list for regions exceeds allocated texture size")
             }
-            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, i + (j * numScanlines), 4096, 1, gl.RGBA, gl.FLOAT, texeldata);
+            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, i + (j * numScanlines), regionDataTexSize, 1, gl.RGBA, gl.FLOAT, texeldata);
         }
     }
     gl.bindTexture(gl.TEXTURE_2D, null);
@@ -1583,7 +1629,7 @@ glUtils._createRegionLUTTexture = function(gl) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, 4096, 64);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, 4096, 128);
     gl.bindTexture(gl.TEXTURE_2D, null);
 
     return texture;
@@ -1591,7 +1637,7 @@ glUtils._createRegionLUTTexture = function(gl) {
 
 
 glUtils._updateRegionLUTTexture = function(gl, texture) {
-    let texeldata = new Uint8Array((4096 * 64) * 4);
+    let texeldata = new Uint8Array((4096 * 128) * 4);
     if (regionUtils._regionToColorLUT.length <= texeldata.length) {
         texeldata.set(regionUtils._regionToColorLUT);
     } else {
@@ -1599,7 +1645,7 @@ glUtils._updateRegionLUTTexture = function(gl, texture) {
     }
 
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, 64, gl.RGBA, gl.UNSIGNED_BYTE, texeldata);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, 128, gl.RGBA, gl.UNSIGNED_BYTE, texeldata);
     gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
@@ -1864,6 +1910,8 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
     gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
     gl.uniform2fv(gl.getUniformLocation(program, "u_markerScalarRange"), glUtils._markerScalarRange[uid]);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
+    gl.uniform1f(gl.getUniformLocation(program, "u_markerStrokeWidth"), glUtils._markerStrokeWidth[uid]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_markerFilled"), glUtils._markerFilled[uid]);
     gl.uniform1i(gl.getUniformLocation(program, "u_markerOutline"), glUtils._markerOutline[uid]);
     gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromMarker"), glUtils._useColorFromMarker[uid]);
     gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromColormap"), glUtils._useColorFromColormap[uid]);

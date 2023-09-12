@@ -45,6 +45,27 @@ regionUtils.resetManager = function () {
     regionUtils._isNewRegion = true;
     regionUtils._currentPoints = null;
 }
+/**
+ * 
+ * @param {OpenSeadragon.point} coordinates
+ * @returns {Number} index of the layer that contains the coordinates
+ */
+regionUtils.getLayerFromCoord = function (coordinates) {
+    var op = tmapp["object_prefix"];
+    var viewer = tmapp[op + "_viewer"];
+    for (var i = viewer.world.getItemCount()-1; i >= 0; i--) {
+        let tiledImage = viewer.world.getItemAt(i);
+        let imageCoord = tiledImage.viewportToImageCoordinates(
+            coordinates.x, coordinates.y, true
+        );
+        if (imageCoord.x > 0 && imageCoord.y > 0 &&
+            imageCoord.x < tiledImage.getContentSize().x && imageCoord.y < tiledImage.getContentSize().y) {
+                console.log("found", i);
+                return i;
+        }
+    }
+    return 0;
+}
 /** 
  *  When a region is being drawn, this function takes care of the creation of the region */
 regionUtils.manager = function (event) {
@@ -77,6 +98,8 @@ regionUtils.manager = function (event) {
         regionUtils._isNewRegion = false;
         //give a new id
         regionUtils._currentRegionId += 1;
+        //set corresponding layer index
+        regionUtils._currentLayerIndex = regionUtils.getLayerFromCoord(normCoords);
         var idregion = regionUtils._currentRegionId;
         //this is out first point for this region
         var startPoint = [normCoords.x, normCoords.y];
@@ -132,7 +155,7 @@ regionUtils.closePolygon = function () {
 
     regionUtils._isNewRegion = true;
     regionUtils._currentPoints.push(regionUtils._currentPoints[0]);
-    regionUtils.addRegion([[regionUtils._currentPoints]], regionid, hexcolor);
+    regionUtils.addRegion([[regionUtils._currentPoints]], regionid, hexcolor, "", regionUtils._currentLayerIndex);
     regionUtils._currentPoints = null;
 
     regionUtils.updateAllRegionClassUI();
@@ -293,7 +316,8 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
         if (regionId in regionUtils._regions) {
             regionId += "_" + (Math.random() + 1).toString(36).substring(7);
         }
-        regionUtils.addRegion(coordinates, regionId, hexColor, geoJSONObjClass);
+        //TODO: collectionIndex from modal if multiple layers
+        regionUtils.addRegion(coordinates, regionId, hexColor, geoJSONObjClass, 0);
         regionUtils._regions[regionId].regionName = regionName;
         if (document.getElementById(regionId + "_class_ta")) {
             document.getElementById(regionId + "_class_ta").value = geoJSONObjClass;
@@ -336,7 +360,8 @@ regionUtils.distance = function (p1, p2) {
 /** 
  *  @param {Number[]} points Array of 2D points in normalized coordinates
  *  @summary Create a region object and store it in the regionUtils._regions container */
-regionUtils.addRegion = function (points, regionid, color, regionClass) {
+regionUtils.addRegion = function (points, regionid, color, regionClass, collectionIndex) {
+    if (collectionIndex == undefined) collectionIndex = 0;
     if (!regionClass) regionClass = "";
     var op = tmapp["object_prefix"];
     var viewer = tmapp[tmapp["object_prefix"] + "_viewer"]
@@ -348,7 +373,8 @@ regionUtils.addRegion = function (points, regionid, color, regionClass) {
         "regionName": regionid, 
         "regionClass": regionClass, 
         "barcodeHistogram": [],
-        "visibility": true
+        "visibility": true,
+        "collectionIndex": collectionIndex
     };
     region.len = points.length;
     var _xmin = parseFloat(points[0][0][0][0]), 
@@ -371,7 +397,7 @@ regionUtils.addRegion = function (points, regionid, color, regionClass) {
                 if (y > _ymax) _ymax = y;
                 if (y < _ymin) _ymin = y;
                 polygon.push({ "x": x, "y": y });
-                let tiledImage = viewer.world.getItemAt(0);
+                let tiledImage = viewer.world.getItemAt(collectionIndex);
                 let imageCoord = tiledImage.viewportToImageCoordinates(
                     x, y, true
                 );
@@ -384,7 +410,7 @@ regionUtils.addRegion = function (points, regionid, color, regionClass) {
         region.globalPoints.push(globalSubregion);
     }
     region._xmin = _xmin, region._xmax = _xmax, region._ymin = _ymin, region._ymax = _ymax;
-    let tiledImage = viewer.world.getItemAt(0);
+    let tiledImage = viewer.world.getItemAt(collectionIndex);
     let _min_imageCoord = tiledImage.viewportToImageCoordinates(
         _xmin,
         _ymin
@@ -810,6 +836,8 @@ regionUtils.freeHandManager = function (event) {
           regionUtils._currentPoints = [];
           regionUtils._isNewRegion = false;
           regionUtils._currentRegionId += 1;
+          regionUtils._currentLayerIndex = regionUtils.getLayerFromCoord(normCoords);
+          
           const idregion = regionUtils._currentRegionId;
           const startPoint = [normCoords.x, normCoords.y];
           regionUtils._currentPoints.push(startPoint);
