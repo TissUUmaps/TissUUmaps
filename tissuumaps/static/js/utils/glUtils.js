@@ -68,6 +68,8 @@ glUtils = {
     _regionUsePivotSplit: true,   // Use split edge lists for faster region rendering and less risk of overflow
     _regionUseColorByID: false,   // Map region object IDs to unique colors
     _regionDataTexSize: 4096,     // Note: should not be set above context's MAX_TEXTURE_SIZE
+    _regionPicked: null,
+    _regionShowInfo: false,
     _logPerformance: false,       // Use GPU timer queries to log performance
     _piechartPaletteDefault: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
@@ -2236,6 +2238,38 @@ glUtils.pick = function(event) {
                 tr.classList.add("table-primary")
                 setTimeout(function(){tr.classList.add("transition_background");tr.classList.remove("table-primary");},400);
             }
+        }
+
+        // FIXME: For now, regions will always have the first image as parent
+        const image = tmapp["ISS_viewer"].world.getItemAt(0);
+        const imageWidth = image ? image.getContentSize().x : 1;
+        const imageHeight = image ? image.getContentSize().y : 1;
+        const imageBounds = [0, 0, imageWidth, imageHeight];
+        const imageCoord = image.viewerElementToImageCoordinates(
+            event.position
+        );
+        const pickedRegion = regionUtils._findRegionByPoint(imageCoord.x, imageCoord.y, imageBounds);
+        const hasPickedRegion = pickedRegion != null;
+        glUtils._regionPicked = pickedRegion;
+
+        tmapp["ISS_viewer"].removeOverlay("ISS_region_info");
+        if (hasPickedRegion && glUtils._regionShowInfo) {
+            const div = document.createElement("div");
+            div.id = "ISS_region_info";
+            div.width = "1px"; div.height = "1px";
+            div.innerHTML = pickedRegion;
+            console.log("Region clicked:", pickedRegion);
+            div.classList.add("viewer-layer", "m-0", "p-1");
+
+            console.log(pickedRegion, imageCoord);
+
+            tmapp["ISS_viewer"].addOverlay({
+                element: div,
+                placement: "TOP_LEFT",
+                location: tmapp["ISS_viewer"].viewport.viewerElementToViewportCoordinates(event.position),
+                checkResize: false,
+                rotationMode: OpenSeadragon.OverlayRotationMode.NO_ROTATION
+            });
         }
     }
 }
