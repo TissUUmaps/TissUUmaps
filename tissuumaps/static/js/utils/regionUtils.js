@@ -947,9 +947,22 @@ regionUtils.importRegionsFromJSON = function () {
     regionUtils.JSONToRegions();
 }
 
-regionUtils.pointsInRegionsToCSV=function(){
+regionUtils.pointsInRegionsToCSV= async function(){
+    /* we loop through all regions in regionUtils._regions and compute the points in each region
+    using regionUtils.analyzeRegion.
+    */
+    let analyzeAll = await interfaceUtils.confirm(
+        "Do you want to run the analysis on all regions? This may take a while.<br/><br/> \
+        If not, the exported file will only contain previously analyzed regions.",
+        "Analyze all regions?"
+    )
+    if (analyzeAll) { 
+        for (let r in regionUtils._regions){
+            regionUtils.analyzeRegion(r);
+        }
+    }
     var alldata=[]
-    for (r in regionUtils._regions){
+    for (let r in regionUtils._regions){
         var regionPoints=regionUtils._regions[r].associatedPoints;
         regionUtils._regions[r].associatedPoints.forEach(function(p){
             p.regionName=regionUtils._regions[r].regionName
