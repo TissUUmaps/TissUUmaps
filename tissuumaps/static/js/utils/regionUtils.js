@@ -17,6 +17,7 @@
  * @property {Object[]} regionUtils._edgeLists - Data structure used for rendering regions with WebGL
  * @property {Object[]} regionUtils._regionToColorLUT - LUT for storing color and visibility per object ID
  * @property {Object{}} regionUtils._regionIDToIndex - Mapping between region ID (string) and object ID (index)
+ * @property {Object{}} regionUtils._regionIndexToID - Mapping between object ID (index) and region ID (string)
 */
 regionUtils = {
     _isNewRegion: true,
@@ -1091,11 +1092,13 @@ regionUtils._generateEdgeListsForDrawing = function(imageBounds, numScanlines = 
     }
 
     regionUtils._regionIDToIndex = {};
+    regionUtils._regionIndexToID = {};
 
     let objectID = 0;
     for (let regionID of Object.keys(regionUtils._regions)) {
         const region = regionUtils._regions[regionID];
         regionUtils._regionIDToIndex[regionID] = objectID;  // Update mapping
+        regionUtils._regionIndexToID[objectID] = regionID;  // ...
 
         for (let subregion of region.globalPoints) {
             for (let points of subregion) {
@@ -1259,6 +1262,60 @@ regionUtils._pointInRegion = function(px, py, regionID, imageBounds) {
         isInside = windingNumber != 0;
     }
     return isInside;
+}
+
+
+// Find region under point. Returns a key to the regionUtils_regions dict if a
+// region is found, otherwise null. If multiple regions overlap at the point,
+// the key of the last one in the draw order shall be returned.
+regionUtils._findRegionByPoint = function(px, py, imageBounds) {
+    console.assert(imageBounds.length == 4);
+    const numScanlines = regionUtils._edgeLists.length;
+    const scanlineHeight = imageBounds[3] / numScanlines;
+    const scanline = Math.floor(py / scanlineHeight);
+
+    if (scanline < 0 || scanline >= numScanlines) return null;  // Outside image
+    const edgeList = regionUtils._edgeLists[scanline][0];
+    const numItems = edgeList.length / 4;
+
+    let offset = 2;  // Offset starts at two because of occupancy mask
+    let objectID = offset < numItems ? (edgeList[offset * 4 + 2] - 1) : -1;
+
+    let foundRegion = -1;
+    while (offset < numItems) {
+        // Traverse edge list to find first path of next object ID
+        while (offset < numItems && (edgeList[offset * 4 + 2] - 1) != objectID) {
+            const count = edgeList[offset * 4 + 3];
+            offset += count + 1;
+        }
+
+        // (TODO Add bounding box test to check if object can be skipped)
+
+        // Compute winding number from all edges stored for the object ID
+        let windingNumber = 0;
+        while (offset < numItems && (edgeList[offset * 4 + 2] - 1) == objectID) {
+            const count = edgeList[offset * 4 + 3];
+            for (let i = 0; i < count; ++i) {
+                const x0 = edgeList[(offset + 1 + i) * 4 + 0];
+                const y0 = edgeList[(offset + 1 + i) * 4 + 1];
+                const x1 = edgeList[(offset + 1 + i) * 4 + 2];
+                const y1 = edgeList[(offset + 1 + i) * 4 + 3];
+
+                if (Math.min(y0, y1) <= py && py < Math.max(y0, y1)) {
+                    const t = (py - y0) / (y1 - y0 + 1e-5);
+                    const x = x0 + (x1 - x0) * t;
+                    const weight = Math.sign(y1 - y0);
+                    windingNumber += ((x - px) > 0.0 ? weight : 0);
+                }
+            }
+            offset += count + 1;  // Position pointer at next path
+        }
+
+        // Apply non-zero fill rule for inside test
+        const isInside = windingNumber != 0;
+        if (isInside) { foundRegion = objectID; }
+    }
+    return foundRegion >= 0 ? regionUtils._regionIndexToID[foundRegion] : null;
 }
 
 
