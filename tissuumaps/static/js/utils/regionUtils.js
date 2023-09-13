@@ -32,10 +32,10 @@ regionUtils = {
     _epsilonDistance: 0.004,
     _regions: {},
     _drawingclass: "drawPoly",
-    _maxRegionsInMenu: 200,
     _edgeLists: [],
     _regionToColorLUT: [],
-    _regionIDToIndex: {}
+    _regionIDToIndex: {},
+    _regionIndexToID: {}
 }
 
 /** 
