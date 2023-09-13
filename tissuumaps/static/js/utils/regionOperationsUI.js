@@ -125,7 +125,7 @@ regionUtils.createRegionOperationsTable = function () {
       kind: "tr",
       extraAttributes: {
         "data-escapedID": regionClassID,
-        id: `region_class_operations_accordion_${regionClass}`,
+        id: `region_class_operations_accordion_${regionClassID}`,
       },
     });
 
@@ -586,7 +586,7 @@ regionUtils.addRegionOperationsRow = function (regionId) {
   ];
   const region = regionUtils._regions[regionId];
   const row = regionUtils.createRegionOperationsRow(regionId);
-  const regionClassTable = document.getElementById(
+  let regionClassTable = document.getElementById(
     "tbody_subregions_operations_region_" + region.regionClass
   );
   if (!regionClassTable) {
@@ -630,7 +630,7 @@ regionUtils.addRegionOperationsRow = function (regionId) {
       kind: "tr",
       extraAttributes: {
         "data-escapedID": regionClassID,
-        id: `region_class_operations_accordion_${region.regionClass}`,
+        id: `region_class_operations_accordion_${regionClassID}`,
       },
     });
 
@@ -709,7 +709,7 @@ regionUtils.addRegionOperationsRow = function (regionId) {
       id: "tbody_subregions_operations_" + regionClassID,
     });
     let collapse_div = HTMLElementUtils.createElement({ kind: "div" });
-    collapse_div.id = "operations_collapse_region_" + region.regionClass;
+    collapse_div.id = "operations_collapse_region_" + regionClassID;
     collapse_div.setAttribute("data-region-class", region.regionClass);
     collapse_div.setAttribute("data-region-classID", regionClassID);
     collapse_div.classList.add("collapse");
@@ -793,6 +793,10 @@ regionUtils.addRegionOperationsRow = function (regionId) {
 
     table.appendChild(regionClassRow);
     table.appendChild(regionItemsRow);
+    regionClassTable = document.getElementById(
+      "tbody_subregions_operations_region_" + regionClassID
+    );
+    regionClassTable.appendChild(row);
     return;
   }
   const count = document.getElementById(
@@ -912,8 +916,9 @@ regionUtils.deleteRegionOperationRows = function (regionId) {
  * @param {*} regionClass Name of the class that will have its accordion removed
  */
 regionUtils.deleteRegionOperationsAccordion = function (regionClass) {
-  document
-    .getElementById(`region_class_operations_accordion_${regionClass}`)
-    .remove();
-  document.getElementById(`operations_collapse_region_${regionClass}`).remove();
+  const regionClassID = HTMLElementUtils.stringToId("region_" + regionClass);
+  let accordion_div = document.getElementById(`region_class_operations_accordion_${regionClassID}`)
+  accordion_div?.remove();
+  let collapse_div = document.getElementById(`operations_collapse_region_${regionClassID}`)
+  collapse_div?.remove();
 };
