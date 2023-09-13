@@ -492,8 +492,8 @@ regionUtils.globalPointInPath=function(x,y,path,tmpPoint) {
             const markerData = dataUtils.data[options.dataset]["_processeddata"];
             const columns = dataUtils.data[options.dataset]["_csv_header"];
             for (const d of node.data) {
-                const x = markerData[xselector][d];
-                const y = markerData[yselector][d];
+                const x = markerData[xselector][d] * options.coordFactor;
+                const y = markerData[yselector][d] * options.coordFactor;
                 if (x >= x0 && x < x3 && y >= y0 && y < y3) {
                     // Note: expanding each point into a full object will be
                     // very inefficient memory-wise for large datasets, so
@@ -541,8 +541,8 @@ regionUtils.searchTreeForPointsInRegion = function (quadtree, x0, y0, x3, y3, re
     let countsInsideRegion = 0;
     let pointsInside = [];
     for (d of pointInBbox) {
-        const x = d[xselector];
-        const y = d[yselector];
+        const x = d[xselector] * options.coordFactor;
+        const y = d[yselector] * options.coordFactor;
         if (regionUtils._pointInRegion(x, y, regionid, imageBounds)) {
             countsInsideRegion += 1;
             pointsInside.push(d);
@@ -706,7 +706,8 @@ regionUtils.analyzeRegion = function (regionid) {
                     "globalCoords":true,
                     "xselector":dataUtils.data[uid]["_X"],
                     "yselector":dataUtils.data[uid]["_Y"],
-                    "dataset":uid
+                    "dataset":uid,
+                    "coordFactor":dataUtils.data[uid]["_coord_factor"]
                 });
             if(pointsInside.length>0){
                 pointsInside.forEach(function(p){
@@ -719,47 +720,6 @@ regionUtils.analyzeRegion = function (regionid) {
         }
     }
     regionUtils._regions[regionid].barcodeHistogram.sort(compare);
-
-    var rPanel = document.getElementById(op + regionid + "_tr_hist");
-    if (rPanel) {
-        var rpanelbody = rPanel.getElementsByClassName("region-histogram")[0];
-        histodiv = document.getElementById(regionid + "_histogram");
-        if (histodiv) {
-            histodiv.parentNode.removeChild(histodiv);
-        }
-
-        var div = HTMLElementUtils.createElement({ kind: "div", id: regionid + "_histogram" });
-        var histogram = regionUtils._regions[regionid].barcodeHistogram;
-        var table = div.appendChild(HTMLElementUtils.createElement({
-            kind: "table",
-            extraAttributes: {
-                class: "table table-striped",
-                style: "overflow-y: auto;"
-            }
-        }));
-        thead = HTMLElementUtils.createElement({kind: "thead"});
-        thead.innerHTML = `<tr>
-        <th scope="col">Key</th>
-        <th scope="col">Name</th>
-        <th scope="col">Count</th>
-        </tr>`;
-        tbody = HTMLElementUtils.createElement({kind: "tbody"});
-        table.appendChild(thead);
-        table.appendChild(tbody);
-
-        for (var i in histogram) {
-            var innerHTML = "";
-            innerHTML += "<td>" + histogram[i].key + "</td>";
-            innerHTML += "<td>" + histogram[i].name + "</td>";
-            innerHTML += "<td>" + histogram[i].count + "</td>";
-            tbody.appendChild(HTMLElementUtils.createElement({
-                kind: "tr",
-                "innerHTML": innerHTML
-            }));
-        }
-        rpanelbody.appendChild(div);
-        $(rPanel).show();
-    }
 }
 /** 
  *  regionUtils */
@@ -988,9 +948,22 @@ regionUtils.importRegionsFromJSON = function () {
     regionUtils.JSONToRegions();
 }
 
-regionUtils.pointsInRegionsToCSV=function(){
+regionUtils.pointsInRegionsToCSV= async function(){
+    /* we loop through all regions in regionUtils._regions and compute the points in each region
+    using regionUtils.analyzeRegion.
+    */
+    let analyzeAll = await interfaceUtils.confirm(
+        "Do you want to run the analysis on all regions? This may take a while.<br/><br/> \
+        If not, the exported file will only contain previously analyzed regions.",
+        "Analyze all regions?"
+    )
+    if (analyzeAll) { 
+        for (let r in regionUtils._regions){
+            regionUtils.analyzeRegion(r);
+        }
+    }
     var alldata=[]
-    for (r in regionUtils._regions){
+    for (let r in regionUtils._regions){
         var regionPoints=regionUtils._regions[r].associatedPoints;
         regionUtils._regions[r].associatedPoints.forEach(function(p){
             p.regionName=regionUtils._regions[r].regionName
