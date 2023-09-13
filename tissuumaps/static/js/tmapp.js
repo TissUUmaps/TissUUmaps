@@ -25,6 +25,7 @@ tmapp.registerActions = function () {
     interfaceUtils.listen(op + '_collapse_btn','click', function () { interfaceUtils.toggleRightPanel() },false);
     interfaceUtils.listen(op + '_drawregions_btn','click', function () { regionUtils.regionsOnOff() },false);
     interfaceUtils.listen(op + "_draw_regions_free_hand_btn", "click", function () { regionUtils.freeHandRegionsOnOff(); }, false);
+    interfaceUtils.listen(op + "_draw_regions_brush_btn", "click", function () { regionUtils.brushRegionsOnOff(); }, false);
     interfaceUtils.listen(op + "_operations_regions_btn", "click", function () { regionUtils.regionOperationsOnOff(); }, false);
     interfaceUtils.listen(op + '_export_regions','click', function () { regionUtils.exportRegionsToJSON() },false);
     interfaceUtils.listen(op + '_import_regions','click', function () { regionUtils.importRegionsFromJSON() },false);
@@ -107,6 +108,16 @@ tmapp.init = function () {
           // Call region creator and drawer
           regionUtils.freeHandManager(event);
         }
+        if (overlayUtils._brushDrawRegions) {
+          // Call region creator and drawer
+          regionUtils.brushManager(event);
+        }
+    }
+    function moveHandler(event) {
+        if (overlayUtils._brushDrawRegions) {
+          // Call region creator and drawer
+          regionUtils.brushHover(event);
+        }
     }
 
     //OSD handlers are not registered manually they have to be registered
@@ -117,6 +128,17 @@ tmapp.init = function () {
     }).setTracking(true);*/
     tmapp["ISS_viewer"].addHandler("canvas-press", pressHandler);
     tmapp["ISS_viewer"].addHandler('canvas-click', click_handler);
+    new OpenSeadragon.MouseTracker({
+        element: tmapp["ISS_viewer"].canvas,
+        moveHandler: moveHandler
+    }).setTracking(true);
+    
+    tmapp["ISS_viewer"].addHandler("animation", function animationFinishHandler(event){
+        const drawingclass = "_brushRegion";
+        d3.selectAll("." + drawingclass).selectAll('circle').each(function(el) {
+            $(this).attr('r', 0.2 * regionUtils._handleRadius / tmapp["ISS_viewer"].viewport.getZoom());
+        });
+    });
     tmapp["ISS_viewer"].addHandler("animation-finish", function animationFinishHandler(event){
         d3.selectAll("." + regionUtils._drawingclass).selectAll('polyline').each(function(el) {
             $(this).attr('stroke-width', regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());

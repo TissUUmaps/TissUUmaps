@@ -43,6 +43,9 @@ regionUtils = {
 regionUtils.resetManager = function () {
     var drawingclass = regionUtils._drawingclass;
     d3.select("." + drawingclass).remove();
+    drawingclass = "_brushRegion";
+    d3.select("." + drawingclass).remove();
+    
     regionUtils._isNewRegion = true;
     regionUtils._currentPoints = null;
 }
@@ -728,6 +731,9 @@ regionUtils.regionsOnOff = function () {
     if (overlayUtils._freeHandDrawRegions) {
         regionUtils.freeHandRegionsOnOff();
     }
+    if (overlayUtils._brushDrawRegions) {
+        regionUtils.brushRegionsOnOff();
+    }
     overlayUtils._drawRegions = !overlayUtils._drawRegions;
     var op = tmapp["object_prefix"];
     let regionIcon = document.getElementById(op + '_drawregions_icon');
@@ -752,6 +758,9 @@ regionUtils.freeHandRegionsOnOff = function () {
     if (overlayUtils._drawRegions) {
         regionUtils.regionsOnOff();
     }
+    if (overlayUtils._brushDrawRegions) {
+        regionUtils.brushRegionsOnOff();
+    }
     overlayUtils._freeHandDrawRegions = !overlayUtils._freeHandDrawRegions;
     const op = tmapp["object_prefix"];
     let freeHandButtonIcon = document.getElementById(
@@ -768,6 +777,34 @@ regionUtils.freeHandRegionsOnOff = function () {
         freeHandButtonIcon.classList.remove("bi-check-circle");
         freeHandButtonIcon.classList.add("bi-circle");
         // Reset cursor and hide hint
+        regionUtils.setViewerCursor("auto");
+        regionUtils.hideHint();
+    }
+};
+
+regionUtils.brushRegionsOnOff = function () {
+    // Toggle off other region modes
+    if (overlayUtils._drawRegions) {
+        regionUtils.regionsOnOff();
+    }
+    if (overlayUtils._freeHandDrawRegions) {
+        regionUtils.freeHandRegionsOnOff();
+    }
+    overlayUtils._brushDrawRegions = !overlayUtils._brushDrawRegions;
+    const op = tmapp["object_prefix"];
+    let brushButtonIcon = document.getElementById(
+        op + "_draw_regions_brush_icon"
+    );
+    if (overlayUtils._brushDrawRegions) {
+        brushButtonIcon.classList.remove("bi-circle");
+        brushButtonIcon.classList.add("bi-check-circle");
+        // Set region drawing cursor and show hint
+        regionUtils.setViewerCursor("none");
+        regionUtils.showHint("Drag the brush to draw regions");
+    } else {
+        regionUtils.resetManager();
+        brushButtonIcon.classList.remove("bi-check-circle");
+        brushButtonIcon.classList.add("bi-circle");
         regionUtils.setViewerCursor("auto");
         regionUtils.hideHint();
     }
@@ -884,6 +921,249 @@ regionUtils.freeHandManager = function (event) {
     OSDViewer.addHandler("canvas-drag", createRegionFromCanvasDrag);
     // Finish region drawing when mouse is released
     OSDViewer.addHandler("canvas-release", onCanvasRelease);
+};
+regionUtils.brushHover = function (event) {
+    // Get OSDViewer
+    const OSDViewer = tmapp[tmapp["object_prefix"] + "_viewer"];
+    const canvas =
+      overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
+    const drawingclass = "_brushRegion";
+    const normCoords = OSDViewer.viewport.pointFromPixel(event.position);
+    regionobj = d3.select("." + drawingclass);
+    regionobj.remove();
+
+    regionobj = d3.select(canvas).append("g").attr("class", drawingclass);
+    // Draw a circle in the position of the first point of the region
+    regionobj
+    .append("circle")
+    .attr(
+        "r",
+        (0.2 * regionUtils._handleRadius) /
+        tmapp["ISS_viewer"].viewport.getZoom()
+    )
+    .attr("fill", "#ff000088")
+    .attr("stroke", "#ff0000")
+    .attr("stroke-width", 0)
+    .attr("class", "regionBrush")
+    .attr("id", "regionBrush")
+    .attr(
+        "transform",
+        "translate(" +
+        normCoords.x.toString() +
+        "," +
+        normCoords.y.toString() +
+        ") scale(" +
+        "1" +
+        ")"
+    )
+    const regions = Object.values(regionUtils._selectedRegions);
+    if (regions.length == 1) {
+        // add a plus sign in a tspan next to the circle cursor
+        regionobj
+        .append("text")
+        .attr(
+            "transform",
+            "translate(" +
+            normCoords.x.toString() +
+            "," +
+            normCoords.y.toString() +
+            ") scale(" +
+            "1" +
+            ")"
+        )
+        .attr("fill", "#000000")
+        .attr("stroke", "#000000")
+        .attr("stroke-width", 0)
+        .attr("class", "regionBrush")
+        .attr("id", "regionBrush")
+        .attr("text-anchor", "middle")
+        .attr("alignment-baseline", "middle")
+        .attr("font-size", (0.02 /
+            tmapp["ISS_viewer"].viewport.getZoom()).toString() + "px")
+        .attr("font-weight", "bold")
+        .text((event.originalEvent.shiftKey)?"-":"+");     
+    }
+    return 
+}
+regionUtils.brushManager = function (event) {
+    function onCanvasRelease(){
+        // Get OSDViewer
+        const OSDViewer = tmapp[tmapp["object_prefix"] + "_viewer"];
+        // Remove mouse dragging handler
+        OSDViewer.removeHandler(
+          "canvas-drag",
+          createRegionFromCanvasDrag
+        );
+        // Remove release handler
+        OSDViewer.removeHandler(
+          "canvas-release",
+          onCanvasRelease
+        );
+        // If there is only one point, there is no region to be drawn, 
+        // reset and stop here
+        if (!regionUtils._currentPoints) { 
+          regionUtils.resetManager(); 
+          return;
+        }
+        // Close the region if initial point and final point are close enough
+        var canvas = overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
+        var drawingclass = regionUtils._drawingclass;
+        var regionid = (regionUtils._editedRegion)?regionUtils._editedRegion.id:'region' + regionUtils._currentRegionId.toString();
+        var regionclass = (regionUtils._editedRegion)?regionUtils._editedRegion.regionClass:'';
+        d3.select("." + drawingclass).remove();
+        regionsobj = d3.select(canvas);
+    
+        var hexcolor = "#FF0000"; //overlayUtils.randomColor("hex");    
+    
+        regionUtils._isNewRegion = true;
+        regionUtils.addRegion(regionUtils._currentPoints, regionid, hexcolor, regionclass, regionUtils._currentLayerIndex);
+        regionUtils._currentPoints = null;
+    
+        regionUtils.updateAllRegionClassUI();
+        if(overlayUtils._regionOperations){
+            regionUtils.addRegionOperationsRow(regionid)
+        }
+        $(document.getElementById("regionClass-")).collapse("show");
+    
+        // If initial point and final point are not close enough, reset
+        regionUtils.resetManager();
+    }
+    function getBrushShape(x1,y1,x2,y2,brushSize){
+        // Get coordinates of the perimeter around two circles of radius brushSize
+        // and centers in x1,y1 and x2,y2, merged with the rectangle joining the
+        // two circles
+        
+        // First we get coordinates of circle 1, circle 2 and rectangle:
+        // Circle 1
+        
+        const brushCircle1 = d3.range(0, 360, 20).map(function (t) {
+            return [
+                x1 + brushSize * Math.cos((t * Math.PI) / 180),
+                y1 + brushSize * Math.sin((t * Math.PI) / 180),
+            ];
+        });
+        // Circle 2
+        const brushCircle2 = d3.range(0, 360, 20).map(function (t) {
+            return [
+                x2 + brushSize * Math.cos((t * Math.PI) / 180),
+                y2 + brushSize * Math.sin((t * Math.PI) / 180),
+            ];
+        });
+        // Rectangle of width 2*brushSize and length the distance between the two points
+        // rotated to join perfectly the two circles
+        const brushRectangle = [
+            [
+                x1 + brushSize * Math.cos(Math.atan2(y2 - y1, x2 - x1) - Math.PI / 2),
+                y1 + brushSize * Math.sin(Math.atan2(y2 - y1, x2 - x1) - Math.PI / 2),
+            ],
+            [
+                x1 + brushSize * Math.cos(Math.atan2(y2 - y1, x2 - x1) + Math.PI / 2),
+                y1 + brushSize * Math.sin(Math.atan2(y2 - y1, x2 - x1) + Math.PI / 2),
+            ],
+            [
+                x2 + brushSize * Math.cos(Math.atan2(y2 - y1, x2 - x1) + Math.PI / 2),
+                y2 + brushSize * Math.sin(Math.atan2(y2 - y1, x2 - x1) + Math.PI / 2),
+            ],
+            [
+                x2 + brushSize * Math.cos(Math.atan2(y2 - y1, x2 - x1) - Math.PI / 2),
+                y2 + brushSize * Math.sin(Math.atan2(y2 - y1, x2 - x1) - Math.PI / 2),
+            ]            
+        ];
+        // Merge all of them
+        const mergedPoints = polygonClipping.union(
+            [[brushCircle1]],
+            [[brushCircle2]],
+            [[brushRectangle]]
+          );
+        return mergedPoints;
+      }
+
+      function createRegionFromCanvasDrag(event) {
+        
+        const drawingclass = regionUtils._drawingclass;
+        // Get OSDViewer
+        const OSDviewer = tmapp[tmapp["object_prefix"] + "_viewer"];
+        const canvas =
+          overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
+        // Block viewer panning
+        event.preventDefaultAction = true;
+        // Get region's next point coordinates from event position 
+        const normCoords = OSDviewer.viewport.pointFromPixel(event.position);
+        if (regionUtils._lastPoints) {
+            if (regionUtils.distance([normCoords.x, normCoords.y], [regionUtils._lastPoints.x, regionUtils._lastPoints.y]) < regionUtils._epsilonDistance / tmapp["ISS_viewer"].viewport.getZoom()) {
+                return;
+            }
+        }
+
+        // Get stroke width depending on currently applied zoom to image
+        const strokeWstr =
+            regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
+        let regionobj;
+        const regions = Object.values(regionUtils._selectedRegions);
+        
+        if (regionUtils._isNewRegion) {
+            if (regions.length == 1) {
+                regionUtils._currentPoints = 
+                regionUtils.objectToArrayPoints(
+                    regionUtils.globalPointsToViewportPoints(
+                        regions[0].globalPoints, 
+                        regions[0].collectionIndex
+                    )
+                );
+                console.log(regionUtils._currentPoints);
+                regionUtils._isNewRegion = false;
+                regionUtils._currentLayerIndex = regions[0].collectionIndex;
+                regionUtils._editedRegion = regions[0];
+                regionUtils.deleteRegion(regions[0].id, true);
+            } else {
+                regionUtils._currentPoints = [];
+                regionUtils._isNewRegion = false;
+                regionUtils._currentRegionId += 1;
+                regionUtils._editedRegion = null;
+                regionUtils._currentLayerIndex = regionUtils.getLayerFromCoord(normCoords);
+            }
+            regionUtils._lastPoints = normCoords
+        } 
+        const idregion = regionUtils._currentRegionId;
+        const operation = (!event.shift) ? polygonClipping.union : polygonClipping.difference;
+        regionUtils._currentPoints = operation(
+            regionUtils._currentPoints,
+            getBrushShape(
+                regionUtils._lastPoints.x,
+                regionUtils._lastPoints.y,
+                normCoords.x,
+                normCoords.y,
+                (0.2 * regionUtils._handleRadius) /
+                    tmapp["ISS_viewer"].viewport.getZoom()
+            )
+          );
+        console.log(regionUtils._currentPoints);
+        regionUtils._lastPoints = normCoords;
+        regionobj = d3.select("." + drawingclass);
+        regionobj.remove();
+        regionobj = d3.select(canvas).append("g").attr("class", drawingclass);
+        for (var i in regionUtils._currentPoints){
+            for (var j in regionUtils._currentPoints[i]){
+                regionobj
+                .append("polyline")
+                .attr("points", regionUtils._currentPoints[i][j])
+                .style("fill", "none")
+                .attr("stroke-width", strokeWstr)
+                .attr("stroke", "#ff0000")
+                .attr("class", "region" + idregion);
+            }
+        }
+    };  
+    // Get OSDViewer
+    const OSDViewer = tmapp[tmapp["object_prefix"] + "_viewer"];
+    // Add region creation handler while mouse is pressed.
+    // Capture the drag events to get the mouse position as the
+    // left button.
+    // Build the region based on the position of those events.
+    OSDViewer.addHandler("canvas-drag", createRegionFromCanvasDrag);
+    // Finish region drawing when mouse is released
+    OSDViewer.addHandler("canvas-release", onCanvasRelease);
+    createRegionFromCanvasDrag(event);
 };
 
 /**
