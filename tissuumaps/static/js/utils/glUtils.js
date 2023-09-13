@@ -68,8 +68,8 @@ glUtils = {
     _regionUsePivotSplit: true,   // Use split edge lists for faster region rendering and less risk of overflow
     _regionUseColorByID: false,   // Map region object IDs to unique colors
     _regionDataTexSize: 4096,     // Note: should not be set above context's MAX_TEXTURE_SIZE
-    _regionPicked: null,
-    _regionShowInfo: false,
+    _regionPicked: null,          // Key to regionUtils._regions dict, or null if no region is picked
+    _regionShowInfo: false,       // Enable region picking and show info for picked region in overlay
     _logPerformance: false,       // Use GPU timer queries to log performance
     _piechartPaletteDefault: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
@@ -2260,12 +2260,13 @@ glUtils.pick = function(event) {
             div.innerHTML = pickedRegion;
             console.log("Region clicked:", pickedRegion);
             div.classList.add("viewer-layer", "m-0", "p-1");
+            div.style.zIndex = 99;
 
             console.log(pickedRegion, imageCoord);
 
             tmapp["ISS_viewer"].addOverlay({
                 element: div,
-                placement: "TOP_LEFT",
+                placement: "TOP_RIGHT",
                 location: tmapp["ISS_viewer"].viewport.viewerElementToViewportCoordinates(event.position),
                 checkResize: false,
                 rotationMode: OpenSeadragon.OverlayRotationMode.NO_ROTATION
