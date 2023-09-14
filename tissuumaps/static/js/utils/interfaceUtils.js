@@ -2990,8 +2990,9 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
                 x => x.regionClass==regionClass
             );
             for (region of groupRegions) {
-                if (document.getElementById(region.id + "_class_ta"))
-                    document.getElementById(region.id + "_class_ta").value = newClass;
+                const escapedRegionID = HTMLElementUtils.stringToId(region.id);
+                if (document.getElementById(escapedRegionID + "_class_ta"))
+                    document.getElementById(escapedRegionID + "_class_ta").value = newClass;
                 regionUtils.changeRegion(region.id);
                 region.regionClass = newClass;
             };
@@ -3179,6 +3180,7 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
 * @summary Delete all trace of a tab including datautils.data.key*/
 interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     var region = regionUtils._regions[regionId];
+    const escapedRegionId = HTMLElementUtils.stringToId(regionId);
     let regionClass = region.regionClass;
     let regionClassID = HTMLElementUtils.stringToId("region_" + regionClass);
 
@@ -3302,7 +3304,7 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     td4.appendChild(regionshistobutton);
     td4.style.width = "1px";
 
-    var check0=HTMLElementUtils.createElement({"kind":"input", "id":"singleRegionUI_"+regionId+"_check","extraAttributes":{"class":"form-check-input regionUI-region-input regionUI-region-"+regionClassID+"-input","type":"checkbox" }});
+    var check0=HTMLElementUtils.createElement({"kind":"input", "id":"singleRegionUI_"+escapedRegionId+"_check","extraAttributes":{"class":"form-check-input regionUI-region-input regionUI-region-"+regionClassID+"-input","type":"checkbox" }});
     check0.checked = true;
     
     check0.addEventListener('input', function (event) {
@@ -3364,12 +3366,12 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     })*/
     tr.onmouseover = function () {
         tr.style.background = "var(--bs-primary-light)";
-        let viewportPoints = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
-        regionUtils.drawRegionPath(viewportPoints, region.id, "#39FF14", null, "0 0.01 0");
+        const viewportPoints = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
+        regionUtils.drawRegionPath(viewportPoints, escapedRegionId, "#39FF14", null, "0 0.01 0");
     };
     tr.onmouseout = function () {
         tr.style.background = "white";
-        d3.selectAll("#" + region.id + "_poly").remove();
+        d3.selectAll("#" + escapedRegionId + "_poly").remove();
     };
     return tr;
 }

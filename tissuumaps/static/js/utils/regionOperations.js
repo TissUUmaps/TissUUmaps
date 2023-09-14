@@ -46,6 +46,7 @@ regionUtils.drawRegionPath = function (
   fillColor,
   strokeDasharray
 ) {
+  const escapedRegionId = HTMLElementUtils.stringToId(regionId);
   const canvasNode =
     overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
   const canvas = d3.select(canvasNode);
@@ -54,7 +55,7 @@ regionUtils.drawRegionPath = function (
   canvas
     .append("path")
     .attr("d", regionUtils.pointsToPath(points))
-    .attr("id", regionId + "_poly")
+    .attr("id", escapedRegionId + "_poly")
     .attr("class", "regionpoly region_previewpoly")
     .attr("stroke-width", strokeWstr)
     .attr("stroke-dasharray", strokeDasharray ? strokeDasharray : "none")
@@ -62,7 +63,7 @@ regionUtils.drawRegionPath = function (
     .style("fill", fillColor ? fillColor : "none")
     .append("title")
     .text(regionId)
-    .attr("id", "path-title-" + regionId);
+    .attr("id", "path-title-" + escapedRegionId);
 };
 
 /**
@@ -504,10 +505,11 @@ regionUtils.mergeRegions = function (regions) {
  * @param {*} region Region to be added to selection collection
  */
 regionUtils.selectRegion = function (region) {
+  const escapedRegionId = HTMLElementUtils.stringToId(region.id);
   regionUtils._selectedRegions[region.id] = region;
   let points = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
-  regionUtils.drawRegionPath(points, region.id + "_selected", "#0165fc")
-  const checkBox = document.getElementById(`${region.id}_selection_check`);
+  regionUtils.drawRegionPath(points, escapedRegionId + "_selected", "#0165fc")
+  const checkBox = document.getElementById(`${escapedRegionId}_selection_check`);
   if (checkBox) checkBox.checked = true;
   regionUtils.addRegionToolbarUI();
 };
@@ -517,9 +519,10 @@ regionUtils.selectRegion = function (region) {
  * @param {*} region Region to be removed from selection collection
  */
 regionUtils.deSelectRegion = function (regionId) {
+    const escapedRegionId = HTMLElementUtils.stringToId(regionId);
     delete regionUtils._selectedRegions[regionId];
-    d3.select("#" + regionId + "_selected" + "_poly").remove();
-    const checkBox = document.getElementById(`${regionId}_selection_check`);
+    d3.select("#" + escapedRegionId + "_selected" + "_poly").remove();
+    const checkBox = document.getElementById(`${escapedRegionId}_selection_check`);
     if (checkBox) checkBox.checked = false;
     regionUtils.addRegionToolbarUI();
 };
@@ -530,9 +533,10 @@ regionUtils.deSelectRegion = function (regionId) {
 regionUtils.resetSelection = function () {
   const selectedRegions = Object.values(regionUtils._selectedRegions);
   selectedRegions.forEach((region) => {
-    const checkBox = document.getElementById(`${region.id}_selection_check`);
+    const escapedRegionId = HTMLElementUtils.stringToId(region.id);
+    const checkBox = document.getElementById(`${escapedRegionId}_selection_check`);
     if (checkBox) checkBox.checked = false;
-    d3.select("#" + region.id + "_selected" + "_poly").remove();
+    d3.select("#" + escapedRegionId + "_selected" + "_poly").remove();
   });
   regionUtils._selectedRegions = {};
   regionUtils.addRegionToolbarUI();

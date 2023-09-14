@@ -641,13 +641,14 @@ regionUtils.updateAllRegionClassUI = function () {
  *  @param {String} regionid Region identifier
  *  @summary Change the region properties like color, class name or region name */
 regionUtils.changeRegion = function (regionid) {
+    const escapedRegionID = HTMLElementUtils.stringToId(regionid)
     if (document.getElementById(regionid + "_name_ta")) {
         var op = tmapp["object_prefix"];
-        var rPanel = document.getElementById(op + regionid + "_tr");
-        var rPanel_hist = document.getElementById(op + regionid + "_tr_hist");
-        if (regionUtils._regions[regionid].regionClass != document.getElementById(regionid + "_class_ta").value) {
-            if (document.getElementById(regionid + "_class_ta").value) {
-                regionUtils._regions[regionid].regionClass = document.getElementById(regionid + "_class_ta").value;
+        var rPanel = document.getElementById(op + escapedRegionID + "_tr");
+        var rPanel_hist = document.getElementById(op + escapedRegionID + "_tr_hist");
+        if (regionUtils._regions[regionid].regionClass != document.getElementById(escapedRegionID + "_class_ta").value) {
+            if (document.getElementById(escapedRegionID + "_class_ta").value) {
+                regionUtils._regions[regionid].regionClass = document.getElementById(escapedRegionID + "_class_ta").value;
                 //classID = HTMLElementUtils.stringToId(regionUtils._regions[regionid].regionClass);
                 //regionUtils.addRegionClassUI (regionUtils._regions[regionid].regionClass)
                 //$(rPanel).detach().appendTo('#markers-regions-panel-' + classID)
@@ -661,12 +662,12 @@ regionUtils.changeRegion = function (regionid) {
             }
             regionUtils.updateAllRegionClassUI();
         }
-        if (document.getElementById(regionid + "_name_ta").value) {
-            regionUtils._regions[regionid].regionName = document.getElementById(regionid + "_name_ta").value;
+        if (document.getElementById(escapedRegionID + "_name_ta").value) {
+            regionUtils._regions[regionid].regionName = document.getElementById(escapedRegionID + "_name_ta").value;
         } else {
             regionUtils._regions[regionid].regionName = regionid;
         }
-        var newregioncolor = document.getElementById(regionid + "_color_input").value;
+        var newregioncolor = document.getElementById(escapedRegionID + "_color_input").value;
         regionUtils._regions[regionid].polycolor = newregioncolor;
     }
 }
