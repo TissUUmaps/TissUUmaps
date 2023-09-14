@@ -788,6 +788,8 @@ def exportToStatic(state, folderpath, previouspath):
             if len(path) == 1:
                 if path[0] not in state.keys():
                     return
+                if state[path[0]] is None:
+                    return
                 if isinstance(state[path[0]], list):
                     if isImg:
                         imgFiles += [s for s in state[path[0]]]
