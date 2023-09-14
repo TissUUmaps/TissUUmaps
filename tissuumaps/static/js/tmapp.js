@@ -23,7 +23,6 @@ tmapp.registerActions = function () {
     var op = tmapp["object_prefix"];
 
     interfaceUtils.listen(op + '_collapse_btn','click', function () { interfaceUtils.toggleRightPanel() },false);
-    interfaceUtils.listen(op + "_toolbar_regions_btn", "click", function () { regionUtils.regionToolbarOnOff(); }, false);
     interfaceUtils.listen(op + '_export_regions','click', function () { regionUtils.exportRegionsToJSON() },false);
     interfaceUtils.listen(op + '_import_regions','click', function () { regionUtils.importRegionsFromJSON() },false);
     interfaceUtils.listen(op + '_export_regions_csv','click', function () { regionUtils.pointsInRegionsToCSV() },false);
@@ -45,6 +44,17 @@ tmapp.registerActions = function () {
             as[j].addEventListener("click",function(){interfaceUtils.hideTabsExcept($(this))});
         }
     }
+
+    const regionTabEl = document.querySelector('#title-tab-regions')
+    regionTabEl?.addEventListener('show.bs.tab', function (event) {
+        overlayUtils._regionToolbar = true;
+        regionUtils.regionToolbarOnOff();
+    })
+    regionTabEl?.addEventListener('hide.bs.tab', function (event) {
+        overlayUtils._regionToolbar = false;
+        regionUtils.regionToolbarOnOff();
+    })
+    
 }
 /**
  * This method is called when the document is loaded. The tmapp object is built as an "app" and init is its main function.

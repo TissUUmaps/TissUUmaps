@@ -205,10 +205,34 @@ regionUtils.addRegionToolbarUI = function () {
     tooltip.enable();
     selectionButton.innerHTML = '<i class="bi bi-cursor"></i>';
 
+    const separator2 = HTMLElementUtils.createElement({
+      kind: "div",
+      extraAttributes: { class: ""},
+      });
+    separator2.style.borderLeft = "2px solid var(--bs-primary)";
+    separator2.style.height = "22px";
+    separator2.style.margin = "auto 10px";
+    separator2.style.width = "0px";
+
+    const fillRegionsButton = HTMLElementUtils.createButton({
+      extraAttributes: { class: "btn lh-1 btn-light m-1 p-2", "title": "Fill regions" },
+    });
+    fillRegionsButton.id = "region_fill_button"
+    fillRegionsButton.onclick = function () {
+      regionUtils.fillAllRegions();
+    };
+    var tooltip = new bootstrap.Tooltip(fillRegionsButton, {
+      placement: "bottom",
+    });
+    tooltip.enable();
+    fillRegionsButton.innerHTML = '<i class="bi bi-front"></i>';
+        
     buttonsContainer.appendChild(drawingPointsButton);
     buttonsContainer.appendChild(drawingFreeButton);
     buttonsContainer.appendChild(drawingBrushButton);
     buttonsContainer.appendChild(selectionButton);
+    buttonsContainer.appendChild(separator2);
+    buttonsContainer.appendChild(fillRegionsButton);
     buttonsContainer.appendChild(separator);
     buttonsContainer.appendChild(deleteButton);
     buttonsContainer.appendChild(duplicateButton);

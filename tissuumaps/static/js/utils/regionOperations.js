@@ -5,17 +5,10 @@ regionUtils._selectedRegions = {};
  */
 regionUtils.regionToolbarOnOff = function () {
   // Add region Toolbar
-  overlayUtils._regionToolbar = !overlayUtils._regionToolbar;
   regionUtils.addRegionToolbarUI();
   const op = tmapp["object_prefix"];
-  const toolbarRegionButtonIcon = document.getElementById(
-    op + "_toolbar_regions_icon"
-  );
   
-  if (overlayUtils._regionToolbar) {
-    toolbarRegionButtonIcon.classList.remove("bi-circle");
-    toolbarRegionButtonIcon.classList.add("bi-check-circle");
-  } else {
+  if (!overlayUtils._regionToolbar) {
     regionUtils.resetSelection();
     if (overlayUtils._drawRegions) {
         regionUtils.regionsOnOff();
@@ -26,11 +19,9 @@ regionUtils.regionToolbarOnOff = function () {
     if (overlayUtils._brushDrawRegions) {
         regionUtils.brushRegionsOnOff();
     }
-    if (glUtils._regionShowInfo) {
+    if (overlayUtils._regionSelection) {
         regionUtils.selectRegionsOnOff();
     }
-    toolbarRegionButtonIcon.classList.remove("bi-check-circle");
-    toolbarRegionButtonIcon.classList.add("bi-circle");
   }
 }
 

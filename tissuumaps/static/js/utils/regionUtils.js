@@ -558,13 +558,13 @@ regionUtils.searchTreeForPointsInRegion = function (quadtree, x0, y0, x3, y3, re
 regionUtils.fillAllRegions=function(){
     glUtils._regionFillRule = glUtils._regionFillRule == "never" ? "nonzero" : "never";
     
-    let regionIcon = document.getElementById('ISS_fillregions_icon');
+    let regionIcon = document.getElementById('region_fill_button');
     if (glUtils._regionFillRule != "never") {
-        regionIcon.classList.remove("bi-circle");
-        regionIcon.classList.add("bi-check-circle");
+        regionIcon.classList.remove("btn-light");
+        regionIcon.classList.add("btn-primary");
     } else {
-        regionIcon.classList.remove("bi-check-circle");
-        regionIcon.classList.add("bi-circle");
+        regionIcon.classList.remove("btn-primary");
+        regionIcon.classList.add("btn-light");
     }
     glUtils.draw();    
 }
