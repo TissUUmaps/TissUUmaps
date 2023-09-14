@@ -26,7 +26,7 @@ markerUtils.updatePiechartLegend = function() {
     elt = document.getElementById("piechartLegend");
     elt.style.display="block";
     elt.innerHTML = "";
-
+    elt.classList.add("d-none");
     let markerData = undefined, sectorsPropertyName = undefined, piechartPalette = undefined;
     for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
         if (glUtils._usePiechartFromMarker[uid]) {
@@ -36,7 +36,7 @@ markerUtils.updatePiechartLegend = function() {
         }
     }
     if (markerData == undefined || sectorsPropertyName == undefined) return;
-
+    elt.classList.remove("d-none");
     let table = HTMLElementUtils.createElement({ kind: "table" });
     table.style.borderSpacing = "3px";
     table.style.borderCollapse = "separate";

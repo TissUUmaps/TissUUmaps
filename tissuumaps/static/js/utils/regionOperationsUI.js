@@ -15,8 +15,10 @@ regionUtils.addRegionToolbarUI = function () {
     );
     buttonsContainer.id = "region-toolbar-buttons";
     buttonsContainer.style.zIndex = "13";
+    buttonsContainer.style.top = "2px";
     buttonsContainer.style.backgroundColor = "color-mix(in srgb, var(--bs-primary-light) 85%, transparent)";
     buttonsContainer.style.marginRight = "165px";
+    buttonsContainer.style.marginLeft = "14px";
     const mergeButton = HTMLElementUtils.createButton({
       extraAttributes: { class: "btn lh-1 btn-primary m-1 px-2 py-0 only-selected only-two-selected", "title": "Merge" },
     });
