@@ -3375,6 +3375,3 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     };
     return tr;
 }
-
-
-

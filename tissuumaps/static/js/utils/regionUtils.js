@@ -755,16 +755,14 @@ regionUtils.regionsOnOff = function () {
     if (overlayUtils._drawRegions) {
         regionIcon.classList.remove("btn-light");
         regionIcon.classList.add("btn-primary");
-        // Set region drawing cursor and show hint
+        // Set region drawing cursor 
         regionUtils.setViewerCursor("crosshair")
-        regionUtils.showHint("Click to draw regions")
     } else {
         regionUtils.resetManager();
         regionIcon.classList.remove("btn-primary");
         regionIcon.classList.add("btn-light");
-         // Reset cursor and hide hint
+         // Reset cursor
         regionUtils.setViewerCursor("auto")
-        regionUtils.hideHint();
     }
 }
 
@@ -787,16 +785,14 @@ regionUtils.freeHandRegionsOnOff = function () {
     if (overlayUtils._freeHandDrawRegions) {
         freeHandButtonIcon.classList.remove("btn-light");
         freeHandButtonIcon.classList.add("btn-primary");
-        // Set region drawing cursor and show hint
+        // Set region drawing cursor
         regionUtils.setViewerCursor("crosshair");
-        regionUtils.showHint("Drag the mouse to draw regions");
     } else {
         regionUtils.resetManager();
         freeHandButtonIcon.classList.remove("btn-primary");
         freeHandButtonIcon.classList.add("btn-light");
-        // Reset cursor and hide hint
+        // Reset cursor
         regionUtils.setViewerCursor("auto");
-        regionUtils.hideHint();
     }
 };
 
@@ -819,15 +815,13 @@ regionUtils.brushRegionsOnOff = function () {
     if (overlayUtils._brushDrawRegions) {
         brushButtonIcon.classList.remove("btn-light");
         brushButtonIcon.classList.add("btn-primary");
-        // Set region drawing cursor and show hint
+        // Set region drawing cursor
         regionUtils.setViewerCursor("none");
-        regionUtils.showHint("Drag the brush to draw regions");
     } else {
         regionUtils.resetManager();
         brushButtonIcon.classList.remove("btn-primary");
         brushButtonIcon.classList.add("btn-light");
         regionUtils.setViewerCursor("auto");
-        regionUtils.hideHint();
     }
 };
 
@@ -1071,7 +1065,6 @@ regionUtils.brushManager = function (event) {
     
         // If initial point and final point are not close enough, reset
         regionUtils.resetManager();
-        regionUtils.selectRegion(regionUtils._regions[regionid]);
     }
     function getBrushShape(x1,y1,x2,y2,brushSize){
         // Get coordinates of the perimeter around two circles of radius brushSize
@@ -1220,45 +1213,6 @@ regionUtils.setViewerCursor = function(cursorType){
     const OSDViewerElement = tmapp[tmapp["object_prefix"] + "_viewer"].element
     // Set the cursor type 
     OSDViewerElement.style.cursor = cursorType
-}
-
-/**
- * 
- * @param {string} message 
- * @summary Show a hint in the regions tab  
- */
-regionUtils.showHint = function(message){
-    // Get region buttons container
-    const regionsButtonsContainer = document.getElementById("regionButtons")
-    // Check if banner is already visible, if not, create it 
-    let hintBanner = document.getElementById("regionHintBanner")
-    if(!hintBanner) {
-        hintBanner = document.createElement("div")
-        hintBanner.setAttribute("id", "regionHintBanner")
-    } 
-    // Set banner styles
-    hintBanner.innerText = message
-    hintBanner.style.width = "100%"
-    hintBanner.style.textAlign = "center"
-    hintBanner.style.background = "rgba(239,239,240, 1)"
-    hintBanner.style.padding = "8px 0 8px 0"
-    hintBanner.style.margin = "8px 0 8px 0"
-    hintBanner.style.color = "green"
-    // Add banner to region buttons container
-    regionsButtonsContainer.append(hintBanner)
-}
-
-/**
- * 
- * @summary Hide regions tab hint 
- */
-regionUtils.hideHint = function(){
-    // Get hint element
-    const hintBanner = document.getElementById("regionHintBanner")
-    // If banner does not exist, return
-    if(!hintBanner) return 
-    // Remove hint element
-    hintBanner.remove()
 }
 
 /** 
