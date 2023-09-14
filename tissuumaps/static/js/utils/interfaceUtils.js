@@ -3369,7 +3369,7 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     };
     tr.onmouseout = function () {
         tr.style.background = "white";
-        d3.select("#" + region.id + "_poly").remove();
+        d3.selectAll("#" + region.id + "_poly").remove();
     };
     return tr;
 }
