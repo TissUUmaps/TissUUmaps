@@ -1606,6 +1606,9 @@ regionUtils._findRegionByPoint = function(px, py, imageBounds) {
 
     let foundRegion = -1;
     while (offset < numItems) {
+        console.assert(regionUtils._regionToColorLUT.length > (objectID * 4));
+        const visible = regionUtils._regionToColorLUT[objectID * 4 + 3];
+
         // (TODO Add bounding box test to check if object can be skipped)
 
         // Compute winding number from all edges stored for the object ID
@@ -1630,7 +1633,7 @@ regionUtils._findRegionByPoint = function(px, py, imageBounds) {
 
         // Apply non-zero fill rule for inside test
         const isInside = windingNumber != 0;
-        if (isInside) { foundRegion = objectID; }
+        if (isInside && visible) { foundRegion = objectID; }
 
         objectID = offset < numItems ? (edgeList[offset * 4 + 2] - 1) : -1;
     }
