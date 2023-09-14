@@ -76,7 +76,7 @@ regionUtils.deleteRegions = function (regionIds) {
 };
 
 /**
- * @summary Deletes regions
+ * @summary Split regions
  * @param {*} regions Array of regions to be deleted
  */
 regionUtils.splitRegions = function (regionIds) {
@@ -197,12 +197,9 @@ regionUtils.regionsDifference = function (regions) {
  */
 regionUtils.resizeRegion = function (regionId, scale, preview) {
   const scaleFactor = scale / 100;
-  let viewportPoints = regionUtils.globalPointsToViewportPoints(
-    regionUtils._regions[regionId].globalPoints, 
-    regionUtils._regions[regionId].collectionIndex
-  );
+  let globalPoints = regionUtils._regions[regionId].globalPoints;
   const points = regionUtils.objectToArrayPoints(
-    viewportPoints
+    globalPoints
   );
 
   //Iterate through each of the polygons in the multipolygon
@@ -248,9 +245,11 @@ regionUtils.resizeRegion = function (regionId, scale, preview) {
 
   // Save new region scale and points
   regionUtils._regions[regionId].scale = scale;
-  regionUtils._regions[regionId].points =
+  // TODO - replace .points with globalPoints?
+  regionUtils._regions[regionId].globalPoints =
     regionUtils.arrayToObjectPoints(points);
-
+  regionUtils.updateBbox(region);
+  
   // Returns the center of a given polygon
   function calculatePolygonCentroid(polygon) {
     let sumX = 0;
@@ -270,11 +269,7 @@ regionUtils.resizeRegion = function (regionId, scale, preview) {
 
     return [centroidX, centroidY];
   }
-
-  regionUtils._regions[regionId] = regionUtils.updateRegionCoordinates(
-    regionUtils._regions[regionId]
-  );
-
+  
   glUtils.updateRegionDataTextures();
   glUtils.updateRegionLUTTextures();
   glUtils.draw();
@@ -298,6 +293,7 @@ regionUtils.dilateRegion = function (regionId, offset, preview, onlyBorder) {
   );
   worker.postMessage([viewportPoints, offsetScaled]);
   worker.onmessage = function (event) {
+    let dilatedPoints = event.data;
     if (!event.data) {
       interfaceUtils.alert(
         "An error ocurred applying the selected offset amount, for negative offsets, please make sure that the region is big enough to be offseted by that amount"
@@ -306,113 +302,31 @@ regionUtils.dilateRegion = function (regionId, offset, preview, onlyBorder) {
       button.innerHTML = "Type";
       return;
     }
+    if (onlyBorder) {
+      dilatedPoints = polygonClipping.xor(
+        regionUtils.objectToArrayPoints(viewportPoints),
+        dilatedPoints
+      );
+    }
     d3.select("#" + region.id + "preview" + "_poly").remove();
     if (preview) {
       regionUtils.drawRegionPath(
-        regionUtils.arrayToObjectPoints(event.data),
+        regionUtils.arrayToObjectPoints(dilatedPoints),
         region.id + "preview"
       );
     }
     else {
-      regionUtils.drawOffsettedRegion(region, event.data, onlyBorder);
-      regionUtils.deleteRegion(region.id)
+      region.globalPoints = regionUtils.viewportPointsToGlobalPoints(
+        regionUtils.arrayToObjectPoints(dilatedPoints),
+        region.collectionIndex
+      );
+      regionUtils.selectRegion(region);
       glUtils.updateRegionDataTextures();
+      glUtils.updateRegionLUTTextures();
       glUtils.draw();
     }
   };
 }
-
-/**
- * @summary Recalculates region coordinates from the current region points.
- * Used before re-drawing a region when its points have been updated
- * @param {*} region Region to be updated
- */
-regionUtils.updateRegionCoordinates = function (region) {
-  const points = regionUtils.objectToArrayPoints(region.points);
-  const newPoints = [];
-  const newGlobalPoints = [];
-  const viewer = tmapp[tmapp["object_prefix"] + "_viewer"];
-  let _xmin = parseFloat(points[0][0][0][0]),
-    _xmax = parseFloat(points[0][0][0][0]),
-    _ymin = parseFloat(points[0][0][0][1]),
-    _ymax = parseFloat(points[0][0][0][1]);
-  for (let i = 0; i < points.length; i++) {
-    subregion = [];
-    globalSubregion = [];
-    for (let j = 0; j < points[i].length; j++) {
-      polygon = [];
-      globalPolygon = [];
-      for (let k = 0; k < points[i][j].length; k++) {
-        let x = parseFloat(points[i][j][k][0]);
-        let y = parseFloat(points[i][j][k][1]);
-
-        if (x > _xmax) _xmax = x;
-        if (x < _xmin) _xmin = x;
-        if (y > _ymax) _ymax = y;
-        if (y < _ymin) _ymin = y;
-        polygon.push({ x: x, y: y });
-        let tiledImage = viewer.world.getItemAt(region.collectionIndex);
-        let imageCoord = tiledImage.viewportToImageCoordinates(x, y, true);
-        globalPolygon.push({ x: imageCoord.x, y: imageCoord.y });
-      }
-      subregion.push(polygon);
-      globalSubregion.push(globalPolygon);
-    }
-    newPoints.push(subregion);
-    newGlobalPoints.push(globalSubregion);
-  }
-  (region._xmin = _xmin),
-    (region._xmax = _xmax),
-    (region._ymin = _ymin),
-    (region._ymax = _ymax);
-  const tiledImage = viewer.world.getItemAt(region.collectionIndex);
-  const _min_imageCoord = tiledImage.viewportToImageCoordinates(_xmin, _ymin);
-  const _max_imageCoord = tiledImage.viewportToImageCoordinates(_xmax, _ymax);
-  (region._gxmin = _min_imageCoord.x),
-    (region._gxmax = _max_imageCoord.x),
-    (region._gymin = _min_imageCoord.y),
-    (region._gymax = _max_imageCoord.y);
-  region.points = newPoints;
-  region.globalPoints = newGlobalPoints;
-  return region;
-};
-
-/**
- * @summary Generates an offsetted polygon
- * @param {*} region Region to base the new offset region
- * @param {*} offset Offset to be applied
- * @param {*} onlyBorder Determines if the resulting polygon will only have
- * an exterior ring or an exterior ring plus an interior ring determined by the
- * original region
- */
-regionUtils.drawOffsettedRegion = function (region, points, onlyBorder) {
-  if (onlyBorder) {
-    let viewportPoints = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
-    points = polygonClipping.xor(
-      regionUtils.objectToArrayPoints(viewportPoints),
-      points
-    );
-  }
-  regionUtils._currentRegionId += 1;
-  const newRegionId =
-    region.id +
-    "offsetR" +
-    regionUtils._currentRegionId +
-    (onlyBorder ? "border" : "");
-  const hexColor = overlayUtils.randomColor("hex");
-  regionUtils.addRegion(
-    points,
-    newRegionId,
-    hexColor,
-    region.regionClass,
-    region.collectionIndex
-  );
-
-  regionUtils.updateAllRegionClassUI();
-  glUtils.updateRegionDataTextures();
-  glUtils.updateRegionLUTTextures();
-  glUtils.draw();
-};
 
 /**
  * @summary Converts Object based points into GeoJson format points

@@ -100,6 +100,36 @@ regionUtils.globalPointsToViewportPoints = function (globalPoints, layerIndex) {
     return viewportPoints;
 }
 
+/**
+ * Get viewport coordinates from image coordinates for a given layer
+ * @param {Object} globalPoints 
+ * @param {Number} layerIndex
+ * @returns viewportPoints
+ */
+regionUtils.viewportPointsToGlobalPoints = function (viewportPoints, layerIndex) {
+    var op = tmapp["object_prefix"];
+    var viewer = tmapp[op + "_viewer"];
+    var globalPoints = [];
+    for (var i = 0; i < viewportPoints.length; i++) {
+        var subregion = [];
+        for (var j = 0; j < viewportPoints[i].length; j++) {
+            var polygon = [];
+            for (var k = 0; k < viewportPoints[i][j].length; k++) {
+                let x = viewportPoints[i][j][k].x;
+                let y = viewportPoints[i][j][k].y;
+                let tiledImage = viewer.world.getItemAt(layerIndex);
+                let imageCoord = tiledImage.viewportToImageCoordinates(
+                    x, y, true
+                );
+                polygon.push({ "x": imageCoord.x, "y": imageCoord.y });
+            }
+            subregion.push(polygon);
+        }
+        globalPoints.push(subregion);
+    }
+    return globalPoints;
+}
+
 /** 
  *  When a region is being drawn, this function takes care of the creation of the region */
 regionUtils.manager = function (event) {
@@ -399,7 +429,6 @@ regionUtils.addRegion = function (points, regionid, color, regionClass, collecti
     //var imageWidth = OSDViewerUtils.getImageWidth();
     var region = { 
         "id": regionid, 
-        "points": [], 
         "globalPoints": [], 
         "regionName": regionid, 
         "regionClass": regionClass, 
@@ -408,55 +437,53 @@ regionUtils.addRegion = function (points, regionid, color, regionClass, collecti
         "collectionIndex": collectionIndex
     };
     region.len = points.length;
-    var _xmin = parseFloat(points[0][0][0][0]), 
-        _xmax = parseFloat(points[0][0][0][0]),
-        _ymin = parseFloat(points[0][0][0][1]),
-        _ymax = parseFloat(points[0][0][0][1]);
-    var objectPointsArray = [];
     for (var i = 0; i < region.len; i++) {
-        subregion = [];
-        globalSubregion = [];
+        let globalSubregion = [];
         for (var j = 0; j < points[i].length; j++) {
-            polygon = [];
-            globalPolygon = [];
+            let globalPolygon = [];
             for (var k = 0; k < points[i][j].length; k++) {
                 let x = parseFloat(points[i][j][k][0]);
                 let y = parseFloat(points[i][j][k][1]);
                 
-                if (x > _xmax) _xmax = x;
-                if (x < _xmin) _xmin = x;
-                if (y > _ymax) _ymax = y;
-                if (y < _ymin) _ymin = y;
-                polygon.push({ "x": x, "y": y });
                 let tiledImage = viewer.world.getItemAt(collectionIndex);
                 let imageCoord = tiledImage.viewportToImageCoordinates(
                     x, y, true
                 );
                 globalPolygon.push({ "x": imageCoord.x, "y": imageCoord.y });
             }
-            subregion.push(polygon);
             globalSubregion.push(globalPolygon);
         }
-        region.points.push(subregion);
         region.globalPoints.push(globalSubregion);
     }
-    region._xmin = _xmin, region._xmax = _xmax, region._ymin = _ymin, region._ymax = _ymax;
-    let tiledImage = viewer.world.getItemAt(collectionIndex);
-    let _min_imageCoord = tiledImage.viewportToImageCoordinates(
-        _xmin,
-        _ymin
-    );
-    let _max_imageCoord = tiledImage.viewportToImageCoordinates(
-        _xmax,
-        _ymax
-    );
-    region._gxmin = _min_imageCoord.x, region._gxmax = _max_imageCoord.x, region._gymin = _min_imageCoord.y, region._gymax = _max_imageCoord.y;
     region.polycolor = color;
 
+    regionUtils.updateBbox(region);
     regionUtils._regions[regionid] = region;
     regionUtils._regions[regionid].associatedPoints=[];
 }
 
+/**
+ * Update bounding box region._gxmin, region._gxmax, region._gymin, region._gymax
+ * from region.globalPoints
+ */
+regionUtils.updateBbox=function(region) {
+    region._gxmin = Infinity;
+    region._gxmax = -Infinity;
+    region._gymin = Infinity;
+    region._gymax = -Infinity;
+    for (var i = 0; i < region.globalPoints.length; i++) {
+        for (var j = 0; j < region.globalPoints[i].length; j++) {
+            for (var k = 0; k < region.globalPoints[i][j].length; k++) {
+                var x = region.globalPoints[i][j][k].x;
+                var y = region.globalPoints[i][j][k].y;
+                region._gxmin = Math.min(region._gxmin, x);
+                region._gxmax = Math.max(region._gxmax, x);
+                region._gymin = Math.min(region._gymin, y);
+                region._gymax = Math.max(region._gymax, y);
+            }
+        }
+    }
+}
 
 /**
  * @deprecated Kept for backward compatibility
