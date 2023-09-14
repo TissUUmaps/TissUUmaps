@@ -1,41 +1,38 @@
 regionUtils._selectedRegions = {};
 
 /**
- * @summary Toggles the region operations menu on and off
+ * @summary Toggles the region toolbar menu on and off
  */
-regionUtils.regionOperationsOnOff = function () {
-  overlayUtils._regionOperations = !overlayUtils._regionOperations;
+regionUtils.regionToolbarOnOff = function () {
+  // Add region Toolbar
+  overlayUtils._regionToolbar = !overlayUtils._regionToolbar;
+  regionUtils.addRegionToolbarUI();
   const op = tmapp["object_prefix"];
-  const operationsRegionButtonIcon = document.getElementById(
-    op + "_operations_regions_icon"
+  const toolbarRegionButtonIcon = document.getElementById(
+    op + "_toolbar_regions_icon"
   );
-  const regionAccordions = document.getElementById("markers-regions-panel");
-  const regionOpertationsList = document.getElementById(
-    "region-operations-panel"
-  );
-  if (overlayUtils._regionOperations) {
-    operationsRegionButtonIcon.classList.remove("bi-circle");
-    operationsRegionButtonIcon.classList.add("bi-check-circle");
-    regionUtils.showHint("Select regions");
-    // Hide region accordions
-    regionAccordions.style.display = "none";
-    // Show region selection list
-    regionOpertationsList.classList.remove("d-none");
-    // Add region selection UI
-    regionUtils.addRegionOperationsUI();
+  
+  if (overlayUtils._regionToolbar) {
+    toolbarRegionButtonIcon.classList.remove("bi-circle");
+    toolbarRegionButtonIcon.classList.add("bi-check-circle");
   } else {
     regionUtils.resetSelection();
-    operationsRegionButtonIcon.classList.remove("bi-check-circle");
-    operationsRegionButtonIcon.classList.add("bi-circle");
-    // Show region accordions
-    regionAccordions.style.display = "block";
-    // Remove region selection list contents
-    regionOpertationsList.innerHTML = "";
-    // Hide region selection UI
-    regionOpertationsList.classList.add("d-none");
-    regionUtils.hideHint();
+    if (overlayUtils._drawRegions) {
+        regionUtils.regionsOnOff();
+    }
+    if (overlayUtils._freeHandDrawRegions) {
+        regionUtils.freeHandRegionsOnOff();
+    }
+    if (overlayUtils._brushDrawRegions) {
+        regionUtils.brushRegionsOnOff();
+    }
+    if (glUtils._regionShowInfo) {
+        regionUtils.selectRegionsOnOff();
+    }
+    toolbarRegionButtonIcon.classList.remove("bi-check-circle");
+    toolbarRegionButtonIcon.classList.add("bi-circle");
   }
-};
+}
 
 /**
  * @summary Draws a path given a set of points and an Id
@@ -46,19 +43,21 @@ regionUtils.drawRegionPath = function (
   points,
   regionId,
   borderColor,
-  fillColor
+  fillColor,
+  strokeDasharray
 ) {
   const canvasNode =
     overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
   const canvas = d3.select(canvasNode);
   const strokeWstr =
-    regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
+    2.5 * regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
   canvas
     .append("path")
     .attr("d", regionUtils.pointsToPath(points))
     .attr("id", regionId + "_poly")
-    .attr("class", "regionpoly")
+    .attr("class", "regionpoly region_previewpoly")
     .attr("stroke-width", strokeWstr)
+    .attr("stroke-dasharray", strokeDasharray ? strokeDasharray : "none")
     .style("stroke", borderColor ? borderColor : "#FF0000")
     .style("fill", fillColor ? fillColor : "none")
     .append("title")
@@ -71,9 +70,35 @@ regionUtils.drawRegionPath = function (
  * @param {*} regions Array of regions to be deleted
  */
 regionUtils.deleteRegions = function (regionIds) {
+  if (regionIds.length < 1) {
+    interfaceUtils.alert("Please select at least one region");
+    return;
+  }
   regionIds.forEach((id) => {
     regionUtils.deleteRegion(id);
   });
+  regionUtils.updateAllRegionClassUI();
+  glUtils.updateRegionDataTextures();
+  glUtils.updateRegionLUTTextures();
+  glUtils.draw();
+};
+
+/**
+ * @summary Deletes regions
+ * @param {*} regions Array of regions to be deleted
+ */
+regionUtils.splitRegions = function (regionIds) {
+  if (regionIds.length < 1) {
+    interfaceUtils.alert("Please select at least one region");
+    return;
+  }
+  regionIds.forEach((id) => {
+    regionUtils.splitRegion(id);
+  });
+  regionUtils.updateAllRegionClassUI();
+  glUtils.updateRegionDataTextures();
+  glUtils.updateRegionLUTTextures();
+  glUtils.draw();
 };
 
 /**
@@ -81,6 +106,10 @@ regionUtils.deleteRegions = function (regionIds) {
  * @param {*} regions Array of regions to be duplicated
  */
 regionUtils.duplicateRegions = function (regions) {
+  if (regions.length < 1) {
+    interfaceUtils.alert("Please select at least one region");
+    return;
+  }
   regions.forEach((region) => {
     const newRegionId = "region" + (regionUtils._currentRegionId + 1);
     regionUtils._currentRegionId++;
@@ -93,9 +122,11 @@ regionUtils.duplicateRegions = function (regions) {
       region.regionClass,
       region.collectionIndex
     );
-    regionUtils.addRegionOperationsRow(newRegionId);
   });
   regionUtils.updateAllRegionClassUI();
+  glUtils.updateRegionDataTextures();
+  glUtils.updateRegionLUTTextures();
+  glUtils.draw();
 };
 
 /**
@@ -103,6 +134,10 @@ regionUtils.duplicateRegions = function (regions) {
  * @param {*} regions Array of regions to calculate the intersection
  */
 regionUtils.regionsIntersection = function (regions) {
+  if (regions.length < 2) {
+    interfaceUtils.alert("Please select at least two regions");
+    return;
+  }
   try {
     const intersectionPoints = polygonClipping.intersection(
       ...regions.map((region) => {
@@ -117,7 +152,6 @@ regionUtils.regionsIntersection = function (regions) {
     const hexColor = overlayUtils.randomColor("hex");
     regionUtils.addRegion(intersectionPoints, newRegionId, hexColor, "", newRegionLayerIndex);
     regionUtils.updateAllRegionClassUI();
-    regionUtils.addRegionOperationsRow(newRegionId);
     regions.forEach((region) => {
       regionUtils.deleteRegion(region.id);
     });
@@ -137,6 +171,10 @@ regionUtils.regionsIntersection = function (regions) {
  * @param {*} regions Array of regions to calculate the difference
  */
 regionUtils.regionsDifference = function (regions) {
+  if (regions.length < 2) {
+    interfaceUtils.alert("Please select at least two regions");
+    return;
+  }
   const differencePoints = polygonClipping.xor(
     ...regions.map((region) => {
       let viewportPoints = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
@@ -150,7 +188,6 @@ regionUtils.regionsDifference = function (regions) {
   const hexColor = overlayUtils.randomColor("hex");
   regionUtils.addRegion(differencePoints, newRegionId, hexColor, "", newRegionLayerIndex);
   regionUtils.updateAllRegionClassUI();
-  regionUtils.addRegionOperationsRow(newRegionId);
   regions.forEach((region) => {
     regionUtils.deleteRegion(region.id);
   });
@@ -166,7 +203,7 @@ regionUtils.regionsDifference = function (regions) {
  * @param {*} regionId Id of the region being rescaled
  * @param {*} scale Scale factor to use in rescaling
  */
-regionUtils.resizeRegion = function (regionId, scale) {
+regionUtils.resizeRegion = function (regionId, scale, preview) {
   const scaleFactor = scale / 100;
   let viewportPoints = regionUtils.globalPointsToViewportPoints(
     regionUtils._regions[regionId].globalPoints, 
@@ -250,6 +287,48 @@ regionUtils.resizeRegion = function (regionId, scale) {
   glUtils.updateRegionLUTTextures();
   glUtils.draw();
 };
+
+regionUtils.dilateRegion = function (regionId, offset, preview, onlyBorder) {
+  if (!offset) return;
+  const region = regionUtils._regions[regionId];
+  const worker = new Worker("static/js/utils/regionOffsetWorker.js");
+  const point1 = turf.point([0, 0]);
+  const point2 = turf.point([1, 0]);
+  const distance = turf.distance(point1, point2, {
+    units: "kilometers",
+  });
+  const offsetScaled =
+    (offset / OSDViewerUtils.getImageWidth()) *
+    distance;
+  let viewportPoints = regionUtils.globalPointsToViewportPoints(
+    region.globalPoints,
+    region.collectionIndex
+  );
+  worker.postMessage([viewportPoints, offsetScaled]);
+  worker.onmessage = function (event) {
+    if (!event.data) {
+      interfaceUtils.alert(
+        "An error ocurred applying the selected offset amount, for negative offsets, please make sure that the region is big enough to be offseted by that amount"
+      );
+      button.disabled = false;
+      button.innerHTML = "Type";
+      return;
+    }
+    d3.select("#" + region.id + "preview" + "_poly").remove();
+    if (preview) {
+      regionUtils.drawRegionPath(
+        regionUtils.arrayToObjectPoints(event.data),
+        region.id + "preview"
+      );
+    }
+    else {
+      regionUtils.drawOffsettedRegion(region, event.data, onlyBorder);
+      regionUtils.deleteRegion(region.id)
+      glUtils.updateRegionDataTextures();
+      glUtils.draw();
+    }
+  };
+}
 
 /**
  * @summary Recalculates region coordinates from the current region points.
@@ -337,7 +416,6 @@ regionUtils.drawOffsettedRegion = function (region, points, onlyBorder) {
     region.collectionIndex
   );
 
-  regionUtils.addRegionOperationsRow(newRegionId);
   regionUtils.updateAllRegionClassUI();
   glUtils.updateRegionDataTextures();
   glUtils.updateRegionLUTTextures();
@@ -395,6 +473,10 @@ regionUtils.stringToFloatPoints = function (points) {
  * @param {*} regions Array of regions to be merged
  */
 regionUtils.mergeRegions = function (regions) {
+  if (regions.length < 2) {
+    interfaceUtils.alert("Please select at least two regions");
+    return;
+  }
   const mergedPoints = polygonClipping.union(
     ...regions.map((region) => {
       let viewportPoints = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
@@ -408,7 +490,6 @@ regionUtils.mergeRegions = function (regions) {
   const hexColor = overlayUtils.randomColor("hex");
   regionUtils.addRegion(mergedPoints, newRegionId, hexColor, "", newRegionLayerIndex);
   regionUtils.updateAllRegionClassUI();
-  regionUtils.addRegionOperationsRow(newRegionId);
   regions.forEach((region) => {
     regionUtils.deleteRegion(region.id);
   });
@@ -426,6 +507,9 @@ regionUtils.selectRegion = function (region) {
   regionUtils._selectedRegions[region.id] = region;
   let points = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
   regionUtils.drawRegionPath(points, region.id + "_selected", "#0165fc")
+  const checkBox = document.getElementById(`${region.id}_selection_check`);
+  if (checkBox) checkBox.checked = true;
+  regionUtils.addRegionToolbarUI();
 };
 
 /**
@@ -435,6 +519,9 @@ regionUtils.selectRegion = function (region) {
 regionUtils.deSelectRegion = function (regionId) {
     delete regionUtils._selectedRegions[regionId];
     d3.select("#" + regionId + "_selected" + "_poly").remove();
+    const checkBox = document.getElementById(`${regionId}_selection_check`);
+    if (checkBox) checkBox.checked = false;
+    regionUtils.addRegionToolbarUI();
 };
 
 /**
@@ -444,8 +531,9 @@ regionUtils.resetSelection = function () {
   const selectedRegions = Object.values(regionUtils._selectedRegions);
   selectedRegions.forEach((region) => {
     const checkBox = document.getElementById(`${region.id}_selection_check`);
-    checkBox.checked = false;
+    if (checkBox) checkBox.checked = false;
     d3.select("#" + region.id + "_selected" + "_poly").remove();
   });
   regionUtils._selectedRegions = {};
+  regionUtils.addRegionToolbarUI();
 };

@@ -23,10 +23,7 @@ tmapp.registerActions = function () {
     var op = tmapp["object_prefix"];
 
     interfaceUtils.listen(op + '_collapse_btn','click', function () { interfaceUtils.toggleRightPanel() },false);
-    interfaceUtils.listen(op + '_drawregions_btn','click', function () { regionUtils.regionsOnOff() },false);
-    interfaceUtils.listen(op + "_draw_regions_free_hand_btn", "click", function () { regionUtils.freeHandRegionsOnOff(); }, false);
-    interfaceUtils.listen(op + "_draw_regions_brush_btn", "click", function () { regionUtils.brushRegionsOnOff(); }, false);
-    interfaceUtils.listen(op + "_operations_regions_btn", "click", function () { regionUtils.regionOperationsOnOff(); }, false);
+    interfaceUtils.listen(op + "_toolbar_regions_btn", "click", function () { regionUtils.regionToolbarOnOff(); }, false);
     interfaceUtils.listen(op + '_export_regions','click', function () { regionUtils.exportRegionsToJSON() },false);
     interfaceUtils.listen(op + '_import_regions','click', function () { regionUtils.importRegionsFromJSON() },false);
     interfaceUtils.listen(op + '_export_regions_csv','click', function () { regionUtils.pointsInRegionsToCSV() },false);
@@ -143,11 +140,15 @@ tmapp.init = function () {
         d3.selectAll("." + regionUtils._drawingclass).selectAll('polyline').each(function(el) {
             $(this).attr('stroke-width', regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
         });
+        
         d3.selectAll("." + regionUtils._drawingclass).selectAll('circle').each(function(el) {
             $(this).attr('r', 10* regionUtils._handleRadius / tmapp["ISS_viewer"].viewport.getZoom());
         });
         d3.selectAll(".regionpoly").each(function(el) {
             $(this).attr('stroke-width', regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
+        });
+        d3.selectAll(".region_previewpoly").each(function(el) {
+            $(this).attr('stroke-width', 2.5 * regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
         });
         var op = tmapp["object_prefix"];
         let homeZoom = tmapp[op + "_viewer"].viewport.getHomeZoom()
@@ -304,6 +305,8 @@ $( document ).ready(function() {
             }
         } else if (event.key === "r") {
             $("#ISS_fillregions_btn").click();
+        } else if (event.key === "Escape") {
+            regionUtils.resetSelection();
         }
     });
 });

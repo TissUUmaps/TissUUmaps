@@ -1984,7 +1984,7 @@ interfaceUtils._mGenUIFuncs.groupUI=async function(uid, force){
         td0.appendChild(check0);
         check0.addEventListener("input",(event)=>{
             clist = interfaceUtils.getElementsByClassName(uid+"-marker-input");
-            for (var i = 0; i < clist.length; ++i) { clist[i].checked = event.target.checked; }
+            for (var i = 0; i < clist.length; ++i) { clist[i].checked_eye = event.target.checked; }
         });
         var label1=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":uid+"_all_check","class":"cursor-pointer"}});
         label1.innerText="All";
@@ -2817,6 +2817,42 @@ interfaceUtils._rGenUIFuncs={}
 /** 
 * @param {HTMLEvent} event event that triggered function
 * @summary Delete all trace of a tab including datautils.data.key*/
+interfaceUtils._rGenUIFuncs.checkboxToEye=function(checkBox){
+    let button1 = HTMLElementUtils.createElement(
+        {"kind":"div", extraAttributes:{"data-uid":checkBox.id,"class":"btn btn-light btn-sm mx-1"}}
+    );
+    button1.innerHTML = "<i class='bi bi-eye'></i>";
+    button1.addEventListener("click",function(event) {
+        checkBox.checked = !checkBox.checked;
+        checkBox.dispatchEvent(new Event('input'));
+        if (checkBox.checked) {
+            button1.innerHTML = "<i class='bi bi-eye'></i>";
+        }
+        else {
+            button1.innerHTML = "<i class='bi bi-eye-slash-fill'></i>";
+        }
+    });
+    checkBox.parentNode.insertBefore(button1, checkBox.nextSibling);
+    checkBox.style.display = "none";
+    Object.defineProperty(checkBox, "checked_eye", {
+        get : function () {
+            return this.checked;
+        },
+        set : function (val) {
+            this.checked = val;
+            if (this.checked) {
+                button1.innerHTML = "<i class='bi bi-eye'></i>";
+            }
+            else {
+                button1.innerHTML = "<i class='bi bi-eye-slash-fill'></i>";
+            }
+        }
+    });
+}
+
+/** 
+* @param {HTMLEvent} event event that triggered function
+* @summary Delete all trace of a tab including datautils.data.key*/
 interfaceUtils._rGenUIFuncs.createTable=function(){
     let allRegionClasses = Object.values(regionUtils._regions).map(function(e) { return e.regionClass; })
     let singleRegionClasses = allRegionClasses.filter((v, i, a) => a.indexOf(v) === i);
@@ -2871,13 +2907,22 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
     // Get previous "All" checkbox element so that we can re-use its old state
     const lastCheckAll = interfaceUtils.getElementById("regionUI_all_check", false);
 
+    
+    var label2=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":"regionUI_all_check","class":"cursor-pointer"}});
+    label2.innerText="All";
+    td2.appendChild(label2);
+
+    var label3=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":"regionUI_all_check","class":"cursor-pointer"}});
+    label3.innerText=Object.keys(regionUtils._regions).length;
+    td3.appendChild(label3);        
+ 
     var check0=HTMLElementUtils.createElement({"kind":"input", "id":"regionUI_all_check","extraAttributes":{"class":"form-check-input","type":"checkbox" }});
     check0.checked = lastCheckAll != null ? lastCheckAll.checked : true;
     td1.appendChild(check0);
     check0.addEventListener("input",(event)=>{
         visible = event.target.checked;
         clist = interfaceUtils.getElementsByClassName("regionUI-region-input");
-        for (var i = 0; i < clist.length; ++i) { clist[i].checked = visible; }
+        for (var i = 0; i < clist.length; ++i) { clist[i].checked_eye = visible; }
         groupRegions = Object.values(regionUtils._regions)
         for (region of groupRegions) {
             region.visibility = visible;
@@ -2895,35 +2940,8 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         glUtils.updateRegionLUTTextures();
         glUtils.draw(); */      
     });
-    var label2=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":"regionUI_all_check","class":"cursor-pointer"}});
-    label2.innerText="All";
-    td2.appendChild(label2);
-
-    var label3=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":"regionUI_all_check","class":"cursor-pointer"}});
-    label3.innerText=Object.keys(regionUtils._regions).length;
-    td3.appendChild(label3);        
- 
-    var regionsdeletebutton = HTMLElementUtils.createButton({
-        innerText: "<i class='bi bi-trash'></i>",
-        extraAttributes: {
-            class: "col btn btn-sm btn-primary form-control-sm mx-1"
-        }
-    });
-    regionsdeletebutton.addEventListener('click', function () {
-        interfaceUtils.confirm('Are you sure you want to delete the whole '+regionClass+' group?')
-        .then(function(_confirm){
-            if (_confirm) {
-                groupRegions = Object.values(regionUtils._regions).filter(
-                    x => x.regionClass==regionClass
-                ).forEach(function (region) {
-                    regionUtils.deleteRegion(region.id, true);
-                });
-                regionUtils.updateAllRegionClassUI();
-            }
-        });
-    });
-    td5.appendChild(regionsdeletebutton);
-
+    td5.appendChild(check0);
+    interfaceUtils._rGenUIFuncs.checkboxToEye(check0);
     thead2.appendChild(tr);
 
     for (i of Object.keys(singleRegionClasses.sort())) {
@@ -2956,28 +2974,6 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         tr.appendChild(td4);
         tr.appendChild(td5);
         //tr.appendChild(td6);
-        
-        var check0=HTMLElementUtils.createElement({"kind":"input", "id":"regionUI_"+regionClassID+"_check","extraAttributes":{"class":"form-check-input regionUI-region-input","type":"checkbox" }});
-        check0.checked = true;
-        td1.appendChild(check0);
-        
-        var check1=HTMLElementUtils.createElement({"kind":"input", "id":"regionUI_"+regionClassID+"_hidden","extraAttributes":{"class":"form-check-input region-hidden d-none regionUI-region-hidden","type":"checkbox" }});
-        check1.checked = true;
-        td1.appendChild(check1);
-        
-        check0.addEventListener('input', function (event) {
-            var visible = event.target.checked;
-            clist = interfaceUtils.getElementsByClassName("regionUI-region-"+regionClassID+"-input");
-            for (var i = 0; i < clist.length; ++i) { clist[i].checked = visible; }
-            groupRegions = Object.values(regionUtils._regions).filter(
-                x => x.regionClass==regionClass
-            );
-            for (region of groupRegions) {
-                region.visibility = visible;
-            };
-            glUtils.updateRegionLUTTextures();
-            glUtils.draw();
-        })
         
         if (regionClass) rClass = regionClass; else rClass = "";
         var regionclasstext = HTMLElementUtils.inputTypeText({
@@ -3044,26 +3040,24 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         });
         td4.appendChild(regioncolorinput);
 
-        var regionsdeletebutton = HTMLElementUtils.createButton({
-            innerText: "<i class='bi bi-trash'></i>",
-            extraAttributes: {
-                class: "col btn btn-sm btn-primary form-control-sm mx-1"
-            }
-        });
-        regionsdeletebutton.addEventListener('click', function () {
-            interfaceUtils.confirm('Are you sure you want to delete the whole '+regionClass+' group?')
-            .then(function(_confirm){
-                if (_confirm) {
-                    groupRegions = Object.values(regionUtils._regions).filter(
-                        x => x.regionClass==regionClass
-                    ).forEach(function (region) {
-                        regionUtils.deleteRegion(region.id, true);
-                    });
-                    regionUtils.updateAllRegionClassUI();
-                }
-            });
-        });
-        td5.appendChild(regionsdeletebutton);
+        var check0=HTMLElementUtils.createElement({"kind":"input", "id":"regionUI_"+regionClassID+"_check","extraAttributes":{"class":"form-check-input regionUI-region-input","type":"checkbox" }});
+        check0.checked = true;
+        td5.appendChild(check0);
+        interfaceUtils._rGenUIFuncs.checkboxToEye(check0);
+        
+        check0.addEventListener('input', function (event) {
+            var visible = event.target.checked;
+            clist = interfaceUtils.getElementsByClassName("regionUI-region-"+regionClassID+"-input");
+            for (var i = 0; i < clist.length; ++i) { clist[i].checked_eye = visible; }
+            groupRegions = Object.values(regionUtils._regions).filter(
+                x => x.regionClass==regionClass
+            );
+            for (region of groupRegions) {
+                region.visibility = visible;
+            };
+            glUtils.updateRegionLUTTextures();
+            glUtils.draw();
+        })
         /*
         button6 = HTMLElementUtils.createElement({"kind":"div", extraAttributes:{"data-escapedID":regionClassID, "class":"btn btn-light btn-sm mx-1"}});
         button6.innerHTML = "<i class='bi bi-eye'></i>";
@@ -3205,22 +3199,21 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     tr.appendChild(td4);
     tr.appendChild(td5);
     
-    var check0=HTMLElementUtils.createElement({"kind":"input", "id":"singleRegionUI_"+regionId+"_check","extraAttributes":{"class":"form-check-input regionUI-region-input regionUI-region-"+regionClassID+"-input","type":"checkbox" }});
-    check0.checked = true;
-    td1.appendChild(check0);
     
-    var check1=HTMLElementUtils.createElement({"kind":"input", "id":"singleRegionUI_"+regionId+"_hidden","extraAttributes":{"class":"form-check-input region-hidden d-none regionUI-region-hidden","type":"checkbox" }});
-    check1.checked = true;
-    td1.appendChild(check1);
-    
-    check0.addEventListener('input', function (event) {
-        var visible = event.target.checked;
-        console.log(region, visible);
-        region.visibility = visible;
-        glUtils.updateRegionLUTTextures();
-        glUtils.draw();
-    })
-    
+    const checkBox = HTMLElementUtils.inputTypeCheckbox({
+        id: region.id + "_selection_check",
+        class: "form-check-input",
+        value: false,
+        eventListeners: {
+        click: function () {
+            this.checked
+            ? regionUtils.selectRegion(region)
+            : regionUtils.deSelectRegion(region.id);
+        },
+        },
+    });
+    checkBox.checked = regionUtils._selectedRegions[region.id] != undefined;
+    td1.appendChild(checkBox);
     var regionclasstext = HTMLElementUtils.inputTypeText({
         extraAttributes: {
             size: 9,
@@ -3260,7 +3253,7 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     var regionshistobutton = HTMLElementUtils.createButton({
         innerText: "<i class='bi bi-bar-chart-fill'></i>",
         extraAttributes: {
-            class: "col btn btn-sm btn-primary form-control-sm mx-1"
+            class: "col btn btn-sm btn-light form-control-sm mx-1"
         }
     });
     regionshistobutton.addEventListener('click', function () {
@@ -3309,17 +3302,19 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     td4.appendChild(regionshistobutton);
     td4.style.width = "1px";
 
-    var regionsdeletebutton = HTMLElementUtils.createButton({
-        innerText: "<i class='bi bi-trash'></i>",
-        extraAttributes: {
-            class: "col btn btn-sm btn-primary form-control-sm mx-1"
-        }
-    });
-    regionsdeletebutton.addEventListener('click', function () {
-        regionUtils.deleteRegion(region.id, true);
-        regionUtils.updateAllRegionClassUI();
-    });
-    td5.appendChild(regionsdeletebutton);
+    var check0=HTMLElementUtils.createElement({"kind":"input", "id":"singleRegionUI_"+regionId+"_check","extraAttributes":{"class":"form-check-input regionUI-region-input regionUI-region-"+regionClassID+"-input","type":"checkbox" }});
+    check0.checked = true;
+    
+    check0.addEventListener('input', function (event) {
+        var visible = event.target.checked;
+        console.log(region, visible);
+        region.visibility = visible;
+        glUtils.updateRegionLUTTextures();
+        glUtils.draw();
+    })
+    
+    td5.appendChild(check0);
+    interfaceUtils._rGenUIFuncs.checkboxToEye(check0);
     td5.style.width = "1px";
     /*
     button6 = HTMLElementUtils.createElement({"kind":"div", extraAttributes:{"data-escapedID":regionClassID, "class":"btn btn-light btn-sm mx-1"}});
@@ -3367,7 +3362,15 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
             glUtils.draw();
         })
     })*/
-    
+    tr.onmouseover = function () {
+        tr.style.background = "var(--bs-primary-light)";
+        let viewportPoints = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
+        regionUtils.drawRegionPath(viewportPoints, region.id, "#39FF14", null, "0 0.01 0");
+    };
+    tr.onmouseout = function () {
+        tr.style.background = "white";
+        d3.select("#" + region.id + "_poly").remove();
+    };
     return tr;
 }
 

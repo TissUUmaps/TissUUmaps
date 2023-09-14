@@ -193,9 +193,6 @@ regionUtils.closePolygon = function () {
     regionUtils._currentPoints = null;
 
     regionUtils.updateAllRegionClassUI();
-    if(overlayUtils._regionOperations){
-        regionUtils.addRegionOperationsRow(regionid)
-    }
     $(document.getElementById("regionClass-")).collapse("show");
 
 }
@@ -574,6 +571,31 @@ regionUtils.fillAllRegions=function(){
 
 /** 
  * @param {String} regionid String id of region to delete
+ * @summary Given a region id, split region.globalPoints in separate regions */
+regionUtils.splitRegion = function (regionid) {
+    const region = regionUtils._regions[regionid];
+    const globalPoints = region.globalPoints;
+    const globalPointsLength = globalPoints.length;
+    for (let i = 0; i < globalPointsLength; i++) {
+        const newRegionId = regionid + "_" + i;
+        regionUtils.addRegion(
+            regionUtils.objectToArrayPoints(
+                regionUtils.globalPointsToViewportPoints(
+                    [globalPoints[i]], 
+                    region.collectionIndex
+                )
+            ),
+            newRegionId,
+            region.polycolor,
+            region.regionClass,
+            region.collectionIndex
+        );
+    }
+    regionUtils.deleteRegion(regionid);
+}
+
+/** 
+ * @param {String} regionid String id of region to delete
  * @summary Given a region id, deletes this region in the interface */
 regionUtils.deleteRegion = function (regionid, skipUpdateAllRegionClassUI) {
     delete regionUtils._regions[regionid];
@@ -584,19 +606,8 @@ regionUtils.deleteRegion = function (regionid, skipUpdateAllRegionClassUI) {
         var rPanelHist = document.getElementById(op + regionid + "_tr_hist");
         rPanelHist.parentElement.removeChild(rPanelHist);
     }
-    if(!overlayUtils._regionOperations) return; 
-    regionUtils.deleteRegionOperationRows(regionid);  
-    if(!regionUtils._selectedRegions[regionid]) return; 
-    const regionClass = regionUtils._selectedRegions[regionid].regionClass;
     regionUtils.deSelectRegion(regionid); 
-    const remainingClassRegions = Object.values(regionUtils._regions).filter((region) => region.regionClass === regionClass);
-    if(remainingClassRegions.length === 0){
-        regionUtils.deleteRegionOperationsAccordion(regionClass);
-    }
     regionUtils.updateAllRegionClassUI();
-    //if(!skipUpdateAllRegionClassUI) {
-    //    regionUtils.updateAllRegionClassUI();
-    //}
 }
 /** 
  * @param {String} regionid String id of region to delete
@@ -734,19 +745,22 @@ regionUtils.regionsOnOff = function () {
     if (overlayUtils._brushDrawRegions) {
         regionUtils.brushRegionsOnOff();
     }
+    if (overlayUtils._regionSelection) {
+        regionUtils.selectRegionsOnOff();
+    }
     overlayUtils._drawRegions = !overlayUtils._drawRegions;
     var op = tmapp["object_prefix"];
-    let regionIcon = document.getElementById(op + '_drawregions_icon');
+    let regionIcon = document.getElementById('region_drawing_points_button');
     if (overlayUtils._drawRegions) {
-        regionIcon.classList.remove("bi-circle");
-        regionIcon.classList.add("bi-check-circle");
+        regionIcon.classList.remove("btn-light");
+        regionIcon.classList.add("btn-primary");
         // Set region drawing cursor and show hint
         regionUtils.setViewerCursor("crosshair")
         regionUtils.showHint("Click to draw regions")
     } else {
         regionUtils.resetManager();
-        regionIcon.classList.remove("bi-check-circle");
-        regionIcon.classList.add("bi-circle");
+        regionIcon.classList.remove("btn-primary");
+        regionIcon.classList.add("btn-light");
          // Reset cursor and hide hint
         regionUtils.setViewerCursor("auto")
         regionUtils.hideHint();
@@ -761,21 +775,24 @@ regionUtils.freeHandRegionsOnOff = function () {
     if (overlayUtils._brushDrawRegions) {
         regionUtils.brushRegionsOnOff();
     }
+    if (overlayUtils._regionSelection) {
+        regionUtils.selectRegionsOnOff();
+    }
     overlayUtils._freeHandDrawRegions = !overlayUtils._freeHandDrawRegions;
     const op = tmapp["object_prefix"];
     let freeHandButtonIcon = document.getElementById(
-        op + "_draw_regions_free_hand_icon"
+        "region_drawing_free_button"
     );
     if (overlayUtils._freeHandDrawRegions) {
-        freeHandButtonIcon.classList.remove("bi-circle");
-        freeHandButtonIcon.classList.add("bi-check-circle");
+        freeHandButtonIcon.classList.remove("btn-light");
+        freeHandButtonIcon.classList.add("btn-primary");
         // Set region drawing cursor and show hint
         regionUtils.setViewerCursor("crosshair");
         regionUtils.showHint("Drag the mouse to draw regions");
     } else {
         regionUtils.resetManager();
-        freeHandButtonIcon.classList.remove("bi-check-circle");
-        freeHandButtonIcon.classList.add("bi-circle");
+        freeHandButtonIcon.classList.remove("btn-primary");
+        freeHandButtonIcon.classList.add("btn-light");
         // Reset cursor and hide hint
         regionUtils.setViewerCursor("auto");
         regionUtils.hideHint();
@@ -790,23 +807,52 @@ regionUtils.brushRegionsOnOff = function () {
     if (overlayUtils._freeHandDrawRegions) {
         regionUtils.freeHandRegionsOnOff();
     }
+    if (overlayUtils._regionSelection) {
+        regionUtils.selectRegionsOnOff();
+    }
     overlayUtils._brushDrawRegions = !overlayUtils._brushDrawRegions;
     const op = tmapp["object_prefix"];
     let brushButtonIcon = document.getElementById(
-        op + "_draw_regions_brush_icon"
+        "region_drawing_brush_button"
     );
     if (overlayUtils._brushDrawRegions) {
-        brushButtonIcon.classList.remove("bi-circle");
-        brushButtonIcon.classList.add("bi-check-circle");
+        brushButtonIcon.classList.remove("btn-light");
+        brushButtonIcon.classList.add("btn-primary");
         // Set region drawing cursor and show hint
         regionUtils.setViewerCursor("none");
         regionUtils.showHint("Drag the brush to draw regions");
     } else {
         regionUtils.resetManager();
-        brushButtonIcon.classList.remove("bi-check-circle");
-        brushButtonIcon.classList.add("bi-circle");
+        brushButtonIcon.classList.remove("btn-primary");
+        brushButtonIcon.classList.add("btn-light");
         regionUtils.setViewerCursor("auto");
         regionUtils.hideHint();
+    }
+};
+
+regionUtils.selectRegionsOnOff = function () {
+    // Toggle off other region modes
+    if (overlayUtils._drawRegions) {
+        regionUtils.regionsOnOff();
+    }
+    if (overlayUtils._freeHandDrawRegions) {
+        regionUtils.freeHandRegionsOnOff();
+    }
+    if (overlayUtils._brushDrawRegions) {
+        regionUtils.brushRegionsOnOff();
+    }
+    overlayUtils._regionSelection = !overlayUtils._regionSelection;
+    const op = tmapp["object_prefix"];
+    let selectButtonIcon = document.getElementById(
+        "region_selection_button"
+    );
+    if (overlayUtils._regionSelection) {
+        selectButtonIcon.classList.remove("btn-light");
+        selectButtonIcon.classList.add("btn-primary");
+    } else {
+        regionUtils.resetManager();
+        selectButtonIcon.classList.remove("btn-primary");
+        selectButtonIcon.classList.add("btn-light");
     }
 };
 
@@ -1020,13 +1066,11 @@ regionUtils.brushManager = function (event) {
         regionUtils._currentPoints = null;
     
         regionUtils.updateAllRegionClassUI();
-        if(overlayUtils._regionOperations){
-            regionUtils.addRegionOperationsRow(regionid)
-        }
         $(document.getElementById("regionClass-")).collapse("show");
     
         // If initial point and final point are not close enough, reset
         regionUtils.resetManager();
+        regionUtils.selectRegion(regionUtils._regions[regionid]);
     }
     function getBrushShape(x1,y1,x2,y2,brushSize){
         // Get coordinates of the perimeter around two circles of radius brushSize
@@ -1110,7 +1154,6 @@ regionUtils.brushManager = function (event) {
                         regions[0].collectionIndex
                     )
                 );
-                console.log(regionUtils._currentPoints);
                 regionUtils._isNewRegion = false;
                 regionUtils._currentLayerIndex = regions[0].collectionIndex;
                 regionUtils._editedRegion = regions[0];
@@ -1355,9 +1398,6 @@ regionUtils.JSONValToRegions= async function(jsonVal){
     var regions=jsonVal;
     await regionUtils.geoJSON2regions(regions);
     regionUtils.updateAllRegionClassUI();
-    if(overlayUtils._regionOperations){
-        regionUtils.updateRegionOperationsListUI();
-    }
     $('[data-bs-target="#markers-regions-project-gui"]').tab('show');
 }
 

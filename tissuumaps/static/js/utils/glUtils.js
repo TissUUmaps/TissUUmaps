@@ -69,7 +69,6 @@ glUtils = {
     _regionUseColorByID: false,   // Map region object IDs to unique colors
     _regionDataTexSize: 4096,     // Note: should not be set above context's MAX_TEXTURE_SIZE
     _regionPicked: null,          // Key to regionUtils._regions dict, or null if no region is picked
-    _regionShowInfo: false,       // Enable region picking and show info for picked region in overlay
     _logPerformance: false,       // Use GPU timer queries to log performance
     _piechartPaletteDefault: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
@@ -2253,7 +2252,7 @@ glUtils.pick = function(event) {
         glUtils._regionPicked = pickedRegion;
 
         tmapp["ISS_viewer"].removeOverlay("ISS_region_info");
-        if (hasPickedRegion && glUtils._regionShowInfo) {
+        if (hasPickedRegion && overlayUtils._regionSelection) {
             const div = document.createElement("div");
             div.id = "ISS_region_info";
             div.width = "1px"; div.height = "1px";
@@ -2271,6 +2270,21 @@ glUtils.pick = function(event) {
                 checkResize: false,
                 rotationMode: OpenSeadragon.OverlayRotationMode.NO_ROTATION
             });
+            if (regionUtils._selectedRegions[pickedRegion]) {
+                regionUtils.deSelectRegion(pickedRegion);
+            }
+            else {
+                if (!event.shift){
+                    regionUtils.resetSelection();
+                }
+                regionUtils.selectRegion(regionUtils._regions[pickedRegion]);
+            }
+            console.log(event);
+        }
+        else {
+            if (!event.shift){
+                regionUtils.resetSelection();
+            }
         }
     }
 }
