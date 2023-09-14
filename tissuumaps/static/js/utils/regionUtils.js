@@ -1065,6 +1065,9 @@ regionUtils.brushManager = function (event) {
     
         // If initial point and final point are not close enough, reset
         regionUtils.resetManager();
+        if (regionUtils._editedRegion) {
+            regionUtils.selectRegion(regionUtils._regions[regionid])
+        }
     }
     function getBrushShape(x1,y1,x2,y2,brushSize){
         // Get coordinates of the perimeter around two circles of radius brushSize
