@@ -1984,7 +1984,7 @@ interfaceUtils._mGenUIFuncs.groupUI=async function(uid, force){
         td0.appendChild(check0);
         check0.addEventListener("input",(event)=>{
             clist = interfaceUtils.getElementsByClassName(uid+"-marker-input");
-            for (var i = 0; i < clist.length; ++i) { clist[i].checked_eye = event.target.checked; }
+            for (var i = 0; i < clist.length; ++i) { clist[i].checked = event.target.checked; }
         });
         var label1=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":uid+"_all_check","class":"cursor-pointer"}});
         label1.innerText="All";
