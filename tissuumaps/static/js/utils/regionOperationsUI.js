@@ -133,6 +133,21 @@ regionUtils.addRegionToolbarUI = function () {
     tooltip.enable();
     splitButton.innerHTML = '<i class="bi bi-percent"></i>';
 
+    const fillHolesButton = HTMLElementUtils.createButton({
+      extraAttributes: { class: "btn lh-1 btn-primary m-1 p-2 only-selected", "title": "Fill holes in regions" },
+    });
+    fillHolesButton.onclick = function () {
+      const regions = Object.values(regionUtils._selectedRegions);
+      regionUtils.fillHolesRegions(
+        Object.values(regions).map((region) => region.id)
+      );
+    };
+    var tooltip = new bootstrap.Tooltip(splitButton, {
+      placement: "bottom",
+    });
+    tooltip.enable();
+    fillHolesButton.innerHTML = '<i class="bi bi-egg-fried"></i>';
+
     const unselectButton = HTMLElementUtils.createButton({
       extraAttributes: { class: "btn lh-1 btn-primary m-1 p-2 only-selected", "title": "Unselect all regions (escape)" },
     });
@@ -244,6 +259,7 @@ regionUtils.addRegionToolbarUI = function () {
     buttonsContainer.appendChild(scaleButton);
     buttonsContainer.appendChild(dilateButton);
     buttonsContainer.appendChild(splitButton);
+    buttonsContainer.appendChild(fillHolesButton);
     buttonsContainer.appendChild(unselectButton);
     tmapp.ISS_viewer.addControl(buttonsContainer, { anchor: OpenSeadragon.ControlAnchor.TOP_LEFT });
   }

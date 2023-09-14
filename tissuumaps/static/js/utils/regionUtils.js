@@ -623,6 +623,18 @@ regionUtils.splitRegion = function (regionid) {
 
 /** 
  * @param {String} regionid String id of region to delete
+ * @summary Given a region id, fill holes in region.globalPoints */
+regionUtils.fillHolesRegion = function (regionid) {
+    const region = regionUtils._regions[regionid];
+    for (let i = 0; i < region.globalPoints.length; i++) {
+        region.globalPoints[i] = [region.globalPoints[i][0]];
+    }
+    regionUtils.deSelectRegion(regionid);
+    regionUtils.selectRegion(region);
+}
+
+/** 
+ * @param {String} regionid String id of region to delete
  * @summary Given a region id, deletes this region in the interface */
 regionUtils.deleteRegion = function (regionid, skipUpdateAllRegionClassUI) {
     delete regionUtils._regions[regionid];

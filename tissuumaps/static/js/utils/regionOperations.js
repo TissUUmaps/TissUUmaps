@@ -94,6 +94,23 @@ regionUtils.splitRegions = function (regionIds) {
 };
 
 /**
+ * @summary Fill holes in regions
+ * @param {*} regions Array of regions to be deleted
+ */
+regionUtils.fillHolesRegions = function (regionIds) {
+  if (regionIds.length < 1) {
+    interfaceUtils.alert("Please select at least one region");
+    return;
+  }
+  regionIds.forEach((id) => {
+    regionUtils.fillHolesRegion(id);
+  });
+  glUtils.updateRegionDataTextures();
+  glUtils.updateRegionLUTTextures();
+  glUtils.draw();
+};
+
+/**
  * @summary Duplicates regions
  * @param {*} regions Array of regions to be duplicated
  */
