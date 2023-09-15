@@ -322,11 +322,12 @@ regionUtils.dilateRegion = function (regionId, offset, preview, onlyBorder) {
         dilatedPoints
       );
     }
-    d3.select("#" + region.id + "preview" + "_poly").remove();
+    const escapedRegionId = HTMLElementUtils.stringToId(regionId);
+    d3.select("#" + escapedRegionId + "preview" + "_poly").remove();
     if (preview) {
       regionUtils.drawRegionPath(
         regionUtils.arrayToObjectPoints(dilatedPoints),
-        region.id + "preview"
+        escapedRegionId + "preview"
       );
     }
     else {
