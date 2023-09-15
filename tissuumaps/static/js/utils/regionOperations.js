@@ -122,12 +122,11 @@ regionUtils.duplicateRegions = function (regions) {
   regions.forEach((region) => {
     const newRegionId = "region" + (regionUtils._currentRegionId + 1);
     regionUtils._currentRegionId++;
-    const hexColor = overlayUtils.randomColor("hex");
     let viewportPoints = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
     regionUtils.addRegion(
       regionUtils.objectToArrayPoints(viewportPoints),
       newRegionId,
-      hexColor,
+      region.polycolor,
       region.regionClass,
       region.collectionIndex
     );
@@ -158,8 +157,7 @@ regionUtils.regionsIntersection = function (regions) {
     const newRegionLayerIndex = regions[0].collectionIndex;
     regionUtils._currentRegionId += 1;
     const newRegionId = "region" + regionUtils._currentRegionId;
-    const hexColor = overlayUtils.randomColor("hex");
-    regionUtils.addRegion(intersectionPoints, newRegionId, hexColor, "", newRegionLayerIndex);
+    regionUtils.addRegion(intersectionPoints, newRegionId, regions[0].polycolor, "", newRegionLayerIndex);
     regionUtils.updateAllRegionClassUI();
     regions.forEach((region) => {
       regionUtils.deleteRegion(region.id);
@@ -194,8 +192,7 @@ regionUtils.regionsDifference = function (regions) {
   const newRegionLayerIndex = regions[0].collectionIndex;
   regionUtils._currentRegionId += 1;
   const newRegionId = "region" + regionUtils._currentRegionId;
-  const hexColor = overlayUtils.randomColor("hex");
-  regionUtils.addRegion(differencePoints, newRegionId, hexColor, "", newRegionLayerIndex);
+  regionUtils.addRegion(differencePoints, newRegionId, regions[0].polycolor, "", newRegionLayerIndex);
   regionUtils.updateAllRegionClassUI();
   regions.forEach((region) => {
     regionUtils.deleteRegion(region.id);
@@ -410,8 +407,7 @@ regionUtils.mergeRegions = function (regions) {
   const newRegionLayerIndex = regions[0].collectionIndex;
   regionUtils._currentRegionId += 1;
   const newRegionId = "region" + regionUtils._currentRegionId;
-  const hexColor = overlayUtils.randomColor("hex");
-  regionUtils.addRegion(mergedPoints, newRegionId, hexColor, "", newRegionLayerIndex);
+  regionUtils.addRegion(mergedPoints, newRegionId, regions[0].polycolor, "", newRegionLayerIndex);
   regionUtils.updateAllRegionClassUI();
   regions.forEach((region) => {
     regionUtils.deleteRegion(region.id);

@@ -2986,6 +2986,9 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         });
         regionclasstext.addEventListener('change', function () {
             var newClass = this.value;
+            const color = Object.values(regionUtils._regions).find(
+                x => x.regionClass==newClass
+            )?.polycolor;
             groupRegions = Object.values(regionUtils._regions).filter(
                 x => x.regionClass==regionClass
             );
@@ -2995,6 +2998,7 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
                     document.getElementById(escapedRegionID + "_class_ta").value = newClass;
                 regionUtils.changeRegion(region.id);
                 region.regionClass = newClass;
+                if (color) {region.polycolor = color;}
             };
             regionUtils.updateAllRegionClassUI();
         });td2.appendChild(regionclasstext);
@@ -3226,7 +3230,11 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     });
     regionclasstext.addEventListener('change', function () {
         var newClass = this.value;
+        const color = Object.values(regionUtils._regions).find(
+            x => x.regionClass==newClass
+        )?.polycolor;
         region.regionClass = newClass;
+        if (color) {region.polycolor = color;}
         regionUtils.updateAllRegionClassUI();
     });
     td2.appendChild(regionclasstext);

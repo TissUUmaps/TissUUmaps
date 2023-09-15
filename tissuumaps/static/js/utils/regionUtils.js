@@ -214,12 +214,10 @@ regionUtils.closePolygon = function () {
     var regionid = 'region' + regionUtils._currentRegionId.toString();
     d3.select("." + drawingclass).remove();
     regionsobj = d3.select(canvas);
-
-    var hexcolor = "#FF0000"; //overlayUtils.randomColor("hex");    
-
+    
     regionUtils._isNewRegion = true;
     regionUtils._currentPoints.push(regionUtils._currentPoints[0]);
-    regionUtils.addRegion([[regionUtils._currentPoints]], regionid, hexcolor, "", regionUtils._currentLayerIndex);
+    regionUtils.addRegion([[regionUtils._currentPoints]], regionid, null, "", regionUtils._currentLayerIndex);
     regionUtils._currentPoints = null;
 
     regionUtils.updateAllRegionClassUI();
@@ -424,6 +422,17 @@ regionUtils.distance = function (p1, p2) {
 regionUtils.addRegion = function (points, regionid, color, regionClass, collectionIndex) {
     if (collectionIndex == undefined) collectionIndex = 0;
     if (!regionClass) regionClass = "";
+    const regionClassID = HTMLElementUtils.stringToId("region_" + regionClass);
+    if (!color) {
+        const color_picker = document.getElementById(`regionUI_${regionClassID}_color`);
+        console.log("color_picker", color_picker);
+        if (color_picker) {
+            color = color_picker.value;
+        } else {
+            color = "#ff0000";
+        }
+        console.log("color", color);
+    }
     var op = tmapp["object_prefix"];
     var viewer = tmapp[tmapp["object_prefix"] + "_viewer"]
     //var imageWidth = OSDViewerUtils.getImageWidth();
@@ -1092,11 +1101,9 @@ regionUtils.brushManager = function (event) {
         var regionclass = (regionUtils._editedRegion)?regionUtils._editedRegion.regionClass:'';
         d3.select("." + drawingclass).remove();
         regionsobj = d3.select(canvas);
-    
-        var hexcolor = "#FF0000"; //overlayUtils.randomColor("hex");    
-    
+
         regionUtils._isNewRegion = true;
-        regionUtils.addRegion(regionUtils._currentPoints, regionid, hexcolor, regionclass, regionUtils._currentLayerIndex);
+        regionUtils.addRegion(regionUtils._currentPoints, regionid, null, regionclass, regionUtils._currentLayerIndex);
         regionUtils._currentPoints = null;
     
         regionUtils.updateAllRegionClassUI();
