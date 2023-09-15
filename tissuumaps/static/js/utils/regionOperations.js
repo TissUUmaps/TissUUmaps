@@ -334,6 +334,9 @@ regionUtils.dilateRegion = function (regionId, offset, preview, onlyBorder) {
         regionUtils.arrayToObjectPoints(dilatedPoints),
         region.collectionIndex
       );
+      regionUtils.updateBbox(region);
+      
+      regionUtils.deSelectRegion(region.id);
       regionUtils.selectRegion(region);
       glUtils.updateRegionDataTextures();
       glUtils.updateRegionLUTTextures();
