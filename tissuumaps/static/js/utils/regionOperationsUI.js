@@ -410,6 +410,7 @@ regionUtils.dilateRegionsModal = async function (regions) {
             inputcheck310=HTMLElementUtils.createElement({"kind":"input", "id":modalUID+"_preview","extraAttributes":{"class":"form-check-input","type":"checkbox" }});
             label311=HTMLElementUtils.createElement({"kind":"label", "id":modalUID+"_preview-label", "extraAttributes":{ "for":modalUID+"_preview" }});
             label311.innerText="Preview"
+  inputcheck210.addEventListener("input", preview);
   inputcheck310.addEventListener("input", preview);
   value112.addEventListener("input", preview);
   content.appendChild(row1);
