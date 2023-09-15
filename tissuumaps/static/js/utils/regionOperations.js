@@ -424,11 +424,25 @@ regionUtils.mergeRegions = function (regions) {
  */
 regionUtils.selectRegion = function (region) {
   const escapedRegionId = HTMLElementUtils.stringToId(region.id);
+  const regionClassID = HTMLElementUtils.stringToId("region_" + region.regionClass);
+
   regionUtils._selectedRegions[region.id] = region;
   let points = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
   regionUtils.drawRegionPath(points, escapedRegionId + "_selected", "#0165fc")
   const checkBox = document.getElementById(`${escapedRegionId}_selection_check`);
   if (checkBox) checkBox.checked = true;
+  const collapsibleRow = $(`#collapse_region_${regionClassID}`);
+  if (collapsibleRow) collapsibleRow.collapse("show");
+  setTimeout(() => {
+    var tr = document.querySelectorAll('[data-escapedid="'+escapedRegionId+'"]')[0];
+    if (tr != null) {
+        tr.scrollIntoView({block: "nearest",inline: "nearest"});
+        tr.classList.remove("transition_background")
+        tr.classList.add("table-primary")
+        setTimeout(function(){tr.classList.add("transition_background");tr.classList.remove("table-primary");},400);
+    }
+  },100)
+  
   regionUtils.addRegionToolbarUI();
 };
 

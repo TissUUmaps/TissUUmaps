@@ -2955,10 +2955,11 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         var td0=HTMLElementUtils.createElement(
             {kind:"td", extraAttributes:{
                 "data-bs-toggle":"collapse",
-                "data-bs-target":"#collapse_region_" + (i + 1),
+                "data-bs-target":"#collapse_region_" + regionClassID,
                 "aria-expanded":"false",
-                "aria-controls":"collapse_region_" + (i + 1),
-                "class":"collapse_button_transform collapsed"
+                "aria-controls":"collapse_region_" + regionClassID,
+                "class":"collapse_button_regionClass collapse_button_transform collapsed",
+                "id": regionClassID + "_collapse_table_button"
             }});
         var td1=HTMLElementUtils.createElement({"kind":"td"});
         var td2=HTMLElementUtils.createElement({"kind":"td"});
@@ -3116,7 +3117,7 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         let table_subregions=HTMLElementUtils.createElement({"kind":"table","extraAttributes":{"class":"table marker_table"}});
         var tbody_subregions=HTMLElementUtils.createElement({"kind":"tbody","id":"tbody_subregions_"+regionClassID});
         let collapse_div=HTMLElementUtils.createElement({"kind":"div"});
-        collapse_div.id = "collapse_region_" + (i + 1);
+        collapse_div.id = "collapse_region_" + regionClassID;
         collapse_div.setAttribute("data-region-class", regionClass);
         collapse_div.setAttribute("data-region-classID", regionClassID);
         collapse_div.classList.add("collapse")
