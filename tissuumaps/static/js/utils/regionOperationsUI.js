@@ -24,8 +24,8 @@ regionUtils.addRegionToolbarUI = function () {
     });
     mergeButton.onclick = function () {
       const regions = Object.values(regionUtils._selectedRegions);
-      regionUtils.mergeRegions(Object.values(regions));
-      regionUtils.resetSelection();
+      regionUtils.regionsClipper(regions, "union");
+      //regionUtils.resetSelection();
     };
     var tooltip = new bootstrap.Tooltip(mergeButton, {
       placement: "bottom",
@@ -38,8 +38,8 @@ regionUtils.addRegionToolbarUI = function () {
     });
     differenceButton.onclick = function () {
       const regions = Object.values(regionUtils._selectedRegions);
-      regionUtils.regionsDifference(Object.values(regions));
-      regionUtils.resetSelection();
+      regionUtils.regionsClipper(regions, "xor");
+      //regionUtils.resetSelection();
     };
     var tooltip = new bootstrap.Tooltip(differenceButton, {
       placement: "bottom",
@@ -52,8 +52,8 @@ regionUtils.addRegionToolbarUI = function () {
     });
     intersectionButton.onclick = function () {
       const regions = Object.values(regionUtils._selectedRegions);
-      regionUtils.regionsIntersection(Object.values(regions));
-      regionUtils.resetSelection();
+      regionUtils.regionsClipper(regions, "intersect");
+      //regionUtils.resetSelection();
     };
     var tooltip = new bootstrap.Tooltip(intersectionButton, {
       placement: "bottom",
@@ -66,7 +66,7 @@ regionUtils.addRegionToolbarUI = function () {
     });
     duplicateButton.onclick = function () {
       const regions = Object.values(regionUtils._selectedRegions);
-      regionUtils.duplicateRegions(Object.values(regions));
+      regionUtils.duplicateRegions(regions);
       regionUtils.resetSelection();
     };
     var tooltip = new bootstrap.Tooltip(duplicateButton, {
@@ -79,7 +79,7 @@ regionUtils.addRegionToolbarUI = function () {
     });
     scaleButton.onclick = function () {
       const regions = Object.values(regionUtils._selectedRegions);
-      regionUtils.resizeRegionsModal(Object.values(regions));
+      regionUtils.resizeRegionsModal(regions);
       //regionUtils.resetSelection();
     };
     var tooltip = new bootstrap.Tooltip(scaleButton, {
@@ -92,7 +92,7 @@ regionUtils.addRegionToolbarUI = function () {
     });
     dilateButton.onclick = function () {
       const regions = Object.values(regionUtils._selectedRegions);
-      regionUtils.dilateRegionsModal(Object.values(regions));
+      regionUtils.dilateRegionsModal(regions);
       //regionUtils.resetSelection();
     };
     var tooltip = new bootstrap.Tooltip(dilateButton, {
@@ -107,7 +107,7 @@ regionUtils.addRegionToolbarUI = function () {
     deleteButton.onclick = function () {
       const regions = Object.values(regionUtils._selectedRegions);
       regionUtils.deleteRegions(
-        Object.values(regions).map((region) => region.id)
+        regions.map((region) => region.id)
       );
       regionUtils.resetSelection();
     };
@@ -123,7 +123,7 @@ regionUtils.addRegionToolbarUI = function () {
     splitButton.onclick = function () {
       const regions = Object.values(regionUtils._selectedRegions);
       regionUtils.splitRegions(
-        Object.values(regions).map((region) => region.id)
+        regions.map((region) => region.id)
       );
       regionUtils.resetSelection();
     };
@@ -139,7 +139,7 @@ regionUtils.addRegionToolbarUI = function () {
     fillHolesButton.onclick = function () {
       const regions = Object.values(regionUtils._selectedRegions);
       regionUtils.fillHolesRegions(
-        Object.values(regions).map((region) => region.id)
+        regions.map((region) => region.id)
       );
     };
     var tooltip = new bootstrap.Tooltip(splitButton, {
