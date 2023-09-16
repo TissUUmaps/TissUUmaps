@@ -169,52 +169,73 @@ regionUtils.addRegionToolbarUI = function () {
     separator.style.margin = "auto 10px";
     separator.style.width = "0px";
 
+    const paintingTools = [
+        {"name": "free", "icon": "bi-pencil-square", "title": "Free hand drawing"},
+        {"name": "points", "icon": "bi-pentagon", "title": "Point based drawing"},
+        {"name": "brush", "icon": "bi-brush", "title": "Brush based drawing"},
+        {"name": "rectangle", "icon": "bi-bounding-box-circles", "title": "Rectangle drawing"},
+        {"name": "ellipse", "icon": "bi-circle", "title": "Ellipse drawing"},
+    ];
     
-    const drawingPointsButton = HTMLElementUtils.createButton({
-      extraAttributes: { class: "btn lh-1 btn-light m-1 p-2", "title": "Point based drawing" },
+    const dropdownButton = HTMLElementUtils.createElement({
+        kind: "div",
+        extraAttributes: { class: "btn-group" }
     });
-    drawingPointsButton.id = "region_drawing_points_button";
-    drawingPointsButton.onclick = function () {
-      regionUtils.regionsOnOff();
-    };
-    var tooltip = new bootstrap.Tooltip(drawingPointsButton, {
+    
+    const mainButton = HTMLElementUtils.createElement({
+        kind: "button",
+        extraAttributes: { class: "btn lh-1 btn-light m-1 p-2 me-0", "type": "button" , "data-Selected": "0", "title": "Drawing tool"},
+        innerHTML: "<i class='bi "+paintingTools[0].icon+"'></i>"
+    });
+    mainButton.id = "region_drawing_button"
+    var tooltip = new bootstrap.Tooltip(mainButton, {
       placement: "bottom",
     });
     tooltip.enable();
-    drawingPointsButton.innerHTML = '<i class="bi bi-pentagon"></i>';
-
-    const drawingFreeButton = HTMLElementUtils.createButton({
-      extraAttributes: { class: "btn lh-1 btn-light m-1 p-2", "title": "Free hand drawing" },
+    mainButton.addEventListener("click", () => {
+        const selected = parseInt(mainButton.dataset.selected);
+        regionUtils.setMode(paintingTools[parseInt(selected)].name);
     });
-    drawingFreeButton.id = "region_drawing_free_button"
-    drawingFreeButton.onclick = function () {
-      regionUtils.freeHandRegionsOnOff();
-    };
-    var tooltip = new bootstrap.Tooltip(drawingFreeButton, {
-      placement: "bottom",
+    dropdownButton.appendChild(mainButton);
+    
+    const splitDropdownButton = HTMLElementUtils.createElement({
+        kind: "button",
+        extraAttributes: { class: "btn lh-1 btn-light m-1 p-2 ms-0 dropdown-toggle dropdown-toggle-split", "type": "button", "data-bs-toggle": "dropdown", "aria-expanded": "false" },
+        innerHTML: '<span class="visually-hidden">Toggle Dropdown</span>'
     });
-    tooltip.enable();
-    drawingFreeButton.innerHTML = '<i class="bi bi-pencil-square"></i>';
-
-    const drawingBrushButton = HTMLElementUtils.createButton({
-      extraAttributes: { class: "btn lh-1 btn-light m-1 p-2", "title": "Brush based drawing" },
+    splitDropdownButton.id = "region_drawing_button_dropdown"
+    dropdownButton.appendChild(splitDropdownButton);
+    
+    const dropdownMenu = HTMLElementUtils.createElement({
+        kind: "ul",
+        extraAttributes: { class: "dropdown-menu" }
     });
-    drawingBrushButton.id = "region_drawing_brush_button"
-    drawingBrushButton.onclick = function () {
-      regionUtils.brushRegionsOnOff();
-    };
-    var tooltip = new bootstrap.Tooltip(drawingBrushButton, {
-      placement: "bottom",
+    
+    paintingTools.forEach(tool => {
+        const menuItem = HTMLElementUtils.createElement({ kind: "li" });
+        const anchor = HTMLElementUtils.createElement({
+            kind: "a",
+            extraAttributes: { class: "dropdown-item", href: "#" },
+            innerHTML: "<i class='bi "+tool.icon+"'></i>&nbsp;-&nbsp;" + tool.title
+        });
+        anchor.addEventListener("click", () => {
+            mainButton.innerHTML = "<i class='bi "+tool.icon+"'></i>";
+            mainButton.dataset.selected = paintingTools.indexOf(tool);
+            regionUtils.setMode(tool.name);
+        });
+        menuItem.appendChild(anchor);
+        dropdownMenu.appendChild(menuItem); 
     });
-    tooltip.enable();
-    drawingBrushButton.innerHTML = '<i class="bi bi-brush"></i>';
+    
+    dropdownButton.appendChild(dropdownMenu);
+      
 
     const selectionButton = HTMLElementUtils.createButton({
       extraAttributes: { class: "btn lh-1 btn-light m-1 p-2", "title": "Select regions (press shift to select multiple regions)" },
     });
     selectionButton.id = "region_selection_button"
     selectionButton.onclick = function () {
-      regionUtils.selectRegionsOnOff();
+      regionUtils.setMode("select");
     };
     var tooltip = new bootstrap.Tooltip(selectionButton, {
       placement: "bottom",
@@ -244,9 +265,6 @@ regionUtils.addRegionToolbarUI = function () {
     tooltip.enable();
     fillRegionsButton.innerHTML = '<i class="bi bi-front"></i>';
         
-    buttonsContainer.appendChild(drawingPointsButton);
-    buttonsContainer.appendChild(drawingFreeButton);
-    buttonsContainer.appendChild(drawingBrushButton);
     const zoomSelectedButton = HTMLElementUtils.createButton({
       extraAttributes: { class: "btn lh-1 btn-primary m-1 p-2 only-selected", "title": "Zoom to selected regions" },
     });

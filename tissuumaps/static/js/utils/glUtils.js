@@ -2252,7 +2252,7 @@ glUtils.pick = function(event) {
         glUtils._regionPicked = pickedRegion;
 
         tmapp["ISS_viewer"].removeOverlay("ISS_region_info");
-        if (hasPickedRegion && overlayUtils._regionSelection) {
+        if (hasPickedRegion && regionUtils._regionMode == "select") {
             const div = document.createElement("div");
             div.id = "ISS_region_info";
             div.width = "1px"; div.height = "1px";

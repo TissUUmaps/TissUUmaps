@@ -101,7 +101,7 @@ tmapp.init = function () {
 
     var click_handler = function (event) {
         if (event.quick) {
-            if (overlayUtils._drawRegions) {
+            if (regionUtils._regionMode == "points") {
                 //call region creator and drawer
                 regionUtils.manager(event);
             }
@@ -111,17 +111,25 @@ tmapp.init = function () {
     };
 
     function pressHandler(event) {
-        if (overlayUtils._freeHandDrawRegions) {
+        if (regionUtils._regionMode == "free") {
           // Call region creator and drawer
           regionUtils.freeHandManager(event);
         }
-        if (overlayUtils._brushDrawRegions) {
+        if (regionUtils._regionMode == "brush") {
           // Call region creator and drawer
           regionUtils.brushManager(event);
         }
+        if (regionUtils._regionMode == "rectangle") {
+          // Call region creator and drawer
+          regionUtils.rectangleManager(event);
+        }
+        if (regionUtils._regionMode == "ellipse") {
+          // Call region creator and drawer
+          regionUtils.ellipseManager(event);
+        }
     }
     function moveHandler(event) {
-        if (overlayUtils._brushDrawRegions) {
+        if (regionUtils._regionMode == "brush") {
           // Call region creator and drawer
           regionUtils.brushHover(event);
         }
@@ -317,6 +325,13 @@ $( document ).ready(function() {
             $("#ISS_fillregions_btn").click();
         } else if (event.key === "Escape") {
             regionUtils.resetSelection();
+            regionUtils.setMode(null);
+        }
+    });
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            regionUtils.resetSelection();
+            regionUtils.setMode(null);
         }
     });
 });
