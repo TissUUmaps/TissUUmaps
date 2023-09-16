@@ -363,7 +363,7 @@ regionUtils.resizeRegionsModal = async function (regions) {
     row3=HTMLElementUtils.createRow({});
     col31=HTMLElementUtils.createColumn({"width":12});
         divformcheck310=HTMLElementUtils.createElement({ "kind":"div", "extraAttributes":{"class":"form-check"}});
-            inputcheck310=HTMLElementUtils.createElement({"kind":"input", "id":modalUID+"_preview","extraAttributes":{"class":"form-check-input","type":"checkbox" }});
+            inputcheck310=HTMLElementUtils.createElement({"kind":"input", "id":modalUID+"_preview","extraAttributes":{"class":"form-check-input","type":"checkbox", "checked":true }});
             label311=HTMLElementUtils.createElement({"kind":"label", "id":modalUID+"_preview-label", "extraAttributes":{ "for":modalUID+"_preview" }});
             label311.innerText="Preview"
   inputcheck310.addEventListener("input", preview);
@@ -441,7 +441,7 @@ regionUtils.dilateRegionsModal = async function (regions) {
     row3=HTMLElementUtils.createRow({});
     col31=HTMLElementUtils.createColumn({"width":12});
         divformcheck310=HTMLElementUtils.createElement({ "kind":"div", "extraAttributes":{"class":"form-check"}});
-            inputcheck310=HTMLElementUtils.createElement({"kind":"input", "id":modalUID+"_preview","extraAttributes":{"class":"form-check-input","type":"checkbox" }});
+            inputcheck310=HTMLElementUtils.createElement({"kind":"input", "id":modalUID+"_preview","extraAttributes":{"class":"form-check-input","type":"checkbox", "checked":true }});
             label311=HTMLElementUtils.createElement({"kind":"label", "id":modalUID+"_preview-label", "extraAttributes":{ "for":modalUID+"_preview" }});
             label311.innerText="Preview"
   inputcheck210.addEventListener("input", preview);
