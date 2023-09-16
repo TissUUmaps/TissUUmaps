@@ -2437,7 +2437,6 @@ interfaceUtils.generateModal = function(title, content, buttons, uid, noClose) {
 
 interfaceUtils.closeModal = async function (modalWindow) {
     for (var i = 0; i < 40; i++) {
-        console.log(i, modalWindow, modalWindow.classList);
         if (modalWindow.classList.contains("show")) {
             break;
         }
@@ -2474,7 +2473,6 @@ interfaceUtils.createDownloadDropdown = function(downloadRow, innerText, callbac
         // innerText: innerText
         class: "select2-select select2-select_" + random_select2_id
     }
-    console.log("dropdownOptions", dropdownOptions);
     var DownloadDropdown = HTMLElementUtils.selectTypeDropDown(paramSelect);
     DownloadDropdown.setAttribute("data-placeholder", "Select from list (" + dropdownOptions.length + " items)")
     DownloadDropdown.style.width = "100%";
@@ -2498,7 +2496,6 @@ interfaceUtils.createDownloadDropdown = function(downloadRow, innerText, callbac
             cache: true,
             transport: function(params, success, failure) {
                 let pageSize = 100;
-                console.log("params",params);
                 let term = (params.data.term || '').toLowerCase();
                 let page = (params.data.page || 1);
                 
@@ -2856,7 +2853,6 @@ interfaceUtils._rGenUIFuncs.checkboxToEye=function(checkBox){
 interfaceUtils._rGenUIFuncs.createTable=function(){
     let allRegionClasses = Object.values(regionUtils._regions).map(function(e) { return e.regionClass; })
     let singleRegionClasses = allRegionClasses.filter((v, i, a) => a.indexOf(v) === i);
-    console.log("singleRegionClasses", singleRegionClasses);
     //I do this to know if I have name selected, and also to know where to draw the 
     //color from
     var groupUI=HTMLElementUtils.createElement({"kind":"div"});
@@ -3014,7 +3010,6 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
                 x => x.regionClass==regionClass
             );
             if (groupRegions.length > 0) {
-                console.log(groupRegions[0]);
                 lastColor = groupRegions[0].polycolor;
             }
             else {
@@ -3269,8 +3264,6 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     });
     regionshistobutton.addEventListener('click', function () {
         regionUtils.analyzeRegion(region.id);
-        console.log("Done!");
-        console.log(regionUtils._regions[region.id].barcodeHistogram);
         
         var rpanelbody = HTMLElementUtils.createElement({ kind: "div" });
 
@@ -3318,7 +3311,6 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     
     check0.addEventListener('input', function (event) {
         var visible = event.target.checked;
-        console.log(region, visible);
         region.visibility = visible;
         glUtils.updateRegionLUTTextures();
         glUtils.draw();

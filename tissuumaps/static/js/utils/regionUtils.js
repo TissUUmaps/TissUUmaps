@@ -64,7 +64,6 @@ regionUtils.getLayerFromCoord = function (coordinates) {
         );
         if (imageCoord.x > 0 && imageCoord.y > 0 &&
             imageCoord.x < tiledImage.getContentSize().x && imageCoord.y < tiledImage.getContentSize().y) {
-                console.log("found", i);
                 return i;
         }
     }
@@ -133,7 +132,6 @@ regionUtils.viewportPointsToGlobalPoints = function (viewportPoints, layerIndex)
 /** 
  *  When a region is being drawn, this function takes care of the creation of the region */
 regionUtils.manager = function (event) {
-    //console.log(event);
     var drawingclass = regionUtils._drawingclass;
     //if we come here is because overlayUtils.drawRegions mode is on
     // No matter what we have to get the normal coordinates so
@@ -145,14 +143,11 @@ regionUtils.manager = function (event) {
     var OSDsvg=d3.select(eventSource.element).select("svg").select("g");
     var stringOSDVname=eventSource.element.parentElement.parentElement.id;
     var overlay=stringOSDVname.substr(0,stringOSDVname.indexOf('_'));*/
-    //console.log(overlay);
     var OSDviewer = tmapp[tmapp["object_prefix"] + "_viewer"];
     var normCoords = OSDviewer.viewport.pointFromPixel(event.position);
     //var canvas=tmapp[tmapp["object_prefix"]+"_svgov"].node();
     var canvas = overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
-    //console.log(normCoords);
     var regionobj;
-    //console.log(d3.select(event.originalEvent.target).attr("is-handle"));
     var strokeWstr = regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom();
 
     if (regionUtils._isNewRegion) {
@@ -425,13 +420,11 @@ regionUtils.addRegion = function (points, regionid, color, regionClass, collecti
     const regionClassID = HTMLElementUtils.stringToId("region_" + regionClass);
     if (!color) {
         const color_picker = document.getElementById(`regionUI_${regionClassID}_color`);
-        console.log("color_picker", color_picker);
         if (color_picker) {
             color = color_picker.value;
         } else {
             color = "#ff0000";
         }
-        console.log("color", color);
     }
     var op = tmapp["object_prefix"];
     var viewer = tmapp[tmapp["object_prefix"] + "_viewer"]
