@@ -598,6 +598,32 @@ regionUtils.fillAllRegions=function(){
     glUtils.draw();    
 }
 
+/** Zoom to a set of regions */
+regionUtils.zoomToRegions=function(regions){
+    console.assert(regions.length > 0, "No regions to zoom to")
+    // Get bounding box of all regions by looking at region._gxmin, region._gxmax, region._gymin, region._gymax
+    let x0 = Infinity;
+    let x3 = -Infinity;
+    let y0 = Infinity;
+    let y3 = -Infinity;
+    for (const region of regions) {
+        const image = tmapp["ISS_viewer"].world.getItemAt(region.collectionIndex);
+        const viewportRect = image.imageToViewportRectangle(
+            region._gxmin, region._gymin, region._gxmax - region._gxmin, region._gymax - region._gymin
+        );
+        x0 = Math.min(x0, viewportRect.x);
+        y0 = Math.min(y0, viewportRect.y);
+        x3 = Math.max(x3, viewportRect.x + viewportRect.width);
+        y3 = Math.max(y3, viewportRect.y + viewportRect.height);
+    }
+    // Zoom to bounding box
+    // Convert image coordinates to viewport coordinates
+    const OSDRect = new OpenSeadragon.Rect(
+        x0, y0, x3 - x0, y3 - y0
+    );
+    tmapp["ISS_viewer"].viewport.fitBounds(OSDRect);
+}
+
 /** 
  * @param {String} regionid String id of region to delete
  * @summary Given a region id, split region.globalPoints in separate regions */

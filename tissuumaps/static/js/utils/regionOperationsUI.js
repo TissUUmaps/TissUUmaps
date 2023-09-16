@@ -247,9 +247,24 @@ regionUtils.addRegionToolbarUI = function () {
     buttonsContainer.appendChild(drawingPointsButton);
     buttonsContainer.appendChild(drawingFreeButton);
     buttonsContainer.appendChild(drawingBrushButton);
+    const zoomSelectedButton = HTMLElementUtils.createButton({
+      extraAttributes: { class: "btn lh-1 btn-primary m-1 p-2 only-selected", "title": "Zoom to selected regions" },
+    });
+    zoomSelectedButton.onclick = function () {
+      const regions = Object.values(regionUtils._selectedRegions);
+      regionUtils.zoomToRegions(regions);
+    };
+    var tooltip = new bootstrap.Tooltip(zoomSelectedButton, {
+      placement: "bottom",
+    });
+    tooltip.enable();
+    zoomSelectedButton.innerHTML = '<i class="bi bi-box-arrow-in-down-right"></i>';
+
+    buttonsContainer.appendChild(dropdownButton);
     buttonsContainer.appendChild(selectionButton);
     buttonsContainer.appendChild(separator2);
     buttonsContainer.appendChild(fillRegionsButton);
+    buttonsContainer.appendChild(zoomSelectedButton);
     buttonsContainer.appendChild(separator);
     buttonsContainer.appendChild(deleteButton);
     buttonsContainer.appendChild(duplicateButton);
