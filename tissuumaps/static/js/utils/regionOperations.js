@@ -138,65 +138,60 @@ regionUtils.duplicateRegions = function (regions) {
 };
 
 /**
+ * Run clipper binary operation on a set of regions
+ */
+regionUtils.clipperPolygons = function (polygons, operation) {
+  let subject = null;
+  let capitalConversion = "x" in polygons[0][0][0][0];
+  for (let i = 0; i < polygons.length; i++) {
+      if (subject == null) {
+        subject = new clipperShape (polygons[i].flat(), closed = true, capitalConversion = capitalConversion, integerConversion = false, removeDuplicates = false)
+      }
+      else {
+        let path2 = new clipperShape (polygons[i].flat(), closed = true, capitalConversion = capitalConversion, integerConversion = false, removeDuplicates = false)
+        subject =  subject[operation](path2);
+      }
+  }
+  let separatePaths = subject.separateShapes().map((path) => path.paths);
+  return separatePaths;
+}
+
+/**
+ * Run clipper binary operation on a set of regions
+ */
+regionUtils.clipperRegions = function (regions, operation) {
+  const polygons = regions.map((region) => region.globalPoints);
+  const solution_paths = regionUtils.clipperPolygons(polygons, operation);
+  return regionUtils.regionToLowerCase(solution_paths);
+}
+
+
+/**
  * @summary Generates a region that covers the instersection of the passed regions
  * @param {*} regions Array of regions to calculate the intersection
  */
-regionUtils.regionsIntersection = function (regions) {
+regionUtils.regionsClipper = function (regions, operation) {
   if (regions.length < 2) {
     interfaceUtils.alert("Please select at least two regions");
     return;
   }
   try {
-    const intersectionPoints = polygonClipping.intersection(
-      ...regions.map((region) => {
-        let viewportPoints = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
-        return regionUtils.objectToArrayPoints(viewportPoints)
-      })
-    );
+    const intersectionPoints = regionUtils.clipperRegions(regions, operation);
     // TODO: Check that all regions have the same collection index. We can not intersect regions from different layers.
-    const newRegionLayerIndex = regions[0].collectionIndex;
-    regionUtils._currentRegionId += 1;
-    const newRegionId = "region" + regionUtils._currentRegionId;
-    regionUtils.addRegion(intersectionPoints, newRegionId, regions[0].polycolor, "", newRegionLayerIndex);
-    regionUtils.updateAllRegionClassUI();
+    let mainRegion = regions.shift();
+    mainRegion.globalPoints = intersectionPoints;
+    regionUtils.updateBbox(mainRegion);
+
     regions.forEach((region) => {
       regionUtils.deleteRegion(region.id);
     });
-  } catch {
+    regionUtils.updateAllRegionClassUI();
+  } catch (error){
+    console.log(error);
     interfaceUtils.alert(
       "The selected regions have no interception between them"
     );
   }
-  regionUtils.resetSelection();
-  glUtils.updateRegionDataTextures();
-  glUtils.updateRegionLUTTextures();
-  glUtils.draw();
-};
-
-/**
- * @summary Generates a region that is the difference between the selected regions
- * @param {*} regions Array of regions to calculate the difference
- */
-regionUtils.regionsDifference = function (regions) {
-  if (regions.length < 2) {
-    interfaceUtils.alert("Please select at least two regions");
-    return;
-  }
-  const differencePoints = polygonClipping.xor(
-    ...regions.map((region) => {
-      let viewportPoints = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
-      return regionUtils.objectToArrayPoints(viewportPoints)
-    })
-  );
-  // TODO: Check that all regions have the same collection index. We can not intersect regions from different layers.
-  const newRegionLayerIndex = regions[0].collectionIndex;
-  regionUtils._currentRegionId += 1;
-  const newRegionId = "region" + regionUtils._currentRegionId;
-  regionUtils.addRegion(differencePoints, newRegionId, regions[0].polycolor, "", newRegionLayerIndex);
-  regionUtils.updateAllRegionClassUI();
-  regions.forEach((region) => {
-    regionUtils.deleteRegion(region.id);
-  });
   regionUtils.resetSelection();
   glUtils.updateRegionDataTextures();
   glUtils.updateRegionLUTTextures();
@@ -210,8 +205,10 @@ regionUtils.regionsDifference = function (regions) {
  * @param {*} scale Scale factor to use in rescaling
  */
 regionUtils.resizeRegion = function (regionId, scale, preview) {
+  const escapedRegionId = HTMLElementUtils.stringToId(regionId);
+  const region = regionUtils._regions[regionId];
   const scaleFactor = scale / 100;
-  let globalPoints = regionUtils._regions[regionId].globalPoints;
+  let globalPoints = region.globalPoints;
   const points = regionUtils.objectToArrayPoints(
     globalPoints
   );
@@ -229,14 +226,14 @@ regionUtils.resizeRegion = function (regionId, scale, preview) {
         point[0] =
           centroidBefore[0] +
           ((point[0] - centroidBefore[0]) * scaleFactor) /
-            (regionUtils._regions[regionId].scale
-              ? regionUtils._regions[regionId].scale / 100
+            (region.scale
+              ? region.scale / 100
               : 1);
         point[1] =
           centroidBefore[1] +
           ((point[1] - centroidBefore[1]) * scaleFactor) /
-            (regionUtils._regions[regionId].scale
-              ? regionUtils._regions[regionId].scale / 100
+            (region.scale
+              ? region.scale / 100
               : 1);
       }
     }
@@ -256,13 +253,28 @@ regionUtils.resizeRegion = function (regionId, scale, preview) {
       }
     }
   }
-
-  // Save new region scale and points
-  regionUtils._regions[regionId].scale = scale;
-  // TODO - replace .points with globalPoints?
-  regionUtils._regions[regionId].globalPoints =
-    regionUtils.arrayToObjectPoints(points);
-  regionUtils.updateBbox(region);
+  const newGlobalPoints = regionUtils.arrayToObjectPoints(points);
+  d3.select("#" + escapedRegionId + "preview" + "_poly").remove();
+  if (preview) {
+    regionUtils.drawRegionPath(
+      regionUtils.globalPointsToViewportPoints(newGlobalPoints, region.collectionIndex),
+      escapedRegionId + "preview"
+    );
+  }
+  else {
+    // Save new region scale and points
+    region.scale = scale;
+    // TODO - replace .points with globalPoints?
+    region.globalPoints = newGlobalPoints;
+    regionUtils.updateBbox(region);
+    
+    regionUtils.deSelectRegion(region.id);
+    regionUtils.selectRegion(region);
+    glUtils.updateRegionDataTextures();
+    glUtils.updateRegionLUTTextures();
+    glUtils.draw();
+  }
+  
   
   // Returns the center of a given polygon
   function calculatePolygonCentroid(polygon) {
@@ -291,59 +303,37 @@ regionUtils.resizeRegion = function (regionId, scale, preview) {
 
 regionUtils.dilateRegion = function (regionId, offset, preview, onlyBorder) {
   if (!offset) return;
+  const options = {
+    jointType : 'jtRound',
+    endType : 'etClosedPolygon',
+    miterLimit : 2.0,
+    roundPrecision : 0.25
+  }
   const region = regionUtils._regions[regionId];
-  const worker = new Worker("static/js/utils/regionOffsetWorker.js");
-  const point1 = turf.point([0, 0]);
-  const point2 = turf.point([1, 0]);
-  const distance = turf.distance(point1, point2, {
-    units: "kilometers",
-  });
-  const offsetScaled =
-    (offset / OSDViewerUtils.getImageWidth()) *
-    distance;
-  let viewportPoints = regionUtils.globalPointsToViewportPoints(
-    region.globalPoints,
-    region.collectionIndex
-  );
-  worker.postMessage([viewportPoints, offsetScaled]);
-  worker.onmessage = function (event) {
-    let dilatedPoints = event.data;
-    if (!event.data) {
-      interfaceUtils.alert(
-        "An error ocurred applying the selected offset amount, for negative offsets, please make sure that the region is big enough to be offseted by that amount"
-      );
-      button.disabled = false;
-      button.innerHTML = "Type";
-      return;
-    }
-    if (onlyBorder) {
-      dilatedPoints = polygonClipping.xor(
-        regionUtils.objectToArrayPoints(viewportPoints),
-        dilatedPoints
-      );
-    }
-    const escapedRegionId = HTMLElementUtils.stringToId(regionId);
-    d3.select("#" + escapedRegionId + "preview" + "_poly").remove();
-    if (preview) {
-      regionUtils.drawRegionPath(
-        regionUtils.arrayToObjectPoints(dilatedPoints),
-        escapedRegionId + "preview"
-      );
-    }
-    else {
-      region.globalPoints = regionUtils.viewportPointsToGlobalPoints(
-        regionUtils.arrayToObjectPoints(dilatedPoints),
-        region.collectionIndex
-      );
-      regionUtils.updateBbox(region);
-      
-      regionUtils.deSelectRegion(region.id);
-      regionUtils.selectRegion(region);
-      glUtils.updateRegionDataTextures();
-      glUtils.updateRegionLUTTextures();
-      glUtils.draw();
-    }
-  };
+  const path = new clipperShape (region.globalPoints.flat(), closed = true, capitalConversion = true, integerConversion = false, removeDuplicates = false)
+  let pathOut = path.offset( offset, options);
+  let dilatedPoints = null;
+  if (onlyBorder) {
+    pathOut = pathOut.xor(path);
+  }
+  pathOut = pathOut.separateShapes().map((path) => path.paths);
+  dilatedPoints = regionUtils.regionToLowerCase(pathOut);
+
+  const escapedRegionId = HTMLElementUtils.stringToId(regionId);
+  d3.select("#" + escapedRegionId + "preview" + "_poly").remove();
+  if (preview) {
+    regionUtils.drawRegionPath(
+      regionUtils.globalPointsToViewportPoints(dilatedPoints, region.collectionIndex),
+      escapedRegionId + "preview"
+    );
+  }
+  else {
+    region.globalPoints = dilatedPoints;
+    regionUtils.updateBbox(region);
+    
+    regionUtils.deSelectRegion(region.id);
+    regionUtils.selectRegion(region);
+  }
 }
 
 /**
@@ -353,6 +343,42 @@ regionUtils.dilateRegion = function (regionId, offset, preview, onlyBorder) {
 regionUtils.objectToArrayPoints = function (points) {
   return points.map((arr) =>
     arr.map((polygon) => polygon.map((point) => [point.x, point.y]))
+  );
+};
+
+/**
+ * @summary Converts clipper-js with upper case X and Y to lower cas x and y for GeoJSON
+ * @param {*} points  
+ * @returns 
+ */
+regionUtils.regionToLowerCase = function (points) {
+  return points.map((arr) =>
+    arr.map((secondArr) =>
+      secondArr.map((coordinates) => {
+        return {
+          x: coordinates.X,
+          y: coordinates.Y,
+        };
+      })
+    )
+  );
+};
+
+/**
+ * @summary Converts GeoJSON with lower cas x and y to upper case X and Y for clipper-js
+ * @param {*} points  
+ * @returns 
+ */
+regionUtils.regionToUpperCase = function (points) {
+  return points.map((arr) =>
+    arr.map((secondArr) =>
+      secondArr.map((coordinates) => {
+        return {
+          X: coordinates.x,
+          Y: coordinates.y,
+        };
+      })
+    )
   );
 };
 
@@ -390,36 +416,6 @@ regionUtils.stringToFloatPoints = function (points) {
       ])
     )
   );
-};
-
-/**
- * @summary Merges a collection of regions into one individual region
- * @param {*} regions Array of regions to be merged
- */
-regionUtils.mergeRegions = function (regions) {
-  if (regions.length < 2) {
-    interfaceUtils.alert("Please select at least two regions");
-    return;
-  }
-  const mergedPoints = polygonClipping.union(
-    ...regions.map((region) => {
-      let viewportPoints = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
-      return regionUtils.objectToArrayPoints(viewportPoints)
-    })
-  );
-  // TODO: Check that all regions have the same collection index. We can not intersect regions from different layers.
-  const newRegionLayerIndex = regions[0].collectionIndex;
-  regionUtils._currentRegionId += 1;
-  const newRegionId = "region" + regionUtils._currentRegionId;
-  regionUtils.addRegion(mergedPoints, newRegionId, regions[0].polycolor, "", newRegionLayerIndex);
-  regionUtils.updateAllRegionClassUI();
-  regions.forEach((region) => {
-    regionUtils.deleteRegion(region.id);
-  });
-  regionUtils.resetSelection();
-  glUtils.updateRegionDataTextures();
-  glUtils.updateRegionLUTTextures();
-  glUtils.draw();
 };
 
 /**

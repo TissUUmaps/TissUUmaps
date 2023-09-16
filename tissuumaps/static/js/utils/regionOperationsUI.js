@@ -407,6 +407,9 @@ regionUtils.dilateRegionsModal = async function (regions) {
       for (let region of regions) {
         regionUtils.dilateRegion(region.id, offset, false, border);
       }
+      glUtils.updateRegionDataTextures();
+      glUtils.updateRegionLUTTextures();
+      glUtils.draw();
   })
   button2.addEventListener("click",function(event) {
       d3.selectAll(".region_previewpoly").remove();

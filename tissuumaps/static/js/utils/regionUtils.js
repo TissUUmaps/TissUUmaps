@@ -1310,43 +1310,44 @@ regionUtils.brushManager = function (event) {
         // Circle 1
         
         const brushCircle1 = d3.range(0, 360, 20).map(function (t) {
-            return [
-                x1 + brushSize * Math.cos((t * Math.PI) / 180),
-                y1 + brushSize * Math.sin((t * Math.PI) / 180),
-            ];
+            return {
+                X:x1 + brushSize * Math.cos((t * Math.PI) / 180),
+                Y:y1 + brushSize * Math.sin((t * Math.PI) / 180),
+            };
         });
         // Circle 2
         const brushCircle2 = d3.range(0, 360, 20).map(function (t) {
-            return [
-                x2 + brushSize * Math.cos((t * Math.PI) / 180),
-                y2 + brushSize * Math.sin((t * Math.PI) / 180),
-            ];
+            return {
+                X:x2 + brushSize * Math.cos((t * Math.PI) / 180),
+                Y:y2 + brushSize * Math.sin((t * Math.PI) / 180),
+            };
         });
         // Rectangle of width 2*brushSize and length the distance between the two points
         // rotated to join perfectly the two circles
         const brushRectangle = [
-            [
-                x1 + brushSize * Math.cos(Math.atan2(y2 - y1, x2 - x1) - Math.PI / 2),
-                y1 + brushSize * Math.sin(Math.atan2(y2 - y1, x2 - x1) - Math.PI / 2),
-            ],
-            [
-                x1 + brushSize * Math.cos(Math.atan2(y2 - y1, x2 - x1) + Math.PI / 2),
-                y1 + brushSize * Math.sin(Math.atan2(y2 - y1, x2 - x1) + Math.PI / 2),
-            ],
-            [
-                x2 + brushSize * Math.cos(Math.atan2(y2 - y1, x2 - x1) + Math.PI / 2),
-                y2 + brushSize * Math.sin(Math.atan2(y2 - y1, x2 - x1) + Math.PI / 2),
-            ],
-            [
-                x2 + brushSize * Math.cos(Math.atan2(y2 - y1, x2 - x1) - Math.PI / 2),
-                y2 + brushSize * Math.sin(Math.atan2(y2 - y1, x2 - x1) - Math.PI / 2),
-            ]            
+            {
+                X:x1 + brushSize * Math.cos(Math.atan2(y2 - y1, x2 - x1) - Math.PI / 2),
+                Y:y1 + brushSize * Math.sin(Math.atan2(y2 - y1, x2 - x1) - Math.PI / 2),
+            },
+            {
+                X:x1 + brushSize * Math.cos(Math.atan2(y2 - y1, x2 - x1) + Math.PI / 2),
+                Y:y1 + brushSize * Math.sin(Math.atan2(y2 - y1, x2 - x1) + Math.PI / 2),
+            },
+            {
+                X:x2 + brushSize * Math.cos(Math.atan2(y2 - y1, x2 - x1) + Math.PI / 2),
+                Y:y2 + brushSize * Math.sin(Math.atan2(y2 - y1, x2 - x1) + Math.PI / 2),
+            },
+            {
+                X:x2 + brushSize * Math.cos(Math.atan2(y2 - y1, x2 - x1) - Math.PI / 2),
+                Y:y2 + brushSize * Math.sin(Math.atan2(y2 - y1, x2 - x1) - Math.PI / 2),
+            }
         ];
         // Merge all of them
-        const mergedPoints = polygonClipping.union(
-            [[brushCircle1]],
+        const mergedPoints = regionUtils.clipperPolygons(
+            [[[brushCircle1]],
             [[brushCircle2]],
-            [[brushRectangle]]
+            [[brushRectangle]]],
+            "union"
           );
         return mergedPoints;
       }
@@ -1397,35 +1398,47 @@ regionUtils.brushManager = function (event) {
             regionUtils._lastPoints = normCoords
         } 
         const idregion = regionUtils._currentRegionId;
-        const operation = (!event.shift) ? polygonClipping.union : polygonClipping.difference;
-        regionUtils._currentPoints = operation(
-            regionUtils._currentPoints,
-            getBrushShape(
-                regionUtils._lastPoints.x,
-                regionUtils._lastPoints.y,
-                normCoords.x,
-                normCoords.y,
-                (0.2 * regionUtils._handleRadius) /
-                    tmapp["ISS_viewer"].viewport.getZoom()
+        const operation = (!event.shift) ? "union" : "difference";
+        const previousPolygon = regionUtils.regionToUpperCase(
+            regionUtils.arrayToObjectPoints(regionUtils._currentPoints)
+        );
+        const brushShape = getBrushShape(
+            regionUtils._lastPoints.x,
+            regionUtils._lastPoints.y,
+            normCoords.x,
+            normCoords.y,
+            (0.2 * regionUtils._handleRadius) /
+                tmapp["ISS_viewer"].viewport.getZoom()
+        );
+        if (previousPolygon.length == 0) {
+            regionUtils._currentPoints = regionUtils.objectToArrayPoints(
+                regionUtils.regionToLowerCase(brushShape)
             )
-          );
-        console.log(regionUtils._currentPoints);
+        }
+        else {
+            regionUtils._currentPoints = regionUtils.objectToArrayPoints(
+                regionUtils.regionToLowerCase(
+                    regionUtils.clipperPolygons(
+                        [
+                            previousPolygon,
+                            brushShape
+                        ], operation
+                    )
+                )
+            );
+        }
         regionUtils._lastPoints = normCoords;
         regionobj = d3.select("." + drawingclass);
         regionobj.remove();
         regionobj = d3.select(canvas).append("g").attr("class", drawingclass);
-        for (var i in regionUtils._currentPoints){
-            for (var j in regionUtils._currentPoints[i]){
-                regionobj
-                .append("polyline")
-                .attr("points", regionUtils._currentPoints[i][j])
-                .style("fill", "none")
-                .attr("stroke-width", strokeWstr)
-                .attr("stroke", "#ff0000")
-                .attr("class", "region" + idregion);
-            }
-        }
-    };  
+        regionobj
+        .append("path")
+        .attr("d", regionUtils.pointsToPath(regionUtils.arrayToObjectPoints(regionUtils._currentPoints)))
+        .style("fill", "none")
+        .attr("stroke-width", strokeWstr)
+        .attr("stroke", "#ff0000")
+        .attr("class", "region" + idregion);
+    };
     // Get OSDViewer
     const OSDViewer = tmapp[tmapp["object_prefix"] + "_viewer"];
     // Add region creation handler while mouse is pressed.
