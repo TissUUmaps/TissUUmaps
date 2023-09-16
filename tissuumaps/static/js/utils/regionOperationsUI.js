@@ -142,7 +142,7 @@ regionUtils.addRegionToolbarUI = function () {
         regions.map((region) => region.id)
       );
     };
-    var tooltip = new bootstrap.Tooltip(splitButton, {
+    var tooltip = new bootstrap.Tooltip(fillHolesButton, {
       placement: "bottom",
     });
     tooltip.enable();
