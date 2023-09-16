@@ -352,12 +352,13 @@ regionUtils.resizeRegionsModal = async function (regions) {
       regionUtils.resizeRegion(region.id, scale, true);
     }
   }
+  const scaleValue = region.scale?region.scale:100;
   let content=HTMLElementUtils.createElement({"kind":"div"});
     row1=HTMLElementUtils.createRow({});
         col11=HTMLElementUtils.createColumn({"width":12});
             label111=HTMLElementUtils.createElement({"kind":"label", "extraAttributes":{ "for":"scale_value_" + modalUID }});
             label111.innerText="Scale (in percents):"
-            value112=HTMLElementUtils.createElement({"kind":"input", "id":"scale_value_" + modalUID, "extraAttributes":{ "class":"form-text-input form-control", "type":"number", "value":0}});
+            value112=HTMLElementUtils.createElement({"kind":"input", "id":"scale_value_" + modalUID, "extraAttributes":{ "class":"form-text-input form-control", "type":"number", "value":scaleValue}});
 
     row3=HTMLElementUtils.createRow({});
     col31=HTMLElementUtils.createColumn({"width":12});
