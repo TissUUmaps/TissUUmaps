@@ -3369,10 +3369,11 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
         tr.style.background = "var(--bs-primary-light)";
         const viewportPoints = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
         regionUtils.drawRegionPath(viewportPoints, escapedRegionId, "#39FF14", null, "0 0.01 0");
+        d3.selectAll("#" + escapedRegionId + "_poly").classed("regionUI-region-hover", true);
     };
     tr.onmouseout = function () {
         tr.style.background = "white";
-        d3.selectAll("#" + escapedRegionId + "_poly").remove();
+        d3.selectAll(".regionUI-region-hover").remove();
     };
     return tr;
 }
