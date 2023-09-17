@@ -690,6 +690,7 @@ regionUtils.deleteAllRegions = function () {
     var regionsPanel = document.getElementById("regionAccordions");
     regionsPanel.innerText = "";
     regionUtils._regions = {};
+    regionUtils.updateAllRegionClassUI();
 }
 regionUtils.updateAllRegionClassUI = function () {
     setTimeout(()=>{

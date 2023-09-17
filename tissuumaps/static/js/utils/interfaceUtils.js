@@ -2943,6 +2943,23 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         glUtils.draw(); */      
     });
     td5.appendChild(check0);
+
+    var regionsdeletebutton = HTMLElementUtils.createButton({
+        innerText: "<i class='bi bi-trash'></i>",
+        extraAttributes: {
+            class: "col btn btn-sm btn-primary form-control-sm mx-1"
+        }
+    });
+    regionsdeletebutton.addEventListener('click', function () {
+        interfaceUtils.confirm('Are you sure you want to delete all regions?')
+        .then(function(_confirm){
+            if (_confirm) {
+                regionUtils.deleteAllRegions();
+            }
+        });
+    });
+    td6.appendChild(regionsdeletebutton);
+
     interfaceUtils._rGenUIFuncs.checkboxToEye(check0);
     thead2.appendChild(tr);
 
