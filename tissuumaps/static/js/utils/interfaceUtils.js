@@ -2863,7 +2863,7 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
     var theadrow=HTMLElementUtils.createElement({"kind":"tr"});
     var tbody=HTMLElementUtils.createElement({"kind":"tbody"});
 
-    var headopts=["", "", "Class", "Counts", "Color",""];//,""];
+    var headopts=["", "", "Class", "Counts", "Color","Visible", "Delete"];
     var sortable = {
         "": "sorttable_nosort",
         "Counts": "sorttable_sort",
@@ -2890,7 +2890,7 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
     var td3=HTMLElementUtils.createElement({"kind":"td"});
     var td4=HTMLElementUtils.createElement({"kind":"td"});
     var td5=HTMLElementUtils.createElement({"kind":"td"});
-    //var td6=HTMLElementUtils.createElement({"kind":"td"});
+    var td6=HTMLElementUtils.createElement({"kind":"td"});
 
     tr.appendChild(td0);
     tr.appendChild(td1);
@@ -2898,7 +2898,7 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
     tr.appendChild(td3);
     tr.appendChild(td4);
     tr.appendChild(td5);
-    //tr.appendChild(td6);
+    tr.appendChild(td6);
 
     // Get previous "All" checkbox element so that we can re-use its old state
     const lastCheckAll = interfaceUtils.getElementById("regionUI_all_check", false);
@@ -2962,7 +2962,7 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         var td3=HTMLElementUtils.createElement({"kind":"td"});
         var td4=HTMLElementUtils.createElement({"kind":"td"});
         var td5=HTMLElementUtils.createElement({"kind":"td"});
-        //var td6=HTMLElementUtils.createElement({"kind":"td"});
+        var td6=HTMLElementUtils.createElement({"kind":"td"});
 
         tr.appendChild(td0);
         tr.appendChild(td1);
@@ -2970,7 +2970,7 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         tr.appendChild(td3);
         tr.appendChild(td4);
         tr.appendChild(td5);
-        //tr.appendChild(td6);
+        tr.appendChild(td6);
         
         if (regionClass) rClass = regionClass; else rClass = "";
         var regionclasstext = HTMLElementUtils.inputTypeText({
@@ -3059,6 +3059,27 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
             glUtils.updateRegionLUTTextures();
             glUtils.draw();
         })
+
+        var regionsdeletebutton = HTMLElementUtils.createButton({
+            innerText: "<i class='bi bi-trash'></i>",
+            extraAttributes: {
+                class: "col btn btn-sm btn-primary form-control-sm mx-1"
+            }
+        });
+        regionsdeletebutton.addEventListener('click', function () {
+            interfaceUtils.confirm('Are you sure you want to delete the whole '+regionClass+' group?')
+            .then(function(_confirm){
+                if (_confirm) {
+                    groupRegions = Object.values(regionUtils._regions).filter(
+                        x => x.regionClass==regionClass
+                    ).forEach(function (region) {
+                        regionUtils.deleteRegion(region.id, true);
+                    });
+                    regionUtils.updateAllRegionClassUI();
+                }
+            });
+        });
+        td6.appendChild(regionsdeletebutton);
         /*
         button6 = HTMLElementUtils.createElement({"kind":"div", extraAttributes:{"data-escapedID":regionClassID, "class":"btn btn-light btn-sm mx-1"}});
         button6.innerHTML = "<i class='bi bi-eye'></i>";
@@ -3193,6 +3214,7 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     var td3=HTMLElementUtils.createElement({"kind":"td"});
     var td4=HTMLElementUtils.createElement({"kind":"td"});
     var td5=HTMLElementUtils.createElement({"kind":"td"});
+    var td6=HTMLElementUtils.createElement({"kind":"td"});
 
     tr.appendChild(td0);
     tr.appendChild(td1);
@@ -3200,6 +3222,7 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     tr.appendChild(td3);
     tr.appendChild(td4);
     tr.appendChild(td5);
+    tr.appendChild(td6);
     
     
     const checkBox = HTMLElementUtils.inputTypeCheckbox({
@@ -3216,6 +3239,10 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     });
     checkBox.checked = regionUtils._selectedRegions[region.id] != undefined;
     td1.appendChild(checkBox);
+    td1.style.width = "1px";
+    td1.classList.add("px-0");
+    td1.classList.add("mx-0");
+
     var regionclasstext = HTMLElementUtils.inputTypeText({
         extraAttributes: {
             size: 9,
@@ -3305,7 +3332,8 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     });
     td4.appendChild(regionshistobutton);
     td4.style.width = "1px";
-
+    td4.classList.add("px-0");
+    td4.classList.add("mx-0");
     var check0=HTMLElementUtils.createElement({"kind":"input", "id":"singleRegionUI_"+escapedRegionId+"_check","extraAttributes":{"class":"form-check-input regionUI-region-input regionUI-region-"+regionClassID+"-input","type":"checkbox" }});
     check0.checked = true;
     
@@ -3319,6 +3347,24 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     td5.appendChild(check0);
     interfaceUtils._rGenUIFuncs.checkboxToEye(check0);
     td5.style.width = "1px";
+    td5.classList.add("px-0");
+    td5.classList.add("mx-0");
+
+    var regionsdeletebutton = HTMLElementUtils.createButton({
+        innerText: "<i class='bi bi-trash'></i>",
+        extraAttributes: {
+            class: "col btn btn-sm btn-primary form-control-sm mx-1"
+        }
+    });
+    regionsdeletebutton.addEventListener('click', function () {
+        regionUtils.deleteRegion(region.id, true);
+        regionUtils.updateAllRegionClassUI();
+    });
+    td6.appendChild(regionsdeletebutton);
+    td6.style.width = "1px";
+    td6.classList.add("px-0");
+    td6.classList.add("mx-0");
+
     /*
     button6 = HTMLElementUtils.createElement({"kind":"div", extraAttributes:{"data-escapedID":regionClassID, "class":"btn btn-light btn-sm mx-1"}});
     button6.innerHTML = "<i class='bi bi-eye'></i>";
