@@ -16,7 +16,7 @@ regionUtils.addRegionToolbarUI = function () {
     buttonsContainer.id = "region-toolbar-buttons";
     buttonsContainer.style.zIndex = "13";
     buttonsContainer.style.top = "2px";
-    buttonsContainer.style.backgroundColor = "color-mix(in srgb, var(--bs-primary-light) 85%, transparent)";
+    buttonsContainer.style.backgroundColor = "#fadfe199";
     buttonsContainer.style.marginRight = "165px";
     buttonsContainer.style.marginLeft = "14px";
 
