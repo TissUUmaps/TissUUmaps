@@ -316,7 +316,7 @@ regionUtils.addRegionToolbarUI = function () {
     buttonsContainer.appendChild(splitButton);
     buttonsContainer.appendChild(fillHolesButton);
     buttonsContainer.appendChild(regionOperationsDropdownButton);
-    tmapp.ISS_viewer.addControl(buttonsContainer, { anchor: OpenSeadragon.ControlAnchor.TOP_LEFT });
+    tmapp.ISS_viewer.addControl(buttonsContainer, { anchor: OpenSeadragon.ControlAnchor.TOP_LEFT, autoFade: false });
   }
   if (overlayUtils._regionToolbar) {
     buttonsContainer.classList.remove("d-none");
