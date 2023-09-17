@@ -3363,6 +3363,7 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     check0.addEventListener('input', function (event) {
         var visible = event.target.checked;
         region.visibility = visible;
+        d3.selectAll(".regionUI-region-hover").remove();
         glUtils.updateRegionLUTTextures();
         glUtils.draw();
     })
@@ -3381,6 +3382,7 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     });
     regionsdeletebutton.addEventListener('click', function () {
         regionUtils.deleteRegion(region.id, true);
+        d3.selectAll(".regionUI-region-hover").remove();
         regionUtils.updateAllRegionClassUI();
     });
     td6.appendChild(regionsdeletebutton);
@@ -3435,9 +3437,13 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
         })
     })*/
     tr.onmouseover = function () {
+        if (!region.visibility) {
+            d3.selectAll(".regionUI-region-hover").remove();
+            return;
+        }
         tr.style.background = "var(--bs-primary-light)";
         const viewportPoints = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
-        regionUtils.drawRegionPath(viewportPoints, escapedRegionId, "#39FF14", null, "0 0.01 0");
+        regionUtils.drawRegionPath(viewportPoints, escapedRegionId, "#000000", "#ffffff55", "0 0.00  0");
         d3.selectAll("#" + escapedRegionId + "_poly").classed("regionUI-region-hover", true);
     };
     tr.onmouseout = function () {

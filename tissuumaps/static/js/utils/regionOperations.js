@@ -258,7 +258,8 @@ regionUtils.resizeRegion = function (regionId, scale, preview) {
   if (preview) {
     regionUtils.drawRegionPath(
       regionUtils.globalPointsToViewportPoints(newGlobalPoints, region.collectionIndex),
-      escapedRegionId + "preview"
+      escapedRegionId + "preview",
+      null, "#ffffff99"
     );
   }
   else {
