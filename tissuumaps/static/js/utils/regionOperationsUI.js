@@ -19,48 +19,68 @@ regionUtils.addRegionToolbarUI = function () {
     buttonsContainer.style.backgroundColor = "color-mix(in srgb, var(--bs-primary-light) 85%, transparent)";
     buttonsContainer.style.marginRight = "165px";
     buttonsContainer.style.marginLeft = "14px";
-    const mergeButton = HTMLElementUtils.createButton({
-      extraAttributes: { class: "btn lh-1 btn-primary m-1 px-2 py-0 only-selected only-two-selected", "title": "Merge" },
+
+    
+    const multipleRegionOperations = [
+      {"name": "union", "icon": `<img style="width: 30px; height: 20px;" src="static/misc/union.svg" />`, "title": "Merge selected regions"},
+      {"name": "xor", "icon": `<img style="width: 30px; height: 20px;" src="static/misc/difference.svg" />`, "title": "XOR selected regions"},
+      {"name": "intersect", "icon": `<img style="width: 30px; height: 20px;" src="static/misc/intersection.svg" />`, "title": "Intersect selected regions"},
+    ];
+
+
+    // Create dropdown button for region operations
+    const regionOperationsDropdownButton = HTMLElementUtils.createElement({
+      kind: "div",
+      extraAttributes: { class: "btn-group" }
     });
-    mergeButton.onclick = function () {
-      const regions = Object.values(regionUtils._selectedRegions);
-      regionUtils.regionsClipper(regions, "union");
-      //regionUtils.resetSelection();
-    };
-    var tooltip = new bootstrap.Tooltip(mergeButton, {
-      placement: "bottom",
+    
+    const mainRegionOperationsButton = HTMLElementUtils.createElement({
+      kind: "button",
+      extraAttributes: { class: "btn lh-1 btn-primary m-1 px-2 py-0 dropdown-toggle only-selected only-two-selected", "type": "button", "data-bs-toggle": "dropdown", "aria-expanded": "false" },
     });
-    tooltip.enable();
-    mergeButton.innerHTML =
-      '<img style="width: 30px; height: 20px;" src="static/misc/union.svg" />';
-    const differenceButton = HTMLElementUtils.createButton({
-      extraAttributes: { class: "btn lh-1 btn-primary m-1 px-2 py-0 only-selected only-two-selected", "title": "Difference" },
+    mainRegionOperationsButton.id = "region_operations_dropdown_button";
+    const mainRegionOperationsButtonSpan = HTMLElementUtils.createElement({
+      kind: "span",
+      extraAttributes: { "title": "Boolean operations" }
     });
-    differenceButton.onclick = function () {
-      const regions = Object.values(regionUtils._selectedRegions);
-      regionUtils.regionsClipper(regions, "xor");
-      //regionUtils.resetSelection();
-    };
-    var tooltip = new bootstrap.Tooltip(differenceButton, {
-      placement: "bottom",
-    });
-    tooltip.enable();
-    differenceButton.innerHTML =
-      '<img style="width: 30px; height: 20px;" src="static/misc/difference.svg" />';
-    const intersectionButton = HTMLElementUtils.createButton({
-      extraAttributes: { class: "btn lh-1 btn-primary m-1 px-2 py-0 only-selected only-two-selected", "title": "Intersection" },
-    });
-    intersectionButton.onclick = function () {
-      const regions = Object.values(regionUtils._selectedRegions);
-      regionUtils.regionsClipper(regions, "intersect");
-      //regionUtils.resetSelection();
-    };
-    var tooltip = new bootstrap.Tooltip(intersectionButton, {
-      placement: "bottom",
+    mainRegionOperationsButtonSpan.innerHTML = multipleRegionOperations[1].icon;
+    mainRegionOperationsButton.appendChild(mainRegionOperationsButtonSpan);
+    var tooltip = new bootstrap.Tooltip(mainRegionOperationsButtonSpan, {
+      placement: "bottom", trigger : 'hover',offset: [0, 9]
     });
     tooltip.enable();
-    intersectionButton.innerHTML =
-      '<img style="width: 30px; height: 20px;" src="static/misc/intersection.svg" />';
+    $(mainRegionOperationsButtonSpan).on('click', function () {
+      $(this).tooltip('hide');
+    });
+
+    const regionOperationsDropdownMenu = HTMLElementUtils.createElement({
+      kind: "ul",
+      extraAttributes: { class: "dropdown-menu dropdown-menu-dark" }
+    });
+    regionOperationsDropdownMenu.style.backgroundColor = "var(--bs-primary)"
+
+    // Create dropdown menu items for each region operation
+    multipleRegionOperations.forEach(operation => {
+      const menuItem = HTMLElementUtils.createElement({ kind: "li" });
+      const anchor = HTMLElementUtils.createElement({
+          kind: "a",
+          extraAttributes: { class: "dropdown-item", href: "#" },
+          innerHTML: operation.icon + "&nbsp;-&nbsp;" + operation.title
+      });
+      anchor.addEventListener("click", () => {
+          regionUtils.regionsClipper(Object.values(regionUtils._selectedRegions), operation.name);
+          //regionUtils.resetSelection();
+      });
+      menuItem.appendChild(anchor);
+      regionOperationsDropdownMenu.appendChild(menuItem);
+    });
+
+    // Add the dropdown button and dropdown menu to the document
+    regionOperationsDropdownButton.appendChild(mainRegionOperationsButton);
+    regionOperationsDropdownButton.appendChild(regionOperationsDropdownMenu);
+
+
+
     const duplicateButton = HTMLElementUtils.createButton({
       extraAttributes: { class: "btn lh-1 btn-primary m-1 p-2 only-selected", "title": "Duplicate" },
     });
@@ -70,7 +90,7 @@ regionUtils.addRegionToolbarUI = function () {
       regionUtils.resetSelection();
     };
     var tooltip = new bootstrap.Tooltip(duplicateButton, {
-      placement: "bottom",
+      placement: "bottom", trigger : 'hover'
     });
     tooltip.enable();
     duplicateButton.innerHTML = '<i class="bi bi-back"></i>';
@@ -83,7 +103,7 @@ regionUtils.addRegionToolbarUI = function () {
       //regionUtils.resetSelection();
     };
     var tooltip = new bootstrap.Tooltip(scaleButton, {
-      placement: "bottom",
+      placement: "bottom", trigger : 'hover'
     });
     tooltip.enable();
     scaleButton.innerHTML = '<i class="bi bi-aspect-ratio"></i>';
@@ -96,7 +116,7 @@ regionUtils.addRegionToolbarUI = function () {
       //regionUtils.resetSelection();
     };
     var tooltip = new bootstrap.Tooltip(dilateButton, {
-      placement: "bottom",
+      placement: "bottom", trigger : 'hover'
     });
     tooltip.enable();
     dilateButton.innerHTML = '<i class="bi bi-record-circle"></i>';
@@ -112,7 +132,7 @@ regionUtils.addRegionToolbarUI = function () {
       regionUtils.resetSelection();
     };
     var tooltip = new bootstrap.Tooltip(deleteButton, {
-      placement: "bottom",
+      placement: "bottom", trigger : 'hover'
     });
     tooltip.enable();
     deleteButton.innerHTML = '<i class="bi bi-trash"></i>';
@@ -128,7 +148,7 @@ regionUtils.addRegionToolbarUI = function () {
       regionUtils.resetSelection();
     };
     var tooltip = new bootstrap.Tooltip(splitButton, {
-      placement: "bottom",
+      placement: "bottom", trigger : 'hover'
     });
     tooltip.enable();
     splitButton.innerHTML = '<i class="bi bi-percent"></i>';
@@ -143,7 +163,7 @@ regionUtils.addRegionToolbarUI = function () {
       );
     };
     var tooltip = new bootstrap.Tooltip(fillHolesButton, {
-      placement: "bottom",
+      placement: "bottom", trigger : 'hover'
     });
     tooltip.enable();
     fillHolesButton.innerHTML = '<i class="bi bi-egg-fried"></i>';
@@ -155,14 +175,14 @@ regionUtils.addRegionToolbarUI = function () {
       regionUtils.resetSelection();
     };
     var tooltip = new bootstrap.Tooltip(unselectButton, {
-      placement: "bottom",
+      placement: "bottom", trigger : 'hover'
     });
     tooltip.enable();
     unselectButton.innerHTML = '<i class="bi bi-dash-circle-dotted"></i>';
     
     const separator = HTMLElementUtils.createElement({
       kind: "div",
-      extraAttributes: { class: "only-selected"},
+      extraAttributes: { class: "only-selected mx-1"},
       });
     separator.style.borderLeft = "2px solid var(--bs-primary)";
     separator.style.height = "22px";
@@ -189,9 +209,12 @@ regionUtils.addRegionToolbarUI = function () {
     });
     mainButton.id = "region_drawing_button"
     var tooltip = new bootstrap.Tooltip(mainButton, {
-      placement: "bottom",
+      placement: "bottom",trigger : 'hover',offset: [20, 0]
     });
     tooltip.enable();
+    $(mainButton).on('click', function () {
+      $(this).tooltip('hide');
+    });
     mainButton.addEventListener("click", () => {
         const selected = parseInt(mainButton.dataset.selected);
         regionUtils.setMode(paintingTools[parseInt(selected)].name);
@@ -200,7 +223,7 @@ regionUtils.addRegionToolbarUI = function () {
     
     const splitDropdownButton = HTMLElementUtils.createElement({
         kind: "button",
-        extraAttributes: { class: "btn lh-1 btn-light m-1 p-2 ms-0 dropdown-toggle dropdown-toggle-split", "type": "button", "data-bs-toggle": "dropdown", "aria-expanded": "false" },
+        extraAttributes: { class: "btn lh-1 btn-light m-1 p-2 ms-0 dropdown-toggle dropdown-toggle-split", "type": "button", "data-bs-toggle": "dropdown", "aria-expanded": "false",  "data-bs-reference": "parent" },
         innerHTML: '<span class="visually-hidden">Toggle Dropdown</span>'
     });
     splitDropdownButton.id = "region_drawing_button_dropdown"
@@ -219,6 +242,7 @@ regionUtils.addRegionToolbarUI = function () {
             innerHTML: "<i class='bi "+tool.icon+"'></i>&nbsp;-&nbsp;" + tool.title
         });
         anchor.addEventListener("click", () => {
+            regionUtils._regionMode = null;
             mainButton.innerHTML = "<i class='bi "+tool.icon+"'></i>";
             mainButton.dataset.selected = paintingTools.indexOf(tool);
             regionUtils.setMode(tool.name);
@@ -238,14 +262,14 @@ regionUtils.addRegionToolbarUI = function () {
       regionUtils.setMode("select");
     };
     var tooltip = new bootstrap.Tooltip(selectionButton, {
-      placement: "bottom",
+      placement: "bottom", trigger : 'hover'
     });
     tooltip.enable();
     selectionButton.innerHTML = '<i class="bi bi-cursor"></i>';
 
     const separator2 = HTMLElementUtils.createElement({
       kind: "div",
-      extraAttributes: { class: ""},
+      extraAttributes: { class: "mx-1"},
       });
     separator2.style.borderLeft = "2px solid var(--bs-primary)";
     separator2.style.height = "22px";
@@ -260,7 +284,7 @@ regionUtils.addRegionToolbarUI = function () {
       regionUtils.fillAllRegions();
     };
     var tooltip = new bootstrap.Tooltip(fillRegionsButton, {
-      placement: "bottom",
+      placement: "bottom", trigger : 'hover'
     });
     tooltip.enable();
     fillRegionsButton.innerHTML = '<i class="bi bi-front"></i>';
@@ -273,7 +297,7 @@ regionUtils.addRegionToolbarUI = function () {
       regionUtils.zoomToRegions(regions);
     };
     var tooltip = new bootstrap.Tooltip(zoomSelectedButton, {
-      placement: "bottom",
+      placement: "bottom", trigger : 'hover'
     });
     tooltip.enable();
     zoomSelectedButton.innerHTML = '<i class="bi bi-box-arrow-in-down-right"></i>';
@@ -284,16 +308,14 @@ regionUtils.addRegionToolbarUI = function () {
     buttonsContainer.appendChild(fillRegionsButton);
     buttonsContainer.appendChild(zoomSelectedButton);
     buttonsContainer.appendChild(separator);
+    buttonsContainer.appendChild(unselectButton);
     buttonsContainer.appendChild(deleteButton);
     buttonsContainer.appendChild(duplicateButton);
-    buttonsContainer.appendChild(intersectionButton);
-    buttonsContainer.appendChild(differenceButton);
-    buttonsContainer.appendChild(mergeButton);
     buttonsContainer.appendChild(scaleButton);
     buttonsContainer.appendChild(dilateButton);
     buttonsContainer.appendChild(splitButton);
     buttonsContainer.appendChild(fillHolesButton);
-    buttonsContainer.appendChild(unselectButton);
+    buttonsContainer.appendChild(regionOperationsDropdownButton);
     tmapp.ISS_viewer.addControl(buttonsContainer, { anchor: OpenSeadragon.ControlAnchor.TOP_LEFT });
   }
   if (overlayUtils._regionToolbar) {
@@ -352,7 +374,7 @@ regionUtils.resizeRegionsModal = async function (regions) {
       regionUtils.resizeRegion(region.id, scale, true);
     }
   }
-  const scaleValue = region.scale?region.scale:100;
+  const scaleValue = regions[0].scale?regions[0].scale:100;
   let content=HTMLElementUtils.createElement({"kind":"div"});
     row1=HTMLElementUtils.createRow({});
         col11=HTMLElementUtils.createColumn({"width":12});
