@@ -401,7 +401,7 @@ regionUtils.resizeRegionsModal = async function (regions) {
         divformcheck310.appendChild(inputcheck310);
   const title = "Region scale"
   const apply = await interfaceUtils.generateModal(
-    title, content, buttons, modalUID, true
+    title, content, buttons, modalUID, true, true
   );
 };
 
@@ -488,6 +488,6 @@ regionUtils.dilateRegionsModal = async function (regions) {
         divformcheck310.appendChild(inputcheck310);
   const title = "Region erosion / dilation"
   const apply = await interfaceUtils.generateModal(
-    title, content, buttons, modalUID, true
+    title, content, buttons, modalUID, true, true
   );
 };

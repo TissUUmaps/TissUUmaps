@@ -2375,7 +2375,8 @@ interfaceUtils.prompt = function (text, value, title, type) {
     })
 }
 
-interfaceUtils.generateModal = function(title, content, buttons, uid, noClose) {
+interfaceUtils.generateModal = function(title, content, buttons, uid, noClose, noBackdrop) {
+    if (!noBackdrop) noBackdrop = false;
     if (!noClose) noClose = false;
     if (!uid) uid = "default";
     modalWindow = document.getElementById(uid + "_modal");
@@ -2411,6 +2412,11 @@ interfaceUtils.generateModal = function(title, content, buttons, uid, noClose) {
     modalWindowButtons.appendChild(buttons);
 
     modalWindow = document.getElementById(`${uid}_modal`);
+    if (noBackdrop) {
+        modalWindow.addEventListener('shown.bs.modal', function (event) {
+            $('.modal-backdrop.show').css('opacity', '0');
+        });
+    }
     $(modalWindow).modal({backdrop: 'static',keyboard: false});
     $(modalWindow).modal("show");
     modalWindow.getElementsByClassName("modal-dialog")[0].style.left = "0";
