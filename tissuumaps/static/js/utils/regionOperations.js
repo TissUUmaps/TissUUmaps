@@ -431,20 +431,32 @@ regionUtils.selectRegion = function (region) {
   regionUtils.drawRegionPath(points, escapedRegionId + "_selected", "#0165fc")
   const checkBox = document.getElementById(`${escapedRegionId}_selection_check`);
   if (checkBox) checkBox.checked = true;
-  const collapsibleRow = $(`#collapse_region_${regionClassID}`);
-  if (collapsibleRow) collapsibleRow.collapse("show");
-  setTimeout(() => {
-    var tr = document.querySelectorAll('[data-escapedid="'+escapedRegionId+'"]')[0];
-    if (tr != null) {
-        tr.scrollIntoView({block: "nearest",inline: "nearest"});
-        tr.classList.remove("transition_background")
-        tr.classList.add("table-primary")
-        setTimeout(function(){tr.classList.add("transition_background");tr.classList.remove("table-primary");},400);
-    }
-  },100)
-  
+  regionUtils.highlightRegion(region.id);
   regionUtils.addRegionToolbarUI();
 };
+
+/**
+ * @summary Highlight and scroll to a region in the right panel
+ * @param {*} regionid ID of region to be highlighted
+ */
+regionUtils.highlightRegion = function (regionid) {
+    // Highlight region in right panel
+    const region = regionUtils._regions[regionid];
+    const escapedRegionId = HTMLElementUtils.stringToId(region.id);
+    const regionClassID = HTMLElementUtils.stringToId("region_" + region.regionClass);
+    const collapsibleRow = $(`#collapse_region_${regionClassID}`);
+
+    if (collapsibleRow) collapsibleRow.collapse("show");
+    setTimeout(() => {
+        var tr = document.querySelectorAll('[data-escapedid="'+escapedRegionId+'"]')[0];
+        if (tr != null) {
+            tr.scrollIntoView({block: "nearest",inline: "nearest"});
+            tr.classList.remove("transition_background")
+            tr.classList.add("table-primary")
+            setTimeout(function(){tr.classList.add("transition_background");tr.classList.remove("table-primary");},400);
+        }
+    },200)
+}
 
 /**
  * @summary Removes a region to selected list
