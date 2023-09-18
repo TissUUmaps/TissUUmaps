@@ -67,7 +67,7 @@ regionUtils.deleteRegions = function (regionIds) {
     return;
   }
   regionIds.forEach((id) => {
-    regionUtils.deleteRegion(id);
+    regionUtils.deleteRegion(id, true);
   });
   regionUtils.updateAllRegionClassUI();
   glUtils.updateRegionDataTextures();
@@ -183,7 +183,7 @@ regionUtils.regionsClipper = function (regions, operation) {
     regionUtils.updateBbox(mainRegion);
 
     regions.forEach((region) => {
-      regionUtils.deleteRegion(region.id);
+      regionUtils.deleteRegion(region.id, true);
     });
     regionUtils.updateAllRegionClassUI();
   } catch (error){

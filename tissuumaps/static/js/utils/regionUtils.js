@@ -674,7 +674,7 @@ regionUtils.deleteRegion = function (regionid, skipUpdateAllRegionClassUI) {
         rPanelHist.parentElement.removeChild(rPanelHist);
     }
     regionUtils.deSelectRegion(regionid); 
-    regionUtils.updateAllRegionClassUI();
+    if (!skipUpdateAllRegionClassUI) regionUtils.updateAllRegionClassUI();
 }
 /** 
  * @param {String} regionid String id of region to delete
