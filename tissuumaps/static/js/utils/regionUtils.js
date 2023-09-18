@@ -885,7 +885,11 @@ regionUtils.freeHandManager = function (event) {
         );
         // If there is only one point, there is no region to be drawn, 
         // reset and stop here
-        if (regionUtils._currentPoints < 1) { 
+        if (!regionUtils._currentPoints) { 
+          regionUtils.resetManager(); 
+          return;
+        }
+        if (regionUtils._currentPoints.length < 2) { 
           regionUtils.resetManager(); 
           return;
         }
@@ -996,9 +1000,10 @@ regionUtils.rectangleManager = function (event) {
           "canvas-release",
           onCanvasRelease
         );
-        // If there is only one point, there is no region to be drawn, 
+        // If x1 == x2 or y1 == y2, there is no region to be drawn
         // reset and stop here
-        if (regionUtils._currentPoints < 1) { 
+        if (last_rectangle[0] == last_rectangle[2] ||
+            last_rectangle[1] == last_rectangle[3]) {
           regionUtils.resetManager(); 
           return;
         }
@@ -1098,9 +1103,10 @@ regionUtils.ellipseManager = function (event) {
           "canvas-release",
           onCanvasRelease
         );
-        // If there is only one point, there is no region to be drawn, 
+        // If x1 == x2 or y1 == y2, there is no region to be drawn
         // reset and stop here
-        if (regionUtils._currentPoints < 1) { 
+        if (last_ellipse[0] == last_ellipse[2] ||
+            last_ellipse[1] == last_ellipse[3]) {
           regionUtils.resetManager(); 
           return;
         }
@@ -1175,7 +1181,7 @@ regionUtils.ellipseManager = function (event) {
                 last_ellipse[1] + height
             ]
         }
-        regionUtils._currentPoints = generateEllipseCoordinates(boundingBox, 100);
+        regionUtils._currentPoints = generateEllipseCoordinates(boundingBox, 50);
         
         regionobj = d3.select("." + drawingclass);
         regionobj.select("polyline").remove();
@@ -1277,6 +1283,10 @@ regionUtils.brushManager = function (event) {
         // If there is only one point, there is no region to be drawn, 
         // reset and stop here
         if (!regionUtils._currentPoints) { 
+          regionUtils.resetManager(); 
+          return;
+        }
+        if (regionUtils._currentPoints.length < 1) { 
           regionUtils.resetManager(); 
           return;
         }
