@@ -358,6 +358,9 @@ regionUtils.resizeRegionsModal = async function (regions) {
       for (let region of regions) {
         regionUtils.resizeRegion(region.id, scale, false);
       }
+      glUtils.updateRegionDataTextures();
+      glUtils.updateRegionLUTTextures();
+      glUtils.draw();
   })
   button2.addEventListener("click",function(event) {
       d3.selectAll(".region_previewpoly").remove();

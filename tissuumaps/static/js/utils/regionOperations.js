@@ -267,13 +267,10 @@ regionUtils.resizeRegion = function (regionId, scale, preview) {
     region.scale = scale;
     // TODO - replace .points with globalPoints?
     region.globalPoints = newGlobalPoints;
-    regionUtils.updateBbox(region);
-    
+
     regionUtils.deSelectRegion(region.id);
     regionUtils.selectRegion(region);
-    glUtils.updateRegionDataTextures();
-    glUtils.updateRegionLUTTextures();
-    glUtils.draw();
+    regionUtils.updateBbox(region);
   }
   
   
@@ -296,10 +293,6 @@ regionUtils.resizeRegion = function (regionId, scale, preview) {
 
     return [centroidX, centroidY];
   }
-  
-  glUtils.updateRegionDataTextures();
-  glUtils.updateRegionLUTTextures();
-  glUtils.draw();
 };
 
 regionUtils.dilateRegion = function (regionId, offset, preview, onlyBorder) {
