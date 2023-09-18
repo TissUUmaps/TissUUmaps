@@ -409,7 +409,7 @@ regionUtils.resizeRegionsModal = async function (regions) {
 };
 
 /**
- * @summary Merges a collection of regions into one individual region
+ * @summary Dilates/Erodes a collection of regions
  * @param {*} regions Array of regions to be merged
  */
 regionUtils.dilateRegionsModal = async function (regions) {
