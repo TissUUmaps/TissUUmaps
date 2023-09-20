@@ -65,7 +65,7 @@ glUtils = {
     _edgeThicknessRatio: 0.1,     // Ratio between edge thickness and marker size
     _regionOpacity: 0.5,
     _regionFillRule: "never",   // Possible values: "never" | "nonzero" | "oddeven"
-    _regionUsePivotSplit: false,   // Use split edge lists for faster region rendering and less risk of overflow
+    _regionUsePivotSplit: true,   // Use split edge lists for faster region rendering and less risk of overflow
     _regionUseColorByID: false,   // Map region object IDs to unique colors
     _regionDataTexSize: 4096,     // Note: should not be set above context's MAX_TEXTURE_SIZE
     _regionPicked: null,          // Key to regionUtils._regions dict, or null if no region is picked
