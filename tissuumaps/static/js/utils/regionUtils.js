@@ -15,7 +15,8 @@
  * @property {Number}   regionUtils._epsilonDistance - Distance at which a click from the first point will consider to close the region, 
  * @property {Object}   regionUtils._regions - Object that contains the regions in the viewer, 
  * @property {String}   regionUtils._drawingclass - String that accompanies the classes of the polygons in the interface"drawPoly", 
- * @property {Object[]} regionUtils._edgeLists - Data structure used for rendering regions with WebGL
+ * @property {Object[]} regionUtils._edgeListsByLayer - Data structure used for rendering regions with WebGL
+ * @property {Object[]} regionUtils._edgeListsByLayerSplit - Data structure used for rendering regions with WebGL
  * @property {Object[]} regionUtils._regionToColorLUT - LUT for storing color and visibility per object ID
  * @property {Object{}} regionUtils._regionIDToIndex - Mapping between region ID (string) and object ID (index)
  * @property {Object{}} regionUtils._regionIndexToID - Mapping between object ID (index) and region ID (string)
@@ -33,7 +34,8 @@ regionUtils = {
     _epsilonDistance: 0.004,
     _regions: {},
     _drawingclass: "drawPoly",
-    _edgeLists: [],
+    _edgeListsByLayer: {},
+    _edgeListsByLayerSplit: {},
     _regionToColorLUT: [],
     _regionIDToIndex: {},
     _regionIndexToID: {}
@@ -1623,10 +1625,22 @@ regionUtils._generateEdgeListsForDrawing = function(imageBounds, numScanlines = 
     console.assert(imageBounds.length == 4);
     const scanlineHeight = imageBounds[3] / numScanlines;
 
-    regionUtils._edgeLists = [];
-    for (let i = 0; i < numScanlines; ++i) {
-        regionUtils._edgeLists[i] = [[0, 0, 0, 0, 0, 0, 0, 0], 0];
+    // Find which layers that have regions, and create empty edge lists for those
+    regionUtils._edgeListsByLayer = {};
+    for (let regionID of Object.keys(regionUtils._regions)) {
+        const region = regionUtils._regions[regionID];
+        const collectionIndex = region.collectionIndex;
+        console.assert(collectionIndex != undefined);
+
+        if (!(collectionIndex in regionUtils._edgeListsByLayer)) {
+            regionUtils._edgeListsByLayer[collectionIndex] = [];
+            for (let i = 0; i < numScanlines; ++i) {
+                regionUtils._edgeListsByLayer[collectionIndex][i] =
+                    [[0, 0, 0, 0, 0, 0, 0, 0], 0];
+            }
+        }
     }
+    console.log("Layers with regions:", Object.keys(regionUtils._edgeListsByLayer));
 
     regionUtils._regionIDToIndex = {};
     regionUtils._regionIndexToID = {};
@@ -1634,6 +1648,10 @@ regionUtils._generateEdgeListsForDrawing = function(imageBounds, numScanlines = 
     let objectID = 0;
     for (let regionID of Object.keys(regionUtils._regions)) {
         const region = regionUtils._regions[regionID];
+        const collectionIndex = region.collectionIndex;
+        console.assert(collectionIndex != undefined);
+        let edgeLists = regionUtils._edgeListsByLayer[collectionIndex];
+
         regionUtils._regionIDToIndex[regionID] = objectID;  // Update mapping
         regionUtils._regionIndexToID[objectID] = regionID;  // ...
 
@@ -1667,11 +1685,11 @@ regionUtils._generateEdgeListsForDrawing = function(imageBounds, numScanlines = 
                 const lower = Math.max(Math.floor(yMin / scanlineHeight), 0);
                 const upper = Math.min(Math.floor(yMax / scanlineHeight), numScanlines - 1);
                 for (let i = lower; i <= upper; ++i) {
-                    const headerOffset = regionUtils._edgeLists[i][0].length;
-                    regionUtils._edgeLists[i][0].push(xMin, xMax, objectID + 1, 0);
-                    regionUtils._edgeLists[i][1] = headerOffset;
+                    const headerOffset = edgeLists[i][0].length;
+                    edgeLists[i][0].push(xMin, xMax, objectID + 1, 0);
+                    edgeLists[i][1] = headerOffset;
                     for (let j = 0; j < 4; ++j) {
-                        regionUtils._edgeLists[i][0][j] |= mask[j];  // Update occupancy mask
+                        edgeLists[i][0][j] |= mask[j];  // Update occupancy mask
                     }
                 }
 
@@ -1684,9 +1702,9 @@ regionUtils._generateEdgeListsForDrawing = function(imageBounds, numScanlines = 
                     const lower = Math.max(Math.floor(Math.min(v0.y, v1.y) / scanlineHeight), 0);
                     const upper = Math.min(Math.floor(Math.max(v0.y, v1.y) / scanlineHeight), numScanlines - 1);
                     for (let j = lower; j <= upper; ++j) {
-                        const headerOffset = regionUtils._edgeLists[j][1];
-                        regionUtils._edgeLists[j][0].push(v0.x, v0.y, v1.x, v1.y);
-                        regionUtils._edgeLists[j][0][headerOffset + 3] += 1;  // Update edge counter
+                        const headerOffset = edgeLists[j][1];
+                        edgeLists[j][0].push(v0.x, v0.y, v1.x, v1.y);
+                        edgeLists[j][0][headerOffset + 3] += 1;  // Update edge counter
                     }
                 }
             }
@@ -1698,50 +1716,57 @@ regionUtils._generateEdgeListsForDrawing = function(imageBounds, numScanlines = 
 
 // Split each individual edge list around a pivot point into two new lists
 regionUtils._splitEdgeLists = function() {
-    const numScanlines = regionUtils._edgeLists.length;
+    regionUtils._edgeListsByLayerSplit = {};
 
-    regionUtils._edgeListsSplit = [];
-    for (let i = 0; i < numScanlines; ++i) {
-        regionUtils._edgeListsSplit[i] = [[], []];
-    }
+    for (let collectionIndex in regionUtils._edgeListsByLayer) {
+        const edgeLists = regionUtils._edgeListsByLayer[collectionIndex];
+        const numScanlines = edgeLists.length;
 
-    for (let i = 0; i < numScanlines; ++i) {
-        const edgeList = regionUtils._edgeLists[i][0];
-        const numItems = edgeList.length / 4;
-
-        // Find pivot point (mean center of all bounding boxes) for left-right split
-        let accum = [0.0, 0.0];
-        for (let j = 2; j < numItems; ++j) {
-            const xMin = edgeList[j * 4 + 0];
-            const xMax = edgeList[j * 4 + 1];
-            const edgeCount = edgeList[j * 4 + 3];
-
-            accum[0] += (xMin + xMax) * 0.5; accum[1] += 1;
-            j += edgeCount;  // Position pointer before next bounding box
-        }
-        const pivot = accum[0] / Math.max(1, accum[1]);
-
-        // Copy occupancy mask, and also store the pivot point
-        for (let n = 0; n < 2; ++n) {
-            regionUtils._edgeListsSplit[i][n].push(...edgeList.slice(0, 4));
-            regionUtils._edgeListsSplit[i][n].push(pivot, 0, 0, 0);
+        regionUtils._edgeListsByLayerSplit[collectionIndex] = [];
+        for (let i = 0; i < numScanlines; ++i) {
+            regionUtils._edgeListsByLayerSplit[collectionIndex][i] =
+                [[], []];
         }
 
-        // Do left-right split of edge data
-        for (let j = 2; j < numItems; ++j) {
-            const xMin = edgeList[j * 4 + 0];
-            const xMax = edgeList[j * 4 + 1];
-            const edgeCount = edgeList[j * 4 + 3];
+        let edgeListsSplit = regionUtils._edgeListsByLayerSplit[collectionIndex];
+        for (let i = 0; i < numScanlines; ++i) {
+            const edgeList = edgeLists[i][0];
+            const numItems = edgeList.length / 4;
 
-            if (xMin < pivot) {
-                regionUtils._edgeListsSplit[i][0].push(
-                    ...edgeList.slice(j * 4, (j + edgeCount + 1) * 4));
+            // Find pivot point (mean center of all bounding boxes) for left-right split
+            let accum = [0.0, 0.0];
+            for (let j = 2; j < numItems; ++j) {
+                const xMin = edgeList[j * 4 + 0];
+                const xMax = edgeList[j * 4 + 1];
+                const edgeCount = edgeList[j * 4 + 3];
+
+                accum[0] += (xMin + xMax) * 0.5; accum[1] += 1;
+                j += edgeCount;  // Position pointer before next bounding box
             }
-            if (xMax > pivot) {
-                regionUtils._edgeListsSplit[i][1].push(
-                    ...edgeList.slice(j * 4, (j + edgeCount + 1) * 4));
+            const pivot = accum[0] / Math.max(1, accum[1]);
+
+            // Copy occupancy mask, and also store the pivot point
+            for (let n = 0; n < 2; ++n) {
+                edgeListsSplit[i][n].push(...edgeList.slice(0, 4));
+                edgeListsSplit[i][n].push(pivot, 0, 0, 0);
             }
-            j += edgeCount;  // Position pointer before next bounding box
+
+            // Do left-right split of edge data
+            for (let j = 2; j < numItems; ++j) {
+                const xMin = edgeList[j * 4 + 0];
+                const xMax = edgeList[j * 4 + 1];
+                const edgeCount = edgeList[j * 4 + 3];
+
+                if (xMin < pivot) {
+                    edgeListsSplit[i][0].push(
+                        ...edgeList.slice(j * 4, (j + edgeCount + 1) * 4));
+                }
+                if (xMax > pivot) {
+                    edgeListsSplit[i][1].push(
+                        ...edgeList.slice(j * 4, (j + edgeCount + 1) * 4));
+                }
+                j += edgeCount;  // Position pointer before next bounding box
+            }
         }
     }
 }
@@ -1757,7 +1782,10 @@ regionUtils._addClustersToEdgeLists = function(imageBounds) {
 // number for paths in a scanline of the edge list data structure
 regionUtils._pointInRegion = function(px, py, regionID, imageBounds) {
     console.assert(imageBounds.length == 4);
-    const numScanlines = regionUtils._edgeLists.length;
+
+    const collectionIndex = 0;  // (TODO: replace hardcoded value)
+    const edgeLists = regionUtils._edgeListsByLayer[collectionIndex];
+    const numScanlines = edgeLists.length;
     const scanlineHeight = imageBounds[3] / numScanlines;
     const scanline = Math.floor(py / scanlineHeight);
 
@@ -1765,7 +1793,7 @@ regionUtils._pointInRegion = function(px, py, regionID, imageBounds) {
 
     let isInside = false;
     if (scanline >= 0 && scanline < numScanlines) {
-        const edgeList = regionUtils._edgeLists[scanline][0];
+        const edgeList = edgeLists[scanline][0];
         const numItems = edgeList.length / 4;
 
         // Traverse edge list until we find first path for object ID
@@ -1807,12 +1835,15 @@ regionUtils._pointInRegion = function(px, py, regionID, imageBounds) {
 // the key of the last one in the draw order shall be returned.
 regionUtils._findRegionByPoint = function(px, py, imageBounds) {
     console.assert(imageBounds.length == 4);
-    const numScanlines = regionUtils._edgeLists.length;
+
+    const collectionIndex = 0;  // (TODO: replace hardcoded value)
+    const edgeLists = regionUtils._edgeListsByLayer[collectionIndex];
+    const numScanlines = edgeLists.length;
     const scanlineHeight = imageBounds[3] / numScanlines;
     const scanline = Math.floor(py / scanlineHeight);
 
     if (scanline < 0 || scanline >= numScanlines) return null;  // Outside image
-    const edgeList = regionUtils._edgeLists[scanline][0];
+    const edgeList = edgeLists[scanline][0];
     const numItems = edgeList.length / 4;
 
     let offset = 2;  // Offset starts at two because of occupancy mask
