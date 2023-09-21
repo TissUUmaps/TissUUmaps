@@ -557,12 +557,6 @@ regionUtils.searchTreeForPointsInRegion = function (quadtree, x0, y0, x3, y3, re
         throw {name : "NotImplementedError", message : "ViewerPointInPath not yet implemented."}; 
     }
 
-    // FIXME: For now, regions will always have the first image as parent
-    const image = tmapp["ISS_viewer"].world.getItemAt(0);
-    const imageWidth = image ? image.getContentSize().x : 1;
-    const imageHeight = image ? image.getContentSize().y : 1;
-    const imageBounds = [0, 0, imageWidth, imageHeight];
-
     // Note: searchTreeForPointsInBbox() currently returns a list of points
     // in array-of-structs format. This will make the memory usage explode for
     // large markersets (or for markers with many attributes), so it would be
@@ -574,7 +568,7 @@ regionUtils.searchTreeForPointsInRegion = function (quadtree, x0, y0, x3, y3, re
     for (d of pointInBbox) {
         const x = d[xselector] * options.coordFactor;
         const y = d[yselector] * options.coordFactor;
-        if (regionUtils._pointInRegion(x, y, regionid, imageBounds)) {
+        if (regionUtils._pointInRegion(x, y, regionid)) {
             countsInsideRegion += 1;
             pointsInside.push(d);
         }
@@ -1786,12 +1780,19 @@ regionUtils._addClustersToEdgeLists = function() {
 
 // Check if point is inside or outside a region, by computing the winding
 // number for paths in a scanline of the edge list data structure
-regionUtils._pointInRegion = function(px, py, regionID, imageBounds) {
-    console.assert(imageBounds.length == 4);
+regionUtils._pointInRegion = function(px, py, regionID) {
+    if (!(regionID in regionUtils._regions)) return false;
 
-    const collectionIndex = 0;  // (TODO: replace hardcoded value)
+    const region = regionUtils._regions[regionID];
+    const collectionIndex = region.collectionIndex;
     const edgeLists = regionUtils._edgeListsByLayer[collectionIndex];
     const numScanlines = edgeLists.length;
+
+    const image = tmapp["ISS_viewer"].world.getItemAt(collectionIndex);
+    console.assert(image != undefined);
+    const imageWidth = image.getContentSize().x;
+    const imageHeight = image.getContentSize().y;
+    const imageBounds = [0, 0, imageWidth, imageHeight];
     const scanlineHeight = imageBounds[3] / numScanlines;
     const scanline = Math.floor(py / scanlineHeight);
 
