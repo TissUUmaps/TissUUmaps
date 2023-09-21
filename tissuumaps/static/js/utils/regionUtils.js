@@ -1621,9 +1621,7 @@ regionUtils.JSONValToRegions= async function(jsonVal){
 // Build data structure for rendering region objects. The basic idea is to
 // divide the image region into scanlines, and bin edges from polygons into
 // those scanlines. Edges within scanlines will be ordered by object IDs.
-regionUtils._generateEdgeListsForDrawing = function(imageBounds, numScanlines = 512) {
-    console.assert(imageBounds.length == 4);
-    const scanlineHeight = imageBounds[3] / numScanlines;
+regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
 
     // Find which layers that have regions, and create empty edge lists for those
     regionUtils._edgeListsByLayer = {};
@@ -1640,7 +1638,6 @@ regionUtils._generateEdgeListsForDrawing = function(imageBounds, numScanlines = 
             }
         }
     }
-    console.log("Layers with regions:", Object.keys(regionUtils._edgeListsByLayer));
 
     regionUtils._regionIDToIndex = {};
     regionUtils._regionIndexToID = {};
@@ -1651,6 +1648,13 @@ regionUtils._generateEdgeListsForDrawing = function(imageBounds, numScanlines = 
         const collectionIndex = region.collectionIndex;
         console.assert(collectionIndex != undefined);
         let edgeLists = regionUtils._edgeListsByLayer[collectionIndex];
+
+        const image = tmapp["ISS_viewer"].world.getItemAt(collectionIndex);
+        console.assert(image != undefined);
+        const imageWidth = image.getContentSize().x;
+        const imageHeight = image.getContentSize().y;
+        const imageBounds = [0, 0, imageWidth, imageHeight];
+        const scanlineHeight = imageBounds[3] / numScanlines;
 
         regionUtils._regionIDToIndex[regionID] = objectID;  // Update mapping
         regionUtils._regionIndexToID[objectID] = regionID;  // ...
@@ -1773,7 +1777,7 @@ regionUtils._splitEdgeLists = function() {
 
 
 // Add cluster information to edge lists (WIP)
-regionUtils._addClustersToEdgeLists = function(imageBounds) {
+regionUtils._addClustersToEdgeLists = function() {
     // STUB
 }
 

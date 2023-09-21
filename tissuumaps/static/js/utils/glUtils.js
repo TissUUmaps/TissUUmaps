@@ -1520,14 +1520,8 @@ glUtils.updateRegionDataTextures = function() {
     const canvas = document.getElementById("gl_canvas");
     const gl = canvas.getContext("webgl2", glUtils._options);
 
-    // FIXME For now, regions will always have the first image as parent
-    const image = tmapp["ISS_viewer"].world.getItemAt(0);
-    const imageWidth = image ? image.getContentSize().x : 1;
-    const imageHeight = image ? image.getContentSize().y : 1;
-    const imageBounds = [0, 0, imageWidth, imageHeight];
-
     console.time("Update region edge lists");
-    regionUtils._generateEdgeListsForDrawing(imageBounds);
+    regionUtils._generateEdgeListsForDrawing();
     console.timeEnd("Update region edge lists");
 
     console.time("Split region edge lists");
@@ -1535,7 +1529,7 @@ glUtils.updateRegionDataTextures = function() {
     console.timeEnd("Split region edge lists");
 
     console.time("Add clusters to region edge lists");
-    regionUtils._addClustersToEdgeLists(imageBounds);
+    regionUtils._addClustersToEdgeLists();
     console.timeEnd("Add clusters to region edge lists");
 
     for (let collectionIndex in regionUtils._edgeListsByLayer) {
