@@ -3313,43 +3313,11 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
         }
     });
     regionshistobutton.addEventListener('click', function () {
-        regionUtils.analyzeRegion(region.id);
+        let innerHTML = regionUtils.getRegionStatistics(region.id);
         
-        var rpanelbody = HTMLElementUtils.createElement({ kind: "div" });
-
-        var div = HTMLElementUtils.createElement({ kind: "div", id: region.id + "_histogram" });
-        var histogram = regionUtils._regions[region.id].barcodeHistogram;
-        var table = div.appendChild(HTMLElementUtils.createElement({
-            kind: "table",
-            extraAttributes: {
-                class: "table table-striped",
-                style: "overflow-y: auto;max-height:600px;display:block;"
-            }
-        }));
-        thead = HTMLElementUtils.createElement({kind: "thead"});
-        thead.innerHTML = `<tr>
-        <th scope="col">Key</th>
-        <th scope="col">Name</th>
-        <th scope="col">Count</th>
-        </tr>`;
-        tbody = HTMLElementUtils.createElement({kind: "tbody"});
-        table.appendChild(thead);
-        table.appendChild(tbody);
-
-        for (var i in histogram) {
-            var innerHTML = "";
-            innerHTML += "<td>" + histogram[i].key + "</td>";
-            innerHTML += "<td>" + histogram[i].name + "</td>";
-            innerHTML += "<td>" + histogram[i].count + "</td>";
-            tbody.appendChild(HTMLElementUtils.createElement({
-                kind: "tr",
-                "innerHTML": innerHTML
-            }));
-        }
-        rpanelbody.appendChild(div);
         interfaceUtils.alert(
-            rpanelbody.innerHTML,
-            "Barcode Histogram"
+            innerHTML,
+            "Region statistics"
         );
         
     });

@@ -830,6 +830,135 @@ regionUtils.analyzeRegion = function (regionid) {
     regionUtils.getPointsInRegion(regionid);
     regionUtils._regions[regionid].barcodeHistogram.sort(compare);
 }
+regionUtils.getRegionStatistics = function (regionid) {
+    function createMeasureTable(regionMeasures, div) {
+        const containerDiv = document.createElement('div');
+        containerDiv.classList.add('overflow-auto');
+
+        const table = document.createElement('table');
+        table.classList.add('table', 'table-striped', 'small');
+        const tableHead = document.createElement('thead');
+        const tableBody = document.createElement('tbody');
+      
+        // Create the header row
+        const headerRow1 = document.createElement('tr');
+        const headerRow2 = document.createElement('tr');
+      
+        // Loop through the keys of the first measurement to create table headers
+        for (const measureKey in regionMeasures) {
+          const measureValue = regionMeasures[measureKey];
+          const headerCell = document.createElement('th');
+      
+          if (typeof measureValue === 'object') {
+            // If the value is an object, create sub-headers for its keys
+            headerCell.setAttribute('colspan', Object.keys(measureValue).length);
+            headerCell.classList.add('py-1');
+            headerCell.textContent = measureKey;
+            headerRow1.appendChild(headerCell);
+      
+            for (const subKey in measureValue) {
+              const subHeaderCell = document.createElement('th');
+              subHeaderCell.classList.add('py-1');
+              subHeaderCell.textContent = subKey;
+              headerRow2.appendChild(subHeaderCell);
+            }
+          } else {
+            // If the value is not an object, create a single header cell
+            headerCell.setAttribute('rowspan', "2");
+            headerCell.classList.add('align-middle', "border-bottom", "border-dark");
+            headerCell.textContent = measureKey;
+            headerRow1.appendChild(headerCell);
+          }
+        }
+      
+        tableHead.appendChild(headerRow1);
+        tableHead.appendChild(headerRow2);
+      
+        // Create the data row
+        const dataRow = document.createElement('tr');
+      
+        for (const measureKey in regionMeasures) {
+          const measureValue = regionMeasures[measureKey];
+          const dataCell = document.createElement('td');
+      
+          if (typeof measureValue === 'object') {
+            // If the value is an object, create sub-cells for its values
+            for (const subKey in measureValue) {
+              const subDataCell = document.createElement('td');
+              subDataCell.textContent = measureValue[subKey].toFixed(2);;
+              dataRow.appendChild(subDataCell);
+            }
+          } else {
+            // If the value is not an object, create a single data cell
+            dataCell.textContent = measureValue.toFixed(2);;
+            dataRow.appendChild(dataCell);
+          }
+        }
+      
+        tableBody.appendChild(dataRow);
+      
+        table.appendChild(tableHead);
+        table.appendChild(tableBody);
+      
+        // Create the title element and append it before the table
+        const title = document.createElement('div');
+        title.classList.add('fw-bold', 'mb-2');
+        title.textContent = 'Measurements';
+      
+        div.appendChild(title);
+        div.appendChild(containerDiv);
+        containerDiv.appendChild(table);
+    }
+
+    region = regionUtils._regions[regionid];
+    regionUtils.analyzeRegion(region.id);
+        
+    var rpanelbody = HTMLElementUtils.createElement({ kind: "div" });
+
+    const shape = new clipperShape (region.globalPoints.flat(), closed = true, capitalConversion = true, integerConversion = false, removeDuplicates = false)
+    
+    const regionMeasures = {
+        "Area": Math.abs(shape.totalArea()),
+        "Perimeter": shape.totalPerimeter(),
+        "Sub-regions": shape.areas().length,
+        "Bounds": shape.shapeBounds()
+    }
+
+    createMeasureTable(regionMeasures, rpanelbody);
+
+    var div = HTMLElementUtils.createElement({ kind: "div", id: region.id + "_histogram" });
+    var histogram = regionUtils._regions[region.id].barcodeHistogram;
+    var table = div.appendChild(HTMLElementUtils.createElement({
+        kind: "table",
+        extraAttributes: {
+            class: "table table-striped small",
+            style: "overflow-y: auto;max-height:600px;display:block;"
+        }
+    }));
+    thead = HTMLElementUtils.createElement({kind: "thead"});
+    thead.innerHTML = `<tr>
+    <th scope="col">Key</th>
+    <th scope="col">Name</th>
+    <th scope="col">Count</th>
+    </tr>`;
+    tbody = HTMLElementUtils.createElement({kind: "tbody"});
+    table.appendChild(thead);
+    table.appendChild(tbody);
+
+    for (var i in histogram) {
+        var innerHTML = "";
+        innerHTML += "<td>" + histogram[i].key + "</td>";
+        innerHTML += "<td>" + histogram[i].name + "</td>";
+        innerHTML += "<td>" + histogram[i].count + "</td>";
+        tbody.appendChild(HTMLElementUtils.createElement({
+            kind: "tr",
+            "innerHTML": innerHTML
+        }));
+    }
+    rpanelbody.appendChild(div);
+    return rpanelbody.innerHTML;
+}
+
 /** 
  *  regionUtils */
 regionUtils.setMode = function (mode) {
