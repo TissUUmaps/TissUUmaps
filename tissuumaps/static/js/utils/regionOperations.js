@@ -416,7 +416,7 @@ regionUtils.stringToFloatPoints = function (points) {
  * @summary Adds a region to selected list
  * @param {*} region Region to be added to selection collection
  */
-regionUtils.selectRegion = function (region) {
+regionUtils.selectRegion = function (region, skipHighlight) {
   const escapedRegionId = HTMLElementUtils.stringToId(region.id);
   const regionClassID = HTMLElementUtils.stringToId("region_" + region.regionClass);
 
@@ -425,7 +425,7 @@ regionUtils.selectRegion = function (region) {
   regionUtils.drawRegionPath(points, escapedRegionId + "_selected", "#0165fc")
   const checkBox = document.getElementById(`${escapedRegionId}_selection_check`);
   if (checkBox) checkBox.checked = true;
-  regionUtils.highlightRegion(region.id);
+  if (!skipHighlight) {regionUtils.highlightRegion(region.id)};
   regionUtils.addRegionToolbarUI();
 };
 
