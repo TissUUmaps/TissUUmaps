@@ -1885,12 +1885,7 @@ glUtils._drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
     }
 
     // Draw regions last, to make them appear on top (same behaviour as for SVG regions)
-    // FIXME For now, regions will always have the first image as parent
-    const image = tmapp["ISS_viewer"].world.getItemAt(0);
-    const imageWidth = image ? image.getContentSize().x : 1;
-    const imageHeight = image ? image.getContentSize().y : 1;
-    const imageBounds = [0, 0, imageWidth, imageHeight];
-    glUtils._drawRegionsColorPass(gl, viewportTransform, imageBounds);
+    glUtils._drawRegionsColorPass(gl, viewportTransform);
 }
 
 
@@ -2021,7 +2016,7 @@ glUtils._drawEdgesByUID = function(gl, viewportTransform, markerScaleAdjusted, u
 }
 
 
-glUtils._drawRegionsColorPass = function(gl, viewportTransform, imageBounds) {
+glUtils._drawRegionsColorPass = function(gl, viewportTransform) {
     if (Object.keys(regionUtils._edgeListsByLayer).length == 0) return;  // No regions to draw
 
     const fillRuleConstants = { "never": 0, "nonzero": 1, "oddeven": 2 };
@@ -2035,6 +2030,12 @@ glUtils._drawRegionsColorPass = function(gl, viewportTransform, imageBounds) {
     for (let collectionIndex in regionUtils._edgeListsByLayer) {
         const edgeLists = regionUtils._edgeListsByLayer[collectionIndex];
         const numScanlines = edgeLists.length;
+
+        const image = tmapp["ISS_viewer"].world.getItemAt(collectionIndex);
+        console.assert(image != undefined);
+        const imageWidth = image.getContentSize().x;
+        const imageHeight = image.getContentSize().y;
+        const imageBounds = [0, 0, imageWidth, imageHeight];
 
         // Set per-scene uniforms
         gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
