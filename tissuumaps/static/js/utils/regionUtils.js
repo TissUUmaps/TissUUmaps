@@ -1639,6 +1639,8 @@ regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
         }
     }
 
+    // Reset dictionaries for mapping between IDs used when storing the regions
+    // and IDs used during render time
     regionUtils._regionIDToIndex = {};
     regionUtils._regionIndexToID = {};
 
@@ -1656,7 +1658,7 @@ regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
         const imageBounds = [0, 0, imageWidth, imageHeight];
         const scanlineHeight = imageBounds[3] / numScanlines;
 
-        regionUtils._regionIDToIndex[regionID] = objectID;  // Update mapping
+        regionUtils._regionIDToIndex[regionID] = objectID;  // Update ID mappings
         regionUtils._regionIndexToID[objectID] = regionID;  // ...
 
         for (let subregion of region.globalPoints) {
