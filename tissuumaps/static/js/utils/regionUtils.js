@@ -1864,7 +1864,7 @@ regionUtils._findRegionByPoint = function(position) {
         const py = imageCoord.y;
         const scanline = Math.floor(py / scanlineHeight);
 
-        if (scanline < 0 || scanline >= numScanlines) return null;  // Outside image
+        if (scanline < 0 || scanline >= numScanlines) continue;  // Outside image
         const edgeList = edgeLists[scanline][0];
         const numItems = edgeList.length / 4;
 
