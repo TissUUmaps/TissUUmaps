@@ -53,6 +53,7 @@ tmapp.registerActions = function () {
     regionTabEl?.addEventListener('hide.bs.tab', function (event) {
         overlayUtils._regionToolbar = false;
         regionUtils.regionToolbarOnOff();
+        regionUtils.setMode(null);
     })
     
 }
