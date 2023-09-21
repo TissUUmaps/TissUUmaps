@@ -524,14 +524,7 @@ regionUtils.globalPointInPath=function(x,y,path,tmpPoint) {
                 const x = markerData[xselector][d] * options.coordFactor;
                 const y = markerData[yselector][d] * options.coordFactor;
                 if (x >= x0 && x < x3 && y >= y0 && y < y3) {
-                    // Note: expanding each point into a full object will be
-                    // very inefficient memory-wise for large datasets, so
-                    // should return points as array of indices instead (TODO)
-                    let p = {};
-                    for (const key of columns) {
-                        p[key] = markerData[key][d];
-                    }
-                    pointsInside.push(p);
+                    pointsInside.push(d);
                 }
             }
         }
@@ -561,17 +554,15 @@ regionUtils.searchTreeForPointsInRegion = function (quadtree, x0, y0, x3, y3, re
     const imageHeight = image ? image.getContentSize().y : 1;
     const imageBounds = [0, 0, imageWidth, imageHeight];
 
-    // Note: searchTreeForPointsInBbox() currently returns a list of points
-    // in array-of-structs format. This will make the memory usage explode for
-    // large markersets (or for markers with many attributes), so it would be
-    // better to just return a list of point indices instead.
     const pointInBbox = regionUtils.searchTreeForPointsInBbox(quadtree, x0, y0, x3, y3, options);
 
     let countsInsideRegion = 0;
     let pointsInside = [];
-    for (d of pointInBbox) {
-        const x = d[xselector] * options.coordFactor;
-        const y = d[yselector] * options.coordFactor;
+    const markerData = dataUtils.data[options.dataset]["_processeddata"];
+
+    for (let d of pointInBbox) {
+        const x = markerData[xselector][d] * options.coordFactor;
+        const y = markerData[yselector][d] * options.coordFactor;
         if (regionUtils._pointInRegion(x, y, regionid, imageBounds)) {
             countsInsideRegion += 1;
             pointsInside.push(d);
@@ -759,17 +750,8 @@ regionUtils.changeRegion = function (regionid) {
 
 /** 
  *  TODO */
-regionUtils.analyzeRegion = function (regionid) {
-    var op = tmapp["object_prefix"];
-
-    function compare(a, b) {
-        if (a.count > b.count)
-            return -1;
-        if (a.count < b.count)
-            return 1;
-        return 0;
-    }
-
+regionUtils.getPointsInRegion = function (regionid) {
+    
     function clone(obj) {
         if (null == obj || "object" != typeof obj) return obj;
         var copy = obj.constructor();
@@ -782,7 +764,9 @@ regionUtils.analyzeRegion = function (regionid) {
     regionUtils._regions[regionid].associatedPoints=[];
     regionUtils._regions[regionid].barcodeHistogram=[];
     allDatasets = Object.keys(dataUtils.data);
+    var allPointsInside = {};
     for (var uid of allDatasets) {
+        allPointsInside[uid] = [];
         var allkeys=Object.keys(dataUtils.data[uid]["_groupgarden"]);
 
         var datapath = dataUtils.data[uid]["_csv_path"];
@@ -798,8 +782,8 @@ regionUtils.analyzeRegion = function (regionid) {
 
         for (var codeIndex in allkeys) {
             var code = allkeys[codeIndex];
-
-            var pointsInside=regionUtils.searchTreeForPointsInRegion(dataUtils.data[uid]["_groupgarden"][code],
+            let groupgarden = dataUtils.data[uid]["_groupgarden"][code];
+            var pointsInside=regionUtils.searchTreeForPointsInRegion(groupgarden,
                 regionUtils._regions[regionid]._gxmin,regionUtils._regions[regionid]._gymin,
                 regionUtils._regions[regionid]._gxmax,regionUtils._regions[regionid]._gymax,
                 regionid, {
@@ -809,8 +793,19 @@ regionUtils.analyzeRegion = function (regionid) {
                     "dataset":uid,
                     "coordFactor":dataUtils.data[uid]["_coord_factor"]
                 });
+            const markerData = dataUtils.data[uid]["_processeddata"];
+            const columns = dataUtils.data[uid]["_csv_header"];
             if(pointsInside.length>0){
-                pointsInside.forEach(function(p){
+                pointsInside.forEach(function(d){
+                    allPointsInside[uid].push(d);
+                    // Note: expanding each point into a full object will be
+                    // very inefficient memory-wise for large datasets, so
+                    // should return points as array of indices instead (TODO)
+                    let p = {};
+                    for (const key of columns) {
+                        p[key] = markerData[key][d];
+                    }
+
                     var pin=clone(p);
                     pin.regionid=regionid;
                     pin.dataset=datapath
@@ -819,6 +814,20 @@ regionUtils.analyzeRegion = function (regionid) {
             }
         }
     }
+    return allPointsInside;
+}
+
+regionUtils.analyzeRegion = function (regionid) {
+    var op = tmapp["object_prefix"];
+
+    function compare(a, b) {
+        if (a.count > b.count)
+            return -1;
+        if (a.count < b.count)
+            return 1;
+        return 0;
+    }
+    regionUtils.getPointsInRegion(regionid);
     regionUtils._regions[regionid].barcodeHistogram.sort(compare);
 }
 /** 
