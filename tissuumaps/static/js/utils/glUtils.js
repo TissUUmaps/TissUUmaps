@@ -2255,15 +2255,7 @@ glUtils.pick = function(event) {
             }
         }
 
-        // FIXME: For now, regions will always have the first image as parent
-        const image = tmapp["ISS_viewer"].world.getItemAt(0);
-        const imageWidth = image ? image.getContentSize().x : 1;
-        const imageHeight = image ? image.getContentSize().y : 1;
-        const imageBounds = [0, 0, imageWidth, imageHeight];
-        const imageCoord = image.viewerElementToImageCoordinates(
-            event.position
-        );
-        const pickedRegion = regionUtils._findRegionByPoint(imageCoord.x, imageCoord.y, imageBounds);
+        const pickedRegion = regionUtils._findRegionByPoint(event.position);
         const hasPickedRegion = pickedRegion != null;
         glUtils._regionPicked = pickedRegion;
 
@@ -2276,8 +2268,6 @@ glUtils.pick = function(event) {
             console.log("Region clicked:", pickedRegion);
             div.classList.add("viewer-layer", "m-0", "p-1");
             div.style.zIndex = 99;
-
-            console.log(pickedRegion, imageCoord);
 
             tmapp["ISS_viewer"].addOverlay({
                 element: div,

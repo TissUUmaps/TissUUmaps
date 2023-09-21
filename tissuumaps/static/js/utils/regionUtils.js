@@ -1836,57 +1836,72 @@ regionUtils._pointInRegion = function(px, py, regionID, imageBounds) {
 }
 
 
-// Find region under point. Returns a key to the regionUtils_regions dict if a
-// region is found, otherwise null. If multiple regions overlap at the point,
-// the key of the last one in the draw order shall be returned.
-regionUtils._findRegionByPoint = function(px, py, imageBounds) {
-    console.assert(imageBounds.length == 4);
-
-    const collectionIndex = 0;  // (TODO: replace hardcoded value)
-    const edgeLists = regionUtils._edgeListsByLayer[collectionIndex];
-    const numScanlines = edgeLists.length;
-    const scanlineHeight = imageBounds[3] / numScanlines;
-    const scanline = Math.floor(py / scanlineHeight);
-
-    if (scanline < 0 || scanline >= numScanlines) return null;  // Outside image
-    const edgeList = edgeLists[scanline][0];
-    const numItems = edgeList.length / 4;
-
-    let offset = 2;  // Offset starts at two because of occupancy mask
-    let objectID = offset < numItems ? (edgeList[offset * 4 + 2] - 1) : -1;
+// Find region under point specified in OSD viewer coordinates. Returns a key to
+// the regionUtils_regions dict if a region is found, otherwise null. If
+// multiple regions overlap at the point, the key of the last one in the draw
+// order shall be returned.
+regionUtils._findRegionByPoint = function(position) {
+    // This function currently loops over all image layers to find any region
+    // containing the point. At some point, we might also want to add
+    // collectionIndex as an optional input, to restrict the search to a
+    // particular image layer.
 
     let foundRegion = -1;
-    while (offset < numItems) {
-        console.assert(regionUtils._regionToColorLUT.length > (objectID * 4));
-        const visible = regionUtils._regionToColorLUT[objectID * 4 + 3];
+    for (let collectionIndex in regionUtils._edgeListsByLayer) {
+        const edgeLists = regionUtils._edgeListsByLayer[collectionIndex];
+        const numScanlines = edgeLists.length;
 
-        // (TODO Add bounding box test to check if object can be skipped)
+        const image = tmapp["ISS_viewer"].world.getItemAt(collectionIndex);
+        console.assert(image != undefined);
+        const imageWidth = image.getContentSize().x;
+        const imageHeight = image.getContentSize().y;
+        const imageBounds = [0, 0, imageWidth, imageHeight];
+        const scanlineHeight = imageBounds[3] / numScanlines;
 
-        // Compute winding number from all edges stored for the object ID
-        let windingNumber = 0;
-        while (offset < numItems && (edgeList[offset * 4 + 2] - 1) == objectID) {
-            const count = edgeList[offset * 4 + 3];
-            for (let i = 0; i < count; ++i) {
-                const x0 = edgeList[(offset + 1 + i) * 4 + 0];
-                const y0 = edgeList[(offset + 1 + i) * 4 + 1];
-                const x1 = edgeList[(offset + 1 + i) * 4 + 2];
-                const y1 = edgeList[(offset + 1 + i) * 4 + 3];
+        const imageCoord = image.viewerElementToImageCoordinates(position);
+        const px = imageCoord.x;
+        const py = imageCoord.y;
+        const scanline = Math.floor(py / scanlineHeight);
 
-                if (Math.min(y0, y1) <= py && py < Math.max(y0, y1)) {
-                    const t = (py - y0) / (y1 - y0 + 1e-5);
-                    const x = x0 + (x1 - x0) * t;
-                    const weight = Math.sign(y1 - y0);
-                    windingNumber += ((x - px) > 0.0 ? weight : 0);
+        if (scanline < 0 || scanline >= numScanlines) return null;  // Outside image
+        const edgeList = edgeLists[scanline][0];
+        const numItems = edgeList.length / 4;
+
+        let offset = 2;  // Offset starts at two because of occupancy mask
+        let objectID = offset < numItems ? (edgeList[offset * 4 + 2] - 1) : -1;
+
+        while (offset < numItems) {
+            console.assert(regionUtils._regionToColorLUT.length > (objectID * 4));
+            const visible = regionUtils._regionToColorLUT[objectID * 4 + 3];
+
+            // (TODO Add bounding box test to check if object can be skipped)
+
+            // Compute winding number from all edges stored for the object ID
+            let windingNumber = 0;
+            while (offset < numItems && (edgeList[offset * 4 + 2] - 1) == objectID) {
+                const count = edgeList[offset * 4 + 3];
+                for (let i = 0; i < count; ++i) {
+                    const x0 = edgeList[(offset + 1 + i) * 4 + 0];
+                    const y0 = edgeList[(offset + 1 + i) * 4 + 1];
+                    const x1 = edgeList[(offset + 1 + i) * 4 + 2];
+                    const y1 = edgeList[(offset + 1 + i) * 4 + 3];
+
+                    if (Math.min(y0, y1) <= py && py < Math.max(y0, y1)) {
+                        const t = (py - y0) / (y1 - y0 + 1e-5);
+                        const x = x0 + (x1 - x0) * t;
+                        const weight = Math.sign(y1 - y0);
+                        windingNumber += ((x - px) > 0.0 ? weight : 0);
+                    }
                 }
+                offset += count + 1;  // Position pointer at next path
             }
-            offset += count + 1;  // Position pointer at next path
+
+            // Apply non-zero fill rule for inside test
+            const isInside = windingNumber != 0;
+            if (isInside && visible) { foundRegion = objectID; }
+
+            objectID = offset < numItems ? (edgeList[offset * 4 + 2] - 1) : -1;
         }
-
-        // Apply non-zero fill rule for inside test
-        const isInside = windingNumber != 0;
-        if (isInside && visible) { foundRegion = objectID; }
-
-        objectID = offset < numItems ? (edgeList[offset * 4 + 2] - 1) : -1;
     }
     return foundRegion >= 0 ? regionUtils._regionIndexToID[foundRegion] : null;
 }
