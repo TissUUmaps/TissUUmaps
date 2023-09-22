@@ -534,6 +534,30 @@ regionUtils.globalPointInPath=function(x,y,path,tmpPoint) {
     });
     return pointsInside;
  }
+
+ /**
+  * @summary Filter a list of point indices by layer
+  * @param {*} points 
+  * @param {*} dataObj 
+  * @param {*} collectionIndex 
+  */
+regionUtils.filterPointsInLayer = function (points, dataObj, collectionIndex) {
+    // check if we are in fixed collection index or not:
+    const useCollectionItemFromMarker = dataObj["_collectionItem_col"] != null;
+    const collectionItemFixed = dataObj["_collectionItem_fixed"];
+
+    if (useCollectionItemFromMarker) {
+        const collectionItemCol = dataObj["_collectionItem_col"];
+        const collectionItemArray = dataObj._processeddata[collectionItemCol];
+        // points are indices in collectionItemArray.
+        // We now filter points d where collectionItemArray[d] == collectionIndex
+        const pointsInLayer = points.filter(d => collectionItemArray[d] == collectionIndex);
+        return pointsInLayer;
+    }
+    else {
+        return (collectionItemFixed == collectionIndex)? points : [];
+    }
+}
 /** 
  *  @param {Object} quadtree d3.quadtree where the points are stored
  *  @param {Number} x0 X coordinate of one point in a bounding box
@@ -552,11 +576,15 @@ regionUtils.searchTreeForPointsInRegion = function (quadtree, x0, y0, x3, y3, re
 
     const pointInBbox = regionUtils.searchTreeForPointsInBbox(quadtree, x0, y0, x3, y3, options);
 
+    const dataObj = dataUtils.data[options.dataset];
+    const collectionIndex = regionUtils._regions[regionid].collectionIndex;
+    const pointInLayer = regionUtils.filterPointsInLayer(pointInBbox, dataObj, collectionIndex)
+    
     let countsInsideRegion = 0;
     let pointsInside = [];
     const markerData = dataUtils.data[options.dataset]["_processeddata"];
 
-    for (let d of pointInBbox) {
+    for (let d of pointInLayer) {
         const x = markerData[xselector][d] * options.coordFactor;
         const y = markerData[yselector][d] * options.coordFactor;
         if (regionUtils._pointInRegion(x, y, regionid)) {
