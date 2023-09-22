@@ -1789,6 +1789,9 @@ regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
         const imageHeight = image.getContentSize().y;
         const imageBounds = [0, 0, imageWidth, imageHeight];
         const scanlineHeight = imageBounds[3] / numScanlines;
+        // We want to add some overlap to prevent broken horizontal outlines
+        // near scanline boundaries:
+        const overlap = 0.25;
 
         regionUtils._regionIDToIndex[regionID] = objectID;  // Update ID mappings
         regionUtils._regionIndexToID[objectID] = regionID;  // ...
@@ -1820,8 +1823,8 @@ regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
                 // Create header elements for storing information about the number
                 // of edges for path in overlapping scanlines. We also want to store
                 // some other information such as bounding box and parent object ID.
-                const lower = Math.max(Math.floor(yMin / scanlineHeight), 0);
-                const upper = Math.min(Math.floor(yMax / scanlineHeight), numScanlines - 1);
+                const lower = Math.max(Math.floor(yMin / scanlineHeight - overlap), 0);
+                const upper = Math.min(Math.floor(yMax / scanlineHeight + overlap), numScanlines - 1);
                 for (let i = lower; i <= upper; ++i) {
                     const headerOffset = edgeLists[i][0].length;
                     edgeLists[i][0].push(xMin, xMax, objectID + 1, 0);
@@ -1837,8 +1840,8 @@ regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
                     const v1 = points[(i + 1) % numPoints];
                     if (v0.x == v1.x && v0.y == v1.y) { continue; }
 
-                    const lower = Math.max(Math.floor(Math.min(v0.y, v1.y) / scanlineHeight), 0);
-                    const upper = Math.min(Math.floor(Math.max(v0.y, v1.y) / scanlineHeight), numScanlines - 1);
+                    const lower = Math.max(Math.floor(Math.min(v0.y, v1.y) / scanlineHeight - overlap), 0);
+                    const upper = Math.min(Math.floor(Math.max(v0.y, v1.y) / scanlineHeight + overlap), numScanlines - 1);
                     for (let j = lower; j <= upper; ++j) {
                         const headerOffset = edgeLists[j][1];
                         edgeLists[j][0].push(v0.x, v0.y, v1.x, v1.y);
