@@ -1,12 +1,12 @@
 /**
  * @file tmapp.js Main base for TissUUmaps to work
- * @author Leslie Solorzano
+ * @author Christophe Avenel, Fredrik Nysjö, Leslie Solorzano
  * @see {@link tmapp}
  */
 
 /**
  * @namespace tmapp
- * @version tmapp 2.0
+ * @version tmapp 3.2
  * @classdesc The root namespace for tmapp.
  */
 tmapp = {
