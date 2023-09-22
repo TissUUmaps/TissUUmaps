@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.1.1.6
+
+- Add a min-max filter to image layers for better contrast (@glbarlow)
+- Fix marker filtering
+- Update license from BSD-3 to MIT
+- Add collapsible sections in plugins
+- Minor fixes
+
 ## 3.1.1.5
 
 - Fix multiple images dropped on empty project

@@ -1,8 +1,8 @@
 ---
 name: Spot Inspector
-version: 2.0.2
+version: 3.0.2
 author: Christophe Avenel - Axel Andersson
-date: 2022-03-30
+date: 2023-09-06
 image: Spot_Inspector.gif
 description:
   The Spot Inspector plugin is implemented using Python with a Javascript interface for interacting with the main module.

@@ -277,7 +277,7 @@ def points2regions(
             grid_props = result["grid_props"]
             clusters = result["cluster_per_bin"]
             label_mask = np.zeros(grid_props["grid_size"], dtype="uint8")
-            label_mask[tuple(ind for ind in grid_props["grid_coords"])] = clusters
+            label_mask[tuple(ind for ind in grid_props["grid_coords"])] = clusters + 1
             label_mask = label_mask
             geojson = labelmask2geojson(
                 label_mask,
@@ -477,7 +477,6 @@ def kde_per_label(
     row, col = adj.nonzero()
     d2 = (xy[row, 0] - xy[col, 0]) ** 2
     d2 = d2 + (xy[row, 1] - xy[col, 1]) ** 2
-    d2 = np.sqrt(d2)
     d2 = np.exp(-d2 / (2 * sigma * sigma))
     aff = sp.csr_matrix((d2, (row, col)), shape=adj.shape, dtype="float32")
     if not return_neighbors:
@@ -607,7 +606,7 @@ class Plugin:
                 except:
                     labels = f.get(jsonParam["clusterKey"])[()]
                 labels = labels.astype(str)
-        bins_per_res = float(jsonParam["_bins_per_res"])
+        bins_per_res = float(jsonParam["bins_per_res"])
         sigma = float(jsonParam["sigma"])
         nclusters = int(jsonParam["nclusters"])
         expression_threshold = float(jsonParam["expression_threshold"])

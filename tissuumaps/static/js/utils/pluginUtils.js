@@ -86,8 +86,9 @@ pluginUtils.loadParameters = function (pluginID, pluginDiv, parameters) {
     }
     
     pluginDiv.innerHTML = "";
+    let activeDiv = pluginDiv;
     for (var parameterName in parameters) {
-        parameter = parameters[parameterName];
+        let parameter = parameters[parameterName];
         if (parameter.label === undefined) {
             parameter.label = parameterName;
         }
@@ -95,34 +96,60 @@ pluginUtils.loadParameters = function (pluginID, pluginDiv, parameters) {
         var row = HTMLElementUtils.createRow({});
         var col1 = HTMLElementUtils.createColumn({ width: 12 });
         if (parameter.type == "section") {
-            row0=HTMLElementUtils.createElement({"kind":"h6", "extraAttributes":{"class":""}});
+            let row0=HTMLElementUtils.createElement({"kind":"h6", "extraAttributes":{"class":""}});
             row0.innerText = parameter.title;
             row0.style.borderBottom = "1px solid #aaa";
             row0.style.padding = "3px";
             row0.style.marginTop = "8px";
 
-            row01=HTMLElementUtils.createElement({"kind":"p", "extraAttributes":{"class":""}});
+            let row01=HTMLElementUtils.createElement({"kind":"p", "extraAttributes":{"class":""}});
             row01.innerHTML = "<i>"+parameter.label+"</i>";
-            
+            console.log(parameter, parameter.collapsed);
+            row0?.setAttribute("data-bs-toggle", "collapse");
+            row0?.setAttribute("data-bs-target", "#collapsedSection_"+parameterID);
+            row0?.setAttribute("aria-controls", "collapse_advanced");
+            row0?.setAttribute("style", "cursor: pointer;");
+            row0?.setAttribute("title", "Click to expand");
+            let newDiv = document.createElement("div");
+            newDiv.setAttribute("id", "collapsedSection_"+parameterID);
             row.appendChild(col1);
             col1.appendChild(row0);
-            col1.appendChild(row01);
+            newDiv.appendChild(row01);
             
+            if (parameter.collapsed) {
+                row0?.setAttribute("aria-expanded", "false");
+                newDiv.setAttribute("class", "collapse");
+                row0?.setAttribute("class", "collapse_button_transform border-bottom-0 p-1 collapsed");
+            }
+            else {
+                row0?.setAttribute("aria-expanded", "true");
+                newDiv.setAttribute("class", "collapse show");
+                row0?.setAttribute("class", "collapse_button_transform border-bottom-0 p-1");
+            }
+            
+
             pluginDiv.appendChild(row);
+            pluginDiv.appendChild(newDiv);
+            activeDiv = newDiv;
             continue;
         }
         else if (parameter.type == "label") {
-            row0=HTMLElementUtils.createElement({"kind":"p", "extraAttributes":{"class":""}});
+            row0=HTMLElementUtils.createElement({
+                id: parameterID,
+                "kind":"p",
+                "extraAttributes":{"class":""}
+            });
             row0.innerHTML = parameter.label;
             
             row.appendChild(col1);
             col1.appendChild(row0);
             
-            pluginDiv.appendChild(row);
+            activeDiv.appendChild(row);
             continue;
         }
         else if (parameter.type == "button") {
             button11 = HTMLElementUtils.createButton({
+                id: parameterID,
                 extraAttributes: {
                     class: "btn btn-secondary btn-sm",
                     data_parameterName: parameterName
@@ -138,7 +165,7 @@ pluginUtils.loadParameters = function (pluginID, pluginDiv, parameters) {
             });
             col1.appendChild(button11);
             row.appendChild(col1);
-            pluginDiv.appendChild(row);
+            activeDiv.appendChild(row);
         }
         else if (parameter.type == "number" || parameter.type == "text") {
             var extraAttributes = {
@@ -163,7 +190,7 @@ pluginUtils.loadParameters = function (pluginID, pluginDiv, parameters) {
             col1.appendChild(label11);
             col1.appendChild(input11);
             row.appendChild(col1);
-            pluginDiv.appendChild(row);
+            activeDiv.appendChild(row);
         }
         else if (parameter.type == "select") {
             var extraAttributes = {
@@ -187,7 +214,7 @@ pluginUtils.loadParameters = function (pluginID, pluginDiv, parameters) {
             col1.appendChild(label11);
             col1.appendChild(input11);
             row.appendChild(col1);
-            pluginDiv.appendChild(row);
+            activeDiv.appendChild(row);
 
             if (parameter.options !== undefined) {
                 interfaceUtils.addElementsToSelect(parameterID, parameter.options);
@@ -218,7 +245,7 @@ pluginUtils.loadParameters = function (pluginID, pluginDiv, parameters) {
             col1.appendChild(input11);
             col1.appendChild(label11);
             row.appendChild(col1);
-            pluginDiv.appendChild(row);
+            activeDiv.appendChild(row);
         }
         if (parameter.type == "number" || parameter.type == "text" || parameter.type == "checkbox" || parameter.type == "select") {
             input11.addEventListener("change", (event) => {
