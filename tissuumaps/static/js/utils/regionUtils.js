@@ -60,7 +60,7 @@ regionUtils.resetManager = function () {
 regionUtils.getLayerFromCoord = function (coordinates) {
     var op = tmapp["object_prefix"];
     var viewer = tmapp[op + "_viewer"];
-    for (var i = viewer.world.getItemCount()-1; i >= 0; i--) {
+    for (var i = 0; i < viewer.world.getItemCount(); i++) {
         let tiledImage = viewer.world.getItemAt(i);
         let imageCoord = tiledImage.viewportToImageCoordinates(
             coordinates.x, coordinates.y, true
