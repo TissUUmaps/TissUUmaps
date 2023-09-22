@@ -1520,14 +1520,8 @@ glUtils.updateRegionDataTextures = function() {
     const canvas = document.getElementById("gl_canvas");
     const gl = canvas.getContext("webgl2", glUtils._options);
 
-    // FIXME For now, regions will always have the first image as parent
-    const image = tmapp["ISS_viewer"].world.getItemAt(0);
-    const imageWidth = image ? image.getContentSize().x : 1;
-    const imageHeight = image ? image.getContentSize().y : 1;
-    const imageBounds = [0, 0, imageWidth, imageHeight];
-
     console.time("Update region edge lists");
-    regionUtils._generateEdgeListsForDrawing(imageBounds);
+    regionUtils._generateEdgeListsForDrawing();
     console.timeEnd("Update region edge lists");
 
     console.time("Split region edge lists");
@@ -1535,11 +1529,22 @@ glUtils.updateRegionDataTextures = function() {
     console.timeEnd("Split region edge lists");
 
     console.time("Add clusters to region edge lists");
-    regionUtils._addClustersToEdgeLists(imageBounds);
+    regionUtils._addClustersToEdgeLists();
     console.timeEnd("Add clusters to region edge lists");
 
-    glUtils._updateRegionDataTexture(gl, glUtils._textures["regionData"]);
-    glUtils._updateRegionDataSplitTexture(gl, glUtils._textures["regionDataSplit"]);
+    for (let collectionIndex in regionUtils._edgeListsByLayer) {
+        if (!(("regionData_" + collectionIndex) in glUtils._textures)) {
+            glUtils._textures["regionData_" + collectionIndex] =
+                glUtils._createRegionDataTexture(gl);
+            glUtils._textures["regionDataSplit_" + collectionIndex] =
+                glUtils._createRegionDataTexture(gl, 1024);
+        }
+
+        glUtils._updateRegionDataTexture(
+            gl, glUtils._textures["regionData_" + collectionIndex], collectionIndex);
+        glUtils._updateRegionDataSplitTexture(
+            gl, glUtils._textures["regionDataSplit_" + collectionIndex], collectionIndex);
+    }
 }
 
 
@@ -1565,17 +1570,20 @@ glUtils._createRegionDataTexture = function(gl, maxNumScanlines=512) {
 }
 
 
-glUtils._updateRegionDataTexture = function(gl, texture) {
+glUtils._updateRegionDataTexture = function(gl, texture, collectionIndex=0) {
+    if (!(collectionIndex in regionUtils._edgeListsByLayer)) return;
+
     const regionDataTexSize = glUtils._regionDataTexSize;
-    const numScanlines = regionUtils._edgeLists.length;
+    const edgeLists = regionUtils._edgeListsByLayer[collectionIndex];
+    const numScanlines = edgeLists.length;
     console.assert(numScanlines <= regionDataTexSize);
 
     gl.bindTexture(gl.TEXTURE_2D, texture);
     for (let i = 0; i < numScanlines; ++i) {
         // Update single row of the texture
         let texeldata = new Float32Array(regionDataTexSize * 4);  // Zero-initialized
-        if (regionUtils._edgeLists[i][0].length <= texeldata.length) {
-            texeldata.set(regionUtils._edgeLists[i][0]);
+        if (edgeLists[i][0].length <= texeldata.length) {
+            texeldata.set(edgeLists[i][0]);
         } else {
             console.warn("Edge list for regions exceeds allocated texture size")
         }
@@ -1585,9 +1593,12 @@ glUtils._updateRegionDataTexture = function(gl, texture) {
 }
 
 
-glUtils._updateRegionDataSplitTexture = function(gl, texture) {
+glUtils._updateRegionDataSplitTexture = function(gl, texture, collectionIndex=0) {
+    if (!(collectionIndex in regionUtils._edgeListsByLayerSplit)) return;
+
     const regionDataTexSize = glUtils._regionDataTexSize;
-    const numScanlines = regionUtils._edgeListsSplit.length;
+    const edgeListsSplit = regionUtils._edgeListsByLayerSplit[collectionIndex];
+    const numScanlines = edgeListsSplit.length;
     console.assert(numScanlines <= regionDataTexSize / 2);
 
     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -1595,8 +1606,8 @@ glUtils._updateRegionDataSplitTexture = function(gl, texture) {
         for (let j = 0; j < 2; ++j) {
             // Update single row of the texture
             let texeldata = new Float32Array(regionDataTexSize * 4);  // Zero-initialized
-            if (regionUtils._edgeListsSplit[i][j].length <= texeldata.length) {
-                texeldata.set(regionUtils._edgeListsSplit[i][j]);
+            if (edgeListsSplit[i][j].length <= texeldata.length) {
+                texeldata.set(edgeListsSplit[i][j]);
             } else {
                 console.warn("Edge list for regions exceeds allocated texture size")
             }
@@ -1868,12 +1879,7 @@ glUtils._drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
     }
 
     // Draw regions last, to make them appear on top (same behaviour as for SVG regions)
-    // FIXME For now, regions will always have the first image as parent
-    const image = tmapp["ISS_viewer"].world.getItemAt(0);
-    const imageWidth = image ? image.getContentSize().x : 1;
-    const imageHeight = image ? image.getContentSize().y : 1;
-    const imageBounds = [0, 0, imageWidth, imageHeight];
-    glUtils._drawRegionsColorPass(gl, viewportTransform, imageBounds);
+    glUtils._drawRegionsColorPass(gl, viewportTransform);
 }
 
 
@@ -2004,11 +2010,10 @@ glUtils._drawEdgesByUID = function(gl, viewportTransform, markerScaleAdjusted, u
 }
 
 
-glUtils._drawRegionsColorPass = function(gl, viewportTransform, imageBounds) {
-    const numScanlines = regionUtils._edgeLists.length;
-    if (numScanlines == 0) return;  // No regions to draw
+glUtils._drawRegionsColorPass = function(gl, viewportTransform) {
+    if (Object.keys(regionUtils._edgeListsByLayer).length == 0) return;  // No regions to draw
 
-    const fillRuleConstants = {"never" : 0, "nonzero" : 1, "oddeven" : 2};
+    const fillRuleConstants = { "never": 0, "nonzero": 1, "oddeven": 2 };
 
     // Set up render pipeline
     const program = glUtils._programs["regions"];
@@ -2016,37 +2021,48 @@ glUtils._drawRegionsColorPass = function(gl, viewportTransform, imageBounds) {
     gl.enable(gl.BLEND);
     gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-    // Set per-scene uniforms
-    gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
-    gl.uniform1i(gl.getUniformLocation(program, "u_transformIndex"), 0);
-    gl.uniform4fv(gl.getUniformLocation(program, "u_imageBounds"), imageBounds);
-    gl.uniform1i(gl.getUniformLocation(program, "u_numScanlines"), numScanlines);
-    gl.uniform1f(gl.getUniformLocation(program, "u_regionOpacity"), glUtils._regionOpacity);
-    gl.uniform1i(gl.getUniformLocation(program, "u_regionFillRule"),
-        fillRuleConstants[glUtils._regionFillRule]);
-    gl.uniform1i(gl.getUniformLocation(program, "u_regionUsePivotSplit"), glUtils._regionUsePivotSplit);
-    gl.uniform1i(gl.getUniformLocation(program, "u_regionUseColorByID"), glUtils._regionUseColorByID);
-    gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, "TransformUniforms"), 0);
-    gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, glUtils._buffers["transformUBO"]);
-    gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionLUT"]);
-    gl.uniform1i(gl.getUniformLocation(program, "u_regionLUT"), 2);
-    gl.activeTexture(gl.TEXTURE1);
-    if (glUtils._regionUsePivotSplit) {
-        gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionDataSplit"]);
-    } else {
-        gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionData"]);
-    }
-    gl.uniform1i(gl.getUniformLocation(program, "u_regionData"), 1);
+    for (let collectionIndex in regionUtils._edgeListsByLayer) {
+        const edgeLists = regionUtils._edgeListsByLayer[collectionIndex];
+        const numScanlines = edgeLists.length;
 
-    // Draw rectangle that will render the regions in the fragment shader
-    gl.bindVertexArray(glUtils._vaos["empty"]);
-    gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers["quad"]);
-    gl.enableVertexAttribArray(0);
-    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, 1);
-    gl.disableVertexAttribArray(0);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        const image = tmapp["ISS_viewer"].world.getItemAt(collectionIndex);
+        console.assert(image != undefined);
+        const imageWidth = image.getContentSize().x;
+        const imageHeight = image.getContentSize().y;
+        const imageBounds = [0, 0, imageWidth, imageHeight];
+
+        // Set per-scene uniforms
+        gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
+        gl.uniform1i(gl.getUniformLocation(program, "u_transformIndex"), collectionIndex);
+        gl.uniform4fv(gl.getUniformLocation(program, "u_imageBounds"), imageBounds);
+        gl.uniform1i(gl.getUniformLocation(program, "u_numScanlines"), numScanlines);
+        gl.uniform1f(gl.getUniformLocation(program, "u_regionOpacity"), glUtils._regionOpacity);
+        gl.uniform1i(gl.getUniformLocation(program, "u_regionFillRule"),
+            fillRuleConstants[glUtils._regionFillRule]);
+        gl.uniform1i(gl.getUniformLocation(program, "u_regionUsePivotSplit"), glUtils._regionUsePivotSplit);
+        gl.uniform1i(gl.getUniformLocation(program, "u_regionUseColorByID"), glUtils._regionUseColorByID);
+        gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, "TransformUniforms"), 0);
+        gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, glUtils._buffers["transformUBO"]);
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionLUT"]);
+        gl.uniform1i(gl.getUniformLocation(program, "u_regionLUT"), 2);
+        gl.activeTexture(gl.TEXTURE1);
+        if (glUtils._regionUsePivotSplit) {
+            gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionDataSplit_" + collectionIndex]);
+        } else {
+            gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionData_" + collectionIndex]);
+        }
+        gl.uniform1i(gl.getUniformLocation(program, "u_regionData"), 1);
+
+        // Draw rectangle that will render the regions in the fragment shader
+        gl.bindVertexArray(glUtils._vaos["empty"]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers["quad"]);
+        gl.enableVertexAttribArray(0);
+        gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, 1);
+        gl.disableVertexAttribArray(0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    }
 
     // Restore render pipeline state
     gl.bindVertexArray(null);
@@ -2239,15 +2255,7 @@ glUtils.pick = function(event) {
             }
         }
 
-        // FIXME: For now, regions will always have the first image as parent
-        const image = tmapp["ISS_viewer"].world.getItemAt(0);
-        const imageWidth = image ? image.getContentSize().x : 1;
-        const imageHeight = image ? image.getContentSize().y : 1;
-        const imageBounds = [0, 0, imageWidth, imageHeight];
-        const imageCoord = image.viewerElementToImageCoordinates(
-            event.position
-        );
-        const pickedRegion = regionUtils._findRegionByPoint(imageCoord.x, imageCoord.y, imageBounds);
+        const pickedRegion = regionUtils._findRegionByPoint(event.position);
         const hasPickedRegion = pickedRegion != null;
         glUtils._regionPicked = pickedRegion;
 
@@ -2260,8 +2268,6 @@ glUtils.pick = function(event) {
             console.log("Region clicked:", pickedRegion);
             div.classList.add("viewer-layer", "m-0", "p-1");
             div.style.zIndex = 99;
-
-            console.log(pickedRegion, imageCoord);
 
             tmapp["ISS_viewer"].addOverlay({
                 element: div,
@@ -2358,12 +2364,10 @@ glUtils.restoreLostContext = function(event) {
     glUtils._textures["shapeAtlas"] = glUtils._loadTextureFromImageURL(gl, glUtils._markershapes);
     glUtils._buffers["quad"] = glUtils._createQuad(gl);
     glUtils._buffers["transformUBO"] = glUtils._createUniformBuffer(gl);
-    glUtils._textures["regionData"] = glUtils._createRegionDataTexture(gl);
-    glUtils._textures["regionDataSplit"] = glUtils._createRegionDataTexture(gl, 1024);
     glUtils._textures["regionLUT"] = glUtils._createRegionLUTTexture(gl);
     glUtils._vaos["empty"] = gl.createVertexArray();
 
-    // Restore per-markersset WebGL objects
+    // Restore per-markerset WebGL objects
     for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
         delete glUtils._buffers[uid + "_markers"];
         delete glUtils._buffers[uid + "_markers_secondary"];
@@ -2377,9 +2381,14 @@ glUtils.restoreLostContext = function(event) {
         glUtils.loadMarkers(uid);
     }
 
-    // Restore per-image WebGL objects for drawing regions (currently only the
-    // first image layer can have regions, but this might change in the future)
-    if (regionUtils._edgeLists.length) {  // Only do update if there is region data
+    // Restore per-layer WebGL objects for drawing regions
+    for (let key in Objects.keys(glUtils._textures)) {
+        // Check all named texture objects to be safe, since the regions
+        // a texture was created for might have been deleted or moved to a
+        // different image layer (been assigned a different collectionIndex)
+        if (key.includes("regionData")) delete glUtils._textures[key];
+    }
+    if (Object.keys(regionUtils._edgeListsByLayer).length) {
         glUtils.updateRegionDataTextures();
         glUtils.updateRegionLUTTextures();
     }
@@ -2420,8 +2429,6 @@ glUtils.init = function() {
     this._textures["shapeAtlas"] = this._loadTextureFromImageURL(gl, glUtils._markershapes);
     this._buffers["quad"] = this._createQuad(gl);
     this._buffers["transformUBO"] = this._createUniformBuffer(gl);
-    this._textures["regionData"] = this._createRegionDataTexture(gl);
-    this._textures["regionDataSplit"] = this._createRegionDataTexture(gl, 1024);
     this._textures["regionLUT"] = this._createRegionLUTTexture(gl);
     this._vaos["empty"] = gl.createVertexArray();
 
