@@ -92,22 +92,6 @@ else:
 from tissuumaps import views
 
 
-class CustomWebEnginePage(QWebEnginePage):
-    """Custom WebEnginePage to customize how we handle link navigation"""
-
-    def acceptNavigationRequest(self, url, _type, isMainFrame):
-        if _type == QWebEnginePage.NavigationTypeLinkClicked:
-            QDesktopServices.openUrl(url)
-            return False
-        return True
-
-    # def javaScriptConsoleMessage(self, level, msg, line, sourceID):
-    #    logging.debug(
-    #        "Javascript console: "
-    #        + " ; ".join([str(level), str(msg), str(line), str(sourceID)])
-    #    )
-
-
 class textWindow(QDialog):
     def __init__(self, parent, title, message):
         QDialog.__init__(self, parent)
@@ -432,8 +416,6 @@ class webEngine(QWebEngineView):
         self.lastdir = str(Path.home())
         profile = QWebEngineProfile().defaultProfile()
 
-        # profile.setHttpCacheType(QWebEngineProfile.DiskHttpCache)
-        # self.setPage(CustomWebEnginePage(profile, self))
         self.webchannel = QWebChannel()
         self.page().setWebChannel(self.webchannel)
         self.webchannel.registerObject("backend", self)
