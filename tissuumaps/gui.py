@@ -18,8 +18,8 @@ try:
         QStandardItemModel,
     )
     from PySide6.QtWebChannel import QWebChannel
-    from PySide6.QtWebEngineCore import *
-    from PySide6.QtWebEngineWidgets import *
+    from PySide6.QtWebEngineCore import QWebEngineProfile, QWebEngineSettings
+    from PySide6.QtWebEngineWidgets import QWebEngineView
     from PySide6.QtWidgets import (
         QApplication,
         QDialog,
