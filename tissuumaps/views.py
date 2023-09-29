@@ -485,33 +485,42 @@ def h5adFile_old(path, filename, ext):
 @app.route("/<string:filename>.tmap", methods=["GET", "POST"])
 @requires_auth
 def tmapFile(filename):
-    path = request.args.get("path")
-    if not path or path == "null":
-        path = "./"
-    jsonFilename = os.path.abspath(os.path.join(app.basedir, path, filename) + ".tmap")
+    # Get the path from the request arguments or use the current directory
+    path = request.args.get("path", default="./")
 
+    # Create the absolute path to the JSON file
+    json_filename = os.path.abspath(os.path.join(app.basedir, path, filename) + ".tmap")
+
+    # Define error message feedback to user, None means no error message
+    errorMessage = None
     if request.method == "POST" and not app.config["READ_ONLY"]:
+        # Handle POST request to update the JSON file
         state = request.get_json(silent=False)
-        with open(jsonFilename, "w") as jsonFile:
-            json.dump(state, jsonFile, indent=4, sort_keys=True)
+        with open(json_filename, "w") as json_file:
+            json.dump(state, json_file, indent=4, sort_keys=True)
         return state
     else:
-        if os.path.isfile(jsonFilename):
+        # Handle GET request to read the JSON file
+        if os.path.isfile(json_filename):
             try:
-                with open(jsonFilename, "r") as jsonFile:
-                    state = json.load(jsonFile)
-            except:
-                import traceback
+                with open(json_filename, "r") as json_file:
+                    state = json.load(json_file)
+                # TODO: Check that the JSON file is valid according to tissuumaps-scheme
+                # if not valid then change errorMessage
 
+            except Exception as e:
                 logging.error(traceback.format_exc())
                 abort(404)
         else:
             abort(404)
+
+        # Determine the plugins based on the state
         if "plugins" in state.keys():
             plugins = []
         else:
             plugins = [p["module"] for p in app.config["PLUGINS"]]
 
+        # Render the template with appropriate data
         return render_template(
             "tissuumaps.html",
             plugins=plugins,
@@ -519,6 +528,7 @@ def tmapFile(filename):
             isStandalone=app.config["isStandalone"],
             readOnly=app.config["READ_ONLY"],
             version=app.config["VERSION"],
+            message=errorMessage,
         )
 
 
