@@ -395,9 +395,9 @@ dataUtils.getAllH5Data = async function(data_id, alldrops){
         // Tooltip
         data_obj["_tooltip_fmt"]=inputs["tooltip_fmt"].value;
         
-        data_obj["_stroke_width"]=2.5;  // TODO
-        data_obj["_no_fill"]=false;     // TODO
-        data_obj["_no_outline"]=(radios["_no_outline"].checked ? true : false);
+        data_obj["_stroke_width"]=parseFloat(inputs["stroke_width"].value);
+        data_obj["_no_fill"]=(radios["no_fill"].checked ? true : false);
+        data_obj["_no_outline"]=(radios["no_outline"].checked ? true : false);
 
         //this function veryfies if a tree with these features exist and doesnt recreate it
         dataUtils.makeQuadTrees(data_id);

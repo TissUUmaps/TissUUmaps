@@ -831,6 +831,7 @@ interfaceUtils._mGenUIFuncs.getTabDropDowns = function(uid, only_csvColumns){
         allinputs["shape_fixed"]=interfaceUtils.getElementById(uid+"_shape-fixed-value");
         allinputs["shape_gr_dict"]=interfaceUtils.getElementById(uid+"_shape-bygroup-dict-val");
         allinputs["opacity"]=interfaceUtils.getElementById(uid+"_opacity");
+        allinputs["stroke_width"]=interfaceUtils.getElementById(uid+"_stroke-width");
         allinputs["tooltip_fmt"]=interfaceUtils.getElementById(uid+"_tooltip_fmt");
         allinputs["collectionItem_fixed"]=interfaceUtils.getElementById(uid+"_collectionItem-fixed-value");
     }
@@ -864,7 +865,8 @@ interfaceUtils._mGenUIFuncs.getTabRadiosAndChecks= function(uid){
     allradios["shape_col"]=interfaceUtils.getElementById(uid+"_shape-bypoint");
     allradios["shape_fixed"]=interfaceUtils.getElementById(uid+"_shape-fixed");
     allradios["opacity_check"]=interfaceUtils.getElementById(uid+"_use-opacity");
-    allradios["_no_outline"]=interfaceUtils.getElementById(uid+"__no-outline");
+    allradios["_no_outline"]=interfaceUtils.getElementById(uid+"_no-outline");
+    allradios["_no_fill"]=interfaceUtils.getElementById(uid+"_no-fill");
     allradios["collectionItem_col"]=interfaceUtils.getElementById(uid+"_collectionItem-bypoint");
     allradios["collectionItem_fixed"]=interfaceUtils.getElementById(uid+"_collectionItem-fixed");
     
@@ -1250,13 +1252,14 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
     row2=interfaceUtils._mGenUIFuncs.generateAdvancedPiechartAccordion3();
     row3=interfaceUtils._mGenUIFuncs.generateAdvancedEdgesAccordion3();
     row4=interfaceUtils._mGenUIFuncs.generateAdvancedShapeAccordion3();
-    row5=interfaceUtils._mGenUIFuncs.generateAdvancedOpacityAccordion3();
-    row6=interfaceUtils._mGenUIFuncs.generateAdvancedSortbyAccordion3();
-    row7=interfaceUtils._mGenUIFuncs.generateAdvancedTooltipAccordion3();
-    row8=interfaceUtils._mGenUIFuncs.generateAdvancedCollectionAccordion3();
-    row9=interfaceUtils._mGenUIFuncs.generateAdvancedMakeButtonAccordion3();
+    row5=interfaceUtils._mGenUIFuncs.generateAdvancedOutlineAccordion3();
+    row6=interfaceUtils._mGenUIFuncs.generateAdvancedOpacityAccordion3();
+    row7=interfaceUtils._mGenUIFuncs.generateAdvancedSortbyAccordion3();
+    row8=interfaceUtils._mGenUIFuncs.generateAdvancedTooltipAccordion3();
+    row9=interfaceUtils._mGenUIFuncs.generateAdvancedCollectionAccordion3();
+    row10=interfaceUtils._mGenUIFuncs.generateAdvancedMakeButtonAccordion3();
     
-    return [row1,row2,row3,row4,row5,row6,row7,row8,row9];
+    return [row1,row2,row3,row4,row5,row6,row7,row8,row9,row10];
  }
 
  /**
@@ -1348,11 +1351,6 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
                 inputradio3shape=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_shape-fixed","extraAttributes":{"name":generated+"_flexRadioShapeBy","class":"form-check-input","type":"radio"}});
                 labelshapefixed=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":generated+"_shape-fixed"}});
                 labelshapefixed.innerText="Use a fixed shape";
-        
-            divformcheck4shape=HTMLElementUtils.createElement({ "kind":"div", "extraAttributes":{"class":"form-check"}});
-                inputcheck4shape=HTMLElementUtils.createElement({"kind":"input", "id":generated+"__no-outline","extraAttributes":{"class":"form-check-input","type":"checkbox" }});
-                label4shape=HTMLElementUtils.createElement({"kind":"label", "id":generated+"__no-outline-label", "extraAttributes":{ "for":generated+"__no-outline" }});
-                label4shape.innerText="Remove Outline"
         //------------------------
     
         colshape3=HTMLElementUtils.createColumn({"width":6});
@@ -1416,9 +1414,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
         colshape2.appendChild(divformcheck3shape);
             divformcheck3shape.appendChild(inputradio3shape);
             divformcheck3shape.appendChild(labelshapefixed);
-        colshape2.appendChild(divformcheck4shape);
-            divformcheck4shape.appendChild(inputcheck4shape);
-            divformcheck4shape.appendChild(label4shape);
+
     row0.appendChild(colshape3);
         colshape3.appendChild(divoptionscolgroup);    
             divoptionscolgroup.appendChild(rowrand);
@@ -1437,6 +1433,65 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
 
     return row0;
 }
+
+ /**
+ * @summary Creates the forms to shape by
+ * @returns {array} a single rows
+ */
+ interfaceUtils._mGenUIFuncs.generateAdvancedOutlineAccordion3= function(){
+    generated=interfaceUtils._mGenUIFuncs.ctx.aUUID;
+
+    //row 1
+    let row0=HTMLElementUtils.createRow({id:generated+"_shape_1"});
+
+    colshape12=HTMLElementUtils.createColumn({"width":6});
+        // Remove outline checkbox
+        divformcheck14shape=HTMLElementUtils.createElement({ "kind":"div", "extraAttributes":{"class":"form-check"}});
+            inputcheck14shape=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_no-outline","extraAttributes":{"class":"form-check-input","type":"checkbox" }});
+            label14shape=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_no-outline-label", "extraAttributes":{ "for":generated+"_no-outline" }});
+            label14shape.innerText="Remove Outline"
+        // Remove Fill checkbox  
+        divformcheck5shape=HTMLElementUtils.createElement({ "kind":"div", "extraAttributes":{"class":"form-check"}});
+            inputcheck5shape=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_no-fill","extraAttributes":{"class":"form-check-input","type":"checkbox" }});
+            label5shape=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_no-fill-label", "extraAttributes":{ "for":generated+"_no-fill" }});
+            label5shape.innerText="Remove Fill"
+    //------------------------
+
+    colshape13=HTMLElementUtils.createColumn({"width":6});
+        //create a input for line thickness
+        divoptionscol=HTMLElementUtils.createElement({"kind":"div","id":generated+"_shape-col-options","extraAttributes":{"class": "renderOptionContainer d-none"}});
+        
+        divoptionscolgroup1=HTMLElementUtils.createElement({"kind":"div","id":generated+"_line_thickness_options","extraAttributes":{}});
+            labelshapegroupdict1=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":generated+"_stroke-width"}});
+            labelshapegroupdict1.innerHTML="Outline thickness<br>";
+            inputtextshapegrdict1=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_stroke-width","extraAttributes":{ "class":"form-text-input", "type":"number", "value":"2.5"}});
+
+    inputcheck14shape.addEventListener("change",(event)=>{
+        var value=event.target.checked;
+        //var doms=["_gb-single","_gb-col","_gb-feature-value","_cb-colormap","_cb-bypoint","_cb-bygroup","_gb-feature-value",
+        //          "_gb-col-value","_gb-col-name","_cb-cmap-value","_cb-col-value","_cb-bygroup-rand","_cb-bygroup-gene","_cb-bygroup-name" ]
+        if(value){
+            interfaceUtils._mGenUIFuncs.hideShow(event,["_line_thickness_options"],[])
+        }
+        else {
+            interfaceUtils._mGenUIFuncs.hideShow(event,["_line_thickness_options"],[0])
+        }
+        
+    });
+    row0.appendChild(colshape12);
+        colshape12.appendChild(divformcheck14shape);
+            divformcheck14shape.appendChild(inputcheck14shape);
+            divformcheck14shape.appendChild(label14shape);  
+        colshape12.appendChild(divformcheck5shape);
+            divformcheck5shape.appendChild(inputcheck5shape);
+            divformcheck5shape.appendChild(label5shape);
+
+    row0.appendChild(colshape13);
+        colshape13.appendChild(divoptionscolgroup1);
+            divoptionscolgroup1.appendChild(labelshapegroupdict1);
+            divoptionscolgroup1.appendChild(inputtextshapegrdict1); 
+    return row0;
+ }
 
  /**
  * @summary Creates the forms for collection id
