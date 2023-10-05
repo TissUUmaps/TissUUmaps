@@ -20,7 +20,7 @@ setuptools.setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        "Flask>=2.0.0",
+        "Flask>=2.0.0,<3.0.0",
         "openslide-python>=1.1.2",
         "Pillow>=8.2.0",
         "ipython>=7.0",
