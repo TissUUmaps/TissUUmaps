@@ -375,11 +375,6 @@ projectUtils.loadProjectFileFromServer = function(path) {
     if (state.markerFiles) {
         state.markerFiles.forEach(function(markerFile, buttonIndex) {
             markerFile["fromButton"] = buttonIndex;
-            // For compatibility reasons:
-            if (markerFile.expectedCSV) {
-                projectUtils.convertOldMarkerFile(markerFile);
-                state.hideTabs = true;
-            }
             if( Object.prototype.toString.call( markerFile.path ) === '[object Array]' || markerFile.dropdownOptions) {
                 interfaceUtils.createDownloadDropdownMarkers(markerFile);
             }
@@ -507,88 +502,6 @@ projectUtils.loadProjectFileFromServer = function(path) {
             });
         }
     },300);
-}
-
-projectUtils.convertOldMarkerFile = function(markerFile) {
-    if (!markerFile.expectedHeader)
-        markerFile.expectedHeader = {}
-    markerFile.expectedHeader.X = markerFile.expectedCSV.X_col;
-    markerFile.expectedHeader.Y = markerFile.expectedCSV.Y_col;
-    if (markerFile.expectedCSV.key == "letters") {
-        markerFile.expectedHeader.gb_col = markerFile.expectedCSV.group;
-        markerFile.expectedHeader.gb_name = markerFile.expectedCSV.name;
-    }
-    else {
-        markerFile.expectedHeader.gb_col = markerFile.expectedCSV.name;
-        markerFile.expectedHeader.gb_name = markerFile.expectedCSV.group;
-    }
-
-    if (!markerFile.expectedRadios)
-        markerFile.expectedRadios = {}
-    if (markerFile.expectedCSV.piechart) {
-        markerFile.expectedRadios.pie_check = true;
-        markerFile.expectedHeader.pie_col = markerFile.expectedCSV.piechart
-    } else {markerFile.expectedRadios.pie_check = false;}
-    if (markerFile.expectedCSV.color) {
-        markerFile.expectedRadios.cb_gr = false;
-        markerFile.expectedRadios.cb_col = true;
-        markerFile.expectedHeader.cb_col = markerFile.expectedCSV.color
-    } else {markerFile.expectedRadios.cb_col = false;}
-    if (markerFile.expectedCSV.scale) {
-        markerFile.expectedRadios.scale_check = true;
-        markerFile.expectedHeader.scale_col = markerFile.expectedCSV.scale
-    } else {markerFile.expectedRadios.scale_check = false;}
-    if (!markerFile.uid)
-        markerFile.uid = "uniquetab";
-    markerFile.name = markerFile.title.replace("Download","");
-    if (markerFile.settings) {
-        markerFile.expectedRadios.cb_gr = true;
-        markerFile.expectedRadios.cb_gr_dict = false;
-        markerFile.expectedRadios.cb_gr_rand = false;
-        markerFile.expectedRadios.cb_gr_key = true;
-        for (setting of markerFile.settings) {
-            //if (setting.module == "glUtils" && setting.function == "_globalMarkerScale")
-            //    markerFile.expectedHeader.scale_factor = setting.value;
-            if (setting.module == "markerUtils" && setting.function == "_selectedShape"){
-                dictSymbol = {6:6}
-                if (dictSymbol[setting.value]) setting.value = dictSymbol[setting.value];
-                markerFile.expectedHeader.shape_fixed = markerUtils._symbolStrings[setting.value];
-            }
-            if (setting.module == "markerUtils" && setting.function == "_randomShape") {
-                markerFile.expectedRadios.shape_fixed = !setting.value;
-                if (!markerFile.expectedHeader.shape_fixed) {
-                    markerFile.expectedHeader.shape_fixed = markerUtils._symbolStrings[2];
-                }
-            }
-            if (setting.module == "markerUtils" && setting.function == "_colorsperkey") {
-                markerFile.expectedRadios.cb_gr = true;
-                markerFile.expectedRadios.cb_gr_rand = false;
-                markerFile.expectedRadios.cb_gr_key = false;
-                markerFile.expectedRadios.cb_gr_dict = true;
-                markerFile.expectedHeader.cb_gr_dict = JSON.stringify(setting.value);
-            }
-            if (setting.module == "HTMLElementUtils" && setting.function == "_colorsperiter") {
-                markerFile.expectedRadios.cb_gr = true;
-                markerFile.expectedRadios.cb_gr_rand = false;
-                markerFile.expectedRadios.cb_gr_key = false;
-                markerFile.expectedRadios.cb_gr_dict = true;
-                markerFile.expectedHeader.cb_gr_dict = JSON.stringify(setting.value);
-            }
-            if (setting.module == "glUtils" && setting.function == "_markerOpacity") {
-                markerFile.expectedHeader.opacity = setting.value;
-                setting.function = "_markerOpacityOld"
-            }
-            if (setting.module == "HTMLElementUtils" && setting.function == "_colorsperbarcode") {
-                markerFile.expectedRadios.cb_gr = true;
-                markerFile.expectedRadios.cb_gr_rand = false;
-                markerFile.expectedRadios.cb_gr_key = false;
-                markerFile.expectedRadios.cb_gr_dict = true;
-                markerFile.expectedHeader.cb_gr_dict = JSON.stringify(setting.value);
-            }
-        }
-    }
-    delete markerFile.expectedCSV;
-    markerFile["hideSettings"] = true;
 }
 
 /**
