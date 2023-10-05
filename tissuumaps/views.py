@@ -36,7 +36,12 @@ from flask import (
     send_from_directory,
     url_for,
 )
-from tissuumaps_schema.v01 import Project
+from tissuumaps_schema import current as current_schema_module
+from tissuumaps_schema.utils import (
+    get_major_version,
+    guess_schema_version,
+    MAJOR_SCHEMA_VERSION_MODULES,
+)
 from werkzeug.exceptions import MethodNotAllowed, NotFound
 from werkzeug.routing import RequestRedirect
 
@@ -507,7 +512,11 @@ def tmapFile(filename):
                 with open(json_filename, "r") as json_file:
                     state = json.load(json_file)
                 try:
-                    project = Project.model_validate(state)
+                    schema_version = guess_schema_version(state)
+                    major_schema_version = get_major_version(schema_version)
+                    old_schema_module = MAJOR_SCHEMA_VERSION_MODULES[major_schema_version]
+                    old_project = old_schema_module.Project.model_validate(state)
+                    project = current_schema_module.Project.upgrade(old_project)
                     state = project.model_dump(by_alias=True)
                 except Exception as e:
                     errorMessage = str(e).replace("\n", "<br>")

@@ -28,7 +28,7 @@ setuptools.setup(
         "pyyaml>=6.0",
         "h5py>=3.6.0",
         "scipy>=1.7.2",
-        "tissuumaps-schema~=1.0.1",
+        "tissuumaps-schema~=1.0.2",
     ],
     extras_require={
         "pyqt6": ["PyQt6>=6.3.0", "PyQt6-WebEngine>=6.3.0"],
