@@ -510,7 +510,7 @@ def tmapFile(filename):
                     project = Project.model_validate(state)
                     state = project.model_dump(by_alias=True)
                 except Exception as e:
-                    errorMessage = str(e)
+                    errorMessage = str(e).replace("\n", "<br>")
             except Exception as e:
                 logging.error(traceback.format_exc())
                 abort(404)
