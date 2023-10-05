@@ -263,6 +263,14 @@ regionUtils.closePolygon = function () {
             });
         })
     }
+    let properties = regionsObjects.properties? regionsObjects.properties : {};
+    properties["name"] = Region.regionName
+    properties["classification"] = {
+        "name": Region.regionClass
+    }
+    properties["color"] = HexToRGB(Region.polycolor)
+    properties["isLocked"] = false
+
     geoJSONObjects = {
         "type": "FeatureCollection",
         "features": Object.values(regionsObjects).map (function(Region, i) {
@@ -272,14 +280,7 @@ regionUtils.closePolygon = function () {
                     "type": "MultiPolygon",
                     "coordinates": oldCoord2GeoJSONCoord(Region.globalPoints)
                 },
-                "properties": {
-                    "name": Region.regionName,
-                    "classification": {
-                        "name": Region.regionClass
-                    },
-                    "color": HexToRGB(Region.polycolor),
-                    "isLocked": false
-                }
+                "properties": properties
             }
         })
     }
@@ -375,6 +376,7 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
         //TODO: collectionIndex from modal if multiple layers
         regionUtils.addRegion(coordinates, regionId, hexColor, geoJSONObjClass, 0);
         regionUtils._regions[regionId].regionName = regionName;
+        regionUtils._regions[regionId].properties = geoJSONObj.properties;
         if (document.getElementById(regionId + "_class_ta")) {
             document.getElementById(regionId + "_class_ta").value = geoJSONObjClass;
             document.getElementById(regionId + "_name_ta").value = regionName;
