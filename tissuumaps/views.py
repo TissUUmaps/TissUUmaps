@@ -19,7 +19,6 @@ from collections import OrderedDict
 from functools import wraps
 from shutil import copyfile, copytree
 from threading import Lock
-from tissuumaps_schema.v01 import Project
 from urllib.parse import parse_qs, unquote, urlparse
 
 import pyvips
@@ -37,6 +36,7 @@ from flask import (
     send_from_directory,
     url_for,
 )
+from tissuumaps_schema.v01 import Project
 from werkzeug.exceptions import MethodNotAllowed, NotFound
 from werkzeug.routing import RequestRedirect
 
