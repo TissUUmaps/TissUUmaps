@@ -2264,7 +2264,7 @@ glUtils.pick = function(event) {
             const div = document.createElement("div");
             div.id = "ISS_region_info";
             div.width = "1px"; div.height = "1px";
-            div.innerHTML = pickedRegion;
+            div.innerHTML = regionUtils._regions[pickedRegion].regionName;
             console.log("Region clicked:", pickedRegion);
             div.classList.add("viewer-layer", "m-0", "p-1");
             div.style.zIndex = 99;

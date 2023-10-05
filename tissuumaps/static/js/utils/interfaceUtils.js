@@ -3345,17 +3345,15 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
         extraAttributes: {
             size: 9,
             placeholder: "name",
-            value: region.id,
+            value: region.regionName,
             class: "col input-sm form-control form-control-sm"
         }
     });
     regionnametext.addEventListener('change', function () {
         var newName = this.value;
-        if (region.id !== newName) {
-            let oldName = region.id;
-            region.id = newName;
-            Object.defineProperty(regionUtils._regions, newName,
-                Object.getOwnPropertyDescriptor(regionUtils._regions, oldName));
+        if (region.regionName !== newName) {
+            let oldName = region.regionName;
+            region.regionName = newName;
             delete regionUtils._regions[oldName];
         }
         regionUtils.updateAllRegionClassUI();
