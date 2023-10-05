@@ -19,6 +19,7 @@ from collections import OrderedDict
 from functools import wraps
 from shutil import copyfile, copytree
 from threading import Lock
+from tissuumaps_schema.v01 import Project
 from urllib.parse import parse_qs, unquote, urlparse
 
 import pyvips
@@ -505,9 +506,11 @@ def tmapFile(filename):
             try:
                 with open(json_filename, "r") as json_file:
                     state = json.load(json_file)
-                # TODO: Check that the JSON file is valid according to tissuumaps-scheme
-                # if not valid then change errorMessage
-
+                try:
+                    project = Project.model_validate(state)
+                    state = project.model_dump(by_alias=True)
+                except Exception as e:
+                    errorMessage = str(e)
             except Exception as e:
                 logging.error(traceback.format_exc())
                 abort(404)
