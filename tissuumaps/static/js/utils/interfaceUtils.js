@@ -865,8 +865,8 @@ interfaceUtils._mGenUIFuncs.getTabRadiosAndChecks= function(uid){
     allradios["shape_col"]=interfaceUtils.getElementById(uid+"_shape-bypoint");
     allradios["shape_fixed"]=interfaceUtils.getElementById(uid+"_shape-fixed");
     allradios["opacity_check"]=interfaceUtils.getElementById(uid+"_use-opacity");
-    allradios["_no_outline"]=interfaceUtils.getElementById(uid+"_no-outline");
-    allradios["_no_fill"]=interfaceUtils.getElementById(uid+"_no-fill");
+    allradios["no_outline"]=interfaceUtils.getElementById(uid+"_no-outline");
+    allradios["no_fill"]=interfaceUtils.getElementById(uid+"_no-fill");
     allradios["collectionItem_col"]=interfaceUtils.getElementById(uid+"_collectionItem-bypoint");
     allradios["collectionItem_fixed"]=interfaceUtils.getElementById(uid+"_collectionItem-fixed");
     
