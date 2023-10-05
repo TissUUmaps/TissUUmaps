@@ -38,9 +38,9 @@ from flask import (
 )
 from tissuumaps_schema import current as current_schema_module
 from tissuumaps_schema.utils import (
+    MAJOR_SCHEMA_VERSION_MODULES,
     get_major_version,
     guess_schema_version,
-    MAJOR_SCHEMA_VERSION_MODULES,
 )
 from werkzeug.exceptions import MethodNotAllowed, NotFound
 from werkzeug.routing import RequestRedirect
@@ -514,7 +514,9 @@ def tmapFile(filename):
                 try:
                     schema_version = guess_schema_version(state)
                     major_schema_version = get_major_version(schema_version)
-                    old_schema_module = MAJOR_SCHEMA_VERSION_MODULES[major_schema_version]
+                    old_schema_module = MAJOR_SCHEMA_VERSION_MODULES[
+                        major_schema_version
+                    ]
                     old_project = old_schema_module.Project.model_validate(state)
                     project = current_schema_module.Project.upgrade(old_project)
                     state = project.model_dump(by_alias=True)
