@@ -521,7 +521,11 @@ def tmapFile(filename):
                     project = current_schema_module.Project.upgrade(old_project)
                     state = project.model_dump(by_alias=True)
                 except Exception as e:
-                    errorMessage = str(e).replace("\n", "<br>")
+                    errorMessage = (
+                        "<b>Warning when loading tmap project:</b> <br><pre><code>"
+                        + str(e).replace("\n", "<br>")
+                        + "</code></pre>"
+                    )
             except Exception as e:
                 logging.error(traceback.format_exc())
                 abort(404)
