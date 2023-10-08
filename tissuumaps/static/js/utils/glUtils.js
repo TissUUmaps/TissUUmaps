@@ -139,7 +139,7 @@ glUtils._markersVS = `
         ndcPos = u_viewportTransform * ndcPos;
 
         int lutIndex = int(mod(in_position.z, float(MAX_NUM_BARCODES)));
-        v_color = texelFetch(u_colorLUT, (ivec2(lutIndex) >> ivec2(0, 12)) & 4095, 0);
+        v_color = texelFetch(u_colorLUT, ivec2(lutIndex & 4095, lutIndex >> 12), 0);
 
         if (u_useColorFromMarker || u_useColorFromColormap) {
             vec2 range = u_markerScalarRange;
@@ -345,7 +345,7 @@ glUtils._pickingVS = `
         v_color = vec4(0.0);
         if (u_op == OP_WRITE_INDEX) {
             int lutIndex = int(mod(in_position.z, float(MAX_NUM_BARCODES)));
-            float shapeID = texelFetch(u_colorLUT, (ivec2(lutIndex) >> ivec2(0, 12)) & 4095, 0).a;
+            float shapeID = texelFetch(u_colorLUT, ivec2(lutIndex & 4095, lutIndex >> 12), 0).a;
             if (shapeID == 0.0) DISCARD_VERTEX;
 
             if (u_useShapeFromMarker) {
