@@ -80,6 +80,7 @@ glUtils._markersVS = `
     #define SHAPE_INDEX_GAUSSIAN 15.0
     #define SHAPE_GRID_SIZE 4.0
     #define MAX_NUM_IMAGES 192
+    #define MAX_NUM_BARCODES 32768
     #define UV_SCALE 0.8
     #define SCALE_FIX (UV_SCALE / 0.7)  // For compatibility with old UV_SCALE
     #define DISCARD_VERTEX { gl_Position = vec4(2.0, 2.0, 2.0, 0.0); return; }
@@ -137,8 +138,8 @@ glUtils._markersVS = `
         ndcPos.y = -ndcPos.y;
         ndcPos = u_viewportTransform * ndcPos;
 
-        float lutIndex = mod(in_position.z, 4096.0);
-        v_color = texture(u_colorLUT, vec2(lutIndex / 4095.0, 0.5));
+        int lutIndex = int(mod(in_position.z, float(MAX_NUM_BARCODES)));
+        v_color = texelFetch(u_colorLUT, (ivec2(lutIndex) >> ivec2(0, 12)) & 4095, 0);
 
         if (u_useColorFromMarker || u_useColorFromColormap) {
             vec2 range = u_markerScalarRange;
@@ -150,7 +151,7 @@ glUtils._markersVS = `
         if (u_useShapeFromMarker && v_color.a > 0.0) {
             // Add one to marker index and normalize, to make things consistent
             // with how marker visibility and shape is stored in the LUT
-            v_color.a = (floor(in_position.z / 4096.0) + 1.0) / 255.0;
+            v_color.a = (floor(in_position.z / float(MAX_NUM_BARCODES)) + 1.0) / 255.0;
         }
 
         if (u_usePiechartFromMarker && v_color.a > 0.0) {
@@ -161,7 +162,7 @@ glUtils._markersVS = `
             if (u_pickedMarker == in_index) v_color.a = SHAPE_INDEX_CIRCLE / 255.0;
 
             // For the alpha pass, we only want to draw the marker once
-            float sectorIndex = floor(in_position.z / 4096.0);
+            float sectorIndex = floor(in_position.z / float(MAX_NUM_BARCODES));
             if (u_alphaPass) v_color.a *= float(sectorIndex == 0.0);
         }
 
@@ -293,6 +294,7 @@ glUtils._pickingVS = `
     #define SHAPE_INDEX_CIRCLE_NOSTROKE 16.0
     #define SHAPE_GRID_SIZE 4.0
     #define MAX_NUM_IMAGES 192
+    #define MAX_NUM_BARCODES 32768
     #define DISCARD_VERTEX { gl_Position = vec4(2.0, 2.0, 2.0, 0.0); return; }
 
     #define OP_CLEAR 0
@@ -342,21 +344,21 @@ glUtils._pickingVS = `
 
         v_color = vec4(0.0);
         if (u_op == OP_WRITE_INDEX) {
-            float lutIndex = mod(in_position.z, 4096.0);
-            float shapeID = texture(u_colorLUT, vec2(lutIndex / 4095.0, 0.5)).a;
+            int lutIndex = int(mod(in_position.z, float(MAX_NUM_BARCODES)));
+            float shapeID = texelFetch(u_colorLUT, (ivec2(lutIndex) >> ivec2(0, 12)) & 4095, 0).a;
             if (shapeID == 0.0) DISCARD_VERTEX;
 
             if (u_useShapeFromMarker) {
                 // Add one to marker index and normalize, to make things consistent
                 // with how marker visibility and shape is stored in the LUT
-                shapeID = (floor(in_position.z / 4096.0) + 1.0) / 255.0;
+                shapeID = (floor(in_position.z / float(MAX_NUM_BARCODES)) + 1.0) / 255.0;
             }
 
             if (u_usePiechartFromMarker) {
                 shapeID = SHAPE_INDEX_CIRCLE_NOSTROKE / 255.0;
 
                 // For the picking pass, we only want to draw the marker once
-                float sectorIndex = floor(in_position.z / 4096.0);
+                float sectorIndex = floor(in_position.z / float(MAX_NUM_BARCODES));
                 if (sectorIndex > 0.0) DISCARD_VERTEX;
             }
 
@@ -933,7 +935,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
                         
                         bytedata_point[4 * k + 0] = markerData[xPosName][markerIndex] * markerCoordFactor;
                         bytedata_point[4 * k + 1] = markerData[yPosName][markerIndex] * markerCoordFactor;
-                        bytedata_point[4 * k + 2] = lutIndex + sectorIndex * 4096.0;
+                        bytedata_point[4 * k + 2] = lutIndex + sectorIndex * 32768.0;
                         bytedata_point[4 * k + 3] = Number("0x" + hexColor.substring(1,7));
                         bytedata_index[k] = markerIndex;  // Store index needed for picking
                         bytedata_scale[k] = useScaleFromMarker ? markerData[scalePropertyName][markerIndex] : 1.0;
@@ -967,7 +969,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
 
                     bytedata_point[4 * i + 0] = markerData[xPosName][markerIndex] * markerCoordFactor;
                     bytedata_point[4 * i + 1] = markerData[yPosName][markerIndex] * markerCoordFactor;
-                    bytedata_point[4 * i + 2] = lutIndex + Number(shapeIndex) * 4096.0;
+                    bytedata_point[4 * i + 2] = lutIndex + Number(shapeIndex) * 32768.0;
                     bytedata_point[4 * i + 3] = useColorFromColormap ? Number(scalarValue)
                                                                      : Number("0x" + hexColor.substring(1,7));
                     bytedata_index[i] = markerIndex;  // Store index needed for picking
@@ -1316,7 +1318,7 @@ glUtils._loadEdges = function(uid, forceUpdate) {
                     bytedata_point[4 * k + 1] = markerData[yPosName][markerIndex] * markerCoordFactor;
                     bytedata_point[4 * k + 2] = markerData[xPosName][markerIndex_j] * markerCoordFactor;
                     bytedata_point[4 * k + 3] = markerData[yPosName][markerIndex_j] * markerCoordFactor;
-                    bytedata_index[k] = lutIndex + (lutIndex_j * 4096.0);
+                    bytedata_index[k] = lutIndex + (lutIndex_j * 32768.0);
                     bytedata_opacity[k] = Math.floor(Math.max(0.0, Math.min(1.0, opacity)) * 65535.0);
                     bytedata_transform[k] = collectionItemIndex + (collectionItemIndex_j * 256);
                 }
@@ -1373,8 +1375,7 @@ glUtils._loadEdges = function(uid, forceUpdate) {
 }
 
 
-// TODO Fix naming of this function, since we now use it for generic markers
-glUtils._updateBarcodeToLUTIndexDict = function (uid, markerData, keyName) {
+glUtils._updateBarcodeToLUTIndexDict = function (uid, markerData, keyName, maxNumBarcodes=32768) {
     const barcodeToLUTIndex = {};
     const barcodeToKey = {};
     const numPoints = markerData[markerData.columns[0]].length;
@@ -1384,8 +1385,8 @@ glUtils._updateBarcodeToLUTIndexDict = function (uid, markerData, keyName) {
         if (!(barcode in barcodeToLUTIndex)) {
             barcodeToLUTIndex[barcode] = index++;
             barcodeToKey[barcode] = barcode;
-            index = index % 4096;  // Prevent index from becoming >= the maximum LUT size,
-                                   // since this causes problems with pie-chart markers
+            index = index % maxNumBarcodes;  // Prevent index from becoming >= the maximum LUT size,
+                                             // since this causes problems with pie-chart markers
         }
     }
     glUtils._barcodeToLUTIndex[uid] = barcodeToLUTIndex;
@@ -1394,37 +1395,29 @@ glUtils._updateBarcodeToLUTIndexDict = function (uid, markerData, keyName) {
 }
 
 
-glUtils._createColorLUTTexture = function(gl) {
-    const randomColors = [];
-    for (let i = 0; i < 4096; ++i) {
-        randomColors[4 * i + 0] = Math.random() * 256.0; 
-        randomColors[4 * i + 1] = Math.random() * 256.0;
-        randomColors[4 * i + 2] = Math.random() * 256.0;
-        randomColors[4 * i + 3] = Math.floor(Math.random() * 7) + 1;
-    }
-
-    const bytedata = new Uint8Array(randomColors);
+glUtils._createColorLUTTexture = function(gl, maxNumBarcodes=32768) {
+    console.assert((maxNumBarcodes % 4096) == 0);  // Must be a multiple of the LUT texture width
 
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); 
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 4096, 1, 0, gl.RGBA,
-                  gl.UNSIGNED_BYTE, bytedata);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, 4096, maxNumBarcodes / 4096);
     gl.bindTexture(gl.TEXTURE_2D, null);
 
     return texture;
 }
 
 
-glUtils._updateColorLUTTexture = function(gl, uid, texture) {
+glUtils._updateColorLUTTexture = function(gl, uid, texture, maxNumBarcodes=32768) {
+    console.assert((maxNumBarcodes % 4096) == 0);  // Must be a multiple of the LUT texture width
     if (!(uid + "_colorLUT" in glUtils._textures)) return;
 
     const hasGroups = dataUtils.data[uid]["_gb_col"] != null;
 
-    const colors = new Array(4096 * 4);
+    const colors = new Array(maxNumBarcodes * 4);
     for (let [barcode, index] of Object.entries(glUtils._barcodeToLUTIndex[uid])) {
         const key = hasGroups ? glUtils._barcodeToKey[uid][barcode] : "All";
         const inputs = interfaceUtils._mGenUIFuncs.getGroupInputs(uid, key);
@@ -1444,8 +1437,8 @@ glUtils._updateColorLUTTexture = function(gl, uid, texture) {
     const bytedata = new Uint8Array(colors);
 
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 4096, 1, 0, gl.RGBA,
-                  gl.UNSIGNED_BYTE, bytedata);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, maxNumBarcodes / 4096,
+                     gl.RGBA, gl.UNSIGNED_BYTE, bytedata);
     gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
