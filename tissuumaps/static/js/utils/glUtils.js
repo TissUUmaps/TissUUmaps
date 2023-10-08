@@ -69,6 +69,7 @@ glUtils = {
     _regionUseColorByID: false,   // Map region object IDs to unique colors
     _regionDataTexSize: 4096,     // Note: should not be set above context's MAX_TEXTURE_SIZE
     _regionPicked: null,          // Key to regionUtils._regions dict, or null if no region is picked
+    _regionMaxNumRegions: 524288, // Limit used for the LUT texture size (will be automatically increased if needed)
     _logPerformance: false,       // Use GPU timer queries to log performance
     _piechartPaletteDefault: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
@@ -1623,34 +1624,46 @@ glUtils.updateRegionLUTTextures = function() {
     regionUtils._generateRegionToColorLUT();
     console.timeEnd("Update region LUT");
 
-    glUtils._updateRegionLUTTexture(gl, glUtils._textures["regionLUT"]);
+    const numRegions = regionUtils._regionToColorLUT.length / 4;
+    if (numRegions > glUtils._regionMaxNumRegions) {
+        gl.deleteTexture(glUtils._textures["regionLUT"]);
+
+        // Increase maximum LUT size to closest power-of-two greater than or equal to numRegions
+        glUtils._regionMaxNumRegions = (1 << Math.ceil(Math.log2(numRegions)));
+        glUtils._textures["regionLUT"] =
+            glUtils._createRegionLUTTexture(gl, glUtils._regionMaxNumRegions);
+    }
+    console.assert(numRegions <= glUtils._regionMaxNumRegions);
+    glUtils._updateRegionLUTTexture(gl, glUtils._textures["regionLUT"], glUtils._regionMaxNumRegions);
 }
 
 
-glUtils._createRegionLUTTexture = function(gl) {
+glUtils._createRegionLUTTexture = function(gl, maxNumRegions) {
+    console.assert((maxNumRegions % 4096) == 0);  // Must be a multiple of the LUT texture width
+
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, 4096, 128);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, 4096, maxNumRegions / 4096);
     gl.bindTexture(gl.TEXTURE_2D, null);
 
     return texture;
 }
 
 
-glUtils._updateRegionLUTTexture = function(gl, texture) {
-    let texeldata = new Uint8Array((4096 * 128) * 4);
-    if (regionUtils._regionToColorLUT.length <= texeldata.length) {
-        texeldata.set(regionUtils._regionToColorLUT);
-    } else {
-        console.warn("Color lookup table for regions exceeds allocated texture size");
-    }
+glUtils._updateRegionLUTTexture = function(gl, texture, maxNumRegions) {
+    console.assert((maxNumRegions % 4096) == 0);  // Must be a multiple of the LUT texture width
+
+    let texeldata = new Uint8Array(maxNumRegions * 4);
+    console.assert(regionUtils._regionToColorLUT.length <= texeldata.length);
+    texeldata.set(regionUtils._regionToColorLUT);
 
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, 128, gl.RGBA, gl.UNSIGNED_BYTE, texeldata);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, maxNumRegions / 4096,
+                     gl.RGBA, gl.UNSIGNED_BYTE, texeldata);
     gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
@@ -2357,7 +2370,7 @@ glUtils.restoreLostContext = function(event) {
     glUtils._textures["shapeAtlas"] = glUtils._loadTextureFromImageURL(gl, glUtils._markershapes);
     glUtils._buffers["quad"] = glUtils._createQuad(gl);
     glUtils._buffers["transformUBO"] = glUtils._createUniformBuffer(gl);
-    glUtils._textures["regionLUT"] = glUtils._createRegionLUTTexture(gl);
+    glUtils._textures["regionLUT"] = glUtils._createRegionLUTTexture(gl, glUtils._regionMaxNumRegions);
     glUtils._vaos["empty"] = gl.createVertexArray();
 
     // Restore per-markerset WebGL objects
@@ -2422,7 +2435,7 @@ glUtils.init = function() {
     this._textures["shapeAtlas"] = this._loadTextureFromImageURL(gl, glUtils._markershapes);
     this._buffers["quad"] = this._createQuad(gl);
     this._buffers["transformUBO"] = this._createUniformBuffer(gl);
-    this._textures["regionLUT"] = this._createRegionLUTTexture(gl);
+    this._textures["regionLUT"] = this._createRegionLUTTexture(gl, glUtils._regionMaxNumRegions);
     this._vaos["empty"] = gl.createVertexArray();
 
     this._createColorbarCanvas();  // The colorbar is drawn separately in a 2D-canvas
