@@ -572,6 +572,7 @@ glUtils._regionsVS = `
 glUtils._regionsFS = `
     #define ALPHA 1.0
     #define STROKE_WIDTH 1.5
+    #define STROKE_WIDTH_FILLED 1.0
     #define FILL_RULE_NEVER 0
     #define FILL_RULE_NONZERO 1
     #define FILL_RULE_ODDEVEN 2
@@ -619,8 +620,9 @@ glUtils._regionsFS = `
         ivec2 regionDataTexSize = textureSize(u_regionData, 0).xy;
 
         float pixelWidth = length(dFdx(p.xy));
-        float strokeWidth = STROKE_WIDTH * pixelWidth;  // Stroke width for outlines
-        float minEdgeDist = 99999.0;                    // Distance to closest edge
+        float strokeWidth = pixelWidth *
+            (u_regionFillRule == FILL_RULE_NEVER ? STROKE_WIDTH : STROKE_WIDTH_FILLED);
+        float minEdgeDist = 99999.0;  // Distance to closest edge
 
         // Do coarse empty space skipping first, by testing sample position against
         // occupancy bitmask stored in the first texel of the scanline
