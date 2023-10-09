@@ -622,7 +622,7 @@ glUtils._regionsFS = `
         float pixelWidth = length(dFdx(p.xy));
         float strokeWidth = pixelWidth *
             (u_regionFillRule == FILL_RULE_NEVER ? STROKE_WIDTH : STROKE_WIDTH_FILLED);
-        float minEdgeDist = 99999.0;  // Distance to closest edge
+        float minEdgeDist = 1e7;  // Distance to closest edge
 
         // Do coarse empty space skipping first, by testing sample position against
         // occupancy bitmask stored in the first texel of the scanline
@@ -682,7 +682,7 @@ glUtils._regionsFS = `
                 }
 
                 windingNumber = 0;  // Reset intersection count
-                minEdgeDist = 99999.0;  // Reset distance to closest edge
+                minEdgeDist = 1e7;  // Reset distance to closest edge
                 objectID = int(headerData.z) - 1;
             }
 

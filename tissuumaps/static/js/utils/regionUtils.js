@@ -1832,7 +1832,7 @@ regionUtils._generateEdgeListsForDrawing = function(numScanlines = 512) {
                 if (numPoints <= 1) continue;
 
                 // Compute axis-aligned bounding box for this path
-                let xMin = 99999, xMax = -99999, yMin = 99999, yMax = -99999;
+                let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
                 for (let i = 0; i < numPoints; ++i) {
                     const v = points[i];
                     xMin = Math.min(xMin, v.x);
