@@ -409,6 +409,7 @@ def index():
         isStandalone=app.config["isStandalone"],
         readOnly=app.config["READ_ONLY"],
         version=app.config["VERSION"],
+        schema_version=current_schema_module.VERSION,
     )
 
 
@@ -448,6 +449,7 @@ def slide(filename):
         isStandalone=app.config["isStandalone"],
         readOnly=app.config["READ_ONLY"],
         version=app.config["VERSION"],
+        schema_version=current_schema_module.VERSION,
     )
 
 
@@ -546,6 +548,7 @@ def tmapFile(filename):
             isStandalone=app.config["isStandalone"],
             readOnly=app.config["READ_ONLY"],
             version=app.config["VERSION"],
+            schema_version=current_schema_module.VERSION,
             message=errorMessage,
         )
 
@@ -768,6 +771,7 @@ def h5ad(filename, ext):
         isStandalone=app.config["isStandalone"],
         readOnly=app.config["READ_ONLY"],
         version=app.config["VERSION"],
+        schema_version=current_schema_module.VERSION,
     )
 
 
@@ -922,6 +926,7 @@ def exportToStatic(state, folderpath, previouspath):
                 isStandalone=False,
                 readOnly=True,
                 version=app.config["VERSION"],
+                schema_version=current_schema_module.VERSION,
             )
         # Replace /static with static:
         index = index.replace('"/static/', '"static/')

@@ -63,6 +63,7 @@ var projectUtils = {
 projectUtils.getActiveProject = function () {
     return new Promise((resolve, reject) => {
         var state = projectUtils._activeState;
+        state.schemaVersion = tmapp.schema_version;
         var tabsNotSaved = [];
         for (const uid in dataUtils.data) {
             if (dataUtils.data[uid]["fromButton"] === undefined) {
