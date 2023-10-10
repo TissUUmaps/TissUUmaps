@@ -37,6 +37,7 @@ from flask import (
     send_from_directory,
     url_for,
 )
+from packaging import version
 from tissuumaps_schema import current as current_schema_module
 from tissuumaps_schema.utils import (
     MAJOR_SCHEMA_VERSION_MODULES,
@@ -508,21 +509,82 @@ def tmapFile(filename):
             try:
                 with open(json_filename, "r") as json_file:
                     state = json.load(json_file)
-                try:
-                    schema_version = guess_schema_version(state)
-                    major_schema_version = get_major_version(schema_version)
+
+                schema_version = guess_schema_version(state)
+                major_schema_version = get_major_version(schema_version)
+                # If major version is newer
+                if version.parse(major_schema_version) > version.parse(
+                    current_schema_module.VERSION
+                ):
+                    errorMessage = (
+                        "<b>Warning:</b> This project was created with a newer version of TissUUmaps with breaking changes.<br/><br/>"
+                        "Please upgrade your TissUUmaps version to ensure compatibility."
+                    )
+                    logging.error(
+                        " ".join(
+                            [
+                                "Major version is newer:",
+                                schema_version,
+                                current_schema_module.VERSION,
+                            ]
+                        )
+                    )
+                # Else if minor version is newer
+                elif version.parse(schema_version) > version.parse(
+                    current_schema_module.VERSION
+                ):
+                    errorMessage = (
+                        "<b>Warning:</b> This project was created with a newer version of TissUUmaps.<br/><br/>"
+                        "Upgrade your TissUUmaps version to get all functionalities."
+                    )
+                    logging.error(
+                        " ".join(
+                            [
+                                "Minor version is newer:",
+                                schema_version,
+                                current_schema_module.VERSION,
+                            ]
+                        )
+                    )
+                # Else if major version is unknown
+                elif major_schema_version not in MAJOR_SCHEMA_VERSION_MODULES:
+                    errorMessage = (
+                        "<b>Warning:</b> This project was created with an unknown version of TissUUmaps.<br/><br/>"
+                        "Upgrade your TissUUmaps version to get all functionalities."
+                    )
+                    logging.error(
+                        " ".join(
+                            [
+                                "Major version is unknown:",
+                                schema_version,
+                                current_schema_module.VERSION,
+                            ]
+                        )
+                    )
+                # Else validate and upgrade the project to last version
+                else:
                     old_schema_module = MAJOR_SCHEMA_VERSION_MODULES[
                         major_schema_version
                     ]
-                    old_project = old_schema_module.Project.model_validate(state)
-                    project = current_schema_module.Project.upgrade(old_project)
-                    state = project.model_dump(by_alias=True)
-                except Exception as e:
-                    errorMessage = (
-                        "<b>Warning when loading tmap project:</b> <br><pre><code>"
-                        + str(e).replace("\n", "<br>")
-                        + "</code></pre>"
-                    )
+
+                    try:
+                        old_project = old_schema_module.Project.model_validate(state)
+                        project = current_schema_module.Project.upgrade(old_project)
+                        state = project.model_dump(by_alias=True)
+                    except Exception as e:
+                        logging.error(traceback.format_exc())
+                        trace = (
+                            "<br>".join(traceback.format_exception_only(e))
+                            .replace("\n", "<br>")
+                            .replace("\r", "<br>")
+                            .replace('"', '\\"')
+                        )
+                        errorMessage = (
+                            "<b>Warning when loading tmap project:</b> <br><pre><code>"
+                            + trace
+                            + "</code></pre>"
+                        )
+            # Error when parsing the JSON file:
             except Exception as e:
                 logging.error(traceback.format_exc())
                 trace = (
