@@ -26,7 +26,6 @@ import pyvips
 # Flask dependencies
 from flask import (
     Response,
-    _request_ctx_stack,
     abort,
     make_response,
     redirect,
@@ -92,14 +91,12 @@ def authenticate():
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if _request_ctx_stack.top.request.args.get("path"):
+        if request.args.get("path"):
             path = os.path.abspath(
-                os.path.join(
-                    app.basedir, _request_ctx_stack.top.request.args.get("path"), "fake"
-                )
+                os.path.join(app.basedir, request.args.get("path"), "fake")
             )
         elif not "path" in kwargs.keys():
-            path = getPathFromReferrer(_request_ctx_stack.top.request, "")
+            path = getPathFromReferrer(request, "")
         else:
             path = os.path.abspath(os.path.join(app.basedir, kwargs["path"]))
         activeFolder = os.path.dirname(path)
@@ -665,8 +662,6 @@ def send_file_partial(path):
     """
     range_header = request.headers.get("Range", None)
     if not range_header:
-        from flask import make_response, send_file
-
         response = make_response(send_file(path))
         response.headers["Accept-Ranges"] = "bytes"
         return response
