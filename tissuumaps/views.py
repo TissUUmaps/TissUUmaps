@@ -15,6 +15,7 @@ import re
 import sys
 import threading
 import time
+import traceback
 from collections import OrderedDict
 from functools import wraps
 from shutil import copyfile, copytree
@@ -172,8 +173,6 @@ class ImageConverter:
                     )
                 except:
                     logging.error("Impossible to convert image using VIPS:")
-                    import traceback
-
                     logging.error(traceback.format_exc())
                 self.convertDone = True
 
@@ -211,8 +210,6 @@ class ImageConverter:
 
                 except:
                     logging.error("Impossible to convert image using VIPS:")
-                    import traceback
-
                     logging.error(traceback.format_exc())
                 self.convertDone = True
 
@@ -358,8 +355,6 @@ def _get_slide(path, originalPath=None):
             tifpath = ImageConverter(path, newpath).convert()
             return _get_slide(tifpath, path)
         except:
-            import traceback
-
             logging.error(traceback.format_exc())
             abort(404)
 
@@ -868,8 +863,6 @@ def exportToStatic(state, folderpath, previouspath):
             for path in paths:
                 addRelativePath_aux(state, path, path[0] == "layers")
         except:
-            import traceback
-
             logging.error(traceback.format_exc())
 
         return state
@@ -943,8 +936,6 @@ def exportToStatic(state, folderpath, previouspath):
 
         return {"success": True}
     except:
-        import traceback
-
         return {"success": False, "error": traceback.format_exc()}
 
 
