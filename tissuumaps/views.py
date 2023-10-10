@@ -521,13 +521,7 @@ def tmapFile(filename):
                         "Please upgrade your TissUUmaps version to ensure compatibility."
                     )
                     logging.error(
-                        " ".join(
-                            [
-                                "Major version is newer:",
-                                schema_version,
-                                current_schema_module.VERSION,
-                            ]
-                        )
+                        f"The MAJOR schema version of the project file ({schema_version}) is newer than the MAJOR schema version supported by the current TissUUmaps installation ({current_schema_module.VERSION})"
                     )
                 # Else if minor version is newer
                 elif version.parse(schema_version) > version.parse(
@@ -538,13 +532,7 @@ def tmapFile(filename):
                         "Upgrade your TissUUmaps version to get all functionalities."
                     )
                     logging.error(
-                        " ".join(
-                            [
-                                "Minor version is newer:",
-                                schema_version,
-                                current_schema_module.VERSION,
-                            ]
-                        )
+                        f"The MINOR schema version of the project file ({schema_version}) is newer than the MINOR schema version supported by the current TissUUmaps installation ({current_schema_module.VERSION})"
                     )
                 # Else if major version is unknown
                 elif major_schema_version not in MAJOR_SCHEMA_VERSION_MODULES:
@@ -553,13 +541,7 @@ def tmapFile(filename):
                         "Upgrade your TissUUmaps version to get all functionalities."
                     )
                     logging.error(
-                        " ".join(
-                            [
-                                "Major version is unknown:",
-                                schema_version,
-                                current_schema_module.VERSION,
-                            ]
-                        )
+                        f"Unsupported MAJOR version in project file: {schema_version}"
                     )
                 # Else validate and upgrade the project to last version
                 else:
