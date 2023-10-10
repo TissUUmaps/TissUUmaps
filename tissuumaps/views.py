@@ -15,6 +15,7 @@ import re
 import sys
 import threading
 import time
+import traceback
 from collections import OrderedDict
 from functools import wraps
 from shutil import copyfile, copytree
@@ -35,6 +36,13 @@ from flask import (
     send_file,
     send_from_directory,
     url_for,
+)
+from packaging import version
+from tissuumaps_schema import current as current_schema_module
+from tissuumaps_schema.utils import (
+    MAJOR_SCHEMA_VERSION_MODULES,
+    get_major_version,
+    guess_schema_version,
 )
 from werkzeug.exceptions import MethodNotAllowed, NotFound
 from werkzeug.routing import RequestRedirect
@@ -166,8 +174,6 @@ class ImageConverter:
                     )
                 except:
                     logging.error("Impossible to convert image using VIPS:")
-                    import traceback
-
                     logging.error(traceback.format_exc())
                 self.convertDone = True
 
@@ -205,8 +211,6 @@ class ImageConverter:
 
                 except:
                     logging.error("Impossible to convert image using VIPS:")
-                    import traceback
-
                     logging.error(traceback.format_exc())
                 self.convertDone = True
 
@@ -352,8 +356,6 @@ def _get_slide(path, originalPath=None):
             tifpath = ImageConverter(path, newpath).convert()
             return _get_slide(tifpath, path)
         except:
-            import traceback
-
             logging.error(traceback.format_exc())
             abort(404)
 
@@ -403,6 +405,7 @@ def index():
         isStandalone=app.config["isStandalone"],
         readOnly=app.config["READ_ONLY"],
         version=app.config["VERSION"],
+        schema_version=current_schema_module.VERSION,
     )
 
 
@@ -442,6 +445,7 @@ def slide(filename):
         isStandalone=app.config["isStandalone"],
         readOnly=app.config["READ_ONLY"],
         version=app.config["VERSION"],
+        schema_version=current_schema_module.VERSION,
     )
 
 
@@ -485,33 +489,108 @@ def h5adFile_old(path, filename, ext):
 @app.route("/<string:filename>.tmap", methods=["GET", "POST"])
 @requires_auth
 def tmapFile(filename):
-    path = request.args.get("path")
-    if not path or path == "null":
-        path = "./"
-    jsonFilename = os.path.abspath(os.path.join(app.basedir, path, filename) + ".tmap")
+    # Get the path from the request arguments or use the current directory
+    path = request.args.get("path", default="./")
 
+    # Create the absolute path to the JSON file
+    json_filename = os.path.abspath(os.path.join(app.basedir, path, filename) + ".tmap")
+
+    # Define error message feedback to user, None means no error message
+    errorMessage = None
     if request.method == "POST" and not app.config["READ_ONLY"]:
+        # Handle POST request to update the JSON file
         state = request.get_json(silent=False)
-        with open(jsonFilename, "w") as jsonFile:
-            json.dump(state, jsonFile, indent=4, sort_keys=True)
+        with open(json_filename, "w") as json_file:
+            json.dump(state, json_file, indent=4, sort_keys=True)
         return state
     else:
-        if os.path.isfile(jsonFilename):
+        # Handle GET request to read the JSON file
+        if os.path.isfile(json_filename):
             try:
-                with open(jsonFilename, "r") as jsonFile:
-                    state = json.load(jsonFile)
-            except:
-                import traceback
+                with open(json_filename, "r") as json_file:
+                    state = json.load(json_file)
 
+                schema_version = guess_schema_version(state)
+                major_schema_version = get_major_version(schema_version)
+                # If major version is newer
+                if version.parse(major_schema_version) > version.parse(
+                    current_schema_module.VERSION
+                ):
+                    errorMessage = (
+                        "<b>Warning:</b> This project was created with a newer version of TissUUmaps with breaking changes.<br/><br/>"
+                        "Please upgrade your TissUUmaps version to ensure compatibility."
+                    )
+                    logging.error(
+                        f"The MAJOR schema version of the project file ({schema_version}) is newer than the MAJOR schema version supported by the current TissUUmaps installation ({current_schema_module.VERSION})"
+                    )
+                # Else if minor version is newer
+                elif version.parse(schema_version) > version.parse(
+                    current_schema_module.VERSION
+                ):
+                    errorMessage = (
+                        "<b>Warning:</b> This project was created with a newer version of TissUUmaps.<br/><br/>"
+                        "Upgrade your TissUUmaps version to get all functionalities."
+                    )
+                    logging.error(
+                        f"The MINOR schema version of the project file ({schema_version}) is newer than the MINOR schema version supported by the current TissUUmaps installation ({current_schema_module.VERSION})"
+                    )
+                # Else if major version is unknown
+                elif major_schema_version not in MAJOR_SCHEMA_VERSION_MODULES:
+                    errorMessage = (
+                        "<b>Warning:</b> This project was created with an unknown version of TissUUmaps.<br/><br/>"
+                        "Upgrade your TissUUmaps version to get all functionalities."
+                    )
+                    logging.error(
+                        f"Unsupported MAJOR version in project file: {schema_version}"
+                    )
+                # Else validate and upgrade the project to last version
+                else:
+                    old_schema_module = MAJOR_SCHEMA_VERSION_MODULES[
+                        major_schema_version
+                    ]
+
+                    try:
+                        old_project = old_schema_module.Project.model_validate(state)
+                        project = current_schema_module.Project.upgrade(old_project)
+                        state = project.model_dump(by_alias=True)
+                    except Exception as e:
+                        logging.error(traceback.format_exc())
+                        trace = (
+                            "<br>".join(traceback.format_exception_only(e))
+                            .replace("\n", "<br>")
+                            .replace("\r", "<br>")
+                            .replace('"', '\\"')
+                        )
+                        errorMessage = (
+                            "<b>Warning when loading tmap project:</b> <br><pre><code>"
+                            + trace
+                            + "</code></pre>"
+                        )
+            # Error when parsing the JSON file:
+            except Exception as e:
                 logging.error(traceback.format_exc())
-                abort(404)
+                trace = (
+                    "<br>".join(traceback.format_exception_only(e))
+                    .replace("\n", "<br>")
+                    .replace("\r", "<br>")
+                    .replace('"', '\\"')
+                )
+                errorMessage = (
+                    "<b>Error when loading tmap project:</b> <br><pre><code>"
+                    + trace
+                    + "</code></pre>"
+                )
+                state = {}
         else:
             abort(404)
+
+        # Determine the plugins based on the state
         if "plugins" in state.keys():
             plugins = []
         else:
             plugins = [p["module"] for p in app.config["PLUGINS"]]
 
+        # Render the template with appropriate data
         return render_template(
             "tissuumaps.html",
             plugins=plugins,
@@ -519,6 +598,8 @@ def tmapFile(filename):
             isStandalone=app.config["isStandalone"],
             readOnly=app.config["READ_ONLY"],
             version=app.config["VERSION"],
+            schema_version=current_schema_module.VERSION,
+            message=errorMessage,
         )
 
 
@@ -740,6 +821,7 @@ def h5ad(filename, ext):
         isStandalone=app.config["isStandalone"],
         readOnly=app.config["READ_ONLY"],
         version=app.config["VERSION"],
+        schema_version=current_schema_module.VERSION,
     )
 
 
@@ -836,8 +918,6 @@ def exportToStatic(state, folderpath, previouspath):
             for path in paths:
                 addRelativePath_aux(state, path, path[0] == "layers")
         except:
-            import traceback
-
             logging.error(traceback.format_exc())
 
         return state
@@ -894,6 +974,7 @@ def exportToStatic(state, folderpath, previouspath):
                 isStandalone=False,
                 readOnly=True,
                 version=app.config["VERSION"],
+                schema_version=current_schema_module.VERSION,
             )
         # Replace /static with static:
         index = index.replace('"/static/', '"static/')
@@ -910,8 +991,6 @@ def exportToStatic(state, folderpath, previouspath):
 
         return {"success": True}
     except:
-        import traceback
-
         return {"success": False, "error": traceback.format_exc()}
 
 
@@ -936,7 +1015,7 @@ def runPlugin(pluginName):
         if os.path.isfile(completePath):
             return send_from_directory(directory, filename)
 
-    logging.error(completePath, "is not an existing file.")
+    logging.error(completePath + " is not an existing file.")
     abort(404)
 
 
