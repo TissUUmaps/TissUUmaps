@@ -517,6 +517,7 @@
       tmapp.registerActions();
       tmapp.init();
       tmapp.version = "{{ version | safe }}";
+      tmapp.schema_version = "{{ schema_version | safe }}";
       {% for plugin in plugins %} {% if plugin %}
       pluginUtils.addPlugin("{{ plugin }}");
       {% endif %} {% endfor %}
