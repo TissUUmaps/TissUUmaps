@@ -39,7 +39,7 @@ try:
 
 except ImportError:
     # dependency missing, issue a warning
-    logging.error("dependency not found, please install PyQt6 to enable gui")
+    logging.error("dependency not found, please install pyside6 to enable gui")
     logging.error(traceback.format_exc())
     import sys
 
