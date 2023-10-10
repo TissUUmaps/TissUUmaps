@@ -30,6 +30,8 @@ glUtils = {
     _markerScaleFactor: {},      // {uid: float}
     _markerScalarPropertyName: {},  // {uid: string, ...}
     _markerOpacity: {},          // {uid: alpha, ...}
+    _markerStrokeWidth: {},      // {uid: float, ...}
+    _markerFilled: {},           // {uid: boolean, ...}
     _markerOutline: {},          // {uid: boolean, ...}
     _useColorFromMarker: {},     // {uid: boolean, ...}
     _useColorFromColormap: {},   // {uid: boolean, ...}
@@ -61,6 +63,12 @@ glUtils = {
     _useInstancing: true,         // Use instancing and gl.TRIANGLE_STRIP to avoid size limit of gl.POINTS
     _showEdgesExperimental: true,
     _edgeThicknessRatio: 0.1,     // Ratio between edge thickness and marker size
+    _regionOpacity: 0.5,
+    _regionFillRule: "never",   // Possible values: "never" | "nonzero" | "oddeven"
+    _regionUsePivotSplit: true,   // Use split edge lists for faster region rendering and less risk of overflow
+    _regionUseColorByID: false,   // Map region object IDs to unique colors
+    _regionDataTexSize: 4096,     // Note: should not be set above context's MAX_TEXTURE_SIZE
+    _regionPicked: null,          // Key to regionUtils._regions dict, or null if no region is picked
     _logPerformance: false,       // Use GPU timer queries to log performance
     _piechartPaletteDefault: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
@@ -69,13 +77,16 @@ glUtils = {
 glUtils._markersVS = `
     #define SHAPE_INDEX_CIRCLE 7.0
     #define SHAPE_INDEX_CIRCLE_NOSTROKE 16.0
+    #define SHAPE_INDEX_GAUSSIAN 15.0
     #define SHAPE_GRID_SIZE 4.0
     #define MAX_NUM_IMAGES 192
+    #define UV_SCALE 0.8
+    #define SCALE_FIX (UV_SCALE / 0.7)  // For compatibility with old UV_SCALE
     #define DISCARD_VERTEX { gl_Position = vec4(2.0, 2.0, 2.0, 0.0); return; }
 
     uniform mat2 u_viewportTransform;
     uniform vec2 u_canvasSize;
-    uniform float u_transformIndex;
+    uniform int u_transformIndex;
     uniform float u_markerScale;
     uniform float u_globalMarkerScale;
     uniform vec2 u_markerScalarRange;
@@ -91,7 +102,7 @@ glUtils._markersVS = `
     uniform sampler2D u_colorscale;
 
     layout(std140) uniform TransformUniforms {
-        mat3x2 imageToViewport[MAX_NUM_IMAGES];
+        mat2x4 imageToViewport[MAX_NUM_IMAGES];
     } u_transformUBO;
 
     layout(location = 0) in vec4 in_position;
@@ -101,12 +112,13 @@ glUtils._markersVS = `
     layout(location = 4) in float in_opacity;
     layout(location = 5) in float in_transform;
 
-    out vec4 v_color;
-    out vec2 v_shapeOrigin;
-    out vec2 v_shapeSector;
-    out float v_shapeSize;
+    flat out vec4 v_color;
+    flat out vec2 v_shapeOrigin;
+    flat out vec2 v_shapeSector;
+    flat out float v_shapeIndex;
+    flat out float v_shapeSize;
     #ifdef USE_INSTANCING
-    out highp vec2 v_texCoord;
+    out vec2 v_texCoord;
     #endif  // USE_INSTANCING
 
     vec3 hex_to_rgb(float v)
@@ -118,8 +130,8 @@ glUtils._markersVS = `
 
     void main()
     {
-        float transformIndex = u_transformIndex >= 0.0 ? u_transformIndex : in_transform;
-        mat3x2 imageToViewport = u_transformUBO.imageToViewport[int(transformIndex)];
+        int transformIndex = u_transformIndex >= 0 ? u_transformIndex : int(in_transform);
+        mat3x2 imageToViewport = mat3x2(transpose(u_transformUBO.imageToViewport[transformIndex]));
         vec2 viewportPos = imageToViewport * vec3(in_position.xy, 1.0);
         vec2 ndcPos = viewportPos * 2.0 - 1.0;
         ndcPos.y = -ndcPos.y;
@@ -154,12 +166,13 @@ glUtils._markersVS = `
         }
 
         gl_Position = vec4(ndcPos, 0.0, 1.0);
-        gl_PointSize = in_scale * u_markerScale * u_globalMarkerScale;
+        gl_PointSize = (in_scale * u_markerScale * u_globalMarkerScale) * SCALE_FIX;
         float alphaFactorSize = clamp(gl_PointSize, 0.2, 1.0); 
         gl_PointSize = clamp(gl_PointSize, 1.0, u_maxPointSize);
 
-        v_shapeOrigin.x = mod((v_color.a + 0.00001) * 255.0 - 1.0, SHAPE_GRID_SIZE);
-        v_shapeOrigin.y = floor(((v_color.a + 0.00001) * 255.0 - 1.0) / SHAPE_GRID_SIZE);
+        v_shapeIndex = floor((v_color.a + 1e-5) * 255.0);
+        v_shapeOrigin.x = mod(v_shapeIndex - 1.0, SHAPE_GRID_SIZE);
+        v_shapeOrigin.y = floor((v_shapeIndex - 1.0) / SHAPE_GRID_SIZE);
         v_shapeSize = gl_PointSize;
 
     #ifdef USE_INSTANCING
@@ -180,22 +193,29 @@ glUtils._markersVS = `
 
 
 glUtils._markersFS = `
-    #define UV_SCALE 0.7
+    #define UV_SCALE 0.8
+    #define SHAPE_INDEX_GAUSSIAN 15.0
     #define SHAPE_GRID_SIZE 4.0
 
-    precision mediump float;
+    precision highp float;
+    precision highp int;
 
+    uniform float u_markerStrokeWidth;
+    uniform bool u_markerFilled;
     uniform bool u_markerOutline;
     uniform bool u_usePiechartFromMarker;
     uniform bool u_alphaPass;
-    uniform sampler2D u_shapeAtlas;
+    uniform highp sampler2D u_shapeAtlas;
 
-    in vec4 v_color;
-    in vec2 v_shapeOrigin;
-    in vec2 v_shapeSector;
-    in float v_shapeSize;
+    flat in vec4 v_color;
+    flat in vec2 v_shapeOrigin;
+    flat in vec2 v_shapeSector;
+    flat in float v_shapeIndex;
+    flat in float v_shapeSize;
     #ifdef USE_INSTANCING
-    in highp vec2 v_texCoord;
+    in vec2 v_texCoord;
+    #else
+    #define v_texCoord gl_PointCoord
     #endif  // USE_INSTANCING
 
     layout(location = 0) out vec4 out_color;
@@ -223,26 +243,42 @@ glUtils._markersFS = `
 
     void main()
     {
-    #ifdef USE_INSTANCING
         vec2 uv = (v_texCoord - 0.5) * UV_SCALE + 0.5;
-    #else
-        vec2 uv = (gl_PointCoord - 0.5) * UV_SCALE + 0.5;
-    #endif  // USE_INSTANCING
         uv = (uv + v_shapeOrigin) * (1.0 / SHAPE_GRID_SIZE);
 
-        // Sample shape texture in which the blue channel encodes alpha and the
-        // red and green channels encode grayscale for marker shape with and
-        // without outline, respectively
-        vec4 shapeColor = texture(u_shapeAtlas, uv, -0.5);
-        shapeColor = u_markerOutline ? shapeColor.rrrb : shapeColor.gggb;
+        vec4 shapeColor = vec4(0.0);
 
+        // Sample shape texture and reconstruct marker shape from signed
+        // distance field (SDF) encoded in the red channel. Distance values
+        // are assumed to be pre-multiplied by a scale factor 8.0 before
+        // being quantized into 8-bit. Other channels in the texture are
+        // currently ignored, but could be used for storing additional shapes
+        // in the future!
+
+        float pixelWidth = dFdx(uv.x) * float(textureSize(u_shapeAtlas, 0).x) * 8.0;
+        float markerStrokeWidth = min(14.0, u_markerStrokeWidth) * 8.0;  // Keep within SDF range
+        float distBias = u_markerFilled ? -pixelWidth * 0.25 : 0.0;  // Minification distance bias
+
+        float distShape = (texture(u_shapeAtlas, uv, -2.0).r - 0.5) * 255.0;
+        float distOutline = markerStrokeWidth - abs(distShape) + distBias;  // Add bias to fix darkening
+        float alpha = clamp(distShape / pixelWidth + 0.5, 0.0, 1.0) * float(u_markerFilled);
+        float alpha2 = clamp(distOutline / pixelWidth + 0.5, 0.0, 1.0) * float(u_markerOutline);
+        if (distOutline < (markerStrokeWidth + 4.0) - 127.5) {
+            alpha2 = 0.0;  // Fixes problem with alpha bleeding on minification
+        }
+        shapeColor = vec4(vec3(mix(1.0, 0.7, alpha2)), max(alpha, alpha2));
+        if (!u_markerFilled && u_markerOutline) {
+            shapeColor.rgb = vec3(1.0);  // Use brighter outline to show actual marker color 
+        }
+
+        // Handle special types of shapes (Gaussians and piecharts)
+
+        if (v_shapeIndex == SHAPE_INDEX_GAUSSIAN) {
+            shapeColor = vec4(vec3(1.0), smoothstep(0.5, 0.0, length(v_texCoord - 0.5)));
+        }
         if (u_usePiechartFromMarker && !u_alphaPass) {
             float delta = 0.25 / v_shapeSize;
-        #ifdef USE_INSTANCING
             shapeColor.a *= sectorToAlphaAA(v_shapeSector, v_texCoord, delta);
-        #else
-            shapeColor.a *= sectorToAlphaAA(v_shapeSector, gl_PointCoord, delta);
-        #endif  // USE_INSTANCING
         }
 
         out_color = shapeColor * v_color;
@@ -252,7 +288,8 @@ glUtils._markersFS = `
 
 
 glUtils._pickingVS = `
-    #define UV_SCALE 0.7
+    #define UV_SCALE 0.8
+    #define SCALE_FIX (UV_SCALE / 0.7)  // For compatibility with old UV_SCALE
     #define SHAPE_INDEX_CIRCLE_NOSTROKE 16.0
     #define SHAPE_GRID_SIZE 4.0
     #define MAX_NUM_IMAGES 192
@@ -264,7 +301,7 @@ glUtils._pickingVS = `
     uniform mat2 u_viewportTransform;
     uniform vec2 u_canvasSize;
     uniform vec2 u_pickingLocation;
-    uniform float u_transformIndex;
+    uniform int u_transformIndex;
     uniform float u_markerScale;
     uniform float u_globalMarkerScale;
     uniform float u_markerOpacity;
@@ -276,7 +313,7 @@ glUtils._pickingVS = `
     uniform sampler2D u_shapeAtlas;
 
     layout(std140) uniform TransformUniforms {
-        mat3x2 imageToViewport[MAX_NUM_IMAGES];
+        mat2x4 imageToViewport[MAX_NUM_IMAGES];
     } u_transformUBO;
 
     layout(location = 0) in vec4 in_position;
@@ -285,7 +322,7 @@ glUtils._pickingVS = `
     layout(location = 4) in float in_opacity;
     layout(location = 5) in float in_transform;
 
-    out vec4 v_color;
+    flat out vec4 v_color;
 
     vec3 hex_to_rgb(float v)
     {
@@ -296,8 +333,8 @@ glUtils._pickingVS = `
 
     void main()
     {
-        float transformIndex = u_transformIndex >= 0.0 ? u_transformIndex : in_transform;
-        mat3x2 imageToViewport = u_transformUBO.imageToViewport[int(transformIndex)];
+        int transformIndex = u_transformIndex >= 0 ? u_transformIndex : int(in_transform);
+        mat3x2 imageToViewport = mat3x2(transpose(u_transformUBO.imageToViewport[transformIndex]));
         vec2 viewportPos = imageToViewport * vec3(in_position.xy, 1.0);
         vec2 ndcPos = viewportPos * 2.0 - 1.0;
         ndcPos.y = -ndcPos.y;
@@ -325,7 +362,7 @@ glUtils._pickingVS = `
 
             vec2 canvasPos = (ndcPos * 0.5 + 0.5) * u_canvasSize;
             canvasPos.y = (u_canvasSize.y - canvasPos.y);  // Y-axis is inverted
-            float pointSize = in_scale * u_markerScale * u_globalMarkerScale;
+            float pointSize = (in_scale * u_markerScale * u_globalMarkerScale) * SCALE_FIX;
             pointSize = clamp(pointSize, 2.0, u_maxPointSize);
 
             // Do coarse inside/outside test against bounding box for marker
@@ -334,13 +371,15 @@ glUtils._pickingVS = `
             if (abs(uv.x - 0.5) > 0.5 || abs(uv.y - 0.5) > 0.5) DISCARD_VERTEX;
 
             // Do fine-grained inside/outside test by sampling the shape texture
-            // with alpha encoded in the blue channel
+            // with signed distance field (SDF) encoded in the red channel.
+            // Currently, this does not take settings for fill and outline into
+            // account, so all markers are assumed to be filled (TODO).
             vec2 shapeOrigin = vec2(0.0);
             shapeOrigin.x = mod((shapeID + 0.00001) * 255.0 - 1.0, SHAPE_GRID_SIZE);
             shapeOrigin.y = floor(((shapeID + 0.00001) * 255.0 - 1.0) / SHAPE_GRID_SIZE);
             uv = (uv - 0.5) * UV_SCALE + 0.5;
             uv = (uv + shapeOrigin) * (1.0 / SHAPE_GRID_SIZE);
-            if (texture(u_shapeAtlas, uv).b < 0.5) DISCARD_VERTEX;
+            if (texture(u_shapeAtlas, uv).r < 0.5) DISCARD_VERTEX;
 
             // Also do a quick alpha-test to avoid picking non-visible markers
             if (in_opacity * u_markerOpacity <= 0.0) DISCARD_VERTEX
@@ -360,9 +399,10 @@ glUtils._pickingVS = `
 
 
 glUtils._pickingFS = `
-    precision mediump float;
+    precision highp float;
+    precision highp int;
 
-    in vec4 v_color;
+    flat in vec4 v_color;
 
     layout(location = 0) out vec4 out_color;
 
@@ -378,7 +418,7 @@ glUtils._edgesVS = `
 
     uniform mat2 u_viewportTransform;
     uniform vec2 u_canvasSize;
-    uniform float u_transformIndex;
+    uniform int u_transformIndex;
     uniform float u_markerScale;
     uniform float u_globalMarkerScale;
     uniform float u_markerOpacity;
@@ -387,7 +427,7 @@ glUtils._edgesVS = `
     uniform sampler2D u_colorLUT;
 
     layout(std140) uniform TransformUniforms {
-        mat3x2 imageToViewport[MAX_NUM_IMAGES];
+        mat2x4 imageToViewport[MAX_NUM_IMAGES];
     } u_transformUBO;
 
     layout(location = 0) in vec4 in_position;
@@ -395,15 +435,15 @@ glUtils._edgesVS = `
     layout(location = 4) in float in_opacity;
     layout(location = 5) in float in_transform;
 
-    out vec4 v_color;
-    out highp vec2 v_texCoord;
+    flat out vec4 v_color;
+    out vec2 v_texCoord;
 
     void main()
     {
-        float transformIndex0 = u_transformIndex >= 0.0 ? u_transformIndex : mod(in_transform, 256.0);
-        float transformIndex1 = u_transformIndex >= 0.0 ? u_transformIndex : floor(in_transform / 256.0);
-        mat3x2 imageToViewport0 = u_transformUBO.imageToViewport[int(transformIndex0)];
-        mat3x2 imageToViewport1 = u_transformUBO.imageToViewport[int(transformIndex1)];
+        int transformIndex0 = u_transformIndex >= 0 ? u_transformIndex : int(mod(in_transform, 256.0));
+        int transformIndex1 = u_transformIndex >= 0 ? u_transformIndex : int(floor(in_transform / 256.0));
+        mat3x2 imageToViewport0 = mat3x2(transpose(u_transformUBO.imageToViewport[transformIndex0]));
+        mat3x2 imageToViewport1 = mat3x2(transpose(u_transformUBO.imageToViewport[transformIndex1]));
 
         vec2 localPos0 = in_position.xy;
         vec2 localPos1 = in_position.zw;
@@ -450,10 +490,11 @@ glUtils._edgesVS = `
 
 
 glUtils._edgesFS = `
-    precision mediump float;
+    precision highp float;
+    precision highp int;
 
-    in vec4 v_color;
-    in highp vec2 v_texCoord;
+    flat in vec4 v_color;
+    in vec2 v_texCoord;
 
     layout(location = 0) out vec4 out_color;
 
@@ -479,6 +520,191 @@ glUtils._edgesFS = `
     {
         out_color.rgb = v_color.rgb;
         out_color.a = v_color.a * subpixelCoverage(v_texCoord);
+    }
+`;
+
+
+glUtils._regionsVS = `
+    #define MAX_NUM_IMAGES 192
+
+    uniform mat2 u_viewportTransform;
+    uniform int u_transformIndex;
+    uniform vec4 u_imageBounds;
+    uniform int u_numScanlines;
+
+    layout(std140) uniform TransformUniforms {
+        mat2x4 imageToViewport[MAX_NUM_IMAGES];
+    } u_transformUBO;
+
+    // Need to have attribute 0 enabled, otherwise some browsers (QtWebEngine)
+    // will give performance warnings. It would otherwise have been simpler to
+    // just compute the position/texcoord from gl_VertexID.
+    layout(location = 0) in vec2 in_position;
+
+    out vec2 v_texCoord;
+    out vec2 v_localPos;
+    out float v_scanline;
+
+    void main()
+    {
+        v_texCoord = in_position;
+        v_scanline = v_texCoord.y * float(u_numScanlines);
+
+        vec2 localPos;
+        localPos.x = v_texCoord.x * u_imageBounds.z;
+        localPos.y = v_texCoord.y * u_imageBounds.w;
+        v_localPos = localPos;
+
+        mat3x2 imageToViewport = mat3x2(transpose(u_transformUBO.imageToViewport[u_transformIndex]));
+        vec2 viewportPos = imageToViewport * vec3(localPos, 1.0);
+        vec2 ndcPos = viewportPos * 2.0 - 1.0;
+        ndcPos.y = -ndcPos.y;
+        ndcPos = u_viewportTransform * ndcPos;
+
+        gl_Position = vec4(ndcPos, 0.0, 1.0);
+    }
+`;
+
+
+glUtils._regionsFS = `
+    #define ALPHA 1.0
+    #define STROKE_WIDTH 1.5
+    #define FILL_RULE_NEVER 0
+    #define FILL_RULE_NONZERO 1
+    #define FILL_RULE_ODDEVEN 2
+    #define SHOW_PIVOT_SPLIT_DEBUG 0
+
+    precision highp float;
+    precision highp int;
+
+    uniform int u_numScanlines;
+    uniform float u_regionOpacity;
+    uniform int u_regionFillRule;
+    uniform int u_regionUsePivotSplit;
+    uniform int u_regionUseColorByID;
+    uniform highp sampler2D u_regionData;
+    uniform highp sampler2D u_regionLUT;
+
+    in vec2 v_texCoord;
+    in vec2 v_localPos;
+    in float v_scanline;
+
+    layout(location = 0) out vec4 out_color;
+
+    float distPointToLine(vec2 p, vec2 v0, vec2 v1)
+    {
+        // Compute distance by first transforming the point p to the frame
+        // defined by the line segment (v0, v1) and its normal vector. This
+        // should be more robust and handle small distances to long line
+        // segments better than just projecting the point onto the line.
+
+        float a = length(v1 - v0);
+        float b = length(p - v0);
+        float c = length(p - v1);
+        vec2 T = (v1 - v0) / (a + 1e-5);
+        vec2 N = vec2(T.y, -T.x);
+        vec2 t = mat2(T, N) * (p - v0);
+        return (0.0 < t.x && t.x < a) ? abs(t.y) : min(b, c);
+    }
+
+    void main()
+    {
+        vec4 color = vec4(0.0);
+
+        vec2 p = v_localPos;  // Current sample position
+        int scanline = int(v_scanline);
+        ivec2 regionDataTexSize = textureSize(u_regionData, 0).xy;
+
+        float pixelWidth = length(dFdx(p.xy));
+        float strokeWidth = STROKE_WIDTH * pixelWidth;  // Stroke width for outlines
+        float minEdgeDist = 99999.0;                    // Distance to closest edge
+
+        // Do coarse empty space skipping first, by testing sample position against
+        // occupancy bitmask stored in the first texel of the scanline
+        uvec4 maskData = uvec4(texelFetch(u_regionData, ivec2(0, scanline), 0));
+        int bitIndex = int(v_texCoord.x * 63.9999);
+        if ((maskData[bitIndex >> 4] & (1u << (bitIndex & 15))) == 0u) { discard; }
+
+        float scanDir = 1.0;  // Can be positive or negative along the X-axis
+        if (bool(u_regionUsePivotSplit)) {
+            float pivot = texelFetch(u_regionData, ivec2(1, scanline), 0).x;
+            scanDir = p.x < pivot ? -1.0 : 1.0;
+            scanline = p.x < pivot ? scanline : scanline + u_numScanlines;
+        }
+
+        vec4 headerData = texelFetch(u_regionData, ivec2(2, scanline), 0);
+        int objectID = int(headerData.z) - 1, offset = 2, windingNumber = 0;
+
+        while (headerData.w != 0.0 && offset < regionDataTexSize.x) {
+
+            // Find next path with bounding box overlapping this sample position
+            while (headerData.w != 0.0 && offset < regionDataTexSize.x) {
+                headerData = texelFetch(u_regionData, ivec2(offset, scanline), 0);
+                bool isPathBbox = headerData.z > 0.0;
+                bool isClusterBbox = headerData.z == 0.0;
+
+                if (headerData.x <= (p.x + strokeWidth) && (p.x - strokeWidth) <= headerData.y) {
+                    if (isPathBbox) { break; }
+                    if (isClusterBbox) { offset -= int(headerData.w); }
+                }
+                offset += int(headerData.w) + 1;
+            }
+            offset += 1;  // Position pointer at first edge element
+
+            // Check if we are done for this object ID and need to update the color value
+            if (objectID != int(headerData.z) - 1) {
+                bool isInside = false;
+                if (u_regionFillRule == FILL_RULE_NONZERO) { isInside = windingNumber != 0; }
+                if (u_regionFillRule == FILL_RULE_ODDEVEN) { isInside = (windingNumber & 1) == 1; }
+
+                if (isInside || minEdgeDist < strokeWidth) {
+                    vec4 objectColor = texelFetch(u_regionLUT, ivec2(objectID & 4095, objectID >> 12), 0);
+                    if (bool(u_regionUseColorByID)) {
+                        // Map object ID to a unique color from low-discrepancy sequence
+                        objectColor.rgb = fract(sqrt(vec3(2.0, 3.0, 5.0)) * float(objectID + 1));
+                    }
+                #if SHOW_PIVOT_SPLIT_DEBUG
+                    if (bool(u_regionUsePivotSplit)) {
+                        objectColor.rgb = scanDir > 0.0 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 1.0);
+                    }
+                #endif  // SHOW_PIVOT_SPLIT_DEBUG
+                    float edgeOpacity = smoothstep(strokeWidth, strokeWidth - pixelWidth, minEdgeDist);
+                    float fillOpacity = float(isInside) * u_regionOpacity;
+                    objectColor.a *= clamp(edgeOpacity + fillOpacity, 0.0, 1.0);
+
+                    color.a = objectColor.a + (1.0 - objectColor.a) * color.a;
+                    color.rgb = mix(color.rgb, objectColor.rgb, objectColor.a);
+                }
+
+                windingNumber = 0;  // Reset intersection count
+                minEdgeDist = 99999.0;  // Reset distance to closest edge
+                objectID = int(headerData.z) - 1;
+            }
+
+            // Do intersection tests with edge elements to update intersection count,
+            // and also update the edge distance needed for outline rendering
+            int count = int(headerData.w);
+            for (int i = 0; i < count; ++i) {
+                vec4 edgeData = texelFetch(u_regionData, ivec2(offset + i, scanline), 0);
+                vec2 v0 = edgeData.xy;
+                vec2 v1 = edgeData.zw;
+
+                if (min(v0.y, v1.y) <= p.y && p.y < max(v0.y, v1.y)) {
+                    float t = (p.y - v0.y) / (v1.y - v0.y + 1e-5);
+                    float x = v0.x + (v1.x - v0.x) * t;
+                    float weight = 0.0;
+                    if (u_regionFillRule == FILL_RULE_NONZERO) { weight = sign(v1.y - v0.y); }
+                    if (u_regionFillRule == FILL_RULE_ODDEVEN) { weight = 1.0; }
+                    windingNumber += int(float((x - p.x) * scanDir > 0.0) * weight);
+                }
+                minEdgeDist = min(minEdgeDist, distPointToLine(p, v0, v1));
+            }
+
+            offset += count;
+        }
+
+        out_color = color;
+        out_color.rgb /= max(1e-5, out_color.a);
     }
 `;
 
@@ -515,7 +741,7 @@ glUtils._loadShaderProgram = function(gl, vertSource, fragSource, definitions=""
 }
 
 
-glUtils._createMarkerBuffer = function(gl, numBytes) {
+glUtils._createVertexBuffer = function(gl, numBytes) {
     const buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer); 
     gl.bufferData(gl.ARRAY_BUFFER, numBytes, gl.STATIC_DRAW);
@@ -625,6 +851,8 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
     const useOpacityFromMarker = newInputs.useOpacityFromMarker = dataUtils.data[uid]["_opacity_col"] != null;
     const markerOpacityFactor = dataUtils.data[uid]["_opacity"];
 
+    const markerStrokeWidth = dataUtils.data[uid]["_stroke_width"];
+    const markerFilled = !dataUtils.data[uid]["_no_fill"];
     const markerOutline = !dataUtils.data[uid]["_no_outline"];
 
     const collectionItemPropertyName = newInputs.collectionItemPropertyName = dataUtils.data[uid]["_collectionItem_col"];
@@ -756,10 +984,10 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
 
             // Create WebGL objects (if this has not already been done)
             if (!(uid + "_markers" in glUtils._buffers))
-                glUtils._buffers[uid + "_markers"] = glUtils._createMarkerBuffer(
+                glUtils._buffers[uid + "_markers"] = glUtils._createVertexBuffer(
                     gl, numPoints * numSectors * NUM_BYTES_PER_MARKER);
             if (!(uid + "_markers_secondary" in glUtils._buffers))
-                glUtils._buffers[uid + "_markers_secondary"] = glUtils._createMarkerBuffer(
+                glUtils._buffers[uid + "_markers_secondary"] = glUtils._createVertexBuffer(
                     gl, numPoints * numSectors * NUM_BYTES_PER_MARKER_SECONDARY);
             if (!(uid + "_markers_indices" in glUtils._buffers))
                 glUtils._buffers[uid + "_markers_indices"] = glUtils._createIndexBuffer(
@@ -895,6 +1123,8 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
     glUtils._markerScalarPropertyName[uid] = scalarPropertyName;
     glUtils._markerScaleFactor[uid] = markerScaleFactor;
     glUtils._markerOpacity[uid] = markerOpacityFactor;
+    glUtils._markerStrokeWidth[uid] = markerStrokeWidth;
+    glUtils._markerFilled[uid] = markerFilled;
     glUtils._markerOutline[uid] = markerOutline;
     glUtils._useColorFromMarker[uid] = useColorFromMarker;
     glUtils._useColorFromColormap[uid] = useColorFromColormap;
@@ -934,6 +1164,8 @@ glUtils.deleteMarkers = function(uid) {
     delete glUtils._markerScalarRange[uid];
     delete glUtils._markerScalarPropertyName[uid];
     delete glUtils._markerOpacity[uid];
+    delete glUtils._markerStrokeWidth[uid];
+    delete glUtils._markerFilled[uid];
     delete glUtils._markerOutline[uid];
     delete glUtils._useColorFromMarker[uid];
     delete glUtils._useColorFromColormap[uid];
@@ -1094,7 +1326,7 @@ glUtils._loadEdges = function(uid, forceUpdate) {
 
             // Create WebGL objects (if this has not already been done)
             if (!(uid + "_edges" in glUtils._buffers))
-                glUtils._buffers[uid + "_edges"] = glUtils._createMarkerBuffer(gl, numEdges * NUM_BYTES_PER_EDGE);
+                glUtils._buffers[uid + "_edges"] = glUtils._createVertexBuffer(gl, numEdges * NUM_BYTES_PER_EDGE);
             if (!(uid + "_edges" in glUtils._vaos))
                 glUtils._vaos[uid + "_edges"] = gl.createVertexArray();
 
@@ -1238,7 +1470,7 @@ glUtils._updateTransformUBO = function(buffer) {
 
     // Compute transforms that takes into account if collection mode viewing is
     // enabled for image layers
-    const imageTransforms = new Array(256 * 12).fill(0);
+    const imageTransforms = new Array(256 * 8).fill(0);
     for (let i = 0; i < tmapp["ISS_viewer"].world.getItemCount(); ++i) {
         const bounds = tmapp["ISS_viewer"].viewport.getBounds();
         const image = tmapp["ISS_viewer"].world.getItemAt(i);
@@ -1261,15 +1493,15 @@ glUtils._updateTransformUBO = function(buffer) {
         const k0 = (imageOrientation >= 180.0) ? (imageFlip ? 0.0 : 1.0) : (imageFlip ? -1.0 : 0.0);
         const k1 = (imageOrientation >= 90.0 && imageOrientation < 270.0) ? 1.0 : 0.0;
 
-        // Construct 3x2 matrix (in col-major order) to be applied to marker positions.
-        // Note: each col in the matrix must be padded to a vec4, because of std140
-        // alignment rules for storing 3x2 matrices in arrays in UBOs.
-        imageTransforms[i * 12 + 0] = flip * Math.cos(theta) * scaleX;
-        imageTransforms[i * 12 + 4] = -Math.sin(theta) * scaleX;
-        imageTransforms[i * 12 + 8] = shiftX - k0 * (scaleX * imageWidth) * Math.cos(theta) + k1 * (scaleX * imageHeight) * Math.sin(theta);
-        imageTransforms[i * 12 + 1] = flip * Math.sin(theta) * scaleY;
-        imageTransforms[i * 12 + 5] = Math.cos(theta) * scaleY;
-        imageTransforms[i * 12 + 9] = shiftY - k0 * (scaleY * imageWidth) * Math.sin(theta) - k1 * (scaleY * imageHeight) * Math.cos(theta);
+        // Construct 3x2 matrix for transform. The matrix is stored transposed
+        // in a 2x4 matrix with column-major order, to comply with std140
+        // alignment rules for storing matrices in arrays in UBOs.
+        imageTransforms[i * 8 + 0] = flip * Math.cos(theta) * scaleX;
+        imageTransforms[i * 8 + 1] = -Math.sin(theta) * scaleX;
+        imageTransforms[i * 8 + 2] = shiftX - k0 * (scaleX * imageWidth) * Math.cos(theta) + k1 * (scaleX * imageHeight) * Math.sin(theta);
+        imageTransforms[i * 8 + 4] = flip * Math.sin(theta) * scaleY;
+        imageTransforms[i * 8 + 5] = Math.cos(theta) * scaleY;
+        imageTransforms[i * 8 + 6] = shiftY - k0 * (scaleY * imageWidth) * Math.sin(theta) - k1 * (scaleY * imageHeight) * Math.cos(theta);
     }
 
     const bytedata = new Float32Array(imageTransforms);
@@ -1277,6 +1509,156 @@ glUtils._updateTransformUBO = function(buffer) {
     gl.bindBuffer(gl.UNIFORM_BUFFER, buffer);
     gl.bufferSubData(gl.UNIFORM_BUFFER, 0, bytedata);
     gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+}
+
+
+/**
+ * @summary Update the region data textures for all region datasets.
+ * This function is a callback and should not normally be called directly.
+ */
+glUtils.updateRegionDataTextures = function() {
+    const canvas = document.getElementById("gl_canvas");
+    const gl = canvas.getContext("webgl2", glUtils._options);
+
+    console.time("Update region edge lists");
+    regionUtils._generateEdgeListsForDrawing();
+    console.timeEnd("Update region edge lists");
+
+    console.time("Split region edge lists");
+    regionUtils._splitEdgeLists();
+    console.timeEnd("Split region edge lists");
+
+    console.time("Add clusters to region edge lists");
+    regionUtils._addClustersToEdgeLists();
+    console.timeEnd("Add clusters to region edge lists");
+
+    for (let collectionIndex in regionUtils._edgeListsByLayer) {
+        if (!(("regionData_" + collectionIndex) in glUtils._textures)) {
+            glUtils._textures["regionData_" + collectionIndex] =
+                glUtils._createRegionDataTexture(gl);
+            glUtils._textures["regionDataSplit_" + collectionIndex] =
+                glUtils._createRegionDataTexture(gl, 1024);
+        }
+
+        glUtils._updateRegionDataTexture(
+            gl, glUtils._textures["regionData_" + collectionIndex], collectionIndex);
+        glUtils._updateRegionDataSplitTexture(
+            gl, glUtils._textures["regionDataSplit_" + collectionIndex], collectionIndex);
+    }
+}
+
+
+glUtils._createRegionDataTexture = function(gl, maxNumScanlines=512) {
+    const regionDataTexSize = glUtils._regionDataTexSize;
+    console.assert(maxNumScanlines <= regionDataTexSize);
+
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); 
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA32F, regionDataTexSize, maxNumScanlines);
+    // Do explicit initialization with zeros, to avoid Firefox warning about
+    // "Tex image TEXTURE_2D level 0 is incurring lazy initialization."
+    // when texSubImage2D() is used to only partially update the texture
+    let zeros = new Float32Array(regionDataTexSize * maxNumScanlines * 4);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, regionDataTexSize, maxNumScanlines, gl.RGBA, gl.FLOAT, zeros);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    return texture;
+}
+
+
+glUtils._updateRegionDataTexture = function(gl, texture, collectionIndex=0) {
+    if (!(collectionIndex in regionUtils._edgeListsByLayer)) return;
+
+    const regionDataTexSize = glUtils._regionDataTexSize;
+    const edgeLists = regionUtils._edgeListsByLayer[collectionIndex];
+    const numScanlines = edgeLists.length;
+    console.assert(numScanlines <= regionDataTexSize);
+
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    for (let i = 0; i < numScanlines; ++i) {
+        // Update single row of the texture
+        let texeldata = new Float32Array(regionDataTexSize * 4);  // Zero-initialized
+        if (edgeLists[i][0].length <= texeldata.length) {
+            texeldata.set(edgeLists[i][0]);
+        } else {
+            console.warn("Edge list for regions exceeds allocated texture size")
+        }
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, i, regionDataTexSize, 1, gl.RGBA, gl.FLOAT, texeldata);
+    }
+    gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
+
+glUtils._updateRegionDataSplitTexture = function(gl, texture, collectionIndex=0) {
+    if (!(collectionIndex in regionUtils._edgeListsByLayerSplit)) return;
+
+    const regionDataTexSize = glUtils._regionDataTexSize;
+    const edgeListsSplit = regionUtils._edgeListsByLayerSplit[collectionIndex];
+    const numScanlines = edgeListsSplit.length;
+    console.assert(numScanlines <= regionDataTexSize / 2);
+
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    for (let i = 0; i < numScanlines; ++i) {
+        for (let j = 0; j < 2; ++j) {
+            // Update single row of the texture
+            let texeldata = new Float32Array(regionDataTexSize * 4);  // Zero-initialized
+            if (edgeListsSplit[i][j].length <= texeldata.length) {
+                texeldata.set(edgeListsSplit[i][j]);
+            } else {
+                console.warn("Edge list for regions exceeds allocated texture size")
+            }
+            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, i + (j * numScanlines), regionDataTexSize, 1, gl.RGBA, gl.FLOAT, texeldata);
+        }
+    }
+    gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
+
+/**
+ * @summary Update the color/visibility LUTs for all region datasets.
+ * This function is a callback and should not normally be called directly.
+ */
+glUtils.updateRegionLUTTextures = function() {
+    const canvas = document.getElementById("gl_canvas");
+    const gl = canvas.getContext("webgl2", glUtils._options);
+
+    console.time("Update region LUT");
+    regionUtils._generateRegionToColorLUT();
+    console.timeEnd("Update region LUT");
+
+    glUtils._updateRegionLUTTexture(gl, glUtils._textures["regionLUT"]);
+}
+
+
+glUtils._createRegionLUTTexture = function(gl) {
+    const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, 4096, 128);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    return texture;
+}
+
+
+glUtils._updateRegionLUTTexture = function(gl, texture) {
+    let texeldata = new Uint8Array((4096 * 128) * 4);
+    if (regionUtils._regionToColorLUT.length <= texeldata.length) {
+        texeldata.set(regionUtils._regionToColorLUT);
+    } else {
+        console.warn("Color lookup table for regions exceeds allocated texture size");
+    }
+
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, 128, gl.RGBA, gl.UNSIGNED_BYTE, texeldata);
+    gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
 
@@ -1438,6 +1820,20 @@ glUtils._createColorbarCanvas = function() {
 }
 
 
+glUtils._createQuad = function(gl) {
+    // Create geometry for drawing a single quad
+    const vertices = [0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0];
+    const bytedata = new Float32Array(vertices);
+
+    const buffer = glUtils._createVertexBuffer(gl, bytedata.byteLength);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, bytedata);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+    return buffer;
+}
+
+
 // Creates WebGL canvas for drawing the markers
 glUtils._createMarkerWebGLCanvas = function() {
     const canvas = document.createElement("canvas");
@@ -1481,6 +1877,9 @@ glUtils._drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
         }
         glUtils._drawMarkersByUID(gl, viewportTransform, markerScaleAdjusted, uid);
     }
+
+    // Draw regions last, to make them appear on top (same behaviour as for SVG regions)
+    glUtils._drawRegionsColorPass(gl, viewportTransform);
 }
 
 
@@ -1513,11 +1912,13 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
     gl.bindVertexArray(glUtils._vaos[uid + (useInstancing ? "_markers_instanced" : "_markers")]);
 
     // Set per-markerset uniforms
-    gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"),
+    gl.uniform1i(gl.getUniformLocation(program, "u_transformIndex"),
         glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
     gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
     gl.uniform2fv(gl.getUniformLocation(program, "u_markerScalarRange"), glUtils._markerScalarRange[uid]);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
+    gl.uniform1f(gl.getUniformLocation(program, "u_markerStrokeWidth"), glUtils._markerStrokeWidth[uid]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_markerFilled"), glUtils._markerFilled[uid]);
     gl.uniform1i(gl.getUniformLocation(program, "u_markerOutline"), glUtils._markerOutline[uid]);
     gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromMarker"), glUtils._useColorFromMarker[uid]);
     gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromColormap"), glUtils._useColorFromColormap[uid]);
@@ -1592,7 +1993,7 @@ glUtils._drawEdgesByUID = function(gl, viewportTransform, markerScaleAdjusted, u
     // Set per-markerset uniforms
     gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
-    gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"),
+    gl.uniform1i(gl.getUniformLocation(program, "u_transformIndex"),
         glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
 
     gl.activeTexture(gl.TEXTURE0);
@@ -1600,6 +2001,68 @@ glUtils._drawEdgesByUID = function(gl, viewportTransform, markerScaleAdjusted, u
     gl.uniform1i(gl.getUniformLocation(program, "u_colorLUT"), 0);
 
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numEdges);
+
+    // Restore render pipeline state
+    gl.bindVertexArray(null);
+    gl.blendFunc(gl.ONE, gl.ONE);
+    gl.disable(gl.BLEND);
+    gl.useProgram(null);
+}
+
+
+glUtils._drawRegionsColorPass = function(gl, viewportTransform) {
+    if (Object.keys(regionUtils._edgeListsByLayer).length == 0) return;  // No regions to draw
+
+    const fillRuleConstants = { "never": 0, "nonzero": 1, "oddeven": 2 };
+
+    // Set up render pipeline
+    const program = glUtils._programs["regions"];
+    gl.useProgram(program);
+    gl.enable(gl.BLEND);
+    gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+
+    for (let collectionIndex in regionUtils._edgeListsByLayer) {
+        const edgeLists = regionUtils._edgeListsByLayer[collectionIndex];
+        const numScanlines = edgeLists.length;
+
+        const image = tmapp["ISS_viewer"].world.getItemAt(collectionIndex);
+        console.assert(image != undefined);
+        const imageWidth = image.getContentSize().x;
+        const imageHeight = image.getContentSize().y;
+        const imageBounds = [0, 0, imageWidth, imageHeight];
+
+        // Set per-scene uniforms
+        gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
+        gl.uniform1i(gl.getUniformLocation(program, "u_transformIndex"), collectionIndex);
+        gl.uniform4fv(gl.getUniformLocation(program, "u_imageBounds"), imageBounds);
+        gl.uniform1i(gl.getUniformLocation(program, "u_numScanlines"), numScanlines);
+        gl.uniform1f(gl.getUniformLocation(program, "u_regionOpacity"), glUtils._regionOpacity);
+        gl.uniform1i(gl.getUniformLocation(program, "u_regionFillRule"),
+            fillRuleConstants[glUtils._regionFillRule]);
+        gl.uniform1i(gl.getUniformLocation(program, "u_regionUsePivotSplit"), glUtils._regionUsePivotSplit);
+        gl.uniform1i(gl.getUniformLocation(program, "u_regionUseColorByID"), glUtils._regionUseColorByID);
+        gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, "TransformUniforms"), 0);
+        gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, glUtils._buffers["transformUBO"]);
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionLUT"]);
+        gl.uniform1i(gl.getUniformLocation(program, "u_regionLUT"), 2);
+        gl.activeTexture(gl.TEXTURE1);
+        if (glUtils._regionUsePivotSplit) {
+            gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionDataSplit_" + collectionIndex]);
+        } else {
+            gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["regionData_" + collectionIndex]);
+        }
+        gl.uniform1i(gl.getUniformLocation(program, "u_regionData"), 1);
+
+        // Draw rectangle that will render the regions in the fragment shader
+        gl.bindVertexArray(glUtils._vaos["empty"]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers["quad"]);
+        gl.enableVertexAttribArray(0);
+        gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, 1);
+        gl.disableVertexAttribArray(0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    }
 
     // Restore render pipeline state
     gl.bindVertexArray(null);
@@ -1641,7 +2104,7 @@ glUtils._drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) 
         gl.bindVertexArray(glUtils._vaos[uid + "_markers"]);
 
         // Set per-markerset uniforms
-        gl.uniform1f(gl.getUniformLocation(program, "u_transformIndex"),
+        gl.uniform1i(gl.getUniformLocation(program, "u_transformIndex"),
             glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
         gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
         gl.uniform1i(gl.getUniformLocation(program, "u_usePiechartFromMarker"), glUtils._usePiechartFromMarker[uid]);
@@ -1791,6 +2254,44 @@ glUtils.pick = function(event) {
                 setTimeout(function(){tr.classList.add("transition_background");tr.classList.remove("table-primary");},400);
             }
         }
+
+        const pickedRegion = regionUtils._findRegionByPoint(event.position);
+        const hasPickedRegion = pickedRegion != null;
+        glUtils._regionPicked = pickedRegion;
+
+        tmapp["ISS_viewer"].removeOverlay("ISS_region_info");
+        if (hasPickedRegion && regionUtils._regionMode == "select") {
+            const div = document.createElement("div");
+            div.id = "ISS_region_info";
+            div.width = "1px"; div.height = "1px";
+            div.innerHTML = regionUtils._regions[pickedRegion].regionName;
+            console.log("Region clicked:", pickedRegion);
+            div.classList.add("viewer-layer", "m-0", "p-1");
+            div.style.zIndex = 99;
+
+            tmapp["ISS_viewer"].addOverlay({
+                element: div,
+                placement: "TOP_RIGHT",
+                location: tmapp["ISS_viewer"].viewport.viewerElementToViewportCoordinates(event.position),
+                checkResize: false,
+                rotationMode: OpenSeadragon.OverlayRotationMode.NO_ROTATION
+            });
+            if (regionUtils._selectedRegions[pickedRegion]) {
+                regionUtils.deSelectRegion(pickedRegion);
+            }
+            else {
+                if (!event.shift){
+                    regionUtils.resetSelection();
+                }
+                regionUtils.selectRegion(regionUtils._regions[pickedRegion]);
+            }
+            console.log(event);
+        }
+        else {
+            if (!event.shift){
+                regionUtils.resetSelection();
+            }
+        }
     }
 }
 
@@ -1859,19 +2360,40 @@ glUtils.restoreLostContext = function(event) {
     glUtils._programs["markers_instanced"] = glUtils._loadShaderProgram(gl, glUtils._markersVS, glUtils._markersFS, "#define USE_INSTANCING\n");
     glUtils._programs["picking"] = glUtils._loadShaderProgram(gl, glUtils._pickingVS, glUtils._pickingFS);
     glUtils._programs["edges"] = glUtils._loadShaderProgram(gl, glUtils._edgesVS, glUtils._edgesFS);
+    glUtils._programs["regions"] = glUtils._loadShaderProgram(gl, glUtils._regionsVS, glUtils._regionsFS);
     glUtils._textures["shapeAtlas"] = glUtils._loadTextureFromImageURL(gl, glUtils._markershapes);
+    glUtils._buffers["quad"] = glUtils._createQuad(gl);
     glUtils._buffers["transformUBO"] = glUtils._createUniformBuffer(gl);
+    glUtils._textures["regionLUT"] = glUtils._createRegionLUTTexture(gl);
+    glUtils._vaos["empty"] = gl.createVertexArray();
 
-    // Restore per-markers WebGL objects
+    // Restore per-markerset WebGL objects
     for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
         delete glUtils._buffers[uid + "_markers"];
+        delete glUtils._buffers[uid + "_markers_secondary"];
+        delete glUtils._buffers[uid + "_markers_indices"];
         delete glUtils._vaos[uid + "_markers"];
+        delete glUtils._vaos[uid + "_markers_instanced"];
+        delete glUtils._buffers[uid + "_edges"];
+        delete glUtils._vaos[uid + "_edges"];
         delete glUtils._textures[uid + "_colorLUT"];
         delete glUtils._textures[uid + "_colorscale"];
         glUtils.loadMarkers(uid);
     }
 
-    glUtils.draw();  // Make sure markers are redrawn
+    // Restore per-layer WebGL objects for drawing regions
+    for (let key in Objects.keys(glUtils._textures)) {
+        // Check all named texture objects to be safe, since the regions
+        // a texture was created for might have been deleted or moved to a
+        // different image layer (been assigned a different collectionIndex)
+        if (key.includes("regionData")) delete glUtils._textures[key];
+    }
+    if (Object.keys(regionUtils._edgeListsByLayer).length) {
+        glUtils.updateRegionDataTextures();
+        glUtils.updateRegionLUTTextures();
+    }
+
+    glUtils.draw();  // Make sure markers and other objects are redrawn
 }
 
 
@@ -1890,6 +2412,10 @@ glUtils.init = function() {
     canvas.addEventListener("webglcontextrestored", glUtils.restoreLostContext, false);
     const gl = canvas.getContext("webgl2", glUtils._options);
 
+    if (!(gl instanceof WebGL2RenderingContext)) {
+        interfaceUtils.alert("Error: TissUUmaps requires a web browser that supports WebGL 2.0");
+    }
+
     // Place marker canvas under the OSD canvas. Doing this also enables proper
     // compositing with the minimap and other OSD elements.
     const osd = document.getElementsByClassName("openseadragon-canvas")[0];
@@ -1899,8 +2425,12 @@ glUtils.init = function() {
     this._programs["markers_instanced"] = this._loadShaderProgram(gl, this._markersVS, this._markersFS, "#define USE_INSTANCING\n");
     this._programs["picking"] = this._loadShaderProgram(gl, this._pickingVS, this._pickingFS);
     this._programs["edges"] = this._loadShaderProgram(gl, this._edgesVS, this._edgesFS);
+    this._programs["regions"] = this._loadShaderProgram(gl, this._regionsVS, this._regionsFS);
     this._textures["shapeAtlas"] = this._loadTextureFromImageURL(gl, glUtils._markershapes);
+    this._buffers["quad"] = this._createQuad(gl);
     this._buffers["transformUBO"] = this._createUniformBuffer(gl);
+    this._textures["regionLUT"] = this._createRegionLUTTexture(gl);
+    this._vaos["empty"] = gl.createVertexArray();
 
     this._createColorbarCanvas();  // The colorbar is drawn separately in a 2D-canvas
 
