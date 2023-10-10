@@ -1,8 +1,10 @@
 scipy<1.9.0
 Flask>=2.0.0
 openslide-python>=1.1.2
+packaging>=21.0
 Pillow>=8.2.0
 pyvips>=2.1.14
 matplotlib>=3.2.2
 pyyaml>=6.0
 h5py>=3.6.0
+tissuumaps-schema~=1.0.2
