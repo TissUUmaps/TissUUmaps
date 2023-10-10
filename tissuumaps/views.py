@@ -525,7 +525,18 @@ def tmapFile(filename):
                     )
             except Exception as e:
                 logging.error(traceback.format_exc())
-                abort(404)
+                trace = (
+                    "<br>".join(traceback.format_exception_only(e))
+                    .replace("\n", "<br>")
+                    .replace("\r", "<br>")
+                    .replace('"', '\\"')
+                )
+                errorMessage = (
+                    "<b>Error when loading tmap project:</b> <br><pre><code>"
+                    + trace
+                    + "</code></pre>"
+                )
+                state = {}
         else:
             abort(404)
 
@@ -960,7 +971,7 @@ def runPlugin(pluginName):
         if os.path.isfile(completePath):
             return send_from_directory(directory, filename)
 
-    logging.error(completePath, "is not an existing file.")
+    logging.error(completePath + " is not an existing file.")
     abort(404)
 
 
