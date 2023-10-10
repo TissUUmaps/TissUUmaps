@@ -67,7 +67,7 @@ glUtils = {
     _regionFillRule: "never",   // Possible values: "never" | "nonzero" | "oddeven"
     _regionUsePivotSplit: true,   // Use split edge lists for faster region rendering and less risk of overflow
     _regionUseColorByID: false,   // Map region object IDs to unique colors
-    _regionDataTexSize: 4096,     // Note: should not be set above context's MAX_TEXTURE_SIZE
+    _regionDataSize: {},          // Size stored per region data texture and used for dynamic resizing
     _regionPicked: null,          // Key to regionUtils._regions dict, or null if no region is picked
     _regionMaxNumRegions: 524288, // Limit used for the LUT texture size (will be automatically increased if needed)
     _logPerformance: false,       // Use GPU timer queries to log performance
@@ -617,34 +617,40 @@ glUtils._regionsFS = `
 
         vec2 p = v_localPos;  // Current sample position
         int scanline = int(v_scanline);
-        ivec2 regionDataTexSize = textureSize(u_regionData, 0).xy;
 
         float pixelWidth = length(dFdx(p.xy));
         float strokeWidth = pixelWidth *
             (u_regionFillRule == FILL_RULE_NEVER ? STROKE_WIDTH : STROKE_WIDTH_FILLED);
         float minEdgeDist = 1e7;  // Distance to closest edge
 
+        uvec4 scanlineInfo = uvec4(texelFetch(u_regionData, ivec2(scanline, 0), 0));
+        int offset = int(scanlineInfo.x);
+
         // Do coarse empty space skipping first, by testing sample position against
         // occupancy bitmask stored in the first texel of the scanline
-        uvec4 maskData = uvec4(texelFetch(u_regionData, ivec2(0, scanline), 0));
+        uvec4 maskData = uvec4(texelFetch(u_regionData, ivec2(offset & 4095, offset >> 12), 0));
         int bitIndex = int(v_texCoord.x * 63.9999);
         if ((maskData[bitIndex >> 4] & (1u << (bitIndex & 15))) == 0u) { discard; }
 
         float scanDir = 1.0;  // Can be positive or negative along the X-axis
         if (bool(u_regionUsePivotSplit)) {
-            float pivot = texelFetch(u_regionData, ivec2(1, scanline), 0).x;
+            float pivot = texelFetch(u_regionData, ivec2((offset + 1) & 4095, (offset + 1) >> 12), 0).x;
             scanDir = p.x < pivot ? -1.0 : 1.0;
-            scanline = p.x < pivot ? scanline : scanline + u_numScanlines;
+            if (p.x >= pivot) {
+                scanlineInfo = uvec4(texelFetch(u_regionData, ivec2(scanline + u_numScanlines, 0), 0));
+                offset = int(scanlineInfo.x);
+            }
         }
 
-        vec4 headerData = texelFetch(u_regionData, ivec2(2, scanline), 0);
-        int objectID = int(headerData.z) - 1, offset = 2, windingNumber = 0;
+        offset += 2;  // Position pointer at first bounding box
+        vec4 headerData = texelFetch(u_regionData, ivec2(offset & 4095, offset >> 12), 0);
+        int objectID = int(headerData.z) - 1;
+        int windingNumber = 0;
 
-        while (headerData.w != 0.0 && offset < regionDataTexSize.x) {
-
+        while (headerData.w != 0.0) {
             // Find next path with bounding box overlapping this sample position
-            while (headerData.w != 0.0 && offset < regionDataTexSize.x) {
-                headerData = texelFetch(u_regionData, ivec2(offset, scanline), 0);
+            while (headerData.w != 0.0) {
+                headerData = texelFetch(u_regionData, ivec2(offset & 4095, offset >> 12), 0);
                 bool isPathBbox = headerData.z > 0.0;
                 bool isClusterBbox = headerData.z == 0.0;
 
@@ -690,7 +696,7 @@ glUtils._regionsFS = `
             // and also update the edge distance needed for outline rendering
             int count = int(headerData.w);
             for (int i = 0; i < count; ++i) {
-                vec4 edgeData = texelFetch(u_regionData, ivec2(offset + i, scanline), 0);
+                vec4 edgeData = texelFetch(u_regionData, ivec2((offset + i) & 4095, (offset + i) >> 12), 0);
                 vec2 v0 = edgeData.xy;
                 vec2 v1 = edgeData.zw;
 
@@ -1529,24 +1535,41 @@ glUtils.updateRegionDataTextures = function() {
     console.timeEnd("Add clusters to region edge lists");
 
     for (let collectionIndex in regionUtils._edgeListsByLayer) {
-        if (!(("regionData_" + collectionIndex) in glUtils._textures)) {
-            glUtils._textures["regionData_" + collectionIndex] =
-                glUtils._createRegionDataTexture(gl);
-            glUtils._textures["regionDataSplit_" + collectionIndex] =
-                glUtils._createRegionDataTexture(gl, 1024);
-        }
+        console.assert(collectionIndex in regionUtils._edgeListsByLayerSplit);
 
-        glUtils._updateRegionDataTexture(
-            gl, glUtils._textures["regionData_" + collectionIndex], collectionIndex);
-        glUtils._updateRegionDataSplitTexture(
-            gl, glUtils._textures["regionDataSplit_" + collectionIndex], collectionIndex);
+        const textureCreateInfo = [
+            {name: "regionData_" + collectionIndex, useSplit: false},
+            {name: "regionDataSplit_" + collectionIndex, useSplit: true}
+        ];
+
+        for (let item of textureCreateInfo) {
+            // Compute size required for storing texture data
+            const numTexels =
+                glUtils._updateRegionDataTexture(gl, null, collectionIndex, item.useSplit);
+
+            // Check if texture needs to be created or resized
+            if (!(item.name in glUtils._textures)) {
+                glUtils._textures[item.name] = glUtils._createRegionDataTexture(gl, numTexels);
+            } else if (glUtils._regionDataSize[item.name] < numTexels) {
+                gl.deleteTexture(glUtils._textures[item.name]);
+                glUtils._textures[item.name] = glUtils._createRegionDataTexture(gl, numTexels);
+            }
+            glUtils._regionDataSize[item.name] = numTexels;
+
+            glUtils._updateRegionDataTexture(
+                gl, glUtils._textures[item.name], collectionIndex, item.useSplit);
+        }
     }
 }
 
 
-glUtils._createRegionDataTexture = function(gl, maxNumScanlines=512) {
-    const regionDataTexSize = glUtils._regionDataTexSize;
-    console.assert(maxNumScanlines <= regionDataTexSize);
+glUtils._createRegionDataTexture = function(gl, numTexels) {
+    console.assert(numTexels > 0);
+    console.assert((numTexels % 4096) == 0);
+
+    const height = numTexels / 4096;
+    // Clamp height to reported maximum texture size to be safe
+    const heightAdjusted = Math.min(height, gl.getParameter(gl.MAX_TEXTURE_SIZE));
 
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -1554,63 +1577,65 @@ glUtils._createRegionDataTexture = function(gl, maxNumScanlines=512) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); 
-    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA32F, regionDataTexSize, maxNumScanlines);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA32F, 4096, heightAdjusted);
     // Do explicit initialization with zeros, to avoid Firefox warning about
     // "Tex image TEXTURE_2D level 0 is incurring lazy initialization."
     // when texSubImage2D() is used to only partially update the texture
-    let zeros = new Float32Array(regionDataTexSize * maxNumScanlines * 4);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, regionDataTexSize, maxNumScanlines, gl.RGBA, gl.FLOAT, zeros);
+    let zeros = new Float32Array(4096 * heightAdjusted * 4);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, heightAdjusted, gl.RGBA, gl.FLOAT, zeros);
     gl.bindTexture(gl.TEXTURE_2D, null);
 
     return texture;
 }
 
 
-glUtils._updateRegionDataTexture = function(gl, texture, collectionIndex=0) {
-    if (!(collectionIndex in regionUtils._edgeListsByLayer)) return;
+glUtils._updateRegionDataTexture = function(gl, texture, collectionIndex=0, useSplitData=false) {
+    if (!(collectionIndex in regionUtils._edgeListsByLayer)) return 0;
 
-    const regionDataTexSize = glUtils._regionDataTexSize;
-    const edgeLists = regionUtils._edgeListsByLayer[collectionIndex];
+    const edgeLists = useSplitData ? regionUtils._edgeListsByLayerSplit[collectionIndex]
+                                   : regionUtils._edgeListsByLayer[collectionIndex];
     const numScanlines = edgeLists.length;
-    console.assert(numScanlines <= regionDataTexSize);
+    const numSides = useSplitData ? 2 : 1;
 
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    for (let i = 0; i < numScanlines; ++i) {
-        // Update single row of the texture
-        let texeldata = new Float32Array(regionDataTexSize * 4);  // Zero-initialized
-        if (edgeLists[i][0].length <= texeldata.length) {
-            texeldata.set(edgeLists[i][0]);
-        } else {
-            console.warn("Edge list for regions exceeds allocated texture size")
+     // The region data texture will require space for storing scanline pointers
+    // and lengths in the first (numScanlines * 2) texels, followed by space for
+    // the scanline data (edges and bounding boxes) tightly packed in the rest
+    // of the texture.
+
+    let numTexels = numScanlines * 2;
+    for (let j = 0; j < numSides; ++j) {
+        for (let i = 0; i < numScanlines; ++i) {
+            const count = edgeLists[i][j].length / 4;
+            numTexels += count + 1;  // Include zero texel for indicating end of scanline
         }
-        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, i, regionDataTexSize, 1, gl.RGBA, gl.FLOAT, texeldata);
     }
-    gl.bindTexture(gl.TEXTURE_2D, null);
-}
+    numTexels += 4096 - (numTexels % 4096);  // Pad to multiplier of texture width   
 
-
-glUtils._updateRegionDataSplitTexture = function(gl, texture, collectionIndex=0) {
-    if (!(collectionIndex in regionUtils._edgeListsByLayerSplit)) return;
-
-    const regionDataTexSize = glUtils._regionDataTexSize;
-    const edgeListsSplit = regionUtils._edgeListsByLayerSplit[collectionIndex];
-    const numScanlines = edgeListsSplit.length;
-    console.assert(numScanlines <= regionDataTexSize / 2);
-
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    for (let i = 0; i < numScanlines; ++i) {
-        for (let j = 0; j < 2; ++j) {
-            // Update single row of the texture
-            let texeldata = new Float32Array(regionDataTexSize * 4);  // Zero-initialized
-            if (edgeListsSplit[i][j].length <= texeldata.length) {
-                texeldata.set(edgeListsSplit[i][j]);
-            } else {
-                console.warn("Edge list for regions exceeds allocated texture size")
+    if (texture != null) {
+        let texeldata = new Float32Array(numTexels * 4);  // Zero-initialized
+        let offset = numScanlines * 2;
+        for (let j = 0; j < numSides; ++j) {
+            for (let i = 0; i < numScanlines; ++i) {
+                const count = edgeLists[i][j].length / 4;
+                texeldata.set(edgeLists[i][j], offset * 4);
+                // (Note: storing the scanline offset as float only allows exact
+                // representation of integers up to 2^24. So would be better to split
+                // the offset or pack it and unpack with floatBitsToInt in shader)
+                texeldata[4 * (i + numScanlines * j) + 0] = offset;
+                texeldata[4 * (i + numScanlines * j) + 1] = count;
+                offset += count + 1;  // Include zero texel for indicating end of scanline
             }
-            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, i + (j * numScanlines), regionDataTexSize, 1, gl.RGBA, gl.FLOAT, texeldata);
         }
+
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, numTexels / 4096,
+                         gl.RGBA, gl.FLOAT, texeldata);
+        gl.bindTexture(gl.TEXTURE_2D, null);
     }
-    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    // Return size used for creating (or resizing) the texture (if no texture
+    // handle was passed as input to this function)
+    return numTexels;
 }
 
 
