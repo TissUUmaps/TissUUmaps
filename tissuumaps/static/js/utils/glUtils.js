@@ -623,8 +623,8 @@ glUtils._regionsFS = `
             (u_regionFillRule == FILL_RULE_NEVER ? STROKE_WIDTH : STROKE_WIDTH_FILLED);
         float minEdgeDist = 1e7;  // Distance to closest edge
 
-        uvec4 scanlineInfo = uvec4(texelFetch(u_regionData, ivec2(scanline, 0), 0));
-        int offset = int(scanlineInfo.x);
+        vec4 scanlineInfo = texelFetch(u_regionData, ivec2(scanline, 0), 0);
+        int offset = int(scanlineInfo.x) + 4096 * int(scanlineInfo.y);
 
         // Do coarse empty space skipping first, by testing sample position against
         // occupancy bitmask stored in the first texel of the scanline
@@ -637,8 +637,8 @@ glUtils._regionsFS = `
             float pivot = texelFetch(u_regionData, ivec2((offset + 1) & 4095, (offset + 1) >> 12), 0).x;
             scanDir = p.x < pivot ? -1.0 : 1.0;
             if (p.x >= pivot) {
-                scanlineInfo = uvec4(texelFetch(u_regionData, ivec2(scanline + u_numScanlines, 0), 0));
-                offset = int(scanlineInfo.x);
+                scanlineInfo = texelFetch(u_regionData, ivec2(scanline + u_numScanlines, 0), 0);
+                offset = int(scanlineInfo.x) + 4096 * int(scanlineInfo.y);
             }
         }
 
@@ -1618,11 +1618,11 @@ glUtils._updateRegionDataTexture = function(gl, texture, collectionIndex=0, useS
             for (let i = 0; i < numScanlines; ++i) {
                 const count = edgeLists[i][j].length / 4;
                 texeldata.set(edgeLists[i][j], offset * 4);
-                // (Note: storing the scanline offset as float only allows exact
-                // representation of integers up to 2^24. So would be better to split
-                // the offset or pack it and unpack with floatBitsToInt in shader)
-                texeldata[4 * (i + numScanlines * j) + 0] = offset;
-                texeldata[4 * (i + numScanlines * j) + 1] = count;
+                // Storing the scanline offset as a float only allows exact
+                // representation of integers up to 2^24, so need to split it
+                // into two X and Y offsets instead
+                texeldata[4 * (i + numScanlines * j) + 0] = offset % 4096;
+                texeldata[4 * (i + numScanlines * j) + 1] = Math.floor(offset / 4096);
                 offset += count + 1;  // Include zero texel for indicating end of scanline
             }
         }
