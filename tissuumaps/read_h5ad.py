@@ -366,7 +366,7 @@ def h5ad_to_tmap(basedir, path, library_id=None):
             "expectedHeader": {
                 "X": globalX,
                 "Y": globalY,
-                "cb_gr_dict": palette,
+                "cb_gr_dict": "",
                 "gb_col": "obs",
                 "opacity": "1",
                 "scale_factor": markerScale,
@@ -401,7 +401,7 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                     "optionName": obs,
                     "name": obs,
                     "expectedHeader.gb_col": f"/obs/{obs}",
-                    "expectedHeader.cb_gr_dict": palette[obs],
+                    "expectedHeader.cb_gr_dict": json.dumps(palette[obs]),
                     "expectedRadios.cb_gr_dict": True,
                     "expectedRadios.cb_col": False,
                     "expectedRadios.cb_gr": True,
