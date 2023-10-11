@@ -108,7 +108,7 @@ Points2Regions.init = function (container) {
 
   input_expression_threshold12.addEventListener("change", (event) => {
     Points2Regions._expression_threshold = parseInt(
-      input_expression_threshold12.value
+      input_expression_threshold12.value,
     );
   });
 
@@ -206,11 +206,11 @@ Points2Regions.init = function (container) {
     interfaceUtils.cleanSelect("Points2Regions_clusterKey");
     interfaceUtils.addElementsToSelect(
       "Points2Regions_clusterKey",
-      dataUtils.data[Points2Regions._dataset]._csv_header
+      dataUtils.data[Points2Regions._dataset]._csv_header,
     );
     if (
       dataUtils.data[Points2Regions._dataset]._csv_header.indexOf(
-        dataUtils.data[Points2Regions._dataset]._gb_col
+        dataUtils.data[Points2Regions._dataset]._gb_col,
       ) > 0
     ) {
       interfaceUtils.getElementById("Points2Regions_clusterKey").value =
@@ -281,7 +281,7 @@ Points2Regions.run = function () {
   var csvFile = dataUtils.data[Points2Regions._dataset]._csv_path;
   if (typeof csvFile === "object") {
     interfaceUtils.alert(
-      "This plugin can only run on datasets generated from buttons. Please convert your dataset to a button (Markers > Advanced Options > Generate button from tab)"
+      "This plugin can only run on datasets generated from buttons. Please convert your dataset to a button (Markers > Advanced Options > Generate button from tab)",
     );
     return;
   }
@@ -324,7 +324,7 @@ Points2Regions.run = function () {
         $(loadingModal).modal("hide");
       }, 500);
       interfaceUtils.alert(
-        "Error during Points2Regions, check logs. This plugin only works on a pip installation of TissUUmaps, with the extra packages: pandas, sklearn, skimage"
+        "Error during Points2Regions, check logs. This plugin only works on a pip installation of TissUUmaps, with the extra packages: pandas, sklearn, skimage",
       );
     },
   });
@@ -343,7 +343,7 @@ Points2Regions.loadRegions = function (data) {
   regionUtils.JSONValToRegions(regionsobj);
   $("#title-tab-regions").tab("show");
   $(
-    document.getElementById("regionClass-" + Points2Regions._region_name)
+    document.getElementById("regionClass-" + Points2Regions._region_name),
   ).collapse("show");
   $("#" + Points2Regions._region_name + "_group_fill_ta").click();
 };

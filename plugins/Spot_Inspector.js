@@ -176,7 +176,7 @@ Spot_Inspector.init = function (container) {
       .prompt(
         "<i>This will replace all layers of the current project.</i><br/>Give the path format of your images, use * for numbers:",
         "Round*_*",
-        "Import images into layers"
+        "Import images into layers",
       )
       .then((pathFormat) => {
         Spot_Inspector.loadImages(pathFormat);
@@ -500,17 +500,17 @@ Spot_Inspector.init = function (container) {
     interfaceUtils.cleanSelect("marker_row");
     interfaceUtils.addElementsToSelect(
       "marker_row",
-      Object.values(dataUtils.data)[0]._csv_header
+      Object.values(dataUtils.data)[0]._csv_header,
     );
 
     interfaceUtils.cleanSelect("marker_col");
     interfaceUtils.addElementsToSelect(
       "marker_col",
-      Object.values(dataUtils.data)[0]._csv_header
+      Object.values(dataUtils.data)[0]._csv_header,
     );
     if (
       Object.values(dataUtils.data)[0]._csv_header.indexOf(
-        Spot_Inspector._marker_row
+        Spot_Inspector._marker_row,
       ) > 0
     ) {
       interfaceUtils.getElementById("marker_row").value =
@@ -518,7 +518,7 @@ Spot_Inspector.init = function (container) {
     }
     if (
       Object.values(dataUtils.data)[0]._csv_header.indexOf(
-        Spot_Inspector._marker_col
+        Spot_Inspector._marker_col,
       ) > 0
     ) {
       interfaceUtils.getElementById("marker_col").value =
@@ -535,7 +535,7 @@ Spot_Inspector.loadImages = function (pathFormat) {
 
   subfolder = window.location.pathname.substring(
     0,
-    window.location.pathname.lastIndexOf("/")
+    window.location.pathname.lastIndexOf("/"),
   );
   //subfolder = subfolder.substring(0, subfolder.lastIndexOf('/') + 1);
   const queryString = window.location.search;
@@ -565,7 +565,7 @@ Spot_Inspector.loadImages = function (pathFormat) {
     error: function (data) {
       interfaceUtils.alert(
         data.responseText.replace("\n", "<br/>"),
-        "Error on the plugin's server response"
+        "Error on the plugin's server response",
       );
     },
   });
@@ -608,7 +608,7 @@ Spot_Inspector.run = function () {
         bbox[0],
         bbox[1],
         bbox[2],
-        bbox[3]
+        bbox[3],
       );
       boundBoxOverlay = $('<div id="overlay-Spot_Inspector"></div>');
       boundBoxOverlay.css({
@@ -634,7 +634,7 @@ Spot_Inspector.run = function () {
       "canvas-click",
       (event) => {
         click_handler(event);
-      }
+      },
     );
   }
 };
@@ -646,7 +646,7 @@ Spot_Inspector.updateLayerFormat = function (doPrompt) {
 
   var difference = patienceDiff(
     tmapp.layers[0].name.split(""),
-    tmapp.layers[tmapp.layers.length - 1].name.split("")
+    tmapp.layers[tmapp.layers.length - 1].name.split(""),
   );
   fieldNames = ["row", "col"];
   var format = difference.lines.reduce(function (a, b) {
@@ -675,7 +675,7 @@ Spot_Inspector.getMarkers = function (bbox) {
     for (var codeIndex in dataUtils.data[dataset]["_groupgarden"]) {
       var inputs = interfaceUtils._mGenUIFuncs.getGroupInputs(
         dataset,
-        codeIndex
+        codeIndex,
       );
       var hexColor = "color" in inputs ? inputs["color"] : "#ffff00";
       var visible = "visible" in inputs ? inputs["visible"] : true;
@@ -691,7 +691,7 @@ Spot_Inspector.getMarkers = function (bbox) {
             xselector: dataUtils.data[dataset]["_X"],
             yselector: dataUtils.data[dataset]["_Y"],
             dataset: dataset,
-          }
+          },
         );
         newMarkers.forEach(function (m) {
           m.color = hexColor;
@@ -782,7 +782,7 @@ Spot_Inspector.getMatrix = function (bbox, layers, markers, order) {
     error: function (data) {
       interfaceUtils.alert(
         data.responseText.replace("\n", "<br/>"),
-        "Error on the plugin's server response"
+        "Error on the plugin's server response",
       );
     },
   });
@@ -1035,7 +1035,7 @@ function patienceDiff(aLines, bLines, diffPlusFlag) {
 
   function recurseLCS(aLo, aHi, bLo, bHi, uniqueCommonMap) {
     const x = longestCommonSubsequence(
-      uniqueCommonMap || uniqueCommon(aLines, aLo, aHi, bLines, bLo, bHi)
+      uniqueCommonMap || uniqueCommon(aLines, aLo, aHi, bLines, bLo, bHi),
     );
 
     if (x.length === 0) {
@@ -1051,7 +1051,7 @@ function patienceDiff(aLines, bLines, diffPlusFlag) {
           x[i].indexA,
           x[i + 1].indexA - 1,
           x[i].indexB,
-          x[i + 1].indexB - 1
+          x[i + 1].indexB - 1,
         );
       }
 

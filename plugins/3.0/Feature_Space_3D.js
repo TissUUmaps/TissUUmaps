@@ -142,17 +142,17 @@ Feature_Space_3D.init = function (container) {
     interfaceUtils.cleanSelect("Feature_Space_3D_UMAP1");
     interfaceUtils.addElementsToSelect(
       "Feature_Space_3D_UMAP1",
-      dataUtils.data[Feature_Space_3D._dataset]._csv_header
+      dataUtils.data[Feature_Space_3D._dataset]._csv_header,
     );
     interfaceUtils.cleanSelect("Feature_Space_3D_UMAP2");
     interfaceUtils.addElementsToSelect(
       "Feature_Space_3D_UMAP2",
-      dataUtils.data[Feature_Space_3D._dataset]._csv_header
+      dataUtils.data[Feature_Space_3D._dataset]._csv_header,
     );
     interfaceUtils.cleanSelect("Feature_Space_3D_UMAP3");
     interfaceUtils.addElementsToSelect(
       "Feature_Space_3D_UMAP3",
-      dataUtils.data[Feature_Space_3D._dataset]._csv_header
+      dataUtils.data[Feature_Space_3D._dataset]._csv_header,
     );
     if (
       dataUtils.data[Feature_Space_3D._dataset]._csv_header.indexOf("UMAP1") > 0
@@ -232,7 +232,7 @@ Feature_Space_3D.run = function () {
   var op = tmapp["object_prefix"];
   var vname = op + "_viewer";
   var Feature_Space_3D_Control = document.getElementById(
-    "Feature_Space_3D_Control"
+    "Feature_Space_3D_Control",
   );
   if (!Feature_Space_3D_Control) {
     Feature_Space_3D_Control = document.createElement("div");
@@ -349,7 +349,7 @@ Feature_Space_3D.run = function () {
     Plotly.relayout(
       document.getElementById("Feature_Space_3D_Control"),
       id + ".camera.eye",
-      eye1
+      eye1,
     );
   }
 

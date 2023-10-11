@@ -44,7 +44,6 @@ COLORS = [[int(255 * v) for v in RGB] for RGB in COLORS]
 def polygons2json(polygons, cluster_class, cluster_names, colors=None):
     jsonROIs = []
     for i, polygon in enumerate(polygons):
-
         name = cluster_names[i]
         jsonROIs.append(
             {
@@ -319,7 +318,6 @@ class FastCluster:
         min_density: float = 0,
         random_state: int = 42,
     ) -> None:
-
         self.raster = Rasterizer(bin_width, xy, labels)
         self.raster.diffuse(sigma=sigma)
         self.raster.threshold(min_density)
