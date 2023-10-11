@@ -1675,6 +1675,12 @@ glUtils._createRegionLUTTexture = function(gl, maxNumRegions) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, 4096, maxNumRegions / 4096);
+    // Do explicit initialization with zeros, to avoid Firefox warning about
+    // "Tex image TEXTURE_2D level 0 is incurring lazy initialization."
+    // when texSubImage2D() is used to only partially update the texture
+    let zeros = new Uint8Array(maxNumRegions * 4);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, maxNumRegions / 4096,
+                     gl.RGBA, gl.UNSIGNED_BYTE, zeros);
     gl.bindTexture(gl.TEXTURE_2D, null);
 
     return texture;
