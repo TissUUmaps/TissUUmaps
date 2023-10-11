@@ -32,8 +32,8 @@ setuptools.setup(
         "tissuumaps-schema~=1.1.0",
     ],
     extras_require={
-        "pyqt6": ["PyQt6>=6.3.0", "PyQt6-WebEngine>=6.3.0"],
-        "full": ["PyQt6>=6.3.0", "PyQt6-WebEngine>=6.3.0"],
+        "pyside6": ["pyside6>=6.5.3", "pyside6-addons>=6.5.3"],
+        "full": ["pyside6>=6.5.3", "pyside6-addons>=6.5.3"],
     },
     classifiers=[
         "Programming Language :: Python :: 3",
