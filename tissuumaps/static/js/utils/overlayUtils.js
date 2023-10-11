@@ -6,13 +6,13 @@
 
 /**
  * @namespace overlayUtils
- * @property {Bool}   overlayUtils._drawRegions - If false then disable the drawing of regions
+ * @property {Bool}   regionUtils._regionToolbar - Toolbar for regions visible or not
  * @property {Object} overlayUtils._d3nodes - Main group or container of all d3 svg groups of overlays corresponding to the 3 main marker data groups
  * @property {Number} overlayUtils._percentageForSubsample - Take this percentage of each barcode when downsamplir for lower resolutions
  * @property {Number}  overlayUtils._zoomForSubsample - When the zoom is bigger than this, display all the checked genes 
  */
 overlayUtils = {
-    _drawRegions: false,
+    _regionToolbar: false,
     _d3nodes: {},
     _percentageForSubsample: 0.25,
     _zoomForSubsample:5.15,
