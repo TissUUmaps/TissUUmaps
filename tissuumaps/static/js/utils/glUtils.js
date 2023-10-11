@@ -67,8 +67,9 @@ glUtils = {
     _regionFillRule: "never",   // Possible values: "never" | "nonzero" | "oddeven"
     _regionUsePivotSplit: true,   // Use split edge lists for faster region rendering and less risk of overflow
     _regionUseColorByID: false,   // Map region object IDs to unique colors
-    _regionDataTexSize: 4096,     // Note: should not be set above context's MAX_TEXTURE_SIZE
+    _regionDataSize: {},          // Size stored per region data texture and used for dynamic resizing
     _regionPicked: null,          // Key to regionUtils._regions dict, or null if no region is picked
+    _regionMaxNumRegions: 524288, // Limit used for the LUT texture size (will be automatically increased if needed)
     _logPerformance: false,       // Use GPU timer queries to log performance
     _piechartPaletteDefault: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
@@ -80,6 +81,7 @@ glUtils._markersVS = `
     #define SHAPE_INDEX_GAUSSIAN 15.0
     #define SHAPE_GRID_SIZE 4.0
     #define MAX_NUM_IMAGES 192
+    #define MAX_NUM_BARCODES 32768
     #define UV_SCALE 0.8
     #define SCALE_FIX (UV_SCALE / 0.7)  // For compatibility with old UV_SCALE
     #define DISCARD_VERTEX { gl_Position = vec4(2.0, 2.0, 2.0, 0.0); return; }
@@ -137,8 +139,8 @@ glUtils._markersVS = `
         ndcPos.y = -ndcPos.y;
         ndcPos = u_viewportTransform * ndcPos;
 
-        float lutIndex = mod(in_position.z, 4096.0);
-        v_color = texture(u_colorLUT, vec2(lutIndex / 4095.0, 0.5));
+        int lutIndex = int(mod(in_position.z, float(MAX_NUM_BARCODES)));
+        v_color = texelFetch(u_colorLUT, ivec2(lutIndex & 4095, lutIndex >> 12), 0);
 
         if (u_useColorFromMarker || u_useColorFromColormap) {
             vec2 range = u_markerScalarRange;
@@ -150,7 +152,7 @@ glUtils._markersVS = `
         if (u_useShapeFromMarker && v_color.a > 0.0) {
             // Add one to marker index and normalize, to make things consistent
             // with how marker visibility and shape is stored in the LUT
-            v_color.a = (floor(in_position.z / 4096.0) + 1.0) / 255.0;
+            v_color.a = (floor(in_position.z / float(MAX_NUM_BARCODES)) + 1.0) / 255.0;
         }
 
         if (u_usePiechartFromMarker && v_color.a > 0.0) {
@@ -161,7 +163,7 @@ glUtils._markersVS = `
             if (u_pickedMarker == in_index) v_color.a = SHAPE_INDEX_CIRCLE / 255.0;
 
             // For the alpha pass, we only want to draw the marker once
-            float sectorIndex = floor(in_position.z / 4096.0);
+            float sectorIndex = floor(in_position.z / float(MAX_NUM_BARCODES));
             if (u_alphaPass) v_color.a *= float(sectorIndex == 0.0);
         }
 
@@ -293,6 +295,7 @@ glUtils._pickingVS = `
     #define SHAPE_INDEX_CIRCLE_NOSTROKE 16.0
     #define SHAPE_GRID_SIZE 4.0
     #define MAX_NUM_IMAGES 192
+    #define MAX_NUM_BARCODES 32768
     #define DISCARD_VERTEX { gl_Position = vec4(2.0, 2.0, 2.0, 0.0); return; }
 
     #define OP_CLEAR 0
@@ -342,21 +345,21 @@ glUtils._pickingVS = `
 
         v_color = vec4(0.0);
         if (u_op == OP_WRITE_INDEX) {
-            float lutIndex = mod(in_position.z, 4096.0);
-            float shapeID = texture(u_colorLUT, vec2(lutIndex / 4095.0, 0.5)).a;
+            int lutIndex = int(mod(in_position.z, float(MAX_NUM_BARCODES)));
+            float shapeID = texelFetch(u_colorLUT, ivec2(lutIndex & 4095, lutIndex >> 12), 0).a;
             if (shapeID == 0.0) DISCARD_VERTEX;
 
             if (u_useShapeFromMarker) {
                 // Add one to marker index and normalize, to make things consistent
                 // with how marker visibility and shape is stored in the LUT
-                shapeID = (floor(in_position.z / 4096.0) + 1.0) / 255.0;
+                shapeID = (floor(in_position.z / float(MAX_NUM_BARCODES)) + 1.0) / 255.0;
             }
 
             if (u_usePiechartFromMarker) {
                 shapeID = SHAPE_INDEX_CIRCLE_NOSTROKE / 255.0;
 
                 // For the picking pass, we only want to draw the marker once
-                float sectorIndex = floor(in_position.z / 4096.0);
+                float sectorIndex = floor(in_position.z / float(MAX_NUM_BARCODES));
                 if (sectorIndex > 0.0) DISCARD_VERTEX;
             }
 
@@ -569,6 +572,7 @@ glUtils._regionsVS = `
 glUtils._regionsFS = `
     #define ALPHA 1.0
     #define STROKE_WIDTH 1.5
+    #define STROKE_WIDTH_FILLED 1.0
     #define FILL_RULE_NEVER 0
     #define FILL_RULE_NONZERO 1
     #define FILL_RULE_ODDEVEN 2
@@ -613,33 +617,40 @@ glUtils._regionsFS = `
 
         vec2 p = v_localPos;  // Current sample position
         int scanline = int(v_scanline);
-        ivec2 regionDataTexSize = textureSize(u_regionData, 0).xy;
 
         float pixelWidth = length(dFdx(p.xy));
-        float strokeWidth = STROKE_WIDTH * pixelWidth;  // Stroke width for outlines
-        float minEdgeDist = 99999.0;                    // Distance to closest edge
+        float strokeWidth = pixelWidth *
+            (u_regionFillRule == FILL_RULE_NEVER ? STROKE_WIDTH : STROKE_WIDTH_FILLED);
+        float minEdgeDist = 1e7;  // Distance to closest edge
+
+        vec4 scanlineInfo = texelFetch(u_regionData, ivec2(scanline, 0), 0);
+        int offset = int(scanlineInfo.x) + 4096 * int(scanlineInfo.y);
 
         // Do coarse empty space skipping first, by testing sample position against
         // occupancy bitmask stored in the first texel of the scanline
-        uvec4 maskData = uvec4(texelFetch(u_regionData, ivec2(0, scanline), 0));
+        uvec4 maskData = uvec4(texelFetch(u_regionData, ivec2(offset & 4095, offset >> 12), 0));
         int bitIndex = int(v_texCoord.x * 63.9999);
         if ((maskData[bitIndex >> 4] & (1u << (bitIndex & 15))) == 0u) { discard; }
 
         float scanDir = 1.0;  // Can be positive or negative along the X-axis
         if (bool(u_regionUsePivotSplit)) {
-            float pivot = texelFetch(u_regionData, ivec2(1, scanline), 0).x;
+            float pivot = texelFetch(u_regionData, ivec2((offset + 1) & 4095, (offset + 1) >> 12), 0).x;
             scanDir = p.x < pivot ? -1.0 : 1.0;
-            scanline = p.x < pivot ? scanline : scanline + u_numScanlines;
+            if (p.x >= pivot) {
+                scanlineInfo = texelFetch(u_regionData, ivec2(scanline + u_numScanlines, 0), 0);
+                offset = int(scanlineInfo.x) + 4096 * int(scanlineInfo.y);
+            }
         }
 
-        vec4 headerData = texelFetch(u_regionData, ivec2(2, scanline), 0);
-        int objectID = int(headerData.z) - 1, offset = 2, windingNumber = 0;
+        offset += 2;  // Position pointer at first bounding box
+        vec4 headerData = texelFetch(u_regionData, ivec2(offset & 4095, offset >> 12), 0);
+        int objectID = int(headerData.z) - 1;
+        int windingNumber = 0;
 
-        while (headerData.w != 0.0 && offset < regionDataTexSize.x) {
-
+        while (headerData.w != 0.0) {
             // Find next path with bounding box overlapping this sample position
-            while (headerData.w != 0.0 && offset < regionDataTexSize.x) {
-                headerData = texelFetch(u_regionData, ivec2(offset, scanline), 0);
+            while (headerData.w != 0.0) {
+                headerData = texelFetch(u_regionData, ivec2(offset & 4095, offset >> 12), 0);
                 bool isPathBbox = headerData.z > 0.0;
                 bool isClusterBbox = headerData.z == 0.0;
 
@@ -677,7 +688,7 @@ glUtils._regionsFS = `
                 }
 
                 windingNumber = 0;  // Reset intersection count
-                minEdgeDist = 99999.0;  // Reset distance to closest edge
+                minEdgeDist = 1e7;  // Reset distance to closest edge
                 objectID = int(headerData.z) - 1;
             }
 
@@ -685,7 +696,7 @@ glUtils._regionsFS = `
             // and also update the edge distance needed for outline rendering
             int count = int(headerData.w);
             for (int i = 0; i < count; ++i) {
-                vec4 edgeData = texelFetch(u_regionData, ivec2(offset + i, scanline), 0);
+                vec4 edgeData = texelFetch(u_regionData, ivec2((offset + i) & 4095, (offset + i) >> 12), 0);
                 vec2 v0 = edgeData.xy;
                 vec2 v1 = edgeData.zw;
 
@@ -933,7 +944,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
                         
                         bytedata_point[4 * k + 0] = markerData[xPosName][markerIndex] * markerCoordFactor;
                         bytedata_point[4 * k + 1] = markerData[yPosName][markerIndex] * markerCoordFactor;
-                        bytedata_point[4 * k + 2] = lutIndex + sectorIndex * 4096.0;
+                        bytedata_point[4 * k + 2] = lutIndex + sectorIndex * 32768.0;
                         bytedata_point[4 * k + 3] = Number("0x" + hexColor.substring(1,7));
                         bytedata_index[k] = markerIndex;  // Store index needed for picking
                         bytedata_scale[k] = useScaleFromMarker ? markerData[scalePropertyName][markerIndex] : 1.0;
@@ -967,7 +978,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
 
                     bytedata_point[4 * i + 0] = markerData[xPosName][markerIndex] * markerCoordFactor;
                     bytedata_point[4 * i + 1] = markerData[yPosName][markerIndex] * markerCoordFactor;
-                    bytedata_point[4 * i + 2] = lutIndex + Number(shapeIndex) * 4096.0;
+                    bytedata_point[4 * i + 2] = lutIndex + Number(shapeIndex) * 32768.0;
                     bytedata_point[4 * i + 3] = useColorFromColormap ? Number(scalarValue)
                                                                      : Number("0x" + hexColor.substring(1,7));
                     bytedata_index[i] = markerIndex;  // Store index needed for picking
@@ -1316,7 +1327,7 @@ glUtils._loadEdges = function(uid, forceUpdate) {
                     bytedata_point[4 * k + 1] = markerData[yPosName][markerIndex] * markerCoordFactor;
                     bytedata_point[4 * k + 2] = markerData[xPosName][markerIndex_j] * markerCoordFactor;
                     bytedata_point[4 * k + 3] = markerData[yPosName][markerIndex_j] * markerCoordFactor;
-                    bytedata_index[k] = lutIndex + (lutIndex_j * 4096.0);
+                    bytedata_index[k] = lutIndex + (lutIndex_j * 32768.0);
                     bytedata_opacity[k] = Math.floor(Math.max(0.0, Math.min(1.0, opacity)) * 65535.0);
                     bytedata_transform[k] = collectionItemIndex + (collectionItemIndex_j * 256);
                 }
@@ -1373,8 +1384,7 @@ glUtils._loadEdges = function(uid, forceUpdate) {
 }
 
 
-// TODO Fix naming of this function, since we now use it for generic markers
-glUtils._updateBarcodeToLUTIndexDict = function (uid, markerData, keyName) {
+glUtils._updateBarcodeToLUTIndexDict = function (uid, markerData, keyName, maxNumBarcodes=32768) {
     const barcodeToLUTIndex = {};
     const barcodeToKey = {};
     const numPoints = markerData[markerData.columns[0]].length;
@@ -1384,8 +1394,8 @@ glUtils._updateBarcodeToLUTIndexDict = function (uid, markerData, keyName) {
         if (!(barcode in barcodeToLUTIndex)) {
             barcodeToLUTIndex[barcode] = index++;
             barcodeToKey[barcode] = barcode;
-            index = index % 4096;  // Prevent index from becoming >= the maximum LUT size,
-                                   // since this causes problems with pie-chart markers
+            index = index % maxNumBarcodes;  // Prevent index from becoming >= the maximum LUT size,
+                                             // since this causes problems with pie-chart markers
         }
     }
     glUtils._barcodeToLUTIndex[uid] = barcodeToLUTIndex;
@@ -1394,37 +1404,29 @@ glUtils._updateBarcodeToLUTIndexDict = function (uid, markerData, keyName) {
 }
 
 
-glUtils._createColorLUTTexture = function(gl) {
-    const randomColors = [];
-    for (let i = 0; i < 4096; ++i) {
-        randomColors[4 * i + 0] = Math.random() * 256.0; 
-        randomColors[4 * i + 1] = Math.random() * 256.0;
-        randomColors[4 * i + 2] = Math.random() * 256.0;
-        randomColors[4 * i + 3] = Math.floor(Math.random() * 7) + 1;
-    }
-
-    const bytedata = new Uint8Array(randomColors);
+glUtils._createColorLUTTexture = function(gl, maxNumBarcodes=32768) {
+    console.assert((maxNumBarcodes % 4096) == 0);  // Must be a multiple of the LUT texture width
 
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); 
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 4096, 1, 0, gl.RGBA,
-                  gl.UNSIGNED_BYTE, bytedata);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, 4096, maxNumBarcodes / 4096);
     gl.bindTexture(gl.TEXTURE_2D, null);
 
     return texture;
 }
 
 
-glUtils._updateColorLUTTexture = function(gl, uid, texture) {
+glUtils._updateColorLUTTexture = function(gl, uid, texture, maxNumBarcodes=32768) {
+    console.assert((maxNumBarcodes % 4096) == 0);  // Must be a multiple of the LUT texture width
     if (!(uid + "_colorLUT" in glUtils._textures)) return;
 
     const hasGroups = dataUtils.data[uid]["_gb_col"] != null;
 
-    const colors = new Array(4096 * 4);
+    const colors = new Array(maxNumBarcodes * 4);
     for (let [barcode, index] of Object.entries(glUtils._barcodeToLUTIndex[uid])) {
         const key = hasGroups ? glUtils._barcodeToKey[uid][barcode] : "All";
         const inputs = interfaceUtils._mGenUIFuncs.getGroupInputs(uid, key);
@@ -1444,8 +1446,8 @@ glUtils._updateColorLUTTexture = function(gl, uid, texture) {
     const bytedata = new Uint8Array(colors);
 
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 4096, 1, 0, gl.RGBA,
-                  gl.UNSIGNED_BYTE, bytedata);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, maxNumBarcodes / 4096,
+                     gl.RGBA, gl.UNSIGNED_BYTE, bytedata);
     gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
@@ -1533,24 +1535,41 @@ glUtils.updateRegionDataTextures = function() {
     console.timeEnd("Add clusters to region edge lists");
 
     for (let collectionIndex in regionUtils._edgeListsByLayer) {
-        if (!(("regionData_" + collectionIndex) in glUtils._textures)) {
-            glUtils._textures["regionData_" + collectionIndex] =
-                glUtils._createRegionDataTexture(gl);
-            glUtils._textures["regionDataSplit_" + collectionIndex] =
-                glUtils._createRegionDataTexture(gl, 1024);
-        }
+        console.assert(collectionIndex in regionUtils._edgeListsByLayerSplit);
 
-        glUtils._updateRegionDataTexture(
-            gl, glUtils._textures["regionData_" + collectionIndex], collectionIndex);
-        glUtils._updateRegionDataSplitTexture(
-            gl, glUtils._textures["regionDataSplit_" + collectionIndex], collectionIndex);
+        const textureCreateInfo = [
+            {name: "regionData_" + collectionIndex, useSplit: false},
+            {name: "regionDataSplit_" + collectionIndex, useSplit: true}
+        ];
+
+        for (let item of textureCreateInfo) {
+            // Compute size required for storing texture data
+            const numTexels =
+                glUtils._updateRegionDataTexture(gl, null, collectionIndex, item.useSplit);
+
+            // Check if texture needs to be created or resized
+            if (!(item.name in glUtils._textures)) {
+                glUtils._textures[item.name] = glUtils._createRegionDataTexture(gl, numTexels);
+            } else if (glUtils._regionDataSize[item.name] < numTexels) {
+                gl.deleteTexture(glUtils._textures[item.name]);
+                glUtils._textures[item.name] = glUtils._createRegionDataTexture(gl, numTexels);
+            }
+            glUtils._regionDataSize[item.name] = numTexels;
+
+            glUtils._updateRegionDataTexture(
+                gl, glUtils._textures[item.name], collectionIndex, item.useSplit);
+        }
     }
 }
 
 
-glUtils._createRegionDataTexture = function(gl, maxNumScanlines=512) {
-    const regionDataTexSize = glUtils._regionDataTexSize;
-    console.assert(maxNumScanlines <= regionDataTexSize);
+glUtils._createRegionDataTexture = function(gl, numTexels) {
+    console.assert(numTexels > 0);
+    console.assert((numTexels % 4096) == 0);
+
+    const height = numTexels / 4096;
+    // Clamp height to reported maximum texture size to be safe
+    const heightAdjusted = Math.min(height, gl.getParameter(gl.MAX_TEXTURE_SIZE));
 
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -1558,63 +1577,65 @@ glUtils._createRegionDataTexture = function(gl, maxNumScanlines=512) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); 
-    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA32F, regionDataTexSize, maxNumScanlines);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA32F, 4096, heightAdjusted);
     // Do explicit initialization with zeros, to avoid Firefox warning about
     // "Tex image TEXTURE_2D level 0 is incurring lazy initialization."
     // when texSubImage2D() is used to only partially update the texture
-    let zeros = new Float32Array(regionDataTexSize * maxNumScanlines * 4);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, regionDataTexSize, maxNumScanlines, gl.RGBA, gl.FLOAT, zeros);
+    let zeros = new Float32Array(4096 * heightAdjusted * 4);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, heightAdjusted, gl.RGBA, gl.FLOAT, zeros);
     gl.bindTexture(gl.TEXTURE_2D, null);
 
     return texture;
 }
 
 
-glUtils._updateRegionDataTexture = function(gl, texture, collectionIndex=0) {
-    if (!(collectionIndex in regionUtils._edgeListsByLayer)) return;
+glUtils._updateRegionDataTexture = function(gl, texture, collectionIndex=0, useSplitData=false) {
+    if (!(collectionIndex in regionUtils._edgeListsByLayer)) return 0;
 
-    const regionDataTexSize = glUtils._regionDataTexSize;
-    const edgeLists = regionUtils._edgeListsByLayer[collectionIndex];
+    const edgeLists = useSplitData ? regionUtils._edgeListsByLayerSplit[collectionIndex]
+                                   : regionUtils._edgeListsByLayer[collectionIndex];
     const numScanlines = edgeLists.length;
-    console.assert(numScanlines <= regionDataTexSize);
+    const numSides = useSplitData ? 2 : 1;
 
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    for (let i = 0; i < numScanlines; ++i) {
-        // Update single row of the texture
-        let texeldata = new Float32Array(regionDataTexSize * 4);  // Zero-initialized
-        if (edgeLists[i][0].length <= texeldata.length) {
-            texeldata.set(edgeLists[i][0]);
-        } else {
-            console.warn("Edge list for regions exceeds allocated texture size")
+     // The region data texture will require space for storing scanline pointers
+    // and lengths in the first (numScanlines * 2) texels, followed by space for
+    // the scanline data (edges and bounding boxes) tightly packed in the rest
+    // of the texture.
+
+    let numTexels = numScanlines * 2;
+    for (let j = 0; j < numSides; ++j) {
+        for (let i = 0; i < numScanlines; ++i) {
+            const count = edgeLists[i][j].length / 4;
+            numTexels += count + 1;  // Include zero texel for indicating end of scanline
         }
-        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, i, regionDataTexSize, 1, gl.RGBA, gl.FLOAT, texeldata);
     }
-    gl.bindTexture(gl.TEXTURE_2D, null);
-}
+    numTexels += 4096 - (numTexels % 4096);  // Pad to multiplier of texture width   
 
-
-glUtils._updateRegionDataSplitTexture = function(gl, texture, collectionIndex=0) {
-    if (!(collectionIndex in regionUtils._edgeListsByLayerSplit)) return;
-
-    const regionDataTexSize = glUtils._regionDataTexSize;
-    const edgeListsSplit = regionUtils._edgeListsByLayerSplit[collectionIndex];
-    const numScanlines = edgeListsSplit.length;
-    console.assert(numScanlines <= regionDataTexSize / 2);
-
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    for (let i = 0; i < numScanlines; ++i) {
-        for (let j = 0; j < 2; ++j) {
-            // Update single row of the texture
-            let texeldata = new Float32Array(regionDataTexSize * 4);  // Zero-initialized
-            if (edgeListsSplit[i][j].length <= texeldata.length) {
-                texeldata.set(edgeListsSplit[i][j]);
-            } else {
-                console.warn("Edge list for regions exceeds allocated texture size")
+    if (texture != null) {
+        let texeldata = new Float32Array(numTexels * 4);  // Zero-initialized
+        let offset = numScanlines * 2;
+        for (let j = 0; j < numSides; ++j) {
+            for (let i = 0; i < numScanlines; ++i) {
+                const count = edgeLists[i][j].length / 4;
+                texeldata.set(edgeLists[i][j], offset * 4);
+                // Storing the scanline offset as a float only allows exact
+                // representation of integers up to 2^24, so need to split it
+                // into two X and Y offsets instead
+                texeldata[4 * (i + numScanlines * j) + 0] = offset % 4096;
+                texeldata[4 * (i + numScanlines * j) + 1] = Math.floor(offset / 4096);
+                offset += count + 1;  // Include zero texel for indicating end of scanline
             }
-            gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, i + (j * numScanlines), regionDataTexSize, 1, gl.RGBA, gl.FLOAT, texeldata);
         }
+
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, numTexels / 4096,
+                         gl.RGBA, gl.FLOAT, texeldata);
+        gl.bindTexture(gl.TEXTURE_2D, null);
     }
-    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    // Return size used for creating (or resizing) the texture (if no texture
+    // handle was passed as input to this function)
+    return numTexels;
 }
 
 
@@ -1630,34 +1651,46 @@ glUtils.updateRegionLUTTextures = function() {
     regionUtils._generateRegionToColorLUT();
     console.timeEnd("Update region LUT");
 
-    glUtils._updateRegionLUTTexture(gl, glUtils._textures["regionLUT"]);
+    const numRegions = regionUtils._regionToColorLUT.length / 4;
+    if (numRegions > glUtils._regionMaxNumRegions) {
+        gl.deleteTexture(glUtils._textures["regionLUT"]);
+
+        // Increase maximum LUT size to closest power-of-two greater than or equal to numRegions
+        glUtils._regionMaxNumRegions = (1 << Math.ceil(Math.log2(numRegions)));
+        glUtils._textures["regionLUT"] =
+            glUtils._createRegionLUTTexture(gl, glUtils._regionMaxNumRegions);
+    }
+    console.assert(numRegions <= glUtils._regionMaxNumRegions);
+    glUtils._updateRegionLUTTexture(gl, glUtils._textures["regionLUT"], glUtils._regionMaxNumRegions);
 }
 
 
-glUtils._createRegionLUTTexture = function(gl) {
+glUtils._createRegionLUTTexture = function(gl, maxNumRegions) {
+    console.assert((maxNumRegions % 4096) == 0);  // Must be a multiple of the LUT texture width
+
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, 4096, 128);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, 4096, maxNumRegions / 4096);
     gl.bindTexture(gl.TEXTURE_2D, null);
 
     return texture;
 }
 
 
-glUtils._updateRegionLUTTexture = function(gl, texture) {
-    let texeldata = new Uint8Array((4096 * 128) * 4);
-    if (regionUtils._regionToColorLUT.length <= texeldata.length) {
-        texeldata.set(regionUtils._regionToColorLUT);
-    } else {
-        console.warn("Color lookup table for regions exceeds allocated texture size");
-    }
+glUtils._updateRegionLUTTexture = function(gl, texture, maxNumRegions) {
+    console.assert((maxNumRegions % 4096) == 0);  // Must be a multiple of the LUT texture width
+
+    let texeldata = new Uint8Array(maxNumRegions * 4);
+    console.assert(regionUtils._regionToColorLUT.length <= texeldata.length);
+    texeldata.set(regionUtils._regionToColorLUT);
 
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, 128, gl.RGBA, gl.UNSIGNED_BYTE, texeldata);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, maxNumRegions / 4096,
+                     gl.RGBA, gl.UNSIGNED_BYTE, texeldata);
     gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
@@ -2364,7 +2397,7 @@ glUtils.restoreLostContext = function(event) {
     glUtils._textures["shapeAtlas"] = glUtils._loadTextureFromImageURL(gl, glUtils._markershapes);
     glUtils._buffers["quad"] = glUtils._createQuad(gl);
     glUtils._buffers["transformUBO"] = glUtils._createUniformBuffer(gl);
-    glUtils._textures["regionLUT"] = glUtils._createRegionLUTTexture(gl);
+    glUtils._textures["regionLUT"] = glUtils._createRegionLUTTexture(gl, glUtils._regionMaxNumRegions);
     glUtils._vaos["empty"] = gl.createVertexArray();
 
     // Restore per-markerset WebGL objects
@@ -2429,7 +2462,7 @@ glUtils.init = function() {
     this._textures["shapeAtlas"] = this._loadTextureFromImageURL(gl, glUtils._markershapes);
     this._buffers["quad"] = this._createQuad(gl);
     this._buffers["transformUBO"] = this._createUniformBuffer(gl);
-    this._textures["regionLUT"] = this._createRegionLUTTexture(gl);
+    this._textures["regionLUT"] = this._createRegionLUTTexture(gl, glUtils._regionMaxNumRegions);
     this._vaos["empty"] = gl.createVertexArray();
 
     this._createColorbarCanvas();  // The colorbar is drawn separately in a 2D-canvas
