@@ -1597,7 +1597,7 @@ glUtils._updateRegionDataTexture = function(gl, texture, collectionIndex=0, useS
     const numScanlines = edgeLists.length;
     const numSides = useSplitData ? 2 : 1;
 
-     // The region data texture will require space for storing scanline pointers
+    // The region data texture will require space for storing scanline pointers
     // and lengths in the first (numScanlines * 2) texels, followed by space for
     // the scanline data (edges and bounding boxes) tightly packed in the rest
     // of the texture.
@@ -1609,7 +1609,7 @@ glUtils._updateRegionDataTexture = function(gl, texture, collectionIndex=0, useS
             numTexels += count + 1;  // Include zero texel for indicating end of scanline
         }
     }
-    numTexels += 4096 - (numTexels % 4096);  // Pad to multiplier of texture width   
+    numTexels += 4096 - (numTexels % 4096);  // Pad to multiple of texture width
 
     if (texture != null) {
         let texeldata = new Float32Array(numTexels * 4);  // Zero-initialized
