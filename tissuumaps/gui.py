@@ -9,13 +9,18 @@ debug_logger.flush = lambda: None  # this may be called when printing
 sys.stdout = debug_logger
 
 try:
-    from PyQt6 import QtGui
-    from PyQt6.QtCore import *
-    from PyQt6.QtGui import QAction, QDesktopServices, QStandardItem, QStandardItemModel
-    from PyQt6.QtWebChannel import QWebChannel
-    from PyQt6.QtWebEngineCore import *
-    from PyQt6.QtWebEngineWidgets import *
-    from PyQt6.QtWidgets import (
+    from PySide6 import QtGui
+    from PySide6.QtCore import *
+    from PySide6.QtGui import (
+        QAction,
+        QDesktopServices,
+        QStandardItem,
+        QStandardItemModel,
+    )
+    from PySide6.QtWebChannel import QWebChannel
+    from PySide6.QtWebEngineCore import QWebEngineProfile, QWebEngineSettings
+    from PySide6.QtWebEngineWidgets import QWebEngineView
+    from PySide6.QtWidgets import (
         QApplication,
         QDialog,
         QDialogButtonBox,
@@ -34,7 +39,7 @@ try:
 
 except ImportError:
     # dependency missing, issue a warning
-    logging.error("dependency not found, please install PyQt6 to enable gui")
+    logging.error("dependency not found, please install pyside6 to enable gui")
     logging.error(traceback.format_exc())
     import sys
 
@@ -85,22 +90,6 @@ else:
     version_file = os.path.join(folderPath, "VERSION")
 
 from tissuumaps import views
-
-
-class CustomWebEnginePage(QWebEnginePage):
-    """Custom WebEnginePage to customize how we handle link navigation"""
-
-    def acceptNavigationRequest(self, url, _type, isMainFrame):
-        if _type == QWebEnginePage.NavigationTypeLinkClicked:
-            QDesktopServices.openUrl(url)
-            return False
-        return True
-
-    # def javaScriptConsoleMessage(self, level, msg, line, sourceID):
-    #    logging.debug(
-    #        "Javascript console: "
-    #        + " ; ".join([str(level), str(msg), str(line), str(sourceID)])
-    #    )
 
 
 class textWindow(QDialog):
@@ -427,8 +416,6 @@ class webEngine(QWebEngineView):
         self.lastdir = str(Path.home())
         profile = QWebEngineProfile().defaultProfile()
 
-        # profile.setHttpCacheType(QWebEngineProfile.DiskHttpCache)
-        # self.setPage(CustomWebEnginePage(profile, self))
         self.webchannel = QWebChannel()
         self.page().setWebChannel(self.webchannel)
         self.webchannel.registerObject("backend", self)
@@ -594,7 +581,7 @@ class webEngine(QWebEngineView):
         else:
             self.load(QUrl(self.location))
 
-    @pyqtSlot(str)
+    @Slot(str)
     def getProperties(self, path):
         try:
             path = urllib.parse.unquote(path)[:-4]
@@ -617,7 +604,7 @@ class webEngine(QWebEngineView):
         self.load(QUrl(self.location))
         self.mainWin.setWindowTitle("TissUUmaps")
 
-    @pyqtSlot(str, result="QJsonObject")
+    @Slot(str, result="QJsonObject")
     def exportToStatic(self, state):
         try:
             parsed_url = urlparse(self.url().toString())
@@ -637,7 +624,7 @@ class webEngine(QWebEngineView):
         except:
             return {"success": False, "error": traceback.format_exc()}
 
-    @pyqtSlot(str)
+    @Slot(str)
     def saveProject(self, state):
         def getRel(previouspath, file, newpath):
             completepath = os.path.dirname(os.path.join(previouspath, file))
@@ -742,11 +729,11 @@ class webEngine(QWebEngineView):
         self.mainWin.setWindowTitle("TissUUmaps - " + os.path.basename(folderpath))
         return True
 
-    @pyqtSlot()
+    @Slot()
     def exit(self):
         self.close()
 
-    @pyqtSlot(str, str, result="QJsonObject")
+    @Slot(str, str, result="QJsonObject")
     def addCSV(self, path, csvpath):
         if csvpath == "":
             csvpath = QFileDialog.getOpenFileName(self, "Select a File")[0]
@@ -785,7 +772,7 @@ class webEngine(QWebEngineView):
         }
         return returnDict
 
-    @pyqtSlot(str, str, result="QJsonObject")
+    @Slot(str, str, result="QJsonObject")
     def addLayer(self, path, layerpath):
         if layerpath == "":
             layerpath = QFileDialog.getOpenFileName(self, "Select a File")[0]
