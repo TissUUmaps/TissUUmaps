@@ -30,7 +30,7 @@ PrivilegesRequiredOverridesAllowed=dialog
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
-OutputBaseFilename=TissUUmaps_winInstaller
+OutputBaseFilename=TissUUmaps_amd64
 OutputDir=dist
 ChangesAssociations = yes
 

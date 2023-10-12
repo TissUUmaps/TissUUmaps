@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=TissUUmaps
+Exec=/opt/TissUUmaps/TissUUmaps
+Icon=/usr/share/icons/hicolor/128x128/apps/TissUUmaps.png
+comment=Raster Graphics Editor
+Type=Application
+Terminal=false
+Encoding=UTF-8
+Categories=Science;
