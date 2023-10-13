@@ -15,6 +15,8 @@ jobs:
         include:
           - os: ubuntu-20.04
             extension: deb
+          - os: ubuntu-22.04
+            extension: deb
           - os: macos-11
             extension: dmg
           - os: windows-latest
@@ -45,7 +47,6 @@ jobs:
             # cp -f standalone/dep/bootloader/* $pythonLocation/Lib/site-packages/PyInstaller/bootloader/Windows-64bit-intel/
           #fi
           if [ "$RUNNER_OS" == "macOS" ]; then
-            # Install libvipsls
             brew install vips openslide
           fi
           python -m pip install --upgrade pip
@@ -97,12 +98,12 @@ jobs:
             "dist/dmg/"
 
       - uses: ruby/setup-ruby@v1
-        if: matrix.os == 'ubuntu-20.04'
+        if: matrix.os == 'ubuntu-20.04' || matrix.os == 'ubuntu-22.04'
         with:
           ruby-version: "3.0"
 
       - name: 🐧 Create Debian Package
-        if: matrix.os == 'ubuntu-20.04'
+        if: matrix.os == 'ubuntu-20.04' || matrix.os == 'ubuntu-22.04'
         shell: bash
         run: |
           cd standalone
@@ -120,7 +121,7 @@ jobs:
           chmod 755 package/opt/TissUUmaps
 
           # Package the app
-          fpm -C package -s dir -t deb -n TissUUmaps -p dist/TissUUmaps_amd64.deb
+          fpm -C package -s dir -d libvips -d libxcb-cursor0 -d openslide-tools -t deb -n TissUUmaps -p dist/TissUUmaps_amd64.deb
 
       - name: Upload the installer as an artifact
         uses: actions/upload-artifact@v3
@@ -129,7 +130,7 @@ jobs:
           name: TissUUmaps_amd64.${{matrix.extension}}
 
   release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     defaults:
       run:
         working-directory: ./standalone
