@@ -41,9 +41,9 @@ jobs:
             sudo apt update
             sudo apt install libxcb-cursor0 openslide-tools libvips -y
           fi
-          if [ "$RUNNER_OS" == "Windows" ]; then
+          #if [ "$RUNNER_OS" == "Windows" ]; then
             # cp -f standalone/dep/bootloader/* $pythonLocation/Lib/site-packages/PyInstaller/bootloader/Windows-64bit-intel/
-          fi
+          #fi
           if [ "$RUNNER_OS" == "macOS" ]; then
             # Install libvipsls
             brew install vips openslide
