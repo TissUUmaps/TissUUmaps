@@ -113,14 +113,16 @@ jobs:
           gem install fpm
 
           # Copy app files into expected output directory structure
-          mkdir -p package/opt package/usr/share/applications package/usr/share/icons/hicolor/128x128/apps
+          mkdir -p package/opt package/usr/share/applications package/usr/share/icons/hicolor/128x128/apps package/usr/bin
           cp -r dist/TissUUmaps package/opt/TissUUmaps
           cp ../tissuumaps/static/misc/design/logo.png package/usr/share/icons/hicolor/128x128/apps/TissUUmaps.png
           cp TissUUmaps.desktop package/usr/share/applications
-
+          echo '#/bin/bash' | tee package/usr/bin/tissuumaps > /dev/null
+          echo '/opt/TissUUmaps/TissUUmaps' | tee -a package/usr/bin/tissuumaps > /dev/null
           # Fix permissions to be usable by non-root users
           find package/usr/share -type f -exec chmod 644 -- {} +
           chmod 755 package/opt/TissUUmaps
+          chmod 755 package/usr/bin/tissuumaps
 
           # Package the app
           fpm -C package -s dir -d libvips -d libxcb-cursor0 -d openslide-tools -t deb -n TissUUmaps -p dist/TissUUmaps.deb
