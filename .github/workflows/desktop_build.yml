@@ -3,8 +3,6 @@ name: desktop_dev_build
 on:
   workflow_dispatch:
   push:
-    tags:
-      - "*"
 
 jobs:
   publish_desktop_apps:
