@@ -263,17 +263,18 @@ regionUtils.closePolygon = function () {
             });
         })
     }
-    let properties = regionsObjects.properties? regionsObjects.properties : {};
-    properties["name"] = Region.regionName
-    properties["classification"] = {
-        "name": Region.regionClass
-    }
-    properties["color"] = HexToRGB(Region.polycolor)
-    properties["isLocked"] = false
 
     geoJSONObjects = {
         "type": "FeatureCollection",
         "features": Object.values(regionsObjects).map (function(Region, i) {
+            let properties = regionsObjects.properties ? regionsObjects.properties : {};
+            properties["name"] = Region.regionName
+            properties["classification"] = {
+                "name": Region.regionClass
+            }
+            properties["color"] = HexToRGB(Region.polycolor)
+            properties["collectionIndex"] = Region.collectionIndex;
+
             return {
                 "type": "Feature",
                 "geometry": {
@@ -337,10 +338,14 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
         }
         var geoJSONObjClass = "";
         var hexColor = "#ff0000";
+        var collectionIndex = 0;
         if (!geoJSONObj.properties)
             geoJSONObj.properties = {};
         if (geoJSONObj.properties.color) {
             hexColor = rgbToHex(geoJSONObj.properties.color)
+        }
+        if (geoJSONObj.properties.collectionIndex != undefined) {
+            collectionIndex = geoJSONObj.properties.collectionIndex;
         }
         if (geoJSONObj.properties.name) {
             regionName = geoJSONObj.properties.name;
@@ -361,7 +366,7 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
             return coordinateList.map (function(coordinateList_i, index) {
                 coordinateList_i = coordinateList_i.map(function(x) {
                     xPoint = new OpenSeadragon.Point(x[0], x[1]);
-                    xPixel = viewer.world.getItemAt(0).imageToViewportCoordinates(xPoint);
+                    xPixel = viewer.world.getItemAt(collectionIndex).imageToViewportCoordinates(xPoint);
                     return [xPixel.x.toFixed(5), xPixel.y.toFixed(5)];
                 });
                 return coordinateList_i.filter(function(value, index, Arr) {
@@ -374,7 +379,7 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
             regionId += "_" + (Math.random() + 1).toString(36).substring(7);
         }
         //TODO: collectionIndex from modal if multiple layers
-        regionUtils.addRegion(coordinates, regionId, hexColor, geoJSONObjClass, 0);
+        regionUtils.addRegion(coordinates, regionId, hexColor, geoJSONObjClass, collectionIndex);
         regionUtils._regions[regionId].regionName = regionName;
         regionUtils._regions[regionId].properties = geoJSONObj.properties;
         if (document.getElementById(regionId + "_class_ta")) {
