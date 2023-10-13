@@ -96,7 +96,7 @@ jobs:
             --icon-size 100 \
             --hide-extension "TissUUmaps.app" \
             --app-drop-link 0 0 \
-            "dist/TissUUmaps_amd64.dmg" \
+            "dist/TissUUmaps.dmg" \
             "dist/dmg/"
 
       - uses: ruby/setup-ruby@v1
@@ -149,5 +149,5 @@ jobs:
           path: "standalone/dist"
       - uses: ncipollo/release-action@v1
         with:
-          artifacts: standalone/dist/TissUUmaps_amd64.*
+          artifacts: standalone/dist/TissUUmaps.*
           token: ${{ secrets.GITHUB_TOKEN }}
