@@ -127,7 +127,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           path: standalone/dist/TissUUmaps_amd64.${{matrix.extension}}
-          name: TissUUmaps_amd64.${{matrix.extension}}
+          name: TissUUmaps_amd64_${{ matrix.os }}.${{matrix.extension}}
 
   release:
     runs-on: ubuntu-22.04
