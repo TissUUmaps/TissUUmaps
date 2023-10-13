@@ -3,6 +3,8 @@ name: desktop_dev_build
 on:
   workflow_dispatch:
   push:
+    tags:
+      - "*"
 
 jobs:
   publish_desktop_apps:
@@ -41,7 +43,6 @@ jobs:
           fi
           if [ "$RUNNER_OS" == "Windows" ]; then
             # cp -f standalone/dep/bootloader/* $pythonLocation/Lib/site-packages/PyInstaller/bootloader/Windows-64bit-intel/
-            cp standalone/dep/vips-dev-8.10/bin/* standalone/dist/TissUUmaps/
           fi
           if [ "$RUNNER_OS" == "macOS" ]; then
             # Install libvipsls
@@ -63,6 +64,10 @@ jobs:
           export PYTHONHASHSEED=42
           export SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
           pyinstaller --noconfirm TissUUmaps.spec
+
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            cp dep/vips-dev-8.10/bin/* dist/TissUUmaps/
+          fi
 
       - name: 💻 Create Win exe installer
         if: matrix.os == 'windows-latest'
