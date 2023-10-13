@@ -80,7 +80,7 @@ jobs:
         shell: cmd
 
       - name: 💻 Create Mac App DMG
-        if: matrix.os == 'macos-11'
+        if: matrix.os == 'macos-11' || matrix.os == 'macOS-X64'
         run: |
           cd standalone
           # Install Mac DMG Creator
