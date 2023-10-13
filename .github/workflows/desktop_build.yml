@@ -19,6 +19,8 @@ jobs:
             extension: deb
           - os: macos-11
             extension: dmg
+          - os: macos-x64
+            extension: dmg
           - os: windows-latest
             extension: exe
 
@@ -121,13 +123,13 @@ jobs:
           chmod 755 package/opt/TissUUmaps
 
           # Package the app
-          fpm -C package -s dir -d libvips -d libxcb-cursor0 -d openslide-tools -t deb -n TissUUmaps -p dist/TissUUmaps_amd64.deb
+          fpm -C package -s dir -d libvips -d libxcb-cursor0 -d openslide-tools -t deb -n TissUUmaps -p dist/TissUUmaps.deb
 
       - name: Upload the installer as an artifact
         uses: actions/upload-artifact@v3
         with:
-          path: standalone/dist/TissUUmaps_amd64.${{matrix.extension}}
-          name: TissUUmaps_amd64_${{ matrix.os }}.${{matrix.extension}}
+          path: standalone/dist/TissUUmaps.${{matrix.extension}}
+          name: TissUUmaps_${{ matrix.os }}.${{matrix.extension}}
 
   release:
     runs-on: ubuntu-22.04
