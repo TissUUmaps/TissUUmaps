@@ -620,6 +620,21 @@ regionUtils.fillAllRegions=function(){
     glUtils.draw();    
 }
 
+/** Toggle showing instances visualized by color */
+regionUtils.showInstances=function(){
+    glUtils._regionUseColorByID = !glUtils._regionUseColorByID;
+
+    let regionIcon = document.getElementById('region_show_instances_button');
+    if (glUtils._regionUseColorByID) {
+        regionIcon.classList.remove("btn-light");
+        regionIcon.classList.add("btn-primary");
+    } else {
+        regionIcon.classList.remove("btn-primary");
+        regionIcon.classList.add("btn-light");
+    }
+    glUtils.draw();    
+}
+
 /** Zoom to a set of regions */
 regionUtils.zoomToRegions=function(regions){
     console.assert(regions.length > 0, "No regions to zoom to")
