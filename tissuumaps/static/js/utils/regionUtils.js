@@ -17,6 +17,7 @@
  * @property {String}   regionUtils._drawingclass - String that accompanies the classes of the polygons in the interface"drawPoly", 
  * @property {Object[]} regionUtils._edgeListsByLayer - Data structure used for rendering regions with WebGL
  * @property {Object[]} regionUtils._edgeListsByLayerSplit - Data structure used for rendering regions with WebGL
+*  @property {Object[]} regionUtils._edgeListsByLayerClustered - Data structure used for rendering regions with WebGL
  * @property {Object[]} regionUtils._regionToColorLUT - LUT for storing color and visibility per object ID
  * @property {Object{}} regionUtils._regionIDToIndex - Mapping between region ID (string) and object ID (index)
  * @property {Object{}} regionUtils._regionIndexToID - Mapping between object ID (index) and region ID (string)
@@ -36,6 +37,7 @@ regionUtils = {
     _drawingclass: "drawPoly",
     _edgeListsByLayer: {},
     _edgeListsByLayerSplit: {},
+    _edgeListsByLayerClustered: {},
     _regionToColorLUT: [],
     _regionIDToIndex: {},
     _regionIndexToID: {}
@@ -1963,9 +1965,56 @@ regionUtils._splitEdgeLists = function() {
 }
 
 
-// Add cluster information to edge lists (WIP)
+// Add cluster information to edge lists
 regionUtils._addClustersToEdgeLists = function() {
-    // STUB
+    const maxClusterSize = 8;
+
+    regionUtils._edgeListsByLayerClustered = {};
+
+    for (let collectionIndex in regionUtils._edgeListsByLayer) {
+        const edgeLists = regionUtils._edgeListsByLayer[collectionIndex];
+        const numScanlines = edgeLists.length;
+
+        regionUtils._edgeListsByLayerClustered[collectionIndex] = [];
+        for (let i = 0; i < numScanlines; ++i) {
+            regionUtils._edgeListsByLayerClustered[collectionIndex][i] =
+                [[]];
+        }
+
+        let edgeListsClustered = regionUtils._edgeListsByLayerClustered[collectionIndex];
+        for (let i = 0; i < numScanlines; ++i) {
+            const edgeList = edgeLists[i][0];
+            const numItems = edgeList.length / 4;
+
+            // Copy occupancy mask
+            edgeListsClustered[i][0].push(...edgeList.slice(0, 8));
+
+            // Copy edge data interleaved with added cluster information
+            let count = 0;
+            let clusterOffset = 2;
+            for (let j = 2; j < numItems; ++j, ++count) {
+                const xMin = edgeList[j * 4 + 0];
+                const xMax = edgeList[j * 4 + 1];
+                const edgeCount = edgeList[j * 4 + 3];
+
+                if ((count % maxClusterSize) == 0) {
+                    // Add new cluster to edge list
+                    clusterOffset = edgeListsClustered[i][0].length;
+                    edgeListsClustered[i][0].push(Infinity, -Infinity, 0, 0);
+                }
+                edgeListsClustered[i][0][clusterOffset + 0] =
+                    Math.min(edgeListsClustered[i][0][clusterOffset + 0], xMin);
+                edgeListsClustered[i][0][clusterOffset + 1] =
+                    Math.max(edgeListsClustered[i][0][clusterOffset + 1], xMax);
+                edgeListsClustered[i][0][clusterOffset + 3] += edgeCount + 1;
+
+                edgeListsClustered[i][0].push(
+                        ...edgeList.slice(j * 4, (j + edgeCount + 1) * 4));
+
+                j += edgeCount;  // Position pointer before next bounding box
+            }
+        }
+    }
 }
 
 
