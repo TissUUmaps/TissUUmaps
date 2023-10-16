@@ -49,6 +49,9 @@ jobs:
             # cp -f standalone/dep/bootloader/* $pythonLocation/Lib/site-packages/PyInstaller/bootloader/Windows-64bit-intel/
           #fi
           if [ "$RUNNER_OS" == "macOS" ]; then
+            if [ "$RUNNER_ARCH" == "arm64"] ; then
+              alias brew='arch -arm64 brew'
+            fi
             brew install vips openslide
             # store vips lib path in a variable and copy all it files to cwd
             export VIPS_PATH=$(brew --prefix vips)
