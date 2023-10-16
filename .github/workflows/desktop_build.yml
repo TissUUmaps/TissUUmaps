@@ -55,7 +55,7 @@ jobs:
             brew install vips openslide
             # store vips lib path in a variable and copy all it files to cwd
             export VIPS_PATH=$(brew --prefix vips)
-            cp -f $VIPS_PATH/lib/* ./
+            cp -rf $VIPS_PATH/lib/* ./
           fi
           python -m pip install --upgrade pip
           pip install pyinstaller==5.12.0 pyside6 --upgrade
