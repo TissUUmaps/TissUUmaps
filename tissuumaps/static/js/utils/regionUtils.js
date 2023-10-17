@@ -1992,14 +1992,19 @@ regionUtils._splitEdgeLists = function() {
 
 
 // Add cluster information to edge lists
-regionUtils._addClustersToEdgeLists = function() {
-    const maxClusterSize = 8;
+regionUtils._addClustersToEdgeLists = function(splitLongClusters=true) {
+    const maxClusterSize = 32;
+    const splitThreshold = 0.2;  // Ratio of scanline width
 
     regionUtils._edgeListsByLayerClustered = {};
 
     for (let collectionIndex in regionUtils._edgeListsByLayer) {
         const edgeLists = regionUtils._edgeListsByLayer[collectionIndex];
         const numScanlines = edgeLists.length;
+
+        const image = tmapp["ISS_viewer"].world.getItemAt(collectionIndex);
+        console.assert(image != undefined);
+        const imageWidth = image.getContentSize().x;
 
         regionUtils._edgeListsByLayerClustered[collectionIndex] = [];
         for (let i = 0; i < numScanlines; ++i) {
@@ -2023,17 +2028,31 @@ regionUtils._addClustersToEdgeLists = function() {
                 const xMax = edgeList[j * 4 + 1];
                 const edgeCount = edgeList[j * 4 + 3];
 
-                if ((count % maxClusterSize) == 0) {
+                if (count == maxClusterSize || j == 2) {
                     // Add new cluster to edge list
                     clusterOffset = edgeListsClustered[i][0].length;
                     edgeListsClustered[i][0].push(Infinity, -Infinity, 0, 0);
+                    count = 0;
                 }
-                edgeListsClustered[i][0][clusterOffset + 0] =
-                    Math.min(edgeListsClustered[i][0][clusterOffset + 0], xMin);
-                edgeListsClustered[i][0][clusterOffset + 1] =
-                    Math.max(edgeListsClustered[i][0][clusterOffset + 1], xMax);
-                edgeListsClustered[i][0][clusterOffset + 3] += edgeCount + 1;
+                let xMinCluster = edgeListsClustered[i][0][clusterOffset + 0];
+                let xMaxCluster = edgeListsClustered[i][0][clusterOffset + 1];
 
+                if (count > 0 && splitLongClusters) {
+                    const diff = Math.max(xMaxCluster, xMax) - Math.min(xMinCluster, xMin);
+                    if (diff > imageWidth * splitThreshold) {
+                        // Add new cluster to edge list
+                        clusterOffset = edgeListsClustered[i][0].length;
+                        edgeListsClustered[i][0].push(Infinity, -Infinity, 0, 0);
+                        count = 0;
+
+                        xMinCluster = edgeListsClustered[i][0][clusterOffset + 0];
+                        xMaxCluster = edgeListsClustered[i][0][clusterOffset + 1];
+                    }
+                }
+
+                edgeListsClustered[i][0][clusterOffset + 0] = Math.min(xMinCluster, xMin);
+                edgeListsClustered[i][0][clusterOffset + 1] = Math.max(xMaxCluster, xMax);
+                edgeListsClustered[i][0][clusterOffset + 3] += edgeCount + 1;
                 edgeListsClustered[i][0].push(
                         ...edgeList.slice(j * 4, (j + edgeCount + 1) * 4));
 
