@@ -544,6 +544,9 @@
       {% if message %}
       interfaceUtils.alert("{{message|safe}}");
       {% endif %}
+      {% if warning %}
+      interfaceUtils.generateNotification("{{warning|safe}}", "loading_alert", false, 3000, "warning");
+      {% endif %}
       if (window!=window.top) {
           elt = document.getElementById("powered_by_tissuumaps");
           tmapp["ISS_viewer"].addControl(elt,{

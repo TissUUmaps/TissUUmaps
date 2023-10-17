@@ -2514,6 +2514,38 @@ interfaceUtils.closeModal = async function (modalWindow) {
     }
 }
 
+interfaceUtils.generateNotification = function(content, uid, noClose, timeout, alertType) {
+    if (!noClose) noClose = false;
+    if (!alertType) alertType = "warning";
+    if (!uid) uid = "default";
+    let alertDiv = document.getElementById(uid + "_alert");
+    if (! alertDiv) {
+        var div = HTMLElementUtils.createElement(
+            {"kind":"div", "id":uid+"_alert", "extraAttributes":{ 
+                "class":`position-absolute bottom-0 end-0 m-2 alert alert-${alertType} alert-dismissible fade show`, "role":"alert"
+            }
+        });
+        div.innerHTML = `
+            ${content}
+            <button id="${uid}_closeButton" type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>`;
+        document.body.appendChild(div);
+    }
+    if (noClose) { 
+        document.getElementById(`${uid}_closeButton`).classList.add("d-none");
+    }
+    else {
+        document.getElementById(`${uid}_closeButton`).classList.remove("d-none");
+    }
+    $(`#${uid}_alert`).alert();
+    if (timeout) {
+        setTimeout(function() {
+            $(`#${uid}_alert`).alert('close');
+        }, timeout);
+    }
+    return alertDiv;
+}
+
 interfaceUtils.createDownloadDropdown = function(downloadRow, innerText, callback, comment, dropdownOptions) {
     var row = HTMLElementUtils.createRow(null);
     var selectDiv = document.createElement("div");
