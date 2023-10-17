@@ -1783,11 +1783,19 @@ regionUtils.JSONToRegions= function(filepath){
         var text=document.getElementById(op+"_region_files_import");
         var file=text.files[0];
         var reader = new FileReader();
-        reader.onload=function(event) {
-            // The file's text will be printed here
-            regionUtils.JSONValToRegions(JSON.parse(event.target.result));
-        };
-        reader.readAsText(file);
+        if (file.name.includes(".pbf")) {
+            // Load GeoJSON stored in Geobuf format (https://github.com/mapbox/geobuf)
+            reader.onload=function(event) {
+                const data = new Pbf(event.target.result);
+                regionUtils.JSONValToRegions(geobuf.decode(data));
+            };
+            reader.readAsArrayBuffer(file);
+        } else if (file.name.includes(".geojson") || file.name.includes(".json")) {
+            reader.onload=function(event) {
+                regionUtils.JSONValToRegions(JSON.parse(event.target.result));
+            };
+            reader.readAsText(file);
+        }
     } else {
         interfaceUtils.alert('The File APIs are not fully supported in this browser.');
     }
