@@ -730,32 +730,33 @@ regionUtils.deleteAllRegions = function () {
     regionUtils._regions = {};
     regionUtils.updateAllRegionClassUI();
 }
-regionUtils.updateAllRegionClassUI = function () {
-    setTimeout(()=>{
-        // get the collapse status of all elements ".collapse_button_regionClass"
-        // and save in a list of uncollapsed element ids}
-        let uncollapsedElements = [];
-        let collapseButtons = document.getElementsByClassName("collapse_button_regionClass");
-        for (let i = 0; i < collapseButtons.length; i++) {
-            if (collapseButtons[i].getAttribute("aria-expanded") == "true") {
-                uncollapsedElements.push(collapseButtons[i].getAttribute("data-bs-target"));
-            }
-        }
-        let regionUI = interfaceUtils._rGenUIFuncs.createTable();
-        menuui=interfaceUtils.getElementById("markers-regions-panel");
-        menuui.innerText="";
+regionUtils.updateAllRegionClassUI = async function () {
+    // wait for an image to be loaded
+    await overlayUtils.waitLayersReady();
 
-        menuui.appendChild(regionUI);
-        // uncollapse all elements in uncollapsedElements:
-        for (let i = 0; i < uncollapsedElements.length; i++) {
-            // set style transition to none:
-            $(uncollapsedElements[i]).css("transition", "none");
-            $(uncollapsedElements[i]).collapse("show");
-            // put back transition to default:
-            $(uncollapsedElements[i]).css("transition", "");
+    // get the collapse status of all elements ".collapse_button_regionClass"
+    // and save in a list of uncollapsed element ids}
+    let uncollapsedElements = [];
+    let collapseButtons = document.getElementsByClassName("collapse_button_regionClass");
+    for (let i = 0; i < collapseButtons.length; i++) {
+        if (collapseButtons[i].getAttribute("aria-expanded") == "true") {
+            uncollapsedElements.push(collapseButtons[i].getAttribute("data-bs-target"));
         }
-        menuui.classList.remove("d-none")
-    },10);
+    }
+    let regionUI = interfaceUtils._rGenUIFuncs.createTable();
+    menuui=interfaceUtils.getElementById("markers-regions-panel");
+    menuui.innerText="";
+
+    menuui.appendChild(regionUI);
+    // uncollapse all elements in uncollapsedElements:
+    for (let i = 0; i < uncollapsedElements.length; i++) {
+        // set style transition to none:
+        $(uncollapsedElements[i]).css("transition", "none");
+        $(uncollapsedElements[i]).collapse("show");
+        // put back transition to default:
+        $(uncollapsedElements[i]).css("transition", "");
+    }
+    menuui.classList.remove("d-none")
     glUtils.updateRegionDataTextures();
     glUtils.updateRegionLUTTextures();
     glUtils.draw();
