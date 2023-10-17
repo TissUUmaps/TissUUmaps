@@ -297,6 +297,7 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
     // Helper functions for converting colors to hexadecimal
     var viewer = tmapp[tmapp["object_prefix"] + "_viewer"]
     await overlayUtils.waitLayersReady();
+
     function rgbToHex(rgb) {
         return "#" + ((1 << 24) + (rgb[0] << 16) + (rgb[1] << 8) + rgb[2]).toString(16).slice(1);
     }
@@ -312,6 +313,7 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
     // Temporary hides the table for chrome issue with slowliness
     document.querySelector("#regionAccordions").classList.add("d-none");
     console.log(geoJSONObjects.length + " regions to import");
+    let promptedCollectionIndex = undefined;
     for (let geoJSONObjIndex in geoJSONObjects) {
         let geoJSONObj = geoJSONObjects[geoJSONObjIndex];
         if (geoJSONObj.type == "FeatureCollection") {
@@ -348,6 +350,29 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
         }
         if (geoJSONObj.properties.collectionIndex != undefined) {
             collectionIndex = geoJSONObj.properties.collectionIndex;
+        }
+        else  {
+            if (promptedCollectionIndex == undefined) {
+                // We check if we have multiple layers opened:
+                if (tmapp.layers.length > 1) {
+                    // If so, we ask the user to select the layer to import the regions:
+                    // First we create an html table with all layer names and indices:
+                    let layerTable = "<table class='table table-striped table-hover table-sm'><thead><tr><th>Layer</th><th>Index</th></tr></thead><tbody>";
+                    for (let i = 0; i < tmapp.layers.length; i++) {
+                        layerTable += "<tr><td>" + tmapp.layers[i].name + "</td><td>" + i + "</td></tr>";
+                    }
+                    layerTable += "</tbody></table>";
+                    promptedCollectionIndex = await interfaceUtils.prompt(
+                        "Multiple layers are opened. Please provide the layer index for importing regions into (default: 0). <br/>" + layerTable + "<b>Layer index:</b>",
+                        "0",
+                        "Import regions to layer"
+                    );
+                }
+                else {
+                    promptedCollectionIndex = 0;
+                }
+            }
+            collectionIndex = promptedCollectionIndex;
         }
         if (geoJSONObj.properties.name) {
             regionName = geoJSONObj.properties.name;
