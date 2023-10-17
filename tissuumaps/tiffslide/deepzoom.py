@@ -188,7 +188,7 @@ class DeepZoomGenerator(object):
 
         # Scale to the correct size
         if tile.size != z_size:
-            tile.thumbnail(z_size, Image.ANTIALIAS)
+            tile.thumbnail(z_size, Image.Resampling.LANCZOS)
 
         return tile
 
