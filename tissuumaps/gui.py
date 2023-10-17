@@ -627,6 +627,8 @@ class webEngine(QWebEngineView):
     @Slot(str)
     def saveProject(self, state):
         def getRel(previouspath, file, newpath):
+            if file is None:
+                return None
             completepath = os.path.dirname(os.path.join(previouspath, file))
             relPath = os.path.relpath(completepath, newpath)
             return os.path.join(relPath, os.path.basename(file)).replace("\\", "/")
