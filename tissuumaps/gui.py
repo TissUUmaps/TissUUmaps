@@ -627,6 +627,8 @@ class webEngine(QWebEngineView):
     @Slot(str)
     def saveProject(self, state):
         def getRel(previouspath, file, newpath):
+            if file is None:
+                return None
             completepath = os.path.dirname(os.path.join(previouspath, file))
             relPath = os.path.relpath(completepath, newpath)
             return os.path.join(relPath, os.path.basename(file)).replace("\\", "/")
@@ -922,7 +924,7 @@ def main():
         logging.debug("Debug mode")
 
         DEBUG_PORT = "5588"
-        DEBUG_URL = "http://127.0.0.1:%s" % DEBUG_PORT
+        DEBUG_URL = "http://localhost:%s" % DEBUG_PORT
         os.environ["QTWEBENGINE_REMOTE_DEBUGGING"] = DEBUG_PORT
 
         # os.environ['WERKZEUG_RUN_MAIN'] = 'true'
@@ -955,6 +957,10 @@ def main():
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
 
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--no-sandbox --ignore-gpu-blacklist"
+    if opts.DEBUG:
+        os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] += (
+            " --remote-allow-origins=" + DEBUG_URL
+        )
     qt_app = QApplication(sys.argv)
 
     logo = QtGui.QPixmap(os.path.join(static_folder, "misc/design/logo.png"))

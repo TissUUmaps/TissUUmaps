@@ -297,6 +297,7 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
     // Helper functions for converting colors to hexadecimal
     var viewer = tmapp[tmapp["object_prefix"] + "_viewer"]
     await overlayUtils.waitLayersReady();
+
     function rgbToHex(rgb) {
         return "#" + ((1 << 24) + (rgb[0] << 16) + (rgb[1] << 8) + rgb[2]).toString(16).slice(1);
     }
@@ -312,6 +313,7 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
     // Temporary hides the table for chrome issue with slowliness
     document.querySelector("#regionAccordions").classList.add("d-none");
     console.log(geoJSONObjects.length + " regions to import");
+    let promptedCollectionIndex = undefined;
     for (let geoJSONObjIndex in geoJSONObjects) {
         let geoJSONObj = geoJSONObjects[geoJSONObjIndex];
         if (geoJSONObj.type == "FeatureCollection") {
@@ -348,6 +350,29 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
         }
         if (geoJSONObj.properties.collectionIndex != undefined) {
             collectionIndex = geoJSONObj.properties.collectionIndex;
+        }
+        else  {
+            if (promptedCollectionIndex == undefined) {
+                // We check if we have multiple layers opened:
+                if (tmapp.layers.length > 1) {
+                    // If so, we ask the user to select the layer to import the regions:
+                    // First we create an html table with all layer names and indices:
+                    let layerTable = "<table class='table table-striped table-hover table-sm'><thead><tr><th>Layer</th><th>Index</th></tr></thead><tbody>";
+                    for (let i = 0; i < tmapp.layers.length; i++) {
+                        layerTable += "<tr><td>" + tmapp.layers[i].name + "</td><td>" + i + "</td></tr>";
+                    }
+                    layerTable += "</tbody></table>";
+                    promptedCollectionIndex = await interfaceUtils.prompt(
+                        "Multiple layers are opened. Please provide the layer index for importing regions into (default: 0). <br/>" + layerTable + "<b>Layer index:</b>",
+                        "0",
+                        "Import regions to layer"
+                    );
+                }
+                else {
+                    promptedCollectionIndex = 0;
+                }
+            }
+            collectionIndex = promptedCollectionIndex;
         }
         if (geoJSONObj.properties.name) {
             regionName = geoJSONObj.properties.name;
@@ -730,32 +755,33 @@ regionUtils.deleteAllRegions = function () {
     regionUtils._regions = {};
     regionUtils.updateAllRegionClassUI();
 }
-regionUtils.updateAllRegionClassUI = function () {
-    setTimeout(()=>{
-        // get the collapse status of all elements ".collapse_button_regionClass"
-        // and save in a list of uncollapsed element ids}
-        let uncollapsedElements = [];
-        let collapseButtons = document.getElementsByClassName("collapse_button_regionClass");
-        for (let i = 0; i < collapseButtons.length; i++) {
-            if (collapseButtons[i].getAttribute("aria-expanded") == "true") {
-                uncollapsedElements.push(collapseButtons[i].getAttribute("data-bs-target"));
-            }
-        }
-        let regionUI = interfaceUtils._rGenUIFuncs.createTable();
-        menuui=interfaceUtils.getElementById("markers-regions-panel");
-        menuui.innerText="";
+regionUtils.updateAllRegionClassUI = async function () {
+    // wait for an image to be loaded
+    await overlayUtils.waitLayersReady();
 
-        menuui.appendChild(regionUI);
-        // uncollapse all elements in uncollapsedElements:
-        for (let i = 0; i < uncollapsedElements.length; i++) {
-            // set style transition to none:
-            $(uncollapsedElements[i]).css("transition", "none");
-            $(uncollapsedElements[i]).collapse("show");
-            // put back transition to default:
-            $(uncollapsedElements[i]).css("transition", "");
+    // get the collapse status of all elements ".collapse_button_regionClass"
+    // and save in a list of uncollapsed element ids}
+    let uncollapsedElements = [];
+    let collapseButtons = document.getElementsByClassName("collapse_button_regionClass");
+    for (let i = 0; i < collapseButtons.length; i++) {
+        if (collapseButtons[i].getAttribute("aria-expanded") == "true") {
+            uncollapsedElements.push(collapseButtons[i].getAttribute("data-bs-target"));
         }
-        menuui.classList.remove("d-none")
-    },10);
+    }
+    let regionUI = interfaceUtils._rGenUIFuncs.createTable();
+    menuui=interfaceUtils.getElementById("markers-regions-panel");
+    menuui.innerText="";
+
+    menuui.appendChild(regionUI);
+    // uncollapse all elements in uncollapsedElements:
+    for (let i = 0; i < uncollapsedElements.length; i++) {
+        // set style transition to none:
+        $(uncollapsedElements[i]).css("transition", "none");
+        $(uncollapsedElements[i]).collapse("show");
+        // put back transition to default:
+        $(uncollapsedElements[i]).css("transition", "");
+    }
+    menuui.classList.remove("d-none")
     glUtils.updateRegionDataTextures();
     glUtils.updateRegionLUTTextures();
     glUtils.draw();
@@ -1974,14 +2000,19 @@ regionUtils._splitEdgeLists = function() {
 
 
 // Add cluster information to edge lists
-regionUtils._addClustersToEdgeLists = function() {
-    const maxClusterSize = 8;
+regionUtils._addClustersToEdgeLists = function(splitLongClusters=true) {
+    const maxClusterSize = 32;
+    const splitThreshold = 0.2;  // Ratio of scanline width
 
     regionUtils._edgeListsByLayerClustered = {};
 
     for (let collectionIndex in regionUtils._edgeListsByLayer) {
         const edgeLists = regionUtils._edgeListsByLayer[collectionIndex];
         const numScanlines = edgeLists.length;
+
+        const image = tmapp["ISS_viewer"].world.getItemAt(collectionIndex);
+        console.assert(image != undefined);
+        const imageWidth = image.getContentSize().x;
 
         regionUtils._edgeListsByLayerClustered[collectionIndex] = [];
         for (let i = 0; i < numScanlines; ++i) {
@@ -2005,17 +2036,31 @@ regionUtils._addClustersToEdgeLists = function() {
                 const xMax = edgeList[j * 4 + 1];
                 const edgeCount = edgeList[j * 4 + 3];
 
-                if ((count % maxClusterSize) == 0) {
+                if (count == maxClusterSize || j == 2) {
                     // Add new cluster to edge list
                     clusterOffset = edgeListsClustered[i][0].length;
                     edgeListsClustered[i][0].push(Infinity, -Infinity, 0, 0);
+                    count = 0;
                 }
-                edgeListsClustered[i][0][clusterOffset + 0] =
-                    Math.min(edgeListsClustered[i][0][clusterOffset + 0], xMin);
-                edgeListsClustered[i][0][clusterOffset + 1] =
-                    Math.max(edgeListsClustered[i][0][clusterOffset + 1], xMax);
-                edgeListsClustered[i][0][clusterOffset + 3] += edgeCount + 1;
+                let xMinCluster = edgeListsClustered[i][0][clusterOffset + 0];
+                let xMaxCluster = edgeListsClustered[i][0][clusterOffset + 1];
 
+                if (count > 0 && splitLongClusters) {
+                    const diff = Math.max(xMaxCluster, xMax) - Math.min(xMinCluster, xMin);
+                    if (diff > imageWidth * splitThreshold) {
+                        // Add new cluster to edge list
+                        clusterOffset = edgeListsClustered[i][0].length;
+                        edgeListsClustered[i][0].push(Infinity, -Infinity, 0, 0);
+                        count = 0;
+
+                        xMinCluster = edgeListsClustered[i][0][clusterOffset + 0];
+                        xMaxCluster = edgeListsClustered[i][0][clusterOffset + 1];
+                    }
+                }
+
+                edgeListsClustered[i][0][clusterOffset + 0] = Math.min(xMinCluster, xMin);
+                edgeListsClustered[i][0][clusterOffset + 1] = Math.max(xMaxCluster, xMax);
+                edgeListsClustered[i][0][clusterOffset + 3] += edgeCount + 1;
                 edgeListsClustered[i][0].push(
                         ...edgeList.slice(j * 4, (j + edgeCount + 1) * 4));
 
