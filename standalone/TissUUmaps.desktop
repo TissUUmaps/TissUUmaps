@@ -2,7 +2,7 @@
 Name=TissUUmaps
 Exec=/opt/TissUUmaps/TissUUmaps
 Icon=/usr/share/icons/hicolor/128x128/apps/TissUUmaps.png
-comment=Raster Graphics Editor
+Comment=TissUUmaps is a browser-based tool for fast visualization and exploration of millions of data points overlaying a tissue sample
 Type=Application
 Terminal=false
 Encoding=UTF-8
