@@ -78,7 +78,7 @@ jobs:
           if [ "$RUNNER_OS" == "macOS" ]; then
             # store vips lib path in a variable and copy all it files to cwd
             export VIPS_PATH=$(brew --prefix vips)
-            cp -rf $VIPS_PATH/lib/* dist/TissUUmaps/
+            cp $VIPS_PATH/lib/libvips.42*.dylib dist/TissUUmaps.app/Contents/MacOS/
           fi
 
       - name: 💻 Create Win exe installer
