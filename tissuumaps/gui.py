@@ -949,10 +949,10 @@ def main():
     qInstallMessageHandler(lambda x, y, z: None)
 
     fmt = QtGui.QSurfaceFormat()
-    if platform.system() == "Darwin":
-        fmt.setProfile(QtGui.QSurfaceFormat.OpenGLContextProfile.CoreProfile)
-        fmt.setVersion(4, 1)
-    fmt.setSwapBehavior(QtGui.QSurfaceFormat.SwapBehavior.DoubleBuffer)
+    fmt.setProfile(QtGui.QSurfaceFormat.OpenGLContextProfile.CoreProfile)
+    fmt.setVersion(4, 1)
+    fmt.setSwapBehavior(QtGui.QSurfaceFormat.SwapBehavior.SingleBuffer)
+
     QtGui.QSurfaceFormat.setDefaultFormat(fmt)
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
 
