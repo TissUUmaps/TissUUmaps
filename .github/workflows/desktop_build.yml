@@ -160,5 +160,5 @@ jobs:
           path: "standalone/dist"
       - uses: ncipollo/release-action@v1
         with:
-          artifacts: standalone/dist/TissUUmaps.*
+          artifacts: standalone/dist/TissUUmaps_*
           token: ${{ secrets.GITHUB_TOKEN }}
