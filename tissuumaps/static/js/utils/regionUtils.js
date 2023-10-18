@@ -17,6 +17,7 @@
  * @property {String}   regionUtils._drawingclass - String that accompanies the classes of the polygons in the interface"drawPoly", 
  * @property {Object[]} regionUtils._edgeListsByLayer - Data structure used for rendering regions with WebGL
  * @property {Object[]} regionUtils._edgeListsByLayerSplit - Data structure used for rendering regions with WebGL
+*  @property {Object[]} regionUtils._edgeListsByLayerClustered - Data structure used for rendering regions with WebGL
  * @property {Object[]} regionUtils._regionToColorLUT - LUT for storing color and visibility per object ID
  * @property {Object{}} regionUtils._regionIDToIndex - Mapping between region ID (string) and object ID (index)
  * @property {Object{}} regionUtils._regionIndexToID - Mapping between object ID (index) and region ID (string)
@@ -36,6 +37,7 @@ regionUtils = {
     _drawingclass: "drawPoly",
     _edgeListsByLayer: {},
     _edgeListsByLayerSplit: {},
+    _edgeListsByLayerClustered: {},
     _regionToColorLUT: [],
     _regionIDToIndex: {},
     _regionIndexToID: {}
@@ -263,17 +265,18 @@ regionUtils.closePolygon = function () {
             });
         })
     }
-    let properties = regionsObjects.properties? regionsObjects.properties : {};
-    properties["name"] = Region.regionName
-    properties["classification"] = {
-        "name": Region.regionClass
-    }
-    properties["color"] = HexToRGB(Region.polycolor)
-    properties["isLocked"] = false
 
     geoJSONObjects = {
         "type": "FeatureCollection",
         "features": Object.values(regionsObjects).map (function(Region, i) {
+            let properties = regionsObjects.properties ? regionsObjects.properties : {};
+            properties["name"] = Region.regionName
+            properties["classification"] = {
+                "name": Region.regionClass
+            }
+            properties["color"] = HexToRGB(Region.polycolor)
+            properties["collectionIndex"] = Region.collectionIndex;
+
             return {
                 "type": "Feature",
                 "geometry": {
@@ -294,6 +297,7 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
     // Helper functions for converting colors to hexadecimal
     var viewer = tmapp[tmapp["object_prefix"] + "_viewer"]
     await overlayUtils.waitLayersReady();
+
     function rgbToHex(rgb) {
         return "#" + ((1 << 24) + (rgb[0] << 16) + (rgb[1] << 8) + rgb[2]).toString(16).slice(1);
     }
@@ -309,6 +313,7 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
     // Temporary hides the table for chrome issue with slowliness
     document.querySelector("#regionAccordions").classList.add("d-none");
     console.log(geoJSONObjects.length + " regions to import");
+    let promptedCollectionIndex = undefined;
     for (let geoJSONObjIndex in geoJSONObjects) {
         let geoJSONObj = geoJSONObjects[geoJSONObjIndex];
         if (geoJSONObj.type == "FeatureCollection") {
@@ -337,10 +342,37 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
         }
         var geoJSONObjClass = "";
         var hexColor = "#ff0000";
+        var collectionIndex = 0;
         if (!geoJSONObj.properties)
             geoJSONObj.properties = {};
         if (geoJSONObj.properties.color) {
             hexColor = rgbToHex(geoJSONObj.properties.color)
+        }
+        if (geoJSONObj.properties.collectionIndex != undefined) {
+            collectionIndex = geoJSONObj.properties.collectionIndex;
+        }
+        else  {
+            if (promptedCollectionIndex == undefined) {
+                // We check if we have multiple layers opened:
+                if (tmapp.layers.length > 1) {
+                    // If so, we ask the user to select the layer to import the regions:
+                    // First we create an html table with all layer names and indices:
+                    let layerTable = "<table class='table table-striped table-hover table-sm'><thead><tr><th>Layer</th><th>Index</th></tr></thead><tbody>";
+                    for (let i = 0; i < tmapp.layers.length; i++) {
+                        layerTable += "<tr><td>" + tmapp.layers[i].name + "</td><td>" + i + "</td></tr>";
+                    }
+                    layerTable += "</tbody></table>";
+                    promptedCollectionIndex = await interfaceUtils.prompt(
+                        "Multiple layers are opened. Please provide the layer index for importing regions into (default: 0). <br/>" + layerTable + "<b>Layer index:</b>",
+                        "0",
+                        "Import regions to layer"
+                    );
+                }
+                else {
+                    promptedCollectionIndex = 0;
+                }
+            }
+            collectionIndex = promptedCollectionIndex;
         }
         if (geoJSONObj.properties.name) {
             regionName = geoJSONObj.properties.name;
@@ -361,7 +393,7 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
             return coordinateList.map (function(coordinateList_i, index) {
                 coordinateList_i = coordinateList_i.map(function(x) {
                     xPoint = new OpenSeadragon.Point(x[0], x[1]);
-                    xPixel = viewer.world.getItemAt(0).imageToViewportCoordinates(xPoint);
+                    xPixel = viewer.world.getItemAt(collectionIndex).imageToViewportCoordinates(xPoint);
                     return [xPixel.x.toFixed(5), xPixel.y.toFixed(5)];
                 });
                 return coordinateList_i.filter(function(value, index, Arr) {
@@ -374,7 +406,7 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
             regionId += "_" + (Math.random() + 1).toString(36).substring(7);
         }
         //TODO: collectionIndex from modal if multiple layers
-        regionUtils.addRegion(coordinates, regionId, hexColor, geoJSONObjClass, 0);
+        regionUtils.addRegion(coordinates, regionId, hexColor, geoJSONObjClass, collectionIndex);
         regionUtils._regions[regionId].regionName = regionName;
         regionUtils._regions[regionId].properties = geoJSONObj.properties;
         if (document.getElementById(regionId + "_class_ta")) {
@@ -615,6 +647,21 @@ regionUtils.fillAllRegions=function(){
     glUtils.draw();    
 }
 
+/** Toggle showing instances visualized by color */
+regionUtils.showInstances=function(){
+    glUtils._regionUseColorByID = !glUtils._regionUseColorByID;
+
+    let regionIcon = document.getElementById('region_show_instances_button');
+    if (glUtils._regionUseColorByID) {
+        regionIcon.classList.remove("btn-light");
+        regionIcon.classList.add("btn-primary");
+    } else {
+        regionIcon.classList.remove("btn-primary");
+        regionIcon.classList.add("btn-light");
+    }
+    glUtils.draw();    
+}
+
 /** Zoom to a set of regions */
 regionUtils.zoomToRegions=function(regions){
     console.assert(regions.length > 0, "No regions to zoom to")
@@ -708,32 +755,33 @@ regionUtils.deleteAllRegions = function () {
     regionUtils._regions = {};
     regionUtils.updateAllRegionClassUI();
 }
-regionUtils.updateAllRegionClassUI = function () {
-    setTimeout(()=>{
-        // get the collapse status of all elements ".collapse_button_regionClass"
-        // and save in a list of uncollapsed element ids}
-        let uncollapsedElements = [];
-        let collapseButtons = document.getElementsByClassName("collapse_button_regionClass");
-        for (let i = 0; i < collapseButtons.length; i++) {
-            if (collapseButtons[i].getAttribute("aria-expanded") == "true") {
-                uncollapsedElements.push(collapseButtons[i].getAttribute("data-bs-target"));
-            }
-        }
-        let regionUI = interfaceUtils._rGenUIFuncs.createTable();
-        menuui=interfaceUtils.getElementById("markers-regions-panel");
-        menuui.innerText="";
+regionUtils.updateAllRegionClassUI = async function () {
+    // wait for an image to be loaded
+    await overlayUtils.waitLayersReady();
 
-        menuui.appendChild(regionUI);
-        // uncollapse all elements in uncollapsedElements:
-        for (let i = 0; i < uncollapsedElements.length; i++) {
-            // set style transition to none:
-            $(uncollapsedElements[i]).css("transition", "none");
-            $(uncollapsedElements[i]).collapse("show");
-            // put back transition to default:
-            $(uncollapsedElements[i]).css("transition", "");
+    // get the collapse status of all elements ".collapse_button_regionClass"
+    // and save in a list of uncollapsed element ids}
+    let uncollapsedElements = [];
+    let collapseButtons = document.getElementsByClassName("collapse_button_regionClass");
+    for (let i = 0; i < collapseButtons.length; i++) {
+        if (collapseButtons[i].getAttribute("aria-expanded") == "true") {
+            uncollapsedElements.push(collapseButtons[i].getAttribute("data-bs-target"));
         }
-        menuui.classList.remove("d-none")
-    },10);
+    }
+    let regionUI = interfaceUtils._rGenUIFuncs.createTable();
+    menuui=interfaceUtils.getElementById("markers-regions-panel");
+    menuui.innerText="";
+
+    menuui.appendChild(regionUI);
+    // uncollapse all elements in uncollapsedElements:
+    for (let i = 0; i < uncollapsedElements.length; i++) {
+        // set style transition to none:
+        $(uncollapsedElements[i]).css("transition", "none");
+        $(uncollapsedElements[i]).collapse("show");
+        // put back transition to default:
+        $(uncollapsedElements[i]).css("transition", "");
+    }
+    menuui.classList.remove("d-none")
     glUtils.updateRegionDataTextures();
     glUtils.updateRegionLUTTextures();
     glUtils.draw();
@@ -1943,9 +1991,56 @@ regionUtils._splitEdgeLists = function() {
 }
 
 
-// Add cluster information to edge lists (WIP)
+// Add cluster information to edge lists
 regionUtils._addClustersToEdgeLists = function() {
-    // STUB
+    const maxClusterSize = 8;
+
+    regionUtils._edgeListsByLayerClustered = {};
+
+    for (let collectionIndex in regionUtils._edgeListsByLayer) {
+        const edgeLists = regionUtils._edgeListsByLayer[collectionIndex];
+        const numScanlines = edgeLists.length;
+
+        regionUtils._edgeListsByLayerClustered[collectionIndex] = [];
+        for (let i = 0; i < numScanlines; ++i) {
+            regionUtils._edgeListsByLayerClustered[collectionIndex][i] =
+                [[]];
+        }
+
+        let edgeListsClustered = regionUtils._edgeListsByLayerClustered[collectionIndex];
+        for (let i = 0; i < numScanlines; ++i) {
+            const edgeList = edgeLists[i][0];
+            const numItems = edgeList.length / 4;
+
+            // Copy occupancy mask
+            edgeListsClustered[i][0].push(...edgeList.slice(0, 8));
+
+            // Copy edge data interleaved with added cluster information
+            let count = 0;
+            let clusterOffset = 2;
+            for (let j = 2; j < numItems; ++j, ++count) {
+                const xMin = edgeList[j * 4 + 0];
+                const xMax = edgeList[j * 4 + 1];
+                const edgeCount = edgeList[j * 4 + 3];
+
+                if ((count % maxClusterSize) == 0) {
+                    // Add new cluster to edge list
+                    clusterOffset = edgeListsClustered[i][0].length;
+                    edgeListsClustered[i][0].push(Infinity, -Infinity, 0, 0);
+                }
+                edgeListsClustered[i][0][clusterOffset + 0] =
+                    Math.min(edgeListsClustered[i][0][clusterOffset + 0], xMin);
+                edgeListsClustered[i][0][clusterOffset + 1] =
+                    Math.max(edgeListsClustered[i][0][clusterOffset + 1], xMax);
+                edgeListsClustered[i][0][clusterOffset + 3] += edgeCount + 1;
+
+                edgeListsClustered[i][0].push(
+                        ...edgeList.slice(j * 4, (j + edgeCount + 1) * 4));
+
+                j += edgeCount;  // Position pointer before next bounding box
+            }
+        }
+    }
 }
 
 

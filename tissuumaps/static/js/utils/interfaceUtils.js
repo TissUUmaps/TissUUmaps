@@ -2514,6 +2514,38 @@ interfaceUtils.closeModal = async function (modalWindow) {
     }
 }
 
+interfaceUtils.generateNotification = function(content, uid, noClose, timeout, alertType) {
+    if (!noClose) noClose = false;
+    if (!alertType) alertType = "warning";
+    if (!uid) uid = "default";
+    let alertDiv = document.getElementById(uid + "_alert");
+    if (! alertDiv) {
+        var div = HTMLElementUtils.createElement(
+            {"kind":"div", "id":uid+"_alert", "extraAttributes":{ 
+                "class":`position-absolute bottom-0 end-0 m-2 alert alert-${alertType} alert-dismissible fade show`, "role":"alert"
+            }
+        });
+        div.innerHTML = `
+            ${content}
+            <button id="${uid}_closeButton" type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>`;
+        document.body.appendChild(div);
+    }
+    if (noClose) { 
+        document.getElementById(`${uid}_closeButton`).classList.add("d-none");
+    }
+    else {
+        document.getElementById(`${uid}_closeButton`).classList.remove("d-none");
+    }
+    $(`#${uid}_alert`).alert();
+    if (timeout) {
+        setTimeout(function() {
+            $(`#${uid}_alert`).alert('close');
+        }, timeout);
+    }
+    return alertDiv;
+}
+
 interfaceUtils.createDownloadDropdown = function(downloadRow, innerText, callback, comment, dropdownOptions) {
     var row = HTMLElementUtils.createRow(null);
     var selectDiv = document.createElement("div");
@@ -3219,35 +3251,60 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         collapse_div.classList.add("container")
         collapse_div.classList.add("p-0")
         $(collapse_div).on('show.bs.collapse', function () {
+            var groupContainer = this;
+            let selectedRegionID = groupContainer.getAttribute("data-region-selected");
+            groupContainer.removeAttribute("data-region-selected");
             let selectedRegionClass = this.getAttribute("data-region-class");
             let selectedRegionClassID = this.getAttribute("data-region-classID");
             let tbody_subregions = document.getElementById("tbody_subregions_" + selectedRegionClassID);
-
+            if (tbody_subregions.innerHTML != "" && selectedRegionID != undefined) {
+                let escapedRegionId = HTMLElementUtils.stringToId(selectedRegionID);
+                var tr = document.querySelectorAll('[data-escapedid="'+escapedRegionId+'"]')[0];
+                if (!tr) tbody_subregions.innerHTML = "";
+            }  
             if (tbody_subregions.innerHTML == "") {
-                var groupContainer = this;
-                var numberOfItemsPerPage = 1000;
+                var numberOfItemsPerPage = 100;
                 let groupRegions = Object.values(regionUtils._regions).filter(
                     x => x.regionClass==selectedRegionClass
                 )
-                let subGroupRegions = groupRegions.slice(0, numberOfItemsPerPage);
+                let selectedIndex = 0;
+                if (selectedRegionID != undefined) {
+                    selectedIndex = groupRegions.findIndex(x => x.id==selectedRegionID);
+                    if (selectedIndex == -1) selectedIndex = 0;
+                }
+                let min = Math.max(0, parseInt(selectedIndex - numberOfItemsPerPage / 2));
+                let max = min + numberOfItemsPerPage;
+                let subGroupRegions = groupRegions.slice(min, max);
                 regionDetails = document.createDocumentFragment();
                 for (region of subGroupRegions) {
                     regionDetails.appendChild(interfaceUtils._rGenUIFuncs.createRegionRow(region.id));
                 }
                 tbody_subregions.appendChild(regionDetails);
-                groupContainer.setAttribute("data-region-count", numberOfItemsPerPage);
+                groupContainer.setAttribute("data-region-max", max);
+                groupContainer.setAttribute("data-region-min", min);
                 $(groupContainer).bind('scroll', function(){
                     let tbody_subregions = document.getElementById("tbody_subregions_" + selectedRegionClassID);
                     if($(groupContainer).scrollTop() + $(this).innerHeight() >= $(this)[0].scrollHeight - 500){
-                        maxItem = parseInt(groupContainer.getAttribute("data-region-count"));
-                        groupContainer.setAttribute("data-region-count", maxItem+numberOfItemsPerPage);
+                        maxItem = parseInt(groupContainer.getAttribute("data-region-max"));
                         if (maxItem >= groupRegions.length) return;
+                        groupContainer.setAttribute("data-region-max", maxItem+numberOfItemsPerPage);
                         let subGroupRegions = groupRegions.slice(maxItem, maxItem+numberOfItemsPerPage);
                         regionDetails = document.createDocumentFragment();
                         for (region of subGroupRegions) {
                             regionDetails.appendChild(interfaceUtils._rGenUIFuncs.createRegionRow(region.id));
                         }
                         tbody_subregions.appendChild(regionDetails);
+                    }
+                    if($(groupContainer).scrollTop() <= 500){
+                        minItem = parseInt(groupContainer.getAttribute("data-region-min"));
+                        if (minItem <= 0) return;
+                        groupContainer.setAttribute("data-region-min", minItem-numberOfItemsPerPage);
+                        let subGroupRegions = groupRegions.slice(minItem-numberOfItemsPerPage, minItem);
+                        regionDetails = document.createDocumentFragment();
+                        for (region of subGroupRegions) {
+                            regionDetails.appendChild(interfaceUtils._rGenUIFuncs.createRegionRow(region.id));
+                        }
+                        tbody_subregions.prepend(regionDetails);
                     }
                 });
                 groupContainer.style.maxHeight = "400px";

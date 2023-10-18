@@ -433,14 +433,20 @@ regionUtils.selectRegion = function (region, skipHighlight) {
  * @summary Highlight and scroll to a region in the right panel
  * @param {*} regionid ID of region to be highlighted
  */
-regionUtils.highlightRegion = function (regionid) {
+regionUtils.highlightRegion = async function (regionid) {
+    // wait 50 ms
+    await new Promise(r => setTimeout(r, 50));
     // Highlight region in right panel
     const region = regionUtils._regions[regionid];
     const escapedRegionId = HTMLElementUtils.stringToId(region.id);
     const regionClassID = HTMLElementUtils.stringToId("region_" + region.regionClass);
     const collapsibleRow = $(`#collapse_region_${regionClassID}`);
-
-    if (collapsibleRow) collapsibleRow.collapse("show");
+    collapsibleRow[0].setAttribute("data-region-selected", escapedRegionId);
+    if (collapsibleRow) {
+      collapsibleRow.collapse("show");
+      // trigger show.bs.collapse on the collapsible row to highlight the region
+      collapsibleRow.trigger("show.bs.collapse");
+    }
     setTimeout(() => {
         var tr = document.querySelectorAll('[data-escapedid="'+escapedRegionId+'"]')[0];
         if (tr != null) {

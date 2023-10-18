@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.2
+
+- Add annotation tools (in collaboration with Sanofi Digital R&D)
+- Move to WebGL rendering for regions
+- Refactor completely the region tab to better handle large number of items
+- Allow import of regions from multiple GeoJSON files
+- Add histogram button for analyzing individual regions
+- Make regions work in collection mode and with multiple image layers
+- Add marker outline and fill options in Advanced options
+- Increase number of barcodes that can be displayed for markers
+- Add validation of .tmap files (via tissuumaps-schema)
+- Move standalone installer from python3.8 to 3.11
+- Move to pyside6 instead of pyqt6
+- Lots of minor fixes
+
 ## 3.1.1.6
 
 - Add a min-max filter to image layers for better contrast (@glbarlow)

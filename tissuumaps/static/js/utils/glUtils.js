@@ -65,7 +65,7 @@ glUtils = {
     _edgeThicknessRatio: 0.1,     // Ratio between edge thickness and marker size
     _regionOpacity: 0.5,
     _regionFillRule: "never",   // Possible values: "never" | "nonzero" | "oddeven"
-    _regionUsePivotSplit: true,   // Use split edge lists for faster region rendering and less risk of overflow
+    _regionUsePivotSplit: false,   // Use split edge lists for faster region rendering and less risk of overflow
     _regionUseColorByID: false,   // Map region object IDs to unique colors
     _regionDataSize: {},          // Size stored per region data texture and used for dynamic resizing
     _regionPicked: null,          // Key to regionUtils._regions dict, or null if no region is picked
@@ -577,6 +577,7 @@ glUtils._regionsFS = `
     #define FILL_RULE_NONZERO 1
     #define FILL_RULE_ODDEVEN 2
     #define SHOW_PIVOT_SPLIT_DEBUG 0
+    #define SHOW_WORK_VISITED_BBOXES_DEBUG 0
 
     precision highp float;
     precision highp int;
@@ -646,6 +647,7 @@ glUtils._regionsFS = `
         vec4 headerData = texelFetch(u_regionData, ivec2(offset & 4095, offset >> 12), 0);
         int objectID = int(headerData.z) - 1;
         int windingNumber = 0;
+        int visitedBBoxes = 0;
 
         while (headerData.w != 0.0) {
             // Find next path with bounding box overlapping this sample position
@@ -653,6 +655,7 @@ glUtils._regionsFS = `
                 headerData = texelFetch(u_regionData, ivec2(offset & 4095, offset >> 12), 0);
                 bool isPathBbox = headerData.z > 0.0;
                 bool isClusterBbox = headerData.z == 0.0;
+                visitedBBoxes += 1;
 
                 if (headerData.x <= (p.x + strokeWidth) && (p.x - strokeWidth) <= headerData.y) {
                     if (isPathBbox) { break; }
@@ -716,6 +719,13 @@ glUtils._regionsFS = `
 
         out_color = color;
         out_color.rgb /= max(1e-5, out_color.a);
+
+    #if SHOW_WORK_VISITED_BBOXES_DEBUG
+        {
+            float t = clamp(float(visitedBBoxes) / 400.0, 0.0, 1.0) * 2.0;
+            out_color.rgb = clamp(vec3(t - 1.0, 1.0 - abs(t - 1.0), 1.0 - t), 0.0, 1.0);
+        }
+    #endif  // SHOW_WORK_VISITED_BBOXES_DEBUG
     }
 `;
 
@@ -1526,20 +1536,18 @@ glUtils.updateRegionDataTextures = function() {
     regionUtils._generateEdgeListsForDrawing();
     console.timeEnd("Update region edge lists");
 
-    console.time("Split region edge lists");
-    regionUtils._splitEdgeLists();
-    console.timeEnd("Split region edge lists");
+    // console.time("Split region edge lists");
+    // regionUtils._splitEdgeLists();
+    // console.timeEnd("Split region edge lists");
 
     console.time("Add clusters to region edge lists");
     regionUtils._addClustersToEdgeLists();
     console.timeEnd("Add clusters to region edge lists");
 
     for (let collectionIndex in regionUtils._edgeListsByLayer) {
-        console.assert(collectionIndex in regionUtils._edgeListsByLayerSplit);
-
         const textureCreateInfo = [
             {name: "regionData_" + collectionIndex, useSplit: false},
-            {name: "regionDataSplit_" + collectionIndex, useSplit: true}
+            // {name: "regionDataSplit_" + collectionIndex, useSplit: true}
         ];
 
         for (let item of textureCreateInfo) {
@@ -1593,7 +1601,7 @@ glUtils._updateRegionDataTexture = function(gl, texture, collectionIndex=0, useS
     if (!(collectionIndex in regionUtils._edgeListsByLayer)) return 0;
 
     const edgeLists = useSplitData ? regionUtils._edgeListsByLayerSplit[collectionIndex]
-                                   : regionUtils._edgeListsByLayer[collectionIndex];
+                                   : regionUtils._edgeListsByLayerClustered[collectionIndex];
     const numScanlines = edgeLists.length;
     const numSides = useSplitData ? 2 : 1;
 
@@ -1675,6 +1683,12 @@ glUtils._createRegionLUTTexture = function(gl, maxNumRegions) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, 4096, maxNumRegions / 4096);
+    // Do explicit initialization with zeros, to avoid Firefox warning about
+    // "Tex image TEXTURE_2D level 0 is incurring lazy initialization."
+    // when texSubImage2D() is used to only partially update the texture
+    let zeros = new Uint8Array(maxNumRegions * 4);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4096, maxNumRegions / 4096,
+                     gl.RGBA, gl.UNSIGNED_BYTE, zeros);
     gl.bindTexture(gl.TEXTURE_2D, null);
 
     return texture;

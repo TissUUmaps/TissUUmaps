@@ -288,6 +288,19 @@ regionUtils.addRegionToolbarUI = function () {
     });
     tooltip.enable();
     fillRegionsButton.innerHTML = '<i class="bi bi-front"></i>';
+
+    const showInstancesButton = HTMLElementUtils.createButton({
+      extraAttributes: { class: "btn lh-1 btn-light m-1 p-2", "title": "Show instances" },
+    });
+    showInstancesButton.id = "region_show_instances_button";
+    showInstancesButton.onclick = function () {
+      regionUtils.showInstances();
+    };
+    var tooltip = new bootstrap.Tooltip(showInstancesButton, {
+      placement: "bottom", trigger : 'hover'
+    });
+    tooltip.enable();
+    showInstancesButton.innerHTML = '<i class="bi bi-layout-wtf"></i>';
         
     const zoomSelectedButton = HTMLElementUtils.createButton({
       extraAttributes: { class: "btn lh-1 btn-primary m-1 p-2 only-selected", "title": "Zoom to selected regions" },
@@ -306,6 +319,7 @@ regionUtils.addRegionToolbarUI = function () {
     buttonsContainer.appendChild(selectionButton);
     buttonsContainer.appendChild(separator2);
     buttonsContainer.appendChild(fillRegionsButton);
+    buttonsContainer.appendChild(showInstancesButton);
     buttonsContainer.appendChild(zoomSelectedButton);
     buttonsContainer.appendChild(separator);
     buttonsContainer.appendChild(unselectButton);

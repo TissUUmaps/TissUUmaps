@@ -499,6 +499,7 @@ def tmapFile(filename):
 
     # Define error message feedback to user, None means no error message
     errorMessage = None
+    warningMessage = None
     if request.method == "POST" and not app.config["READ_ONLY"]:
         # Handle POST request to update the JSON file
         state = request.get_json(silent=False)
@@ -518,7 +519,7 @@ def tmapFile(filename):
                 if version.parse(major_schema_version) > version.parse(
                     current_schema_module.VERSION
                 ):
-                    errorMessage = (
+                    warningMessage = (
                         "<b>Warning:</b> This project was created with a newer version "
                         "of TissUUmaps with breaking changes.<br/><br/>Please "
                         "upgrade your TissUUmaps version to ensure compatibility."
@@ -533,7 +534,7 @@ def tmapFile(filename):
                 elif version.parse(schema_version) > version.parse(
                     current_schema_module.VERSION
                 ):
-                    errorMessage = (
+                    warningMessage = (
                         "<b>Warning:</b> This project was created with a newer version "
                         "of TissUUmaps.<br/><br/>"
                         "Upgrade your TissUUmaps version to get all functionalities."
@@ -546,7 +547,7 @@ def tmapFile(filename):
                     )
                 # Else if major version is unknown
                 elif major_schema_version not in MAJOR_SCHEMA_VERSION_MODULES:
-                    errorMessage = (
+                    warningMessage = (
                         "<b>Warning:</b> This project was created with an unknown "
                         "version of TissUUmaps.<br/><br/>"
                         "Upgrade your TissUUmaps version to get all functionalities."
@@ -572,7 +573,7 @@ def tmapFile(filename):
                             .replace("\r", "<br>")
                             .replace('"', '\\"')
                         )
-                        errorMessage = (
+                        warningMessage = (
                             "<b>Warning when loading tmap project:</b> <br><pre><code>"
                             + trace
                             + "</code></pre>"
@@ -611,6 +612,7 @@ def tmapFile(filename):
             version=app.config["VERSION"],
             schema_version=current_schema_module.VERSION,
             message=errorMessage,
+            warning=warningMessage,
         )
 
 
