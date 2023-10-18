@@ -2,7 +2,6 @@ import json
 import logging
 import os
 import pathlib
-import platform
 import random
 import socket
 import string
