@@ -2,11 +2,23 @@
 
 block_cipher = None
 
+import distutils.util
+
+COMPILING_PLATFORM = distutils.util.get_platform()
+STRIP = False
+
+if COMPILING_PLATFORM == 'win-amd64':
+    platform = 'win'
+elif COMPILING_PLATFORM == 'linux-x86_64':
+    platform = 'nix64'
+elif "macosx" in COMPILING_PLATFORM:
+    platform = 'mac'
+
 a = Analysis(['../tissuumaps/gui.py'],
              pathex=['./'],
              binaries=[],
              datas=[('../tissuumaps/VERSION', './'), ('../tissuumaps/templates', 'templates'), ('../tissuumaps/flask_filetree', 'flask_filetree'), ('../tissuumaps/static', 'static'), ('../tissuumaps/plugins/__init__.py','plugins')],
-             hiddenimports=["pyvips","matplotlib","mpl_toolkits","scipy.sparse"],
+             hiddenimports=["pyvips","matplotlib","mpl_toolkits","scipy.sparse", "tissuumaps_schema"],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
@@ -23,7 +35,7 @@ exe = EXE(pyz,
           name='TissUUmaps',
           debug=False,
           bootloader_ignore_signals=False,
-          strip=False,
+          strip=STRIP,
           upx=True,
           console=False,
           icon='../tissuumaps/static/misc/favicon.ico')
@@ -31,7 +43,13 @@ coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
                a.datas,
-               strip=False,
+               strip=STRIP,
                upx=True,
                upx_exclude=[],
                name='TissUUmaps')
+
+if platform == 'mac':
+    app = BUNDLE(coll,
+                 name='TissUUmaps.app',
+                 icon='../tissuumaps/static/misc/design/logo.png',
+                 bundle_identifier=None)

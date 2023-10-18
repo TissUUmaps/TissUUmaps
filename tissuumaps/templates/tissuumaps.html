@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <title>TissUUmaps</title>
@@ -283,27 +283,8 @@
                           <div class="panel panel-default">
                             <div class="panel-body">
                               <div id="divRegionsDownloadButtons"></div>
-                              <div class="row my-1">
-                                <button
-                                  id="ISS_drawregions_btn"
-                                  class="btn btn-primary col mx-1"
-                                  type="button"
-                                >
-                                  <i
-                                    id="ISS_drawregions_icon"
-                                    class="bi bi-circle"
-                                  ></i>
-                                  Draw regions
-                                </button>
-                                <button
-                                  id="ISS_fillregions_btn"
-                                  class="btn btn-primary col mx-1"
-                                  type="button"
-                                >
-                                  Fill all regions
-                                </button>
-                              </div>
                               <div id="regionAccordions"></div>
+
                               <div id="markers-regions-div">
                                 <div
                                   class="my-1"
@@ -479,6 +460,7 @@
       </div>
     </div>
   </body>
+  <script src="static/vendor/clipper-js/clipper-js.js"></script>
   <script src="static/vendor/bootstrap-5.1.1/dist/js/bootstrap.bundle.min.js"></script>
   <script src="static/vendor/openseadragon-bin-4.0.0/openseadragon.min.js"></script>
   <script src="static/vendor/openseadragon-plugins/openseadragon-filtering.js"></script>
@@ -488,12 +470,15 @@
   <script src="static/vendor/PapaParse-5.3.0/papaparse.min.js"></script>
   <script src="static/vendor/sorttable/sorttable.js"></script>
   <script src="static/js/utils/interfaceUtils.js"></script>
+  <script src="static/js/utils/customElementUtils.js"></script>
   <script src="static/js/utils/dataUtils.js"></script>
   <script src="static/js/utils/h5Utils.js"></script>
   <script src="static/js/utils/markerUtils.js"></script>
   <script src="static/js/utils/OSDViewerUtils.js"></script>
   <script src="static/js/utils/HTMLElementUtils.js"></script>
   <script src="static/js/utils/regionUtils.js"></script>
+  <script src="static/js/utils/regionOperations.js"></script>
+  <script src="static/js/utils/regionOperationsUI.js"></script>
   <script src="static/js/utils/overlayUtils.js"></script>
   <script src="static/js/utils/filterUtils.js"></script>
   <script src="static/js/utils/glUtils.js"></script>
@@ -532,6 +517,7 @@
       tmapp.registerActions();
       tmapp.init();
       tmapp.version = "{{ version | safe }}";
+      tmapp.schema_version = "{{ schema_version | safe }}";
       {% for plugin in plugins %} {% if plugin %}
       pluginUtils.addPlugin("{{ plugin }}");
       {% endif %} {% endfor %}
@@ -557,6 +543,9 @@
       {% endif %}
       {% if message %}
       interfaceUtils.alert("{{message|safe}}");
+      {% endif %}
+      {% if warning %}
+      interfaceUtils.generateNotification("{{warning|safe}}", "loading_alert", false, 3000, "warning");
       {% endif %}
       if (window!=window.top) {
           elt = document.getElementById("powered_by_tissuumaps");

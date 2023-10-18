@@ -118,12 +118,12 @@ Points2Regions.init = function (container) {
         placement: "right",
       });
       tooltip.enable();
-    }
+    },
   );
   let advancedSectionIndex = 7;
 
   let advancedSectionElement = document.querySelector(
-    `#plugin-Points2Regions div:nth-child(${advancedSectionIndex}) div h6`
+    `#plugin-Points2Regions div:nth-child(${advancedSectionIndex}) div h6`,
   );
   advancedSectionElement?.setAttribute("data-bs-toggle", "collapse");
   advancedSectionElement?.setAttribute("data-bs-target", "#collapse_advanced");
@@ -131,7 +131,7 @@ Points2Regions.init = function (container) {
   advancedSectionElement?.setAttribute("aria-controls", "collapse_advanced");
   advancedSectionElement?.setAttribute(
     "class",
-    "collapse_button_transform border-bottom-0 p-1 collapsed"
+    "collapse_button_transform border-bottom-0 p-1 collapsed",
   );
   advancedSectionElement?.setAttribute("style", "cursor: pointer;");
   advancedSectionElement?.setAttribute("title", "Click to expand");
@@ -140,7 +140,7 @@ Points2Regions.init = function (container) {
   newDiv.setAttribute("class", "collapse");
   $("#plugin-Points2Regions").append(newDiv);
   let advancedSectionSubtitle = document.querySelector(
-    `#plugin-Points2Regions div:nth-child(${advancedSectionIndex}) div p`
+    `#plugin-Points2Regions div:nth-child(${advancedSectionIndex}) div p`,
   );
   newDiv.appendChild(advancedSectionSubtitle);
   for (
@@ -149,7 +149,7 @@ Points2Regions.init = function (container) {
     indexElement++
   ) {
     let element = document.querySelector(
-      `#plugin-Points2Regions div:nth-child(${advancedSectionIndex + 1})`
+      `#plugin-Points2Regions div:nth-child(${advancedSectionIndex + 1})`,
     );
     newDiv.appendChild(element);
   }
@@ -160,7 +160,7 @@ Points2Regions.run = function () {
     var csvFile = dataUtils.data[Points2Regions.get("_dataset")]._csv_path;
     if (typeof csvFile === "object") {
       interfaceUtils.alert(
-        "This plugin can only run on datasets generated from buttons. Please convert your dataset to a button (Markers > Advanced Options > Generate button from tab)"
+        "This plugin can only run on datasets generated from buttons. Please convert your dataset to a button (Markers > Advanced Options > Generate button from tab)",
       );
       return;
     }
@@ -172,7 +172,7 @@ Points2Regions.run = function () {
       }
     }
     loadingModal = interfaceUtils.loadingModal(
-      "Points2Regions... Please wait."
+      "Points2Regions... Please wait.",
     );
     $.ajax({
       type: "post",
@@ -217,7 +217,7 @@ Points2Regions.run = function () {
           $(loadingModal).modal("hide");
         }, 500);
         interfaceUtils.alert(
-          "Error during Points2Regions, check logs. This plugin only works on a pip installation of TissUUmaps, with the extra packages: pandas, sklearn, skimage"
+          "Error during Points2Regions, check logs. This plugin only works on a pip installation of TissUUmaps, with the extra packages: pandas, sklearn, skimage",
         );
       },
     });
@@ -752,7 +752,7 @@ Points2Regions.setMessage("")
     if (Points2Regions.get("_clusterKey") === undefined) {
       Points2Regions.set(
         "_clusterKey",
-        dataUtils.data[Points2Regions.get("_dataset")]._gb_col
+        dataUtils.data[Points2Regions.get("_dataset")]._gb_col,
       );
     }
     Points2Regions.setMessage("Running Python code...");
@@ -775,7 +775,7 @@ Points2Regions.inputTrigger = function (parameterName) {
     });
     interfaceUtils.addObjectsToSelect(
       Points2Regions.getInputID("_dataset"),
-      datasets
+      datasets,
     );
     var event = new Event("change");
     interfaceUtils
@@ -789,21 +789,21 @@ Points2Regions.inputTrigger = function (parameterName) {
     interfaceUtils.cleanSelect(Points2Regions.getInputID("_clusterKey"));
     interfaceUtils.addElementsToSelect(
       Points2Regions.getInputID("_clusterKey"),
-      dataUtils.data[Points2Regions.get("_dataset")]._csv_header
+      dataUtils.data[Points2Regions.get("_dataset")]._csv_header,
     );
     Points2Regions.set(
       "_clusterKey",
-      dataUtils.data[Points2Regions.get("_dataset")]._gb_col
+      dataUtils.data[Points2Regions.get("_dataset")]._gb_col,
     );
 
     if (dataUtils.data[Points2Regions.get("_dataset")]._filetype == "h5") {
       select311 = interfaceUtils._mGenUIFuncs.intputToH5(
         Points2Regions.get("_dataset"),
-        interfaceUtils.getElementById(Points2Regions.getInputID("_clusterKey"))
+        interfaceUtils.getElementById(Points2Regions.getInputID("_clusterKey")),
       );
       Points2Regions.set(
         "_clusterKey",
-        dataUtils.data[Points2Regions.get("_dataset")]._gb_col
+        dataUtils.data[Points2Regions.get("_dataset")]._gb_col,
       );
       select311.addEventListener("change", (event) => {
         Points2Regions.set("_clusterKey", select311.value);
@@ -856,8 +856,8 @@ Points2Regions.selectStride = function (parameterName) {
         startSelection.x,
         startSelection.y,
         normCoords.x - startSelection.x,
-        normCoords.y - startSelection.y
-      )
+        normCoords.y - startSelection.y,
+      ),
     );
     let canvas =
       overlayUtils._d3nodes[tmapp["object_prefix"] + "_regions_svgnode"].node();
@@ -873,7 +873,7 @@ Points2Regions.selectStride = function (parameterName) {
     }
     let width = Math.max(
       normCoords.x - startSelection.x,
-      normCoords.y - startSelection.y
+      normCoords.y - startSelection.y,
     );
     console.log(width, normCoords.x, normCoords.y);
     let polyline = regionobj
@@ -891,7 +891,7 @@ Points2Regions.selectStride = function (parameterName) {
         "stroke-dasharray",
         0.004 / tmapp["ISS_viewer"].viewport.getZoom() +
           "," +
-          0.004 / tmapp["ISS_viewer"].viewport.getZoom()
+          0.004 / tmapp["ISS_viewer"].viewport.getZoom(),
       )
       .attr("class", "stride_region");
     Points2Regions.set("_sigma", rectangle.width);
@@ -925,10 +925,10 @@ Points2Regions.loadClusters = function (data) {
   data_obj._processeddata.columns.push("Points2Regions");
   interfaceUtils.addElementsToSelect(
     Points2Regions.get("_dataset") + "_gb-col-value",
-    ["Points2Regions"]
+    ["Points2Regions"],
   );
   document.getElementById(
-    Points2Regions.get("_dataset") + "_gb-col-value"
+    Points2Regions.get("_dataset") + "_gb-col-value",
   ).value = "Points2Regions";
   let colors = {
     "-1": "#000000",
@@ -957,7 +957,7 @@ Points2Regions.loadClusters = function (data) {
     .getElementById(Points2Regions.get("_dataset") + "_cb-bygroup-dict")
     .click();
   document.getElementById(
-    Points2Regions.get("_dataset") + "_cb-bygroup-dict-val"
+    Points2Regions.get("_dataset") + "_cb-bygroup-dict-val",
   ).value = JSON.stringify(colors);
   dataUtils._quadtreesLastInputs = null;
   glUtils._markerInputsCached[Points2Regions.get("_dataset")] = null;
@@ -978,7 +978,7 @@ Points2Regions.loadRegions = function (data) {
   regionUtils.JSONValToRegions(regionsobj);
   $("#title-tab-regions").tab("show");
   $(
-    document.getElementById("regionClass-" + Points2Regions._region_name)
+    document.getElementById("regionClass-" + Points2Regions._region_name),
   ).collapse("show");
   $("#" + Points2Regions._region_name + "_group_fill_ta").click();
 };
@@ -1098,7 +1098,7 @@ Points2Regions._api = function (endpoint, data, success, error) {
       : function (data) {
           interfaceUtils.alert(
             data.responseText.replace("\n", "<br/>"),
-            "Error on the plugin's server response:"
+            "Error on the plugin's server response:",
           );
         },
   });
@@ -1159,6 +1159,6 @@ function Array_Stdev(tab) {
   return Math.sqrt(
     diffSqredArr.reduce(function (firstEl, nextEl) {
       return firstEl + nextEl;
-    }) / tab.length
+    }) / tab.length,
   );
 }

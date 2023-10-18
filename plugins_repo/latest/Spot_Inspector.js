@@ -11,7 +11,7 @@
 let cmap = ["None"].concat(
   dataUtils._d3LUTs.map(function (str, index) {
     return { value: index, innerHTML: str.replace("interpolate", "") };
-  })
+  }),
 );
 
 var Spot_Inspector;
@@ -96,7 +96,7 @@ Spot_Inspector = {
 // Log Scale
 const expScale = d3.scalePow().exponent(Math.E).domain([0, 1]);
 const colorScaleExp = d3.scaleSequential((d) =>
-  d3.interpolateGreys(expScale(1 - d))
+  d3.interpolateGreys(expScale(1 - d)),
 );
 
 d3["LogGreys"] = colorScaleExp;
@@ -119,7 +119,7 @@ Spot_Inspector.inputTrigger = function (parameterName) {
       .prompt(
         "<i>This will replace all layers of the current project.</i><br/>Give the path format of your images, use * for numbers:",
         "R*_C*.tif",
-        "Import images into layers"
+        "Import images into layers",
       )
       .then((pathFormat) => {
         Spot_Inspector.loadImages(pathFormat);
@@ -146,7 +146,7 @@ Spot_Inspector.init = function (container) {
   cmap = ["None"].concat(
     dataUtils._d3LUTs.map(function (str, index) {
       return { value: index, innerHTML: str.replace("interpolate", "") };
-    })
+    }),
   );
   interfaceUtils.addObjectsToSelect(Spot_Inspector.getInputID("_cmap"), cmap);
   Spot_Inspector.set("_cmap", Spot_Inspector.get("_cmap"));
@@ -156,40 +156,40 @@ Spot_Inspector.init = function (container) {
     interfaceUtils.cleanSelect(marker_row);
     interfaceUtils.addElementsToSelect(
       marker_row,
-      [0].concat(Object.values(dataUtils.data)[0]._csv_header)
+      [0].concat(Object.values(dataUtils.data)[0]._csv_header),
     );
 
     let marker_col = Spot_Inspector.getInputID("_marker_col");
     interfaceUtils.cleanSelect(marker_col);
     interfaceUtils.addElementsToSelect(
       marker_col,
-      [0].concat(Object.values(dataUtils.data)[0]._csv_header)
+      [0].concat(Object.values(dataUtils.data)[0]._csv_header),
     );
 
     let layername = Spot_Inspector.getInputID("_layername");
     interfaceUtils.cleanSelect(layername);
     interfaceUtils.addElementsToSelect(
       layername,
-      [null].concat(Object.values(dataUtils.data)[0]._csv_header)
+      [null].concat(Object.values(dataUtils.data)[0]._csv_header),
     );
 
     if (
       Object.values(dataUtils.data)[0]._csv_header.indexOf(
-        Spot_Inspector.get("_layername")
+        Spot_Inspector.get("_layername"),
       ) > 0
     ) {
       Spot_Inspector.set("_layername", Spot_Inspector.get("_layername"));
     }
     if (
       Object.values(dataUtils.data)[0]._csv_header.indexOf(
-        Spot_Inspector.get("_marker_row")
+        Spot_Inspector.get("_marker_row"),
       ) > 0
     ) {
       Spot_Inspector.set("_marker_row", Spot_Inspector.get("_marker_row"));
     }
     if (
       Object.values(dataUtils.data)[0]._csv_header.indexOf(
-        Spot_Inspector.get("_marker_col")
+        Spot_Inspector.get("_marker_col"),
       ) > 0
     ) {
       Spot_Inspector.set("_marker_col", Spot_Inspector.get("_marker_col"));
@@ -199,7 +199,7 @@ Spot_Inspector.init = function (container) {
   let advancedSectionIndex = 9;
 
   let advancedSectionElement = document.querySelector(
-    `#plugin-Spot_Inspector div:nth-child(${advancedSectionIndex}) div h6`
+    `#plugin-Spot_Inspector div:nth-child(${advancedSectionIndex}) div h6`,
   );
   advancedSectionElement?.setAttribute("data-bs-toggle", "collapse");
   advancedSectionElement?.setAttribute("data-bs-target", "#collapse_advanced");
@@ -207,7 +207,7 @@ Spot_Inspector.init = function (container) {
   advancedSectionElement?.setAttribute("aria-controls", "collapse_advanced");
   advancedSectionElement?.setAttribute(
     "class",
-    "collapse_button_transform border-bottom-0 p-1 collapsed"
+    "collapse_button_transform border-bottom-0 p-1 collapsed",
   );
   advancedSectionElement?.setAttribute("style", "cursor: pointer;");
   advancedSectionElement?.setAttribute("title", "Click to expand");
@@ -216,7 +216,7 @@ Spot_Inspector.init = function (container) {
   newDiv.setAttribute("class", "collapse");
   $("#plugin-Spot_Inspector").append(newDiv);
   let advancedSectionSubtitle = document.querySelector(
-    `#plugin-Spot_Inspector div:nth-child(${advancedSectionIndex}) div p`
+    `#plugin-Spot_Inspector div:nth-child(${advancedSectionIndex}) div p`,
   );
   newDiv.appendChild(advancedSectionSubtitle);
   for (
@@ -225,7 +225,7 @@ Spot_Inspector.init = function (container) {
     indexElement++
   ) {
     let element = document.querySelector(
-      `#plugin-Spot_Inspector div:nth-child(${advancedSectionIndex + 1})`
+      `#plugin-Spot_Inspector div:nth-child(${advancedSectionIndex + 1})`,
     );
     newDiv.appendChild(element);
   }
@@ -240,7 +240,7 @@ Spot_Inspector.loadImages = function (pathFormat) {
 
   subfolder = window.location.pathname.substring(
     0,
-    window.location.pathname.lastIndexOf("/")
+    window.location.pathname.lastIndexOf("/"),
   );
   //subfolder = subfolder.substring(0, subfolder.lastIndexOf('/') + 1);
   const queryString = window.location.search;
@@ -269,7 +269,7 @@ Spot_Inspector.loadImages = function (pathFormat) {
     error: function (data) {
       interfaceUtils.alert(
         data.responseText.replace("\n", "<br/>"),
-        "Error on the plugin's server response"
+        "Error on the plugin's server response",
       );
     },
   });
@@ -338,7 +338,7 @@ Spot_Inspector.run = function () {
       "canvas-click",
       (event) => {
         click_handler(event);
-      }
+      },
     );
   }
 };
@@ -353,7 +353,7 @@ Spot_Inspector.updateLayerFormat = function (doPrompt) {
 
   var difference = patienceDiff(
     escapeRegExp(tmapp.layers[0].name).split(""),
-    escapeRegExp(tmapp.layers[tmapp.layers.length - 1].name).split("")
+    escapeRegExp(tmapp.layers[tmapp.layers.length - 1].name).split(""),
   );
   fieldNames = ["row", "col"];
   var format = difference.lines.reduce(function (a, b) {
@@ -382,7 +382,7 @@ Spot_Inspector.getMarkers = function (bbox) {
     for (var codeIndex in dataUtils.data[dataset]["_groupgarden"]) {
       var inputs = interfaceUtils._mGenUIFuncs.getGroupInputs(
         dataset,
-        codeIndex
+        codeIndex,
       );
       var hexColor = "color" in inputs ? inputs["color"] : "#ffff00";
       var visible = "visible" in inputs ? inputs["visible"] : true;
@@ -398,7 +398,7 @@ Spot_Inspector.getMarkers = function (bbox) {
             xselector: dataUtils.data[dataset]["_X"],
             yselector: dataUtils.data[dataset]["_Y"],
             dataset: dataset,
-          }
+          },
         );
         newMarkers.forEach(function (m) {
           m.color = hexColor;
@@ -512,7 +512,7 @@ Spot_Inspector.getMatrix = function () {
       "resize",
       function animationFinishHandler(event) {
         Spot_Inspector.moveHandler(event);
-      }
+      },
     );
     Spot_Inspector.animationTimeout = null;
     Spot_Inspector.osd_viewer.addHandler(
@@ -525,7 +525,7 @@ Spot_Inspector.getMatrix = function () {
           tiledImage.immediateRender = true;
         }
         Spot_Inspector.osd_viewer.imageLoaderLimit = 0;
-      }
+      },
     );
     Spot_Inspector.osd_viewer.addHandler(
       "animation-start",
@@ -541,7 +541,7 @@ Spot_Inspector.getMatrix = function () {
             Spot_Inspector.osd_viewer.imageLoaderLimit = 2;
           }, 200);
         }
-      }
+      },
     );
   }
 };
@@ -598,15 +598,15 @@ Spot_Inspector.setFilters = function () {
       if (Spot_Inspector.get("_gamma") != 1) {
         processors.push(
           filterUtils._filters["Gamma"]["filterFunction"](
-            Spot_Inspector.get("_gamma")
-          )
+            Spot_Inspector.get("_gamma"),
+          ),
         );
       }
       if (Spot_Inspector.get("_cmap") != "undefined") {
         processors.push(
           filterUtils._filters["Colormap"]["filterFunction"](
-            parseInt(Spot_Inspector.get("_cmap")) + 1
-          )
+            parseInt(Spot_Inspector.get("_cmap")) + 1,
+          ),
         );
       }
       for (
@@ -617,8 +617,8 @@ Spot_Inspector.setFilters = function () {
         if (filterUtils._filterItems[layer][filterIndex].name != "Color") {
           processors.push(
             filterUtils._filterItems[layer][filterIndex].filterFunction(
-              filterUtils._filterItems[layer][filterIndex].value
-            )
+              filterUtils._filterItems[layer][filterIndex].value,
+            ),
           );
         }
       }
@@ -658,7 +658,7 @@ Spot_Inspector.getCoordinates = function () {
   const invert_row_col =
     layer_format.indexOf("{row}") > layer_format.indexOf("{col}");
   const regexp_format = new RegExp(
-    layer_format.replace(/\{row\}|\{col\}/g, "(.*)")
+    layer_format.replace(/\{row\}|\{col\}/g, "(.*)"),
   );
 
   const outputFields = [];
@@ -730,7 +730,7 @@ Spot_Inspector.moveHandler = function (event) {
     return;
   }
   var normCoords = tmapp.ISS_viewer.viewport.pointFromPixel(
-    Spot_Inspector.position
+    Spot_Inspector.position,
   );
   var imagePoint = tmapp.ISS_viewer.world
     .getItemAt(0)
@@ -748,7 +748,7 @@ Spot_Inspector.moveHandler = function (event) {
     if (Spot_Inspector.osd_viewer.world.getItemCount() - 1 < layer) break;
 
     let overlay = Spot_Inspector.osd_viewer.getOverlayById(
-      "Spot_Inspector_overlay_" + layer
+      "Spot_Inspector_overlay_" + layer,
     );
     if (!overlay) {
       var elt = document.createElement("div");
@@ -762,10 +762,10 @@ Spot_Inspector.moveHandler = function (event) {
       Spot_Inspector.osd_viewer.addOverlay(
         elt.id,
         position,
-        OpenSeadragon.Placement.TOP
+        OpenSeadragon.Placement.TOP,
       );
       overlay = Spot_Inspector.osd_viewer.getOverlayById(
-        "Spot_Inspector_overlay_" + layer
+        "Spot_Inspector_overlay_" + layer,
       );
     }
 
@@ -775,38 +775,38 @@ Spot_Inspector.moveHandler = function (event) {
         imagePoint.x - patch_width / 2,
         imagePoint.y - patch_width / 2,
         patch_width,
-        patch_width
-      )
+        patch_width,
+      ),
     );
     let x_point_offset = layerCoordinate[0] * (patch_width + margin);
     x_point_offset_max = Math.max(
       x_point_offset_max,
-      x_point_offset + patch_width
+      x_point_offset + patch_width,
     );
     let y_point_offset = layerCoordinate[1] * (patch_width + font_height);
     y_point_offset_max = Math.max(
       y_point_offset_max,
-      y_point_offset + patch_width
+      y_point_offset + patch_width,
     );
     var point = new OpenSeadragon.Point(x_point_offset, y_point_offset);
     tiledImage.setPosition(
       Spot_Inspector.osd_viewer.world
         .getItemAt(0)
         .imageToViewportCoordinates(point),
-      true
+      true,
     );
 
     let label_position = new OpenSeadragon.Rect(
       imagePoint.x - patch_width / 2 + x_point_offset,
       imagePoint.y - patch_width / 2 + y_point_offset - font_height,
       patch_width,
-      font_height
+      font_height,
     );
     overlay.update(
       Spot_Inspector.osd_viewer.world
         .getItemAt(0)
         .imageToViewportRectangle(label_position),
-      OpenSeadragon.Placement.TOP_LEFT
+      OpenSeadragon.Placement.TOP_LEFT,
     );
     tiledImage.setOpacity(100);
   }
@@ -818,10 +818,10 @@ Spot_Inspector.moveHandler = function (event) {
           imagePoint.x - patch_width / 2,
           imagePoint.y - patch_width / 2 - font_height,
           x_point_offset_max,
-          y_point_offset_max + font_height
-        )
+          y_point_offset_max + font_height,
+        ),
       ),
-    true
+    true,
   );
 
   // Change window size:
@@ -829,7 +829,7 @@ Spot_Inspector.moveHandler = function (event) {
   if (ratio > 1) {
     let max_width = Math.min(
       Spot_Inspector.get("_max_width"),
-      document.getElementById("ISS_viewer")?.offsetWidth || 0
+      document.getElementById("ISS_viewer")?.offsetWidth || 0,
     );
     document.getElementById("ISS_Spot_Inspector_viewer").style.width =
       max_width + "px";
@@ -838,7 +838,7 @@ Spot_Inspector.moveHandler = function (event) {
   } else {
     let max_height = Math.min(
       Spot_Inspector.get("_max_width"),
-      document.getElementById("ISS_viewer")?.offsetHeight || 0
+      document.getElementById("ISS_viewer")?.offsetHeight || 0,
     );
     document.getElementById("ISS_Spot_Inspector_viewer").style.width =
       max_height * ratio + "px";
@@ -847,12 +847,12 @@ Spot_Inspector.moveHandler = function (event) {
   }
 
   let overlay = Spot_Inspector.osd_viewer.getOverlayById(
-    "Spot_Inspector_overlay_0"
+    "Spot_Inspector_overlay_0",
   );
   let real_font_size = overlay.size.y / 1.3;
   for (let layer in layers) {
     let overlay = Spot_Inspector.osd_viewer.getOverlayById(
-      "Spot_Inspector_overlay_" + layer
+      "Spot_Inspector_overlay_" + layer,
     );
     if (overlay) overlay.style.fontSize = real_font_size + "px";
   }
@@ -895,7 +895,10 @@ Spot_Inspector.moveHandler = function (event) {
                 Spot_Inspector.get("_line_width"),
             normCoords.y +
               y_point_offset +
-              edges[1] * 0.005 * patch_width * Spot_Inspector.get("_line_width")
+              edges[1] *
+                0.005 *
+                patch_width *
+                Spot_Inspector.get("_line_width"),
           ),
         p2 = Spot_Inspector.osd_viewer.world
           .getItemAt(0)
@@ -908,7 +911,10 @@ Spot_Inspector.moveHandler = function (event) {
                 Spot_Inspector.get("_line_width"),
             normCoords.y +
               y_point_offset +
-              edges[3] * 0.005 * patch_width * Spot_Inspector.get("_line_width")
+              edges[3] *
+                0.005 *
+                patch_width *
+                Spot_Inspector.get("_line_width"),
           );
       let strokeWstr =
         (Spot_Inspector.get("_line_width") * 0.0005) /
@@ -947,8 +953,8 @@ Spot_Inspector.moveHandler = function (event) {
           Math.min(
             1,
             (Math.abs(x - normCoords.x) + Math.abs(y - normCoords.y)) /
-              patch_width
-          )
+              patch_width,
+          ),
         );
     if (
       marker_col.toString().indexOf(";") > -1 &&
@@ -1012,7 +1018,7 @@ Spot_Inspector.moveHandler = function (event) {
                 edges[1] *
                   0.01 *
                   patch_width *
-                  Spot_Inspector.get("_line_width")
+                  Spot_Inspector.get("_line_width"),
             ),
           p2 = Spot_Inspector.osd_viewer.world
             .getItemAt(0)
@@ -1026,7 +1032,7 @@ Spot_Inspector.moveHandler = function (event) {
                 edges[3] *
                   0.01 *
                   patch_width *
-                  Spot_Inspector.get("_line_width")
+                  Spot_Inspector.get("_line_width"),
             );
         let strokeWstr =
           (Spot_Inspector.get("_line_width") * 0.001) /
@@ -1294,7 +1300,7 @@ function patienceDiff(aLines, bLines, diffPlusFlag) {
 
   function recurseLCS(aLo, aHi, bLo, bHi, uniqueCommonMap) {
     const x = longestCommonSubsequence(
-      uniqueCommonMap || uniqueCommon(aLines, aLo, aHi, bLines, bLo, bHi)
+      uniqueCommonMap || uniqueCommon(aLines, aLo, aHi, bLines, bLo, bHi),
     );
 
     if (x.length === 0) {
@@ -1310,7 +1316,7 @@ function patienceDiff(aLines, bLines, diffPlusFlag) {
           x[i].indexA,
           x[i + 1].indexA - 1,
           x[i].indexB,
-          x[i + 1].indexB - 1
+          x[i + 1].indexB - 1,
         );
       }
 

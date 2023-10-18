@@ -107,12 +107,12 @@ InteractionQC.init = function (container) {
     interfaceUtils.cleanSelect("Column");
     interfaceUtils.addElementsToSelect(
       "Column",
-      dataUtils.data[InteractionQC._dataset]._csv_header
+      dataUtils.data[InteractionQC._dataset]._csv_header,
     );
     interfaceUtils.cleanSelect("matrix");
     interfaceUtils.addElementsToSelect(
       "matrix",
-      dataUtils.data[InteractionQC._dataset]._csv_header
+      dataUtils.data[InteractionQC._dataset]._csv_header,
     );
     if (
       dataUtils.data[InteractionQC._dataset]._csv_header.indexOf("Column") > 0
@@ -215,7 +215,7 @@ InteractionQC.run = function () {
       tickvals: InteractionQC._matrix_header,
       ticktext: InteractionQC._matrix_header.map(function (text) {
         color = document.getElementById(
-          InteractionQC._dataset + "_" + text + "_color"
+          InteractionQC._dataset + "_" + text + "_color",
         ).value;
         return "<span style='font-weight:bold;color:" + color + "'>███</span>";
       }),
@@ -237,7 +237,7 @@ InteractionQC.run = function () {
         .reverse()
         .map(function (text) {
           color = document.getElementById(
-            InteractionQC._dataset + "_" + text + "_color"
+            InteractionQC._dataset + "_" + text + "_color",
           ).value;
           return (
             "<span style='font-weight:bold;color:" + color + "'>███</span>"
@@ -266,13 +266,13 @@ InteractionQC.run = function () {
     {
       responsive: true,
       displayModeBar: false,
-    }
+    },
   );
 
   legend = "";
   for (type of InteractionQC._matrix_header) {
     typecolor = document.getElementById(
-      InteractionQC._dataset + "_" + type + "_color"
+      InteractionQC._dataset + "_" + type + "_color",
     ).value;
     legend +=
       "<div style='display:inline-block;margin-right:10px;'><span style='width:15px;color:" +
