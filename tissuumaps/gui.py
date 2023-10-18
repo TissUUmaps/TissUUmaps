@@ -956,7 +956,9 @@ def main():
     QtGui.QSurfaceFormat.setDefaultFormat(fmt)
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
 
-    os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--no-sandbox --ignore-gpu-blacklist"
+    os.environ[
+        "QTWEBENGINE_CHROMIUM_FLAGS"
+    ] = "--no-sandbox --ignore-gpu-blacklist --enable-webgl-image-chromium"
     if opts.DEBUG:
         os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] += (
             " --remote-allow-origins=" + DEBUG_URL
