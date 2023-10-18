@@ -19,8 +19,6 @@ jobs:
             extension: deb
           - os: macos-11
             extension: dmg
-          - os: macOS-X64
-            extension: dmg
           - os: windows-latest
             extension: exe
 
