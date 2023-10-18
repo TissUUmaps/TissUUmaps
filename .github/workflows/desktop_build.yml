@@ -57,7 +57,7 @@ jobs:
 
       - name: ⬇️ Install TissUUmaps
         run: |
-          pip install --upgrade .
+          pip install .
 
       - name: 📦 Package TissUUmaps
         shell: bash
