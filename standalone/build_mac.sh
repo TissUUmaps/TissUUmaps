@@ -8,7 +8,7 @@ export VIPS_PATH=$(brew --prefix vips)
 cp -rf $VIPS_PATH/lib/libvips.42*.dylib dist/TissUUmaps.app/Contents/MacOS/
 
 # Install Mac DMG Creator
-Brew install build-dmg
+brew install build-dmg
 
 # Copy app to separate dmg folder
 mkdir -p dist/dmg && cp -r dist/TissUUmaps.app dist/dmg
