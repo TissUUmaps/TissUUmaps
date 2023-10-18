@@ -50,7 +50,7 @@ from tissuumaps import app, read_h5ad
 from tissuumaps.flask_filetree import filetree
 
 import openslide  # isort: skip
-from openslide import ImageSlide, OpenSlide  # isort: skip
+from openslide import OpenSlide  # isort: skip
 from openslide.deepzoom import DeepZoomGenerator  # isort: skip
 
 
@@ -103,7 +103,7 @@ def requires_auth(f):
             path = os.path.abspath(
                 os.path.join(app.basedir, request.args.get("path"), "fake")
             )
-        elif not "path" in kwargs.keys():
+        elif "path" not in kwargs.keys():
             path = getPathFromReferrer(request, "")
         else:
             path = os.path.abspath(os.path.join(app.basedir, kwargs["path"]))
@@ -153,7 +153,8 @@ class ImageConverter:
                         maxVal = 255
                     if minVal < 0 or maxVal > 255:
                         logging.debug(
-                            f"Rescaling image {self.inputImage}: {minVal} - {maxVal} to 0 - 255"
+                            f"Rescaling image {self.inputImage}: "
+                            f"{minVal} - {maxVal} to 0 - 255"
                         )
                         imgVips = (255.0 * (imgVips - minVal)) / (maxVal - minVal)
                         imgVips = (imgVips < 0).ifthenelse(0, imgVips)
@@ -169,7 +170,7 @@ class ImageConverter:
                         Q=95,
                         properties=True,
                     )
-                except:
+                except Exception:
                     logging.error("Impossible to convert image using VIPS:")
                     logging.error(traceback.format_exc())
                 self.convertDone = True
@@ -206,7 +207,7 @@ class ImageConverter:
                         tile_size=256,
                     )
 
-                except:
+                except Exception:
                     logging.error("Impossible to convert image using VIPS:")
                     logging.error(traceback.format_exc())
                 self.convertDone = True
@@ -236,7 +237,7 @@ class _SlideCache(object):
         osr = OpenSlide(path)
         # try:
         #    osr = OpenSlide(path)
-        # except:
+        # except Exception as e:
         #    osr = ImageSlide(path)
         # Fix for 16 bits tiff files
         # if osr._image.getextrema()[1] > 256:
@@ -264,11 +265,11 @@ class _SlideCache(object):
                 mpp_y = numerator / float(osr.properties["tiff.YResolution"])
                 slide.properties = osr.properties
                 slide.mpp = (float(mpp_x) + float(mpp_y)) / 2
-            except:
+            except Exception:
                 slide.mpp = 0
         try:
             slide.properties = slide.properties
-        except:
+        except Exception:
             slide.properties = osr.properties
         slide.tileLock = Lock()
         if originalPath:
@@ -320,7 +321,11 @@ def internal_server_error(e):
         render_template(
             "tissuumaps.html",
             isStandalone=app.config["isStandalone"],
-            message="Internal Server Error<br/>The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.",
+            message=(
+                "Internal Server Error<br/>The server encountered an internal "
+                "error and was unable to complete your request. Either the "
+                "server is overloaded or there is an error in the application."
+            ),
             readOnly=app.config["READ_ONLY"],
         ),
         500,
@@ -339,7 +344,7 @@ def _get_slide(path, originalPath=None):
         slide = app.cache.get(path, originalPath)
         slide.filename = os.path.basename(path)
         return slide
-    except:
+    except Exception:
         if ".tissuumaps" in path:
             abort(404)
         try:
@@ -352,7 +357,7 @@ def _get_slide(path, originalPath=None):
             os.makedirs(os.path.dirname(path) + "/.tissuumaps/", exist_ok=True)
             tifpath = ImageConverter(path, newpath).convert()
             return _get_slide(tifpath, path)
-        except:
+        except Exception:
             logging.error(traceback.format_exc())
             abort(404)
 
@@ -457,7 +462,7 @@ def getPathFromReferrer(request, filename):
         parsed_url = urlparse(request.referrer)
         path = parse_qs(parsed_url.query)["path"][0]
         path = os.path.abspath(os.path.join(app.basedir, path, filename))
-    except:
+    except Exception:
         path = os.path.abspath(os.path.join(app.basedir, filename))
     if not path:
         path = os.path.abspath(os.path.join(app.basedir, filename))
@@ -515,27 +520,36 @@ def tmapFile(filename):
                     current_schema_module.VERSION
                 ):
                     warningMessage = (
-                        "<b>Warning:</b> This project was created with a newer version of TissUUmaps with breaking changes.<br/><br/>"
-                        "Please upgrade your TissUUmaps version to ensure compatibility."
+                        "<b>Warning:</b> This project was created with a newer version "
+                        "of TissUUmaps with breaking changes.<br/><br/>Please "
+                        "upgrade your TissUUmaps version to ensure compatibility."
                     )
                     logging.error(
-                        f"The MAJOR schema version of the project file ({schema_version}) is newer than the MAJOR schema version supported by the current TissUUmaps installation ({current_schema_module.VERSION})"
+                        "The MAJOR schema version of the project file "
+                        f"({schema_version}) is newer than the MAJOR schema version "
+                        "supported by the current  TissUUmaps installation "
+                        f"({current_schema_module.VERSION})"
                     )
                 # Else if minor version is newer
                 elif version.parse(schema_version) > version.parse(
                     current_schema_module.VERSION
                 ):
                     warningMessage = (
-                        "<b>Warning:</b> This project was created with a newer version of TissUUmaps.<br/><br/>"
+                        "<b>Warning:</b> This project was created with a newer version "
+                        "of TissUUmaps.<br/><br/>"
                         "Upgrade your TissUUmaps version to get all functionalities."
                     )
                     logging.error(
-                        f"The MINOR schema version of the project file ({schema_version}) is newer than the MINOR schema version supported by the current TissUUmaps installation ({current_schema_module.VERSION})"
+                        "The MINOR schema version of the project file "
+                        f"({schema_version}) is newer than the MINOR schema version "
+                        "supported by the current TissUUmaps installation "
+                        f"({current_schema_module.VERSION})"
                     )
                 # Else if major version is unknown
                 elif major_schema_version not in MAJOR_SCHEMA_VERSION_MODULES:
                     warningMessage = (
-                        "<b>Warning:</b> This project was created with an unknown version of TissUUmaps.<br/><br/>"
+                        "<b>Warning:</b> This project was created with an unknown "
+                        "version of TissUUmaps.<br/><br/>"
                         "Upgrade your TissUUmaps version to get all functionalities."
                     )
                     logging.error(
@@ -685,7 +699,6 @@ def dzi_asso(path):
         associated_images=associated_images,
         properties=slide.properties,
     )
-    return resp
 
 
 @app.route("/<path:path>_files/<int:level>/<int:col>_<int:row>.<format>")
@@ -772,7 +785,6 @@ def send_file_partial(path):
         data, 206, mimetype=mimetypes.guess_type(path)[0], direct_passthrough=True
     )
     rv.headers["Accept-Ranges"] = "bytes"
-    # rv.headers.add('Content-Range', 'bytes {0}-{1}/{2}'.format(byte1, byte1 + length - 1, size))
     rv.headers.add(
         "Content-Range", "bytes {0}-{1}/{2}".format(byte1, byte1 + length, size)
     )
@@ -862,7 +874,7 @@ def exportToStatic(state, folderpath, previouspath):
 
         def addRelativePath_aux(state, path, isImg):
             nonlocal imgFiles, otherFiles
-            if not path[0] in state.keys():
+            if path[0] not in state.keys():
                 return
             if len(path) == 1:
                 if path[0] not in state.keys():
@@ -914,7 +926,7 @@ def exportToStatic(state, folderpath, previouspath):
             ]
             for path in paths:
                 addRelativePath_aux(state, path, path[0] == "layers")
-        except:
+        except Exception:
             logging.error(traceback.format_exc())
 
         return state
@@ -950,13 +962,12 @@ def exportToStatic(state, folderpath, previouspath):
                         m.group(7),
                         m.group(2),
                     )
-                except:
+                except Exception:
                     pass
             copyfile(
                 os.path.join(previouspath, file),
                 os.path.join(folderpath, "data/files", os.path.basename(file)),
             )
-        import zipfile
 
         if getattr(sys, "frozen", False):
             mainFolderPath = sys._MEIPASS
@@ -987,7 +998,7 @@ def exportToStatic(state, folderpath, previouspath):
             )
 
         return {"success": True}
-    except:
+    except Exception:
         return {"success": False, "error": traceback.format_exc()}
 
 

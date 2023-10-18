@@ -85,7 +85,7 @@ ClassQC.init = function (container) {
     interfaceUtils.cleanSelect("ClassQC_dataset1_column");
     interfaceUtils.addElementsToSelect(
       "ClassQC_dataset1_column",
-      dataUtils.data[ClassQC._dataset1]._csv_header
+      dataUtils.data[ClassQC._dataset1]._csv_header,
     );
   });
   // END Select marker dataset 1
@@ -137,7 +137,7 @@ ClassQC.init = function (container) {
     interfaceUtils.cleanSelect("ClassQC_dataset2_column");
     interfaceUtils.addElementsToSelect(
       "ClassQC_dataset2_column",
-      dataUtils.data[ClassQC._dataset2]._csv_header
+      dataUtils.data[ClassQC._dataset2]._csv_header,
     );
   });
   // END Select dataset 2
@@ -525,10 +525,10 @@ ClassQC.display = function (pathFormat) {
 
     // Get types from both datasets:
     var typeSet1 = Object.keys(
-      dataUtils.data[ClassQC._dataset1]._groupgarden
+      dataUtils.data[ClassQC._dataset1]._groupgarden,
     ).sort();
     var typeSet2 = Object.keys(
-      dataUtils.data[ClassQC._dataset2]._groupgarden
+      dataUtils.data[ClassQC._dataset2]._groupgarden,
     ).sort();
     // Make union of the two type sets into one:
     var typeSet = [...new Set([...typeSet1, ...typeSet2])];
@@ -584,11 +584,11 @@ ClassQC.displayConfusion = function (_matrix_header, _matrix) {
       ticktext: _matrix_header.map(function (type) {
         try {
           typecolor = document.getElementById(
-            ClassQC._dataset1 + "_" + type + "_color"
+            ClassQC._dataset1 + "_" + type + "_color",
           ).value;
         } catch (error) {
           typecolor = document.getElementById(
-            ClassQC._dataset2 + "_" + type + "_color"
+            ClassQC._dataset2 + "_" + type + "_color",
           ).value;
         }
         return (
@@ -614,11 +614,11 @@ ClassQC.displayConfusion = function (_matrix_header, _matrix) {
         .map(function (type) {
           try {
             typecolor = document.getElementById(
-              ClassQC._dataset2 + "_" + type + "_color"
+              ClassQC._dataset2 + "_" + type + "_color",
             ).value;
           } catch (error) {
             typecolor = document.getElementById(
-              ClassQC._dataset1 + "_" + type + "_color"
+              ClassQC._dataset1 + "_" + type + "_color",
             ).value;
           }
           return (
@@ -681,11 +681,11 @@ ClassQC.displayConfusion = function (_matrix_header, _matrix) {
   for (type of _matrix_header) {
     try {
       typecolor = document.getElementById(
-        ClassQC._dataset1 + "_" + type + "_color"
+        ClassQC._dataset1 + "_" + type + "_color",
       ).value;
     } catch (error) {
       typecolor = document.getElementById(
-        ClassQC._dataset2 + "_" + type + "_color"
+        ClassQC._dataset2 + "_" + type + "_color",
       ).value;
     }
     legend +=
@@ -709,12 +709,12 @@ ClassQC.displayConfusion = function (_matrix_header, _matrix) {
 
     dataUtils.data[ClassQC._dataset1]["_opacity_col"] = opacityPropertyName;
     markerData[opacityPropertyName] = new Float64Array(
-      markerData[dataUtils.data[ClassQC._dataset1]["_X"]].length
+      markerData[dataUtils.data[ClassQC._dataset1]["_X"]].length,
     );
     markerData[opacityPropertyName] = markerData[opacityPropertyName].map(
       function () {
         return 0.3;
-      }
+      },
     );
     var confusions =
       dataUtils.data[ClassQC._dataset1]._processeddata["ClassQC_confusion"];
@@ -733,12 +733,12 @@ ClassQC.displayConfusion = function (_matrix_header, _matrix) {
 
     dataUtils.data[ClassQC._dataset2]["_opacity_col"] = opacityPropertyName;
     markerData[opacityPropertyName] = new Float64Array(
-      markerData[dataUtils.data[ClassQC._dataset2]["_X"]].length
+      markerData[dataUtils.data[ClassQC._dataset2]["_X"]].length,
     );
     markerData[opacityPropertyName] = markerData[opacityPropertyName].map(
       function () {
         return 0.3;
-      }
+      },
     );
     var confusions =
       dataUtils.data[ClassQC._dataset1]._processeddata["ClassQC_confusion"];
@@ -792,7 +792,7 @@ ClassQC.run = function () {
         bbox[0],
         bbox[1],
         bbox[2],
-        bbox[3]
+        bbox[3],
       );
       boundBoxOverlay = $('<div id="overlay-ClassQC"></div>');
       boundBoxOverlay.css({
@@ -818,7 +818,7 @@ ClassQC.run = function () {
       "canvas-click",
       (event) => {
         click_handler(event);
-      }
+      },
     );
   }
 };

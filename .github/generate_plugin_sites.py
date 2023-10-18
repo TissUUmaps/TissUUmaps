@@ -23,7 +23,8 @@ t = Template(
                 margin-right:auto;
             }
 
-            td, th { border: 1px solid #CCC; height: 30px; } /* Make cells a bit taller */
+            /* Make cells a bit taller */
+            td, th { border: 1px solid #CCC; height: 30px; }
 
             th {
                 background: #F3F3F3; /* Light grey background */
@@ -72,7 +73,9 @@ t = Template(
                     </td>
                     <td class="thumb">
                         {% if plugin.image %}\
-                            <img src="{{plugin.image}}" style="max-height:500px;width:100%;"/><br/>
+                            <img src="{{plugin.image}}"
+                                 style="max-height:500px;width:100%;"
+                            /><br/>
                         {% endif %}
                     </td>
                 </tr>
@@ -121,7 +124,7 @@ def getPlugin(ymlFile):
 
 
 # For compatibility reasons, we keep v3.0 in the main folder:
-v3_0Files = glob.glob(rf"../plugins_repo/3.0/*")
+v3_0Files = glob.glob(r"../plugins_repo/3.0/*")
 for src in v3_0Files:
     shutil.copyfile(src, src.replace("plugins_repo/3.0", "plugins_repo/"))
 
@@ -133,7 +136,7 @@ for version in ["."] + old_versions:
     for ymlFile in ymlFiles:
         try:
             pluginList.append(getPlugin(ymlFile))
-        except:
+        except Exception:
             pass
 
     if version != ".":

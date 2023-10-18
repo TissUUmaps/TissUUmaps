@@ -23,18 +23,24 @@ def get_files(d, fnfilter, dfilter, rel=True):
                 else:
                     if fnfilter(ffn):
                         fns.append(fn)
-            except:
+            except Exception:
                 pass
         return fns, dirs
-    except:
+    except Exception:
         return [], []
 
 
 def make_blueprint(app=None, register=True, fnfilter=None, dfilter=None):
     if fnfilter is None:
-        fnfilter = lambda fn: True
+
+        def fnfilter(fn):
+            return True
+
     if dfilter is None:
-        dfilter = lambda d: True
+
+        def dfilter(d):
+            return True
+
     main_dir = os.path.dirname(os.path.abspath(__file__))
     template_folder = os.path.join(main_dir, "templates")
     static_folder = os.path.join(main_dir, "static")

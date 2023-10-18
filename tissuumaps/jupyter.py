@@ -15,7 +15,7 @@ from pathlib import Path
 
 import click
 from IPython.core.display import display
-from IPython.display import HTML, Javascript, clear_output
+from IPython.display import HTML, Javascript
 
 from tissuumaps import views
 
@@ -155,18 +155,18 @@ def loaddata(
             "opacity": 1,
         }
         expectedRadios = {
-            "cb_col": colorSelector != None,
-            "cb_gr": colorSelector == None,
+            "cb_col": colorSelector is not None,
+            "cb_gr": colorSelector is None,
             "cb_gr_rand": False,
             "cb_gr_dict": False,
             "cb_gr_key": True,
-            "pie_check": piechartSelector != None,
-            "scale_check": scaleSelector != None,
-            "shape_gr": shapeSelector == None and fixedShape == None,
-            "shape_gr_rand": shapeSelector == None and fixedShape == None,
+            "pie_check": piechartSelector is not None,
+            "scale_check": scaleSelector is not None,
+            "shape_gr": shapeSelector is None and fixedShape is None,
+            "shape_gr_rand": shapeSelector is None and fixedShape is None,
             "shape_gr_dict": False,
-            "shape_col": shapeSelector != None,
-            "shape_fixed": fixedShape != None,
+            "shape_col": shapeSelector is not None,
+            "shape_fixed": fixedShape is not None,
         }
         if len(csvFiles) == 1:
             csvFiles = csvFiles[0]
@@ -227,21 +227,30 @@ class TissUUmapsViewer:
                 + screenshot_id
                 + """);
                 try {
-                    IPython.notebook.kernel.execute(`from IPython.display import update_display, HTML`)
-                    IPython.notebook.kernel.execute(`obj = HTML("<img src='`+evt.data.img+`'/>")`)
-                    IPython.notebook.kernel.execute(`update_display(obj, display_id="display_out_"""
+                    IPython.notebook.kernel.execute(
+                        `from IPython.display import update_display, HTML`
+                    )
+                    IPython.notebook.kernel.execute(
+                        `obj = HTML("<img src='`+evt.data.img+`'/>")`
+                    )
+                    IPython.notebook.kernel.execute(
+                        `update_display(obj, display_id="display_out_"""
                 + screenshot_id
-                + """")`)
+                + """"
+                )`)
                 } catch (e) { // vscode or jupyterLab can not communicate back...
                     if (e instanceof ReferenceError) {
                         document.getElementById("img_out_"""
                 + screenshot_id
                 + """").src = evt.data.img;
                         let newNode = document.createElement("span");
-                        newNode.innerHTML = "Warning: run viewer.screenshot in a classical Jupyter Notebook if you want the screenshot to be saved.";
+                        newNode.innerHTML = "Warning: run viewer.screenshot in a \
+                            classical Jupyter Notebook if you want the screenshot \
+                            to be saved.";
                         document.getElementById("img_out_"""
                 + screenshot_id
-                + """").parentElement.insertBefore(newNode, document.getElementById("img_out_"""
+                + """").parentElement.insertBefore(
+                    newNode, document.getElementById("img_out_"""
                 + screenshot_id
                 + """"));
                     }
@@ -269,7 +278,6 @@ class TissUUmapsServer:
     """
 
     def __init__(self, slideDir, port=5000, host="0.0.0.0"):
-
         log = logging.getLogger("werkzeug")
         log.setLevel(logging.ERROR)
         log = logging.getLogger("pyvips")
@@ -288,7 +296,8 @@ class TissUUmapsServer:
 
         if TissUUmapsServer.is_port_in_use(self.port):
             log.warning(
-                f"Port {self.port} already in use. Impossible to start TissUUmaps server."
+                f"Port {self.port} already in use. "
+                "Impossible to start TissUUmaps server."
             )
             return
 
