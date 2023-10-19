@@ -193,7 +193,45 @@ tmapp.init = function () {
         }
         tmapp[op + "_viewer"].imageLoaderLimit = 1;
     });
-    
+    let mousewheelevt = (/Firefox/i.test(navigator.userAgent)) ? "DOMMouseScroll" : "mousewheel";
+    $(document).on("wheel", "input[type=range]", moveSlider);
+    function moveSlider(e){
+        var zoomLevel = parseFloat(e.target.value); 
+        let step = parseFloat(e.target.step);
+        // detect positive or negative scrolling
+        if ( e.originalEvent.wheelDelta < 0 ) {
+            //scroll down
+            $(e.target).val(zoomLevel+step);
+        } else {
+            //scroll up
+            $(e.target).val(zoomLevel-step);
+        }
+
+        // Create a new 'change' event
+        var event = new Event('input', {
+            bubbles: true,
+            cancelable: true,
+        });
+          
+        // trigger the change event
+        e.target.dispatchEvent(event);
+
+        //prevent page fom scrolling
+        return false;
+    }
+    $(document).on("input", "input[type=range]", updateSlider);
+    function updateSlider(e){
+        if (e.target.id == "ISS_globalmarkersize_text" || e.target.id == "channelValue") return;
+        if ($("#opacity-layer-0").attr('data-bs-original-title') !== undefined) {
+            e.target.title = e.target.value;
+            $(e.target).tooltip('show');
+        }
+        $(e.target).attr('data-bs-original-title', e.target.value);
+        $(e.target).tooltip('dispose');
+        $(e.target).tooltip('show');
+        //$(e.target).tooltip({ placement: 'bottom' });
+
+    }
     elt = document.getElementById("ISS_globalmarkersize");
     if (elt) {
         tmapp[vname].addControl(elt,{
