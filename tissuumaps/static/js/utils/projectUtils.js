@@ -497,7 +497,7 @@ projectUtils.loadProjectFileFromServer = function(path) {
         if (state.layerOpacities && state.layerVisibilities) {
             $(".visible-layers").prop("checked",true);$(".visible-layers").click();
             tmapp.layers.forEach(function(layer, i) {
-                $("#opacity-layer-"+i).val(state.layerOpacities[i]);
+                $("#opacity-layer-"+i).val(state.layerOpacities[i]?state.layerOpacities[i]:1);
                 if (state.layerVisibilities[i] != 0) {
                     $("#visible-layer-"+i).click();
                 }
