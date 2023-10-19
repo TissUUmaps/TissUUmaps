@@ -10364,6 +10364,12 @@ html {
   padding-left: 26px !important;
   cursor: pointer; }
 
+.alert {
+  zoom: 80%; }
+
+.alert pre {
+  max-height: 100px; }
+
 /* ============ desktop view ============ */
 @media all and (min-width: 992px) {
   .dropdown-menu li {
