@@ -2539,10 +2539,15 @@ interfaceUtils.generateNotification = function(content, uid, noClose, timeout, a
     }
     $(`#${uid}_alert`).alert();
     if (timeout) {
-        setTimeout(function() {
+        let _timeout = setTimeout(function() {
             $(`#${uid}_alert`).alert('close');
         }, timeout);
+        // remove timeout if alert is clicked or touched:
+        $(`#${uid}_alert`).on('click touchstart', function() {
+            clearTimeout(_timeout);
+        });
     }
+
     return alertDiv;
 }
 
