@@ -93,7 +93,7 @@ class alignImages:
     def runVirtualAlignment(self):
         IJ.log("Function runVirtualAlignment on " + self.inputFolder)
         refImage = None
-        for (DAPIFile, fluoFiles) in self.imageFiles:
+        for DAPIFile, fluoFiles in self.imageFiles:
             copyfile(DAPIFile, self.inputDAPIFolder + os.path.basename(DAPIFile))
             for fluoFile in fluoFiles:
                 copyfile(fluoFile, self.inputFluoFolder + os.path.basename(fluoFile))
@@ -116,7 +116,7 @@ class alignImages:
         )
 
         IJ.log("Copying DAPI transformation matrices to Fluo folder")
-        for (DAPIFile, fluoFiles) in self.imageFiles:
+        for DAPIFile, fluoFiles in self.imageFiles:
             for fluoFile in fluoFiles:
                 copyfile(
                     self.outputDAPIFolder
@@ -139,7 +139,7 @@ class alignImages:
     def displayStack(self):
         IJ.log("Creating virtual stacks from files")
         FluoStack = None
-        for (DAPIFile, fluoFiles) in self.imageFiles:
+        for DAPIFile, fluoFiles in self.imageFiles:
             for fluoFile in fluoFiles:
                 fluoFile = self.outputFluoFolder + os.path.basename(fluoFile)
                 FluoImp = IJ.openImage(fluoFile)
@@ -312,7 +312,7 @@ class extractDots:
             (self.imp.getWidth(), 0),
         ]
         transCoord = Transform_Virtual_Stack_MT.readCoordinateTransform(transFile)
-        for (x, y) in corners:
+        for x, y in corners:
             x, y = transCoord.apply([x, y])
             if x < boundingBox[0]:
                 boundingBox[0] = x

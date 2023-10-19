@@ -1,68 +1,66 @@
-import logging
-import sys
-import traceback
-import warnings
-
-debug_logger = logging.getLogger("root")
-debug_logger.write = debug_logger.debug  # consider all prints as debug information
-debug_logger.flush = lambda: None  # this may be called when printing
-sys.stdout = debug_logger
-
-try:
-    from PySide6 import QtGui
-    from PySide6.QtCore import *
-    from PySide6.QtGui import (
-        QAction,
-        QDesktopServices,
-        QStandardItem,
-        QStandardItemModel,
-    )
-    from PySide6.QtWebChannel import QWebChannel
-    from PySide6.QtWebEngineCore import QWebEngineProfile, QWebEngineSettings
-    from PySide6.QtWebEngineWidgets import QWebEngineView
-    from PySide6.QtWidgets import (
-        QApplication,
-        QDialog,
-        QDialogButtonBox,
-        QFileDialog,
-        QFormLayout,
-        QLabel,
-        QLineEdit,
-        QListView,
-        QMainWindow,
-        QMessageBox,
-        QPlainTextEdit,
-        QPushButton,
-        QSplashScreen,
-        QStyle,
-    )
-
-except ImportError:
-    # dependency missing, issue a warning
-    logging.error("dependency not found, please install pyside6 to enable gui")
-    logging.error(traceback.format_exc())
-    import sys
-
-    sys.exit()
-
 import json
+import logging
 import os
 import pathlib
-import platform
 import random
-import re
 import socket
 import string
 import subprocess
 import sys
 import threading
 import time
+import traceback
 import urllib.parse
 import urllib.request
+import warnings
 from functools import partial
 from optparse import OptionParser
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
+
+from PySide6 import QtGui
+from PySide6.QtCore import (
+    QObject,
+    QSize,
+    Qt,
+    QThread,
+    QTimer,
+    QUrl,
+    Slot,
+    qInstallMessageHandler,
+)
+from PySide6.QtGui import (
+    QAction,
+    QDesktopServices,
+    QStandardItem,
+    QStandardItemModel,
+)
+from PySide6.QtWebChannel import QWebChannel
+from PySide6.QtWebEngineCore import QWebEngineProfile, QWebEngineSettings
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWidgets import (
+    QApplication,
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
+    QFormLayout,
+    QLabel,
+    QLineEdit,
+    QListView,
+    QMainWindow,
+    QMessageBox,
+    QPlainTextEdit,
+    QPushButton,
+    QSplashScreen,
+    QStyle,
+)
+
+from tissuumaps import views
+
+debug_logger = logging.getLogger("root")
+debug_logger.write = debug_logger.debug  # consider all prints as debug information
+debug_logger.flush = lambda: None  # this may be called when printing
+sys.stdout = debug_logger
 
 # Don't remove this line.  The idna encoding
 # is used by getaddrinfo when dealing with unicode hostnames,
@@ -88,8 +86,6 @@ else:
     static_folder = os.path.join(folderPath, "static")
     plugins_folder = os.path.join(folderPath, "plugins")
     version_file = os.path.join(folderPath, "VERSION")
-
-from tissuumaps import views
 
 
 class textWindow(QDialog):
@@ -144,7 +140,7 @@ class SelectPluginWindow(QDialog):
             buttonBox.rejected.connect(self.reject)
 
             self.getPlugins()
-        except:
+        except Exception:
             logging.error(traceback.format_exc())
 
     def getPlugins(self):
@@ -190,10 +186,10 @@ class SelectPluginWindow(QDialog):
 
                 model.appendRow(standardItem)
             self.listView.setModel(model)
-        except:
+        except Exception:
             try:
                 QMessageBox.warning(self, "Error", traceback.format_exc())
-            except:
+            except Exception:
                 logging.error(traceback.format_exc())
 
     def itemsSelected(self):
@@ -397,9 +393,12 @@ class MainWindow(QMainWindow):
                     QMessageBox.warning(
                         self,
                         "Restart TissUUmaps",
-                        "The new plugins will only be available after restarting TissUUmaps.",
+                        (
+                            "The new plugins will only be available after restarting"
+                            "TissUUmaps."
+                        ),
                     )
-        except:
+        except Exception:
             logging.error(traceback.format_exc())
 
 
@@ -455,9 +454,10 @@ class webEngine(QWebEngineView):
             try:
                 with open(recentFile) as f:
                     recentFiles = json.load(f)
-            except:
+            except Exception:
                 logging.warning(
-                    f"Impossible to load: {recentFile}. TissUUmaps will create a new one."
+                    f"Impossible to load: {recentFile}. "
+                    "TissUUmaps will create a new one."
                 )
                 recentFiles = []
         else:
@@ -478,9 +478,10 @@ class webEngine(QWebEngineView):
             try:
                 with open(recentFile) as f:
                     recentFiles = json.load(f)
-            except:
+            except Exception:
                 logging.warning(
-                    f"Impossible to load: {recentFile}. TissUUmaps will create a new one."
+                    f"Impossible to load: {recentFile}. "
+                    "TissUUmaps will create a new one."
                 )
                 recentFiles = []
         else:
@@ -570,7 +571,7 @@ class webEngine(QWebEngineView):
             try:
                 if urllib.request.urlopen(self.location).getcode() == 200:
                     break
-            except:
+            except Exception:
                 pass
 
             logging.error("Impossible to load: " + self.location)
@@ -587,7 +588,7 @@ class webEngine(QWebEngineView):
             path = urllib.parse.unquote(path)[:-4]
             slide = views._get_slide(path)
             propString = "\n".join([n + ": " + v for n, v in slide.properties.items()])
-        except:
+        except Exception:
             propString = ""
 
         messageBox = textWindow(
@@ -609,7 +610,7 @@ class webEngine(QWebEngineView):
         try:
             parsed_url = urlparse(self.url().toString())
             previouspath = parse_qs(parsed_url.query)["path"][0]
-        except:
+        except Exception:
             previouspath = "./"
         previouspath = os.path.abspath(os.path.join(self.app.basedir, previouspath))
 
@@ -621,7 +622,7 @@ class webEngine(QWebEngineView):
         )
         try:
             return views.exportToStatic(state, folderpath, previouspath)
-        except:
+        except Exception:
             return {"success": False, "error": traceback.format_exc()}
 
     @Slot(str)
@@ -645,7 +646,7 @@ class webEngine(QWebEngineView):
                     else:
                         state[path[0]] = getRel(previouspath, state[path[0]], newpath)
                     return
-                if not path[0] in state.keys():
+                if path[0] not in state.keys():
                     return
                 else:
                     if isinstance(state[path[0]], list):
@@ -663,7 +664,7 @@ class webEngine(QWebEngineView):
                 ]
                 for path in paths:
                     addRelativePath_aux(state, path)
-            except:
+            except Exception:
                 logging.error(traceback.format_exc())
 
             return state
@@ -679,7 +680,7 @@ class webEngine(QWebEngineView):
             parsed_url = urlparse(self.url().toString())
             previouspath = parse_qs(parsed_url.query)["path"][0]
             previouspath = os.path.abspath(os.path.join(self.app.basedir, previouspath))
-        except:
+        except Exception:
             previouspath = self.app.basedir
         state = addRelativePath(
             json.loads(state), previouspath, os.path.dirname(projectFilename)
@@ -787,7 +788,10 @@ class webEngine(QWebEngineView):
                 reply = QMessageBox.question(
                     self,
                     "Error",
-                    "All layers must be in the same drive. Would you like to open this image only?",
+                    (
+                        "All layers must be in the same drive. "
+                        "Would you like to open this image only?"
+                    ),
                 )
                 if reply == QMessageBox.StandardButton.Yes:
                     self.openImagePath(layerpath)
@@ -798,7 +802,7 @@ class webEngine(QWebEngineView):
         imgPath = os.path.join(*parts[1:])
         try:
             views._get_slide(imgPath)
-        except:
+        except Exception:
             logging.error(traceback.format_exc())
             QMessageBox.about(
                 self, "Error", "TissUUmaps did not manage to open this image."
@@ -949,15 +953,17 @@ def main():
     qInstallMessageHandler(lambda x, y, z: None)
 
     fmt = QtGui.QSurfaceFormat()
-    if platform.system() == "Darwin":
-        fmt.setProfile(QtGui.QSurfaceFormat.OpenGLContextProfile.CoreProfile)
-        fmt.setVersion(4, 1)
-    fmt.setSwapBehavior(QtGui.QSurfaceFormat.SwapBehavior.DoubleBuffer)
+    fmt.setProfile(QtGui.QSurfaceFormat.OpenGLContextProfile.CoreProfile)
+    fmt.setVersion(4, 1)
+    fmt.setSwapBehavior(QtGui.QSurfaceFormat.SwapBehavior.SingleBuffer)
+
     QtGui.QSurfaceFormat.setDefaultFormat(fmt)
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
 
-    os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--no-sandbox --ignore-gpu-blacklist"
-    if opts.DEBUG:
+    os.environ[
+        "QTWEBENGINE_CHROMIUM_FLAGS"
+    ] = "--no-sandbox --ignore-gpu-blacklist --enable-webgl-image-chromium"
+    if views.app.config["DEBUG_CLI"]:
         os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] += (
             " --remote-allow-origins=" + DEBUG_URL
         )
@@ -967,13 +973,7 @@ def main():
     logo = logo.scaledToWidth(512, Qt.TransformationMode.SmoothTransformation)
     splash = QSplashScreen(logo, Qt.WindowType.WindowStaysOnTopHint)
 
-    # desktop = qt_app.desktop()
-    # scrn = desktop.screenNumber(QtGui.QCursor.pos())
-    # currentDesktopsCenter = desktop.availableGeometry(scrn).center()
-    # splash.move(currentDesktopsCenter - splash.rect().center())
-
     splash.show()
-    # splash.showMessage('Loading TissUUmaps...',Qt.AlignBottom | Qt.AlignCenter,Qt.white)
 
     qt_app.processEvents()
 

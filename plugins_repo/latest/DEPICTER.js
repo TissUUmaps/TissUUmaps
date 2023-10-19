@@ -78,7 +78,7 @@ DEPICTER.init = async function (container) {
       glUtils.temp_pick(event);
       if (glUtils._pickedMarker[0] != -1) {
         classSelected = document.querySelector(
-          'input[name="radio_name"]:checked'
+          'input[name="radio_name"]:checked',
         ).value;
         if (classSelected) {
           DEPICTER.add_seed(classSelected, glUtils._pickedMarker[1]);
@@ -336,32 +336,32 @@ DEPICTER.updateClasses = function (data) {
   dataUtils.data[DEPICTER._dataset]["_cb_col"] = colorPropertyName;
 
   markerData[opacityPropertyName] = new Float64Array(
-    markerData[dataUtils.data[DEPICTER._dataset]["_X"]].length
+    markerData[dataUtils.data[DEPICTER._dataset]["_X"]].length,
   );
   markerData[opacityPropertyName] = markerData[opacityPropertyName].map(
     function () {
       return DEPICTER.get("_opacity");
-    }
+    },
   );
   if (DEPICTER._classes !== undefined) {
     var classPropertyName = "DEPICTER_class";
     markerData[classPropertyName] = DEPICTER._classes;
     markerData[colorPropertyName] = DEPICTER._classes;
 
-    markerData[colorPropertyName] = markerData[colorPropertyName].map(function (
-      v
-    ) {
-      return $("#class_id_color_" + (v - -1)).val();
-    });
+    markerData[colorPropertyName] = markerData[colorPropertyName].map(
+      function (v) {
+        return $("#class_id_color_" + (v - -1)).val();
+      },
+    );
   } else {
     markerData[colorPropertyName] = Array.apply(
       null,
-      Array(markerData[dataUtils.data[DEPICTER._dataset]["_X"]].length)
+      Array(markerData[dataUtils.data[DEPICTER._dataset]["_X"]].length),
     );
     markerData[colorPropertyName] = markerData[colorPropertyName].map(
       function () {
         return "#FFFFFF";
-      }
+      },
     );
   }
   for (var seeds in data["seeds"]) {
@@ -529,14 +529,14 @@ async function copyDataset(dataIn, dataOut) {
   var headers = interfaceUtils._mGenUIFuncs.getTabDropDowns(DEPICTER._dataset);
   dataOut["expectedHeader"] = Object.assign(
     {},
-    ...Object.keys(headers).map((k) => ({ [k]: headers[k].value }))
+    ...Object.keys(headers).map((k) => ({ [k]: headers[k].value })),
   );
   var radios = interfaceUtils._mGenUIFuncs.getTabRadiosAndChecks(
-    DEPICTER._dataset
+    DEPICTER._dataset,
   );
   dataOut["expectedRadios"] = Object.assign(
     {},
-    ...Object.keys(radios).map((k) => ({ [k]: radios[k].checked }))
+    ...Object.keys(radios).map((k) => ({ [k]: radios[k].checked })),
   );
   dataOut["expectedHeader"]["X"] = DEPICTER._UMAP1;
   dataOut["expectedHeader"]["Y"] = DEPICTER._UMAP2;
@@ -615,19 +615,19 @@ DEPICTER.showFeatureSpace = async function () {
         "canvas-press",
         (event) => {
           DEPICTER.pressHandler(event, DEPICTER._newwin, window);
-        }
+        },
       );
       DEPICTER._newwin.tmapp["ISS_viewer"].addHandler(
         "canvas-release",
         (event) => {
           DEPICTER.releaseHandler(event, DEPICTER._newwin, window);
-        }
+        },
       );
       DEPICTER._newwin.tmapp["ISS_viewer"].addHandler(
         "canvas-drag",
         (event) => {
           if (event.originalEvent.shiftKey) event.preventDefaultAction = true;
-        }
+        },
       );
       DEPICTER._newwin.tmapp["ISS_viewer"].addHandler(
         "animation-finish",
@@ -639,7 +639,7 @@ DEPICTER.showFeatureSpace = async function () {
               $(this).attr(
                 "stroke-width",
                 (2 * regionUtils._polygonStrokeWidth) /
-                  DEPICTER._newwin.tmapp["ISS_viewer"].viewport.getZoom()
+                  DEPICTER._newwin.tmapp["ISS_viewer"].viewport.getZoom(),
               );
             });
           DEPICTER._newwin.d3
@@ -649,17 +649,17 @@ DEPICTER.showFeatureSpace = async function () {
               $(this).attr(
                 "r",
                 (10 * regionUtils._handleRadius) /
-                  DEPICTER._newwin.tmapp["ISS_viewer"].viewport.getZoom()
+                  DEPICTER._newwin.tmapp["ISS_viewer"].viewport.getZoom(),
               );
             });
           DEPICTER._newwin.d3.selectAll(".region_UMAP").each(function (el) {
             $(this).attr(
               "stroke-width",
               (2 * regionUtils._polygonStrokeWidth) /
-                DEPICTER._newwin.tmapp["ISS_viewer"].viewport.getZoom()
+                DEPICTER._newwin.tmapp["ISS_viewer"].viewport.getZoom(),
             );
           });
-        }
+        },
       );
 
       new OpenSeadragon.MouseTracker({
@@ -686,7 +686,7 @@ DEPICTER.showFeatureSpace = async function () {
               $(this).attr(
                 "stroke-width",
                 (2 * regionUtils._polygonStrokeWidth) /
-                  tmapp["ISS_viewer"].viewport.getZoom()
+                  tmapp["ISS_viewer"].viewport.getZoom(),
               );
             });
           d3.selectAll(".region_UMAP")
@@ -695,24 +695,24 @@ DEPICTER.showFeatureSpace = async function () {
               $(this).attr(
                 "r",
                 (10 * regionUtils._handleRadius) /
-                  tmapp["ISS_viewer"].viewport.getZoom()
+                  tmapp["ISS_viewer"].viewport.getZoom(),
               );
             });
           d3.selectAll(".region_UMAP").each(function (el) {
             $(this).attr(
               "stroke-width",
               (2 * regionUtils._polygonStrokeWidth) /
-                tmapp["ISS_viewer"].viewport.getZoom()
+                tmapp["ISS_viewer"].viewport.getZoom(),
             );
           });
-        }
+        },
       );
 
       /*newwin.projectUtils._activeState = JSON.parse(
         JSON.stringify(projectUtils._activeState)
       );*/
       newwin.projectUtils._activeState["markerFiles"] = JSON.parse(
-        JSON.stringify(projectUtils._activeState["markerFiles"])
+        JSON.stringify(projectUtils._activeState["markerFiles"]),
       );
       newwin.tmapp["ISS_viewer"].close();
 
@@ -730,11 +730,11 @@ DEPICTER.showFeatureSpace = async function () {
       newwin.dataUtils.data[DEPICTER._dataset] = {};
       copyDataset(
         dataUtils.data[DEPICTER._dataset],
-        newwin.dataUtils.data[DEPICTER._dataset]
+        newwin.dataUtils.data[DEPICTER._dataset],
       ).then(() => {
         newwin.dataUtils.createMenuFromCSV(
           DEPICTER._dataset,
-          newwin.dataUtils.data[DEPICTER._dataset]["_processeddata"].columns
+          newwin.dataUtils.data[DEPICTER._dataset]["_processeddata"].columns,
         );
         let main_button = newwin.document.getElementById("ISS_collapse_btn");
         main_button.classList.add("d-none");
@@ -769,7 +769,7 @@ DEPICTER.showFeatureSpace = async function () {
               newwin = DEPICTER._newwin;
               copyDataset(
                 dataUtils.data[DEPICTER._dataset],
-                newwin.dataUtils.data[DEPICTER._dataset]
+                newwin.dataUtils.data[DEPICTER._dataset],
               ).then(() => {
                 $(
                   "." +
@@ -780,7 +780,7 @@ DEPICTER.showFeatureSpace = async function () {
                     DEPICTER._dataset +
                     "-marker-color, ." +
                     DEPICTER._dataset +
-                    "-marker-shape"
+                    "-marker-shape",
                 )
                   .each(function (i, elt) {
                     newwin.document.getElementById(elt.id).value = elt.value;
@@ -810,27 +810,27 @@ DEPICTER.showFeatureSpace = async function () {
             dataUtils.updateViewOptions = function (
               data_id,
               force_reload_all,
-              reloadH5
+              reloadH5,
             ) {
               newwin.tmapp["ISS_viewer"].world.removeAll();
               dataUtils.temp_updateViewOptions(
                 data_id,
                 force_reload_all,
-                reloadH5
+                reloadH5,
               );
               copyDataset(
                 dataUtils.data[DEPICTER._dataset],
-                newwin.dataUtils.data[DEPICTER._dataset]
+                newwin.dataUtils.data[DEPICTER._dataset],
               ).then(() => {
                 newwin.dataUtils.createMenuFromCSV(
                   DEPICTER._dataset,
                   newwin.dataUtils.data[DEPICTER._dataset]["_processeddata"]
-                    .columns
+                    .columns,
                 );
                 newwin.dataUtils.updateViewOptions(
                   data_id,
                   force_reload_all,
-                  reloadH5
+                  reloadH5,
                 );
               });
             };
@@ -854,7 +854,7 @@ DEPICTER.showFeatureSpace = async function () {
   DEPICTER_Control.classList.add("d-none");
   DEPICTER_Control.setAttribute(
     "src",
-    window.location.href.replace(/#.*$/, "") + "&tmap=null"
+    window.location.href.replace(/#.*$/, "") + "&tmap=null",
   );
 };
 
@@ -910,14 +910,14 @@ DEPICTER.releaseHandler = function (event, win, mainwin) {
     .attr(
       "stroke-width",
       (2 * regionUtils._polygonStrokeWidth) /
-        win.tmapp["ISS_viewer"].viewport.getZoom()
+        win.tmapp["ISS_viewer"].viewport.getZoom(),
     )
     .style("stroke", "#ff0000")
     .style("fill", "none");
 
   var pointsIn = DEPICTER.analyzeRegion(DEPICTER._region, win);
   classSelected = document.querySelector(
-    'input[name="radio_name"]:checked'
+    'input[name="radio_name"]:checked',
   ).value;
   if (classSelected) {
     for (var d of pointsIn) {
@@ -1021,7 +1021,7 @@ DEPICTER.moveHandler = function (event, win, mainwin) {
   if (DEPICTER._regionPixels.length > 1) {
     dis = distance(
       DEPICTER._regionPixels[DEPICTER._regionPixels.length - 1],
-      DEPICTER._regionPixels[DEPICTER._regionPixels.length - 2]
+      DEPICTER._regionPixels[DEPICTER._regionPixels.length - 2],
     );
     if (dis < 5) {
       DEPICTER._regionPixels.pop();
@@ -1045,13 +1045,13 @@ DEPICTER.moveHandler = function (event, win, mainwin) {
       "points",
       DEPICTER._region.map(function (x) {
         return [x.x, x.y];
-      })
+      }),
     )
     .style("fill", "none")
     .attr(
       "stroke-width",
       (2 * regionUtils._polygonStrokeWidth) /
-        win.tmapp["ISS_viewer"].viewport.getZoom()
+        win.tmapp["ISS_viewer"].viewport.getZoom(),
     )
     .attr("stroke", "#ff0000")
     .attr("class", "region_UMAP");
@@ -1072,22 +1072,22 @@ DEPICTER.analyzeRegion = function (points, win) {
   var x0 = Math.min(
     ...points.map(function (x) {
       return x.x;
-    })
+    }),
   );
   var y0 = Math.min(
     ...points.map(function (x) {
       return x.y;
-    })
+    }),
   );
   var x3 = Math.max(
     ...points.map(function (x) {
       return x.x;
-    })
+    }),
   );
   var y3 = Math.max(
     ...points.map(function (x) {
       return x.y;
-    })
+    }),
   );
   var xselector = options.xselector;
   var yselector = options.yselector;
@@ -1098,7 +1098,7 @@ DEPICTER.analyzeRegion = function (points, win) {
 
   var pointInBbox = [
     ...Array(
-      win.dataUtils.data[dataset]["_processeddata"][xselector].length
+      win.dataUtils.data[dataset]["_processeddata"][xselector].length,
     ).keys(),
   ];
   var markerData = win.dataUtils.data[dataset]["_processeddata"];
@@ -1118,7 +1118,7 @@ DEPICTER.analyzeRegion = function (points, win) {
     const image = win.tmapp["ISS_viewer"].world.getItemAt(LUTindex);
     var viewportCoord = image.imageToViewportCoordinates(
       markerData[xselector][d] * win.dataUtils.data[dataset]._coord_factor,
-      markerData[yselector][d] * win.dataUtils.data[dataset]._coord_factor
+      markerData[yselector][d] * win.dataUtils.data[dataset]._coord_factor,
     );
     if (
       viewportCoord.x < x0 ||
@@ -1134,7 +1134,7 @@ DEPICTER.analyzeRegion = function (points, win) {
         viewportCoord.x,
         viewportCoord.y,
         regionPath,
-        tmpPoint
+        tmpPoint,
       )
     ) {
       countsInsideRegion[key] += 1;
@@ -1163,7 +1163,7 @@ DEPICTER.searchTreeForPointsInBbox = function (
   y0,
   x3,
   y3,
-  options
+  options,
 ) {
   if (options.globalCoords) {
     var xselector = options.xselector;

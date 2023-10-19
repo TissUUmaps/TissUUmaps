@@ -86,11 +86,11 @@ Plot_Histogram.init = function (container) {
     interfaceUtils.cleanSelect("Plot_Histogram_histoKey");
     interfaceUtils.addElementsToSelect(
       "Plot_Histogram_histoKey",
-      dataUtils.data[Plot_Histogram._dataset]._csv_header
+      dataUtils.data[Plot_Histogram._dataset]._csv_header,
     );
     if (
       dataUtils.data[Plot_Histogram._dataset]._csv_header.indexOf(
-        dataUtils.data[Plot_Histogram._dataset]._gb_col
+        dataUtils.data[Plot_Histogram._dataset]._gb_col,
       ) > 0
     ) {
       interfaceUtils.getElementById("Plot_Histogram_histoKey").value =
@@ -168,7 +168,7 @@ Plot_Histogram.run = function () {
           $(this).attr(
             "stroke-width",
             regionUtils._polygonStrokeWidth /
-              tmapp["ISS_viewer"].viewport.getZoom()
+              tmapp["ISS_viewer"].viewport.getZoom(),
           );
         });
       d3.selectAll(".region_histo")
@@ -177,17 +177,17 @@ Plot_Histogram.run = function () {
           $(this).attr(
             "r",
             (10 * regionUtils._handleRadius) /
-              tmapp["ISS_viewer"].viewport.getZoom()
+              tmapp["ISS_viewer"].viewport.getZoom(),
           );
         });
       d3.selectAll(".region_histo").each(function (el) {
         $(this).attr(
           "stroke-width",
           regionUtils._polygonStrokeWidth /
-            tmapp["ISS_viewer"].viewport.getZoom()
+            tmapp["ISS_viewer"].viewport.getZoom(),
         );
       });
-    }
+    },
   );
 };
 
@@ -230,7 +230,7 @@ Plot_Histogram.releaseHandler = function (event) {
     .attr("class", "region_histo")
     .attr(
       "stroke-width",
-      regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom()
+      regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom(),
     )
     .style("stroke", "#ff0000")
     .style("fill", "none");
@@ -241,34 +241,34 @@ Plot_Histogram.releaseHandler = function (event) {
   dataUtils.data[Plot_Histogram._dataset]["_scale_col"] = scalePropertyName;
   var markerData = dataUtils.data[Plot_Histogram._dataset]["_processeddata"];
   markerData[scalePropertyName] = new Float64Array(
-    markerData[dataUtils.data[Plot_Histogram._dataset]["_X"]].length
+    markerData[dataUtils.data[Plot_Histogram._dataset]["_X"]].length,
   );
   var opacityPropertyName = "UMAP_Region_opacity";
   dataUtils.data[Plot_Histogram._dataset]["_opacity_col"] = opacityPropertyName;
   dataUtils.data[Plot_Histogram._dataset]["_opacity_col"] = opacityPropertyName;
   markerData[opacityPropertyName] = new Float64Array(
-    markerData[dataUtils.data[Plot_Histogram._dataset]["_X"]].length
+    markerData[dataUtils.data[Plot_Histogram._dataset]["_X"]].length,
   );
   markerData[opacityPropertyName] = markerData[opacityPropertyName].map(
     function () {
       return 0.3;
-    }
+    },
   );
   markerData[scalePropertyName] = markerData[scalePropertyName].map(
     function () {
       return 0.3;
-    }
+    },
   );
   if (pointsIn.length == 0) {
     markerData[scalePropertyName] = markerData[scalePropertyName].map(
       function () {
         return 1;
-      }
+      },
     );
     markerData[opacityPropertyName] = markerData[opacityPropertyName].map(
       function () {
         return 1;
-      }
+      },
     );
   }
   for (var d of pointsIn) {
@@ -305,7 +305,7 @@ Plot_Histogram.moveHandler = function (event) {
   if (Plot_Histogram._regionPixels.length > 1) {
     dis = distance(
       Plot_Histogram._regionPixels[Plot_Histogram._regionPixels.length - 1],
-      Plot_Histogram._regionPixels[Plot_Histogram._regionPixels.length - 2]
+      Plot_Histogram._regionPixels[Plot_Histogram._regionPixels.length - 2],
     );
     if (dis < 5) {
       Plot_Histogram._regionPixels.pop();
@@ -325,12 +325,12 @@ Plot_Histogram.moveHandler = function (event) {
       "points",
       Plot_Histogram._region.map(function (x) {
         return [x.x, x.y];
-      })
+      }),
     )
     .style("fill", "none")
     .attr(
       "stroke-width",
-      regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom()
+      regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom(),
     )
     .attr("stroke", "#ff0000")
     .attr("class", "region_histo");
@@ -353,25 +353,25 @@ Plot_Histogram.analyzeRegion = function (points) {
       Math.min(
         ...points.map(function (x) {
           return x.x;
-        })
+        }),
       ) * imageWidth;
     var y0 =
       Math.min(
         ...points.map(function (x) {
           return x.y;
-        })
+        }),
       ) * imageWidth;
     var x3 =
       Math.max(
         ...points.map(function (x) {
           return x.x;
-        })
+        }),
       ) * imageWidth;
     var y3 =
       Math.max(
         ...points.map(function (x) {
           return x.y;
-        })
+        }),
       ) * imageWidth;
     var options = {
       globalCoords: true,
@@ -395,7 +395,7 @@ Plot_Histogram.analyzeRegion = function (points) {
         y0,
         x3,
         y3,
-        options
+        options,
       );
       var markerData = dataUtils.data[dataset]["_processeddata"];
       for (var d of pointInBbox) {
@@ -407,7 +407,7 @@ Plot_Histogram.analyzeRegion = function (points) {
             x / imageWidth,
             y / imageWidth,
             regionPath,
-            tmpPoint
+            tmpPoint,
           )
         ) {
           if (Plot_Histogram._histoKey) {
@@ -465,7 +465,7 @@ Plot_Histogram.searchTreeForPointsInBbox = function (
   y0,
   x3,
   y3,
-  options
+  options,
 ) {
   if (options.globalCoords) {
     var xselector = options.xselector;
@@ -538,6 +538,6 @@ Plot_Histogram.getHisto = function () {
         automargin: true,
       },
     },
-    { responsive: true, displayModeBar: false }
+    { responsive: true, displayModeBar: false },
   );
 };
