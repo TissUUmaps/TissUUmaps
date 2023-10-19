@@ -963,7 +963,7 @@ def main():
     os.environ[
         "QTWEBENGINE_CHROMIUM_FLAGS"
     ] = "--no-sandbox --ignore-gpu-blacklist --enable-webgl-image-chromium"
-    if opts.DEBUG:
+    if views.app.config["DEBUG_CLI"]:
         os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] += (
             " --remote-allow-origins=" + DEBUG_URL
         )
