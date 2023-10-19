@@ -755,9 +755,11 @@ regionUtils.deleteAllRegions = function () {
     regionUtils._regions = {};
     regionUtils.updateAllRegionClassUI();
 }
-regionUtils.updateAllRegionClassUI = async function () {
+regionUtils.updateAllRegionClassUI = async function (waitForLayers=false) {
     // wait for an image to be loaded
-    await overlayUtils.waitLayersReady();
+    if (waitForLayers) {
+        await overlayUtils.waitLayersReady();
+    }
 
     // get the collapse status of all elements ".collapse_button_regionClass"
     // and save in a list of uncollapsed element ids}
