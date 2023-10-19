@@ -159,7 +159,7 @@
         "Gamma":{
             params:{
                 type:"range",
-                min:-0,
+                min:0,
                 max:2,
                 step:0.1,
                 value:1
