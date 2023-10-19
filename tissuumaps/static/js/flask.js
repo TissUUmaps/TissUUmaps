@@ -52,7 +52,7 @@ flask.standalone.init = function () {
     document.body.append(flask.standalone.pixelFlickering)
     var counterFrames = 3;
     async function refreshAnimation() {
-        console.log("refreshAnimation", counterFrames);
+        // console.log("refreshAnimation", counterFrames);
         if (flask.standalone.pixelFlickering.style.backgroundColor=="rgb(255, 255, 255)")
             flask.standalone.pixelFlickering.style.backgroundColor="rgb(255, 255, 254)";
         else 
