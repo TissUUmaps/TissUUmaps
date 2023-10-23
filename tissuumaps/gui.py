@@ -955,7 +955,7 @@ def main():
     fmt = QtGui.QSurfaceFormat()
     fmt.setProfile(QtGui.QSurfaceFormat.OpenGLContextProfile.CoreProfile)
     fmt.setVersion(4, 1)
-    fmt.setSwapBehavior(QtGui.QSurfaceFormat.SwapBehavior.SingleBuffer)
+    fmt.setSwapBehavior(QtGui.QSurfaceFormat.SwapBehavior.DoubleBuffer)
 
     QtGui.QSurfaceFormat.setDefaultFormat(fmt)
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
