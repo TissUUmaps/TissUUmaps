@@ -94,6 +94,17 @@ flask.standalone.init = function () {
     }, true);
 };
 
+flask.standalone.addGeoJSON = function (filename) {
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    const path = urlParams.get('path')
+    flask.standalone.backend.addGeoJSON(path, filename, function(geoJSONJSON) {
+        if (geoJSONJSON["geoJSONPath"]!=null) {
+            regionUtils.JSONToRegions(geoJSONJSON["geoJSONPath"]);
+        }
+    });
+}
+
 flask.standalone.addCSV = function (filename) {
     const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString);

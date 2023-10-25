@@ -655,10 +655,10 @@ def csvFile(completePath):
         abort(404)
 
 
-@app.route("/<path:completePath>.json")
+@app.route("/<path:completePath>.<any(json, geojson, pbf):ext>")
 @requires_auth
-def jsonFile(completePath):
-    completePath = os.path.join(app.basedir, completePath + ".json")
+def jsonFile(completePath, ext):
+    completePath = os.path.join(app.basedir, completePath + "." + ext)
     directory = os.path.dirname(completePath)
     filename = os.path.basename(completePath)
     if os.path.isfile(completePath):
