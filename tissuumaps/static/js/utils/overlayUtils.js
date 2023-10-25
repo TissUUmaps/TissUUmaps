@@ -579,7 +579,10 @@ overlayUtils.addLayer = function(layer, i, visible) {
                 columns: Math.ceil(Math.sqrt(tmapp.layers.length))
             }
             if (projectUtils._activeState["collectionLayout"] !== undefined) {
-                collectionLayout = projectUtils._activeState["collectionLayout"];
+                //copy each field of projectUtils._activeState["collectionLayout"] to collectionLayout
+                for (var field in projectUtils._activeState["collectionLayout"]) {
+                    collectionLayout[field] = projectUtils._activeState["collectionLayout"][field];
+                }
             }
             tmapp["ISS_viewer"].world.arrange(collectionLayout);
             var inputs = document.querySelectorAll(".visible-layers");

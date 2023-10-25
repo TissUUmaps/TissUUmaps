@@ -865,7 +865,7 @@ interfaceUtils._mGenUIFuncs.getTabRadiosAndChecks= function(uid){
     allradios["shape_col"]=interfaceUtils.getElementById(uid+"_shape-bypoint");
     allradios["shape_fixed"]=interfaceUtils.getElementById(uid+"_shape-fixed");
     allradios["opacity_check"]=interfaceUtils.getElementById(uid+"_use-opacity");
-    allradios["no_outline"]=interfaceUtils.getElementById(uid+"_no-outline");
+    allradios["_no_outline"]=interfaceUtils.getElementById(uid+"_no-outline");
     allradios["no_fill"]=interfaceUtils.getElementById(uid+"_no-fill");
     allradios["collectionItem_col"]=interfaceUtils.getElementById(uid+"_collectionItem-bypoint");
     allradios["collectionItem_fixed"]=interfaceUtils.getElementById(uid+"_collectionItem-fixed");
@@ -2539,10 +2539,15 @@ interfaceUtils.generateNotification = function(content, uid, noClose, timeout, a
     }
     $(`#${uid}_alert`).alert();
     if (timeout) {
-        setTimeout(function() {
+        let _timeout = setTimeout(function() {
             $(`#${uid}_alert`).alert('close');
         }, timeout);
+        // remove timeout if alert is clicked or touched:
+        $(`#${uid}_alert`).on('click touchstart', function() {
+            clearTimeout(_timeout);
+        });
     }
+
     return alertDiv;
 }
 
