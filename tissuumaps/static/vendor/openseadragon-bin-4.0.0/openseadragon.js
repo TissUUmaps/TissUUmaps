@@ -5323,8 +5323,18 @@ $.EventSource.prototype = {
         //   y-index scrolling.
         // event.deltaMode: 0=pixel, 1=line, 2=page
         // TODO: Deltas in pixel mode should be accumulated then a scroll value computed after $.DEFAULT_SETTINGS.pixelsPerWheelLine threshold reached
-        nDelta = event.deltaY < 0 ? 1 : -1;
-
+        /* Fix for Qt bug on diagonal wheel event */
+        if (tracker.lastScrollDelta == undefined) {
+            tracker.lastScrollDelta = 0;
+            tracker.lastScrollTime = 0;
+        }
+        if (event.deltaY == 0 && event.deltaX == 0 && event.timeStamp - tracker.lastScrollTime < 500) {
+            nDelta = tracker.lastScrollDelta;
+        }
+        if (event.deltaY < 0) { nDelta = 1; tracker.lastScrollDelta = nDelta;}
+        if (event.deltaY > 0) { nDelta = -1; tracker.lastScrollDelta = nDelta;}
+        tracker.lastScrollTime = event.timeStamp
+        /* End fix for Qt */
         eventInfo = {
             originalEvent: event,
             eventType: 'wheel',
