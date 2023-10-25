@@ -1802,13 +1802,19 @@ regionUtils.JSONToRegions= function(filepath){
             // Load GeoJSON stored in Geobuf format (https://github.com/mapbox/geobuf)
             fetch(filepath)
             .then((response) => {
-                const data = new Pbf(response.arrayBuffer());
+                return response.arrayBuffer();
+            })
+            .then((regionsobj) => {
+                const data = new Pbf(regionsobj);
                 regionUtils.JSONValToRegions(geobuf.decode(data));
             });
         } else if (filepath.includes(".geojson") || filepath.includes(".json")) {
             fetch(filepath)
             .then((response) => {
-                regionUtils.JSONValToRegions(response.json());
+                return response.json();
+            })
+            .then((regionsobj) => {
+                regionUtils.JSONValToRegions(regionsobj);
             });
         }
     }
