@@ -1798,13 +1798,19 @@ regionUtils.JSONToRegions= function(filepath){
         if (path != null) {
             filepath = path + "/" + filepath;
         }
-        fetch(filepath)
-        .then((response) => {
-            return response.json();
-        })
-        .then((regionsobj) => {
-            regionUtils.JSONValToRegions(regionsobj);
-        });
+        if (filepath.includes(".pbf")) {
+            // Load GeoJSON stored in Geobuf format (https://github.com/mapbox/geobuf)
+            fetch(filepath)
+            .then((response) => {
+                const data = new Pbf(response.arrayBuffer());
+                regionUtils.JSONValToRegions(geobuf.decode(data));
+            });
+        } else if (filepath.includes(".geojson") || filepath.includes(".json")) {
+            fetch(filepath)
+            .then((response) => {
+                regionUtils.JSONValToRegions(response.json());
+            });
+        }
     }
     else if(window.File && window.FileReader && window.FileList && window.Blob) {
         var op=tmapp["object_prefix"];
