@@ -6,7 +6,7 @@
 - Move to WebGL rendering for regions
 - Refactor completely the region tab to better handle large number of items
 - Allow import of regions from multiple GeoJSON files
-- Add support for pbf region files
+- Add support for Geobuf (.pbf) region files
 - Add drag-and-drop opening of GeoJSON files
 - Add histogram button for analyzing individual regions
 - Make regions work in collection mode and with multiple image layers
