@@ -189,6 +189,7 @@ glUtils._markersVS = `
         // Discard point here in vertex shader if marker is hidden
         v_color.a = v_color.a > 0.0 ? in_opacity * u_markerOpacity : 0.0;
         v_color.a *= alphaFactorSize * alphaFactorSize;
+        v_color.a = clamp(v_color.a, 0.0, 1.0);
         if (v_color.a == 0.0) DISCARD_VERTEX;
     }
 `;
