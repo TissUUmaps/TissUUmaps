@@ -557,8 +557,8 @@ regionUtils.globalPointInPath=function(x,y,path,tmpPoint) {
             const markerData = dataUtils.data[options.dataset]["_processeddata"];
             const columns = dataUtils.data[options.dataset]["_csv_header"];
             for (const d of node.data) {
-                const x = markerData[xselector][d] * options.coordFactor;
-                const y = markerData[yselector][d] * options.coordFactor;
+                const x = markerData[xselector][d] * dataUtils.data[options.dataset]["_coord_factor"];
+                const y = markerData[yselector][d] * dataUtils.data[options.dataset]["_coord_factor"];
                 if (x >= x0 && x < x3 && y >= y0 && y < y3) {
                     pointsInside.push(d);
                 }
@@ -619,8 +619,8 @@ regionUtils.searchTreeForPointsInRegion = function (quadtree, x0, y0, x3, y3, re
     const markerData = dataUtils.data[options.dataset]["_processeddata"];
 
     for (let d of pointInLayer) {
-        const x = markerData[xselector][d] * options.coordFactor;
-        const y = markerData[yselector][d] * options.coordFactor;
+        const x = markerData[xselector][d] * dataUtils.data[options.dataset]["_coord_factor"];
+        const y = markerData[yselector][d] * dataUtils.data[options.dataset]["_coord_factor"];
         if (regionUtils._pointInRegion(x, y, regionid)) {
             countsInsideRegion += 1;
             pointsInside.push(d);
@@ -866,8 +866,7 @@ regionUtils.getPointsInRegion = function (regionid) {
                     "globalCoords":true,
                     "xselector":dataUtils.data[uid]["_X"],
                     "yselector":dataUtils.data[uid]["_Y"],
-                    "dataset":uid,
-                    "coordFactor":dataUtils.data[uid]["_coord_factor"]
+                    "dataset":uid
                 });
             const markerData = dataUtils.data[uid]["_processeddata"];
             const columns = dataUtils.data[uid]["_csv_header"];
