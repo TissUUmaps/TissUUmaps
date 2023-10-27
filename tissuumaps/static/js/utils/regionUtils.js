@@ -1798,24 +1798,52 @@ regionUtils.JSONToRegions= function(filepath){
         if (path != null) {
             filepath = path + "/" + filepath;
         }
-        fetch(filepath)
-        .then((response) => {
-            return response.json();
-        })
-        .then((regionsobj) => {
-            regionUtils.JSONValToRegions(regionsobj);
-        });
+        if (filepath.toLowerCase().endsWith(".pbf")) {
+            // Load GeoJSON stored in Geobuf format (https://github.com/mapbox/geobuf)
+            fetch(filepath)
+            .then((response) => {
+                response.arrayBuffer()
+                .then((response) => {
+                    const data = new Pbf(response);
+                    regionUtils.JSONValToRegions(geobuf.decode(data));
+                });
+            });
+        } else if (filepath.toLowerCase().endsWith(".geojson") ||
+                   filepath.toLowerCase().endsWith(".json")) {
+            fetch(filepath)
+            .then((response) => {
+                response.json()
+                .then((response) => {
+                    regionUtils.JSONValToRegions(response);
+                });
+            });
+        } else {
+            interfaceUtils.alert("Region files must have extension .geojson, .json, or .pbf.",
+                                 "Invalid region filename");
+        }
     }
     else if(window.File && window.FileReader && window.FileList && window.Blob) {
         var op=tmapp["object_prefix"];
         var text=document.getElementById(op+"_region_files_import");
         var file=text.files[0];
         var reader = new FileReader();
-        reader.onload=function(event) {
-            // The file's text will be printed here
-            regionUtils.JSONValToRegions(JSON.parse(event.target.result));
-        };
-        reader.readAsText(file);
+        if (file.name.toLowerCase().endsWith(".pbf")) {
+            // Load GeoJSON stored in Geobuf format (https://github.com/mapbox/geobuf)
+            reader.onload=function(event) {
+                const data = new Pbf(event.target.result);
+                regionUtils.JSONValToRegions(geobuf.decode(data));
+            };
+            reader.readAsArrayBuffer(file);
+        } else if (file.name.toLowerCase().endsWith(".geojson") ||
+                   file.name.toLowerCase().endsWith(".json")) {
+            reader.onload=function(event) {
+                regionUtils.JSONValToRegions(JSON.parse(event.target.result));
+            };
+            reader.readAsText(file);
+        } else {
+            interfaceUtils.alert("Region files must have extension .geojson, .json, or .pbf.",
+                                 "Invalid region filename");
+        }
     } else {
         interfaceUtils.alert('The File APIs are not fully supported in this browser.');
     }
