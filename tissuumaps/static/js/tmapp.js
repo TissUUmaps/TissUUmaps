@@ -383,6 +383,7 @@ const frameTimes = [];
 let   frameCursor = 0;
 let   numFrames = 0;   
 const maxFrames = 20;
+let maxFPS = 0;
 let   totalFPS = 0;
 
 let then = 0;
@@ -392,6 +393,8 @@ function countFPS(now) {
     then = now;                            // remember time for next frame
     const fps = 1 / deltaTime;             // compute frames per second
     
+    maxFPS = Math.max(maxFPS, fps);
+
     // add the current fps and remove the oldest fps
     totalFPS += fps - (frameTimes[frameCursor] || 0);
     
@@ -407,7 +410,7 @@ function countFPS(now) {
     const averageFPS = totalFPS / numFrames;
 
     //console.log(averageFPS.toFixed(1));  // update avg display
-    if (averageFPS < 40 && tmapp.ISS_viewer && tmapp.dragging) {
+    if (averageFPS < maxFPS / 2.0 && tmapp.ISS_viewer && tmapp.dragging) {
         tmapp.ISS_viewer.debouncePanEvents = 100;
         interfaceUtils.generateNotification(
             "The browser is slow, enabling event debounce.",
