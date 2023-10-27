@@ -142,6 +142,9 @@ tmapp.init = function () {
         element: tmapp[vname].canvas,
         clickHandler: click_handler
     }).setTracking(true);*/
+    tmapp["ISS_viewer"].addHandler("canvas-press", ()=>{this.dragging = true;});
+    tmapp["ISS_viewer"].addHandler("canvas-release", ()=>{this.dragging = false;});
+
     tmapp["ISS_viewer"].addHandler("canvas-press", pressHandler);
     tmapp["ISS_viewer"].addHandler('canvas-click', click_handler);
     new OpenSeadragon.MouseTracker({
@@ -284,7 +287,8 @@ tmapp.options_osd = {
     },
     gestureSettingsPen: {
         flickEnabled: false
-    }
+    },
+    debouncePanEvents: false,
 }
 
 function toggleFullscreen() {
@@ -374,3 +378,47 @@ $( document ).ready(function() {
         }
     });
 });
+
+const frameTimes = [];
+let   frameCursor = 0;
+let   numFrames = 0;   
+const maxFrames = 20;
+let   totalFPS = 0;
+
+let then = 0;
+function countFPS(now) {
+    now *= 0.001;                          // convert to seconds
+    const deltaTime = now - then;          // compute time since last frame
+    then = now;                            // remember time for next frame
+    const fps = 1 / deltaTime;             // compute frames per second
+    
+    // add the current fps and remove the oldest fps
+    totalFPS += fps - (frameTimes[frameCursor] || 0);
+    
+    // record the newest fps
+    frameTimes[frameCursor++] = fps;
+    
+    // needed so the first N frames, before we have maxFrames, is correct.
+    numFrames = Math.max(numFrames, frameCursor);
+    
+    // wrap the cursor
+    frameCursor %= maxFrames;
+        
+    const averageFPS = totalFPS / numFrames;
+
+    //console.log(averageFPS.toFixed(1));  // update avg display
+    if (averageFPS < 40 && tmapp.ISS_viewer && tmapp.dragging) {
+        tmapp.ISS_viewer.debouncePanEvents = 100;
+        interfaceUtils.generateNotification(
+            "The browser is slow, enabling event debounce.",
+            "debounce",
+            false,
+            3000,
+            "info"
+        );
+    }
+    else {
+        requestAnimationFrame(countFPS);
+    }
+}
+requestAnimationFrame(countFPS);
