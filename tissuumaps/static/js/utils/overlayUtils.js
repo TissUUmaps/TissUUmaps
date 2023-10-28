@@ -770,7 +770,8 @@ overlayUtils.savePNG=function() {
         tmapp.ISS_viewer.world.getItemAt(0).immediateRender = true
         var strokeWidthSVG = regionUtils._polygonStrokeWidth
         var strokeWidthGL = glUtils._regionStrokeWidth;
-        regionUtils._polygonStrokeWidth *= resolution
+        regionUtils._polygonStrokeWidth *= resolution;
+        glUtils._regionStrokeWidth *= resolution;
         overlayUtils.waitFullyLoaded().then(() => {
             overlayUtils.getCanvasPNG(resolution)
             .then (() => {
