@@ -64,8 +64,9 @@ glUtils = {
     _showEdgesExperimental: true,
     _edgeThicknessRatio: 0.1,     // Ratio between edge thickness and marker size
     _regionOpacity: 0.5,
-    _regionFillRule: "never",   // Possible values: "never" | "nonzero" | "oddeven"
-    _regionUsePivotSplit: false,   // Use split edge lists for faster region rendering and less risk of overflow
+    _regionStrokeWidth: 1.0,      // Base stroke width in pixels (larger values can give artifacts, so use with care!)
+    _regionFillRule: "never",     // Possible values: "never" | "nonzero" | "oddeven"
+    _regionUsePivotSplit: false,  // Use split edge lists for faster region rendering and less risk of overflow
     _regionUseColorByID: false,   // Map region object IDs to unique colors
     _regionDataSize: {},          // Size stored per region data texture and used for dynamic resizing
     _regionPicked: null,          // Key to regionUtils._regions dict, or null if no region is picked
@@ -585,6 +586,7 @@ glUtils._regionsFS = `
 
     uniform int u_numScanlines;
     uniform float u_regionOpacity;
+    uniform float u_regionStrokeWidth;
     uniform int u_regionFillRule;
     uniform int u_regionUsePivotSplit;
     uniform int u_regionUseColorByID;
@@ -621,7 +623,7 @@ glUtils._regionsFS = `
         int scanline = int(v_scanline);
 
         float pixelWidth = length(dFdx(p.xy));
-        float strokeWidth = pixelWidth *
+        float strokeWidth = pixelWidth * u_regionStrokeWidth *
             (u_regionFillRule == FILL_RULE_NEVER ? STROKE_WIDTH : STROKE_WIDTH_FILLED);
         float minEdgeDist = 1e7;  // Distance to closest edge
 
@@ -2085,6 +2087,7 @@ glUtils._drawRegionsColorPass = function(gl, viewportTransform) {
         gl.uniform4fv(gl.getUniformLocation(program, "u_imageBounds"), imageBounds);
         gl.uniform1i(gl.getUniformLocation(program, "u_numScanlines"), numScanlines);
         gl.uniform1f(gl.getUniformLocation(program, "u_regionOpacity"), glUtils._regionOpacity);
+        gl.uniform1f(gl.getUniformLocation(program, "u_regionStrokeWidth"), glUtils._regionStrokeWidth);
         gl.uniform1i(gl.getUniformLocation(program, "u_regionFillRule"),
             fillRuleConstants[glUtils._regionFillRule]);
         gl.uniform1i(gl.getUniformLocation(program, "u_regionUsePivotSplit"), glUtils._regionUsePivotSplit);

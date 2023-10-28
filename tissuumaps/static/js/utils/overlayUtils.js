@@ -768,13 +768,15 @@ overlayUtils.savePNG=function() {
         var bounds = tmapp.ISS_viewer.viewport.getBounds();
         var loading=interfaceUtils.loadingModal();
         tmapp.ISS_viewer.world.getItemAt(0).immediateRender = true
-        var strokeWidth = regionUtils._polygonStrokeWidth
+        var strokeWidthSVG = regionUtils._polygonStrokeWidth
+        var strokeWidthGL = glUtils._regionStrokeWidth;
         regionUtils._polygonStrokeWidth *= resolution
         overlayUtils.waitFullyLoaded().then(() => {
             overlayUtils.getCanvasPNG(resolution)
             .then (() => {
                 // We go back to original size:
-                regionUtils._polygonStrokeWidth = strokeWidth;
+                regionUtils._polygonStrokeWidth = strokeWidthSVG;
+                glUtils._regionStrokeWidth = strokeWidthGL;
                 tmapp.ISS_viewer.world.getItemAt(0).immediateRender = false
                 tmapp.ISS_viewer.viewport.fitBounds(bounds, true);
                 interfaceUtils.closeModal(loading);
