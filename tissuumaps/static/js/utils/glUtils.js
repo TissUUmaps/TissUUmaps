@@ -2433,7 +2433,7 @@ glUtils.restoreLostContext = function(event) {
     }
 
     // Restore per-layer WebGL objects for drawing regions
-    for (let key in Objects.keys(glUtils._textures)) {
+    for (let key in Object.keys(glUtils._textures)) {
         // Check all named texture objects to be safe, since the regions
         // a texture was created for might have been deleted or moved to a
         // different image layer (been assigned a different collectionIndex)
