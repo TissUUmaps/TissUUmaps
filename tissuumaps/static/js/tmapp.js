@@ -411,7 +411,7 @@ function countFPS(now) {
 
     //console.log(averageFPS.toFixed(1));  // update avg display
     if (averageFPS < maxFPS / 2.0 && tmapp.ISS_viewer && tmapp.dragging) {
-        tmapp.ISS_viewer.debouncePanEvents = 100;
+        tmapp.ISS_viewer.debouncePanEvents = 75;
         interfaceUtils.generateNotification(
             "The browser is slow, enabling event debounce.",
             "debounce",
