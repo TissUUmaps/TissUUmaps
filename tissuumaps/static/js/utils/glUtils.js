@@ -893,21 +893,23 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
 
     // Additional info about the vertex format. Make sure to update also
     // NUM_BYTES_PER_MARKER and NUM_BYTES_PER_MARKER_SECONDARY when making
-    // changes to the format! Two buffers will be used for the vertex data
-    // to avoid the 1GB max size limit imposed by QtWebEngine/Chromium.
+    // changes to the format! Two buffers will be used for the vertex data to
+    // avoid the 1GB max size limit imposed by QtWebEngine/Chromium. Also
+    // remember to update glUtils._updateBindingOffsetsForVAO if changing the
+    // format.
     const NUM_BYTES_PER_MARKER = 16;
     const NUM_BYTES_PER_MARKER_SECONDARY = 16;
     const POINT_OFFSET = numPoints * 0,
           INDEX_OFFSET = numPoints * 0,
           SCALE_OFFSET = numPoints * 4,
-          SHAPE_OFFSET = numPoints * 8;
-          OPACITY_OFFSET = numPoints * 12;
+          SHAPE_OFFSET = numPoints * 8,
+          OPACITY_OFFSET = numPoints * 12,
           TRANSFORM_OFFSET = numPoints * 14;
     const POINT_LOCATION = 0,
           INDEX_LOCATION = 1,
           SCALE_LOCATION = 2,
           SHAPE_LOCATION = 3,
-          OPACITY_LOCATION = 4;
+          OPACITY_LOCATION = 4,
           TRANSFORM_LOCATION = 5;
 
     const lastInputs = glUtils._markerInputsCached[uid];
@@ -1234,6 +1236,38 @@ glUtils.deleteMarkers = function(uid) {
 
     // Make sure piechart legend is deleted if it was used for this UID
     markerUtils.updatePiechartLegend();
+}
+
+
+glUtils._updateBindingOffsetsForCurrentVAO = function(gl, uid, offset, numPoints) {
+    // This function is used for updating the offsets of vertex bindings for
+    // instanced drawing. This is only necessary because drawArrayInstanced and
+    // drawElementsInstanced ignores any offset or first parameters we provide
+    // for instanced arrays (arrays with non-zero vertex attrib divisor).
+
+    // Additional info about the vertex format. Make sure to update these values
+    // if/when also changing the vertex format in glUtils.loadMarkers!
+    const POINT_OFFSET = numPoints * 0,
+          INDEX_OFFSET = numPoints * 0,
+          SCALE_OFFSET = numPoints * 4,
+          SHAPE_OFFSET = numPoints * 8,
+          OPACITY_OFFSET = numPoints * 12,
+          TRANSFORM_OFFSET = numPoints * 14;
+    const POINT_LOCATION = 0,
+          INDEX_LOCATION = 1,
+          SCALE_LOCATION = 2,
+          SHAPE_LOCATION = 3,
+          OPACITY_LOCATION = 4,
+          TRANSFORM_LOCATION = 5;
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_markers"]);
+    gl.vertexAttribPointer(POINT_LOCATION, 4, gl.FLOAT, false, 0, POINT_OFFSET + offset * 16);
+    gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_markers_secondary"]);
+    gl.vertexAttribIPointer(INDEX_LOCATION, 1, gl.INT, 0, INDEX_OFFSET + offset * 4);
+    gl.vertexAttribPointer(SCALE_LOCATION, 1, gl.FLOAT, false, 0, SCALE_OFFSET + offset * 4);
+    gl.vertexAttribPointer(SHAPE_LOCATION, 1, gl.FLOAT, false, 0, SHAPE_OFFSET + offset * 4);
+    gl.vertexAttribPointer(OPACITY_LOCATION, 1, gl.UNSIGNED_SHORT, true, 0, OPACITY_OFFSET + offset * 2);
+    gl.vertexAttribPointer(TRANSFORM_LOCATION, 1, gl.UNSIGNED_SHORT, false, 0, TRANSFORM_OFFSET + offset * 2);
 }
 
 
@@ -1945,6 +1979,11 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
     // we will fall back to using point sprites instead.
     const useInstancing = glUtils._useInstancing && !glUtils._useSortByCol[uid];
 
+    // Chunk size used to split a single large draw call into smaller chunks. On
+    // some Android phones, drawing larger datasets can result in WebGL context
+    // loss or crashes, so this should be a workaround.
+    const chunkSize = 65536;
+
     // Set up render pipeline
     const program = glUtils._programs[useInstancing ? "markers_instanced" : "markers"];
     gl.useProgram(program);
@@ -1987,36 +2026,44 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
     gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorLUT"]);
     gl.uniform1i(gl.getUniformLocation(program, "u_colorLUT"), 0);
 
+    // Note: drawArrayInstanced seems to be faster than drawElementsInstanced on
+    // most HW. So since sorting currently does not work with instancing, we use
+    // it here for the instanced drawing.
+
     if (glUtils._usePiechartFromMarker[uid]) {
         // 1st pass: draw alpha for whole marker shapes
         gl.uniform1i(gl.getUniformLocation(program, "u_alphaPass"), true);
-        if (useInstancing) {
-            gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numPoints);
-        } else {
-            gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_INT, 0);
+        for (let offset = 0; offset < numPoints; offset += chunkSize) {
+            const count = (offset + chunkSize >= numPoints) ? numPoints - offset : chunkSize;
+            if (useInstancing) {
+                glUtils._updateBindingOffsetsForCurrentVAO(gl, uid, offset, numPoints);
+                gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
+            } else {
+                gl.drawElements(gl.POINTS, count, gl.UNSIGNED_INT, offset * 4);
+            }
         }
         // 2nd pass: draw colors for individual piechart sectors
         gl.uniform1i(gl.getUniformLocation(program, "u_alphaPass"), false);
         gl.colorMask(true, true, true, false);
+        // (Reminder of the drawing is the same as for non-piechart markers, so
+        // here we can just re-use that code path)
+    }
+    for (let offset = 0; offset < numPoints; offset += chunkSize) {
+        const count = (offset + chunkSize >= numPoints) ? numPoints - offset : chunkSize;
         if (useInstancing) {
-            gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numPoints);
+            glUtils._updateBindingOffsetsForCurrentVAO(gl, uid, offset, numPoints);
+            gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
         } else {
-            gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_INT, 0);
-        }
-        gl.colorMask(true, true, true, true);
-    } else {
-        if (useInstancing) {
-            // Note: drawElementsInstanced is for some reason much slower than
-            // drawArraysInstanced. So since sorting currently does not work
-            // with instancing, we can use faster non-indexed drawing here.
-            gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numPoints);
-        } else {
-            gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_INT, 0);
+            gl.drawElements(gl.POINTS, count, gl.UNSIGNED_INT, offset * 4);
         }
     }
 
     // Restore render pipeline state
+    if (useInstancing) {
+        glUtils._updateBindingOffsetsForCurrentVAO(gl, uid, 0, numPoints);
+    }
     gl.bindVertexArray(null);
+    gl.colorMask(true, true, true, true);
     gl.blendFunc(gl.ONE, gl.ONE);
     gl.disable(gl.BLEND);
     gl.useProgram(null);
@@ -2054,6 +2101,9 @@ glUtils._drawEdgesByUID = function(gl, viewportTransform, markerScaleAdjusted, u
     gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorLUT"]);
     gl.uniform1i(gl.getUniformLocation(program, "u_colorLUT"), 0);
 
+    // (TODO: this draw call should also be split into smaller chunks (as in
+    // glUtils._drawMarkersByUID and glUtils._drawPickingPass) to avoid problem
+    // with rendering larger datasets on some Android phones)
     gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numEdges);
 
     // Restore render pipeline state
@@ -2128,6 +2178,11 @@ glUtils._drawRegionsColorPass = function(gl, viewportTransform) {
 
 
 glUtils._drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) {
+    // Chunk size used to split a single large draw call into smaller chunks. On
+    // some Android phones, drawing larger datasets can result in WebGL context
+    // loss or crashes, so this should be a workaround.
+    const chunkSize = 65536;
+
     // Set up render pipeline
     const program = glUtils._programs["picking"];
     gl.useProgram(program);
@@ -2175,7 +2230,10 @@ glUtils._drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) 
         gl.drawArrays(gl.POINTS, 0, 1);  // Note: this drawcall does not have to be indexed
         // 2nd pass: draw all the markers (as single pixels)
         gl.uniform1i(gl.getUniformLocation(program, "u_op"), 1);
-        gl.drawElements(gl.POINTS, numPoints, gl.UNSIGNED_INT, 0);
+        for (let offset = 0; offset < numPoints; offset += chunkSize) {
+            const count = (offset + chunkSize >= numPoints) ? numPoints - offset : chunkSize;
+            gl.drawElements(gl.POINTS, count, gl.UNSIGNED_INT, offset * 4);
+        }
 
         // Read back pixel at location (0, 0) to get the picked object
         const result = new Uint8Array(4);
