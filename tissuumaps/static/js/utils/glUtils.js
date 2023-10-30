@@ -19,6 +19,7 @@ glUtils = {
     _vaos: {},
     _textures: {},
     _query: null,
+    _caps: {},
 
     // Marker settings and info stored per UID (this could perhaps be
     // better handled by having an object per UID that stores all info
@@ -1954,7 +1955,8 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
     gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
     gl.uniform2fv(gl.getUniformLocation(program, "u_canvasSize"), [gl.canvas.width, gl.canvas.height]);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
-    gl.uniform1f(gl.getUniformLocation(program, "u_maxPointSize"), useInstancing ? 2048 : 256);
+    gl.uniform1f(gl.getUniformLocation(program, "u_maxPointSize"),
+        glUtils._useInstancing ? 2048 : glUtils._caps[gl.ALIASED_POINT_SIZE_RANGE][1]);
     gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, "TransformUniforms"), 0);
     gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, glUtils._buffers["transformUBO"]);
     gl.activeTexture(gl.TEXTURE2);
@@ -2135,7 +2137,8 @@ glUtils._drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) 
     gl.uniform2fv(gl.getUniformLocation(program, "u_canvasSize"), [gl.canvas.width, gl.canvas.height]);
     gl.uniform2fv(gl.getUniformLocation(program, "u_pickingLocation"), glUtils._pickingLocation);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
-    gl.uniform1f(gl.getUniformLocation(program, "u_maxPointSize"), glUtils._useInstancing ? 2048 : 256);
+    gl.uniform1f(gl.getUniformLocation(program, "u_maxPointSize"),
+        glUtils._useInstancing ? 2048 : glUtils._caps[gl.ALIASED_POINT_SIZE_RANGE][1]);
     gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, "TransformUniforms"), 0);
     gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, glUtils._buffers["transformUBO"]);
     gl.activeTexture(gl.TEXTURE2);
@@ -2468,6 +2471,10 @@ glUtils.init = function() {
     if (!(gl instanceof WebGL2RenderingContext)) {
         interfaceUtils.alert("Error: TissUUmaps requires a web browser that supports WebGL 2.0");
     }
+
+    // Get HW capabilities from WebGL context
+    glUtils._caps[gl.ALIASED_POINT_SIZE_RANGE] = gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE);
+    console.assert(glUtils._caps[gl.ALIASED_POINT_SIZE_RANGE] instanceof Float32Array);
 
     // Place marker canvas under the OSD canvas. Doing this also enables proper
     // compositing with the minimap and other OSD elements.
