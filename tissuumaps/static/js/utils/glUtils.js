@@ -1077,9 +1077,11 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
                 const colData = markerData[sortByCol];
                 if (sortByDesc) {
                     // Sort in descending order
-                    bytedata_indices.sort((i, j) => Number(colData[j]) - Number(colData[i]));
+                    bytedata_indices.sort((i, j) => Number(colData[Math.floor(j / numSectors)]) -
+                                                    Number(colData[Math.floor(i / numSectors)]));
                 } else {  // Sort in ascending order
-                    bytedata_indices.sort((i, j) => Number(colData[i]) - Number(colData[j]));
+                    bytedata_indices.sort((i, j) => Number(colData[Math.floor(i / numSectors)]) -
+                                                    Number(colData[Math.floor(j / numSectors)]));
                 }
             }
 
