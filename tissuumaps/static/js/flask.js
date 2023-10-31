@@ -72,6 +72,7 @@ flask.standalone.init = function () {
     document.addEventListener('mouseup', resetCounter);
     document.addEventListener('mousedown', resetCounter);
     document.addEventListener('mousemove', resetCounter);
+    document.addEventListener('pointermove', resetCounter);
     document.addEventListener('touchstart', resetCounter);
     document.addEventListener('scroll', resetCounter);
     document.addEventListener('keydown', resetCounter);
