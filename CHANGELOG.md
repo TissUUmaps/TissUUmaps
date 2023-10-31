@@ -16,6 +16,7 @@
 - Move standalone installer from python3.8 to 3.11
 - Move to pyside6 instead of pyqt6
 - Add installers for MacOS X (.dmg) and Linux (.deb)
+- Update to OpenSeadragon 4.1.0
 - Lots of minor fixes
 
 ## 3.1.1.6
