@@ -846,6 +846,10 @@ regionUtils.getPointsInRegion = function (regionid) {
         var allkeys=Object.keys(dataUtils.data[uid]["_groupgarden"]);
 
         var datapath = dataUtils.data[uid]["_csv_path"];
+        if (typeof datapath != "string") {
+            console.assert(datapath.name != undefined);
+            datapath = datapath.name;  // Keep the filepath part
+        }
         if (datapath.includes(".csv") || datapath.includes(".CSV")) {
             // Strip everything except the filename, to save a bit of memory
             // and reduce the filesize when exporting to CSV
