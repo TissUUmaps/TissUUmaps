@@ -379,6 +379,11 @@ $( document ).ready(function() {
     });
 });
 
+/* FPS counter
+*  If the browser is slow, we debounce the pan events to avoid the browser
+*  getting overwhelmed and dropping frames.
+*  If the fps is below half the max fps, we debounce the pan events.
+*/
 const frameTimes = [];
 let   frameCursor = 0;
 let   numFrames = 0;   
@@ -392,8 +397,8 @@ function countFPS(now) {
     const deltaTime = now - then;          // compute time since last frame
     then = now;                            // remember time for next frame
     const fps = 1 / deltaTime;             // compute frames per second
-    
-    maxFPS = Math.max(maxFPS, fps);
+    if (deltaTime < 1)
+        maxFPS = Math.max(maxFPS, fps);
 
     // add the current fps and remove the oldest fps
     totalFPS += fps - (frameTimes[frameCursor] || 0);
@@ -408,20 +413,42 @@ function countFPS(now) {
     frameCursor %= maxFrames;
         
     const averageFPS = totalFPS / numFrames;
-
-    //console.log(averageFPS.toFixed(1));  // update avg display
+    /*if (tmapp.ISS_viewer) {
+        console.log(tmapp.ISS_viewer.debouncePanEvents, averageFPS.toFixed(1), maxFPS);  // update avg display
+    }*/
     if (averageFPS < maxFPS / 2.0 && tmapp.ISS_viewer && tmapp.dragging) {
-        tmapp.ISS_viewer.debouncePanEvents = 75;
-        interfaceUtils.generateNotification(
-            "The browser is slow, enabling event debounce.",
-            "debounce",
-            false,
-            3000,
-            "info"
-        );
+        if (!tmapp.ISS_viewer.debouncePanEvents) {
+            tmapp.ISS_viewer.debouncePanEvents = 50;
+            interfaceUtils.generateNotification(
+                "The browser is slow, enabling event debounce.",
+                "debounce",
+                false,
+                3000,
+                "info"
+            );
+        }
+        else {
+            tmapp.ISS_viewer.debouncePanEvents *= 1.2;
+        }
+        for (let i=0; i<numFrames; i++) {
+            frameTimes[i] = maxFPS;
+            totalFPS = maxFPS * numFrames;
+        }
+        setTimeout(()=>{
+            requestAnimationFrame(countFPS);
+        }, 2000);
     }
     else {
         requestAnimationFrame(countFPS);
     }
 }
 requestAnimationFrame(countFPS);
+// every 1 minute, we remove one level of debounce to see if the browser can manage
+setInterval(()=>{
+    if (tmapp.ISS_viewer && tmapp.ISS_viewer.debouncePanEvents) {
+        tmapp.ISS_viewer.debouncePanEvents /= 1.2;
+    }
+    if (tmapp.ISS_viewer.debouncePanEvents < 50) {
+        tmapp.ISS_viewer.debouncePanEvents = false;
+    }
+}, 1*60*1000);
