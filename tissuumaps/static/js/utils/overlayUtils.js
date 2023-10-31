@@ -662,19 +662,6 @@ overlayUtils.waitFullyLoaded = async function () {
     }
 }
 
-/** 
- * @param {String} layerName name of an existing d3 node
- * @param {Number} opacity desired opacity
- * @summary Set the opacity of a tile source */
-overlayUtils.setLayerOpacity= function(layerName,opacity){
-    if(layerName in overlayUtils._d3nodes){
-        var layer = overlayUtils._d3nodes[layerName];
-        layer._groups[0][0].style.opacity=opacity;
-    }else{
-        console.log("layer does not exist or is not a D3 node");
-    }
-}
-
 /**
  * @param {String} colortype A string from [hex,hsl,rgb]
  * @summary Get a random color in the desired format
