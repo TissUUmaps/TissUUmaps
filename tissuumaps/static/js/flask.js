@@ -50,7 +50,7 @@ flask.standalone.init = function () {
     // as long as the user is interacting with the page
     flask.standalone.pixelFlickering = HTMLElementUtils.createElement({"kind":"div", extraAttributes:{"style":"position:absolute;right:0px;bottom:0px;width:1px;height:1px;line-height:1px;background-color:#FFFFFF"}});
     document.body.append(flask.standalone.pixelFlickering)
-    var counterFrames = 3;
+    var counterFrames = 10;
     async function refreshAnimation() {
         // console.log("refreshAnimation", counterFrames);
         if (flask.standalone.pixelFlickering.style.backgroundColor=="rgb(255, 255, 255)")
@@ -66,7 +66,7 @@ flask.standalone.init = function () {
     }
     refreshAnimation();
     function resetCounter() {
-        counterFrames = 3;
+        counterFrames = 10;
     }
     document.addEventListener('click', resetCounter);
     document.addEventListener('mouseup', resetCounter);
