@@ -918,6 +918,27 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
         forceUpdate = true;
         scalarRange = [1e9, -1e9];  // This range will be computed from the data
 
+        console.time("Generate index data");
+        const numIndices = numPoints * numSectors;
+        let indicesSorted = new Uint32Array(numIndices);
+        {
+            for (let index = 0; index < numIndices; ++index) {
+                indicesSorted[index] = index;
+            }
+            if (useSortByCol) {
+                const colData = markerData[sortByCol];
+                if (sortByDesc) {
+                    // Sort in descending order
+                    indicesSorted.sort((i, j) => Number(colData[Math.floor(j / numSectors)]) -
+                        Number(colData[Math.floor(i / numSectors)]));
+                } else {  // Sort in ascending order
+                    indicesSorted.sort((i, j) => Number(colData[Math.floor(i / numSectors)]) -
+                        Number(colData[Math.floor(j / numSectors)]));
+                }
+            }
+        }
+        console.timeEnd("Generate index data");
+
         // Extract and upload vertex data for markers. For datasets with tens of of
         // millions of points, the vertex data can be quite large, so we upload the
         // data in chunks to the GPU buffer to avoid having to allocate a large
@@ -946,7 +967,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
                 bytedata_transform = new Uint16Array(chunkSize * numSectors * 1);
 
                 for (let i = 0; i < chunkSize; ++i) {
-                    const markerIndex = i + offset;
+                    const markerIndex = indicesSorted[i + offset];
                     const sectors = markerData[sectorsPropertyName][markerIndex].toString().split(";");
                     const piechartAngles = glUtils._createPiechartAngles(sectors);
                     const lutIndex = (keyName != null) ? barcodeToLUTIndex[markerData[keyName][markerIndex]] : 0;
@@ -973,7 +994,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
                 }
             } else {
                 for (let i = 0; i < chunkSize; ++i) {
-                    const markerIndex = i + offset;
+                    const markerIndex = indicesSorted[i + offset];
                     const lutIndex = (keyName != null) ? barcodeToLUTIndex[markerData[keyName][markerIndex]] : 0;
                     const opacity = useOpacityFromMarker ? markerData[opacityPropertyName][markerIndex] : 1.0;
                     if (useCollectionItemFromMarker) collectionItemIndex = markerData[collectionItemPropertyName][markerIndex];
@@ -1016,9 +1037,6 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
             if (!(uid + "_markers_secondary" in glUtils._buffers))
                 glUtils._buffers[uid + "_markers_secondary"] = glUtils._createVertexBuffer(
                     gl, numPoints * numSectors * NUM_BYTES_PER_MARKER_SECONDARY);
-            if (!(uid + "_markers_indices" in glUtils._buffers))
-                glUtils._buffers[uid + "_markers_indices"] = glUtils._createIndexBuffer(
-                    gl, numPoints * numSectors * 4);  // Use 32-bits indices
             if (!(uid + "_markers" in glUtils._vaos))
                 glUtils._vaos[uid + "_markers"] = gl.createVertexArray();
             if (!(uid + "_markers_instanced" in glUtils._vaos))
@@ -1047,14 +1065,6 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
                         gl.bufferData(gl.ARRAY_BUFFER, newBufferSize, gl.STATIC_DRAW);
                     gl.bindBuffer(gl.ARRAY_BUFFER, null);
                 }
-                {
-                    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, glUtils._buffers[uid + "_markers_indices"]);
-                    const newBufferSize = numPoints * numSectors * 4;  // Use 32-bits indices
-                    const oldBufferSize = gl.getBufferParameter(gl.ELEMENT_ARRAY_BUFFER, gl.BUFFER_SIZE);
-                    if (newBufferSize != oldBufferSize)
-                        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, newBufferSize, gl.STATIC_DRAW);
-                    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-                }
             }
             gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_markers"]);
             gl.bufferSubData(gl.ARRAY_BUFFER, (POINT_OFFSET + offset * 16) * numSectors, bytedata_point);
@@ -1067,32 +1077,6 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
             gl.bindBuffer(gl.ARRAY_BUFFER, null);
         }
         console.timeEnd("Generate vertex data");
-
-        console.time("Generate index data");
-        {
-            const numIndices = numPoints * numSectors;
-            const bytedata_indices = new Uint32Array(numIndices);
-            for (let index = 0; index < numIndices; ++index) {
-                bytedata_indices[index] = index;
-            }
-            
-            if (useSortByCol) {
-                const colData = markerData[sortByCol];
-                if (sortByDesc) {
-                    // Sort in descending order
-                    bytedata_indices.sort((i, j) => Number(colData[Math.floor(j / numSectors)]) -
-                                                    Number(colData[Math.floor(i / numSectors)]));
-                } else {  // Sort in ascending order
-                    bytedata_indices.sort((i, j) => Number(colData[Math.floor(i / numSectors)]) -
-                                                    Number(colData[Math.floor(j / numSectors)]));
-                }
-            }
-
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, glUtils._buffers[uid + "_markers_indices"]);
-            gl.bufferSubData(gl.ELEMENT_ARRAY_BUFFER, 0, bytedata_indices);
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-        }
-        console.timeEnd("Generate index data");
 
         // Set up VAO with vertex format for drawing
         gl.bindVertexArray(glUtils._vaos[uid + "_markers"]);
@@ -1110,7 +1094,6 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
         gl.vertexAttribPointer(OPACITY_LOCATION, 1, gl.UNSIGNED_SHORT, true, 0, OPACITY_OFFSET * numSectors);
         gl.enableVertexAttribArray(TRANSFORM_LOCATION);
         gl.vertexAttribPointer(TRANSFORM_LOCATION, 1, gl.UNSIGNED_SHORT, false, 0, TRANSFORM_OFFSET * numSectors);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, glUtils._buffers[uid + "_markers_indices"]);
         gl.bindVertexArray(null);
 
         // Set up 2nd VAO (for experimental instanced drawing)
@@ -1135,7 +1118,6 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
         gl.enableVertexAttribArray(TRANSFORM_LOCATION);
         gl.vertexAttribPointer(TRANSFORM_LOCATION, 1, gl.UNSIGNED_SHORT, false, 0, TRANSFORM_OFFSET * numSectors);
         gl.vertexAttribDivisor(TRANSFORM_LOCATION, 1);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, glUtils._buffers[uid + "_markers_indices"]);
         gl.bindVertexArray(null);
     }
     glUtils._markerInputsCached[uid] = JSON.stringify(newInputs);
@@ -1215,7 +1197,6 @@ glUtils.deleteMarkers = function(uid) {
     // Clean up WebGL resources
     gl.deleteBuffer(glUtils._buffers[uid + "_markers"]);
     gl.deleteBuffer(glUtils._buffers[uid + "_markers_secondary"]);
-    gl.deleteBuffer(glUtils._buffers[uid + "_markers_indices"]);
     gl.deleteVertexArray(glUtils._vaos[uid + "_markers"]);
     gl.deleteVertexArray(glUtils._vaos[uid + "_markers_instanced"]);
     gl.deleteBuffer(glUtils._buffers[uid + "_edges"]);
@@ -1224,7 +1205,6 @@ glUtils.deleteMarkers = function(uid) {
     gl.deleteTexture(glUtils._textures[uid + "_colorscale"]);
     delete glUtils._buffers[uid + "_markers"];
     delete glUtils._buffers[uid + "_markers_secondary"];
-    delete glUtils._buffers[uid + "_markers_indices"];
     delete glUtils._vaos[uid + "_markers"];
     delete glUtils._vaos[uid + "_markers_instanced"];
     delete glUtils._buffers[uid + "_edges"];
@@ -1974,18 +1954,13 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
     const numPoints = glUtils._numPoints[uid];
     if (numPoints == 0) return;
 
-    // Note: marker rendering is currently broken when both instancing and
-    // sorting are enabled at the same time. In that case, as workaround,
-    // we will fall back to using point sprites instead.
-    const useInstancing = glUtils._useInstancing && !glUtils._useSortByCol[uid];
-
     // Chunk size used to split a single large draw call into smaller chunks. On
     // some Android phones, drawing larger datasets can result in WebGL context
     // loss or crashes, so this should be a workaround.
     const chunkSize = 65536;
 
     // Set up render pipeline
-    const program = glUtils._programs[useInstancing ? "markers_instanced" : "markers"];
+    const program = glUtils._programs[glUtils._useInstancing ? "markers_instanced" : "markers"];
     gl.useProgram(program);
     gl.enable(gl.BLEND);
     gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -2002,7 +1977,7 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
     gl.bindTexture(gl.TEXTURE_2D, glUtils._textures["shapeAtlas"]);
     gl.uniform1i(gl.getUniformLocation(program, "u_shapeAtlas"), 2);
 
-    gl.bindVertexArray(glUtils._vaos[uid + (useInstancing ? "_markers_instanced" : "_markers")]);
+    gl.bindVertexArray(glUtils._vaos[uid + (glUtils._useInstancing ? "_markers_instanced" : "_markers")]);
 
     // Set per-markerset uniforms
     gl.uniform1i(gl.getUniformLocation(program, "u_transformIndex"),
@@ -2026,40 +2001,36 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
     gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorLUT"]);
     gl.uniform1i(gl.getUniformLocation(program, "u_colorLUT"), 0);
 
-    // Note: drawArrayInstanced seems to be faster than drawElementsInstanced on
-    // most HW. So since sorting currently does not work with instancing, we use
-    // it here for the instanced drawing.
-
     if (glUtils._usePiechartFromMarker[uid]) {
         // 1st pass: draw alpha for whole marker shapes
         gl.uniform1i(gl.getUniformLocation(program, "u_alphaPass"), true);
         for (let offset = 0; offset < numPoints; offset += chunkSize) {
             const count = (offset + chunkSize >= numPoints) ? numPoints - offset : chunkSize;
-            if (useInstancing) {
+            if (glUtils._useInstancing) {
                 glUtils._updateBindingOffsetsForCurrentVAO(gl, uid, offset, numPoints);
                 gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
             } else {
-                gl.drawElements(gl.POINTS, count, gl.UNSIGNED_INT, offset * 4);
+                gl.drawArrays(gl.POINTS, offset, count);
             }
         }
         // 2nd pass: draw colors for individual piechart sectors
         gl.uniform1i(gl.getUniformLocation(program, "u_alphaPass"), false);
         gl.colorMask(true, true, true, false);
         // (Reminder of the drawing is the same as for non-piechart markers, so
-        // here we can just re-use that code path)
+        // here we can just re-use the code that follows)
     }
     for (let offset = 0; offset < numPoints; offset += chunkSize) {
         const count = (offset + chunkSize >= numPoints) ? numPoints - offset : chunkSize;
-        if (useInstancing) {
+        if (glUtils._useInstancing) {
             glUtils._updateBindingOffsetsForCurrentVAO(gl, uid, offset, numPoints);
             gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
         } else {
-            gl.drawElements(gl.POINTS, count, gl.UNSIGNED_INT, offset * 4);
+            gl.drawArrays(gl.POINTS, offset, count);
         }
     }
 
     // Restore render pipeline state
-    if (useInstancing) {
+    if (glUtils._useInstancing) {
         glUtils._updateBindingOffsetsForCurrentVAO(gl, uid, 0, numPoints);
     }
     gl.bindVertexArray(null);
@@ -2084,7 +2055,8 @@ glUtils._drawEdgesByUID = function(gl, viewportTransform, markerScaleAdjusted, u
     gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
     gl.uniform2fv(gl.getUniformLocation(program, "u_canvasSize"), [gl.canvas.width, gl.canvas.height]);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
-    gl.uniform1f(gl.getUniformLocation(program, "u_maxPointSize"), glUtils._useInstancing ? 2048 : 256);
+    gl.uniform1f(gl.getUniformLocation(program, "u_maxPointSize"),
+        glUtils._useInstancing ? 2048 : glUtils._caps[gl.ALIASED_POINT_SIZE_RANGE][1]);
     gl.uniform1f(gl.getUniformLocation(program, "u_edgeThicknessRatio"), glUtils._edgeThicknessRatio);
     gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, "TransformUniforms"), 0);
     gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, glUtils._buffers["transformUBO"]);
@@ -2232,7 +2204,7 @@ glUtils._drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) 
         gl.uniform1i(gl.getUniformLocation(program, "u_op"), 1);
         for (let offset = 0; offset < numPoints; offset += chunkSize) {
             const count = (offset + chunkSize >= numPoints) ? numPoints - offset : chunkSize;
-            gl.drawElements(gl.POINTS, count, gl.UNSIGNED_INT, offset * 4);
+            gl.drawArrays(gl.POINTS, offset, count);
         }
 
         // Read back pixel at location (0, 0) to get the picked object
@@ -2485,7 +2457,6 @@ glUtils.restoreLostContext = function(event) {
     for (let [uid, numPoints] of Object.entries(glUtils._numPoints)) {
         delete glUtils._buffers[uid + "_markers"];
         delete glUtils._buffers[uid + "_markers_secondary"];
-        delete glUtils._buffers[uid + "_markers_indices"];
         delete glUtils._vaos[uid + "_markers"];
         delete glUtils._vaos[uid + "_markers_instanced"];
         delete glUtils._buffers[uid + "_edges"];
