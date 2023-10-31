@@ -4739,7 +4739,7 @@ $.EventSource.prototype = {
                     tracker.element,
                     event,
                     delegate[ event ],
-                    event === $.MouseTracker.wheelEventName ? { passive: false, capture: false } : false
+                    event === $.MouseTracker.wheelEventName ? { passive: true, capture: false } : false
                 );
             }
 
@@ -5371,7 +5371,7 @@ $.EventSource.prototype = {
             $.stopEvent( originalEvent );
         }
         if ( ( eventArgs && eventArgs.preventDefault ) || ( eventInfo.preventDefault && !eventInfo.defaultPrevented ) ) {
-                $.cancelEvent( originalEvent );
+                //$.cancelEvent( originalEvent );
         }
 }
 
