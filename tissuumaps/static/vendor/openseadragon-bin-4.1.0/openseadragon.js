@@ -1,6 +1,6 @@
 //! openseadragon 4.1.0
-//! Built on 2023-10-27
-//! Git commit: v4.1.0-50-8109872-dirty
+//! Built on 2023-10-31
+//! Git commit: v4.1.0-51-e836ffc-dirty
 //! http://openseadragon.github.io
 //! License: http://openseadragon.github.io/license/
 
@@ -10744,7 +10744,7 @@ function onCanvasDrag( event ) {
                 newEvent.delta.y = 0;
                 this.dragEventCombined.timeStamp -= this.debouncePanEvents;
                 onCanvasDrag.call(this, newEvent);
-            }.bind(this), this.debouncePanEvents / 5);
+            }.bind(this), Math.max(50, this.debouncePanEvents / 5));
             return;
         }
     }
