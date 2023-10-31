@@ -853,7 +853,7 @@ regionUtils.getPointsInRegion = function (regionid) {
         if (datapath.includes(".csv") || datapath.includes(".CSV")) {
             // Strip everything except the filename, to save a bit of memory
             // and reduce the filesize when exporting to CSV
-            datapath = dataUtils.data[uid]["_csv_path"].split("/").pop();
+            datapath = datapath.split("/").pop();
         } else if (datapath.includes("base64")) {
             // If the file is encoded in the path as a Base64 string, use
             // the name of the marker tab as identifier in the output CSV
