@@ -542,6 +542,19 @@ filterUtils.getFilterFunction = function(filterName) {
 }
 
 /** 
+ * Set html opacity and visibility from layers
+ *  */
+filterUtils.setOpacityFromLayers = async function() {
+    var op = tmapp["object_prefix"];    
+    tmapp.layers.forEach(function(layer, i) {
+        let opacity = tmapp[op + "_viewer"].world.getItemAt(i).getOpacity();
+        console.log(opacity);
+        $("#opacity-layer-"+i).val((opacity != 0)?opacity:1);
+        $("#visible-layer-"+i).prop('checked', opacity != 0);
+    });
+}
+
+/** 
  * Get filter functions and values from html ranges and checkboxes
  *  */
 filterUtils.getFilterItems = function() {

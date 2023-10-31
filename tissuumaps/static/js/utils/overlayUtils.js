@@ -46,6 +46,7 @@ overlayUtils.addAllLayersSettings = function() {
         overlayUtils.addLayerSettings(layer.name, layer.tileSource, i-1);
     });
     filterUtils.setRangesFromFilterItems();
+    filterUtils.setOpacityFromLayers();
     
     // Add collection mode checkbox:
     if (document.getElementById("setCollectionModeRow")) {
