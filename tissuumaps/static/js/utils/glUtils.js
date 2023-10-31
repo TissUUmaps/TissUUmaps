@@ -2505,6 +2505,14 @@ glUtils.init = function() {
     glUtils._caps[gl.ALIASED_POINT_SIZE_RANGE] = gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE);
     console.assert(glUtils._caps[gl.ALIASED_POINT_SIZE_RANGE] instanceof Float32Array);
 
+    // Disable instanced marker drawing by default if the HW point size limit
+    // is large enough. Should be faster in most cases, and we can still
+    // temporarily switch to instanced drawing during viewport captures to
+    // avoid the HW point size limit.
+    if (glUtils._caps[gl.ALIASED_POINT_SIZE_RANGE][1] >= 1023) {
+        glUtils._useInstancing = false;
+    }
+
     // Place marker canvas under the OSD canvas. Doing this also enables proper
     // compositing with the minimap and other OSD elements.
     const osd = document.getElementsByClassName("openseadragon-canvas")[0];
