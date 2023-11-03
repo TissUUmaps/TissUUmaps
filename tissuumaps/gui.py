@@ -1000,8 +1000,13 @@ def main():
     qInstallMessageHandler(lambda x, y, z: None)
 
     fmt = QtGui.QSurfaceFormat()
-    fmt.setProfile(QtGui.QSurfaceFormat.OpenGLContextProfile.CoreProfile)
-    fmt.setVersion(4, 1)
+    if not sys.platform.startswith("win32"):
+        # On Windows, requesting a core profile OpenGL context can result in the
+        # application crashing with a seg fault when using PySide6/Qt6 versions
+        # older than 6.5.1. So for now, we only ask for a specific OpenGL
+        # context on the other supported platforms (Linux and macOS).
+        fmt.setProfile(QtGui.QSurfaceFormat.OpenGLContextProfile.CoreProfile)
+        fmt.setVersion(4, 1)
     fmt.setSwapBehavior(QtGui.QSurfaceFormat.SwapBehavior.DoubleBuffer)
 
     QtGui.QSurfaceFormat.setDefaultFormat(fmt)
