@@ -629,7 +629,7 @@ glUtils._regionsFS = `
         // For proper anti-aliasing, clamp stroke width to at least 1 pixel, and
         // make thinner strokes fade by coverage
         float strokeWidth = max(1.0, strokeWidthPixels) * pixelWidth;
-        float strokeOpacity = min(1.0, strokeWidthPixels);
+        float strokeFade = min(1.0, strokeWidthPixels);
 
         float minEdgeDist = 1e7;  // Distance to closest edge
 
@@ -692,7 +692,7 @@ glUtils._regionsFS = `
                     }
                 #endif  // SHOW_PIVOT_SPLIT_DEBUG
                     float minEdgeDistSigned = isInside ? minEdgeDist : -minEdgeDist;
-                    float strokeOpacity = smoothstep(strokeWidth, strokeWidth - pixelWidth, minEdgeDist) * strokeOpacity;
+                    float strokeOpacity = smoothstep(strokeWidth, strokeWidth - pixelWidth, minEdgeDist) * strokeFade;
                     float fillOpacity = smoothstep(-pixelWidth, pixelWidth, minEdgeDistSigned) * u_regionOpacity;
                     objectColor.a *= clamp(strokeOpacity + fillOpacity, 0.0, 1.0);
 
