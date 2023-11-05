@@ -624,8 +624,13 @@ glUtils._regionsFS = `
         int scanline = int(v_scanline);
 
         float pixelWidth = length(dFdx(p.xy));
-        float strokeWidth = pixelWidth * u_regionStrokeWidth *
+        float strokeWidthPixels = u_regionStrokeWidth *
             (u_regionFillRule == FILL_RULE_NEVER ? STROKE_WIDTH : STROKE_WIDTH_FILLED);
+        // For proper anti-aliasing, clamp stroke width to at least 1 pixel, and
+        // make thinner strokes fade by coverage
+        float strokeWidth = max(1.0, strokeWidthPixels) * pixelWidth;
+        float strokeOpacity = min(1.0, strokeWidthPixels);
+
         float minEdgeDist = 1e7;  // Distance to closest edge
 
         vec4 scanlineInfo = texelFetch(u_regionData, ivec2(scanline, 0), 0);
@@ -686,9 +691,10 @@ glUtils._regionsFS = `
                         objectColor.rgb = scanDir > 0.0 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 1.0);
                     }
                 #endif  // SHOW_PIVOT_SPLIT_DEBUG
-                    float edgeOpacity = smoothstep(strokeWidth, strokeWidth - pixelWidth, minEdgeDist);
-                    float fillOpacity = float(isInside) * u_regionOpacity;
-                    objectColor.a *= clamp(edgeOpacity + fillOpacity, 0.0, 1.0);
+                    float minEdgeDistSigned = isInside ? minEdgeDist : -minEdgeDist;
+                    float strokeOpacity = smoothstep(strokeWidth, strokeWidth - pixelWidth, minEdgeDist) * strokeOpacity;
+                    float fillOpacity = smoothstep(-pixelWidth, pixelWidth, minEdgeDistSigned) * u_regionOpacity;
+                    objectColor.a *= clamp(strokeOpacity + fillOpacity, 0.0, 1.0);
 
                     color.a = objectColor.a + (1.0 - objectColor.a) * color.a;
                     color.rgb = mix(color.rgb, objectColor.rgb, objectColor.a);
