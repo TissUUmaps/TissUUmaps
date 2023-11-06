@@ -549,7 +549,6 @@ filterUtils.setOpacityFromLayers = async function() {
     tmapp.layers.forEach(function(layer, i) {
         if (tmapp[op + "_viewer"].world.getItemAt(i) != undefined) {
             let opacity = tmapp[op + "_viewer"].world.getItemAt(i).getOpacity();
-            console.log(opacity);
             $("#opacity-layer-"+i).val((opacity != 0)?opacity:1);
             $("#visible-layer-"+i).prop('checked', opacity != 0);
         }
