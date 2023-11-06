@@ -17,7 +17,7 @@ jobs:
             extension: deb
           - os: ubuntu-22.04
             extension: deb
-          - os: macos-11
+          - os: macos-12
             extension: dmg
           - os: windows-latest
             extension: exe
