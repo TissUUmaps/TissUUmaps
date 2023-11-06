@@ -142,6 +142,9 @@ tmapp.init = function () {
         element: tmapp[vname].canvas,
         clickHandler: click_handler
     }).setTracking(true);*/
+    tmapp["ISS_viewer"].addHandler("canvas-press", ()=>{this.dragging = true;});
+    tmapp["ISS_viewer"].addHandler("canvas-release", ()=>{this.dragging = false;});
+
     tmapp["ISS_viewer"].addHandler("canvas-press", pressHandler);
     tmapp["ISS_viewer"].addHandler('canvas-click', click_handler);
     new OpenSeadragon.MouseTracker({
@@ -284,7 +287,8 @@ tmapp.options_osd = {
     },
     gestureSettingsPen: {
         flickEnabled: false
-    }
+    },
+    debouncePanEvents: false,
 }
 
 function toggleFullscreen() {

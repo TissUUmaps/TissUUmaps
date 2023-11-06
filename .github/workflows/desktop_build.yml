@@ -17,7 +17,7 @@ jobs:
             extension: deb
           - os: ubuntu-22.04
             extension: deb
-          - os: macos-11
+          - os: macos-12
             extension: dmg
           - os: windows-latest
             extension: exe
@@ -53,12 +53,12 @@ jobs:
             brew install vips openslide
           fi
           python -m pip install --upgrade pip
-          pip install pyinstaller==5.12.0 pyside6 --upgrade
+          pip install pyinstaller==5.12.0 --upgrade
 
       - name: ⬇️ Install TissUUmaps
         shell: bash
         run: |
-          pip install .
+          pip install ".[full]"
           if [ "$RUNNER_OS" == "macOS" ]; then
             pip install pillow==9.5.0
           fi
@@ -92,7 +92,7 @@ jobs:
         shell: cmd
 
       - name: 💻 Create Mac App DMG
-        if: matrix.os == 'macos-11' || matrix.os == 'macOS-X64'
+        if: matrix.os == 'macos-12' || matrix.os == 'macOS-X64'
         run: |
           cd standalone
           # Install Mac DMG Creator

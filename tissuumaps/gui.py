@@ -523,13 +523,15 @@ class webEngine(QWebEngineView):
             for url in event.mimeData().urls():
                 links.append(str(url.toLocalFile()))
             for link in links:
-                filename, file_extension = os.path.splitext(link)
+                _, file_extension = os.path.splitext(link)
                 if file_extension == ".tmap":
                     self.openImagePath(link)
                 elif file_extension == ".h5ad":
                     self.openImagePath(link)
                 elif file_extension == ".csv":
                     self.page().runJavaScript(f'flask.standalone.addCSV("{link}");')
+                elif file_extension in [".json", ".geojson", ".pbf"]:
+                    self.page().runJavaScript(f'flask.standalone.addGeoJSON("{link}");')
                 else:
                     self.page().runJavaScript(f'flask.standalone.addLayer("{link}");')
             # self.emit(SIGNAL("dropped"), links)
@@ -714,6 +716,18 @@ class webEngine(QWebEngineView):
             )
             self.page().runJavaScript(f'flask.standalone.addCSV("{folderpath}");')
             return True
+        elif file_extension in [".json", ".geojson", ".pbf"]:
+            logging.debug(
+                " ".join(
+                    [
+                        "Opening json:",
+                        str(self.app.basedir),
+                        str(self.location + imgPath),
+                    ]
+                )
+            )
+            self.page().runJavaScript(f'flask.standalone.addGeoJSON("{folderpath}");')
+            return True
         logging.debug(
             " ".join(
                 [
@@ -773,6 +787,39 @@ class webEngine(QWebEngineView):
                 "uid": "".join(random.choice(string.ascii_uppercase) for _ in range(6)),
             }
         }
+        return returnDict
+
+    @Slot(str, str, result="QJsonObject")
+    def addGeoJSON(self, path, geoJSONpath):
+        if geoJSONpath == "":
+            geoJSONpath = QFileDialog.getOpenFileName(self, "Select a File")[0]
+        if not geoJSONpath:
+            returnDict = {"geoJSONPath": None}
+            return returnDict
+        parts = Path(geoJSONpath).parts
+        if parts[0] == "https:":
+            imgPath = parts[-1]
+            relativePath = "/".join(parts[:-1])
+
+        else:
+            if self.app.basedir != parts[0]:
+                if not self.app.basedir == os.path.abspath(
+                    self.app.config["SLIDE_DIR"]
+                ):
+                    QMessageBox.warning(
+                        self, "Error", "All files must be in the same drive."
+                    )
+                    returnDict = {"geoJSONPath": None}
+                    return returnDict
+                else:
+                    self.app.basedir = parts[0]
+            imgPath = os.path.join(*parts[1:])
+
+            path = os.path.abspath(os.path.join(self.app.basedir, path))
+            imgPath = os.path.abspath(os.path.join(self.app.basedir, imgPath))
+
+            relativePath = os.path.relpath(os.path.dirname(imgPath), path)
+        returnDict = {"geoJSONPath": relativePath + "/" + os.path.basename(imgPath)}
         return returnDict
 
     @Slot(str, str, result="QJsonObject")
@@ -953,9 +1000,14 @@ def main():
     qInstallMessageHandler(lambda x, y, z: None)
 
     fmt = QtGui.QSurfaceFormat()
-    fmt.setProfile(QtGui.QSurfaceFormat.OpenGLContextProfile.CoreProfile)
-    fmt.setVersion(4, 1)
-    fmt.setSwapBehavior(QtGui.QSurfaceFormat.SwapBehavior.SingleBuffer)
+    if not sys.platform.startswith("win32"):
+        # On Windows, requesting a core profile OpenGL context can result in the
+        # application crashing with a seg fault when using PySide6/Qt6 versions
+        # older than 6.5.1. So for now, we only ask for a specific OpenGL
+        # context on the other supported platforms (Linux and macOS).
+        fmt.setProfile(QtGui.QSurfaceFormat.OpenGLContextProfile.CoreProfile)
+        fmt.setVersion(4, 1)
+    fmt.setSwapBehavior(QtGui.QSurfaceFormat.SwapBehavior.DoubleBuffer)
 
     QtGui.QSurfaceFormat.setDefaultFormat(fmt)
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)

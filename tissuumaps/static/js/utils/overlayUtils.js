@@ -46,6 +46,7 @@ overlayUtils.addAllLayersSettings = function() {
         overlayUtils.addLayerSettings(layer.name, layer.tileSource, i-1);
     });
     filterUtils.setRangesFromFilterItems();
+    filterUtils.setOpacityFromLayers();
     
     // Add collection mode checkbox:
     if (document.getElementById("setCollectionModeRow")) {
@@ -662,19 +663,6 @@ overlayUtils.waitFullyLoaded = async function () {
     }
 }
 
-/** 
- * @param {String} layerName name of an existing d3 node
- * @param {Number} opacity desired opacity
- * @summary Set the opacity of a tile source */
-overlayUtils.setLayerOpacity= function(layerName,opacity){
-    if(layerName in overlayUtils._d3nodes){
-        var layer = overlayUtils._d3nodes[layerName];
-        layer._groups[0][0].style.opacity=opacity;
-    }else{
-        console.log("layer does not exist or is not a D3 node");
-    }
-}
-
 /**
  * @param {String} colortype A string from [hex,hsl,rgb]
  * @summary Get a random color in the desired format
@@ -768,13 +756,21 @@ overlayUtils.savePNG=function() {
         var bounds = tmapp.ISS_viewer.viewport.getBounds();
         var loading=interfaceUtils.loadingModal();
         tmapp.ISS_viewer.world.getItemAt(0).immediateRender = true
-        var strokeWidth = regionUtils._polygonStrokeWidth
-        regionUtils._polygonStrokeWidth *= resolution
+        var strokeWidthSVG = regionUtils._polygonStrokeWidth
+        var strokeWidthGL = glUtils._regionStrokeWidth;
+        regionUtils._polygonStrokeWidth *= resolution;
+        glUtils._regionStrokeWidth *= resolution;
+
+        var useInstancing = glUtils._useInstancing;
+        glUtils._useInstancing = true;  // Enable to avoid HW point size limit
+
         overlayUtils.waitFullyLoaded().then(() => {
             overlayUtils.getCanvasPNG(resolution)
             .then (() => {
                 // We go back to original size:
-                regionUtils._polygonStrokeWidth = strokeWidth;
+                regionUtils._polygonStrokeWidth = strokeWidthSVG;
+                glUtils._regionStrokeWidth = strokeWidthGL;
+                glUtils._useInstancing = useInstancing;
                 tmapp.ISS_viewer.world.getItemAt(0).immediateRender = false
                 tmapp.ISS_viewer.viewport.fitBounds(bounds, true);
                 interfaceUtils.closeModal(loading);

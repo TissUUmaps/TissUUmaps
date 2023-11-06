@@ -557,8 +557,8 @@ regionUtils.globalPointInPath=function(x,y,path,tmpPoint) {
             const markerData = dataUtils.data[options.dataset]["_processeddata"];
             const columns = dataUtils.data[options.dataset]["_csv_header"];
             for (const d of node.data) {
-                const x = markerData[xselector][d] * options.coordFactor;
-                const y = markerData[yselector][d] * options.coordFactor;
+                const x = markerData[xselector][d] * dataUtils.data[options.dataset]["_coord_factor"];
+                const y = markerData[yselector][d] * dataUtils.data[options.dataset]["_coord_factor"];
                 if (x >= x0 && x < x3 && y >= y0 && y < y3) {
                     pointsInside.push(d);
                 }
@@ -619,8 +619,8 @@ regionUtils.searchTreeForPointsInRegion = function (quadtree, x0, y0, x3, y3, re
     const markerData = dataUtils.data[options.dataset]["_processeddata"];
 
     for (let d of pointInLayer) {
-        const x = markerData[xselector][d] * options.coordFactor;
-        const y = markerData[yselector][d] * options.coordFactor;
+        const x = markerData[xselector][d] * dataUtils.data[options.dataset]["_coord_factor"];
+        const y = markerData[yselector][d] * dataUtils.data[options.dataset]["_coord_factor"];
         if (regionUtils._pointInRegion(x, y, regionid)) {
             countsInsideRegion += 1;
             pointsInside.push(d);
@@ -846,10 +846,14 @@ regionUtils.getPointsInRegion = function (regionid) {
         var allkeys=Object.keys(dataUtils.data[uid]["_groupgarden"]);
 
         var datapath = dataUtils.data[uid]["_csv_path"];
+        if (typeof datapath != "string") {
+            console.assert(datapath.name != undefined);
+            datapath = datapath.name;  // Keep the filepath part
+        }
         if (datapath.includes(".csv") || datapath.includes(".CSV")) {
             // Strip everything except the filename, to save a bit of memory
             // and reduce the filesize when exporting to CSV
-            datapath = dataUtils.data[uid]["_csv_path"].split("/").pop();
+            datapath = datapath.split("/").pop();
         } else if (datapath.includes("base64")) {
             // If the file is encoded in the path as a Base64 string, use
             // the name of the marker tab as identifier in the output CSV
@@ -866,8 +870,7 @@ regionUtils.getPointsInRegion = function (regionid) {
                     "globalCoords":true,
                     "xselector":dataUtils.data[uid]["_X"],
                     "yselector":dataUtils.data[uid]["_Y"],
-                    "dataset":uid,
-                    "coordFactor":dataUtils.data[uid]["_coord_factor"]
+                    "dataset":uid
                 });
             const markerData = dataUtils.data[uid]["_processeddata"];
             const columns = dataUtils.data[uid]["_csv_header"];
@@ -1798,24 +1801,52 @@ regionUtils.JSONToRegions= function(filepath){
         if (path != null) {
             filepath = path + "/" + filepath;
         }
-        fetch(filepath)
-        .then((response) => {
-            return response.json();
-        })
-        .then((regionsobj) => {
-            regionUtils.JSONValToRegions(regionsobj);
-        });
+        if (filepath.toLowerCase().endsWith(".pbf")) {
+            // Load GeoJSON stored in Geobuf format (https://github.com/mapbox/geobuf)
+            fetch(filepath)
+            .then((response) => {
+                response.arrayBuffer()
+                .then((response) => {
+                    const data = new Pbf(response);
+                    regionUtils.JSONValToRegions(geobuf.decode(data));
+                });
+            });
+        } else if (filepath.toLowerCase().endsWith(".geojson") ||
+                   filepath.toLowerCase().endsWith(".json")) {
+            fetch(filepath)
+            .then((response) => {
+                response.json()
+                .then((response) => {
+                    regionUtils.JSONValToRegions(response);
+                });
+            });
+        } else {
+            interfaceUtils.alert("Region files must have extension .geojson, .json, or .pbf.",
+                                 "Invalid region filename");
+        }
     }
     else if(window.File && window.FileReader && window.FileList && window.Blob) {
         var op=tmapp["object_prefix"];
         var text=document.getElementById(op+"_region_files_import");
         var file=text.files[0];
         var reader = new FileReader();
-        reader.onload=function(event) {
-            // The file's text will be printed here
-            regionUtils.JSONValToRegions(JSON.parse(event.target.result));
-        };
-        reader.readAsText(file);
+        if (file.name.toLowerCase().endsWith(".pbf")) {
+            // Load GeoJSON stored in Geobuf format (https://github.com/mapbox/geobuf)
+            reader.onload=function(event) {
+                const data = new Pbf(event.target.result);
+                regionUtils.JSONValToRegions(geobuf.decode(data));
+            };
+            reader.readAsArrayBuffer(file);
+        } else if (file.name.toLowerCase().endsWith(".geojson") ||
+                   file.name.toLowerCase().endsWith(".json")) {
+            reader.onload=function(event) {
+                regionUtils.JSONValToRegions(JSON.parse(event.target.result));
+            };
+            reader.readAsText(file);
+        } else {
+            interfaceUtils.alert("Region files must have extension .geojson, .json, or .pbf.",
+                                 "Invalid region filename");
+        }
     } else {
         interfaceUtils.alert('The File APIs are not fully supported in this browser.');
     }

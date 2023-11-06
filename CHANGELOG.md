@@ -6,14 +6,17 @@
 - Move to WebGL rendering for regions
 - Refactor completely the region tab to better handle large number of items
 - Allow import of regions from multiple GeoJSON files
+- Add support for Geobuf (.pbf) region files
+- Add drag-and-drop opening of GeoJSON files
 - Add histogram button for analyzing individual regions
 - Make regions work in collection mode and with multiple image layers
 - Add marker outline and fill options in Advanced options
 - Increase number of barcodes that can be displayed for markers
 - Add validation of .tmap files (via tissuumaps-schema)
-- Move standalone installer from python3.8 to 3.11
-- Move to pyside6 instead of pyqt6
+- Move standalone installer from Python 3.8 to 3.11
+- Move to PySide6 instead of PyQt6
 - Add installers for MacOS X (.dmg) and Linux (.deb)
+- Update to OpenSeadragon 4.1.0
 - Lots of minor fixes
 
 ## 3.1.1.6
