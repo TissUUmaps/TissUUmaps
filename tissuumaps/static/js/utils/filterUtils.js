@@ -547,10 +547,12 @@ filterUtils.getFilterFunction = function(filterName) {
 filterUtils.setOpacityFromLayers = async function() {
     var op = tmapp["object_prefix"];    
     tmapp.layers.forEach(function(layer, i) {
-        let opacity = tmapp[op + "_viewer"].world.getItemAt(i).getOpacity();
-        console.log(opacity);
-        $("#opacity-layer-"+i).val((opacity != 0)?opacity:1);
-        $("#visible-layer-"+i).prop('checked', opacity != 0);
+        if (tmapp[op + "_viewer"].world.getItemAt(i) != undefined) {
+            let opacity = tmapp[op + "_viewer"].world.getItemAt(i).getOpacity();
+            console.log(opacity);
+            $("#opacity-layer-"+i).val((opacity != 0)?opacity:1);
+            $("#visible-layer-"+i).prop('checked', opacity != 0);
+        }
     });
 }
 
