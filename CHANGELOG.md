@@ -13,8 +13,8 @@
 - Add marker outline and fill options in Advanced options
 - Increase number of barcodes that can be displayed for markers
 - Add validation of .tmap files (via tissuumaps-schema)
-- Move standalone installer from python3.8 to 3.11
-- Move to pyside6 instead of pyqt6
+- Move standalone installer from Python 3.8 to 3.11
+- Move to PySide6 instead of PyQt6
 - Add installers for MacOS X (.dmg) and Linux (.deb)
 - Update to OpenSeadragon 4.1.0
 - Lots of minor fixes
