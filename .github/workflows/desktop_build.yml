@@ -53,12 +53,12 @@ jobs:
             brew install vips openslide
           fi
           python -m pip install --upgrade pip
-          pip install pyinstaller==5.12.0 pyside6 --upgrade
+          pip install pyinstaller==5.12.0 --upgrade
 
       - name: ⬇️ Install TissUUmaps
         shell: bash
         run: |
-          pip install .
+          pip install ".[full]"
           if [ "$RUNNER_OS" == "macOS" ]; then
             pip install pillow==9.5.0
           fi
