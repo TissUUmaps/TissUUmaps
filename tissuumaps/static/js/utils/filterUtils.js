@@ -264,7 +264,6 @@
                 value:"None"
             },
             filterFunction: function (value) {
-                console.log(value);
                 if (value == 0) { return function (context, callback) {callback();}}
                 else {
                     return function(context, callback) {
