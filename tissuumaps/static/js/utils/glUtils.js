@@ -579,6 +579,7 @@ glUtils._regionsFS = `
     #define FILL_RULE_NEVER 0
     #define FILL_RULE_NONZERO 1
     #define FILL_RULE_ODDEVEN 2
+    #define USE_OCCUPANCY_MASK 1
     #define SHOW_PIVOT_SPLIT_DEBUG 0
     #define SHOW_WORK_VISITED_BBOXES_DEBUG 0
 
@@ -636,11 +637,15 @@ glUtils._regionsFS = `
         vec4 scanlineInfo = texelFetch(u_regionData, ivec2(scanline, 0), 0);
         int offset = int(scanlineInfo.x) + 4096 * int(scanlineInfo.y);
 
+    #if USE_OCCUPANCY_MASK
         // Do coarse empty space skipping first, by testing sample position against
-        // occupancy bitmask stored in the first texel of the scanline
+        // occupancy bitmask stored in the first texel of the scanline.
+        // Note: since the mask does not take the stroke width into account,
+        // rendering thicker strokes with this enabled can result in artifacts.
         uvec4 maskData = uvec4(texelFetch(u_regionData, ivec2(offset & 4095, offset >> 12), 0));
         int bitIndex = int(v_texCoord.x * 63.9999);
         if ((maskData[bitIndex >> 4] & (1u << (bitIndex & 15))) == 0u) { discard; }
+    #endif  // USE_OCCUPANCY_MASK
 
         float scanDir = 1.0;  // Can be positive or negative along the X-axis
         if (bool(u_regionUsePivotSplit)) {
