@@ -43,9 +43,6 @@ jobs:
             sudo apt update
             sudo apt install libxcb-cursor0 openslide-tools libvips -y
           fi
-          #if [ "$RUNNER_OS" == "Windows" ]; then
-            # cp -f standalone/dep/bootloader/* $pythonLocation/Lib/site-packages/PyInstaller/bootloader/Windows-64bit-intel/
-          #fi
           if [ "$RUNNER_OS" == "macOS" ]; then
             if [ "$RUNNER_ARCH" == "arm64" ]; then
               alias brew='arch -arm64 brew'
@@ -74,13 +71,8 @@ jobs:
           pyinstaller --noconfirm --clean TissUUmaps.spec
 
           if [ "$RUNNER_OS" == "Windows" ]; then
-            # store vips lib path in a variable and copy all it files to cwd
+            # copy all needed vips lib
             cp dep/vips-dev-8.10/bin/* dist/TissUUmaps/
-          fi
-          if [ "$RUNNER_OS" == "macOS" ]; then
-            # store vips lib path in a variable and copy all it files to cwd
-            export VIPS_PATH=$(brew --prefix vips)
-            cp $VIPS_PATH/lib/libvips.42*.dylib dist/TissUUmaps.app/Contents/MacOS/
           fi
 
       - name: 💻 Create Win exe installer
