@@ -1608,7 +1608,7 @@ glUtils._createRegionDataTexture = function(gl, numTexels) {
 
     const height = numTexels / 4096;
     // Clamp height to reported maximum texture size to be safe
-    const heightAdjusted = Math.min(height, gl.getParameter(gl.MAX_TEXTURE_SIZE));
+    const heightAdjusted = Math.min(height, glUtils._caps[gl.MAX_TEXTURE_SIZE]);
 
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -2513,6 +2513,7 @@ glUtils.init = function() {
     }
 
     // Get HW capabilities from WebGL context
+    glUtils._caps[gl.MAX_TEXTURE_SIZE] = gl.getParameter(gl.MAX_TEXTURE_SIZE);
     glUtils._caps[gl.ALIASED_POINT_SIZE_RANGE] = gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE);
     console.assert(glUtils._caps[gl.ALIASED_POINT_SIZE_RANGE] instanceof Float32Array);
 
