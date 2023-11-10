@@ -308,10 +308,11 @@ def page_not_found(e):
             isStandalone=app.config["isStandalone"],
             message="File not found or corrupted.",
             readOnly=app.config["READ_ONLY"],
+            version=app.config["VERSION"],
+            schema_version=current_schema_module.VERSION,
         ),
         404,
     )
-    return redirect("/"), 404, {"Refresh": "1; url=/"}
 
 
 @app.errorhandler(500)
@@ -327,6 +328,8 @@ def internal_server_error(e):
                 "server is overloaded or there is an error in the application."
             ),
             readOnly=app.config["READ_ONLY"],
+            version=app.config["VERSION"],
+            schema_version=current_schema_module.VERSION,
         ),
         500,
     )
