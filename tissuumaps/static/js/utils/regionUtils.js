@@ -308,7 +308,10 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
     // Helper functions for converting colors to hexadecimal
     var viewer = tmapp[tmapp["object_prefix"] + "_viewer"]
     await overlayUtils.waitLayersReady();
-
+    if (viewer.world.getItemCount() == 0) {
+        interfaceUtils.alert("Impossible to load regions without image or marker data loaded.")
+        return;
+    }
     function rgbToHex(rgb) {
         return "#" + ((1 << 24) + (rgb[0] << 16) + (rgb[1] << 8) + rgb[2]).toString(16).slice(1);
     }
@@ -769,10 +772,10 @@ regionUtils.deleteAllRegions = function () {
     regionUtils._regions = {};
     regionUtils.updateAllRegionClassUI();
 }
-regionUtils.updateAllRegionClassUI = async function (waitForLayers=false) {
+regionUtils.updateAllRegionClassUI = async function (waitForLayers=false, acceptNoLayers=true) {
     // wait for an image to be loaded
     if (waitForLayers) {
-        await overlayUtils.waitLayersReady();
+        await overlayUtils.waitLayersReady(acceptNoLayers);
     }
 
     // get the collapse status of all elements ".collapse_button_regionClass"

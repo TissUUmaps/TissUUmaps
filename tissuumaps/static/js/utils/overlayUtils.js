@@ -648,12 +648,15 @@ overlayUtils.areAllFullyLoaded = function () {
     return true;
 }
 
-overlayUtils.waitLayersReady = async function () {
+overlayUtils.waitLayersReady = async function (acceptNoLayers=true) {
     var op = tmapp["object_prefix"];
     await new Promise(r => setTimeout(r, 200));
-    while (!tmapp[op + "_viewer"].world || 
-        ((tmapp[op + "_viewer"].world.getItemCount() != tmapp.layers.length) &&
-        !(tmapp[op + "_viewer"].world.getItemCount() == 1 && tmapp.layers.length == 0))) {
+    while 
+        (
+            !tmapp[op + "_viewer"].world || 
+            tmapp[op + "_viewer"].world.getItemCount() < tmapp.layers.length ||
+            (!acceptNoLayers && tmapp[op + "_viewer"].world.getItemCount() == 0)
+        ) {
         await new Promise(r => setTimeout(r, 200));
     }
 }

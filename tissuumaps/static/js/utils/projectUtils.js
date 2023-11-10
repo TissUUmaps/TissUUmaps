@@ -359,7 +359,7 @@ projectUtils.loadProjectFileFromServer = function(path) {
     }
     if (state.regions && Object.keys(state.regions).length > 0) {
         regionUtils._regions = state.regions;
-        regionUtils.updateAllRegionClassUI(true);
+        regionUtils.updateAllRegionClassUI(true, false);
     }
     if (state.regionFile) {
         const queryString = window.location.search;
