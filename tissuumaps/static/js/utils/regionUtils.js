@@ -1630,6 +1630,9 @@ regionUtils.brushManager = function (event) {
                 regionUtils._currentLayerIndex = regions[0].collectionIndex;
                 regionUtils._editedRegion = regions[0];
                 regionUtils.deleteRegion(regions[0].id, true);
+                glUtils.updateRegionDataTextures();
+                glUtils.updateRegionLUTTextures();
+                glUtils.draw();
             } else {
                 regionUtils._currentPoints = [];
                 regionUtils._isNewRegion = false;
