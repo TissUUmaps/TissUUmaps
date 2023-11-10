@@ -258,10 +258,16 @@ regionUtils.closePolygon = function () {
         }
         return coordinates.map (function(coordinateList, i) {
             return coordinateList.map (function(coordinateList_i, index) {
-                return coordinateList_i.map(function(x) {
+                let closedCurve = coordinateList_i.map(function(x) {
                     return [x.x, x.y];
                 });
-                
+                // Check if first and last couple of closedCurve are different
+                // If so, we close the curve
+                if (closedCurve[0][0] != closedCurve[closedCurve.length - 1][0] ||
+                    closedCurve[0][1] != closedCurve[closedCurve.length - 1][1]) {
+                    closedCurve.push(closedCurve[0]);
+                }
+                return closedCurve;
             });
         })
     }
@@ -272,16 +278,21 @@ regionUtils.closePolygon = function () {
             let properties = regionsObjects.properties ? regionsObjects.properties : {};
             properties["name"] = Region.regionName
             properties["classification"] = {
-                "name": Region.regionClass
+                "name": Region.regionClass,
+                "color": HexToRGB(Region.polycolor)
             }
-            properties["color"] = HexToRGB(Region.polycolor)
             properties["collectionIndex"] = Region.collectionIndex;
-
+            let featureCoordinates = oldCoord2GeoJSONCoord(Region.globalPoints)
+            let polygonType = "MultiPolygon"
+            if (featureCoordinates.length == 1) {
+                featureCoordinates = featureCoordinates[0];
+                polygonType = "Polygon"
+            }
             return {
                 "type": "Feature",
                 "geometry": {
-                    "type": "MultiPolygon",
-                    "coordinates": oldCoord2GeoJSONCoord(Region.globalPoints)
+                    "type": polygonType,
+                    "coordinates": featureCoordinates
                 },
                 "properties": properties
             }
@@ -387,6 +398,9 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
             geoJSONObjClass = geoJSONObj.properties.classification.name;
             if (geoJSONObj.properties.classification.colorRGB) {
                 hexColor = decimalToHex(geoJSONObj.properties.classification.colorRGB);
+            }
+            if (geoJSONObj.properties.classification.color) {
+                hexColor = rgbToHex(geoJSONObj.properties.classification.color)
             }
         }
         coordinates = coordinates.map (function(coordinateList, i) {
