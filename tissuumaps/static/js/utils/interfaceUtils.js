@@ -3490,3 +3490,32 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     };
     return tr;
 }
+
+interfaceUtils./* The above code is defining a JavaScript function called "_rGenUIFuncs". */
+_rGenUIFuncs.createProgressBar=function(){
+        if (document.getElementById("divRegionsDownloadProgress")) return;
+        // Get #divRegionsDownloadButtons element
+        var downloadButtons = document.getElementById("divRegionsDownloadButtons");
+        // Add a div element after the button div
+        var divpane = document.createElement("div");
+        divpane.id = "divRegionsDownloadProgress";
+        // Append the div element to the parent of the button div
+        downloadButtons.parentNode?.insertBefore(divpane, downloadButtons?.nextElementSibling);
+        
+        // Get #divRegionsDownloadButtons element
+        //row progressbar
+        row0=HTMLElementUtils.createRow({id:"region_progress_parent"});
+        row0.classList.add("d-none");
+        row0.classList.add("px-3");
+        row0.innerHTML="Loading regions..."
+
+        col01=HTMLElementUtils.createColumn({"width":12});
+            div011=HTMLElementUtils.createElement({"kind":"div", "extraAttributes":{"class":"progress"}});
+                div0111=HTMLElementUtils.createElement({"kind":"div", "id":"region_progress", "extraAttributes":{"class":"progress-bar progress-bar-striped progress-bar-animated","role":"progressbar" ,"aria-valuenow":"10", "aria-valuemin":"0" ,"aria-valuemax":"100"}});
+        
+        row0.appendChild(col01)
+            col01.appendChild(div011)
+                div011.appendChild(div0111);
+
+        divpane.appendChild(row0);
+}

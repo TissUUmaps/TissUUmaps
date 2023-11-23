@@ -1786,15 +1786,26 @@ regionUtils.downloadPointsInRegionsCSV=function(data){
 regionUtils.regionsToJSON= function(){
     if (window.Blob) {
         var op=tmapp["object_prefix"];
-        var jsonse = JSON.stringify(regionUtils.regions2GeoJSON(regionUtils._regions));
-        var blob = new Blob([jsonse], {kind: "application/json"});
-        var url  = URL.createObjectURL(blob);
-        var a=document.createElement("a");// document.getElementById("invisibleRegionJSON");
         if(document.getElementById(op+"_region_file_name")){
             var name=document.getElementById(op+"_region_file_name").value;
         }else{
             var name="regions.json";
         }
+        let geoJSON = regionUtils.regions2GeoJSON(regionUtils._regions);
+        console.log(name.toLowerCase().endsWith(".pbf"));
+        if (name.toLowerCase().endsWith(".pbf")) {
+            // Save GeoJSON stored in Geobuf format
+            var buffer = geobuf.encode(geoJSON, new Pbf());
+            console.log(buffer);
+            var blob = new Blob([buffer], {kind: "application/octet-stream"});
+        }
+        else {
+            var jsonse = JSON.stringify(geoJSON);
+            var blob = new Blob([jsonse], {kind: "application/json"});
+        }
+        var url  = URL.createObjectURL(blob);
+        var a=document.createElement("a");// document.getElementById("invisibleRegionJSON");
+        
         a.href        = url;
         a.download    = name;
         a.textContent = "Download backup.json";
@@ -1804,6 +1815,42 @@ regionUtils.regionsToJSON= function(){
         interfaceUtils.alert('The File APIs are not fully supported in this browser.');
     }        
 }
+
+regionUtils.fetch = function(url, responseType, callback) {
+    // Use XMLHttpRequest and update progress bar
+    interfaceUtils._rGenUIFuncs.createProgressBar();
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.responseType = responseType;
+    xhr.onload = function(e) {
+        if (this.status == 200) {
+            callback(this.response);
+        }
+    }
+    let progressBar=interfaceUtils.getElementById("region_progress");
+    let progressParent=interfaceUtils.getElementById("region_progress_parent");
+    progressParent.classList.remove("d-none");
+    xhr.addEventListener("progress", (event) => {
+        if (event.lengthComputable) {
+          console.log("download progress:", event.loaded / event.total);
+            if(progressBar){
+                progressBar.style.width = (event.loaded / event.total) * 100 + "%";
+            }
+        }
+    });
+    xhr.addEventListener("load", (event) => {
+        console.log("download complete");
+        if(progressBar){
+            progressBar.style.width = "100%";
+        }
+        setTimeout(function(){
+            progressParent.classList.add("d-none");
+            progressBar.style.width = "0%";
+        }, 500);
+    });
+    xhr.send();
+}
+
 
 regionUtils.JSONToRegions= function(filepath){
     if(filepath!==undefined){
@@ -1815,22 +1862,14 @@ regionUtils.JSONToRegions= function(filepath){
         }
         if (filepath.toLowerCase().endsWith(".pbf")) {
             // Load GeoJSON stored in Geobuf format (https://github.com/mapbox/geobuf)
-            fetch(filepath)
-            .then((response) => {
-                response.arrayBuffer()
-                .then((response) => {
-                    const data = new Pbf(response);
-                    regionUtils.JSONValToRegions(geobuf.decode(data));
-                });
+            regionUtils.fetch(filepath, "arraybuffer", (response) => {
+                const data = new Pbf(response);
+                regionUtils.JSONValToRegions(geobuf.decode(data));
             });
         } else if (filepath.toLowerCase().endsWith(".geojson") ||
                    filepath.toLowerCase().endsWith(".json")) {
-            fetch(filepath)
-            .then((response) => {
-                response.json()
-                .then((response) => {
-                    regionUtils.JSONValToRegions(response);
-                });
+            regionUtils.fetch(filepath, "json", (response) => {
+                regionUtils.JSONValToRegions(response);
             });
         } else {
             interfaceUtils.alert("Region files must have extension .geojson, .json, or .pbf.",
