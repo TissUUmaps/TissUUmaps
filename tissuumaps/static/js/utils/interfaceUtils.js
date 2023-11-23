@@ -3474,52 +3474,6 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
     td6.classList.add("px-0");
     td6.classList.add("mx-0");
 
-    /*
-    button6 = HTMLElementUtils.createElement({"kind":"div", extraAttributes:{"data-escapedID":regionClassID, "class":"btn btn-light btn-sm mx-1"}});
-    button6.innerHTML = "<i class='bi bi-eye'></i>";
-    button6.checkVisible = check0;
-    button6.checkHidden = check1;
-    // Store this state so that we can also "preview" unchecked marker groups
-    button6.lastCheckedState = check0.checked;
-    td6.appendChild(button6);
-            
-    eventnames = ["mouseenter"];
-    eventnames.forEach(function(eventname) {
-        button6.addEventListener(eventname,function(event) {
-            tr = this.parentElement.parentElement;
-            tr.classList.add("table-primary");
-            hidden_inputs = interfaceUtils.getElementsByClassName("region-hidden");
-            for(var i = 0; i < hidden_inputs.length; i++){
-                hidden_inputs[i].checked = true;
-            }
-            this.lastCheckedState = this.checkVisible.checked;
-            this.checkVisible.checked = true;
-            this.checkHidden.checked = false;
-            regionUtils._currentRegionId = Object.keys(regionUtils._regions).length;
-            regionUtils._edgeLists = [];
-            
-            glUtils.updateRegionLUTTextures();
-            glUtils.draw();
-        })
-    })
-    eventnames = ["mouseleave"];
-    eventnames.forEach(function(eventname){
-        button6.addEventListener(eventname,function(event) {
-            tr = this.parentElement.parentElement;
-            tr.classList.remove("table-primary");
-            hidden_inputs = interfaceUtils.getElementsByClassName("region-hidden");
-            for(var i = 0; i < hidden_inputs.length; i++){
-                hidden_inputs[i].checked = false;
-            }
-            this.checkVisible.checked = this.lastCheckedState;  // Restore visible checkbox
-            regionUtils._currentRegionId = Object.keys(regionUtils._regions).length;
-            regionUtils._edgeLists = [];
-            
-            glUtils.updateRegionDataTextures();
-            glUtils.updateRegionLUTTextures();
-            glUtils.draw();
-        })
-    })*/
     tr.onmouseover = function () {
         if (!region.visibility) {
             d3.selectAll(".regionUI-region-hover").remove();

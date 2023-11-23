@@ -818,16 +818,8 @@ regionUtils.changeRegion = function (regionid) {
         if (regionUtils._regions[regionid].regionClass != document.getElementById(escapedRegionID + "_class_ta").value) {
             if (document.getElementById(escapedRegionID + "_class_ta").value) {
                 regionUtils._regions[regionid].regionClass = document.getElementById(escapedRegionID + "_class_ta").value;
-                //classID = HTMLElementUtils.stringToId(regionUtils._regions[regionid].regionClass);
-                //regionUtils.addRegionClassUI (regionUtils._regions[regionid].regionClass)
-                //$(rPanel).detach().appendTo('#markers-regions-panel-' + classID)
-                //$(rPanel_hist).detach().appendTo('#markers-regions-panel-' + classID)
             } else {
                 regionUtils._regions[regionid].regionClass = null;
-                //regionUtils.addRegionClassUI (null)
-                //classID = HTMLElementUtils.stringToId(regionUtils._regions[regionid].regionClass);
-                //$(rPanel).detach().appendTo('#markers-regions-panel-')
-                //$(rPanel_hist).detach().appendTo('#markers-regions-panel-')
             }
             regionUtils.updateAllRegionClassUI();
         }
