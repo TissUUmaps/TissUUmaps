@@ -20,7 +20,6 @@ import logging
 import os
 import pathlib
 import sys
-from optparse import OptionParser
 
 import yaml
 from flask import Flask
@@ -28,7 +27,7 @@ from flask import Flask
 log = logging.getLogger()
 log.setLevel(logging.INFO)
 
-SLIDE_DIR = "/mnt/data/shared/"
+SLIDE_DIR = "/Users/rugorgi/Documents/images"
 DEFAULT_PROJECT = False
 SLIDE_CACHE_SIZE = 60
 DEEPZOOM_FORMAT = "jpeg"
@@ -76,7 +75,7 @@ def getPluginInFolder(folder):
     pluginNames = [
         os.path.splitext(os.path.basename(module))[0]
         for module in glob.glob(os.path.join(folder, "*.py"))
-        if not "__init__.py" in module
+        if "__init__.py" not in module
     ]
     for pluginName in pluginNames:
         if pluginName in [p["module"] for p in app.config["PLUGINS"]]:
@@ -98,6 +97,7 @@ getPluginInFolder(app.config["PLUGIN_FOLDER"])
 
 app.config["isStandalone"] = False
 
-from . import views
+# must import views after app is created
+from . import views  # noqa: E402
 
 views.setup(app)

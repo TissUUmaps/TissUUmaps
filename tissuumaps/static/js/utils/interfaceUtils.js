@@ -831,6 +831,7 @@ interfaceUtils._mGenUIFuncs.getTabDropDowns = function(uid, only_csvColumns){
         allinputs["shape_fixed"]=interfaceUtils.getElementById(uid+"_shape-fixed-value");
         allinputs["shape_gr_dict"]=interfaceUtils.getElementById(uid+"_shape-bygroup-dict-val");
         allinputs["opacity"]=interfaceUtils.getElementById(uid+"_opacity");
+        allinputs["stroke_width"]=interfaceUtils.getElementById(uid+"_stroke-width");
         allinputs["tooltip_fmt"]=interfaceUtils.getElementById(uid+"_tooltip_fmt");
         allinputs["collectionItem_fixed"]=interfaceUtils.getElementById(uid+"_collectionItem-fixed-value");
     }
@@ -864,7 +865,8 @@ interfaceUtils._mGenUIFuncs.getTabRadiosAndChecks= function(uid){
     allradios["shape_col"]=interfaceUtils.getElementById(uid+"_shape-bypoint");
     allradios["shape_fixed"]=interfaceUtils.getElementById(uid+"_shape-fixed");
     allradios["opacity_check"]=interfaceUtils.getElementById(uid+"_use-opacity");
-    allradios["_no_outline"]=interfaceUtils.getElementById(uid+"__no-outline");
+    allradios["_no_outline"]=interfaceUtils.getElementById(uid+"_no-outline");
+    allradios["no_fill"]=interfaceUtils.getElementById(uid+"_no-fill");
     allradios["collectionItem_col"]=interfaceUtils.getElementById(uid+"_collectionItem-bypoint");
     allradios["collectionItem_fixed"]=interfaceUtils.getElementById(uid+"_collectionItem-fixed");
     
@@ -1123,7 +1125,7 @@ interfaceUtils._mGenUIFuncs.generateColorByAccordion2= function(){
                 inputradiocbgrdict=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_cb-bygroup-dict","extraAttributes":{ "name":generated+"_flexRadioColorByGroup", "class":"form-check-input", "type":"radio"}});
                 labelcbgroupdict=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":generated+"_cb-bygroup-dict"}});
                 labelcbgroupdict.innerHTML="Use color from dictionary<br>";
-                inputtextcbgrdict=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_cb-bygroup-dict-val","extraAttributes":{ "class":"form-text-input", "type":"text", "placeholder":"{'key1':''#FFFFFF',...}"}});
+                inputtextcbgrdict=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_cb-bygroup-dict-val","extraAttributes":{ "class":"form-text-input", "type":"text", "placeholder":"{\"key1\":\"#FFFFFF\",...}"}});
                 inputtextcbgrdict.disabled=true
 
         divoptionscol=HTMLElementUtils.createElement({"kind":"div","id":generated+"_cb-col-options","extraAttributes":{"class": "renderOptionContainer d-none"}});
@@ -1250,13 +1252,14 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
     row2=interfaceUtils._mGenUIFuncs.generateAdvancedPiechartAccordion3();
     row3=interfaceUtils._mGenUIFuncs.generateAdvancedEdgesAccordion3();
     row4=interfaceUtils._mGenUIFuncs.generateAdvancedShapeAccordion3();
-    row5=interfaceUtils._mGenUIFuncs.generateAdvancedOpacityAccordion3();
-    row6=interfaceUtils._mGenUIFuncs.generateAdvancedSortbyAccordion3();
-    row7=interfaceUtils._mGenUIFuncs.generateAdvancedTooltipAccordion3();
-    row8=interfaceUtils._mGenUIFuncs.generateAdvancedCollectionAccordion3();
-    row9=interfaceUtils._mGenUIFuncs.generateAdvancedMakeButtonAccordion3();
+    row5=interfaceUtils._mGenUIFuncs.generateAdvancedOutlineAccordion3();
+    row6=interfaceUtils._mGenUIFuncs.generateAdvancedOpacityAccordion3();
+    row7=interfaceUtils._mGenUIFuncs.generateAdvancedSortbyAccordion3();
+    row8=interfaceUtils._mGenUIFuncs.generateAdvancedTooltipAccordion3();
+    row9=interfaceUtils._mGenUIFuncs.generateAdvancedCollectionAccordion3();
+    row10=interfaceUtils._mGenUIFuncs.generateAdvancedMakeButtonAccordion3();
     
-    return [row1,row2,row3,row4,row5,row6,row7,row8,row9];
+    return [row1,row2,row3,row4,row5,row6,row7,row8,row9,row10];
  }
 
  /**
@@ -1348,11 +1351,6 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
                 inputradio3shape=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_shape-fixed","extraAttributes":{"name":generated+"_flexRadioShapeBy","class":"form-check-input","type":"radio"}});
                 labelshapefixed=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":generated+"_shape-fixed"}});
                 labelshapefixed.innerText="Use a fixed shape";
-        
-            divformcheck4shape=HTMLElementUtils.createElement({ "kind":"div", "extraAttributes":{"class":"form-check"}});
-                inputcheck4shape=HTMLElementUtils.createElement({"kind":"input", "id":generated+"__no-outline","extraAttributes":{"class":"form-check-input","type":"checkbox" }});
-                label4shape=HTMLElementUtils.createElement({"kind":"label", "id":generated+"__no-outline-label", "extraAttributes":{ "for":generated+"__no-outline" }});
-                label4shape.innerText="Remove Outline"
         //------------------------
     
         colshape3=HTMLElementUtils.createColumn({"width":6});
@@ -1368,7 +1366,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
                     inputradioshapegrdict=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_shape-bygroup-dict","extraAttributes":{ "name":generated+"_flexRadioShapeByGroup", "class":"form-check-input", "type":"radio"}});
                     labelshapegroupdict=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":generated+"_shape-bygroup-dict"}});
                     labelshapegroupdict.innerHTML="Use shape from dictionary<br>";
-                    inputtextshapegrdict=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_shape-bygroup-dict-val","extraAttributes":{ "class":"form-text-input", "type":"text", "placeholder":"{'key1':''#FFFFFF',...}"}});
+                    inputtextshapegrdict=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_shape-bygroup-dict-val","extraAttributes":{ "class":"form-text-input", "type":"text", "placeholder":"{\"key1\":\"disc\",...}"}});
                     inputtextshapegrdict.disabled=true
     
             divoptionscol=HTMLElementUtils.createElement({"kind":"div","id":generated+"_shape-col-options","extraAttributes":{"class": "renderOptionContainer d-none"}});
@@ -1416,9 +1414,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
         colshape2.appendChild(divformcheck3shape);
             divformcheck3shape.appendChild(inputradio3shape);
             divformcheck3shape.appendChild(labelshapefixed);
-        colshape2.appendChild(divformcheck4shape);
-            divformcheck4shape.appendChild(inputcheck4shape);
-            divformcheck4shape.appendChild(label4shape);
+
     row0.appendChild(colshape3);
         colshape3.appendChild(divoptionscolgroup);    
             divoptionscolgroup.appendChild(rowrand);
@@ -1437,6 +1433,65 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
 
     return row0;
 }
+
+ /**
+ * @summary Creates the forms to shape by
+ * @returns {array} a single rows
+ */
+ interfaceUtils._mGenUIFuncs.generateAdvancedOutlineAccordion3= function(){
+    generated=interfaceUtils._mGenUIFuncs.ctx.aUUID;
+
+    //row 1
+    let row0=HTMLElementUtils.createRow({id:generated+"_shape_1"});
+
+    colshape12=HTMLElementUtils.createColumn({"width":6});
+        // Remove outline checkbox
+        divformcheck14shape=HTMLElementUtils.createElement({ "kind":"div", "extraAttributes":{"class":"form-check"}});
+            inputcheck14shape=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_no-outline","extraAttributes":{"class":"form-check-input","type":"checkbox" }});
+            label14shape=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_no-outline-label", "extraAttributes":{ "for":generated+"_no-outline" }});
+            label14shape.innerText="Remove Outline"
+        // Remove Fill checkbox  
+        divformcheck5shape=HTMLElementUtils.createElement({ "kind":"div", "extraAttributes":{"class":"form-check"}});
+            inputcheck5shape=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_no-fill","extraAttributes":{"class":"form-check-input","type":"checkbox" }});
+            label5shape=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_no-fill-label", "extraAttributes":{ "for":generated+"_no-fill" }});
+            label5shape.innerText="Remove Fill"
+    //------------------------
+
+    colshape13=HTMLElementUtils.createColumn({"width":6});
+        //create a input for line thickness
+        divoptionscol=HTMLElementUtils.createElement({"kind":"div","id":generated+"_shape-col-options","extraAttributes":{"class": "renderOptionContainer d-none"}});
+        
+        divoptionscolgroup1=HTMLElementUtils.createElement({"kind":"div","id":generated+"_line_thickness_options","extraAttributes":{}});
+            labelshapegroupdict1=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"class":"form-check-label","for":generated+"_stroke-width"}});
+            labelshapegroupdict1.innerHTML="Outline thickness<br>";
+            inputtextshapegrdict1=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_stroke-width","extraAttributes":{ "class":"form-text-input", "type":"number", "value":"2.5"}});
+
+    inputcheck14shape.addEventListener("change",(event)=>{
+        var value=event.target.checked;
+        //var doms=["_gb-single","_gb-col","_gb-feature-value","_cb-colormap","_cb-bypoint","_cb-bygroup","_gb-feature-value",
+        //          "_gb-col-value","_gb-col-name","_cb-cmap-value","_cb-col-value","_cb-bygroup-rand","_cb-bygroup-gene","_cb-bygroup-name" ]
+        if(value){
+            interfaceUtils._mGenUIFuncs.hideShow(event,["_line_thickness_options"],[])
+        }
+        else {
+            interfaceUtils._mGenUIFuncs.hideShow(event,["_line_thickness_options"],[0])
+        }
+        
+    });
+    row0.appendChild(colshape12);
+        colshape12.appendChild(divformcheck14shape);
+            divformcheck14shape.appendChild(inputcheck14shape);
+            divformcheck14shape.appendChild(label14shape);  
+        colshape12.appendChild(divformcheck5shape);
+            divformcheck5shape.appendChild(inputcheck5shape);
+            divformcheck5shape.appendChild(label5shape);
+
+    row0.appendChild(colshape13);
+        colshape13.appendChild(divoptionscolgroup1);
+            divoptionscolgroup1.appendChild(labelshapegroupdict1);
+            divoptionscolgroup1.appendChild(inputtextshapegrdict1); 
+    return row0;
+ }
 
  /**
  * @summary Creates the forms for collection id
@@ -1534,7 +1589,7 @@ interfaceUtils._mGenUIFuncs.generateAccordionItem2=function(){
             select011.disabled=true
             label012=HTMLElementUtils.createElement({"kind":"label", "id":generated+"_piechart-dict-label", "extraAttributes":{ "class":"d-none", "for":generated+"_piechart-dict" }});
             label012.innerText="Pie-chart colors"
-            input013=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_piechart-dict-val","extraAttributes":{ "class":"d-none form-text-input", "type":"text", "placeholder":"{'key1':''#FFFFFF',...}"}});            
+            input013=HTMLElementUtils.createElement({"kind":"input", "id":generated+"_piechart-dict-val","extraAttributes":{ "class":"d-none form-text-input", "type":"text", "placeholder":"{\"key1\":\"#FFFFFF\",...}"}});            
 
     inputcheck0000.addEventListener("change", (event)=>{
         var value=event.target.checked;
@@ -1844,6 +1899,7 @@ interfaceUtils._mGenUIFuncs.fillDropDownsIfExpectedCSV=function(uid,expectedHead
         for(d in expectedHeader){
             if(dropdowns[d]){
                 needle=expectedHeader[d];
+                if (needle === undefined || needle === null) needle = "";
                 if (typeof needle === 'object') needle = JSON.stringify(needle);
                 opts=dropdowns[d].options;
                 if (!opts) {
@@ -2201,7 +2257,7 @@ interfaceUtils._mGenUIFuncs.groupUI=async function(uid, force){
         const trs = table.querySelectorAll('tbody tr')
         const filter = this.value
         const regex = new RegExp(filter, 'i')
-        const isFoundInTds = td => regex.test(td.innerText)
+        const isFoundInTds = td => regex.test(td.querySelector('label')?.innerText??"")
         const isFound = childrenArr => childrenArr.some(isFoundInTds)
         const setTrStyleDisplay = (element) => {
             if (isFound([
@@ -2375,7 +2431,8 @@ interfaceUtils.prompt = function (text, value, title, type) {
     })
 }
 
-interfaceUtils.generateModal = function(title, content, buttons, uid, noClose) {
+interfaceUtils.generateModal = function(title, content, buttons, uid, noClose, noBackdrop) {
+    if (!noBackdrop) noBackdrop = false;
     if (!noClose) noClose = false;
     if (!uid) uid = "default";
     modalWindow = document.getElementById(uid + "_modal");
@@ -2411,6 +2468,11 @@ interfaceUtils.generateModal = function(title, content, buttons, uid, noClose) {
     modalWindowButtons.appendChild(buttons);
 
     modalWindow = document.getElementById(`${uid}_modal`);
+    if (noBackdrop) {
+        modalWindow.addEventListener('shown.bs.modal', function (event) {
+            $('.modal-backdrop.show').css('opacity', '0');
+        });
+    }
     $(modalWindow).modal({backdrop: 'static',keyboard: false});
     $(modalWindow).modal("show");
     modalWindow.getElementsByClassName("modal-dialog")[0].style.left = "0";
@@ -2437,7 +2499,6 @@ interfaceUtils.generateModal = function(title, content, buttons, uid, noClose) {
 
 interfaceUtils.closeModal = async function (modalWindow) {
     for (var i = 0; i < 40; i++) {
-        console.log(i, modalWindow, modalWindow.classList);
         if (modalWindow.classList.contains("show")) {
             break;
         }
@@ -2451,6 +2512,43 @@ interfaceUtils.closeModal = async function (modalWindow) {
         await new Promise(r => setTimeout(r, 500));
         $(modalWindow).modal("hide");
     }
+}
+
+interfaceUtils.generateNotification = function(content, uid, noClose, timeout, alertType) {
+    if (!noClose) noClose = false;
+    if (!alertType) alertType = "warning";
+    if (!uid) uid = "default";
+    let alertDiv = document.getElementById(uid + "_alert");
+    if (! alertDiv) {
+        var div = HTMLElementUtils.createElement(
+            {"kind":"div", "id":uid+"_alert", "extraAttributes":{ 
+                "class":`position-absolute bottom-0 end-0 m-2 alert alert-${alertType} alert-dismissible fade show`, "role":"alert"
+            }
+        });
+        div.innerHTML = `
+            ${content}
+            <button id="${uid}_closeButton" type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>`;
+        document.body.appendChild(div);
+    }
+    if (noClose) { 
+        document.getElementById(`${uid}_closeButton`).classList.add("d-none");
+    }
+    else {
+        document.getElementById(`${uid}_closeButton`).classList.remove("d-none");
+    }
+    $(`#${uid}_alert`).alert();
+    if (timeout) {
+        let _timeout = setTimeout(function() {
+            $(`#${uid}_alert`).alert('close');
+        }, timeout);
+        // remove timeout if alert is clicked or touched:
+        $(`#${uid}_alert`).on('click touchstart', function() {
+            clearTimeout(_timeout);
+        });
+    }
+
+    return alertDiv;
 }
 
 interfaceUtils.createDownloadDropdown = function(downloadRow, innerText, callback, comment, dropdownOptions) {
@@ -2474,7 +2572,6 @@ interfaceUtils.createDownloadDropdown = function(downloadRow, innerText, callbac
         // innerText: innerText
         class: "select2-select select2-select_" + random_select2_id
     }
-    console.log("dropdownOptions", dropdownOptions);
     var DownloadDropdown = HTMLElementUtils.selectTypeDropDown(paramSelect);
     DownloadDropdown.setAttribute("data-placeholder", "Select from list (" + dropdownOptions.length + " items)")
     DownloadDropdown.style.width = "100%";
@@ -2498,7 +2595,6 @@ interfaceUtils.createDownloadDropdown = function(downloadRow, innerText, callbac
             cache: true,
             transport: function(params, success, failure) {
                 let pageSize = 100;
-                console.log("params",params);
                 let term = (params.data.term || '').toLowerCase();
                 let page = (params.data.page || 1);
                 
@@ -2805,4 +2901,638 @@ interfaceUtils.addPluginAccordion = function (pluginID, pluginName) {
     $('#' + "plugin-" + pluginID).collapse('show', {parent: pluginsAccordions});
     document.getElementById("title-tab-plugins").classList.remove("d-none");
     return document.getElementById("plugin-" + pluginID);
+}
+
+
+/**
+ * @summary To not fill interfaceUtils with a lot of things, there is the _rGenUIFuncs
+ * object encapsulating all the functions pertaining creation of region UI
+ */
+interfaceUtils._rGenUIFuncs={}
+
+/** 
+* @param {HTMLEvent} event event that triggered function
+* @summary Delete all trace of a tab including datautils.data.key*/
+interfaceUtils._rGenUIFuncs.checkboxToEye=function(checkBox){
+    let button1 = HTMLElementUtils.createElement(
+        {"kind":"div", extraAttributes:{"data-uid":checkBox.id,"class":"btn btn-light btn-sm mx-1"}}
+    );
+    button1.innerHTML = "<i class='bi bi-eye'></i>";
+    button1.addEventListener("click",function(event) {
+        checkBox.checked = !checkBox.checked;
+        checkBox.dispatchEvent(new Event('input'));
+        if (checkBox.checked) {
+            button1.innerHTML = "<i class='bi bi-eye'></i>";
+        }
+        else {
+            button1.innerHTML = "<i class='bi bi-eye-slash-fill'></i>";
+        }
+    });
+    checkBox.parentNode.insertBefore(button1, checkBox.nextSibling);
+    checkBox.style.display = "none";
+    Object.defineProperty(checkBox, "checked_eye", {
+        get : function () {
+            return this.checked;
+        },
+        set : function (val) {
+            this.checked = val;
+            if (this.checked) {
+                button1.innerHTML = "<i class='bi bi-eye'></i>";
+            }
+            else {
+                button1.innerHTML = "<i class='bi bi-eye-slash-fill'></i>";
+            }
+        }
+    });
+}
+
+/** 
+* @param {HTMLEvent} event event that triggered function
+* @summary Delete all trace of a tab including datautils.data.key*/
+interfaceUtils._rGenUIFuncs.createTable=function(){
+    let allRegionClasses = Object.values(regionUtils._regions).map(function(e) { return e.regionClass; })
+    let singleRegionClasses = allRegionClasses.filter((v, i, a) => a.indexOf(v) === i);
+    //I do this to know if I have name selected, and also to know where to draw the 
+    //color from
+    var groupUI=HTMLElementUtils.createElement({"kind":"div"});
+    
+    var table=HTMLElementUtils.createElement({"kind":"table","extraAttributes":{"class":"table table-striped marker_table"}});
+    var thead=HTMLElementUtils.createElement({"kind":"thead"});
+    var thead2=HTMLElementUtils.createElement({"kind":"thead"});
+    var theadrow=HTMLElementUtils.createElement({"kind":"tr"});
+    var tbody=HTMLElementUtils.createElement({"kind":"tbody"});
+
+    var headopts=["", "", "Class", "Counts", "Color","Visible", "Delete"];
+    var sortable = {
+        "": "sorttable_nosort",
+        "Counts": "sorttable_sort",
+        "Class": "sorttable_sort col-md-8",
+        "Color": "sorttable_nosort",
+        "Color": "sorttable_nosort"
+    }
+    headopts.forEach((opt)=>{
+        var th=HTMLElementUtils.createElement({"kind":"th","extraAttributes":{"scope":"col","class":sortable[opt]}});
+        th.innerText=opt
+        theadrow.appendChild(th);
+    });
+
+    thead.appendChild(theadrow);
+
+    // add All row
+    
+    //row
+    var tr=HTMLElementUtils.createElement({"kind":"tr","extraAttributes":{"class":"sorttable_nosort"}});
+    //first spot for a check
+    var td0=HTMLElementUtils.createElement({"kind":"td"});
+    var td1=HTMLElementUtils.createElement({"kind":"td"});
+    var td2=HTMLElementUtils.createElement({"kind":"td"});
+    var td3=HTMLElementUtils.createElement({"kind":"td"});
+    var td4=HTMLElementUtils.createElement({"kind":"td"});
+    var td5=HTMLElementUtils.createElement({"kind":"td"});
+    var td6=HTMLElementUtils.createElement({"kind":"td"});
+
+    tr.appendChild(td0);
+    tr.appendChild(td1);
+    tr.appendChild(td2);
+    tr.appendChild(td3);
+    tr.appendChild(td4);
+    tr.appendChild(td5);
+    tr.appendChild(td6);
+
+    // Get previous "All" checkbox element so that we can re-use its old state
+    const lastCheckAll = interfaceUtils.getElementById("regionUI_all_check", false);
+
+    
+    var label2=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":"regionUI_all_check","class":"cursor-pointer"}});
+    label2.innerText="All";
+    td2.appendChild(label2);
+
+    var label3=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":"regionUI_all_check","class":"cursor-pointer"}});
+    label3.innerText=Object.keys(regionUtils._regions).length;
+    td3.appendChild(label3);        
+ 
+    var check0=HTMLElementUtils.createElement({"kind":"input", "id":"regionUI_all_check","extraAttributes":{"class":"form-check-input","type":"checkbox" }});
+    check0.checked = lastCheckAll != null ? lastCheckAll.checked : true;
+    td1.appendChild(check0);
+    check0.addEventListener("input",(event)=>{
+        visible = event.target.checked;
+        clist = interfaceUtils.getElementsByClassName("regionUI-region-input");
+        for (var i = 0; i < clist.length; ++i) { clist[i].checked_eye = visible; }
+        groupRegions = Object.values(regionUtils._regions)
+        for (region of groupRegions) {
+            region.visibility = visible;
+        };
+        glUtils.updateRegionLUTTextures();
+        glUtils.draw();
+        /*let newVisibility = this.checked;
+        let groupRegions = Object.values(regionUtils._regions).filter(
+            x => x.regionClass==regionClass
+        ).forEach(function (region) {
+            region.visibility = newVisibility;
+            if (document.getElementById(region.id + "_fill_ta"))
+                document.getElementById(region.id + "_fill_ta").checked = newVisibility;
+        });
+        glUtils.updateRegionLUTTextures();
+        glUtils.draw(); */      
+    });
+    td5.appendChild(check0);
+
+    var regionsdeletebutton = HTMLElementUtils.createButton({
+        innerText: "<i class='bi bi-trash'></i>",
+        extraAttributes: {
+            class: "col btn btn-sm btn-primary form-control-sm mx-1"
+        }
+    });
+    regionsdeletebutton.addEventListener('click', function () {
+        interfaceUtils.confirm('Are you sure you want to delete all regions?')
+        .then(function(_confirm){
+            if (_confirm) {
+                regionUtils.deleteAllRegions();
+            }
+        });
+    });
+    td6.appendChild(regionsdeletebutton);
+
+    interfaceUtils._rGenUIFuncs.checkboxToEye(check0);
+    thead2.appendChild(tr);
+
+    for (i of Object.keys(singleRegionClasses.sort())) {
+        let regionClass = singleRegionClasses[i];
+        let regionClassID = HTMLElementUtils.stringToId("region_" + regionClass);
+        let numRegions = allRegionClasses.filter(x => x==regionClass).length
+
+        //row
+        var tr=HTMLElementUtils.createElement({"kind":"tr",extraAttributes:{"data-escapedID":regionClassID}});
+
+        var td0=HTMLElementUtils.createElement(
+            {kind:"td", extraAttributes:{
+                "data-bs-toggle":"collapse",
+                "data-bs-target":"#collapse_region_" + regionClassID,
+                "aria-expanded":"false",
+                "aria-controls":"collapse_region_" + regionClassID,
+                "class":"collapse_button_regionClass collapse_button_transform collapsed",
+                "id": regionClassID + "_collapse_table_button"
+            }});
+        var td1=HTMLElementUtils.createElement({"kind":"td"});
+        var td2=HTMLElementUtils.createElement({"kind":"td"});
+        var td3=HTMLElementUtils.createElement({"kind":"td"});
+        var td4=HTMLElementUtils.createElement({"kind":"td"});
+        var td5=HTMLElementUtils.createElement({"kind":"td"});
+        var td6=HTMLElementUtils.createElement({"kind":"td"});
+
+        tr.appendChild(td0);
+        tr.appendChild(td1);
+        tr.appendChild(td2);
+        tr.appendChild(td3);
+        tr.appendChild(td4);
+        tr.appendChild(td5);
+        tr.appendChild(td6);
+        
+        if (regionClass) rClass = regionClass; else rClass = "";
+        var regionclasstext = HTMLElementUtils.inputTypeText({
+            extraAttributes: {
+                size: 9,
+                placeholder: "class",
+                value: rClass,
+                class: "col input-sm form-control form-control-sm"
+            }
+        });
+        regionclasstext.addEventListener('change', function () {
+            var newClass = this.value;
+            const color = Object.values(regionUtils._regions).find(
+                x => x.regionClass==newClass
+            )?.polycolor;
+            groupRegions = Object.values(regionUtils._regions).filter(
+                x => x.regionClass==regionClass
+            );
+            for (region of groupRegions) {
+                const escapedRegionID = HTMLElementUtils.stringToId(region.id);
+                if (document.getElementById(escapedRegionID + "_class_ta"))
+                    document.getElementById(escapedRegionID + "_class_ta").value = newClass;
+                regionUtils.changeRegion(region.id);
+                region.regionClass = newClass;
+                if (color) {region.polycolor = color;}
+            };
+            regionUtils.updateAllRegionClassUI();
+        });td2.appendChild(regionclasstext);
+
+        var label3=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":"regionUI_"+regionClassID+"_check","class":"cursor-pointer"}});
+        label3.innerText=numRegions;
+        td3.appendChild(label3);        
+
+        let lastColor = interfaceUtils.getElementById("regionUI_"+regionClassID+"_color", false);
+        if (lastColor == null) {
+            let groupRegions = Object.values(regionUtils._regions).filter(
+                x => x.regionClass==regionClass
+            );
+            if (groupRegions.length > 0) {
+                lastColor = groupRegions[0].polycolor;
+            }
+            else {
+                lastColor = "#FF0000";
+            }
+        }
+        else lastColor = lastColor.value;
+        var regioncolorinput = HTMLElementUtils.inputTypeColor({
+            id: "regionUI_"+regionClassID+"_color",
+            extraAttributes: {
+                value: lastColor
+            }
+        });
+        regioncolorinput.addEventListener('change', function () {
+            var newColor = this.value;
+            groupRegions = Object.values(regionUtils._regions).filter(
+                x => x.regionClass==regionClass
+            )
+            for (region of groupRegions) {
+                region.polycolor = newColor;
+                if (document.getElementById(region.id + "_color_input"))
+                    document.getElementById(region.id + "_color_input").value = newColor;
+                regionUtils.changeRegion(region.id);
+            };
+            regionUtils.updateAllRegionClassUI();
+        });
+        var tdPanel = HTMLElementUtils.createElement({
+            kind: "td",
+        });
+        td4.appendChild(regioncolorinput);
+
+        var check0=HTMLElementUtils.createElement({"kind":"input", "id":"regionUI_"+regionClassID+"_check","extraAttributes":{"class":"form-check-input regionUI-region-input","type":"checkbox" }});
+        check0.checked = true;
+        td5.appendChild(check0);
+        interfaceUtils._rGenUIFuncs.checkboxToEye(check0);
+        
+        check0.addEventListener('input', function (event) {
+            var visible = event.target.checked;
+            clist = interfaceUtils.getElementsByClassName("regionUI-region-"+regionClassID+"-input");
+            for (var i = 0; i < clist.length; ++i) { clist[i].checked_eye = visible; }
+            groupRegions = Object.values(regionUtils._regions).filter(
+                x => x.regionClass==regionClass
+            );
+            for (region of groupRegions) {
+                region.visibility = visible;
+            };
+            glUtils.updateRegionLUTTextures();
+            glUtils.draw();
+        })
+
+        var regionsdeletebutton = HTMLElementUtils.createButton({
+            innerText: "<i class='bi bi-trash'></i>",
+            extraAttributes: {
+                class: "col btn btn-sm btn-primary form-control-sm mx-1"
+            }
+        });
+        regionsdeletebutton.addEventListener('click', function () {
+            interfaceUtils.confirm('Are you sure you want to delete the whole '+regionClass+' group?')
+            .then(function(_confirm){
+                if (_confirm) {
+                    groupRegions = Object.values(regionUtils._regions).filter(
+                        x => x.regionClass==regionClass
+                    ).forEach(function (region) {
+                        regionUtils.deleteRegion(region.id, true);
+                    });
+                    regionUtils.updateAllRegionClassUI();
+                }
+            });
+        });
+        td6.appendChild(regionsdeletebutton);
+        /*
+        button6 = HTMLElementUtils.createElement({"kind":"div", extraAttributes:{"data-escapedID":regionClassID, "class":"btn btn-light btn-sm mx-1"}});
+        button6.innerHTML = "<i class='bi bi-eye'></i>";
+        button6.checkVisible = check0;
+        button6.checkHidden = check1;
+        // Store this state so that we can also "preview" unchecked marker groups
+        button6.lastCheckedState = check0.checked;
+        td6.appendChild(button6);
+               
+        eventnames = ["mouseenter"];
+        eventnames.forEach(function(eventname) {
+            button6.addEventListener(eventname,function(event) {
+                tr = this.parentElement.parentElement;
+                tr.classList.add("table-primary");
+                hidden_inputs = interfaceUtils.getElementsByClassName("region-hidden");
+                for(var i = 0; i < hidden_inputs.length; i++){
+                    hidden_inputs[i].checked = true;
+                }
+                this.lastCheckedState = this.checkVisible.checked;
+                this.checkVisible.checked = true;
+                this.checkHidden.checked = false;
+                regionUtils._currentRegionId = Object.keys(regionUtils._regions).length;
+                regionUtils._edgeLists = [];
+                
+                glUtils.updateRegionDataTextures();
+                glUtils.updateRegionLUTTextures();
+                glUtils.draw();
+            })
+        })
+        eventnames = ["mouseleave"];
+        eventnames.forEach(function(eventname){
+            button6.addEventListener(eventname,function(event) {
+                tr = this.parentElement.parentElement;
+                tr.classList.remove("table-primary");
+                hidden_inputs = interfaceUtils.getElementsByClassName("region-hidden");
+                for(var i = 0; i < hidden_inputs.length; i++){
+                    hidden_inputs[i].checked = false;
+                }
+                this.checkVisible.checked = this.lastCheckedState;  // Restore visible checkbox
+                regionUtils._currentRegionId = Object.keys(regionUtils._regions).length;
+                regionUtils._edgeLists = [];
+                
+                glUtils.updateRegionLUTTextures();
+                glUtils.draw();
+            })
+        })*/
+        var tr_subregions = document.createElement("tr");
+        var td_subregions = document.createElement("td");
+        td_subregions.classList.add("p-0")
+        td_subregions.setAttribute("colspan","100");
+        let table_subregions=HTMLElementUtils.createElement({"kind":"table","extraAttributes":{"class":"table marker_table"}});
+        var tbody_subregions=HTMLElementUtils.createElement({"kind":"tbody","id":"tbody_subregions_"+regionClassID});
+        let collapse_div=HTMLElementUtils.createElement({"kind":"div"});
+        collapse_div.id = "collapse_region_" + regionClassID;
+        collapse_div.setAttribute("data-region-class", regionClass);
+        collapse_div.setAttribute("data-region-classID", regionClassID);
+        collapse_div.classList.add("collapse")
+        collapse_div.classList.add("container")
+        collapse_div.classList.add("p-0")
+        $(collapse_div).on('show.bs.collapse', function () {
+            var groupContainer = this;
+            let selectedRegionID = groupContainer.getAttribute("data-region-selected");
+            groupContainer.removeAttribute("data-region-selected");
+            let selectedRegionClass = this.getAttribute("data-region-class");
+            let selectedRegionClassID = this.getAttribute("data-region-classID");
+            let tbody_subregions = document.getElementById("tbody_subregions_" + selectedRegionClassID);
+            if (tbody_subregions.innerHTML != "" && selectedRegionID != undefined) {
+                let escapedRegionId = HTMLElementUtils.stringToId(selectedRegionID);
+                var tr = document.querySelectorAll('[data-escapedid="'+escapedRegionId+'"]')[0];
+                if (!tr) tbody_subregions.innerHTML = "";
+            }  
+            if (tbody_subregions.innerHTML == "") {
+                var numberOfItemsPerPage = 100;
+                let groupRegions = Object.values(regionUtils._regions).filter(
+                    x => x.regionClass==selectedRegionClass
+                )
+                let selectedIndex = 0;
+                if (selectedRegionID != undefined) {
+                    selectedIndex = groupRegions.findIndex(x => x.id==selectedRegionID);
+                    if (selectedIndex == -1) selectedIndex = 0;
+                }
+                let min = Math.max(0, parseInt(selectedIndex - numberOfItemsPerPage / 2));
+                let max = min + numberOfItemsPerPage;
+                let subGroupRegions = groupRegions.slice(min, max);
+                regionDetails = document.createDocumentFragment();
+                for (region of subGroupRegions) {
+                    regionDetails.appendChild(interfaceUtils._rGenUIFuncs.createRegionRow(region.id));
+                }
+                tbody_subregions.appendChild(regionDetails);
+                groupContainer.setAttribute("data-region-max", max);
+                groupContainer.setAttribute("data-region-min", min);
+                $(groupContainer).bind('scroll', function(){
+                    let tbody_subregions = document.getElementById("tbody_subregions_" + selectedRegionClassID);
+                    if($(groupContainer).scrollTop() + $(this).innerHeight() >= $(this)[0].scrollHeight - 500){
+                        maxItem = parseInt(groupContainer.getAttribute("data-region-max"));
+                        if (maxItem >= groupRegions.length) return;
+                        groupContainer.setAttribute("data-region-max", maxItem+numberOfItemsPerPage);
+                        let subGroupRegions = groupRegions.slice(maxItem, maxItem+numberOfItemsPerPage);
+                        regionDetails = document.createDocumentFragment();
+                        for (region of subGroupRegions) {
+                            regionDetails.appendChild(interfaceUtils._rGenUIFuncs.createRegionRow(region.id));
+                        }
+                        tbody_subregions.appendChild(regionDetails);
+                    }
+                    if($(groupContainer).scrollTop() <= 500){
+                        minItem = parseInt(groupContainer.getAttribute("data-region-min"));
+                        if (minItem <= 0) return;
+                        groupContainer.setAttribute("data-region-min", minItem-numberOfItemsPerPage);
+                        let subGroupRegions = groupRegions.slice(minItem-numberOfItemsPerPage, minItem);
+                        regionDetails = document.createDocumentFragment();
+                        for (region of subGroupRegions) {
+                            regionDetails.appendChild(interfaceUtils._rGenUIFuncs.createRegionRow(region.id));
+                        }
+                        tbody_subregions.prepend(regionDetails);
+                    }
+                });
+                groupContainer.style.maxHeight = "400px";
+                groupContainer.style.overflowY = "scroll";
+            }
+        })
+        
+        tr_subregions.appendChild(td_subregions);
+        td_subregions.appendChild(collapse_div);
+        collapse_div.appendChild(table_subregions);
+        table_subregions.appendChild(tbody_subregions);
+
+        tbody.appendChild(tr);
+        tbody.appendChild(tr_subregions);
+       
+    }
+
+
+    table.appendChild(thead);
+    table.appendChild(thead2);
+    table.appendChild(tbody);
+    groupUI.appendChild(table);
+
+    //sorttable.makeSortable(table);
+    return groupUI;
+}
+
+/** 
+* @param {HTMLEvent} event event that triggered function
+* @summary Delete all trace of a tab including datautils.data.key*/
+interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
+    var region = regionUtils._regions[regionId];
+    const escapedRegionId = HTMLElementUtils.stringToId(regionId);
+    let regionClass = region.regionClass;
+    let regionClassID = HTMLElementUtils.stringToId("region_" + regionClass);
+
+    //row
+    var tr=HTMLElementUtils.createElement({"kind":"tr",extraAttributes:{"data-escapedID":regionId}});
+
+    var td0=HTMLElementUtils.createElement({"kind":"td"});
+    var td1=HTMLElementUtils.createElement({"kind":"td"});
+    var td2=HTMLElementUtils.createElement({"kind":"td"});
+    var td3=HTMLElementUtils.createElement({"kind":"td"});
+    var td4=HTMLElementUtils.createElement({"kind":"td"});
+    var td5=HTMLElementUtils.createElement({"kind":"td"});
+    var td6=HTMLElementUtils.createElement({"kind":"td"});
+
+    tr.appendChild(td0);
+    tr.appendChild(td1);
+    tr.appendChild(td2);
+    tr.appendChild(td3);
+    tr.appendChild(td4);
+    tr.appendChild(td5);
+    tr.appendChild(td6);
+    
+    
+    const checkBox = HTMLElementUtils.inputTypeCheckbox({
+        id: region.id + "_selection_check",
+        class: "form-check-input",
+        value: false,
+        eventListeners: {
+        click: function () {
+            this.checked
+            ? regionUtils.selectRegion(region)
+            : regionUtils.deSelectRegion(region.id);
+        },
+        },
+    });
+    checkBox.checked = regionUtils._selectedRegions[region.id] != undefined;
+    td1.appendChild(checkBox);
+    td1.style.width = "1px";
+    td1.classList.add("px-0");
+    td1.classList.add("mx-0");
+
+    var regionclasstext = HTMLElementUtils.inputTypeText({
+        extraAttributes: {
+            size: 9,
+            placeholder: "class",
+            value: regionClass,
+            class: "col input-sm form-control form-control-sm"
+        }
+    });
+    regionclasstext.addEventListener('change', function () {
+        var newClass = this.value;
+        const color = Object.values(regionUtils._regions).find(
+            x => x.regionClass==newClass
+        )?.polycolor;
+        region.regionClass = newClass;
+        if (color) {region.polycolor = color;}
+        regionUtils.updateAllRegionClassUI();
+    });
+    td2.appendChild(regionclasstext);
+
+    var regionnametext = HTMLElementUtils.inputTypeText({
+        extraAttributes: {
+            size: 9,
+            placeholder: "name",
+            value: region.regionName,
+            class: "col input-sm form-control form-control-sm"
+        }
+    });
+    regionnametext.addEventListener('change', function () {
+        var newName = this.value;
+        if (region.regionName !== newName) {
+            let oldName = region.regionName;
+            region.regionName = newName;
+            delete regionUtils._regions[oldName];
+        }
+        regionUtils.updateAllRegionClassUI();
+    });
+    td3.appendChild(regionnametext);
+
+    var regionshistobutton = HTMLElementUtils.createButton({
+        innerText: "<i class='bi bi-bar-chart-fill'></i>",
+        extraAttributes: {
+            class: "col btn btn-sm btn-light form-control-sm mx-1"
+        }
+    });
+    regionshistobutton.addEventListener('click', function () {
+        let innerHTML = regionUtils.getRegionStatistics(region.id);
+        
+        interfaceUtils.alert(
+            innerHTML,
+            "Region statistics"
+        );
+        
+    });
+    td4.appendChild(regionshistobutton);
+    td4.style.width = "1px";
+    td4.classList.add("px-0");
+    td4.classList.add("mx-0");
+    var check0=HTMLElementUtils.createElement({"kind":"input", "id":"singleRegionUI_"+escapedRegionId+"_check","extraAttributes":{"class":"form-check-input regionUI-region-input regionUI-region-"+regionClassID+"-input","type":"checkbox" }});
+    check0.checked = true;
+    
+    check0.addEventListener('input', function (event) {
+        var visible = event.target.checked;
+        region.visibility = visible;
+        d3.selectAll(".regionUI-region-hover").remove();
+        glUtils.updateRegionLUTTextures();
+        glUtils.draw();
+    })
+    
+    td5.appendChild(check0);
+    interfaceUtils._rGenUIFuncs.checkboxToEye(check0);
+    td5.style.width = "1px";
+    td5.classList.add("px-0");
+    td5.classList.add("mx-0");
+
+    var regionsdeletebutton = HTMLElementUtils.createButton({
+        innerText: "<i class='bi bi-trash'></i>",
+        extraAttributes: {
+            class: "col btn btn-sm btn-primary form-control-sm mx-1"
+        }
+    });
+    regionsdeletebutton.addEventListener('click', function () {
+        regionUtils.deleteRegion(region.id, true);
+        d3.selectAll(".regionUI-region-hover").remove();
+        regionUtils.updateAllRegionClassUI();
+    });
+    td6.appendChild(regionsdeletebutton);
+    td6.style.width = "1px";
+    td6.classList.add("px-0");
+    td6.classList.add("mx-0");
+
+    /*
+    button6 = HTMLElementUtils.createElement({"kind":"div", extraAttributes:{"data-escapedID":regionClassID, "class":"btn btn-light btn-sm mx-1"}});
+    button6.innerHTML = "<i class='bi bi-eye'></i>";
+    button6.checkVisible = check0;
+    button6.checkHidden = check1;
+    // Store this state so that we can also "preview" unchecked marker groups
+    button6.lastCheckedState = check0.checked;
+    td6.appendChild(button6);
+            
+    eventnames = ["mouseenter"];
+    eventnames.forEach(function(eventname) {
+        button6.addEventListener(eventname,function(event) {
+            tr = this.parentElement.parentElement;
+            tr.classList.add("table-primary");
+            hidden_inputs = interfaceUtils.getElementsByClassName("region-hidden");
+            for(var i = 0; i < hidden_inputs.length; i++){
+                hidden_inputs[i].checked = true;
+            }
+            this.lastCheckedState = this.checkVisible.checked;
+            this.checkVisible.checked = true;
+            this.checkHidden.checked = false;
+            regionUtils._currentRegionId = Object.keys(regionUtils._regions).length;
+            regionUtils._edgeLists = [];
+            
+            glUtils.updateRegionLUTTextures();
+            glUtils.draw();
+        })
+    })
+    eventnames = ["mouseleave"];
+    eventnames.forEach(function(eventname){
+        button6.addEventListener(eventname,function(event) {
+            tr = this.parentElement.parentElement;
+            tr.classList.remove("table-primary");
+            hidden_inputs = interfaceUtils.getElementsByClassName("region-hidden");
+            for(var i = 0; i < hidden_inputs.length; i++){
+                hidden_inputs[i].checked = false;
+            }
+            this.checkVisible.checked = this.lastCheckedState;  // Restore visible checkbox
+            regionUtils._currentRegionId = Object.keys(regionUtils._regions).length;
+            regionUtils._edgeLists = [];
+            
+            glUtils.updateRegionDataTextures();
+            glUtils.updateRegionLUTTextures();
+            glUtils.draw();
+        })
+    })*/
+    tr.onmouseover = function () {
+        if (!region.visibility) {
+            d3.selectAll(".regionUI-region-hover").remove();
+            return;
+        }
+        tr.style.background = "var(--bs-primary-light)";
+        const viewportPoints = regionUtils.globalPointsToViewportPoints(region.globalPoints, region.collectionIndex);
+        regionUtils.drawRegionPath(viewportPoints, escapedRegionId, "#000000", "#ffffff55", "0 0.00  0");
+        d3.selectAll("#" + escapedRegionId + "_poly").classed("regionUI-region-hover", true);
+    };
+    tr.onmouseout = function () {
+        tr.style.background = "white";
+        d3.selectAll(".regionUI-region-hover").remove();
+    };
+    return tr;
 }

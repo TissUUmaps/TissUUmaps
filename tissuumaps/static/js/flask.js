@@ -43,8 +43,41 @@ flask.standalone.init = function () {
     button.addEventListener("click", function(){
         flask.standalone.addLayer("");
     });
+
+    // There is a frame refresh bug in QtWebEngine, this is a workaround
+    // This will be removed when the bug is fixed in QtWebEngine
+    // It will add a pixel that will flicker for 3 idle frames
+    // as long as the user is interacting with the page
     flask.standalone.pixelFlickering = HTMLElementUtils.createElement({"kind":"div", extraAttributes:{"style":"position:absolute;right:0px;bottom:0px;width:1px;height:1px;line-height:1px;background-color:#FFFFFF"}});
     document.body.append(flask.standalone.pixelFlickering)
+    var counterFrames = 10;
+    async function refreshAnimation() {
+        // console.log("refreshAnimation", counterFrames);
+        if (flask.standalone.pixelFlickering.style.backgroundColor=="rgb(255, 255, 255)")
+            flask.standalone.pixelFlickering.style.backgroundColor="rgb(255, 255, 254)";
+        else 
+            flask.standalone.pixelFlickering.style.backgroundColor="rgb(255, 255, 255)";
+        counterFrames--;
+        // async wait for counterFrames to be bigger than 0
+        while (counterFrames <= 0) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        window.requestIdleCallback(refreshAnimation)
+    }
+    refreshAnimation();
+    function resetCounter() {
+        counterFrames = 10;
+    }
+    document.addEventListener('click', resetCounter);
+    document.addEventListener('mouseup', resetCounter);
+    document.addEventListener('mousedown', resetCounter);
+    document.addEventListener('mousemove', resetCounter);
+    document.addEventListener('pointermove', resetCounter);
+    document.addEventListener('touchstart', resetCounter);
+    document.addEventListener('scroll', resetCounter);
+    document.addEventListener('keydown', resetCounter);
+    document.addEventListener('keyup', resetCounter);
+    // End of workaround
 
     var plusButton = document.getElementById("plus-1-button");
     var clone = plusButton.cloneNode(true); plusButton.replaceWith(clone); 
@@ -61,6 +94,17 @@ flask.standalone.init = function () {
         return false;
     }, true);
 };
+
+flask.standalone.addGeoJSON = function (filename) {
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    const path = urlParams.get('path')
+    flask.standalone.backend.addGeoJSON(path, filename, function(geoJSONJSON) {
+        if (geoJSONJSON["geoJSONPath"]!=null) {
+            regionUtils.JSONToRegions(geoJSONJSON["geoJSONPath"]);
+        }
+    });
+}
 
 flask.standalone.addCSV = function (filename) {
     const queryString = window.location.search;

@@ -40,7 +40,7 @@
                 type:"range",
                 min:-50,
                 max:50,
-                step:0.1,
+                step:0.5,
                 value:0
             },
             filterFunction: function (value) {
@@ -94,7 +94,7 @@
                 type:"range",
                 min:0,
                 max:8,
-                step:0.01,
+                step:0.05,
                 value:1
             },
             filterFunction: function (value) {
@@ -159,7 +159,7 @@
         "Gamma":{
             params:{
                 type:"range",
-                min:-0,
+                min:0,
                 max:2,
                 step:0.1,
                 value:1
@@ -264,7 +264,6 @@
                 value:"None"
             },
             filterFunction: function (value) {
-                console.log(value);
                 if (value == 0) { return function (context, callback) {callback();}}
                 else {
                     return function(context, callback) {
@@ -275,13 +274,64 @@
                     }
                 }
             }
+        },
+        "Min":{
+            params:{
+                type:"range",
+                min:0,
+                max:255,
+                step:1,
+                value:0
+            },
+            filterFunction: function (value) {
+                if (value == 0) {  return function (context, callback) {callback();}}
+                return RESCALE(value,filterUtils.getFilterParams('Max').value);
+            }
+        },
+        "Max":{
+            params:{
+                type:"range",
+                min:0,
+                max:255,
+                step:1,
+                value:255
+            },
+            filterFunction: function (value) {
+                if (value == 255) {  return function (context, callback) {callback();}}
+                return RESCALE(filterUtils.getFilterParams('Min').value,value);
+            }
         }
     },
     _filterItems:{},
     _lastFilters:{},
     _compositeMode:"source-over"
 }
-
+RESCALE = function(vmin,vmax) {
+            if (vmin < 0 || vmax>255) {
+                throw new Error('Contrast adjustment must be positive.');
+            }
+            var range = (vmax-vmin)/255
+            var precomputedContrast = [];
+            for (var i = 0; i < 256; i++) {
+                var val = (i - vmin)/range;
+                if (val<0){val=0};
+                if (val>255){val=255};
+                precomputedContrast[i] = val
+            }
+            return function(context, callback) {
+                var imgData = context.getImageData(
+                    0, 0, context.canvas.width, context.canvas.height);
+                var pixels = imgData.data;
+                for (var i = 0; i < pixels.length; i += 4) {
+                    pixels[i] = precomputedContrast[pixels[i]];
+                    pixels[i + 1] = precomputedContrast[pixels[i + 1]];
+                    pixels[i + 2] = precomputedContrast[pixels[i + 2]];
+                }
+                context.putImageData(imgData, 0, 0);
+                callback();
+            };
+        },
+        
 Caman.Filter.register("splitChannel", function (channelValue) {
     this.process("splitChannel", function (rgba) {
         let channel = null;
@@ -291,7 +341,7 @@ Caman.Filter.register("splitChannel", function (channelValue) {
         rgba.r = channel;
         rgba.g = channel;
         rgba.b = channel;
-    
+
         // Return the modified RGB values
         return rgba;
     });
@@ -488,6 +538,20 @@ filterUtils.getFilterFunction = function(filterName) {
             }
         }
     };
+}
+
+/** 
+ * Set html opacity and visibility from layers
+ *  */
+filterUtils.setOpacityFromLayers = async function() {
+    var op = tmapp["object_prefix"];    
+    tmapp.layers.forEach(function(layer, i) {
+        if (tmapp[op + "_viewer"].world.getItemAt(i) != undefined) {
+            let opacity = tmapp[op + "_viewer"].world.getItemAt(i).getOpacity();
+            $("#opacity-layer-"+i).val((opacity != 0)?opacity:1);
+            $("#visible-layer-"+i).prop('checked', opacity != 0);
+        }
+    });
 }
 
 /** 

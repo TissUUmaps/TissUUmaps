@@ -234,6 +234,7 @@ print("peak memory = %.3g MB" % (peak_mem / (1024 * 1024)))
 if mem != 0:
     print("leak! final memory = %.3g MB" % (mem / (1024 * 1024)))
 
+
 # does a list of events contain an overlap?
 # assume the list of events has been sorted by start time
 def events_overlap(events):
@@ -301,7 +302,7 @@ for thread in threads:
     # second pass: move all other events to non-overlapping ys
     y = 1
     for event in thread.other_events:
-        if not event.gate_name in gate_positions:
+        if event.gate_name not in gate_positions:
             # look at all the ys we've allocated previously and see if we can
             # add this gate to one of them
             for gate_y in range(1, y):
@@ -319,7 +320,7 @@ for thread in threads:
                     break
 
             # failure? add a new y
-            if not event.gate_name in gate_positions:
+            if event.gate_name not in gate_positions:
                 gate_positions[event.gate_name] = y
                 y += 1
 

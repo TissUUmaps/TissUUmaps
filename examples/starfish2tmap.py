@@ -5,7 +5,6 @@ from starfish.types import Axes
 
 
 def qc_csv(experiment, spot_intensities, output_name):
-
     """
     Create a CSV file from a starfish experiments compatible with the TissUUmaps "Spot Insepector" plugin
 
@@ -45,7 +44,6 @@ def qc_csv(experiment, spot_intensities, output_name):
 
 
 def qc_images(filtered_imgs):
-
     """
     Creates the images from a starfish experiments compatible with the TissUUmaps "Spot Insepector" plugin
 

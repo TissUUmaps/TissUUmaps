@@ -1,12 +1,12 @@
 /**
  * @file tmapp.js Main base for TissUUmaps to work
- * @author Leslie Solorzano
+ * @author Christophe Avenel, Fredrik Nysjö, Leslie Solorzano
  * @see {@link tmapp}
  */
 
 /**
  * @namespace tmapp
- * @version tmapp 2.0
+ * @version tmapp 3.2
  * @classdesc The root namespace for tmapp.
  */
 tmapp = {
@@ -23,7 +23,6 @@ tmapp.registerActions = function () {
     var op = tmapp["object_prefix"];
 
     interfaceUtils.listen(op + '_collapse_btn','click', function () { interfaceUtils.toggleRightPanel() },false);
-    interfaceUtils.listen(op + '_drawregions_btn','click', function () { regionUtils.regionsOnOff() },false);
     interfaceUtils.listen(op + '_export_regions','click', function () { regionUtils.exportRegionsToJSON() },false);
     interfaceUtils.listen(op + '_import_regions','click', function () { regionUtils.importRegionsFromJSON() },false);
     interfaceUtils.listen(op + '_export_regions_csv','click', function () { regionUtils.pointsInRegionsToCSV() },false);
@@ -45,6 +44,18 @@ tmapp.registerActions = function () {
             as[j].addEventListener("click",function(){interfaceUtils.hideTabsExcept($(this))});
         }
     }
+
+    const regionTabEl = document.querySelector('#title-tab-regions')
+    regionTabEl?.addEventListener('show.bs.tab', function (event) {
+        overlayUtils._regionToolbar = true;
+        regionUtils.regionToolbarOnOff();
+    })
+    regionTabEl?.addEventListener('hide.bs.tab', function (event) {
+        overlayUtils._regionToolbar = false;
+        regionUtils.regionToolbarOnOff();
+        regionUtils.setMode(null);
+    })
+    
 }
 /**
  * This method is called when the document is loaded. The tmapp object is built as an "app" and init is its main function.
@@ -91,7 +102,7 @@ tmapp.init = function () {
 
     var click_handler = function (event) {
         if (event.quick) {
-            if (overlayUtils._drawRegions) {
+            if (regionUtils._regionMode == "points") {
                 //call region creator and drawer
                 regionUtils.manager(event);
             }
@@ -100,23 +111,66 @@ tmapp.init = function () {
         }
     };
 
+    function pressHandler(event) {
+        if (regionUtils._regionMode == "free") {
+          // Call region creator and drawer
+          regionUtils.freeHandManager(event);
+        }
+        if (regionUtils._regionMode == "brush") {
+          // Call region creator and drawer
+          regionUtils.brushManager(event);
+        }
+        if (regionUtils._regionMode == "rectangle") {
+          // Call region creator and drawer
+          regionUtils.rectangleManager(event);
+        }
+        if (regionUtils._regionMode == "ellipse") {
+          // Call region creator and drawer
+          regionUtils.ellipseManager(event);
+        }
+    }
+    function moveHandler(event) {
+        if (regionUtils._regionMode == "brush") {
+          // Call region creator and drawer
+          regionUtils.brushHover(event);
+        }
+    }
+
     //OSD handlers are not registered manually they have to be registered
     //using MouseTracker OSD objects 
     /*var ISS_mouse_tracker = new OpenSeadragon.MouseTracker({
         element: tmapp[vname].canvas,
         clickHandler: click_handler
     }).setTracking(true);*/
-    
+    tmapp["ISS_viewer"].addHandler("canvas-press", ()=>{this.dragging = true;});
+    tmapp["ISS_viewer"].addHandler("canvas-release", ()=>{this.dragging = false;});
+
+    tmapp["ISS_viewer"].addHandler("canvas-press", pressHandler);
     tmapp["ISS_viewer"].addHandler('canvas-click', click_handler);
+    new OpenSeadragon.MouseTracker({
+        element: tmapp["ISS_viewer"].canvas,
+        moveHandler: moveHandler
+    }).setTracking(true);
+    
+    tmapp["ISS_viewer"].addHandler("animation", function animationFinishHandler(event){
+        const drawingclass = "_brushRegion";
+        d3.selectAll("." + drawingclass).selectAll('circle').each(function(el) {
+            $(this).attr('r', 0.2 * regionUtils._handleRadius / tmapp["ISS_viewer"].viewport.getZoom());
+        });
+    });
     tmapp["ISS_viewer"].addHandler("animation-finish", function animationFinishHandler(event){
         d3.selectAll("." + regionUtils._drawingclass).selectAll('polyline').each(function(el) {
             $(this).attr('stroke-width', regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
         });
+        
         d3.selectAll("." + regionUtils._drawingclass).selectAll('circle').each(function(el) {
             $(this).attr('r', 10* regionUtils._handleRadius / tmapp["ISS_viewer"].viewport.getZoom());
         });
         d3.selectAll(".regionpoly").each(function(el) {
             $(this).attr('stroke-width', regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
+        });
+        d3.selectAll(".region_previewpoly").each(function(el) {
+            $(this).attr('stroke-width', 2.5 * regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
         });
         var op = tmapp["object_prefix"];
         let homeZoom = tmapp[op + "_viewer"].viewport.getHomeZoom()
@@ -142,7 +196,45 @@ tmapp.init = function () {
         }
         tmapp[op + "_viewer"].imageLoaderLimit = 1;
     });
-    
+    let mousewheelevt = (/Firefox/i.test(navigator.userAgent)) ? "DOMMouseScroll" : "mousewheel";
+    $(document).on("wheel", "input[type=range]", moveSlider);
+    function moveSlider(e){
+        var zoomLevel = parseFloat(e.target.value); 
+        let step = parseFloat(e.target.step);
+        // detect positive or negative scrolling
+        if ( e.originalEvent.wheelDelta < 0 ) {
+            //scroll down
+            $(e.target).val(zoomLevel+step);
+        } else {
+            //scroll up
+            $(e.target).val(zoomLevel-step);
+        }
+
+        // Create a new 'change' event
+        var event = new Event('input', {
+            bubbles: true,
+            cancelable: true,
+        });
+          
+        // trigger the change event
+        e.target.dispatchEvent(event);
+
+        //prevent page fom scrolling
+        return false;
+    }
+    $(document).on("input", "input[type=range]", updateSlider);
+    function updateSlider(e){
+        if (e.target.id == "ISS_globalmarkersize_text" || e.target.id == "channelValue") return;
+        if ($("#opacity-layer-0").attr('data-bs-original-title') !== undefined) {
+            e.target.title = e.target.value;
+            $(e.target).tooltip('show');
+        }
+        $(e.target).attr('data-bs-original-title', e.target.value);
+        $(e.target).tooltip('dispose');
+        $(e.target).tooltip('show');
+        //$(e.target).tooltip({ placement: 'bottom' });
+
+    }
     elt = document.getElementById("ISS_globalmarkersize");
     if (elt) {
         tmapp[vname].addControl(elt,{
@@ -195,7 +287,8 @@ tmapp.options_osd = {
     },
     gestureSettingsPen: {
         flickEnabled: false
-    }
+    },
+    debouncePanEvents: false,
 }
 
 function toggleFullscreen() {
@@ -273,6 +366,15 @@ $( document ).ready(function() {
             }
         } else if (event.key === "r") {
             $("#ISS_fillregions_btn").click();
+        } else if (event.key === "Escape") {
+            regionUtils.resetSelection();
+            regionUtils.setMode(null);
+        }
+    });
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            regionUtils.resetSelection();
+            regionUtils.setMode(null);
         }
     });
 });

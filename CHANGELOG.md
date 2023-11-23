@@ -1,5 +1,40 @@
 # Changelog
 
+## 3.2
+
+- Add annotation tools (in collaboration with Sanofi Digital R&D)
+- Move to WebGL rendering for regions
+- Refactor completely the region tab to better handle large number of items
+- Allow import of regions from multiple GeoJSON files
+- Add support for Geobuf (.pbf) region files
+- Add drag-and-drop opening of GeoJSON files
+- Add histogram button for analyzing individual regions
+- Make regions work in collection mode and with multiple image layers
+- Add marker outline and fill options in Advanced options
+- Increase number of barcodes that can be displayed for markers
+- Add validation of .tmap files (via tissuumaps-schema)
+- Move standalone installer from Python 3.8 to 3.11
+- Move to PySide6 instead of PyQt6
+- Add installers for MacOS X (.dmg) and Linux (.deb)
+- Update to OpenSeadragon 4.1.0
+- Lots of minor fixes
+
+## 3.1.1.6
+
+- Add a min-max filter to image layers for better contrast (@glbarlow)
+- Fix marker filtering
+- Update license from BSD-3 to MIT
+- Add collapsible sections in plugins
+- Minor fixes
+
+## 3.1.1.5
+
+- Fix multiple images dropped on empty project
+- Change threading to allow higher priority to GUI than to server side
+- Add .tmap extension to all saved projects
+- Fix pie charts display update and colors
+- Add error message if update view fails
+
 ## 3.1.1.4
 
 - Fix bug of modal not hiding properly

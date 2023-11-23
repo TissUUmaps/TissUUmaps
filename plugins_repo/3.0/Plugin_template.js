@@ -42,7 +42,7 @@ Plugin_template.demo = function (message) {
   console.log(
     JSON.stringify({
       message: message,
-    })
+    }),
   );
   $.ajax({
     type: "post",

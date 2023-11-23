@@ -28,7 +28,7 @@ def getPalette(adata, obs):
             )
         )
         palette = dict(palette, **new_palette)
-    except:
+    except Exception:
         pass
     return palette
 
@@ -48,7 +48,7 @@ def getObsList(adata):
     try:
         # if obs is a dataframe:
         obsList = list(adata.get("obs").dtype.names)
-    except:
+    except Exception:
         # if obs is NOT a dataframe:
         obsList = list(adata.get("obs"))
     if "_index" in obsList:
@@ -100,7 +100,7 @@ def get_write_adata(adata, path, basedir):
 
 def h5ad_to_tmap(basedir, path, library_id=None):
     write_adata = False
-    path_out = os.path.splitext(path)[0] + "_tmap.h5ad"
+    os.path.splitext(path)[0] + "_tmap.h5ad"
     # if os.path.isfile(os.path.join(basedir, path_out)):
     #    if os.path.getmtime(os.path.join(basedir, path)) < os.path.getmtime(
     #        os.path.join(basedir, path_out)
@@ -140,16 +140,16 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                 adata.copy(f"/obs/__categories/{categ}", f"/obs/__{categ}__/categories")
                 del adata[f"/obs/{categ}"]
                 adata["obs"].move(f"__{categ}__", f"{categ}")
-        del adata[f"/obs/__categories"]
+        del adata["/obs/__categories"]
 
     layers = []
     library_ids = list(adata.get("uns/spatial", []))
     try:
         library_ids = adata["/obs/library_id/categories"].asstr()[...]
-    except:
+    except Exception:
         try:
             library_ids = adata["/obs/__categories/library_id"].asstr()[...]
-        except:
+        except Exception:
             pass
 
     coord_factor = 1
@@ -177,12 +177,12 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                 library_codes_array = adata["/obs/library_id/codes"][...]
                 library_categ_array = adata["/obs/library_id/categories"].asstr()[...]
                 library_col = "/obs/library_id/codes"
-            except:
+            except Exception:
                 library_codes_array = adata["/obs/library_id"][...]
                 library_categ_array = adata["/obs/__categories/library_id"][...]
                 library_col = "/obs/library_id"
 
-            if not "spatial_hires" in list(adata.get("/obsm", [])):
+            if "spatial_hires" not in list(adata.get("/obsm", [])):
                 if not write_adata:
                     write_adata = True
                     adata, path = get_write_adata(adata, path, basedir)
@@ -233,7 +233,7 @@ def h5ad_to_tmap(basedir, path, library_id=None):
     if "tmap" in list(adata.get("uns", [])):
         new_tmap_project = json.loads(
             adata.get(
-                f"/uns/tmap",
+                "/uns/tmap",
                 "{}",
             )[()]
         )
@@ -316,7 +316,7 @@ def h5ad_to_tmap(basedir, path, library_id=None):
             "expectedHeader": {
                 "X": globalX,
                 "Y": globalY,
-                "cb_gr_dict": palette,
+                "cb_gr_dict": "",
                 "gb_col": "obs",
                 "opacity": "1",
                 "scale_factor": markerScale,
@@ -351,7 +351,7 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                     "optionName": obs,
                     "name": obs,
                     "expectedHeader.gb_col": f"/obs/{obs}",
-                    "expectedHeader.cb_gr_dict": palette[obs],
+                    "expectedHeader.cb_gr_dict": json.dumps(palette[obs]),
                     "expectedRadios.cb_gr_dict": True,
                     "expectedRadios.cb_col": False,
                     "expectedRadios.cb_gr": True,

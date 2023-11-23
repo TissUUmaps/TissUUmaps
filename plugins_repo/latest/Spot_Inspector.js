@@ -7,20 +7,125 @@
  * @namespace Spot_Inspector
  * @classdesc The root namespace for Spot_Inspector.
  */
+
+let cmap = ["None"].concat(
+  dataUtils._d3LUTs.map(function (str, index) {
+    return { value: index, innerHTML: str.replace("interpolate", "") };
+  }),
+);
+
 var Spot_Inspector;
 Spot_Inspector = {
   name: "Spot Inspector Plugin",
   _bboxSize: 11,
   _figureSize: 7,
   _layer_format: null,
-  _only_picked: false,
-  _show_trace: true,
-  _marker_row: "rounds",
-  _marker_col: "channels",
-  _cmap: "None",
-  _use_raw: false,
+  _marker_row: "channels",
+  _marker_col: "rounds",
+  _cmap: "33",
+  parameters: {
+    _ImageSection: {
+      label: "Image layer options",
+      title: "IMAGE LAYER OPTIONS",
+      type: "section",
+    },
+    _layer_format: {
+      label:
+        "Layer name format - use <b>{row}</b> and <b>{col}</b> to define dimensions:",
+      type: "text",
+      default: "",
+    },
+    _cmap: {
+      label: "Select colormap",
+      type: "select",
+      default: 33,
+    },
+    _gamma: {
+      label: "Use gamma transform on intensities",
+      type: "number",
+      default: 1,
+      attributes: {
+        min: 0,
+        max: 5,
+        step: 0.1,
+      },
+    },
+    _MarkersSection: {
+      label:
+        'If you want to visualize markers on top of the image, you need to have a csv column for successive {row} values separated by semi-colons, and a csv column for successive {col} values separated by semi-colons (e.g. "1;2;3;4" and "C;T;G;A" for layers in the format Round1_C.tif',
+      title: "MARKER OPTIONS",
+      type: "section",
+    },
+    _marker_row: {
+      label: "Select {row} column of markers",
+      type: "select",
+      default: "rounds",
+    },
+    _marker_col: {
+      label: "Select {col} column of markers",
+      type: "select",
+      default: "channels",
+    },
+    _layername: {
+      label: "Or select column with corresponding layer name",
+      type: "select",
+      default: "",
+    },
+    _AdvancedSection: {
+      label: "Only use these settings if you know what you are doing!",
+      title: "ADVANCED SETTINGS",
+      type: "section",
+    },
+    _importImages: {
+      label: "Import folder of images into layers <i>(optional)</i>",
+      type: "button",
+    },
+    _max_width: {
+      label: "Maximum width of frame, in pixels",
+      type: "number",
+      default: 800,
+    },
+    _line_width: {
+      label: "Line width",
+      type: "number",
+      default: 5,
+    },
+  },
 };
 
+// Log Scale
+const expScale = d3.scalePow().exponent(Math.E).domain([0, 1]);
+const colorScaleExp = d3.scaleSequential((d) =>
+  d3.interpolateGreys(expScale(1 - d)),
+);
+
+d3["LogGreys"] = colorScaleExp;
+dataUtils._d3LUTs.push("LogGreys");
+
+Spot_Inspector.inputTrigger = function (parameterName) {
+  if (parameterName == "_layer_format") {
+    $(".Spot_Inspector_overlay").remove();
+    $("#ISS_Spot_Inspector_viewer").remove();
+    Spot_Inspector.getMatrix();
+  }
+  if (parameterName == "_gamma") {
+    Spot_Inspector.setFilters();
+  } else if (parameterName == "_cmap") {
+    Spot_Inspector.setFilters();
+  } else if (parameterName == "_importImages") {
+    $(".Spot_Inspector_overlay").remove();
+    $("#ISS_Spot_Inspector_viewer").remove();
+    interfaceUtils
+      .prompt(
+        "<i>This will replace all layers of the current project.</i><br/>Give the path format of your images, use * for numbers:",
+        "R*_C*.tif",
+        "Import images into layers",
+      )
+      .then((pathFormat) => {
+        Spot_Inspector.loadImages(pathFormat);
+      });
+  }
+};
 /**
  * This method is called when the document is loaded. The tmapp object is built as an "app" and init is its main function.
  * Creates the OpenSeadragon (OSD) viewer and adds the handlers for interaction.
@@ -35,507 +140,107 @@ Spot_Inspector.init = function (container) {
   script.src =
     "https://raw.githubusercontent.com/jonTrent/PatienceDiff/dev/PatienceDiff.js";
   document.head.appendChild(script);
+  if (Spot_Inspector.get("_layer_format") == "")
+    Spot_Inspector.updateLayerFormat(false);
 
-  Spot_Inspector.updateLayerFormat(false);
-  row0 = HTMLElementUtils.createElement({
-    kind: "h6",
-    extraAttributes: { class: "" },
-  });
-  row0.innerText = "IMAGE LAYERS";
-  row0.style.borderBottom = "1px solid #aaa";
-  row0.style.padding = "3px";
-  row0.style.marginTop = "8px";
+  cmap = ["None"].concat(
+    dataUtils._d3LUTs.map(function (str, index) {
+      return { value: index, innerHTML: str.replace("interpolate", "") };
+    }),
+  );
+  interfaceUtils.addObjectsToSelect(Spot_Inspector.getInputID("_cmap"), cmap);
+  Spot_Inspector.set("_cmap", Spot_Inspector.get("_cmap"));
 
-  row01 = HTMLElementUtils.createElement({
-    kind: "p",
-    extraAttributes: { class: "" },
-  });
-  row01.innerHTML =
-    "<i>You can use existing layers or load a group of images from the project folder.</i>";
-
-  row1 = HTMLElementUtils.createRow({});
-  col11 = HTMLElementUtils.createColumn({ width: 12 });
-  label112 = HTMLElementUtils.createElement({
-    kind: "label",
-    extraAttributes: {
-      class: "form-check-label",
-      for: "Spot_Inspector_bboxSize",
-    },
-  });
-  label112.innerHTML = "Box size:";
-  var input112 = HTMLElementUtils.createElement({
-    kind: "input",
-    id: "Spot_Inspector_bboxSize",
-    extraAttributes: {
-      class: "form-text-input form-control",
-      type: "number",
-      value: Spot_Inspector._bboxSize,
-    },
-  });
-
-  input112.addEventListener("change", (event) => {
-    Spot_Inspector._bboxSize = parseInt(input112.value);
-  });
-
-  row7 = HTMLElementUtils.createRow({});
-  col71 = HTMLElementUtils.createColumn({ width: 12 });
-  label712 = HTMLElementUtils.createElement({
-    kind: "label",
-    extraAttributes: {
-      class: "form-check-label",
-      for: "Spot_Inspector_bboxSize",
-    },
-  });
-  label712.innerHTML = "Figure size:";
-  var input712 = HTMLElementUtils.createElement({
-    kind: "input",
-    id: "Spot_Inspector_figureSize",
-    extraAttributes: {
-      class: "form-text-input form-control",
-      type: "number",
-      value: Spot_Inspector._figureSize,
-    },
-  });
-
-  input712.addEventListener("change", (event) => {
-    Spot_Inspector._figureSize = parseInt(input712.value);
-  });
-
-  row2 = HTMLElementUtils.createRow({});
-  col21 = HTMLElementUtils.createColumn({ width: 12 });
-  label212 = HTMLElementUtils.createElement({
-    kind: "label",
-    extraAttributes: {
-      class: "form-check-label",
-      for: "Spot_Inspector_layer_format",
-    },
-  });
-  label212.innerHTML =
-    "Layer name format - use <b>{row}</b> and <b>{col}</b> to define dimensions:";
-  var input212 = HTMLElementUtils.createElement({
-    kind: "input",
-    id: "Spot_Inspector_layer_format",
-    extraAttributes: {
-      class: "form-text-input form-control",
-      type: "text",
-      value: Spot_Inspector._layer_format,
-      placeholder: "Round{0}_{1}",
-    },
-  });
-
-  input212.addEventListener("change", (event) => {
-    Spot_Inspector._layer_format = input212.value;
-  });
-
-  row3b = HTMLElementUtils.createRow({});
-  col3b1 = HTMLElementUtils.createColumn({ width: 12 });
-  var input3b11 = HTMLElementUtils.createElement({
-    kind: "input",
-    id: "Spot_Inspector_use_raw",
-    extraAttributes: { class: "form-check-input", type: "checkbox" },
-  });
-  label3b11 = HTMLElementUtils.createElement({
-    kind: "label",
-    extraAttributes: { for: "Spot_Inspector_use_raw" },
-  });
-  label3b11.innerHTML = "&nbsp;Use raw images (slow)";
-
-  input3b11.addEventListener("change", (event) => {
-    Spot_Inspector._use_raw = input3b11.checked;
-  });
-
-  row6 = HTMLElementUtils.createRow({});
-  col61 = HTMLElementUtils.createColumn({ width: 12 });
-  select611 = HTMLElementUtils.createElement({
-    kind: "select",
-    id: "Spot_Inspector_colormap",
-    extraAttributes: {
-      class: "form-select form-select-sm",
-      "aria-label": ".form-select-sm",
-    },
-  });
-  label612 = HTMLElementUtils.createElement({
-    kind: "label",
-    extraAttributes: { for: "Spot_Inspector_colormap" },
-  });
-  label612.innerText = "Select colormap";
-
-  select611.addEventListener("change", (event) => {
-    Spot_Inspector._cmap = select611.value;
-  });
-
-  row5 = HTMLElementUtils.createRow({});
-  col51 = HTMLElementUtils.createColumn({ width: 12 });
-  button511 = HTMLElementUtils.createButton({
-    extraAttributes: { class: "btn btn-secondary btn-sm" },
-  });
-  button511.innerHTML = "Import folder of images into layers <i>(optional)</i>";
-
-  button511.addEventListener("click", (event) => {
-    interfaceUtils
-      .prompt(
-        "<i>This will replace all layers of the current project.</i><br/>Give the path format of your images, use * for numbers:",
-        "Round*_*",
-        "Import images into layers"
-      )
-      .then((pathFormat) => {
-        Spot_Inspector.loadImages(pathFormat);
-      });
-  });
-
-  row8 = HTMLElementUtils.createElement({
-    kind: "h6",
-    extraAttributes: { class: "" },
-  });
-  row8.innerText = "MARKERS (Optional)";
-  row8.style.borderBottom = "1px solid #aaa";
-  row8.style.marginTop = "8px";
-  row8.style.padding = "3px";
-
-  row81 = HTMLElementUtils.createElement({
-    kind: "p",
-    extraAttributes: { class: "" },
-  });
-  row81.innerHTML =
-    '<i>If you want to visualize markers on top of the image, you need to have a csv column for successive {row} values separated by semi-colons, and a csv column for successive {col} values separated by semi-colons (e.g. "1;2;3;4" and "C;T;G;A" for layers in the format Round1_C.tif</i>';
-
-  row9 = HTMLElementUtils.createRow({});
-  col91 = HTMLElementUtils.createColumn({ width: 12 });
-  select911 = HTMLElementUtils.createElement({
-    kind: "select",
-    id: "marker_row",
-    extraAttributes: {
-      class: "form-select form-select-sm",
-      "aria-label": ".form-select-sm",
-    },
-  });
-  label912 = HTMLElementUtils.createElement({
-    kind: "label",
-    extraAttributes: { for: "marker_row" },
-  });
-  label912.innerText = "Select {row} column of markers";
-
-  select911.addEventListener("change", (event) => {
-    Spot_Inspector._marker_row = select911.value;
-  });
-
-  row10 = HTMLElementUtils.createRow({});
-  col101 = HTMLElementUtils.createColumn({ width: 12 });
-  select1011 = HTMLElementUtils.createElement({
-    kind: "select",
-    id: "marker_col",
-    extraAttributes: {
-      class: "form-select form-select-sm",
-      "aria-label": ".form-select-sm",
-    },
-  });
-  label1012 = HTMLElementUtils.createElement({
-    kind: "label",
-    extraAttributes: { for: "marker_col" },
-  });
-  label1012.innerText = "Select {col} column of markers";
-
-  select1011.addEventListener("change", (event) => {
-    Spot_Inspector._marker_col = select1011.value;
-  });
-
-  row4 = HTMLElementUtils.createRow({});
-  col41 = HTMLElementUtils.createColumn({ width: 12 });
-  var input411 = HTMLElementUtils.createElement({
-    kind: "input",
-    id: "Spot_Inspector_only_picked",
-    extraAttributes: { class: "form-check-input", type: "checkbox" },
-  });
-  label411 = HTMLElementUtils.createElement({
-    kind: "label",
-    extraAttributes: { for: "Spot_Inspector_only_picked" },
-  });
-  label411.innerHTML = "&nbsp;Only show central selected marker";
-
-  input411.addEventListener("change", (event) => {
-    Spot_Inspector._only_picked = input411.checked;
-  });
-
-  row4b = HTMLElementUtils.createRow({});
-  col4b1 = HTMLElementUtils.createColumn({ width: 12 });
-  var input4b11 = HTMLElementUtils.createElement({
-    kind: "input",
-    id: "Spot_Inspector_show_trace",
-    extraAttributes: {
-      class: "form-check-input",
-      type: "checkbox",
-      checked: Spot_Inspector._show_trace,
-    },
-  });
-  label4b11 = HTMLElementUtils.createElement({
-    kind: "label",
-    extraAttributes: { for: "Spot_Inspector_show_trace" },
-  });
-  label4b11.innerHTML = "&nbsp;Connect dots with a line";
-
-  input4b11.addEventListener("change", (event) => {
-    Spot_Inspector._show_trace = input4b11.checked;
-  });
-
-  container.innerHTML = "";
-  container.appendChild(row0);
-  container.appendChild(row01);
-  container.appendChild(row5);
-  row5.appendChild(col51);
-  col51.appendChild(button511);
-  container.appendChild(row3b);
-  row3b.appendChild(col3b1);
-  col3b1.appendChild(input3b11);
-  col3b1.appendChild(label3b11);
-  container.appendChild(row1);
-  row1.appendChild(col11);
-  col11.appendChild(label112);
-  col11.appendChild(input112);
-  container.appendChild(row7);
-  row7.appendChild(col71);
-  col71.appendChild(label712);
-  col71.appendChild(input712);
-  container.appendChild(row2);
-  row2.appendChild(col21);
-  col21.appendChild(label212);
-  col21.appendChild(input212);
-  container.appendChild(row6);
-  row6.appendChild(col61);
-  col61.appendChild(label612);
-  col61.appendChild(select611);
-
-  container.appendChild(row8);
-  container.appendChild(row81);
-
-  container.appendChild(row9);
-  row9.appendChild(col91);
-  col91.appendChild(label912);
-  col91.appendChild(select911);
-
-  container.appendChild(row10);
-  row10.appendChild(col101);
-  col101.appendChild(label1012);
-  col101.appendChild(select1011);
-
-  container.appendChild(row4);
-  row4.appendChild(col41);
-  col41.appendChild(input411);
-  col41.appendChild(label411);
-  container.appendChild(row4b);
-  row4b.appendChild(col4b1);
-  col4b1.appendChild(input4b11);
-  col4b1.appendChild(label4b11);
-
-  cmap = [
-    "None",
-    "Greys_r",
-    "Greys",
-    "Accent",
-    "Accent_r",
-    "Blues",
-    "Blues_r",
-    "BrBG",
-    "BrBG_r",
-    "BuGn",
-    "BuGn_r",
-    "BuPu",
-    "BuPu_r",
-    "CMRmap",
-    "CMRmap_r",
-    "Dark2",
-    "Dark2_r",
-    "GnBu",
-    "GnBu_r",
-    "Greens",
-    "Greens_r",
-    "OrRd",
-    "OrRd_r",
-    "Oranges",
-    "Oranges_r",
-    "PRGn",
-    "PRGn_r",
-    "Paired",
-    "Paired_r",
-    "Pastel1",
-    "Pastel1_r",
-    "Pastel2",
-    "Pastel2_r",
-    "PiYG",
-    "PiYG_r",
-    "PuBu",
-    "PuBuGn",
-    "PuBuGn_r",
-    "PuBu_r",
-    "PuOr",
-    "PuOr_r",
-    "PuRd",
-    "PuRd_r",
-    "Purples",
-    "Purples_r",
-    "RdBu",
-    "RdBu_r",
-    "RdGy",
-    "RdGy_r",
-    "RdPu",
-    "RdPu_r",
-    "RdYlBu",
-    "RdYlBu_r",
-    "RdYlGn",
-    "RdYlGn_r",
-    "Reds",
-    "Reds_r",
-    "Set1",
-    "Set1_r",
-    "Set2",
-    "Set2_r",
-    "Set3",
-    "Set3_r",
-    "Spectral",
-    "Spectral_r",
-    "Wistia",
-    "Wistia_r",
-    "YlGn",
-    "YlGnBu",
-    "YlGnBu_r",
-    "YlGn_r",
-    "YlOrBr",
-    "YlOrBr_r",
-    "YlOrRd",
-    "YlOrRd_r",
-    "afmhot",
-    "afmhot_r",
-    "autumn",
-    "autumn_r",
-    "binary",
-    "binary_r",
-    "bone",
-    "bone_r",
-    "brg",
-    "brg_r",
-    "bwr",
-    "bwr_r",
-    "cividis",
-    "cividis_r",
-    "cool",
-    "cool_r",
-    "coolwarm",
-    "coolwarm_r",
-    "copper",
-    "copper_r",
-    "cubehelix",
-    "cubehelix_r",
-    "flag",
-    "flag_r",
-    "gist_earth",
-    "gist_earth_r",
-    "gist_gray",
-    "gist_gray_r",
-    "gist_heat",
-    "gist_heat_r",
-    "gist_ncar",
-    "gist_ncar_r",
-    "gist_rainbow",
-    "gist_rainbow_r",
-    "gist_stern",
-    "gist_stern_r",
-    "gist_yarg",
-    "gist_yarg_r",
-    "gnuplot",
-    "gnuplot2",
-    "gnuplot2_r",
-    "gnuplot_r",
-    "gray",
-    "gray_r",
-    "hot",
-    "hot_r",
-    "hsv",
-    "hsv_r",
-    "inferno",
-    "inferno_r",
-    "jet",
-    "jet_r",
-    "magma",
-    "magma_r",
-    "nipy_spectral",
-    "nipy_spectral_r",
-    "ocean",
-    "ocean_r",
-    "pink",
-    "pink_r",
-    "plasma",
-    "plasma_r",
-    "prism",
-    "prism_r",
-    "rainbow",
-    "rainbow_r",
-    "seismic",
-    "seismic_r",
-    "spring",
-    "spring_r",
-    "summer",
-    "summer_r",
-    "tab10",
-    "tab10_r",
-    "tab20",
-    "tab20_r",
-    "tab20b",
-    "tab20b_r",
-    "tab20c",
-    "tab20c_r",
-    "terrain",
-    "terrain_r",
-    "turbo",
-    "turbo_r",
-    "twilight",
-    "twilight_r",
-    "twilight_shifted",
-    "twilight_shifted_r",
-    "viridis",
-    "viridis_r",
-    "winter",
-    "winter_r",
-  ];
-  interfaceUtils.addElementsToSelect("Spot_Inspector_colormap", cmap);
   if (Object.keys(dataUtils.data).length > 0) {
-    interfaceUtils.cleanSelect("marker_row");
+    let marker_row = Spot_Inspector.getInputID("_marker_row");
+    interfaceUtils.cleanSelect(marker_row);
     interfaceUtils.addElementsToSelect(
-      "marker_row",
-      Object.values(dataUtils.data)[0]._csv_header
+      marker_row,
+      [0].concat(Object.values(dataUtils.data)[0]._csv_header),
     );
 
-    interfaceUtils.cleanSelect("marker_col");
+    let marker_col = Spot_Inspector.getInputID("_marker_col");
+    interfaceUtils.cleanSelect(marker_col);
     interfaceUtils.addElementsToSelect(
-      "marker_col",
-      Object.values(dataUtils.data)[0]._csv_header
+      marker_col,
+      [0].concat(Object.values(dataUtils.data)[0]._csv_header),
     );
+
+    let layername = Spot_Inspector.getInputID("_layername");
+    interfaceUtils.cleanSelect(layername);
+    interfaceUtils.addElementsToSelect(
+      layername,
+      [null].concat(Object.values(dataUtils.data)[0]._csv_header),
+    );
+
     if (
       Object.values(dataUtils.data)[0]._csv_header.indexOf(
-        Spot_Inspector._marker_row
+        Spot_Inspector.get("_layername"),
       ) > 0
     ) {
-      interfaceUtils.getElementById("marker_row").value =
-        Spot_Inspector._marker_row;
+      Spot_Inspector.set("_layername", Spot_Inspector.get("_layername"));
     }
     if (
       Object.values(dataUtils.data)[0]._csv_header.indexOf(
-        Spot_Inspector._marker_col
+        Spot_Inspector.get("_marker_row"),
       ) > 0
     ) {
-      interfaceUtils.getElementById("marker_col").value =
-        Spot_Inspector._marker_col;
+      Spot_Inspector.set("_marker_row", Spot_Inspector.get("_marker_row"));
+    }
+    if (
+      Object.values(dataUtils.data)[0]._csv_header.indexOf(
+        Spot_Inspector.get("_marker_col"),
+      ) > 0
+    ) {
+      Spot_Inspector.set("_marker_col", Spot_Inspector.get("_marker_col"));
     }
   }
-  Spot_Inspector.run();
+
+  let advancedSectionIndex = 9;
+
+  let advancedSectionElement = document.querySelector(
+    `#plugin-Spot_Inspector div:nth-child(${advancedSectionIndex}) div h6`,
+  );
+  advancedSectionElement?.setAttribute("data-bs-toggle", "collapse");
+  advancedSectionElement?.setAttribute("data-bs-target", "#collapse_advanced");
+  advancedSectionElement?.setAttribute("aria-expanded", "false");
+  advancedSectionElement?.setAttribute("aria-controls", "collapse_advanced");
+  advancedSectionElement?.setAttribute(
+    "class",
+    "collapse_button_transform border-bottom-0 p-1 collapsed",
+  );
+  advancedSectionElement?.setAttribute("style", "cursor: pointer;");
+  advancedSectionElement?.setAttribute("title", "Click to expand");
+  let newDiv = document.createElement("div");
+  newDiv.setAttribute("id", "collapse_advanced");
+  newDiv.setAttribute("class", "collapse");
+  $("#plugin-Spot_Inspector").append(newDiv);
+  let advancedSectionSubtitle = document.querySelector(
+    `#plugin-Spot_Inspector div:nth-child(${advancedSectionIndex}) div p`,
+  );
+  newDiv.appendChild(advancedSectionSubtitle);
+  for (
+    let indexElement = advancedSectionIndex + 1;
+    indexElement < Object.keys(Spot_Inspector.parameters).length + 1;
+    indexElement++
+  ) {
+    let element = document.querySelector(
+      `#plugin-Spot_Inspector div:nth-child(${advancedSectionIndex + 1})`,
+    );
+    newDiv.appendChild(element);
+  }
+
+  //Spot_Inspector.run();
+  setTimeout(() => Spot_Inspector.getMatrix(), 2000);
 };
 
 Spot_Inspector.loadImages = function (pathFormat) {
-  console.log("Import images into layers");
   var op = tmapp["object_prefix"];
   var vname = op + "_viewer";
 
   subfolder = window.location.pathname.substring(
     0,
-    window.location.pathname.lastIndexOf("/")
+    window.location.pathname.lastIndexOf("/"),
   );
   //subfolder = subfolder.substring(0, subfolder.lastIndexOf('/') + 1);
   const queryString = window.location.search;
@@ -555,8 +260,7 @@ Spot_Inspector.loadImages = function (pathFormat) {
       else projectUtils.loadProject(data);
       setTimeout(function () {
         Spot_Inspector.updateLayerFormat(false);
-        $("#Spot_Inspector_layer_format")[0].value =
-          Spot_Inspector._layer_format;
+        Spot_Inspector.getMatrix();
       }, 500);
     },
     complete: function (data) {
@@ -565,7 +269,7 @@ Spot_Inspector.loadImages = function (pathFormat) {
     error: function (data) {
       interfaceUtils.alert(
         data.responseText.replace("\n", "<br/>"),
-        "Error on the plugin's server response"
+        "Error on the plugin's server response",
       );
     },
   });
@@ -578,8 +282,9 @@ Spot_Inspector.run = function () {
   var vname = op + "_viewer";
 
   var click_handler = function (event) {
+    return;
     if (event.quick) {
-      var OSDviewer = tmapp[tmapp["object_prefix"] + "_viewer"];
+      /*var OSDviewer = tmapp[tmapp["object_prefix"] + "_viewer"];
       var tiledImage = OSDviewer.world.getItemAt(0);
       var viewportCoords = OSDviewer.viewport.pointFromPixel(event.position);
       var normCoords = tiledImage.viewportToImageCoordinates(viewportCoords);
@@ -589,17 +294,16 @@ Spot_Inspector.run = function () {
         Math.round(normCoords.y - Spot_Inspector._bboxSize / 2),
         Spot_Inspector._bboxSize,
         Spot_Inspector._bboxSize,
-      ];
+      ];*/
       var markers = Spot_Inspector.getMarkers(bbox);
       if (markers.length > 0) {
         if (!Spot_Inspector._layer_format)
           Spot_Inspector.updateLayerFormat(false);
       }
-      img = document.getElementById("ISS_Spot_Inspector_img");
-      if (img) img.style.filter = "blur(5px)";
-      Spot_Inspector.getMatrix(bbox, tmapp.layers, markers);
+      let img = document.getElementById("ISS_Spot_Inspector_img");
+      Spot_Inspector.getMatrix();
 
-      color = "red";
+      /*color = "red";
       var boundBoxOverlay = document.getElementById("overlay-Spot_Inspector");
       if (boundBoxOverlay) {
         OSDviewer.removeOverlay(boundBoxOverlay);
@@ -614,7 +318,7 @@ Spot_Inspector.run = function () {
       boundBoxOverlay.css({
         border: "2px solid " + color,
       });
-      OSDviewer.addOverlay(boundBoxOverlay.get(0), boundBoxRect);
+      OSDviewer.addOverlay(boundBoxOverlay.get(0), boundBoxRect);*/
     } else {
       //if it is not quick then its panning
       // nothing
@@ -634,19 +338,22 @@ Spot_Inspector.run = function () {
       "canvas-click",
       (event) => {
         click_handler(event);
-      }
+      },
     );
   }
 };
 
 Spot_Inspector.updateLayerFormat = function (doPrompt) {
+  function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
+  }
   if (doPrompt == undefined) doPrompt = true;
   rounds = [];
   channels = [];
 
   var difference = patienceDiff(
-    tmapp.layers[0].name.split(""),
-    tmapp.layers[tmapp.layers.length - 1].name.split("")
+    escapeRegExp(tmapp.layers[0].name).split(""),
+    escapeRegExp(tmapp.layers[tmapp.layers.length - 1].name).split(""),
   );
   fieldNames = ["row", "col"];
   var format = difference.lines.reduce(function (a, b) {
@@ -660,7 +367,7 @@ Spot_Inspector.updateLayerFormat = function (doPrompt) {
   if ((format.match(/\{/g) || []).length > 2) {
     format = "{col}";
   }
-  Spot_Inspector._layer_format = format;
+  Spot_Inspector.set("_layer_format", format);
 };
 
 Spot_Inspector.getMarkers = function (bbox) {
@@ -675,7 +382,7 @@ Spot_Inspector.getMarkers = function (bbox) {
     for (var codeIndex in dataUtils.data[dataset]["_groupgarden"]) {
       var inputs = interfaceUtils._mGenUIFuncs.getGroupInputs(
         dataset,
-        codeIndex
+        codeIndex,
       );
       var hexColor = "color" in inputs ? inputs["color"] : "#ffff00";
       var visible = "visible" in inputs ? inputs["visible"] : true;
@@ -691,7 +398,7 @@ Spot_Inspector.getMarkers = function (bbox) {
             xselector: dataUtils.data[dataset]["_X"],
             yselector: dataUtils.data[dataset]["_Y"],
             dataset: dataset,
-          }
+          },
         );
         newMarkers.forEach(function (m) {
           m.color = hexColor;
@@ -714,78 +421,636 @@ Spot_Inspector.getMarkers = function (bbox) {
   return markersInViewportBounds;
 };
 
-Spot_Inspector.getMatrix = function (bbox, layers, markers, order) {
+Spot_Inspector.getMatrix = function () {
   var op = tmapp["object_prefix"];
   var vname = op + "_viewer";
-  console.log("Calling ajax getMatrix");
-  const queryString = window.location.search;
-  const urlParams = new URLSearchParams(queryString);
-  const path = urlParams.get("path");
-  $.ajax({
-    // Post select to url.
-    type: "post",
-    url: "/plugins/Spot_Inspector/getMatrix",
-    contentType: "application/json; charset=utf-8",
-    data: JSON.stringify({
-      bbox: bbox,
-      figureSize: Spot_Inspector._figureSize,
-      show_trace: Spot_Inspector._show_trace,
-      layers: layers,
-      path: path,
-      markers: markers,
-      marker_row: Spot_Inspector._marker_row,
-      marker_col: Spot_Inspector._marker_col,
-      layer_format: Spot_Inspector._layer_format,
-      cmap: Spot_Inspector._cmap,
-      use_raw: Spot_Inspector._use_raw,
-    }),
-    success: function (data) {
-      img = document.getElementById("ISS_Spot_Inspector_img");
-      if (!img) {
-        var img = document.createElement("img");
-        img.id = "ISS_Spot_Inspector_img";
-        var elt = document.createElement("div");
-        elt.classList.add("viewer-layer");
-        //elt.classList.add("px-1");
-        //elt.classList.add("mx-1");
-        elt.style.maxWidth = "800px";
-        elt.style.maxHeight = "800px";
-        elt.style.overflow = "auto";
+  let img = document.getElementById("ISS_Spot_Inspector_viewer");
+  let getCoord = Spot_Inspector.getCoordinates();
+  let layers = getCoord[0];
+  console.log("LAYERS:", layers);
+  if (!img) {
+    img = document.createElement("div");
+    img.id = "ISS_Spot_Inspector_viewer";
+    img.style.width = "50px";
+    img.style.height = "50px";
 
-        elt.appendChild(img);
-        tmapp[vname].addControl(elt, {
-          anchor: OpenSeadragon.ControlAnchor.BOTTOM_RIGHT,
-        });
-        elt.parentElement.parentElement.style.zIndex = "100";
-        elt.style.display = "inherit";
+    var elt = document.createElement("div");
+    elt.classList.add("viewer-layer");
+    //elt.classList.add("px-1");
+    //elt.classList.add("mx-1");
+    elt.style.overflow = "auto";
+    elt.style.background = "#000000";
+    elt.appendChild(img);
+    tmapp[vname].addControl(elt, {
+      anchor: OpenSeadragon.ControlAnchor.BOTTOM_RIGHT,
+    });
+    elt.parentElement.parentElement.style.zIndex = "100";
+    elt.style.display = "inherit";
 
-        let eltClose = document.createElement("div");
-        eltClose.className = "closeFeature_Space px-1 mx-1 viewer-layer";
-        eltClose.id = "closeSpot_Inspector";
-        eltClose.style.zIndex = "100";
-        eltClose.style.cursor = "pointer";
-        eltClose.style.position = "absolute";
-        eltClose.style.left = "5px";
-        eltClose.style.top = "5px";
-        eltClose.innerHTML = "<i class='bi bi-x-lg'></i>";
-        eltClose.addEventListener("click", function (event) {
-          img.parentElement.remove();
-        });
-        elt.appendChild(eltClose);
-      }
-      img.setAttribute("src", "data:image/png;base64," + data);
-      img.style.filter = "none";
-    },
-    complete: function (data) {
-      // do something, not critical.
-    },
-    error: function (data) {
-      interfaceUtils.alert(
-        data.responseText.replace("\n", "<br/>"),
-        "Error on the plugin's server response"
-      );
-    },
+    let eltClose = document.createElement("div");
+    eltClose.className = "closeFeature_Space px-1 mx-1 viewer-layer";
+    eltClose.id = "closeSpot_Inspector";
+    eltClose.style.zIndex = "100";
+    eltClose.style.cursor = "pointer";
+    eltClose.style.position = "absolute";
+    eltClose.style.right = "5px";
+    eltClose.style.top = "5px";
+    eltClose.innerHTML = "<i class='bi bi-x-lg'></i>";
+    eltClose.addEventListener("click", function (event) {
+      img.parentElement.remove();
+    });
+    elt.appendChild(eltClose);
+
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    const path = urlParams.get("path");
+    var _url_suffix = "";
+    if (path != null) {
+      _url_suffix = path + "/";
+    }
+
+    let options_osd = {
+      id: "ISS_Spot_Inspector_viewer",
+      showNavigator: false,
+      animationTime: 0.0,
+      blendTime: 0,
+      minZoomImageRatio: 1,
+      maxZoomPixelRatio: 30,
+      immediateRender: true,
+      showNavigationControl: false,
+      imageLoaderLimit: 50,
+      preload: false,
+      imageSmoothingEnabled: false,
+      mouseNavEnabled: false,
+      preserveImageSizeOnResize: true,
+    };
+    Spot_Inspector.osd_viewer = OpenSeadragon(options_osd);
+    Spot_Inspector.svgOverlay = Spot_Inspector.osd_viewer.svgOverlay();
+    Spot_Inspector.d3Node = d3.select(Spot_Inspector.svgOverlay.node());
+    Spot_Inspector.pathNode = Spot_Inspector.d3Node.append("g");
+    for (let layer of layers) {
+      Spot_Inspector.osd_viewer.addTiledImage({
+        tileSource: _url_suffix + layer.tileSource,
+        x: 0,
+        y: 0,
+        opacity: 0,
+      });
+    }
+    Spot_Inspector.setFilters();
+    new OpenSeadragon.MouseTracker({
+      element: tmapp.ISS_viewer.canvas,
+      moveHandler: (event) => Spot_Inspector.moveHandler(event),
+      scrollHandler: (event) => Spot_Inspector.moveHandler(event),
+    }).setTracking(true);
+    setTimeout(document.getElementById("ISS_viewer").click(), 2000);
+    setTimeout(document.getElementById("ISS_viewer").click(), 3000);
+
+    tmapp.ISS_viewer.addHandler("animation", function animationHandler(event) {
+      Spot_Inspector.moveHandler(event);
+    });
+    Spot_Inspector.osd_viewer.addHandler(
+      "resize",
+      function animationFinishHandler(event) {
+        Spot_Inspector.moveHandler(event);
+      },
+    );
+    Spot_Inspector.animationTimeout = null;
+    Spot_Inspector.osd_viewer.addHandler(
+      "animation-finish",
+      function animationFinishHandler(event) {
+        Spot_Inspector.animationTimeout = null;
+        var count = Spot_Inspector.osd_viewer.world.getItemCount();
+        for (var i = 0; i < count; i++) {
+          var tiledImage = Spot_Inspector.osd_viewer.world.getItemAt(i);
+          tiledImage.immediateRender = true;
+        }
+        Spot_Inspector.osd_viewer.imageLoaderLimit = 0;
+      },
+    );
+    Spot_Inspector.osd_viewer.addHandler(
+      "animation-start",
+      function animationStartHandler(event) {
+        if (Spot_Inspector.animationTimeout == null) {
+          Spot_Inspector.animationTimeout = setTimeout(function () {
+            if (Spot_Inspector.animationTimeout == null) return;
+            var count = Spot_Inspector.osd_viewer.world.getItemCount();
+            for (var i = 0; i < count; i++) {
+              var tiledImage = Spot_Inspector.osd_viewer.world.getItemAt(i);
+              tiledImage.immediateRender = false;
+            }
+            Spot_Inspector.osd_viewer.imageLoaderLimit = 2;
+          }, 200);
+        }
+      },
+    );
+  }
+};
+
+Caman.Filter.register("log", function (channelValue) {
+  this.process("log", function (rgba) {
+    //console.log(rgba.r, rgba.g, rgba.b)
+    let c = 255; // / (Math.log(1+255))
+    rgba.r = c * Math.exp(1 - rgba.r / 255);
+    rgba.g = c * Math.exp(1 - rgba.g / 255);
+    rgba.b = c * Math.exp(1 - rgba.b / 255);
+    //console.log(rgba.r, rgba.g, rgba.b)
+
+    // Return the modified RGB values
+    return rgba;
   });
+});
+
+Spot_Inspector.setFilters = function () {
+  if (!filterUtils._filters["Log"]) {
+    filterUtils._filters["Log"] = {
+      params: {
+        type: "checkbox",
+      },
+      filterFunction: function (value) {
+        if (value == false) {
+          return function (context, callback) {
+            callback();
+          };
+        } else {
+          return function (context, callback) {
+            Caman(context.canvas, function () {
+              this.log(value);
+              this.render(callback);
+            });
+          };
+        }
+      },
+    };
+  }
+
+  if (false) {
+    Spot_Inspector.osd_viewer.setFilterOptions({
+      filters: [],
+      loadMode: "async",
+    });
+    return;
+  }
+  Spot_Inspector.waitLayersReady().then(() => {
+    console.log("Add Items!");
+    filters = [];
+    for (const layer in filterUtils._filterItems) {
+      processors = [];
+      if (Spot_Inspector.get("_gamma") != 1) {
+        processors.push(
+          filterUtils._filters["Gamma"]["filterFunction"](
+            Spot_Inspector.get("_gamma"),
+          ),
+        );
+      }
+      if (Spot_Inspector.get("_cmap") != "undefined") {
+        processors.push(
+          filterUtils._filters["Colormap"]["filterFunction"](
+            parseInt(Spot_Inspector.get("_cmap")) + 1,
+          ),
+        );
+      }
+      for (
+        var filterIndex = 0;
+        filterIndex < filterUtils._filterItems[layer].length;
+        filterIndex++
+      ) {
+        if (filterUtils._filterItems[layer][filterIndex].name != "Color") {
+          processors.push(
+            filterUtils._filterItems[layer][filterIndex].filterFunction(
+              filterUtils._filterItems[layer][filterIndex].value,
+            ),
+          );
+        }
+      }
+      filters.push({
+        items: Spot_Inspector.osd_viewer.world.getItemAt(layer),
+        processors: processors,
+        toReset: true,
+      });
+    }
+    Spot_Inspector.osd_viewer.setFilterOptions({
+      filters: filters,
+      loadMode: "async",
+    });
+    for (var i = 0; i < Spot_Inspector.osd_viewer.world._items.length; i++) {
+      Spot_Inspector.osd_viewer.world._items[i].tilesMatrix = {};
+      Spot_Inspector.osd_viewer.world._items[i]._needsDraw = true;
+    }
+  });
+};
+
+Spot_Inspector.waitLayersReady = async function () {
+  await new Promise((r) => setTimeout(r, 200));
+  while (
+    !(
+      !Spot_Inspector.osd_viewer.world ||
+      !Spot_Inspector.osd_viewer.world.getItemCount() != tmapp.layers.length
+    )
+  ) {
+    await new Promise((r) => setTimeout(r, 200));
+  }
+};
+
+Spot_Inspector.getCoordinates = function () {
+  let layers = tmapp.layers,
+    layer_format = Spot_Inspector.get("_layer_format");
+
+  const invert_row_col =
+    layer_format.indexOf("{row}") > layer_format.indexOf("{col}");
+  const regexp_format = new RegExp(
+    layer_format.replace(/\{row\}|\{col\}/g, "(.*)"),
+  );
+
+  const outputFields = [];
+  const kept_layers = [];
+  for (const layer of layers) {
+    const tileCoord = layer["name"].match(regexp_format);
+    if (tileCoord === null) {
+      continue;
+    }
+    kept_layers.push(layer);
+    let tileCoordList;
+    if (invert_row_col) {
+      tileCoordList = Array.from(tileCoord).slice(1);
+    } else {
+      tileCoordList = Array.from(tileCoord).slice(1).reverse(); // Remove the full match (index 0)
+    }
+    outputFields.push(tileCoordList);
+  }
+  let rowNames = Array.from(new Set(outputFields.map((fields) => fields[0]))); //.sort();
+  let colNames = Array.from(new Set(outputFields.map((fields) => fields[1]))); //.sort();
+  console.log(regexp_format, rowNames, colNames, outputFields);
+  outputFields.map((fields) => {
+    fields[0] = rowNames.indexOf(fields[0]);
+    fields[1] = colNames.indexOf(fields[1]);
+  });
+  // We check if two coordinates are similar, and add one if it the case:
+  for (let i = 0; i < outputFields.length; i++) {
+    for (let j = i + 1; j < outputFields.length; j++) {
+      if (
+        outputFields[i][0] == outputFields[j][0] &&
+        outputFields[i][1] == outputFields[j][1]
+      ) {
+        outputFields[j][1] += 1;
+      }
+    }
+  }
+
+  console.log(outputFields);
+  layers = kept_layers;
+  return [kept_layers, outputFields];
+};
+
+Spot_Inspector.moveHandler = function (event) {
+  let img = document.getElementById("ISS_Spot_Inspector_viewer");
+  if (!img) return;
+  if (Spot_Inspector.osd_viewer.world.getItemCount() == 0) return;
+  if (!event.position) event.position = Spot_Inspector.lastEventPosition;
+  Spot_Inspector.lastEventPosition = event.position;
+  let getCoord = Spot_Inspector.getCoordinates();
+  let layers = getCoord[0];
+  let layerCoordinates = getCoord[1];
+  var patch_width = 200;
+  var font_height = 23;
+  var margin = 5;
+  var zoom;
+  if (false) {
+    zoom = 1;
+  } else {
+    zoom = tmapp.ISS_viewer.world
+      .getItemAt(0)
+      .viewportToImageZoom(tmapp.ISS_viewer.viewport.getZoom());
+  }
+  patch_width /= zoom;
+  font_height /= zoom;
+  margin /= zoom;
+  if (event.position) {
+    Spot_Inspector.position = event.position;
+  } else if (!Spot_Inspector.position) {
+    return;
+  }
+  var normCoords = tmapp.ISS_viewer.viewport.pointFromPixel(
+    Spot_Inspector.position,
+  );
+  var imagePoint = tmapp.ISS_viewer.world
+    .getItemAt(0)
+    .viewportToImageCoordinates(normCoords);
+
+  //var targetZoom = tmapp.ISS_viewer.world.getItemAt(0).source.dimensions.x / Spot_Inspector.osd_viewer.viewport.getContainerSize().x;
+  //Spot_Inspector.osd_viewer.viewport.panTo(normCoords, true);
+  //Spot_Inspector.osd_viewer.viewport.zoomTo(targetZoom/2, normCoords, true);
+  let x_point_offset_max = 0;
+  let y_point_offset_max = 0;
+  for (let layer in layers) {
+    let layerCoordinate = layerCoordinates[layer];
+
+    layer = parseInt(layer);
+    if (Spot_Inspector.osd_viewer.world.getItemCount() - 1 < layer) break;
+
+    let overlay = Spot_Inspector.osd_viewer.getOverlayById(
+      "Spot_Inspector_overlay_" + layer,
+    );
+    if (!overlay) {
+      var elt = document.createElement("div");
+      elt.id = "Spot_Inspector_overlay_" + layer;
+      elt.className = "Spot_Inspector_overlay";
+      elt.innerText = layers[layer].name.substring(0, 20);
+      elt.style.fontSize = "12px";
+      elt.style.color = "#FFFFFF";
+      document.body.appendChild(elt);
+      position = new OpenSeadragon.Point(0, 0);
+      Spot_Inspector.osd_viewer.addOverlay(
+        elt.id,
+        position,
+        OpenSeadragon.Placement.TOP,
+      );
+      overlay = Spot_Inspector.osd_viewer.getOverlayById(
+        "Spot_Inspector_overlay_" + layer,
+      );
+    }
+
+    var tiledImage = Spot_Inspector.osd_viewer.world.getItemAt(layer); // Assuming you just have a single image in the viewer
+    tiledImage.setClip(
+      new OpenSeadragon.Rect(
+        imagePoint.x - patch_width / 2,
+        imagePoint.y - patch_width / 2,
+        patch_width,
+        patch_width,
+      ),
+    );
+    let x_point_offset = layerCoordinate[0] * (patch_width + margin);
+    x_point_offset_max = Math.max(
+      x_point_offset_max,
+      x_point_offset + patch_width,
+    );
+    let y_point_offset = layerCoordinate[1] * (patch_width + font_height);
+    y_point_offset_max = Math.max(
+      y_point_offset_max,
+      y_point_offset + patch_width,
+    );
+    var point = new OpenSeadragon.Point(x_point_offset, y_point_offset);
+    tiledImage.setPosition(
+      Spot_Inspector.osd_viewer.world
+        .getItemAt(0)
+        .imageToViewportCoordinates(point),
+      true,
+    );
+
+    let label_position = new OpenSeadragon.Rect(
+      imagePoint.x - patch_width / 2 + x_point_offset,
+      imagePoint.y - patch_width / 2 + y_point_offset - font_height,
+      patch_width,
+      font_height,
+    );
+    overlay.update(
+      Spot_Inspector.osd_viewer.world
+        .getItemAt(0)
+        .imageToViewportRectangle(label_position),
+      OpenSeadragon.Placement.TOP_LEFT,
+    );
+    tiledImage.setOpacity(100);
+  }
+  Spot_Inspector.osd_viewer.viewport.fitBounds(
+    Spot_Inspector.osd_viewer.world
+      .getItemAt(0)
+      .imageToViewportRectangle(
+        new OpenSeadragon.Rect(
+          imagePoint.x - patch_width / 2,
+          imagePoint.y - patch_width / 2 - font_height,
+          x_point_offset_max,
+          y_point_offset_max + font_height,
+        ),
+      ),
+    true,
+  );
+
+  // Change window size:
+  let ratio = x_point_offset_max / (y_point_offset_max + font_height);
+  if (ratio > 1) {
+    let max_width = Math.min(
+      Spot_Inspector.get("_max_width"),
+      document.getElementById("ISS_viewer")?.offsetWidth || 0,
+    );
+    document.getElementById("ISS_Spot_Inspector_viewer").style.width =
+      max_width + "px";
+    document.getElementById("ISS_Spot_Inspector_viewer").style.height =
+      max_width / ratio + "px";
+  } else {
+    let max_height = Math.min(
+      Spot_Inspector.get("_max_width"),
+      document.getElementById("ISS_viewer")?.offsetHeight || 0,
+    );
+    document.getElementById("ISS_Spot_Inspector_viewer").style.width =
+      max_height * ratio + "px";
+    document.getElementById("ISS_Spot_Inspector_viewer").style.height =
+      max_height + "px";
+  }
+
+  let overlay = Spot_Inspector.osd_viewer.getOverlayById(
+    "Spot_Inspector_overlay_0",
+  );
+  let real_font_size = overlay.size.y / 1.3;
+  for (let layer in layers) {
+    let overlay = Spot_Inspector.osd_viewer.getOverlayById(
+      "Spot_Inspector_overlay_" + layer,
+    );
+    if (overlay) overlay.style.fontSize = real_font_size + "px";
+  }
+
+  var OSDviewer = tmapp[tmapp["object_prefix"] + "_viewer"];
+  var tiledImage = OSDviewer.world.getItemAt(0);
+  var viewportCoords = OSDviewer.viewport.pointFromPixel(event.position);
+  var normCoords = tiledImage.viewportToImageCoordinates(viewportCoords);
+  console.log(patch_width, Spot_Inspector._bboxSize);
+  let _bboxSize = Math.min(25, patch_width);
+  var bbox = [
+    Math.round(normCoords.x - _bboxSize / 2),
+    Math.round(normCoords.y - _bboxSize / 2),
+    _bboxSize,
+    _bboxSize,
+  ];
+  let markers = Spot_Inspector.getMarkers(bbox),
+    marker_row = Spot_Inspector._marker_row,
+    marker_col = Spot_Inspector._marker_col;
+
+  var canvas = Spot_Inspector.pathNode.node();
+  let regionobj = d3.select(canvas);
+  regionobj.selectAll("polyline").remove();
+  for (let layer in layers) {
+    let layerCoordinate = layerCoordinates[layer];
+    let x_point_offset = layerCoordinate[0] * (patch_width + margin);
+    let y_point_offset = layerCoordinate[1] * (patch_width + font_height);
+    for (let edges of [
+      [-1, 0, 1, 0],
+      [0, -1, 0, 1],
+    ]) {
+      let p1 = Spot_Inspector.osd_viewer.world
+          .getItemAt(0)
+          .imageToViewportCoordinates(
+            normCoords.x +
+              x_point_offset +
+              edges[0] *
+                0.005 *
+                patch_width *
+                Spot_Inspector.get("_line_width"),
+            normCoords.y +
+              y_point_offset +
+              edges[1] *
+                0.005 *
+                patch_width *
+                Spot_Inspector.get("_line_width"),
+          ),
+        p2 = Spot_Inspector.osd_viewer.world
+          .getItemAt(0)
+          .imageToViewportCoordinates(
+            normCoords.x +
+              x_point_offset +
+              edges[2] *
+                0.005 *
+                patch_width *
+                Spot_Inspector.get("_line_width"),
+            normCoords.y +
+              y_point_offset +
+              edges[3] *
+                0.005 *
+                patch_width *
+                Spot_Inspector.get("_line_width"),
+          );
+      let strokeWstr =
+        (Spot_Inspector.get("_line_width") * 0.0005) /
+        Spot_Inspector.osd_viewer.viewport.getZoom();
+      var polyline = regionobj
+        .append("polyline")
+        .attr("points", [
+          [p1.x, p1.y],
+          [p2.x, p2.y],
+        ])
+        .style("fill", "none")
+        .attr("stroke-width", strokeWstr)
+        .attr("stroke", "#FFFFFF");
+    }
+  }
+  if (!Spot_Inspector.get("_marker_col")) return;
+
+  for (let marker of markers) {
+    let marker_col = marker[Spot_Inspector.get("_marker_col")]
+      ? marker[Spot_Inspector.get("_marker_col")]
+      : 0;
+    let marker_row = marker[Spot_Inspector.get("_marker_row")]
+      ? marker[Spot_Inspector.get("_marker_row")]
+      : 0;
+    let layername = marker[Spot_Inspector.get("_layername")]
+      ? marker[Spot_Inspector.get("_layername")]
+      : null;
+    let x = marker["global_X_pos"],
+      y = marker["global_Y_pos"];
+    // Compute the opacity so that it is 1 in the center of patch_width and 0 at the border
+    let opacity =
+      1 -
+      1.5 *
+        Math.max(
+          0,
+          Math.min(
+            1,
+            (Math.abs(x - normCoords.x) + Math.abs(y - normCoords.y)) /
+              patch_width,
+          ),
+        );
+    if (
+      marker_col.toString().indexOf(";") > -1 &&
+      marker_row.toString().indexOf(";") > -1
+    ) {
+      let channels = marker_col.split(";"),
+        rounds = marker_row.split(";");
+      let pathPoints = [];
+      for (let i = 0; i < channels.length; i++) {
+        let channel = parseInt(channels[i]),
+          round = parseInt(rounds[i]);
+        let point_x = x + channel * (patch_width + margin),
+          point_y = y + round * (patch_width + font_height);
+        let viewportPoint = Spot_Inspector.osd_viewer.world
+          .getItemAt(0)
+          .imageToViewportCoordinates(point_x, point_y);
+        pathPoints.push([viewportPoint.x, viewportPoint.y]);
+      }
+      //var OSDviewer = tmapp[tmapp["object_prefix"] + "_viewer"];
+      //var normCoords = OSDviewer.viewport.pointFromPixel(event.position);
+      let idregion = 0;
+
+      let strokeWstr =
+        (Spot_Inspector.get("_line_width") * 0.001) /
+        Spot_Inspector.osd_viewer.viewport.getZoom();
+      var polyline = regionobj
+        .append("polyline")
+        .attr("points", pathPoints)
+        .style("fill", "none")
+        .attr("stroke-width", strokeWstr)
+        .attr("stroke", marker["color"])
+        .attr("class", "region" + marker[""])
+        .attr("opacity", opacity);
+    } else if (layername) {
+      console.log("Layer names: ", layername, layers);
+      let layerIndex = layers
+        .map((x) => {
+          return x.name;
+        })
+        .indexOf(layername + ".dzi");
+      let coord = layerCoordinates[layerIndex];
+      console.log("Coordinates: ", coord);
+      let channel = coord[0],
+        round = coord[1];
+      console.log(channel, round);
+      let point_x = channel ? x + channel * (patch_width + margin) : x,
+        point_y = round ? y + round * (patch_width + font_height) : y;
+      for (let edges of [
+        [-1, -1, 1, 1],
+        [-1, 1, 1, -1],
+      ]) {
+        let p1 = Spot_Inspector.osd_viewer.world
+            .getItemAt(0)
+            .imageToViewportCoordinates(
+              point_x +
+                edges[0] *
+                  0.01 *
+                  patch_width *
+                  Spot_Inspector.get("_line_width"),
+              point_y +
+                edges[1] *
+                  0.01 *
+                  patch_width *
+                  Spot_Inspector.get("_line_width"),
+            ),
+          p2 = Spot_Inspector.osd_viewer.world
+            .getItemAt(0)
+            .imageToViewportCoordinates(
+              point_x +
+                edges[2] *
+                  0.01 *
+                  patch_width *
+                  Spot_Inspector.get("_line_width"),
+              point_y +
+                edges[3] *
+                  0.01 *
+                  patch_width *
+                  Spot_Inspector.get("_line_width"),
+            );
+        let strokeWstr =
+          (Spot_Inspector.get("_line_width") * 0.001) /
+          Spot_Inspector.osd_viewer.viewport.getZoom();
+        var polyline = regionobj
+          .append("polyline")
+          .attr("points", [
+            [p1.x, p1.y],
+            [p2.x, p2.y],
+          ])
+          .style("fill", "none")
+          .attr("stroke-width", strokeWstr)
+          .attr("stroke", marker["color"])
+          .attr("class", "region" + marker[""])
+          .attr("opacity", opacity);
+      }
+    }
+  }
 };
 
 ///////////////////////////////////////////
@@ -1035,7 +1300,7 @@ function patienceDiff(aLines, bLines, diffPlusFlag) {
 
   function recurseLCS(aLo, aHi, bLo, bHi, uniqueCommonMap) {
     const x = longestCommonSubsequence(
-      uniqueCommonMap || uniqueCommon(aLines, aLo, aHi, bLines, bLo, bHi)
+      uniqueCommonMap || uniqueCommon(aLines, aLo, aHi, bLines, bLo, bHi),
     );
 
     if (x.length === 0) {
@@ -1051,7 +1316,7 @@ function patienceDiff(aLines, bLines, diffPlusFlag) {
           x[i].indexA,
           x[i + 1].indexA - 1,
           x[i].indexB,
-          x[i + 1].indexB - 1
+          x[i + 1].indexB - 1,
         );
       }
 

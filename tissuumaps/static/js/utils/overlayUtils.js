@@ -6,13 +6,13 @@
 
 /**
  * @namespace overlayUtils
- * @property {Bool}   overlayUtils._drawRegions - If false then disable the drawing of regions
+ * @property {Bool}   regionUtils._regionToolbar - Toolbar for regions visible or not
  * @property {Object} overlayUtils._d3nodes - Main group or container of all d3 svg groups of overlays corresponding to the 3 main marker data groups
  * @property {Number} overlayUtils._percentageForSubsample - Take this percentage of each barcode when downsamplir for lower resolutions
  * @property {Number}  overlayUtils._zoomForSubsample - When the zoom is bigger than this, display all the checked genes 
  */
 overlayUtils = {
-    _drawRegions: false,
+    _regionToolbar: false,
     _d3nodes: {},
     _percentageForSubsample: 0.25,
     _zoomForSubsample:5.15,
@@ -46,6 +46,7 @@ overlayUtils.addAllLayersSettings = function() {
         overlayUtils.addLayerSettings(layer.name, layer.tileSource, i-1);
     });
     filterUtils.setRangesFromFilterItems();
+    filterUtils.setOpacityFromLayers();
     
     // Add collection mode checkbox:
     if (document.getElementById("setCollectionModeRow")) {
@@ -666,7 +667,10 @@ overlayUtils.addLayer = async function(layer, i, visible) {
                 columns: Math.ceil(Math.sqrt(tmapp.layers.length))
             }
             if (projectUtils._activeState["collectionLayout"] !== undefined) {
-                collectionLayout = projectUtils._activeState["collectionLayout"];
+                //copy each field of projectUtils._activeState["collectionLayout"] to collectionLayout
+                for (var field in projectUtils._activeState["collectionLayout"]) {
+                    collectionLayout[field] = projectUtils._activeState["collectionLayout"][field];
+                }
             }
             tmapp["ISS_viewer"].world.arrange(collectionLayout);
             var inputs = document.querySelectorAll(".visible-layers");
@@ -743,19 +747,6 @@ overlayUtils.waitFullyLoaded = async function () {
     await new Promise(r => setTimeout(r, 200));
     while (!overlayUtils.areAllFullyLoaded()) {
         await new Promise(r => setTimeout(r, 200));
-    }
-}
-
-/** 
- * @param {String} layerName name of an existing d3 node
- * @param {Number} opacity desired opacity
- * @summary Set the opacity of a tile source */
-overlayUtils.setLayerOpacity= function(layerName,opacity){
-    if(layerName in overlayUtils._d3nodes){
-        var layer = overlayUtils._d3nodes[layerName];
-        layer._groups[0][0].style.opacity=opacity;
-    }else{
-        console.log("layer does not exist or is not a D3 node");
     }
 }
 
@@ -852,13 +843,21 @@ overlayUtils.savePNG=function() {
         var bounds = tmapp.ISS_viewer.viewport.getBounds();
         var loading=interfaceUtils.loadingModal();
         tmapp.ISS_viewer.world.getItemAt(0).immediateRender = true
-        var strokeWidth = regionUtils._polygonStrokeWidth
-        regionUtils._polygonStrokeWidth *= resolution
+        var strokeWidthSVG = regionUtils._polygonStrokeWidth
+        var strokeWidthGL = glUtils._regionStrokeWidth;
+        regionUtils._polygonStrokeWidth *= resolution;
+        glUtils._regionStrokeWidth *= resolution;
+
+        var useInstancing = glUtils._useInstancing;
+        glUtils._useInstancing = true;  // Enable to avoid HW point size limit
+
         overlayUtils.waitFullyLoaded().then(() => {
             overlayUtils.getCanvasPNG(resolution)
             .then (() => {
                 // We go back to original size:
-                regionUtils._polygonStrokeWidth = strokeWidth;
+                regionUtils._polygonStrokeWidth = strokeWidthSVG;
+                glUtils._regionStrokeWidth = strokeWidthGL;
+                glUtils._useInstancing = useInstancing;
                 tmapp.ISS_viewer.world.getItemAt(0).immediateRender = false
                 tmapp.ISS_viewer.viewport.fitBounds(bounds, true);
                 interfaceUtils.closeModal(loading);

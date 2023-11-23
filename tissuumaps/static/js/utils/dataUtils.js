@@ -205,240 +205,247 @@ dataUtils.getAllH5Data = async function(data_id, alldrops){
 * its ready to be displayed.
 * @param {String} data_id The id of the data group like "U234345"
 */
-dataUtils.updateViewOptions = async function(data_id, force_reload_all, reloadH5){
-    if (reloadH5 === undefined) reloadH5 = true;
-    let progressParent=interfaceUtils.getElementById(data_id+"_csv_progress_parent");
-    progressParent.classList.remove("d-none");
-    let progressBar=interfaceUtils.getElementById(data_id+"_csv_progress");
-    progressBar.style.width = "10%";
-    
-    var data_obj = dataUtils.data[data_id];
-    
-    if(data_obj === undefined){
-        message="Load data first";
-        interfaceUtils.alert(message); console.log(message);
-        return;
-    }
-
-    var _selectedOptions = interfaceUtils._mGenUIFuncs.areRadiosAndChecksChecked(data_id);
-    data_obj["_selectedOptions"]=_selectedOptions
-    
-    var radios = interfaceUtils._mGenUIFuncs.getTabRadiosAndChecks(data_id);
-    var inputs = interfaceUtils._mGenUIFuncs.getTabDropDowns(data_id);
-
-    var updateButton = document.getElementById(data_id + "_update-view-button")
-    updateButton.innerHTML = "Loading..."
-    
-    var p = Promise.resolve();
-    if (data_obj._filetype == "h5" && reloadH5) {
-        p = await dataUtils.getAllH5Data(data_id);
-    }
-
-    if(inputs["X"].value == 'null' || inputs["Y"].value == 'null'){
-        message="Select X and Y first";
-        interfaceUtils.alert(message); console.log(message);
-        return;
-    }else{
-        data_obj["_X"]=inputs["X"].value;
-        data_obj["_Y"]=inputs["Y"].value;
-    }
-    // Check if image is already fake:
-    var recompute_background_img = false;
-    if (tmapp["ISS_viewer"].world.getItemCount() == 0) {
-        recompute_background_img = true;
-    }
-    else {
-        if (tmapp["ISS_viewer"].world.getItemAt(0).source.getTileUrl(0,0,0) == null) {
-            var recompute_background_img = true;
+    dataUtils.updateViewOptions = async function(data_id, force_reload_all, reloadH5){
+    try {
+        if (reloadH5 === undefined) reloadH5 = true;
+        let progressParent=interfaceUtils.getElementById(data_id+"_csv_progress_parent");
+        progressParent.classList.remove("d-none");
+        let progressBar=interfaceUtils.getElementById(data_id+"_csv_progress");
+        progressBar.style.width = "10%";
+        
+        var data_obj = dataUtils.data[data_id];
+        
+        if(data_obj === undefined){
+            message="Load data first";
+            interfaceUtils.alert(message); console.log(message);
+            return;
         }
-    }
-    if (recompute_background_img) {
-        function getMax(arr) {
-            let len = arr.length; let max = -Infinity;
-            while (len--) { max = +arr[len] > max ? +arr[len] : max; }
-            return max;
+
+        var _selectedOptions = interfaceUtils._mGenUIFuncs.areRadiosAndChecksChecked(data_id);
+        data_obj["_selectedOptions"]=_selectedOptions
+        
+        var radios = interfaceUtils._mGenUIFuncs.getTabRadiosAndChecks(data_id);
+        var inputs = interfaceUtils._mGenUIFuncs.getTabDropDowns(data_id);
+
+        var updateButton = document.getElementById(data_id + "_update-view-button")
+        updateButton.innerHTML = "Loading..."
+        
+        var p = Promise.resolve();
+        if (data_obj._filetype == "h5" && reloadH5) {
+            p = await dataUtils.getAllH5Data(data_id);
         }
-        function getMin(arr) {
-            let len = arr.length; let min = Infinity; 
-            while (len--) { min = +arr[len] < min ? +arr[len] : min; }
-            return min;
+
+        if(inputs["X"].value == 'null' || inputs["Y"].value == 'null'){
+            message="Select X and Y first";
+            interfaceUtils.alert(message); console.log(message);
+            return;
+        }else{
+            data_obj["_X"]=inputs["X"].value;
+            data_obj["_Y"]=inputs["Y"].value;
         }
-        var minX = getMin(data_obj["_processeddata"][data_obj["_X"]]);
-        var maxX = getMax(data_obj["_processeddata"][data_obj["_X"]]);
-        var minY = getMin(data_obj["_processeddata"][data_obj["_Y"]]);
-        var maxY = getMax(data_obj["_processeddata"][data_obj["_Y"]]);
-        if (minX <0 || maxX < 500 || minY <0 || maxY < 500) {
-            var markerTransform;
-            if (maxX - minX > maxY - minY) {
-                markerTransform = 5000 / (maxX - minX);
+        // Check if image is already fake:
+        var recompute_background_img = false;
+        if (tmapp["ISS_viewer"].world.getItemCount() == 0) {
+            recompute_background_img = true;
+        }
+        else {
+            if (tmapp["ISS_viewer"].world.getItemAt(0).source.getTileUrl(0,0,0) == null) {
+                var recompute_background_img = true;
+            }
+        }
+        if (recompute_background_img) {
+            function getMax(arr) {
+                let len = arr.length; let max = -Infinity;
+                while (len--) { max = +arr[len] > max ? +arr[len] : max; }
+                return max;
+            }
+            function getMin(arr) {
+                let len = arr.length; let min = Infinity; 
+                while (len--) { min = +arr[len] < min ? +arr[len] : min; }
+                return min;
+            }
+            var minX = getMin(data_obj["_processeddata"][data_obj["_X"]]);
+            var maxX = getMax(data_obj["_processeddata"][data_obj["_X"]]);
+            var minY = getMin(data_obj["_processeddata"][data_obj["_Y"]]);
+            var maxY = getMax(data_obj["_processeddata"][data_obj["_Y"]]);
+            if (minX <0 || maxX < 500 || minY <0 || maxY < 500) {
+                var markerTransform;
+                if (maxX - minX > maxY - minY) {
+                    markerTransform = 5000 / (maxX - minX);
+                }
+                else {
+                    markerTransform = 5000 / (maxY - minY);
+                }
+                let arrX = data_obj["_processeddata"][data_obj["_X"]];
+                for (let i = 0; i < arrX.length; ++i) {
+                    arrX[i] = markerTransform * (arrX[i] - minX);
+                }
+                maxX = getMax(arrX);
+                let arrY = data_obj["_processeddata"][data_obj["_Y"]];
+                for (let i = 0; i < arrY.length; ++i) {
+                    arrY[i] = markerTransform * (arrY[i] - minY);
+                }
+                maxY = getMax(arrY);
+            }
+            // We load an empty image at the size of the data.
+            if (tmapp["ISS_viewer"].world.getItemCount() > 0) {
+                if (tmapp["ISS_viewer"].world.getItemAt(0).source.height < parseInt(maxY*1.06) || tmapp["ISS_viewer"].world.getItemAt(0).source.width < parseInt(maxX*1.06)){
+                    tmapp["ISS_viewer"].close();
+                    setTimeout (function() {dataUtils.updateViewOptions(data_id, false, false)},50);
+                    return;
+                }
             }
             else {
-                markerTransform = 5000 / (maxY - minY);
-            }
-            let arrX = data_obj["_processeddata"][data_obj["_X"]];
-            for (let i = 0; i < arrX.length; ++i) {
-                arrX[i] = markerTransform * (arrX[i] - minX);
-            }
-            maxX = getMax(arrX);
-            let arrY = data_obj["_processeddata"][data_obj["_Y"]];
-            for (let i = 0; i < arrY.length; ++i) {
-                arrY[i] = markerTransform * (arrY[i] - minY);
-            }
-            maxY = getMax(arrY);
-        }
-        // We load an empty image at the size of the data.
-        if (tmapp["ISS_viewer"].world.getItemCount() > 0) {
-            if (tmapp["ISS_viewer"].world.getItemAt(0).source.height < parseInt(maxY*1.06) || tmapp["ISS_viewer"].world.getItemAt(0).source.width < parseInt(maxX*1.06)){
-                tmapp["ISS_viewer"].close();
-                setTimeout (function() {dataUtils.updateViewOptions(data_id, false, false)},50);
+                tmapp["ISS_viewer"].addTiledImage ({
+                    tileSource: {
+                        getTileUrl: function(z, x, y){return null},
+                        height: parseInt(maxY*1.06),
+                        width:  parseInt(maxX*1.06),
+                        tileSize: 256,
+                    },
+                    opacity: 0,
+                    x: -0.02,
+                    y: -0.02
+                })
+                setTimeout (function() {dataUtils.updateViewOptions(data_id, true, false)},50);
                 return;
             }
         }
+        //this will be trickier since trees need to be made and also a menu
+        
+        if(inputs["gb_col"].value && inputs["gb_col"].value != "null"){
+            data_obj["_gb_col"]=inputs["gb_col"].value;    
+        }else{
+            data_obj["_gb_col"]=null;    
+        }
+
+        if(inputs["gb_name"].value && inputs["gb_name"].value != "null"){
+            data_obj["_gb_name"]=inputs["gb_name"].value;    
+        }else{
+            data_obj["_gb_name"]=null;    
+        }
+
+        // Load all settings inside of data_obj for easy access from glUtils
+        // adds: data_obj["_cb_col"], data_obj["_cb_cmap"]
+        //       data_obj["_pie_col"], data_obj["_scale_col"], data_obj["_shape_col"]
+        if (radios["cb_gr"].checked) { // Color by group
+            data_obj["_cb_col"]=null;
+            data_obj["_cb_cmap"]=null;
+            data_obj["_cb_gr_dict"]=inputs["cb_gr_dict"].value;
+        }
+        else if (radios["cb_col"].checked) { // Color by marker
+            if (inputs["cb_col"].value != "null") {
+                if (inputs["cb_cmap"].value != "") {
+                    data_obj["_cb_cmap"]=inputs["cb_cmap"].value;
+                }
+                else {
+                    data_obj["_cb_cmap"]=null;
+                }
+                data_obj["_cb_col"]=inputs["cb_col"].value;
+            }
+            else  {
+                interfaceUtils.alert("No color column selected. Impossible to update view.");return;
+            }
+        }
+        // Use piecharts column
+        data_obj["_pie_col"]=(radios["pie_check"].checked ? inputs["pie_col"].value : null);
+        data_obj["_pie_dict"]=inputs["pie_dict"].value?JSON.parse(inputs["pie_dict"].value):[];
+        if (data_obj["_pie_col"]=="null") {
+            interfaceUtils.alert("No piechart column selected. Impossible to update view.");return;
+        }
+        data_obj["_edges_col"]=(radios["edges_check"].checked ? inputs["edges_col"].value : null);
+        if (data_obj["_edges_col"]=="null") {
+            interfaceUtils.alert("No edges column selected. Impossible to update view.");return;
+        }
+        data_obj["_sortby_col"]=(radios["sortby_check"].checked ? inputs["sortby_col"].value : null);
+        data_obj["_sortby_desc"]=(radios["sortby_check"].checked ? radios["sortby_desc_check"].checked : null);
+        data_obj["_z_order"]=parseFloat(inputs["z_order"].value);
+
+        if (data_obj["_sortby_col"]=="null") {
+            interfaceUtils.alert("No sort by column selected. Impossible to update view.");return;
+        }
+        // Use scale colummn
+        data_obj["_scale_col"]=(radios["scale_check"].checked ? inputs["scale_col"].value : null);
+        if (data_obj["_scale_col"]=="null") {
+            interfaceUtils.alert("No size column selected. Impossible to update view.");return;
+        }
+        data_obj["_scale_factor"]=parseFloat(inputs["scale_factor"].value);
+        data_obj["_coord_factor"]=parseFloat(inputs["coord_factor"].value);
+        // Use shape column
+        data_obj["_shape_col"]=(radios["shape_col"].checked ? inputs["shape_col"].value : null);
+        if (data_obj["_shape_col"]=="null") {
+            interfaceUtils.alert("No shape column selected. Impossible to update view.");return;
+        }
+        // Use opacity column
+        data_obj["_opacity_col"]=(radios["opacity_check"].checked ? inputs["opacity_col"].value : null);
+        if (data_obj["_opacity_col"]=="null") {
+            interfaceUtils.alert("No opacity column selected. Impossible to update view.");return;
+        }// Use collection column
+        data_obj["_collectionItem_col"]=(radios["collectionItem_col"].checked ? inputs["collectionItem_col"].value : null);
+        data_obj["_collectionItem_fixed"]=(radios["collectionItem_col"].checked ? null : parseInt(inputs["collectionItem_fixed"].value));
+        if (data_obj["_collectionItem_col"]=="null") {
+            interfaceUtils.alert("No collection item column selected. Impossible to update view.");return;
+        }
+        if (
+            (data_obj["_collectionItem_col"] || data_obj["_collectionItem_fixed"] > 0)
+            && filterUtils._compositeMode != "collection") {
+            //interfaceUtils.alert("Warning, images are not in Collection Mode. Go to \"Image layers > Filter Settings > Merging mode\" to activate Collection Mode.");
+        }
+        data_obj["_opacity"]=parseFloat(inputs["opacity"].value);
+        // Tooltip
+        data_obj["_tooltip_fmt"]=inputs["tooltip_fmt"].value;
+        
+        data_obj["_stroke_width"]=parseFloat(inputs["stroke_width"].value);
+        data_obj["_no_fill"]=(radios["no_fill"].checked ? true : false);
+        data_obj["_no_outline"]=(radios["_no_outline"].checked ? true : false);
+
+        //this function veryfies if a tree with these features exist and doesnt recreate it
+        dataUtils.makeQuadTrees(data_id);
+        //print a menu in the interface for the groups
+        let table=await interfaceUtils._mGenUIFuncs.groupUI(data_id);
+        if (table == null) return;
+        menuui=interfaceUtils.getElementById(data_id+"_menu-UI");
+        menuui.classList.remove("d-none")
+        menuui.innerText="";
+
+        menuui.appendChild(table);
+        //shape UXXXX_grname_shape, color UXXXX_grname_color
+
+        // Make sure that slider for global marker size is shown
+        if (interfaceUtils.getElementById("ISS_globalmarkersize"))
+            interfaceUtils.getElementById("ISS_globalmarkersize").classList.remove("d-none");
+
+        if (data_obj["fromButton"] !== undefined) {
+            projectUtils.updateMarkerButton(data_id);
+        }
+        // If we need to reload all markers from all datasets after new image size:
+        if(force_reload_all !== undefined) {
+            for (var uid in dataUtils.data) {
+                glUtils.loadMarkers(uid);
+            }
+        }
         else {
-            tmapp["ISS_viewer"].addTiledImage ({
-                tileSource: {
-                    getTileUrl: function(z, x, y){return null},
-                    height: parseInt(maxY*1.06),
-                    width:  parseInt(maxX*1.06),
-                    tileSize: 256,
-                },
-                opacity: 0,
-                x: -0.02,
-                y: -0.02
-            })
-            setTimeout (function() {dataUtils.updateViewOptions(data_id, true, false)},50);
-            return;
+            glUtils.loadMarkers(data_id);
         }
+        glUtils.draw();
+        
+        setTimeout(()=>{
+            // We apply constraints after 300 ms in case the viewport size changed.
+            tmapp.ISS_viewer.viewport.applyConstraints(false);
+        },300);
+        // Create the event.
+        const event = document.createEvent('Event');
+        // Define that the event name is 'glUtilsDraw'.
+        event.initEvent('glUtilsDraw', true, true);
+        // target can be any Element or other EventTarget.
+        document.dispatchEvent(event);
+        updateButton.innerHTML = "Update view"
+        progressBar.style.width = "100%";
+        progressParent.classList.add("d-none");
+    } catch (error) {
+        let stack = error.stack.replace(new RegExp("\n","g"),"<br>");
+        interfaceUtils.alert("Error while updating view: <br><pre><code>"+stack+"</code></pre>");
     }
-    //this will be trickier since trees need to be made and also a menu
-    
-    if(inputs["gb_col"].value && inputs["gb_col"].value != "null"){
-        data_obj["_gb_col"]=inputs["gb_col"].value;    
-    }else{
-        data_obj["_gb_col"]=null;    
-    }
-
-    if(inputs["gb_name"].value && inputs["gb_name"].value != "null"){
-        data_obj["_gb_name"]=inputs["gb_name"].value;    
-    }else{
-        data_obj["_gb_name"]=null;    
-    }
-
-    // Load all settings inside of data_obj for easy access from glUtils
-    // adds: data_obj["_cb_col"], data_obj["_cb_cmap"]
-    //       data_obj["_pie_col"], data_obj["_scale_col"], data_obj["_shape_col"]
-    if (radios["cb_gr"].checked) { // Color by group
-        data_obj["_cb_col"]=null;
-        data_obj["_cb_cmap"]=null;
-        data_obj["_cb_gr_dict"]=inputs["cb_gr_dict"].value;
-    }
-    else if (radios["cb_col"].checked) { // Color by marker
-        if (inputs["cb_col"].value != "null") {
-            if (inputs["cb_cmap"].value != "") {
-                data_obj["_cb_cmap"]=inputs["cb_cmap"].value;
-            }
-            else {
-                data_obj["_cb_cmap"]=null;
-            }
-            data_obj["_cb_col"]=inputs["cb_col"].value;
-        }
-        else  {
-            interfaceUtils.alert("No color column selected. Impossible to update view.");return;
-        }
-    }
-    // Use piecharts column
-    data_obj["_pie_col"]=(radios["pie_check"].checked ? inputs["pie_col"].value : null);
-    data_obj["_pie_dict"]=inputs["pie_dict"].value;
-    if (data_obj["_pie_col"]=="null") {
-        interfaceUtils.alert("No piechart column selected. Impossible to update view.");return;
-    }
-    data_obj["_edges_col"]=(radios["edges_check"].checked ? inputs["edges_col"].value : null);
-    if (data_obj["_edges_col"]=="null") {
-        interfaceUtils.alert("No edges column selected. Impossible to update view.");return;
-    }
-    data_obj["_sortby_col"]=(radios["sortby_check"].checked ? inputs["sortby_col"].value : null);
-    data_obj["_sortby_desc"]=(radios["sortby_check"].checked ? radios["sortby_desc_check"].checked : null);
-    data_obj["_z_order"]=parseFloat(inputs["z_order"].value);
-
-    if (data_obj["_sortby_col"]=="null") {
-        interfaceUtils.alert("No sort by column selected. Impossible to update view.");return;
-    }
-    // Use scale colummn
-    data_obj["_scale_col"]=(radios["scale_check"].checked ? inputs["scale_col"].value : null);
-    if (data_obj["_scale_col"]=="null") {
-        interfaceUtils.alert("No size column selected. Impossible to update view.");return;
-    }
-    data_obj["_scale_factor"]=parseFloat(inputs["scale_factor"].value);
-    data_obj["_coord_factor"]=parseFloat(inputs["coord_factor"].value);
-    // Use shape column
-    data_obj["_shape_col"]=(radios["shape_col"].checked ? inputs["shape_col"].value : null);
-    if (data_obj["_shape_col"]=="null") {
-        interfaceUtils.alert("No shape column selected. Impossible to update view.");return;
-    }
-    // Use opacity column
-    data_obj["_opacity_col"]=(radios["opacity_check"].checked ? inputs["opacity_col"].value : null);
-    if (data_obj["_opacity_col"]=="null") {
-        interfaceUtils.alert("No opacity column selected. Impossible to update view.");return;
-    }// Use collection column
-    data_obj["_collectionItem_col"]=(radios["collectionItem_col"].checked ? inputs["collectionItem_col"].value : null);
-    data_obj["_collectionItem_fixed"]=(radios["collectionItem_col"].checked ? null : parseInt(inputs["collectionItem_fixed"].value));
-    if (data_obj["_collectionItem_col"]=="null") {
-        interfaceUtils.alert("No collection item column selected. Impossible to update view.");return;
-    }
-    if (
-        (data_obj["_collectionItem_col"] || data_obj["_collectionItem_fixed"] > 0)
-        && filterUtils._compositeMode != "collection") {
-        //interfaceUtils.alert("Warning, images are not in Collection Mode. Go to \"Image layers > Filter Settings > Merging mode\" to activate Collection Mode.");
-    }
-    data_obj["_opacity"]=parseFloat(inputs["opacity"].value);
-    // Tooltip
-    data_obj["_tooltip_fmt"]=inputs["tooltip_fmt"].value;
-    
-    data_obj["_no_outline"]=(radios["_no_outline"].checked ? true : false);
-
-    //this function veryfies if a tree with these features exist and doesnt recreate it
-    dataUtils.makeQuadTrees(data_id);
-    //print a menu in the interface for the groups
-    let table=await interfaceUtils._mGenUIFuncs.groupUI(data_id);
-    if (table == null) return;
-    menuui=interfaceUtils.getElementById(data_id+"_menu-UI");
-    menuui.classList.remove("d-none")
-    menuui.innerText="";
-
-    menuui.appendChild(table);
-    //shape UXXXX_grname_shape, color UXXXX_grname_color
-
-    // Make sure that slider for global marker size is shown
-    if (interfaceUtils.getElementById("ISS_globalmarkersize"))
-        interfaceUtils.getElementById("ISS_globalmarkersize").classList.remove("d-none");
-
-    if (data_obj["fromButton"] !== undefined) {
-        projectUtils.updateMarkerButton(data_id);
-    }
-    // If we need to reload all markers from all datasets after new image size:
-    if(force_reload_all !== undefined) {
-        for (var uid in dataUtils.data) {
-            glUtils.loadMarkers(uid);
-        }
-    }
-    else {
-        glUtils.loadMarkers(data_id);
-    }
-    glUtils.draw();
-    
-    setTimeout(()=>{
-        // We apply constraints after 300 ms in case the viewport size changed.
-        tmapp.ISS_viewer.viewport.applyConstraints(false);
-    },300);
-    // Create the event.
-    const event = document.createEvent('Event');
-    // Define that the event name is 'glUtilsDraw'.
-    event.initEvent('glUtilsDraw', true, true);
-    // target can be any Element or other EventTarget.
-    document.dispatchEvent(event);
-    updateButton.innerHTML = "Update view"
-    progressBar.style.width = "100%";
-    progressParent.classList.add("d-none");
 }
 
 /** 
@@ -786,6 +793,7 @@ dataUtils.makeQuadTrees = function(data_id) {
     var groupByCol=data_obj["_gb_col"]
     var groupByColsName=data_obj["_gb_name"]
     var markerData=data_obj["_processeddata"];
+    var coordFactor=data_obj["_coord_factor"];
 
     // Check if we can skip recomputing the last generated quadtree
     const lastInputs = dataUtils._quadtreesLastInputs;
@@ -804,10 +812,10 @@ dataUtils.makeQuadTrees = function(data_id) {
     for (let i = 0; i < numMarkers; ++i) indexData[i] = i;
 
     var x = function (d) {
-        return markerData[xselector][d];
+        return markerData[xselector][d] * coordFactor;
     };
     var y = function (d) {
-        return markerData[yselector][d];
+        return markerData[yselector][d] * coordFactor;
     };
     if (dataUtils._quadtreesEnabled) console.time("Generate quadtrees");
     if (groupByCol) {
