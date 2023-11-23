@@ -61,6 +61,8 @@ def _fnfilter(filename):
         return True
     elif ".tmap" in filename.lower():
         return True
+    elif ".dzi" in filename.lower():
+        return True
     elif ".h5ad" in filename.lower():
         return True
     return False
