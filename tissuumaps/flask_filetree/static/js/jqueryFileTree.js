@@ -117,9 +117,11 @@ if (jQuery)
                   const addLayer = urlParams.get("addlayer");
                   console.log("addLayer", addLayer);
                   if (addLayer) {
-                    window.parent.flask.server.addLayer(
-                      $(this).attr("rel") + ".dzi"
-                    );
+                    let layerPath = $(this).attr("rel");
+                    if (!layerPath.endsWith(".dzi")) {
+                      layerPath += ".dzi";
+                    }
+                    window.parent.flask.server.addLayer(layerPath);
                   } else {
                     h($(this).attr("rel"));
                   }

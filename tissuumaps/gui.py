@@ -847,20 +847,24 @@ class webEngine(QWebEngineView):
             else:
                 self.app.basedir = parts[0]
         imgPath = os.path.join(*parts[1:])
-        try:
-            views._get_slide(imgPath)
-        except Exception:
-            logging.error(traceback.format_exc())
-            QMessageBox.about(
-                self, "Error", "TissUUmaps did not manage to open this image."
-            )
-            returnDict = {"dzi": None, "name": None}
-            return returnDict
+        if not imgPath.endswith(".dzi"):
+            try:
+                views._get_slide(imgPath)
+            except Exception:
+                logging.error(traceback.format_exc())
+                QMessageBox.about(
+                    self, "Error", "TissUUmaps did not manage to open this image."
+                )
+                returnDict = {"dzi": None, "name": None}
+                return returnDict
         path = os.path.abspath(os.path.join(self.app.basedir, path))
         imgPath = os.path.abspath(os.path.join(self.app.basedir, imgPath))
         relativePath = os.path.relpath(os.path.dirname(imgPath), path)
+        dziPath = relativePath + "/" + os.path.basename(imgPath)
+        if not imgPath.endswith(".dzi"):
+            dziPath += ".dzi"
         returnDict = {
-            "dzi": relativePath + "/" + os.path.basename(imgPath) + ".dzi",
+            "dzi": dziPath,
             "name": os.path.basename(imgPath),
         }
         return returnDict

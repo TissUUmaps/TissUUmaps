@@ -244,7 +244,7 @@ flask.server.init = function () {
 flask.server.addLayer = function (filename) {
     const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString);
-    const path = urlParams.get('path')
+    const path = urlParams.get('path') ? urlParams.get('path') : "";
     if (filename.startsWith(path)) {
         filename = filename.slice(path.length);
     }
