@@ -224,7 +224,7 @@ tmapp.init = function () {
     }
     $(document).on("input", "input[type=range]", updateSlider);
     function updateSlider(e){
-        if (e.target.id == "ISS_globalmarkersize_text" || e.target.id == "channelValue") return;
+        if (e.target.id == "ISS_globalmarkersize_text" || e.target.id == "channelRangeInput") return;
         if ($("#opacity-layer-0").attr('data-bs-original-title') !== undefined) {
             e.target.title = e.target.value;
             $(e.target).tooltip('show');
