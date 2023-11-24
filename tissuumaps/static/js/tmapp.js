@@ -345,8 +345,13 @@ $( document ).ready(function() {
     let ISS_viewer_container = document.getElementById("ISS_viewer_container");
 
     ISS_viewer.addEventListener('dblclick', function (e) {
-        // Open in fullscreen if double clicked
-        toggleFullscreen();
+        interfaceUtils.generateNotification(
+            "Fullscreen on double click has been disabled from version 3.2. Please use the F key to go fullscreen.",
+            "fullscreen", 
+            false,
+            2000,
+            "info"
+        );
     });
 
     let full_ui = document.getElementById("main-ui");
