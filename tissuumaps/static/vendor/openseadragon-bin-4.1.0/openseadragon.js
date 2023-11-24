@@ -19877,6 +19877,9 @@ $.Drawer.prototype = {
         if ( this.useCanvas ) {
             this._imageSmoothingEnabled = imageSmoothingEnabled;
             this._updateImageSmoothingEnabled(this.context);
+            if (this.sketchContext) {
+                this._updateImageSmoothingEnabled(this.sketchContext);
+            }
             this.viewer.forceRedraw();
         }
     },
