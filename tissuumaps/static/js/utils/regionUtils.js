@@ -1900,6 +1900,25 @@ regionUtils.JSONToRegions= function(filepath){
             interfaceUtils.alert("Region files must have extension .geojson, .json, or .pbf.",
                                  "Invalid region filename");
         }
+        // Add progress bar
+        interfaceUtils._rGenUIFuncs.createProgressBar();
+        $('[data-bs-target="#markers-regions-project-gui"]').tab('show');
+        reader.addEventListener("progress", (event) => {
+            if (event.lengthComputable) {
+                console.log("download progress:", event.loaded / event.total);
+                let progressBar=interfaceUtils.getElementById("region_progress");
+                let progressParent=interfaceUtils.getElementById("region_progress_parent");
+                progressParent.classList.remove("d-none");
+                progressBar.style.width = (event.loaded / event.total) * 100 + "%";
+            }
+        });
+        reader.addEventListener("load", (event) => {
+            console.log("download complete");
+            let progressBar=interfaceUtils.getElementById("region_progress");
+            let progressParent=interfaceUtils.getElementById("region_progress_parent");
+            progressParent.classList.add("d-none");
+            progressBar.style.width = "0%";
+        });
     } else {
         interfaceUtils.alert('The File APIs are not fully supported in this browser.');
     }
