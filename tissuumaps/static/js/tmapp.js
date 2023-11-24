@@ -196,7 +196,6 @@ tmapp.init = function () {
         }
         tmapp[op + "_viewer"].imageLoaderLimit = 1;
     });
-    let mousewheelevt = (/Firefox/i.test(navigator.userAgent)) ? "DOMMouseScroll" : "mousewheel";
     $(document).on("wheel", "input[type=range]", moveSlider);
     function moveSlider(e){
         var zoomLevel = parseFloat(e.target.value); 
