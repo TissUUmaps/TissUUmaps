@@ -315,11 +315,76 @@ regionUtils.addRegionToolbarUI = function () {
     tooltip.enable();
     zoomSelectedButton.innerHTML = '<i class="bi bi-box-arrow-in-down-right"></i>';
 
+    // New code for "Line width" dropdown button
+    const lineWidthDropdownButton = HTMLElementUtils.createElement({
+      kind: "div",
+      extraAttributes: { class: "btn-group m-1" }
+    });
+
+    const lineWidthButton = HTMLElementUtils.createElement({
+      kind: "button",
+      extraAttributes: { class: "btn lh-1 btn-light px-2 py-0 dropdown-toggle", "type": "button", "data-bs-toggle": "dropdown", "aria-expanded": "false" },
+    });
+    lineWidthButton.id = "line_width_dropdown_button";
+    const lineWidthButtonSpan = HTMLElementUtils.createElement({
+      kind: "span",
+      extraAttributes: { "title": "Line width" }
+    });
+    lineWidthButtonSpan.innerHTML = '<i class="bi bi-border-width"></i>';
+
+    lineWidthButton.appendChild(lineWidthButtonSpan);
+
+    const lineWidthDropdownMenu = HTMLElementUtils.createElement({
+      kind: "div",
+      extraAttributes: { class: "dropdown-menu p-2" }
+    });
+
+    // Range input for line width
+    const lineWidthRangeInput = HTMLElementUtils.createElement({
+      kind: "input",
+      extraAttributes: { type: "range", min: "0", max: "2", step: "0.1", value: "1", class: "form-range" },
+    });
+    lineWidthDropdownMenu.appendChild(lineWidthRangeInput);
+    lineWidthRangeInput.addEventListener("input", () => {
+      // raise zoom event on tmapp["ISS_viewer"]:
+      regionUtils._regionStrokeWidth = lineWidthRangeInput.value;
+      tmapp["ISS_viewer"].raiseEvent("zoom", { zoom: tmapp["ISS_viewer"].viewport.getZoom() });
+      glUtils.draw();
+    });
+    // Checkbox for "Adapt on zoom"
+    const adaptOnZoomCheckbox = HTMLElementUtils.createElement({
+      kind: "div",
+      extraAttributes: { class: "form-check" }
+    });
+    const checkboxLabel = HTMLElementUtils.createElement({
+      kind: "label",
+      extraAttributes: { class: "form-check-label" }
+    });
+    const checkboxInput = HTMLElementUtils.createElement({
+      kind: "input",
+      extraAttributes: { type: "checkbox", class: "form-check-input" },
+    });
+    checkboxLabel.appendChild(checkboxInput);
+    checkboxLabel.innerHTML += " Adapt on zoom";
+    adaptOnZoomCheckbox.appendChild(checkboxLabel);
+    lineWidthDropdownMenu.appendChild(adaptOnZoomCheckbox);
+
+    adaptOnZoomCheckbox.addEventListener("input", (event) => {
+      regionUtils._regionStrokeAdaptOnZoom = event.target.checked;
+      tmapp["ISS_viewer"].raiseEvent("zoom", { zoom: tmapp["ISS_viewer"].viewport.getZoom() });
+      glUtils.draw();
+    });
+
+    // Add the "Line width" dropdown button and menu to the document
+    lineWidthDropdownButton.appendChild(lineWidthButton);
+    lineWidthDropdownButton.appendChild(lineWidthDropdownMenu);
+
     buttonsContainer.appendChild(dropdownButton);
     buttonsContainer.appendChild(selectionButton);
     buttonsContainer.appendChild(separator2);
     buttonsContainer.appendChild(fillRegionsButton);
     buttonsContainer.appendChild(showInstancesButton);
+    buttonsContainer.appendChild(lineWidthDropdownButton);
     buttonsContainer.appendChild(zoomSelectedButton);
     buttonsContainer.appendChild(separator);
     buttonsContainer.appendChild(unselectButton);

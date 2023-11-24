@@ -31,6 +31,8 @@ regionUtils = {
     _colorActiveHandle: "#ffff00",
     _scaleHandle: 0.0025,
     _polygonStrokeWidth: 0.0015,
+    _regionStrokeWidth: 1,
+    _regionStrokeAdaptOnZoom: false,
     _handleRadius: 0.1,
     _epsilonDistance: 0.004,
     _regions: {},

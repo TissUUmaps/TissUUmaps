@@ -194,6 +194,9 @@ tmapp.init = function () {
                 tiledImage.immediateRender = false;
             }
         }
+        glUtils._regionStrokeWidth = (regionUtils._regionStrokeAdaptOnZoom) ? 
+            imageZoom * regionUtils._regionStrokeWidth :
+            regionUtils._regionStrokeWidth;
     });
     tmapp["ISS_viewer"].addHandler("animation-start", function animationFinishHandler(event){
         var op = tmapp["object_prefix"];
