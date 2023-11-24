@@ -67,6 +67,7 @@ glUtils = {
     _regionOpacity: 0.5,
     _regionStrokeWidth: 1.0,      // Base stroke width in pixels (larger values can give artifacts, so use with care!)
     _regionFillRule: "never",     // Possible values: "never" | "nonzero" | "oddeven"
+    _regionShowOnTop: true,       // Draw regions on top of markers if this is true, otherwise under
     _regionUsePivotSplit: false,  // Use split edge lists for faster region rendering and less risk of overflow
     _regionUseColorByID: false,   // Map region object IDs to unique colors
     _regionDataSize: {},          // Size stored per region data texture and used for dynamic resizing
@@ -1943,6 +1944,11 @@ glUtils._drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
     // we retain the old behaviour when z-order is the same for all UIDs)
     drawOrder.sort((a, b) => glUtils._zOrder[a] - glUtils._zOrder[b]);
 
+    if (!glUtils._regionShowOnTop) {
+        // Draw regions first, so that they appear under markers
+        glUtils._drawRegionsColorPass(gl, viewportTransform);
+    }
+
     // Draw markers and edges interleaved, to ensure correct overlap per UID
     for (let uid of drawOrder) {
         if (glUtils._showEdgesExperimental) {
@@ -1951,8 +1957,11 @@ glUtils._drawColorPass = function(gl, viewportTransform, markerScaleAdjusted) {
         glUtils._drawMarkersByUID(gl, viewportTransform, markerScaleAdjusted, uid);
     }
 
-    // Draw regions last, to make them appear on top (same behaviour as for SVG regions)
-    glUtils._drawRegionsColorPass(gl, viewportTransform);
+    if (glUtils._regionShowOnTop) {
+        // Draw regions last, so that they appear on top of markers (this is the
+        // same behaviour as for the old SVG regions)
+        glUtils._drawRegionsColorPass(gl, viewportTransform);
+    }
 }
 
 
