@@ -543,9 +543,7 @@ class webEngine(QWebEngineView):
             download.downloadDirectory(), download.downloadFileName()
         )
         suffix = os.path.splitext(old_path)[1]
-        path, _ = QFileDialog.getSaveFileName(
-            self, "Save File", old_path, "*." + suffix
-        )
+        path, _ = QFileDialog.getSaveFileName(self, "Save File", old_path, "*" + suffix)
         if path:
             download.setDownloadDirectory(os.path.dirname(path))
             download.setDownloadFileName(os.path.basename(path))
