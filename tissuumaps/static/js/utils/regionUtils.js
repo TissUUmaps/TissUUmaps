@@ -408,24 +408,12 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
                 hexColor = rgbToHex(geoJSONObj.properties.classification.color)
             }
         }
-        coordinates = coordinates.map (function(coordinateList, i) {
-            return coordinateList.map (function(coordinateList_i, index) {
-                coordinateList_i = coordinateList_i.map(function(x) {
-                    xPoint = new OpenSeadragon.Point(x[0], x[1]);
-                    xPixel = viewer.world.getItemAt(collectionIndex).imageToViewportCoordinates(xPoint);
-                    return [xPixel.x.toFixed(5), xPixel.y.toFixed(5)];
-                });
-                return coordinateList_i.filter(function(value, index, Arr) {
-                    return index % 1 == 0;
-                });
-            });
-        })
         var regionId = "Region_geoJSON_" + geoJSONObjIndex;
         if (regionId in regionUtils._regions) {
             regionId += "_" + (Math.random() + 1).toString(36).substring(7);
         }
         //TODO: collectionIndex from modal if multiple layers
-        regionUtils.addRegion(coordinates, regionId, hexColor, geoJSONObjClass, collectionIndex);
+        regionUtils.addRegion(coordinates, regionId, hexColor, geoJSONObjClass, collectionIndex, true);
         regionUtils._regions[regionId].regionName = regionName;
         regionUtils._regions[regionId].properties = geoJSONObj.properties;
         if (document.getElementById(regionId + "_class_ta")) {
@@ -469,7 +457,8 @@ regionUtils.distance = function (p1, p2) {
 /** 
  *  @param {Number[]} points Array of 2D points in normalized coordinates
  *  @summary Create a region object and store it in the regionUtils._regions container */
-regionUtils.addRegion = function (points, regionid, color, regionClass, collectionIndex) {
+regionUtils.addRegion = function (points, regionid, color, regionClass, collectionIndex, globalCoordinates) {
+    if (globalCoordinates == undefined) globalCoordinates = false;
     if (collectionIndex == undefined) collectionIndex = 0;
     if (!regionClass) regionClass = "";
     const regionClassID = HTMLElementUtils.stringToId("region_" + regionClass);
@@ -501,12 +490,15 @@ regionUtils.addRegion = function (points, regionid, color, regionClass, collecti
             for (var k = 0; k < points[i][j].length; k++) {
                 let x = parseFloat(points[i][j][k][0]);
                 let y = parseFloat(points[i][j][k][1]);
-                
-                let tiledImage = viewer.world.getItemAt(collectionIndex);
-                let imageCoord = tiledImage.viewportToImageCoordinates(
-                    x, y, true
-                );
-                globalPolygon.push({ "x": imageCoord.x, "y": imageCoord.y });
+                if (!globalCoordinates) {
+                    let tiledImage = viewer.world.getItemAt(collectionIndex);
+                    let imageCoord = tiledImage.viewportToImageCoordinates(
+                        x, y, true
+                    );
+                    x = imageCoord.x;
+                    y = imageCoord.y;
+                }
+                globalPolygon.push({ "x": x, "y": y });
             }
             globalSubregion.push(globalPolygon);
         }
