@@ -1790,11 +1790,9 @@ regionUtils.regionsToJSON= function(){
             var name="regions.json";
         }
         let geoJSON = regionUtils.regions2GeoJSON(regionUtils._regions);
-        console.log(name.toLowerCase().endsWith(".pbf"));
         if (name.toLowerCase().endsWith(".pbf")) {
             // Save GeoJSON stored in Geobuf format
             var buffer = geobuf.encode(geoJSON, new Pbf());
-            console.log(buffer);
             var blob = new Blob([buffer], {kind: "application/octet-stream"});
         }
         else {
