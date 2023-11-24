@@ -1,6 +1,6 @@
 //! openseadragon 4.1.0
-//! Built on 2023-10-31
-//! Git commit: v4.1.0-51-e836ffc-dirty
+//! Built on 2023-11-24
+//! Git commit: v4.1.0-51-9c74c5d-dirty
 //! http://openseadragon.github.io
 //! License: http://openseadragon.github.io/license/
 
@@ -4390,6 +4390,11 @@ $.EventSource.prototype = {
                                     'DOMMouseScroll';                                                        // Assume old Firefox
 
     /**
+     * Flag for disabling passive wheel events
+     */
+    $.MouseTracker.passiveWheelEvents = true;
+
+    /**
      * Detect browser pointer device event model(s) and build appropriate list of events to subscribe to.
      */
     $.MouseTracker.subscribeEvents = [ "click", "dblclick", "keydown", "keyup", "keypress", "focus", "blur", "contextmenu", $.MouseTracker.wheelEventName ];
@@ -4739,7 +4744,7 @@ $.EventSource.prototype = {
                     tracker.element,
                     event,
                     delegate[ event ],
-                    event === $.MouseTracker.wheelEventName ? { passive: true, capture: false } : false
+                    event === $.MouseTracker.wheelEventName ? { passive: $.MouseTracker.passiveWheelEvents, capture: false } : false
                 );
             }
 
@@ -5371,7 +5376,9 @@ $.EventSource.prototype = {
             $.stopEvent( originalEvent );
         }
         if ( ( eventArgs && eventArgs.preventDefault ) || ( eventInfo.preventDefault && !eventInfo.defaultPrevented ) ) {
-                //$.cancelEvent( originalEvent );
+            if (!originalEvent.cancelable) {
+                $.cancelEvent( originalEvent );
+            }
         }
 }
 
