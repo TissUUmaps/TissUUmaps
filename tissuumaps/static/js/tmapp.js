@@ -172,28 +172,31 @@ tmapp.init = function () {
         d3.selectAll(".region_previewpoly").each(function(el) {
             $(this).attr('stroke-width', 2.5 * regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
         });
+        tmapp[op + "_viewer"].imageLoaderLimit = 50;
+    });
+    tmapp["ISS_viewer"].addHandler("zoom", function animationFinishHandler(event){
+        const zoom = event.zoom;
         var op = tmapp["object_prefix"];
-        let homeZoom = tmapp[op + "_viewer"].viewport.getHomeZoom()
-        if (tmapp[op + "_viewer"].viewport.getZoom() > homeZoom * 4) {
+        let imageZoom = tmapp[op + "_viewer"].world.getItemAt(0).viewportToImageZoom(zoom)
+        if (imageZoom > 0.8) {
             tmapp[op + "_viewer"].drawer.setImageSmoothingEnabled(false);
             var count = tmapp[op + "_viewer"].world.getItemCount();
             for (var i = 0; i < count; i++) {
                 var tiledImage = tmapp[op + "_viewer"].world.getItemAt(i);
                 tiledImage.immediateRender = true;
             }
-            tmapp[op + "_viewer"].imageLoaderLimit = 50;
         }
         else {
             tmapp[op + "_viewer"].drawer.setImageSmoothingEnabled(true);
+            var count = tmapp[op + "_viewer"].world.getItemCount();
+            for (var i = 0; i < count; i++) {
+                var tiledImage = tmapp[op + "_viewer"].world.getItemAt(i);
+                tiledImage.immediateRender = false;
+            }
         }
     });
     tmapp["ISS_viewer"].addHandler("animation-start", function animationFinishHandler(event){
         var op = tmapp["object_prefix"];
-        var count = tmapp[op + "_viewer"].world.getItemCount();
-        for (var i = 0; i < count; i++) {
-            var tiledImage = tmapp[op + "_viewer"].world.getItemAt(i);
-            tiledImage.immediateRender = false;
-        }
         tmapp[op + "_viewer"].imageLoaderLimit = 1;
     });
     $(document).on("wheel", "input[type=range]", moveSlider);
