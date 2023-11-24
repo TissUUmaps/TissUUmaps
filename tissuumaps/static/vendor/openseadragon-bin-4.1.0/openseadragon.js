@@ -5376,7 +5376,7 @@ $.EventSource.prototype = {
             $.stopEvent( originalEvent );
         }
         if ( ( eventArgs && eventArgs.preventDefault ) || ( eventInfo.preventDefault && !eventInfo.defaultPrevented ) ) {
-            if (!originalEvent.cancelable) {
+            if (originalEvent.cancelable) {
                 $.cancelEvent( originalEvent );
             }
         }
