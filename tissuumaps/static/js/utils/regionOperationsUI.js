@@ -276,19 +276,6 @@ regionUtils.addRegionToolbarUI = function () {
     separator2.style.margin = "auto 10px";
     separator2.style.width = "0px";
 
-    const fillRegionsButton = HTMLElementUtils.createButton({
-      extraAttributes: { class: "btn lh-1 btn-light m-1 p-2", "title": "Fill regions" },
-    });
-    fillRegionsButton.id = "region_fill_button"
-    fillRegionsButton.onclick = function () {
-      regionUtils.fillAllRegions();
-    };
-    var tooltip = new bootstrap.Tooltip(fillRegionsButton, {
-      placement: "bottom", trigger : 'hover'
-    });
-    tooltip.enable();
-    fillRegionsButton.innerHTML = '<i class="bi bi-front"></i>';
-
     const showInstancesButton = HTMLElementUtils.createButton({
       extraAttributes: { class: "btn lh-1 btn-light m-1 p-2", "title": "Show instances" },
     });
@@ -384,11 +371,80 @@ regionUtils.addRegionToolbarUI = function () {
     });
     tooltip.enable();
 
+    // Add "Fill opacity" dropdown button
+    let fillOpacityDropdownButton = undefined;
+    {
+      fillOpacityDropdownButton = HTMLElementUtils.createElement({
+        kind: "div",
+        extraAttributes: { class: "btn-group m-1" }
+      });
+
+      const fillOpacityButton = HTMLElementUtils.createElement({
+        kind: "button",
+        extraAttributes: { class: "btn lh-1 btn-light px-2 py-0 dropdown-toggle", "type": "button", "data-bs-toggle": "dropdown", "aria-expanded": "false" },
+      });
+      fillOpacityButton.id = "fill_opacity_dropdown_button";
+      const fillOpacityButtonSpan = HTMLElementUtils.createElement({
+        kind: "span",
+        extraAttributes: { "title": "Fill opacity" }
+      });
+      fillOpacityButtonSpan.innerHTML = '<i class="bi bi-front"></i>';
+      fillOpacityButton.appendChild(fillOpacityButtonSpan);
+
+      // Dropdown menu
+      const fillOpacityDropdownMenu = HTMLElementUtils.createElement({
+        kind: "div",
+        extraAttributes: { class: "dropdown-menu p-2" }
+      });
+
+      // Range input for region opacity
+      const fillOpacityRangeInput = HTMLElementUtils.createElement({
+        kind: "input",
+        extraAttributes: { type: "range", min: "0", max: "1", step: "0.05", value: "0.5", class: "form-range" },
+      });
+      fillOpacityDropdownMenu.appendChild(fillOpacityRangeInput);
+      fillOpacityRangeInput.addEventListener("input", () => {
+        glUtils._regionOpacity = fillOpacityRangeInput.value;
+        glUtils.draw();
+      });
+
+      // Checkbox for "Fill regions"
+      const fillRegionsCheckbox = HTMLElementUtils.createElement({
+        kind: "div",
+        extraAttributes: { class: "form-check" }
+      });
+      const checkboxLabel = HTMLElementUtils.createElement({
+        kind: "label",
+        extraAttributes: { class: "form-check-label" }
+      });
+      const checkboxInput = HTMLElementUtils.createElement({
+        kind: "input",
+        extraAttributes: { type: "checkbox", class: "form-check-input" },
+      });
+      checkboxLabel.appendChild(checkboxInput);
+      checkboxLabel.innerHTML += " Fill regions";
+      fillRegionsCheckbox.appendChild(checkboxLabel);
+      fillOpacityDropdownMenu.appendChild(fillRegionsCheckbox);
+      fillRegionsCheckbox.addEventListener("input", (event) => {
+        regionUtils.fillAllRegions();
+      });
+
+      // Add the "Fill regions" button and menu to the dropdown
+      fillOpacityDropdownButton.appendChild(fillOpacityButton);
+      fillOpacityDropdownButton.appendChild(fillOpacityDropdownMenu);
+
+      // Add tooltip
+      var tooltip = new bootstrap.Tooltip(fillOpacityButtonSpan, {
+        placement: "bottom", trigger : 'hover', offset: [0, 9]
+      });
+      tooltip.enable();
+    }
+
     buttonsContainer.appendChild(dropdownButton);
     buttonsContainer.appendChild(selectionButton);
     buttonsContainer.appendChild(separator2);
-    buttonsContainer.appendChild(fillRegionsButton);
     buttonsContainer.appendChild(showInstancesButton);
+    buttonsContainer.appendChild(fillOpacityDropdownButton);
     buttonsContainer.appendChild(lineWidthDropdownButton);
     buttonsContainer.appendChild(zoomSelectedButton);
     buttonsContainer.appendChild(separator);
