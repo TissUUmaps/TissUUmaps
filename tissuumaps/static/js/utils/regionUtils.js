@@ -422,9 +422,6 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
             regionUtils.changeRegion(regionId);
         }
     };
-    glUtils.updateRegionDataTextures();
-    glUtils.updateRegionLUTTextures();
-    glUtils.draw();
     document.querySelector("#regionAccordions").classList.remove("d-none");
 }
 
