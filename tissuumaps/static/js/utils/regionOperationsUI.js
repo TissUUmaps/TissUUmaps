@@ -379,6 +379,11 @@ regionUtils.addRegionToolbarUI = function () {
     lineWidthDropdownButton.appendChild(lineWidthButton);
     lineWidthDropdownButton.appendChild(lineWidthDropdownMenu);
 
+    var tooltip = new bootstrap.Tooltip(lineWidthButtonSpan, {
+      placement: "bottom", trigger : 'hover', offset: [0, 9]
+    });
+    tooltip.enable();
+
     buttonsContainer.appendChild(dropdownButton);
     buttonsContainer.appendChild(selectionButton);
     buttonsContainer.appendChild(separator2);
