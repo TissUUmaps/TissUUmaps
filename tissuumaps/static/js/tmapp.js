@@ -187,7 +187,9 @@ tmapp.init = function () {
             }
         }
         else {
-            tmapp[op + "_viewer"].drawer.setImageSmoothingEnabled(true);
+            if (!flask.standalone.backend) {
+                tmapp[op + "_viewer"].drawer.setImageSmoothingEnabled(true);
+            }
             var count = tmapp[op + "_viewer"].world.getItemCount();
             for (var i = 0; i < count; i++) {
                 var tiledImage = tmapp[op + "_viewer"].world.getItemAt(i);
