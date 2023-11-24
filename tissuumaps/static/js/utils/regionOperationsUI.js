@@ -379,17 +379,27 @@ regionUtils.addRegionToolbarUI = function () {
         extraAttributes: { class: "btn-group m-1" }
       });
 
-      const fillOpacityButton = HTMLElementUtils.createElement({
+      // Toggle button
+      const fillOpacityToggleButton = HTMLElementUtils.createElement({
         kind: "button",
-        extraAttributes: { class: "btn lh-1 btn-light px-2 py-0 dropdown-toggle", "type": "button", "data-bs-toggle": "dropdown", "aria-expanded": "false" },
+        extraAttributes: { class: "btn lh-1 btn-light px-2 py-0", "type": "button", "title": "Fill opacity" },
       });
-      fillOpacityButton.id = "fill_opacity_dropdown_button";
-      const fillOpacityButtonSpan = HTMLElementUtils.createElement({
-        kind: "span",
-        extraAttributes: { "title": "Fill opacity" }
+      fillOpacityToggleButton.id = "fill_opacity_button";
+      fillOpacityToggleButton.innerHTML = '<i class="bi bi-front"></i>';
+      
+      // Add tooltip
+      var tooltip = new bootstrap.Tooltip(fillOpacityToggleButton, {
+        placement: "bottom", trigger: 'hover', offset: [20, 0]
       });
-      fillOpacityButtonSpan.innerHTML = '<i class="bi bi-front"></i>';
-      fillOpacityButton.appendChild(fillOpacityButtonSpan);
+      tooltip.enable();
+
+      // Down arrow button
+      const fillOpacityDownArrowButton = HTMLElementUtils.createElement({
+        kind: "button",
+        extraAttributes: { class: "btn lh-1 btn-light px-2 py-0 dropdown-toggle dropdown-toggle-split", "type": "button", "data-bs-toggle": "dropdown", "aria-expanded": "false" },
+        innerHTML: '<span class="visually-hidden">Toggle Dropdown</span>'
+      });
+      fillOpacityDownArrowButton.id = "fill_opacity_dropdown_button"
 
       // Dropdown menu
       const fillOpacityDropdownMenu = HTMLElementUtils.createElement({
@@ -421,6 +431,7 @@ regionUtils.addRegionToolbarUI = function () {
         kind: "input",
         extraAttributes: { type: "checkbox", class: "form-check-input" },
       });
+      checkboxInput.id="fill_regions_checkbox";
       checkboxLabel.appendChild(checkboxInput);
       checkboxLabel.innerHTML += " Fill regions";
       fillRegionsCheckbox.appendChild(checkboxLabel);
@@ -428,16 +439,15 @@ regionUtils.addRegionToolbarUI = function () {
       fillRegionsCheckbox.addEventListener("input", (event) => {
         regionUtils.fillAllRegions();
       });
+      fillOpacityToggleButton.addEventListener("click", () => {
+        document.getElementById("fill_regions_checkbox").click();
+      });
 
-      // Add the "Fill regions" button and menu to the dropdown
-      fillOpacityDropdownButton.appendChild(fillOpacityButton);
+      // Add the toggle and down arrow buttons to the dropdown
+      fillOpacityDropdownButton.appendChild(fillOpacityToggleButton);
+      fillOpacityDropdownButton.appendChild(fillOpacityDownArrowButton);
       fillOpacityDropdownButton.appendChild(fillOpacityDropdownMenu);
 
-      // Add tooltip
-      var tooltip = new bootstrap.Tooltip(fillOpacityButtonSpan, {
-        placement: "bottom", trigger : 'hover', offset: [0, 9]
-      });
-      tooltip.enable();
     }
 
     buttonsContainer.appendChild(dropdownButton);

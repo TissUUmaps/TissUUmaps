@@ -644,13 +644,20 @@ regionUtils.searchTreeForPointsInRegion = function (quadtree, x0, y0, x3, y3, re
 regionUtils.fillAllRegions=function(){
     glUtils._regionFillRule = glUtils._regionFillRule == "never" ? "nonzero" : "never";
     
-    let regionIcon = document.getElementById('fill_opacity_dropdown_button');
+    let regionIcon = document.getElementById('fill_opacity_button');
+    let regionIconDropdown = document.getElementById(
+        "fill_opacity_dropdown_button"
+    );
     if (glUtils._regionFillRule != "never") {
         regionIcon.classList.remove("btn-light");
         regionIcon.classList.add("btn-primary");
+        regionIconDropdown.classList.remove("btn-light");
+        regionIconDropdown.classList.add("btn-primary");
     } else {
         regionIcon.classList.remove("btn-primary");
         regionIcon.classList.add("btn-light");
+        regionIconDropdown.classList.remove("btn-primary");
+        regionIconDropdown.classList.add("btn-light");
     }
     glUtils.draw();    
 }
