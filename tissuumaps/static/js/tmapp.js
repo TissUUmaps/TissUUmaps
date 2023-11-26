@@ -204,6 +204,9 @@ tmapp.init = function () {
         var op = tmapp["object_prefix"];
         tmapp[op + "_viewer"].imageLoaderLimit = 1;
     });
+    tmapp["ISS_viewer"].addHandler("open", function animationFinishHandler(event){
+        tmapp["ISS_viewer"].raiseEvent("zoom", { zoom: tmapp["ISS_viewer"].viewport.getZoom() });
+    });
     $(document).on("wheel", "input[type=range]", moveSlider);
     function moveSlider(e){
         var zoomLevel = parseFloat(e.target.value); 
@@ -283,7 +286,7 @@ tmapp.options_osd = {
     visibilityRatio: 0.5,
     showNavigationControl: false,
     maxImageCacheCount:2000,
-    imageSmoothingEnabled:true,
+    imageSmoothingEnabled:false,
     preserveImageSizeOnResize: true,
     imageLoaderLimit: 50,
     gestureSettingsUnknown: {
