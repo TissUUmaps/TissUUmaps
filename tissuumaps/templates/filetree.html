@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>File Tree</title>
+    <!-- Add jQuery and jsTree (JavaScript Tree) libraries -->
+    <script src="static/vendor/jquery-3.5.1/jquery-3.5.1.min.js"></script>
+    <link rel="stylesheet" href="static/vendor/jstree-3.3.16/style.min.css" />
+    <script src="static/vendor/jstree-3.3.16/jstree.min.js"></script>
+  </head>
+  <body>
+    <div id="filetree"></div>
+
+    <script>
+      $("#filetree")
+        .jstree({
+          core: {
+            data: {
+              url: function (node) {
+                return (
+                  "/get_file_tree?root=" +
+                  (node.id === "#"
+                    ? "/"
+                    : $("#filetree").jstree().get_path(node, "/"))
+                );
+              },
+              dataType: "json",
+            },
+            themes: {
+              dots: true,
+              icons: true,
+            },
+          },
+        })
+        .on("open_node.jstree", function (e, data) {
+          if (data.node.children.length === 0) {
+            let fullPath = data.instance.get_path(data.node, "/");
+            $("#filetree").jstree("load_node", data.node);
+          }
+        })
+        .on("select_node.jstree", function (e, data) {
+          // Handle node selection (e.g., fetch additional data)
+          // Check if node is a folder
+          if (data.node.data.isdirectory) {
+            data.instance.open_node(data.node);
+            return;
+          }
+          let fullPath = data.instance.get_path(data.node, "/");
+          openFile(fullPath);
+        });
+      function openFile(filename) {
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        const addLayer = urlParams.get("addlayer");
+        if (addLayer || filename.endsWith(".dzi")) {
+          if (!filename.endsWith(".dzi")) {
+            filename += ".dzi";
+          }
+          window.parent.flask.server.addLayer(filename);
+        } else {
+          // Open url filename:
+          var dirname = "";
+          if (filename.match(/(.*)[\/\\]/)) {
+            dirname = filename.match(/(.*)[\/\\]/)[1] || "";
+          }
+          if (dirname.startsWith("/")) {
+            dirname = dirname.substring(1);
+          }
+          var filenameEncoded = filename.replace(/^.*[\\\/]/, "");
+          document.getElementById("filetree").innerHTML =
+            "Loading, please wait...";
+          window.parent.location = "/" + filenameEncoded + "?path=" + dirname;
+        }
+      }
+    </script>
+  </body>
+</html>

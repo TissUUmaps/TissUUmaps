@@ -28,6 +28,7 @@ import pyvips
 from flask import (
     Response,
     abort,
+    jsonify,
     make_response,
     redirect,
     render_template,
@@ -47,7 +48,6 @@ from werkzeug.exceptions import MethodNotAllowed, NotFound
 from werkzeug.routing import RequestRedirect
 
 from tissuumaps import app, read_h5ad
-from tissuumaps.flask_filetree import filetree
 
 import openslide  # isort: skip
 from openslide import OpenSlide  # isort: skip
@@ -59,11 +59,11 @@ def _fnfilter(filename):
         return True
     elif imghdr.what(filename):
         return True
-    elif ".tmap" in filename.lower():
+    elif filename.lower().endswith(".tmap"):
         return True
-    elif ".dzi" in filename.lower():
+    elif filename.lower().endswith(".dzi"):
         return True
-    elif ".h5ad" in filename.lower():
+    elif filename.lower().endswith(".h5ad"):
         return True
     return False
 
@@ -74,12 +74,6 @@ def _dfilter(filename):
     if ".tissuumaps" in filename:
         return False
     return True
-
-
-ft = filetree.make_blueprint(
-    app=app, register=False, dfilter=_dfilter, fnfilter=_fnfilter
-)
-app.register_blueprint(ft, url_prefix="/filetree")
 
 
 def check_auth(username, password):
@@ -1043,6 +1037,47 @@ def pluginJS(pluginName, method):
     else:
         content = request.args
         return pluginMethod(content)
+
+
+@app.route("/filetree")
+def get_tree():
+    return render_template("filetree.html")
+
+
+@app.route("/get_file_tree")
+def get_file_tree():
+    root_path = app.config["SLIDE_DIR"] + "/" + request.args.get("root", "./")
+    return jsonify(get_file_tree_data(root_path))
+
+
+def get_file_tree_data(root_path):
+    data = {"text": os.path.basename(root_path), "children": []}
+
+    for item in os.listdir(root_path):
+        item_path = os.path.join(root_path, item)
+        if os.path.isdir(item_path):
+            if _dfilter(item_path):
+                data["children"].append(
+                    {
+                        "text": item,
+                        "icon": "jstree-folder",
+                        "state": {"opened": False},
+                        "data": {"isdirectory": True},
+                        # No initial children, they will be loaded on demand
+                        "children": True,
+                    }
+                )
+        else:
+            if _fnfilter(item_path):
+                data["children"].append(
+                    {
+                        "text": item,
+                        "icon": "jstree-file",
+                        "data": {"isdirectory": False},
+                    }
+                )
+
+    return data["children"]
 
 
 @app.route("/favicon.ico")
