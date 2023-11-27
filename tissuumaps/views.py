@@ -1041,13 +1041,19 @@ def pluginJS(pluginName, method):
 
 @app.route("/filetree")
 def get_tree():
-    return render_template("filetree.html")
+    if not app.config["READ_ONLY"]:
+        return render_template("filetree.html")
+    else:
+        return make_response("")
 
 
 @app.route("/get_file_tree")
 def get_file_tree():
-    root_path = app.config["SLIDE_DIR"] + "/" + request.args.get("root", "./")
-    return jsonify(get_file_tree_data(root_path))
+    if not app.config["READ_ONLY"]:
+        root_path = app.config["SLIDE_DIR"] + "/" + request.args.get("root", "./")
+        return jsonify(get_file_tree_data(root_path))
+    else:
+        return jsonify([])
 
 
 def get_file_tree_data(root_path):
