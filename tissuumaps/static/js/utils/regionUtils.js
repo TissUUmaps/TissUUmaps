@@ -1546,6 +1546,7 @@ regionUtils.brushManager = function (event) {
         regionUtils._isNewRegion = true;
         regionUtils.addRegion(regionUtils._currentPoints, regionid, null, regionclass, regionUtils._currentLayerIndex);
         regionUtils._currentPoints = null;
+        regionUtils._editedRegion = null;
     
         regionUtils.updateAllRegionClassUI();
         $(document.getElementById("regionClass-")).collapse("show");
