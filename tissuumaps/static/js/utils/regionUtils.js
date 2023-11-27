@@ -31,6 +31,8 @@ regionUtils = {
     _colorActiveHandle: "#ffff00",
     _scaleHandle: 0.0025,
     _polygonStrokeWidth: 0.0015,
+    _regionStrokeWidth: 1,
+    _regionStrokeAdaptOnZoom: false,
     _handleRadius: 0.1,
     _epsilonDistance: 0.004,
     _regions: {},
@@ -258,10 +260,16 @@ regionUtils.closePolygon = function () {
         }
         return coordinates.map (function(coordinateList, i) {
             return coordinateList.map (function(coordinateList_i, index) {
-                return coordinateList_i.map(function(x) {
+                let closedCurve = coordinateList_i.map(function(x) {
                     return [x.x, x.y];
                 });
-                
+                // Check if first and last couple of closedCurve are different
+                // If so, we close the curve
+                if (closedCurve[0][0] != closedCurve[closedCurve.length - 1][0] ||
+                    closedCurve[0][1] != closedCurve[closedCurve.length - 1][1]) {
+                    closedCurve.push(closedCurve[0]);
+                }
+                return closedCurve;
             });
         })
     }
@@ -272,16 +280,21 @@ regionUtils.closePolygon = function () {
             let properties = regionsObjects.properties ? regionsObjects.properties : {};
             properties["name"] = Region.regionName
             properties["classification"] = {
-                "name": Region.regionClass
+                "name": Region.regionClass,
+                "color": HexToRGB(Region.polycolor)
             }
-            properties["color"] = HexToRGB(Region.polycolor)
             properties["collectionIndex"] = Region.collectionIndex;
-
+            let featureCoordinates = oldCoord2GeoJSONCoord(Region.globalPoints)
+            let polygonType = "MultiPolygon"
+            if (featureCoordinates.length == 1) {
+                featureCoordinates = featureCoordinates[0];
+                polygonType = "Polygon"
+            }
             return {
                 "type": "Feature",
                 "geometry": {
-                    "type": "MultiPolygon",
-                    "coordinates": oldCoord2GeoJSONCoord(Region.globalPoints)
+                    "type": polygonType,
+                    "coordinates": featureCoordinates
                 },
                 "properties": properties
             }
@@ -297,7 +310,10 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
     // Helper functions for converting colors to hexadecimal
     var viewer = tmapp[tmapp["object_prefix"] + "_viewer"]
     await overlayUtils.waitLayersReady();
-
+    if (viewer.world.getItemCount() == 0) {
+        interfaceUtils.alert("Impossible to load regions without image or marker data loaded.")
+        return;
+    }
     function rgbToHex(rgb) {
         return "#" + ((1 << 24) + (rgb[0] << 16) + (rgb[1] << 8) + rgb[2]).toString(16).slice(1);
     }
@@ -388,25 +404,16 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
             if (geoJSONObj.properties.classification.colorRGB) {
                 hexColor = decimalToHex(geoJSONObj.properties.classification.colorRGB);
             }
+            if (geoJSONObj.properties.classification.color) {
+                hexColor = rgbToHex(geoJSONObj.properties.classification.color)
+            }
         }
-        coordinates = coordinates.map (function(coordinateList, i) {
-            return coordinateList.map (function(coordinateList_i, index) {
-                coordinateList_i = coordinateList_i.map(function(x) {
-                    xPoint = new OpenSeadragon.Point(x[0], x[1]);
-                    xPixel = viewer.world.getItemAt(collectionIndex).imageToViewportCoordinates(xPoint);
-                    return [xPixel.x.toFixed(5), xPixel.y.toFixed(5)];
-                });
-                return coordinateList_i.filter(function(value, index, Arr) {
-                    return index % 1 == 0;
-                });
-            });
-        })
         var regionId = "Region_geoJSON_" + geoJSONObjIndex;
         if (regionId in regionUtils._regions) {
             regionId += "_" + (Math.random() + 1).toString(36).substring(7);
         }
         //TODO: collectionIndex from modal if multiple layers
-        regionUtils.addRegion(coordinates, regionId, hexColor, geoJSONObjClass, collectionIndex);
+        regionUtils.addRegion(coordinates, regionId, hexColor, geoJSONObjClass, collectionIndex, true);
         regionUtils._regions[regionId].regionName = regionName;
         regionUtils._regions[regionId].properties = geoJSONObj.properties;
         if (document.getElementById(regionId + "_class_ta")) {
@@ -415,9 +422,6 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
             regionUtils.changeRegion(regionId);
         }
     };
-    glUtils.updateRegionDataTextures();
-    glUtils.updateRegionLUTTextures();
-    glUtils.draw();
     document.querySelector("#regionAccordions").classList.remove("d-none");
 }
 
@@ -450,7 +454,8 @@ regionUtils.distance = function (p1, p2) {
 /** 
  *  @param {Number[]} points Array of 2D points in normalized coordinates
  *  @summary Create a region object and store it in the regionUtils._regions container */
-regionUtils.addRegion = function (points, regionid, color, regionClass, collectionIndex) {
+regionUtils.addRegion = function (points, regionid, color, regionClass, collectionIndex, globalCoordinates) {
+    if (globalCoordinates == undefined) globalCoordinates = false;
     if (collectionIndex == undefined) collectionIndex = 0;
     if (!regionClass) regionClass = "";
     const regionClassID = HTMLElementUtils.stringToId("region_" + regionClass);
@@ -482,12 +487,15 @@ regionUtils.addRegion = function (points, regionid, color, regionClass, collecti
             for (var k = 0; k < points[i][j].length; k++) {
                 let x = parseFloat(points[i][j][k][0]);
                 let y = parseFloat(points[i][j][k][1]);
-                
-                let tiledImage = viewer.world.getItemAt(collectionIndex);
-                let imageCoord = tiledImage.viewportToImageCoordinates(
-                    x, y, true
-                );
-                globalPolygon.push({ "x": imageCoord.x, "y": imageCoord.y });
+                if (!globalCoordinates) {
+                    let tiledImage = viewer.world.getItemAt(collectionIndex);
+                    let imageCoord = tiledImage.viewportToImageCoordinates(
+                        x, y, true
+                    );
+                    x = imageCoord.x;
+                    y = imageCoord.y;
+                }
+                globalPolygon.push({ "x": x, "y": y });
             }
             globalSubregion.push(globalPolygon);
         }
@@ -636,13 +644,20 @@ regionUtils.searchTreeForPointsInRegion = function (quadtree, x0, y0, x3, y3, re
 regionUtils.fillAllRegions=function(){
     glUtils._regionFillRule = glUtils._regionFillRule == "never" ? "nonzero" : "never";
     
-    let regionIcon = document.getElementById('region_fill_button');
+    let regionIcon = document.getElementById('fill_opacity_button');
+    let regionIconDropdown = document.getElementById(
+        "fill_opacity_dropdown_button"
+    );
     if (glUtils._regionFillRule != "never") {
         regionIcon.classList.remove("btn-light");
         regionIcon.classList.add("btn-primary");
+        regionIconDropdown.classList.remove("btn-light");
+        regionIconDropdown.classList.add("btn-primary");
     } else {
         regionIcon.classList.remove("btn-primary");
         regionIcon.classList.add("btn-light");
+        regionIconDropdown.classList.remove("btn-primary");
+        regionIconDropdown.classList.add("btn-light");
     }
     glUtils.draw();    
 }
@@ -755,10 +770,10 @@ regionUtils.deleteAllRegions = function () {
     regionUtils._regions = {};
     regionUtils.updateAllRegionClassUI();
 }
-regionUtils.updateAllRegionClassUI = async function (waitForLayers=false) {
+regionUtils.updateAllRegionClassUI = async function (waitForLayers=false, acceptNoLayers=true) {
     // wait for an image to be loaded
     if (waitForLayers) {
-        await overlayUtils.waitLayersReady();
+        await overlayUtils.waitLayersReady(acceptNoLayers);
     }
 
     // get the collapse status of all elements ".collapse_button_regionClass"
@@ -789,6 +804,17 @@ regionUtils.updateAllRegionClassUI = async function (waitForLayers=false) {
     glUtils.draw();
 }
 
+regionUtils._sanitizeRegions = function () {
+    for (let r in regionUtils._regions){
+        if (regionUtils._regions[r].collectionIndex == undefined) {
+            regionUtils._regions[r].collectionIndex = 0;
+        }
+        if (regionUtils._regions[r].visibility == undefined) {
+            regionUtils._regions[r].visibility = true;
+        }
+    }
+}
+
 /** 
  *  @param {String} regionid Region identifier
  *  @summary Change the region properties like color, class name or region name */
@@ -801,16 +827,8 @@ regionUtils.changeRegion = function (regionid) {
         if (regionUtils._regions[regionid].regionClass != document.getElementById(escapedRegionID + "_class_ta").value) {
             if (document.getElementById(escapedRegionID + "_class_ta").value) {
                 regionUtils._regions[regionid].regionClass = document.getElementById(escapedRegionID + "_class_ta").value;
-                //classID = HTMLElementUtils.stringToId(regionUtils._regions[regionid].regionClass);
-                //regionUtils.addRegionClassUI (regionUtils._regions[regionid].regionClass)
-                //$(rPanel).detach().appendTo('#markers-regions-panel-' + classID)
-                //$(rPanel_hist).detach().appendTo('#markers-regions-panel-' + classID)
             } else {
                 regionUtils._regions[regionid].regionClass = null;
-                //regionUtils.addRegionClassUI (null)
-                //classID = HTMLElementUtils.stringToId(regionUtils._regions[regionid].regionClass);
-                //$(rPanel).detach().appendTo('#markers-regions-panel-')
-                //$(rPanel_hist).detach().appendTo('#markers-regions-panel-')
             }
             regionUtils.updateAllRegionClassUI();
         }
@@ -1083,6 +1101,13 @@ regionUtils.setMode = function (mode) {
         // Set region drawing cursor 
         regionUtils.setViewerCursor("crosshair")
     }
+    if (regionUtils._editedRegion) {
+        regionUtils._regions[regionUtils._editedRegion.id] = regionUtils._editedRegion;
+        regionUtils._editedRegion = null;
+        glUtils.updateRegionDataTextures();
+        glUtils.updateRegionLUTTextures();
+        glUtils.draw();
+    }
     regionUtils.resetManager();
 }
 
@@ -1127,6 +1152,7 @@ regionUtils.freeHandManager = function (event) {
     }
     
       function createRegionFromCanvasDrag(event) {
+        if (regionUtils._regionMode != "free") return;
         const drawingclass = regionUtils._drawingclass;
         // Get OSDViewer
         const OSDviewer = tmapp[tmapp["object_prefix"] + "_viewer"];
@@ -1231,6 +1257,7 @@ regionUtils.rectangleManager = function (event) {
     }
     
       function createRegionFromCanvasDrag(event) {
+        if (regionUtils._regionMode != "rectangle") return;
         const drawingclass = regionUtils._drawingclass;
         // Get OSDViewer
         const OSDviewer = tmapp[tmapp["object_prefix"] + "_viewer"];
@@ -1352,6 +1379,7 @@ regionUtils.ellipseManager = function (event) {
     }
     
       function createRegionFromCanvasDrag(event) {
+        if (regionUtils._regionMode != "ellipse") return;
         const drawingclass = regionUtils._drawingclass;
         // Get OSDViewer
         const OSDviewer = tmapp[tmapp["object_prefix"] + "_viewer"];
@@ -1518,6 +1546,7 @@ regionUtils.brushManager = function (event) {
         regionUtils._isNewRegion = true;
         regionUtils.addRegion(regionUtils._currentPoints, regionid, null, regionclass, regionUtils._currentLayerIndex);
         regionUtils._currentPoints = null;
+        regionUtils._editedRegion = null;
     
         regionUtils.updateAllRegionClassUI();
         $(document.getElementById("regionClass-")).collapse("show");
@@ -1581,7 +1610,7 @@ regionUtils.brushManager = function (event) {
       }
 
       function createRegionFromCanvasDrag(event) {
-        
+        if (regionUtils._regionMode != "brush") return;
         const drawingclass = regionUtils._drawingclass;
         // Get OSDViewer
         const OSDviewer = tmapp[tmapp["object_prefix"] + "_viewer"];
@@ -1616,6 +1645,9 @@ regionUtils.brushManager = function (event) {
                 regionUtils._currentLayerIndex = regions[0].collectionIndex;
                 regionUtils._editedRegion = regions[0];
                 regionUtils.deleteRegion(regions[0].id, true);
+                glUtils.updateRegionDataTextures();
+                glUtils.updateRegionLUTTextures();
+                glUtils.draw();
             } else {
                 regionUtils._currentPoints = [];
                 regionUtils._isNewRegion = false;
@@ -1774,15 +1806,24 @@ regionUtils.downloadPointsInRegionsCSV=function(data){
 regionUtils.regionsToJSON= function(){
     if (window.Blob) {
         var op=tmapp["object_prefix"];
-        var jsonse = JSON.stringify(regionUtils.regions2GeoJSON(regionUtils._regions));
-        var blob = new Blob([jsonse], {kind: "application/json"});
-        var url  = URL.createObjectURL(blob);
-        var a=document.createElement("a");// document.getElementById("invisibleRegionJSON");
         if(document.getElementById(op+"_region_file_name")){
             var name=document.getElementById(op+"_region_file_name").value;
         }else{
             var name="regions.json";
         }
+        let geoJSON = regionUtils.regions2GeoJSON(regionUtils._regions);
+        if (name.toLowerCase().endsWith(".pbf")) {
+            // Save GeoJSON stored in Geobuf format
+            var buffer = geobuf.encode(geoJSON, new Pbf());
+            var blob = new Blob([buffer], {kind: "application/octet-stream"});
+        }
+        else {
+            var jsonse = JSON.stringify(geoJSON);
+            var blob = new Blob([jsonse], {kind: "application/json"});
+        }
+        var url  = URL.createObjectURL(blob);
+        var a=document.createElement("a");// document.getElementById("invisibleRegionJSON");
+        
         a.href        = url;
         a.download    = name;
         a.textContent = "Download backup.json";
@@ -1792,6 +1833,42 @@ regionUtils.regionsToJSON= function(){
         interfaceUtils.alert('The File APIs are not fully supported in this browser.');
     }        
 }
+
+regionUtils.fetch = function(url, responseType, callback) {
+    // Use XMLHttpRequest and update progress bar
+    interfaceUtils._rGenUIFuncs.createProgressBar();
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.responseType = responseType;
+    xhr.onload = function(e) {
+        if (this.status == 200) {
+            callback(this.response);
+        }
+    }
+    let progressBar=interfaceUtils.getElementById("region_progress");
+    let progressParent=interfaceUtils.getElementById("region_progress_parent");
+    progressParent.classList.remove("d-none");
+    xhr.addEventListener("progress", (event) => {
+        if (event.lengthComputable) {
+          console.log("download progress:", event.loaded / event.total);
+            if(progressBar){
+                progressBar.style.width = (event.loaded / event.total) * 100 + "%";
+            }
+        }
+    });
+    xhr.addEventListener("load", (event) => {
+        console.log("download complete");
+        if(progressBar){
+            progressBar.style.width = "100%";
+        }
+        setTimeout(function(){
+            progressParent.classList.add("d-none");
+            progressBar.style.width = "0%";
+        }, 500);
+    });
+    xhr.send();
+}
+
 
 regionUtils.JSONToRegions= function(filepath){
     if(filepath!==undefined){
@@ -1803,22 +1880,14 @@ regionUtils.JSONToRegions= function(filepath){
         }
         if (filepath.toLowerCase().endsWith(".pbf")) {
             // Load GeoJSON stored in Geobuf format (https://github.com/mapbox/geobuf)
-            fetch(filepath)
-            .then((response) => {
-                response.arrayBuffer()
-                .then((response) => {
-                    const data = new Pbf(response);
-                    regionUtils.JSONValToRegions(geobuf.decode(data));
-                });
+            regionUtils.fetch(filepath, "arraybuffer", (response) => {
+                const data = new Pbf(response);
+                regionUtils.JSONValToRegions(geobuf.decode(data));
             });
         } else if (filepath.toLowerCase().endsWith(".geojson") ||
                    filepath.toLowerCase().endsWith(".json")) {
-            fetch(filepath)
-            .then((response) => {
-                response.json()
-                .then((response) => {
-                    regionUtils.JSONValToRegions(response);
-                });
+            regionUtils.fetch(filepath, "json", (response) => {
+                regionUtils.JSONValToRegions(response);
             });
         } else {
             interfaceUtils.alert("Region files must have extension .geojson, .json, or .pbf.",
@@ -1847,6 +1916,25 @@ regionUtils.JSONToRegions= function(filepath){
             interfaceUtils.alert("Region files must have extension .geojson, .json, or .pbf.",
                                  "Invalid region filename");
         }
+        // Add progress bar
+        interfaceUtils._rGenUIFuncs.createProgressBar();
+        $('[data-bs-target="#markers-regions-project-gui"]').tab('show');
+        reader.addEventListener("progress", (event) => {
+            if (event.lengthComputable) {
+                console.log("download progress:", event.loaded / event.total);
+                let progressBar=interfaceUtils.getElementById("region_progress");
+                let progressParent=interfaceUtils.getElementById("region_progress_parent");
+                progressParent.classList.remove("d-none");
+                progressBar.style.width = (event.loaded / event.total) * 100 + "%";
+            }
+        });
+        reader.addEventListener("load", (event) => {
+            console.log("download complete");
+            let progressBar=interfaceUtils.getElementById("region_progress");
+            let progressParent=interfaceUtils.getElementById("region_progress_parent");
+            progressParent.classList.add("d-none");
+            progressBar.style.width = "0%";
+        });
     } else {
         interfaceUtils.alert('The File APIs are not fully supported in this browser.');
     }

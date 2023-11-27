@@ -173,30 +173,44 @@ tmapp.init = function () {
             $(this).attr('stroke-width', 2.5 * regionUtils._polygonStrokeWidth / tmapp["ISS_viewer"].viewport.getZoom());
         });
         var op = tmapp["object_prefix"];
-        let homeZoom = tmapp[op + "_viewer"].viewport.getHomeZoom()
-        if (tmapp[op + "_viewer"].viewport.getZoom() > homeZoom * 4) {
+        tmapp[op + "_viewer"].imageLoaderLimit = 50;
+        tmapp[op + "_viewer"].immediateRender = true;
+        var count = tmapp[op + "_viewer"].world.getItemCount();
+        for (var i = 0; i < count; i++) {
+            var tiledImage = tmapp[op + "_viewer"].world.getItemAt(i);
+            tiledImage.immediateRender = true;
+        }
+
+    });
+    tmapp["ISS_viewer"].addHandler("zoom", function animationFinishHandler(event){
+        const zoom = event.zoom;
+        var op = tmapp["object_prefix"];
+        let imageZoom = tmapp[op + "_viewer"].world.getItemAt(0).viewportToImageZoom(zoom)
+        if (imageZoom > 0.8) {
             tmapp[op + "_viewer"].drawer.setImageSmoothingEnabled(false);
-            var count = tmapp[op + "_viewer"].world.getItemCount();
-            for (var i = 0; i < count; i++) {
-                var tiledImage = tmapp[op + "_viewer"].world.getItemAt(i);
-                tiledImage.immediateRender = true;
-            }
-            tmapp[op + "_viewer"].imageLoaderLimit = 50;
         }
         else {
-            tmapp[op + "_viewer"].drawer.setImageSmoothingEnabled(true);
+            if (!flask.standalone.backend) {
+                tmapp[op + "_viewer"].drawer.setImageSmoothingEnabled(true);
+            }
         }
+        glUtils._regionStrokeWidth = (regionUtils._regionStrokeAdaptOnZoom) ? 
+            imageZoom * regionUtils._regionStrokeWidth :
+            regionUtils._regionStrokeWidth;
     });
     tmapp["ISS_viewer"].addHandler("animation-start", function animationFinishHandler(event){
         var op = tmapp["object_prefix"];
+        tmapp[op + "_viewer"].imageLoaderLimit = 1;
+        tmapp[op + "_viewer"].immediateRender = false;
         var count = tmapp[op + "_viewer"].world.getItemCount();
         for (var i = 0; i < count; i++) {
             var tiledImage = tmapp[op + "_viewer"].world.getItemAt(i);
             tiledImage.immediateRender = false;
         }
-        tmapp[op + "_viewer"].imageLoaderLimit = 1;
     });
-    let mousewheelevt = (/Firefox/i.test(navigator.userAgent)) ? "DOMMouseScroll" : "mousewheel";
+    tmapp["ISS_viewer"].addHandler("open", function animationFinishHandler(event){
+        tmapp["ISS_viewer"].raiseEvent("zoom", { zoom: tmapp["ISS_viewer"].viewport.getZoom() });
+    });
     $(document).on("wheel", "input[type=range]", moveSlider);
     function moveSlider(e){
         var zoomLevel = parseFloat(e.target.value); 
@@ -224,7 +238,7 @@ tmapp.init = function () {
     }
     $(document).on("input", "input[type=range]", updateSlider);
     function updateSlider(e){
-        if (e.target.id == "ISS_globalmarkersize_text" || e.target.id == "channelValue") return;
+        if (e.target.id == "ISS_globalmarkersize_text" || e.target.id == "channelRangeInput") return;
         if ($("#opacity-layer-0").attr('data-bs-original-title') !== undefined) {
             e.target.title = e.target.value;
             $(e.target).tooltip('show');
@@ -276,7 +290,7 @@ tmapp.options_osd = {
     visibilityRatio: 0.5,
     showNavigationControl: false,
     maxImageCacheCount:2000,
-    imageSmoothingEnabled:true,
+    imageSmoothingEnabled:false,
     preserveImageSizeOnResize: true,
     imageLoaderLimit: 50,
     gestureSettingsUnknown: {
@@ -338,8 +352,13 @@ $( document ).ready(function() {
     let ISS_viewer_container = document.getElementById("ISS_viewer_container");
 
     ISS_viewer.addEventListener('dblclick', function (e) {
-        // Open in fullscreen if double clicked
-        toggleFullscreen();
+        interfaceUtils.generateNotification(
+            "Fullscreen on double click has been disabled from version 3.2. Please use the F key to go fullscreen.",
+            "fullscreen", 
+            false,
+            2000,
+            "info"
+        );
     });
 
     let full_ui = document.getElementById("main-ui");
@@ -365,7 +384,7 @@ $( document ).ready(function() {
                 $("#"+key+"_All_check").click();
             }
         } else if (event.key === "r") {
-            $("#ISS_fillregions_btn").click();
+            $("#regionUI_all_check").click();
         } else if (event.key === "Escape") {
             regionUtils.resetSelection();
             regionUtils.setMode(null);
