@@ -197,7 +197,7 @@ class SelectPluginWindow(QDialog):
         model = self.listView.model()
         i = 0
         while model.item(i):
-            if model.item(i).checkState():
+            if model.item(i).checkState() == Qt.CheckState.Checked:
                 selected.append(self.items[i])
             i += 1
         return selected
