@@ -384,7 +384,7 @@ $( document ).ready(function() {
                 $("#"+key+"_All_check").click();
             }
         } else if (event.key === "r") {
-            $("#ISS_fillregions_btn").click();
+            $("#regionUI_all_check").click();
         } else if (event.key === "Escape") {
             regionUtils.resetSelection();
             regionUtils.setMode(null);
