@@ -1,6 +1,6 @@
 //! openseadragon 4.1.0
-//! Built on 2023-11-24
-//! Git commit: v4.1.0-51-9c74c5d-dirty
+//! Built on 2023-11-27
+//! Git commit: v4.1.0-54-2fe54f5-dirty
 //! http://openseadragon.github.io
 //! License: http://openseadragon.github.io/license/
 
@@ -23013,7 +23013,7 @@ $.extend($.TiledImage.prototype, $.EventSource.prototype, /** @lends OpenSeadrag
                 false
             ).x * this._scaleSpring.current.value;
 
-            var optimalRatio = this.immediateRender ? 1 : targetZeroRatio;
+            var optimalRatio = this.immediateRender ? targetRenderPixelRatio : targetZeroRatio;
             var levelOpacity = Math.min(1, (currentRenderPixelRatio - 0.5) / 0.5);
             var levelVisibility = optimalRatio / Math.abs(
                 optimalRatio - targetRenderPixelRatio
