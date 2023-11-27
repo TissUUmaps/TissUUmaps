@@ -17,7 +17,7 @@ elif "macosx" in COMPILING_PLATFORM:
 a = Analysis(['../tissuumaps/gui.py'],
              pathex=['./'],
              binaries=[],
-             datas=[('../tissuumaps/VERSION', './'), ('../tissuumaps/templates', 'templates'), ('../tissuumaps/flask_filetree', 'flask_filetree'), ('../tissuumaps/static', 'static'), ('../tissuumaps/plugins/__init__.py','plugins')],
+             datas=[('../tissuumaps/VERSION', './'), ('../tissuumaps/templates', 'templates'), ('../tissuumaps/static', 'static'), ('../tissuumaps/plugins/__init__.py','plugins')],
              hiddenimports=["pyvips","matplotlib","mpl_toolkits","scipy.sparse", "tissuumaps_schema"],
              hookspath=[],
              runtime_hooks=[],

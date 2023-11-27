@@ -22,4 +22,3 @@ repos:
     rev: v3.0.3
     hooks:
       - id: prettier
-        exclude: ^tissuumaps/flask_filetree
