@@ -804,6 +804,17 @@ regionUtils.updateAllRegionClassUI = async function (waitForLayers=false, accept
     glUtils.draw();
 }
 
+regionUtils._sanitizeRegions = function () {
+    for (let r in regionUtils._regions){
+        if (regionUtils._regions[r].collectionIndex == undefined) {
+            regionUtils._regions[r].collectionIndex = 0;
+        }
+        if (regionUtils._regions[r].visibility == undefined) {
+            regionUtils._regions[r].visibility = true;
+        }
+    }
+}
+
 /** 
  *  @param {String} regionid Region identifier
  *  @summary Change the region properties like color, class name or region name */

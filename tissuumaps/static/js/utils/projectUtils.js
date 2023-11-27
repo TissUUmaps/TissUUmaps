@@ -359,6 +359,7 @@ projectUtils.loadProjectFileFromServer = function(path) {
     }
     if (state.regions && Object.keys(state.regions).length > 0) {
         regionUtils._regions = state.regions;
+        regionUtils._sanitizeRegions();
         regionUtils.updateAllRegionClassUI(true, false);
     }
     if (state.regionFile) {
