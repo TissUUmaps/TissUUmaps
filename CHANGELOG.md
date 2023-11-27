@@ -17,6 +17,7 @@
 - Move to PySide6 instead of PyQt6
 - Add installers for MacOS X (.dmg) and Linux (.deb)
 - Update to OpenSeadragon 4.1.0
+- Add dzi support (opening as images directly)
 - Lots of minor fixes
 
 ## 3.1.1.6
