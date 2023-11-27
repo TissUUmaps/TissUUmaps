@@ -492,6 +492,7 @@
 
     if (window!=window.top) {
       /* I'm in a frame! */
+      OpenSeadragon.MouseTracker.passiveWheelEvents = false;
       document.getElementById("main-navbar").classList.add("collapse");
       document
         .getElementById("floating-navbar-toggler")
