@@ -1101,6 +1101,13 @@ regionUtils.setMode = function (mode) {
         // Set region drawing cursor 
         regionUtils.setViewerCursor("crosshair")
     }
+    if (regionUtils._editedRegion) {
+        regionUtils._regions[regionUtils._editedRegion.id] = regionUtils._editedRegion;
+        regionUtils._editedRegion = null;
+        glUtils.updateRegionDataTextures();
+        glUtils.updateRegionLUTTextures();
+        glUtils.draw();
+    }
     regionUtils.resetManager();
 }
 
@@ -1145,6 +1152,7 @@ regionUtils.freeHandManager = function (event) {
     }
     
       function createRegionFromCanvasDrag(event) {
+        if (regionUtils._regionMode != "free") return;
         const drawingclass = regionUtils._drawingclass;
         // Get OSDViewer
         const OSDviewer = tmapp[tmapp["object_prefix"] + "_viewer"];
@@ -1249,6 +1257,7 @@ regionUtils.rectangleManager = function (event) {
     }
     
       function createRegionFromCanvasDrag(event) {
+        if (regionUtils._regionMode != "rectangle") return;
         const drawingclass = regionUtils._drawingclass;
         // Get OSDViewer
         const OSDviewer = tmapp[tmapp["object_prefix"] + "_viewer"];
@@ -1370,6 +1379,7 @@ regionUtils.ellipseManager = function (event) {
     }
     
       function createRegionFromCanvasDrag(event) {
+        if (regionUtils._regionMode != "ellipse") return;
         const drawingclass = regionUtils._drawingclass;
         // Get OSDViewer
         const OSDviewer = tmapp[tmapp["object_prefix"] + "_viewer"];
@@ -1599,7 +1609,7 @@ regionUtils.brushManager = function (event) {
       }
 
       function createRegionFromCanvasDrag(event) {
-        
+        if (regionUtils._regionMode != "brush") return;
         const drawingclass = regionUtils._drawingclass;
         // Get OSDViewer
         const OSDviewer = tmapp[tmapp["object_prefix"] + "_viewer"];
