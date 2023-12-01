@@ -535,6 +535,7 @@ glUtils._regionsVS = `
     #define MAX_NUM_IMAGES 192
 
     uniform mat2 u_viewportTransform;
+    uniform vec2 u_canvasSize;
     uniform int u_transformIndex;
     uniform vec4 u_imageBounds;
     uniform int u_numScanlines;
@@ -551,6 +552,7 @@ glUtils._regionsVS = `
     out vec2 v_texCoord;
     out vec2 v_localPos;
     out float v_scanline;
+    flat out float v_pixelWidth;
 
     void main()
     {
@@ -567,6 +569,13 @@ glUtils._regionsVS = `
         vec2 ndcPos = viewportPos * 2.0 - 1.0;
         ndcPos.y = -ndcPos.y;
         ndcPos = u_viewportTransform * ndcPos;
+
+        // Calculate pixel width in local coordinates. Need to do it here in the
+        // vertex shader, because using pixel derivatives in the fragment shader
+        // can cause broken stroke lines for large coordinates.
+        vec2 ndcPos2 = ndcPos + 0.7 / u_canvasSize;
+        mat2 viewportToLocal = inverse(u_viewportTransform * mat2(imageToViewport));
+        v_pixelWidth = length(viewportToLocal * (ndcPos2 - ndcPos));
 
         gl_Position = vec4(ndcPos, 0.0, 1.0);
     }
@@ -599,6 +608,7 @@ glUtils._regionsFS = `
     in vec2 v_texCoord;
     in vec2 v_localPos;
     in float v_scanline;
+    flat in float v_pixelWidth;
 
     layout(location = 0) out vec4 out_color;
 
@@ -625,7 +635,9 @@ glUtils._regionsFS = `
         vec2 p = v_localPos;  // Current sample position
         int scanline = int(v_scanline);
 
-        float pixelWidth = length(dFdx(p.xy));
+        // float pixelWidth = length(dFdx(p.xy));  // Can cause precision problems!
+        float pixelWidth = v_pixelWidth;  // Safer
+
         float strokeWidthPixels = u_regionStrokeWidth *
             (u_regionFillRule == FILL_RULE_NEVER ? STROKE_WIDTH : STROKE_WIDTH_FILLED);
         // For proper anti-aliasing, clamp stroke width to at least 1 pixel, and
@@ -2129,6 +2141,7 @@ glUtils._drawRegionsColorPass = function(gl, viewportTransform) {
 
         // Set per-scene uniforms
         gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
+        gl.uniform2fv(gl.getUniformLocation(program, "u_canvasSize"), [gl.canvas.width, gl.canvas.height]);
         gl.uniform1i(gl.getUniformLocation(program, "u_transformIndex"), collectionIndex);
         gl.uniform4fv(gl.getUniformLocation(program, "u_imageBounds"), imageBounds);
         gl.uniform1i(gl.getUniformLocation(program, "u_numScanlines"), numScanlines);
