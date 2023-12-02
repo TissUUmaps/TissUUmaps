@@ -293,13 +293,19 @@ def h5ad_to_tmap(basedir, path, library_id=None):
     obsListNumerical = []
     palette = {}
 
+    obsIndex = str(adata.get("/obs").attrs["_index"])
     for obs in obsList:
         if adata.get(f"/obs/{obs}/categories") is not None:
             obsListCategorical.append(obs)
             p = getPalette(adata, obs)
             palette[obs] = p
-        else:
+        elif adata.get(f"/obs/{obs}").dtype.kind in "iuf":
             obsListNumerical.append(obs)
+        elif obs == obsIndex:
+            continue
+        else:
+            obsListCategorical.append(obs)
+            palette[obs] = {}
 
     new_tmap_project["markerFiles"].append(
         {
