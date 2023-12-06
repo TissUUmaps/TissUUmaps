@@ -19,11 +19,12 @@ pluginUtils.addPlugin = function (pluginID) {
     }
     pluginUtils._pluginList.push(pluginID);
     interfaceUtils.addMenuItem(["Plugins",pluginID],function() {
-        pluginUtils.startPlugin(pluginID);
+        pluginUtils.startPlugin(pluginID, undefined, true);
     });
 }
 
-pluginUtils.startPlugin = function (pluginID, options) {
+pluginUtils.startPlugin = function (pluginID, options, show) {
+    if (show == undefined) show = true;
     var script = document.createElement('script');
     script.src = `plugins/${pluginID}.js?date=${Date.now()}`;
     document.head.appendChild(script);
@@ -35,7 +36,7 @@ pluginUtils.startPlugin = function (pluginID, options) {
         if (!pluginTitle)
             pluginTitle = pluginID;
         
-        pluginDiv = interfaceUtils.addPluginAccordion(pluginID, pluginTitle);
+        pluginDiv = interfaceUtils.addPluginAccordion(pluginID, pluginTitle, show);
         if (window[pluginID].parameters !== undefined) {
             pluginUtils.loadParameters(pluginID, pluginDiv, window[pluginID].parameters);
         }

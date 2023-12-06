@@ -2849,7 +2849,8 @@ interfaceUtils.addMenuItem = function(itemTree, callback, before) {
     })
 }
 
-interfaceUtils.addPluginAccordion = function (pluginID, pluginName) {
+interfaceUtils.addPluginAccordion = function (pluginID, pluginName, show) {
+    if (show == undefined) show = true;
     var pluginID = HTMLElementUtils.stringToId(pluginID);
     var pluginsAccordions = document.getElementById("pluginsAccordions");
     var accordion_item = document.getElementById("PluginAccordionItem-" + pluginID);
@@ -2897,8 +2898,10 @@ interfaceUtils.addPluginAccordion = function (pluginID, pluginName) {
         accordion_item.appendChild(accordion_content);
         accordion_content.innerHTML = "[Plugin loading...]"
     }
-    $('#title-tab-plugins').tab('show');
-    $('#' + "plugin-" + pluginID).collapse('show', {parent: pluginsAccordions});
+    if (show) {
+        $('#title-tab-plugins').tab('show');
+        $('#' + "plugin-" + pluginID).collapse('show', {parent: pluginsAccordions});
+    }
     document.getElementById("title-tab-plugins").classList.remove("d-none");
     return document.getElementById("plugin-" + pluginID);
 }
