@@ -542,9 +542,10 @@ Feature_Space.run = async function () {
   });
 
   Feature_Space_Control.classList.add("d-none");
+  let separator = window.location.href.includes("?") ? "&" : "?";
   Feature_Space_Control.setAttribute(
     "src",
-    window.location.href.replace(/#.*$/, "") + "&tmap=null",
+    window.location.href.replace(/#.*$/, "") + separator + "tmap=null",
   );
 };
 
