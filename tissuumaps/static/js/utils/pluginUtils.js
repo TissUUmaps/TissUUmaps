@@ -58,6 +58,7 @@ pluginUtils.loadParameters = function (pluginID, pluginDiv, parameters) {
         if (document.getElementById(parameterID) !== null) {
             document.getElementById(parameterID).value = value;
             document.getElementById(parameterID).checked = value;
+            document.getElementById(parameterID)?.click();
         }
     }
     window[pluginID].get = function(paramName) {
@@ -271,7 +272,9 @@ pluginUtils.loadParameters = function (pluginID, pluginDiv, parameters) {
                 }
             });
         }
-        window[pluginID].set(parameterName, parameter.default);
+        if (parameter.type != "button") {
+            window[pluginID].set(parameterName, parameter.default);
+        }
     }
     
 }
