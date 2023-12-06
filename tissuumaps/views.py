@@ -194,8 +194,7 @@ class ImageConverter:
                         imgVips = (imgVips > 255).ifthenelse(255, imgVips)
                         imgVips = imgVips.scaleimage()
                     imgVips.dzsave(
-                        os.path.basename(self.outputImage),
-                        dirname=os.path.dirname(self.outputImage),
+                        self.outputImage,
                         suffix=".jpg",
                         background=0,
                         depth="onepixel",
