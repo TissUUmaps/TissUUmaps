@@ -529,6 +529,14 @@ class Plugin:
     def __init__(self, app):
         self.app = app
 
+    def getPythonCode(self):
+        import inspect
+
+        resp = make_response(
+            inspect.getsource(inspect.getmodule(inspect.currentframe()))
+        )
+        return resp
+
     def getCacheFile(self, jsonParam):
         strCache = self.app.basedir + json.dumps(jsonParam, sort_keys=True, indent=2)
         hashKey = hashlib.md5(strCache.encode("utf-8")).hexdigest()

@@ -1,0 +1,101 @@
+[
+    {
+        "author": "Andrea Behanova, Christophe Avenel",
+        "date": "2022-10-31",
+        "description": "ClassV&QC plugin is for visualization, comparison and quality control of cell classification. You can read more at <a target=\"_blank\" href=\"https://doi.org/10.1017/S2633903X23000053\"  >https://doi.org/10.1017/S2633903X23000053</a>.",
+        "image": "ClassQC.gif",
+        "js": "ClassQC.js",
+        "name": "ClassV&QC",
+        "py": "ClassQC.py",
+        "tmap_min_version": 3.1,
+        "version": 1.0,
+        "yml": "ClassQC.yml"
+    },
+    {
+        "author": "Eduard Chelebian - Christophe Avenel",
+        "date": "2023-08-08",
+        "description": null,
+        "image": null,
+        "js": "DEPICTER.js",
+        "name": "DEPICTER",
+        "py": "DEPICTER.py",
+        "version": "0.1.0",
+        "yml": "DEPICTER.yml"
+    },
+    {
+        "author": "Christophe Avenel",
+        "date": "2023-01-19",
+        "description": "The Feature Space plugin allows to display markers in any feature space - such as UMAP, t-SNE or PCA - next to markers with spatial coordinates. You can interactively select markers in the Feature Space viewport and instantaneously see the corresponding markers in the Spatial viewport. You can read more at <a target=\"_blank\" href=\"https://doi.org/10.1017/S2633903X23000053\"  >https://doi.org/10.1017/S2633903X23000053</a>.",
+        "image": "Feature_Space.gif",
+        "js": "Feature_Space.js",
+        "name": "Feature Space",
+        "py": "Feature_Space.py",
+        "version": "1.2.1",
+        "yml": "Feature_Space.yml"
+    },
+    {
+        "author": "Christophe Avenel",
+        "date": "2022-03-30",
+        "description": "The Feature Space 3D plugin allows to display markers in 3D in any feature space - such as UMAP, t-SNE or PCA - next to markers with spatial coordinates. Note that this plugin doesn't allow marker selection in the Feature Space.",
+        "image": "Feature_Space_3D.gif",
+        "js": "Feature_Space_3D.js",
+        "name": "Feature Space 3D",
+        "py": "Feature_Space_3D.py",
+        "tmap_min_version": 3.1,
+        "version": 1.3,
+        "yml": "Feature_Space_3D.yml"
+    },
+    {
+        "author": "Andrea Behanova, Christophe Avenel",
+        "date": "2022-10-31",
+        "description": "InteractionV&QC plugin is for visualization and quality control of cell-cell interactions. You can read more at <a target=\"_blank\" href=\"https://doi.org/10.1017/S2633903X23000053\">https://doi.org/10.1017/S2633903X23000053</a>.",
+        "image": "InteractionQC.gif",
+        "js": "InteractionQC.js",
+        "name": "InteractionV&QC plugin",
+        "py": "InteractionQC.py",
+        "version": 1.0,
+        "yml": "InteractionQC.yml"
+    },
+    {
+        "author": "Christophe Avenel",
+        "date": "2022-03-30",
+        "description": "The Plot_Histogram plugin allows to display histograms of markers from any hand drawn selection in the image, in real time.",
+        "image": "Plot_Histogram.gif",
+        "js": "Plot_Histogram.js",
+        "name": "Plot Histogram",
+        "py": "Plot_Histogram.py",
+        "version": 1.0,
+        "yml": "Plot_Histogram.yml"
+    },
+    {
+        "author": "Axel Andersson, Christophe Avenel",
+        "date": "2023-05-22",
+        "description": "Points2Regions allows the user to automatically identify regions of similar gene expression. Gene signature vectors are created by counting the frequency of different genes in small local neighborhoods. The signatures are then clustered resulting in masks for regions of similar gene expression. You can read more at <a target=\"_blank\" href=\"https://doi.org/10.1101/2022.12.07.519086\">https://doi.org/10.1101/2022.12.07.519086</a>.",
+        "image": "Points2Regions.gif",
+        "js": "Points2Regions.js",
+        "name": "Points2Regions",
+        "py": "Points2Regions.py",
+        "version": "0.6.4",
+        "yml": "Points2Regions.yml"
+    },
+    {
+        "author": "Christophe Avenel - Axel Andersson",
+        "date": "2023-09-06",
+        "description": "The Spot Inspector plugin is implemented using Python with a Javascript interface for interacting with the main module. The plugin allows the user to interactively visualize content from multiple staining rounds and channels by clicking on the currently displayed image in TissUUmaps. The plugin works for TissUUmaps Windows version and is demonstrated through a short video (<a href=\"https://tissuumaps.github.io/tutorials/#spot_inspector\">spot inspector video</a>). <br/> <br/>\nThe In Situ Transcriptomic (IST) quality control plugin Spot Inspection allows the user to interactively click anywhere on an image displayed in TissUUmaps. This interaction opens a gridded figure displaying image content from multiple image rounds and channels as well as traces indicating the barcoded labels. The plugin enables an effective and interactive way for visualizing and interpreting errors introduced in IST pipelines. The Spot Inspector plugin is available for the TissUUmaps desktop client. It is implemented using Python with a JavaScript interface for communicating with the main TissUUmaps module. <br/> <br/> The source code of the plugin is available under <a target=\"_blank\" href=\"https://github.com/TissUUmaps/TissUUmaps/tree/master/plugins_repo\">https://github.com/TissUUmaps/TissUUmaps/tree/master/plugins_repo</a>.",
+        "image": "Spot_Inspector.gif",
+        "js": "Spot_Inspector.js",
+        "name": "Spot Inspector",
+        "py": "Spot_Inspector.py",
+        "version": "3.0.2",
+        "yml": "Spot_Inspector.yml"
+    },
+    {
+        "author": "Christophe Avenel",
+        "description": "Copy these plugin files to create your own plugin.",
+        "js": "Plugin_template.js",
+        "name": "Plugin Template",
+        "py": "Plugin_template.py",
+        "version": 1.0,
+        "yml": "Plugin_template.yml"
+    }
+]

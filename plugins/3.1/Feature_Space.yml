@@ -1,0 +1,7 @@
+---
+name: Feature Space
+version: 1.2.1
+author: Christophe Avenel
+date: 2023-01-19
+image: Feature_Space.gif
+description: The Feature Space plugin allows to display markers in any feature space - such as UMAP, t-SNE or PCA - next to markers with spatial coordinates. You can interactively select markers in the Feature Space viewport and instantaneously see the corresponding markers in the Spatial viewport. You can read more at <a target="_blank" href="https://doi.org/10.1017/S2633903X23000053"  >https://doi.org/10.1017/S2633903X23000053</a>.

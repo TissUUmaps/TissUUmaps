@@ -31,7 +31,7 @@ Spot_Inspector = {
     },
     _layer_format: {
       label:
-        "Layer name format - use <b>{row}</b> and <b>{col}</b> to define dimensions:",
+        "Layer name format - use <b>{row}</b> and <b>{col}</b> to define dimensions. Use {layout-col6} or {layout-row6} to display all layers with the given number of rows or columns:",
       type: "text",
       default: "",
     },
@@ -50,11 +50,16 @@ Spot_Inspector = {
         step: 0.1,
       },
     },
+    _run: {
+      label: "Display Spot Inspector",
+      type: "button",
+    },
     _MarkersSection: {
       label:
         'If you want to visualize markers on top of the image, you need to have a csv column for successive {row} values separated by semi-colons, and a csv column for successive {col} values separated by semi-colons (e.g. "1;2;3;4" and "C;T;G;A" for layers in the format Round1_C.tif',
       title: "MARKER OPTIONS",
       type: "section",
+      collapsed: true,
     },
     _marker_row: {
       label: "Select {row} column of markers",
@@ -75,6 +80,7 @@ Spot_Inspector = {
       label: "Only use these settings if you know what you are doing!",
       title: "ADVANCED SETTINGS",
       type: "section",
+      collapsed: true,
     },
     _importImages: {
       label: "Import folder of images into layers <i>(optional)</i>",
@@ -103,6 +109,9 @@ d3["LogGreys"] = colorScaleExp;
 dataUtils._d3LUTs.push("LogGreys");
 
 Spot_Inspector.inputTrigger = function (parameterName) {
+  if (parameterName == "_run") {
+    Spot_Inspector.getMatrix();
+  }
   if (parameterName == "_layer_format") {
     $(".Spot_Inspector_overlay").remove();
     $("#ISS_Spot_Inspector_viewer").remove();
@@ -195,43 +204,6 @@ Spot_Inspector.init = function (container) {
       Spot_Inspector.set("_marker_col", Spot_Inspector.get("_marker_col"));
     }
   }
-
-  let advancedSectionIndex = 9;
-
-  let advancedSectionElement = document.querySelector(
-    `#plugin-Spot_Inspector div:nth-child(${advancedSectionIndex}) div h6`,
-  );
-  advancedSectionElement?.setAttribute("data-bs-toggle", "collapse");
-  advancedSectionElement?.setAttribute("data-bs-target", "#collapse_advanced");
-  advancedSectionElement?.setAttribute("aria-expanded", "false");
-  advancedSectionElement?.setAttribute("aria-controls", "collapse_advanced");
-  advancedSectionElement?.setAttribute(
-    "class",
-    "collapse_button_transform border-bottom-0 p-1 collapsed",
-  );
-  advancedSectionElement?.setAttribute("style", "cursor: pointer;");
-  advancedSectionElement?.setAttribute("title", "Click to expand");
-  let newDiv = document.createElement("div");
-  newDiv.setAttribute("id", "collapse_advanced");
-  newDiv.setAttribute("class", "collapse");
-  $("#plugin-Spot_Inspector").append(newDiv);
-  let advancedSectionSubtitle = document.querySelector(
-    `#plugin-Spot_Inspector div:nth-child(${advancedSectionIndex}) div p`,
-  );
-  newDiv.appendChild(advancedSectionSubtitle);
-  for (
-    let indexElement = advancedSectionIndex + 1;
-    indexElement < Object.keys(Spot_Inspector.parameters).length + 1;
-    indexElement++
-  ) {
-    let element = document.querySelector(
-      `#plugin-Spot_Inspector div:nth-child(${advancedSectionIndex + 1})`,
-    );
-    newDiv.appendChild(element);
-  }
-
-  //Spot_Inspector.run();
-  setTimeout(() => Spot_Inspector.getMatrix(), 2000);
 };
 
 Spot_Inspector.loadImages = function (pathFormat) {
@@ -377,6 +349,7 @@ Spot_Inspector.getMarkers = function (bbox) {
   var ymax = ymin + bbox[3]; //OSDviewer.viewport.imageToViewportCoordinates(bbox[3]);
 
   markersInViewportBounds = [];
+  console.log("Get Markers");
   for (dataset in dataUtils.data) {
     var allkeys = Object.keys(dataUtils.data[dataset]["_groupgarden"]);
     for (var codeIndex in dataUtils.data[dataset]["_groupgarden"]) {
@@ -387,7 +360,7 @@ Spot_Inspector.getMarkers = function (bbox) {
       var hexColor = "color" in inputs ? inputs["color"] : "#ffff00";
       var visible = "visible" in inputs ? inputs["visible"] : true;
       if (visible) {
-        var newMarkers = regionUtils.searchTreeForPointsInBbox(
+        var pointsInside = regionUtils.searchTreeForPointsInBbox(
           dataUtils.data[dataset]["_groupgarden"][codeIndex],
           xmin,
           ymin,
@@ -398,8 +371,19 @@ Spot_Inspector.getMarkers = function (bbox) {
             xselector: dataUtils.data[dataset]["_X"],
             yselector: dataUtils.data[dataset]["_Y"],
             dataset: dataset,
+            coordFactor: dataUtils.data[dataset]["_coord_factor"],
           },
         );
+        var newMarkers = [];
+        var markerData = dataUtils.data[dataset]["_processeddata"];
+        const columns = dataUtils.data[dataset]["_csv_header"];
+        pointsInside.forEach(function (d) {
+          let p = {};
+          for (const key of columns) {
+            p[key] = markerData[key][d];
+          }
+          newMarkers.push(p);
+        });
         newMarkers.forEach(function (m) {
           m.color = hexColor;
           (m.global_X_pos = parseFloat(m[dataUtils.data[dataset]["_X"]])),
@@ -655,31 +639,54 @@ Spot_Inspector.getCoordinates = function () {
   let layers = tmapp.layers,
     layer_format = Spot_Inspector.get("_layer_format");
 
-  const invert_row_col =
-    layer_format.indexOf("{row}") > layer_format.indexOf("{col}");
-  const regexp_format = new RegExp(
-    layer_format.replace(/\{row\}|\{col\}/g, "(.*)"),
-  );
-
   const outputFields = [];
   const kept_layers = [];
-  for (const layer of layers) {
-    const tileCoord = layer["name"].match(regexp_format);
-    if (tileCoord === null) {
-      continue;
+  let layout_col = layer_format.match(/\{layout-col(\d+)\}/);
+  let layout_row = layer_format.match(/\{layout-row(\d+)\}/);
+  if (layout_col) {
+    let nb_col = layout_col[1];
+    for (let layerIndex = 0; layerIndex < layers.length; layerIndex++) {
+      let tileCoordList = [
+        layerIndex % nb_col,
+        Math.floor(layerIndex / nb_col),
+      ];
+      outputFields.push(tileCoordList);
+      kept_layers.push(layers[layerIndex]);
     }
-    kept_layers.push(layer);
-    let tileCoordList;
-    if (invert_row_col) {
-      tileCoordList = Array.from(tileCoord).slice(1);
-    } else {
-      tileCoordList = Array.from(tileCoord).slice(1).reverse(); // Remove the full match (index 0)
+  } else if (layout_row) {
+    let nb_row = layout_row[1];
+    for (let layerIndex = 0; layerIndex < layers.length; layerIndex++) {
+      let tileCoordList = [
+        Math.floor(layerIndex / nb_row),
+        layerIndex % nb_row,
+      ];
+      outputFields.push(tileCoordList);
+      kept_layers.push(layers[layerIndex]);
     }
-    outputFields.push(tileCoordList);
+  } else {
+    const invert_row_col =
+      layer_format.indexOf("{row}") > layer_format.indexOf("{col}");
+    const regexp_format = new RegExp(
+      layer_format.replace(/\{row\}|\{col\}/g, "(.*)"),
+    );
+
+    for (const layer of layers) {
+      const tileCoord = layer["name"].match(regexp_format);
+      if (tileCoord === null) {
+        continue;
+      }
+      kept_layers.push(layer);
+      let tileCoordList;
+      if (invert_row_col) {
+        tileCoordList = Array.from(tileCoord).slice(1);
+      } else {
+        tileCoordList = Array.from(tileCoord).slice(1).reverse(); // Remove the full match (index 0)
+      }
+      outputFields.push(tileCoordList);
+    }
   }
   let rowNames = Array.from(new Set(outputFields.map((fields) => fields[0]))); //.sort();
   let colNames = Array.from(new Set(outputFields.map((fields) => fields[1]))); //.sort();
-  console.log(regexp_format, rowNames, colNames, outputFields);
   outputFields.map((fields) => {
     fields[0] = rowNames.indexOf(fields[0]);
     fields[1] = colNames.indexOf(fields[1]);

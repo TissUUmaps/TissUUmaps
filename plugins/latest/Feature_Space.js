@@ -11,6 +11,20 @@ var Feature_Space;
 Feature_Space = {
   name: "Feature_Space Plugin",
   parameters: {
+    _display: {
+      label: "Display Feature Space",
+      type: "button",
+    },
+    _info: {
+      label: "Hold shift to draw a region around markers",
+      type: "label",
+    },
+    _advancedSection: {
+      label: "",
+      title: "ADVANCED OPTIONS",
+      type: "section",
+      collapsed: true,
+    },
     _refresh: {
       label: "Refresh plugin based on loaded markers",
       type: "button",
@@ -36,14 +50,6 @@ Feature_Space = {
       label: "Select Histogram Key",
       type: "select",
     },
-    _display: {
-      label: "Display Feature Space",
-      type: "button",
-    },
-    _info: {
-      label: "Hold shift to draw a region around markers",
-      type: "label",
-    },
   },
   _region: null,
   _regionPixels: null,
@@ -57,6 +63,12 @@ Feature_Space.init = function (container) {
   var script = document.createElement("script");
   script.src = "https://cdn.plot.ly/plotly-2.9.0.min.js";
   document.head.appendChild(script);
+
+  glUtils.temp_draw_trigger = glUtils.draw;
+  glUtils.draw = function () {
+    glUtils.temp_draw_trigger();
+    Feature_Space.inputTrigger("_refresh");
+  };
   Feature_Space.inputTrigger("_refresh");
 };
 
@@ -228,7 +240,10 @@ Feature_Space.run = async function () {
   if (Feature_Space_Control) {
     Feature_Space.clear();
   }
-
+  if (!dataUtils.data[Feature_Space.get("_dataset")]) {
+    interfaceUtils.alert("No marker dataset loaded");
+    return;
+  }
   if (dataUtils.data[Feature_Space.get("_dataset")]._filetype == "h5") {
     let allinputs = {
       umap0: interfaceUtils.getElementById(Feature_Space.getInputID("_UMAP1")),
