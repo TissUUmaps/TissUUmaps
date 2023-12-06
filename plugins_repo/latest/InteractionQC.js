@@ -10,13 +10,21 @@
 var InteractionQC;
 InteractionQC = {
   name: "InteractionQC Plugin",
-  _dataset: null,
+  parameters: {
+    _run: {
+      label: "Display Neighborhood Enrichment Test",
+      type: "button",
+    },
+    _AdvancedSection: {
+      label:
+        "If you have a precomputed matrix in csv format, you can upload it here. Headers must be the same as the cell class names.",
+      title: "ADVANCED OPTIONS",
+      type: "section",
+      collapsed: true,
+    },
+  },
   _matrix: null,
   _matrix_header: null,
-  _region: null,
-  _regionPixels: null,
-  _regionWin: null,
-  _newwin: null,
 };
 
 /**
@@ -25,28 +33,9 @@ InteractionQC.init = function (container) {
   var script = document.createElement("script");
   script.src = "https://cdn.plot.ly/plotly-latest.min.js";
   document.head.appendChild(script);
-  row1 = HTMLElementUtils.createRow({});
-  col11 = HTMLElementUtils.createColumn({ width: 12 });
-  button111 = HTMLElementUtils.createButton({
-    extraAttributes: { class: "btn btn-primary mx-2" },
-  });
-  button111.innerText = "Refresh drop-down lists based on loaded markers";
-
-  row2 = HTMLElementUtils.createRow({});
-  col21 = HTMLElementUtils.createColumn({ width: 12 });
-  select211 = HTMLElementUtils.createElement({
-    kind: "select",
-    id: "InteractionQC_dataset",
-    extraAttributes: {
-      class: "form-select form-select-sm",
-      "aria-label": ".form-select-sm",
-    },
-  });
-  label212 = HTMLElementUtils.createElement({
-    kind: "label",
-    extraAttributes: { for: "InteractionQC_dataset" },
-  });
-  label212.innerText = "Select marker dataset";
+  let advanced_section = document.getElementById(
+    "collapsedSection_InteractionQC__AdvancedSection",
+  );
 
   row4 = HTMLElementUtils.createRow({});
   col41 = HTMLElementUtils.createColumn({ width: 12 });
@@ -65,70 +54,6 @@ InteractionQC.init = function (container) {
     extraAttributes: { for: "matrix" },
   });
   label412.innerText = "Select file";
-
-  row5 = HTMLElementUtils.createRow({});
-  col51 = HTMLElementUtils.createColumn({ width: 12 });
-  button511 = HTMLElementUtils.createButton({
-    extraAttributes: { class: "btn btn-primary mx-2" },
-  });
-  button511.innerText = "Display Neighborhood Enrichment Test";
-
-  row12 = HTMLElementUtils.createRow({});
-  col121 = HTMLElementUtils.createElement({
-    kind: "div",
-    id: "InteractionQC_matrix",
-  });
-  col131 = HTMLElementUtils.createElement({
-    kind: "div",
-    id: "InteractionQC_legend",
-  });
-
-  // Refresh button Refresh drop-down lists based on loaded markers
-  button111.addEventListener("click", (event) => {
-    interfaceUtils.cleanSelect("InteractionQC_dataset");
-    interfaceUtils.cleanSelect("Column");
-    interfaceUtils.cleanSelect("matrix");
-
-    var datasets = Object.keys(dataUtils.data).map(function (e, i) {
-      return {
-        value: e,
-        innerHTML: document.getElementById(e + "_tab-name").value,
-      };
-    });
-    interfaceUtils.addObjectsToSelect("InteractionQC_dataset", datasets);
-    var event = new Event("change");
-    interfaceUtils.getElementById("InteractionQC_dataset").dispatchEvent(event);
-  });
-
-  // Marker dataset selector
-  select211.addEventListener("change", (event) => {
-    InteractionQC._dataset = select211.value;
-    if (!dataUtils.data[InteractionQC._dataset]) return;
-    interfaceUtils.cleanSelect("Column");
-    interfaceUtils.addElementsToSelect(
-      "Column",
-      dataUtils.data[InteractionQC._dataset]._csv_header,
-    );
-    interfaceUtils.cleanSelect("matrix");
-    interfaceUtils.addElementsToSelect(
-      "matrix",
-      dataUtils.data[InteractionQC._dataset]._csv_header,
-    );
-    if (
-      dataUtils.data[InteractionQC._dataset]._csv_header.indexOf("Column") > 0
-    ) {
-      interfaceUtils.getElementById("Column").value = "Column";
-      var event = new Event("change");
-      interfaceUtils.getElementById("Column").dispatchEvent(event);
-    }
-    if (
-      dataUtils.data[InteractionQC._dataset]._csv_header.indexOf("matrix") > 0
-    ) {
-      interfaceUtils.getElementById("matrix").value = "matrix";
-      var event = new Event("change");
-      interfaceUtils.getElementById("matrix").dispatchEvent(event);
-    }
-  });
 
   input411.addEventListener("change", (event) => {
     var reader = new FileReader();
@@ -161,11 +86,25 @@ InteractionQC.init = function (container) {
     parseFile();
   });
 
-  button511.addEventListener("click", (event) => {
-    InteractionQC.run();
+  row12 = HTMLElementUtils.createRow({});
+  col121 = HTMLElementUtils.createElement({
+    kind: "div",
+    id: "InteractionQC_matrix",
   });
+  col131 = HTMLElementUtils.createElement({
+    kind: "div",
+    id: "InteractionQC_legend",
+  });
+  advanced_section.appendChild(row4);
+  row4.appendChild(col41);
+  col41.appendChild(label412);
+  col41.appendChild(input411);
 
-  container.innerHTML = "";
+  container.appendChild(row12);
+  row12.appendChild(col121);
+  row12.appendChild(col131);
+
+  /*container.innerHTML = "";
   // container.appendChild(row0);
   container.appendChild(row1);
   row1.appendChild(col11);
@@ -174,10 +113,7 @@ InteractionQC.init = function (container) {
   row2.appendChild(col21);
   col21.appendChild(label212);
   col21.appendChild(select211);
-  container.appendChild(row4);
-  row4.appendChild(col41);
-  col41.appendChild(label412);
-  col41.appendChild(input411);
+
   container.appendChild(row5);
   row5.appendChild(col51);
   col51.appendChild(button511);
@@ -186,22 +122,68 @@ InteractionQC.init = function (container) {
   row12.appendChild(col131);
 
   var event = new Event("click");
-  button111.dispatchEvent(event);
+  button111.dispatchEvent(event);*/
 };
 
-InteractionQC.run = function () {
+InteractionQC.inputTrigger = function (parameterName) {
+  if (parameterName == "_run") {
+    InteractionQC.run();
+  }
+};
+
+InteractionQC.loadFromH5AD = async function () {
+  let _dataset = Object.keys(dataUtils.data)[0];
+  data_obj = dataUtils.data[_dataset];
+  if (!data_obj._filetype == "h5") return;
+  try {
+    let obs = data_obj._gb_col.replace(/\/obs/g, "");
+    let matrix = await dataUtils._hdf5Api.get(data_obj._csv_path, {
+      path: "/uns/" + obs + "_nhood_enrichment/zscore",
+    });
+    console.log(matrix);
+    let _matrix_header = Object.keys(data_obj._groupgarden);
+    // convert matrix from 1D typed array of shape NxN to array of arrays
+
+    InteractionQC._matrix = [];
+    for (let i = 0; i < _matrix_header.length; i += 1) {
+      InteractionQC._matrix.push(
+        matrix.value.slice(
+          i * _matrix_header.length,
+          (i + 1) * _matrix_header.length,
+        ),
+      );
+    }
+    InteractionQC._matrix = InteractionQC._matrix.reverse();
+    console.log(InteractionQC._matrix);
+    return _matrix_header;
+  } catch (error) {
+    interfaceUtils.alert(
+      "No precomputed matrix found for the current dataset.",
+    );
+    return null;
+  }
+};
+
+InteractionQC.run = async function () {
+  let _dataset = Object.keys(dataUtils.data)[0];
+  if (!_dataset) {
+    interfaceUtils.alert("No marker dataset loaded");
+    return;
+  }
+  let _matrix_header = InteractionQC._matrix_header;
+  if (!InteractionQC._matrix_header) {
+    _matrix_header = await InteractionQC.loadFromH5AD();
+  }
   var op = tmapp["object_prefix"];
-  var vname = op + "_viewer";
-  var InteractionQC_Control = document.getElementById("InteractionQC_Control");
 
   var data = [
     {
       z: InteractionQC._matrix,
-      x: InteractionQC._matrix_header,
-      y: InteractionQC._matrix_header.slice().reverse(),
+      x: _matrix_header,
+      y: _matrix_header.slice().reverse(),
       type: "heatmap",
       hoverongaps: false,
-      colorscale: "Hot",
+      colorscale: "Viridis",
     },
   ];
 
@@ -212,11 +194,11 @@ InteractionQC.run = function () {
     yaxis: {
       side: "top",
       tickmode: "array",
-      tickvals: InteractionQC._matrix_header,
-      ticktext: InteractionQC._matrix_header.map(function (text) {
-        color = document.getElementById(
-          InteractionQC._dataset + "_" + text + "_color",
-        ).value;
+      tickvals: _matrix_header,
+      ticktext: _matrix_header.map(function (text) {
+        let color = document.getElementById(
+          _dataset + "_" + text + "_color",
+        )?.value;
         return "<span style='font-weight:bold;color:" + color + "'>███</span>";
       }),
       ticks: "",
@@ -231,14 +213,14 @@ InteractionQC.run = function () {
     },
     xaxis: {
       // "scaleanchor":"x",
-      tickvals: InteractionQC._matrix_header.slice().reverse(),
-      ticktext: InteractionQC._matrix_header
+      tickvals: _matrix_header.slice().reverse(),
+      ticktext: _matrix_header
         .slice()
         .reverse()
         .map(function (text) {
-          color = document.getElementById(
-            InteractionQC._dataset + "_" + text + "_color",
-          ).value;
+          let color = document.getElementById(
+            _dataset + "_" + text + "_color",
+          )?.value;
           return (
             "<span style='font-weight:bold;color:" + color + "'>███</span>"
           );
@@ -269,11 +251,11 @@ InteractionQC.run = function () {
     },
   );
 
-  legend = "";
-  for (type of InteractionQC._matrix_header) {
-    typecolor = document.getElementById(
-      InteractionQC._dataset + "_" + type + "_color",
-    ).value;
+  let legend = "";
+  for (type of _matrix_header) {
+    let typecolor = document.getElementById(
+      _dataset + "_" + type + "_color",
+    )?.value;
     legend +=
       "<div style='display:inline-block;margin-right:10px;'><span style='width:15px;color:" +
       typecolor +
@@ -283,14 +265,13 @@ InteractionQC.run = function () {
   }
   document.getElementById("InteractionQC_legend").innerHTML = legend;
 
-  // InteractionQC_Control.on('plotly_click', function(data){
   document
     .getElementById("InteractionQC_matrix")
     .on("plotly_click", function (data) {
       console.log(data.points[0].x, data.points[0].y);
-      var clicked_x = data.points[0].x.replace(/ /g, "_");
-      var clicked_y = data.points[0].y.replace(/ /g, "_");
-      var uid = InteractionQC._dataset;
+      var clicked_x = data.points[0].x.toString().replace(/ /g, "_");
+      var clicked_y = data.points[0].y.toString().replace(/ /g, "_");
+      var uid = _dataset;
       console.log(uid + "_" + clicked_x);
       document.getElementById(uid + "_all_check").checked = true;
       document.getElementById(uid + "_all_check").click();

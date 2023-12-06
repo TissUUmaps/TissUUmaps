@@ -10,6 +10,23 @@
 var Plugin_template;
 Plugin_template = {
   name: "Template Plugin",
+  parameters: {
+    _section_test: {
+      label: "Test section",
+      title: "Section 1",
+      type: "section",
+      collapsed: false,
+    },
+    _message: {
+      label: "Message",
+      type: "text",
+      default: "Hello world",
+    },
+    _testButton: {
+      label: "Test button",
+      type: "button",
+    },
+  },
 };
 
 /**
@@ -17,48 +34,31 @@ Plugin_template = {
  * The container element is a div where the plugin options will be displayed.
  * @summary After setting up the tmapp object, initialize it*/
 Plugin_template.init = function (container) {
-  row1 = HTMLElementUtils.createRow({});
-  col11 = HTMLElementUtils.createColumn({ width: 12 });
-  button111 = HTMLElementUtils.createButton({
-    extraAttributes: { class: "btn btn-primary mx-2" },
-  });
-  button111.innerText = "Test plugin";
+  interfaceUtils.alert("The plugin has been loaded");
+};
 
-  button111.addEventListener("click", (event) => {
-    interfaceUtils
-      .prompt("Message", "Hello world", "Blabla")
-      .then((pathFormat) => {
-        Plugin_template.demo(pathFormat);
-      });
-  });
-
-  container.innerHTML = "";
-  container.appendChild(row1);
-  row1.appendChild(col11);
-  col11.appendChild(button111);
+/**
+ * This method is called when a button is clicked or a parameter value is changed*/
+Plugin_template.inputTrigger = function (input) {
+  console.log("inputTrigger", input);
+  if (input === "_testButton") {
+    let message = Plugin_template.get("_message");
+    Plugin_template.demo(message);
+  }
 };
 
 Plugin_template.demo = function (message) {
-  console.log(
-    JSON.stringify({
-      message: message,
-    }),
+  let successCallback = function (data) {
+    interfaceUtils.alert(data);
+  };
+  let errorCallback = function (data) {
+    console.log("Error:", data);
+  };
+  // Call the Python API endpoint "server_demo"
+  Plugin_template.api(
+    "server_demo",
+    { message: message },
+    successCallback,
+    errorCallback,
   );
-  $.ajax({
-    type: "post",
-    url: "/plugins/Plugin_template/server_demo",
-    contentType: "application/json; charset=utf-8",
-    data: JSON.stringify({
-      message: message,
-    }),
-    success: function (data) {
-      interfaceUtils.alert(data);
-    },
-    complete: function (data) {
-      // do something, not critical.
-    },
-    error: function (data) {
-      console.log("Error:", data);
-    },
-  });
 };

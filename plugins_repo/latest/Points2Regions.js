@@ -43,6 +43,7 @@ Points2Regions = {
       label: "Only change these settings if you know what you are doing!",
       title: "Advanced settings",
       type: "section",
+      collapsed: true,
     },
     _refresh: {
       label: "Refresh drop-down lists based on loaded markers",
@@ -58,9 +59,9 @@ Points2Regions = {
       type: "select",
     },
     _bins_per_res: {
-      label: "Number of bins per `resolution` (default 3):",
+      label: "Number of bins per `resolution` (default 1.5):",
       type: "number",
-      default: 3,
+      default: 1.5,
     },
     _seed: {
       label: "Random seed (used during KMeans):",
@@ -120,10 +121,10 @@ Points2Regions.init = function (container) {
       tooltip.enable();
     },
   );
-  let advancedSectionIndex = 7;
+  /*let advancedSectionIndex = 7;
 
   let advancedSectionElement = document.querySelector(
-    `#plugin-Points2Regions div:nth-child(${advancedSectionIndex}) div h6`,
+    `#plugin-Points2Regions div:nth-child(${advancedSectionIndex}) div h6`
   );
   advancedSectionElement?.setAttribute("data-bs-toggle", "collapse");
   advancedSectionElement?.setAttribute("data-bs-target", "#collapse_advanced");
@@ -131,7 +132,7 @@ Points2Regions.init = function (container) {
   advancedSectionElement?.setAttribute("aria-controls", "collapse_advanced");
   advancedSectionElement?.setAttribute(
     "class",
-    "collapse_button_transform border-bottom-0 p-1 collapsed",
+    "collapse_button_transform border-bottom-0 p-1 collapsed"
   );
   advancedSectionElement?.setAttribute("style", "cursor: pointer;");
   advancedSectionElement?.setAttribute("title", "Click to expand");
@@ -140,7 +141,7 @@ Points2Regions.init = function (container) {
   newDiv.setAttribute("class", "collapse");
   $("#plugin-Points2Regions").append(newDiv);
   let advancedSectionSubtitle = document.querySelector(
-    `#plugin-Points2Regions div:nth-child(${advancedSectionIndex}) div p`,
+    `#plugin-Points2Regions div:nth-child(${advancedSectionIndex}) div p`
   );
   newDiv.appendChild(advancedSectionSubtitle);
   for (
@@ -149,10 +150,10 @@ Points2Regions.init = function (container) {
     indexElement++
   ) {
     let element = document.querySelector(
-      `#plugin-Points2Regions div:nth-child(${advancedSectionIndex + 1})`,
+      `#plugin-Points2Regions div:nth-child(${advancedSectionIndex + 1})`
     );
     newDiv.appendChild(element);
-  }
+  }*/
 };
 
 Points2Regions.run = function () {
@@ -212,13 +213,17 @@ Points2Regions.run = function () {
         // do something, not critical.
       },
       error: function (data) {
-        console.log("Error:", data);
+        interfaceUtils.alert(
+          data.responseText.replace(/\n/g, "<br/>"),
+          "Error on the plugin's server response:",
+        );
+        /*console.log("Error:", data);
         setTimeout(function () {
           $(loadingModal).modal("hide");
         }, 500);
         interfaceUtils.alert(
-          "Error during Points2Regions, check logs. This plugin only works on a pip installation of TissUUmaps, with the extra packages: pandas, sklearn, skimage",
-        );
+          "Error during Points2Regions, check logs. This plugin only works on a pip installation of TissUUmaps, with the extra packages: pandas, sklearn, skimage"
+        );*/
       },
     });
   } else {
@@ -737,6 +742,7 @@ c,r = points2regions(
     seed,
     region_name
     )
+
 import json
 print (json.dumps(r))
 if (Points2Regions.get("_format")== "GeoJSON polygons"):
@@ -1031,7 +1037,7 @@ Points2Regions.initPython = function () {
     document.head.appendChild(script);
 
     var pyconfig = document.createElement("py-config");
-    pyconfig.innerHTML = "packages=['scikit-learn','scikit-image']";
+    pyconfig.innerHTML = "packages=['scikit-learn','scikit-image','anndata']";
     document.head.appendChild(pyconfig);
     Points2Regions.executePythonString(`
         from js import Points2Regions
@@ -1097,7 +1103,7 @@ Points2Regions._api = function (endpoint, data, success, error) {
       ? error
       : function (data) {
           interfaceUtils.alert(
-            data.responseText.replace("\n", "<br/>"),
+            data.responseText.replace(/\n/g, "<br/>"),
             "Error on the plugin's server response:",
           );
         },
