@@ -318,8 +318,9 @@ regionUtils.geoJSON2regions = async function (geoJSONObjects) {
         return "#" + ((1 << 24) + (rgb[0] << 16) + (rgb[1] << 8) + rgb[2]).toString(16).slice(1);
     }
     function decimalToHex(number) {
+        number = Number(number);
         if (number < 0){ number = 0xFFFFFFFF + number + 1; }
-        return "#" + number.toString(16).toUpperCase().substring(2, 8);
+        return "#" + number.toString(16).toUpperCase().substr(-6);
     }
     geoJSONObjects = regionUtils.oldRegions2GeoJSON(geoJSONObjects);
     if (!Array.isArray(geoJSONObjects)) {
