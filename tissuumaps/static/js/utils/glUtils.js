@@ -1243,10 +1243,10 @@ glUtils.deleteMarkers = function(uid) {
 }
 
 
-glUtils._updateBindingOffsetsForCurrentVAO = function(gl, uid, offset, numPoints) {
+glUtils._updateBindingOffsetsForCurrentMarkerVAO = function(gl, uid, offset, numPoints) {
     // This function is used for updating the offsets of vertex bindings for
     // instanced drawing. This is only necessary because drawArrayInstanced and
-    // drawElementsInstanced ignores any offset or first parameters we provide
+    // drawElementsInstanced ignores any offset/first parameters we provide
     // for instanced arrays (arrays with non-zero vertex attrib divisor).
 
     // Additional info about the vertex format. Make sure to update these values
@@ -1324,7 +1324,7 @@ glUtils._loadEdges = function(uid, forceUpdate) {
           TRANSFORM_OFFSET = numEdges * 22;
     const POINT_LOCATION = 0,      // Re-use the same attribute locations that
           INDEX_LOCATION = 1,      // are used also for drawing the markers
-          OPACITY_LOCATION = 4;
+          OPACITY_LOCATION = 4,
           TRANSFORM_LOCATION = 5;
 
     const lastInputs = glUtils._edgeInputsCached[uid];
@@ -1435,6 +1435,31 @@ glUtils._loadEdges = function(uid, forceUpdate) {
     glUtils._edgeInputsCached[uid] = JSON.stringify(newInputs);
 
     return numEdges;
+}
+
+
+glUtils._updateBindingOffsetsForCurrentEdgesVAO = function(gl, uid, offset, numEdges) {
+    // This function is used for updating the offsets of vertex bindings for
+    // instanced drawing. This is only necessary because drawArrayInstanced and
+    // drawElementsInstanced ignores any offset/first parameters we provide
+    // for instanced arrays (arrays with non-zero vertex attrib divisor).
+
+    // Additional info about the vertex format. Make sure to update these values
+    // if/when also changing the vertex format in glUtils.loadEdges!    
+    const POINT_OFFSET = numEdges * 0,
+          INDEX_OFFSET = numEdges * 16,
+          OPACITY_OFFSET = numEdges * 20,
+          TRANSFORM_OFFSET = numEdges * 22;
+    const POINT_LOCATION = 0,
+          INDEX_LOCATION = 1,
+          OPACITY_LOCATION = 4,
+          TRANSFORM_LOCATION = 5;
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_edges"]);
+    gl.vertexAttribPointer(POINT_LOCATION, 4, gl.FLOAT, false, 0, POINT_OFFSET + offset * 16);
+    gl.vertexAttribIPointer(INDEX_LOCATION, 1, gl.INT, 0, INDEX_OFFSET + offset * 4);
+    gl.vertexAttribPointer(OPACITY_LOCATION, 1, gl.UNSIGNED_SHORT, true, 0, OPACITY_OFFSET + offset * 2);
+    gl.vertexAttribPointer(TRANSFORM_LOCATION, 1, gl.UNSIGNED_SHORT, false, 0, TRANSFORM_OFFSET + offset * 2);
 }
 
 
@@ -2039,7 +2064,7 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
         for (let offset = 0; offset < numPoints; offset += chunkSize) {
             const count = (offset + chunkSize >= numPoints) ? numPoints - offset : chunkSize;
             if (glUtils._useInstancing) {
-                glUtils._updateBindingOffsetsForCurrentVAO(gl, uid, offset, numPoints);
+                glUtils._updateBindingOffsetsForCurrentMarkerVAO(gl, uid, offset, numPoints);
                 gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
             } else {
                 gl.drawArrays(gl.POINTS, offset, count);
@@ -2054,7 +2079,7 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
     for (let offset = 0; offset < numPoints; offset += chunkSize) {
         const count = (offset + chunkSize >= numPoints) ? numPoints - offset : chunkSize;
         if (glUtils._useInstancing) {
-            glUtils._updateBindingOffsetsForCurrentVAO(gl, uid, offset, numPoints);
+            glUtils._updateBindingOffsetsForCurrentMarkerVAO(gl, uid, offset, numPoints);
             gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
         } else {
             gl.drawArrays(gl.POINTS, offset, count);
@@ -2063,7 +2088,7 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
 
     // Restore render pipeline state
     if (glUtils._useInstancing) {
-        glUtils._updateBindingOffsetsForCurrentVAO(gl, uid, 0, numPoints);
+        glUtils._updateBindingOffsetsForCurrentMarkerVAO(gl, uid, 0, numPoints);
     }
     gl.bindVertexArray(null);
     gl.colorMask(true, true, true, true);
@@ -2076,6 +2101,11 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
 glUtils._drawEdgesByUID = function(gl, viewportTransform, markerScaleAdjusted, uid) {
     const numEdges = glUtils._numEdges[uid];
     if (numEdges == 0) return;
+
+    // Chunk size used to split a single large draw call into smaller chunks. On
+    // some Android phones, drawing larger datasets can result in WebGL context
+    // loss or crashes, so this should be a workaround.
+    const chunkSize = 65536;
 
     // Set up render pipeline
     const program = glUtils._programs["edges"];
@@ -2093,22 +2123,21 @@ glUtils._drawEdgesByUID = function(gl, viewportTransform, markerScaleAdjusted, u
     gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, "TransformUniforms"), 0);
     gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, glUtils._buffers["transformUBO"]);
 
-    gl.bindVertexArray(glUtils._vaos[uid + "_edges"]);
-
     // Set per-markerset uniforms
     gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
     gl.uniform1i(gl.getUniformLocation(program, "u_transformIndex"),
         glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
-
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorLUT"]);
     gl.uniform1i(gl.getUniformLocation(program, "u_colorLUT"), 0);
 
-    // (TODO: this draw call should also be split into smaller chunks (as in
-    // glUtils._drawMarkersByUID and glUtils._drawPickingPass) to avoid problem
-    // with rendering larger datasets on some Android phones)
-    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numEdges);
+    gl.bindVertexArray(glUtils._vaos[uid + "_edges"]);
+    for (let offset = 0; offset < numEdges; offset += chunkSize) {
+        const count = (offset + chunkSize >= numEdges) ? numEdges - offset : chunkSize;
+        glUtils._updateBindingOffsetsForCurrentEdgesVAO(gl, uid, offset, numEdges);
+        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
+    }
 
     // Restore render pipeline state
     gl.bindVertexArray(null);
