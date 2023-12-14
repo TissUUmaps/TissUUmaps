@@ -2953,8 +2953,6 @@ interfaceUtils._rGenUIFuncs.checkboxToEye=function(checkBox){
 * @param {HTMLEvent} event event that triggered function
 * @summary Delete all trace of a tab including datautils.data.key*/
 interfaceUtils._rGenUIFuncs.createTable=function(){
-    let allRegionClasses = Object.values(regionUtils._regions).map(function(e) { return e.regionClass; })
-    let singleRegionClasses = allRegionClasses.filter((v, i, a) => a.indexOf(v) === i);
     //I do this to know if I have name selected, and also to know where to draw the 
     //color from
     var groupUI=HTMLElementUtils.createElement({"kind":"div"});
@@ -3058,11 +3056,39 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
 
     interfaceUtils._rGenUIFuncs.checkboxToEye(check0);
     thead2.appendChild(tr);
-
-    for (i of Object.keys(singleRegionClasses.sort())) {
-        let regionClass = singleRegionClasses[i];
+    
+    function getUniqueCombinations(array) {
+        const uniqueCombinationsSet = new Set();
+        const result = [];
+      
+        for (const { collectionIndex, regionClass } of array) {
+            const combination = `${collectionIndex},${regionClass}`;
+        
+            if (!uniqueCombinationsSet.has(combination)) {
+                uniqueCombinationsSet.add(combination);
+                result.push({ collectionIndex, regionClass });
+            }
+        }
+        // sort result by collectionIndex and then by regionClass
+        result.sort((a, b) => {
+            if (a.collectionIndex < b.collectionIndex) return -1;
+            if (a.collectionIndex > b.collectionIndex) return 1;
+            if (a.regionClass < b.regionClass) return -1;
+            if (a.regionClass > b.regionClass) return 1;
+            return 0;
+        });
+        return result;
+    }
+    
+    let allRegionClasses = Object.values(regionUtils._regions).map(function(e) { return [e.collectionIndex, e.regionClass]; })
+    let singleRegionClasses = getUniqueCombinations(Object.values(regionUtils._regions));
+    
+    for (i of Object.keys(singleRegionClasses)) {
+        let collectionIndex = singleRegionClasses[i].collectionIndex;
+        let regionClass = singleRegionClasses[i].regionClass;
+        console.log(regionClass, collectionIndex, singleRegionClasses[i]);
         let regionClassID = HTMLElementUtils.stringToId("region_" + regionClass);
-        let numRegions = allRegionClasses.filter(x => x==regionClass).length
+        let numRegions = allRegionClasses.filter(x => x[0] == collectionIndex && x[1]==regionClass).length
 
         //row
         var tr=HTMLElementUtils.createElement({"kind":"tr",extraAttributes:{"data-escapedID":regionClassID}});
@@ -3070,11 +3096,11 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         var td0=HTMLElementUtils.createElement(
             {kind:"td", extraAttributes:{
                 "data-bs-toggle":"collapse",
-                "data-bs-target":"#collapse_region_" + regionClassID,
+                "data-bs-target":"#collapse_region_" + collectionIndex + "_" + regionClassID,
                 "aria-expanded":"false",
-                "aria-controls":"collapse_region_" + regionClassID,
+                "aria-controls":"collapse_region_" + collectionIndex + "_" + regionClassID,
                 "class":"collapse_button_regionClass collapse_button_transform collapsed",
-                "id": regionClassID + "_collapse_table_button"
+                "id": collectionIndex + "_" + regionClassID + "_collapse_table_button"
             }});
         var td1=HTMLElementUtils.createElement({"kind":"td"});
         var td2=HTMLElementUtils.createElement({"kind":"td"});
@@ -3091,6 +3117,18 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         tr.appendChild(td5);
         tr.appendChild(td6);
         
+        // create label with collectionIndex:
+        var regionclasslabel = HTMLElementUtils.createElement(
+            {
+                "kind":"label",
+                "extraAttributes":{
+                    "for":"regionUI_"+collectionIndex + "_" + regionClassID+"_check","class":"cursor-pointer"
+                },
+                "innerHTML": collectionIndex + "&nbsp;/"
+            }
+        )
+        td1.appendChild(regionclasslabel);
+        
         if (regionClass) rClass = regionClass; else rClass = "";
         var regionclasstext = HTMLElementUtils.inputTypeText({
             extraAttributes: {
@@ -3103,10 +3141,10 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         regionclasstext.addEventListener('change', function () {
             var newClass = this.value;
             const color = Object.values(regionUtils._regions).find(
-                x => x.regionClass==newClass
+                x => x.regionClass==newClass && x.collectionIndex==collectionIndex
             )?.polycolor;
             groupRegions = Object.values(regionUtils._regions).filter(
-                x => x.regionClass==regionClass
+                x => x.regionClass==regionClass && x.collectionIndex==collectionIndex
             );
             for (region of groupRegions) {
                 const escapedRegionID = HTMLElementUtils.stringToId(region.id);
@@ -3117,16 +3155,17 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
                 if (color) {region.polycolor = color;}
             };
             regionUtils.updateAllRegionClassUI();
-        });td2.appendChild(regionclasstext);
+        });
+        td2.appendChild(regionclasstext);
 
-        var label3=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":"regionUI_"+regionClassID+"_check","class":"cursor-pointer"}});
+        var label3=HTMLElementUtils.createElement({"kind":"label","extraAttributes":{"for":"regionUI_"+collectionIndex + "_" + regionClassID+"_check","class":"cursor-pointer"}});
         label3.innerText=numRegions;
         td3.appendChild(label3);        
 
-        let lastColor = interfaceUtils.getElementById("regionUI_"+regionClassID+"_color", false);
+        let lastColor = interfaceUtils.getElementById("regionUI_"+collectionIndex + "_" + regionClassID+"_color", false);
         if (lastColor == null) {
             let groupRegions = Object.values(regionUtils._regions).filter(
-                x => x.regionClass==regionClass
+                x => x.regionClass==regionClass && x.collectionIndex==collectionIndex
             );
             if (groupRegions.length > 0) {
                 lastColor = groupRegions[0].polycolor;
@@ -3137,7 +3176,7 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         }
         else lastColor = lastColor.value;
         var regioncolorinput = HTMLElementUtils.inputTypeColor({
-            id: "regionUI_"+regionClassID+"_color",
+            id: "regionUI_"+collectionIndex + "_" + regionClassID+"_color",
             extraAttributes: {
                 value: lastColor
             }
@@ -3145,7 +3184,7 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         regioncolorinput.addEventListener('change', function () {
             var newColor = this.value;
             groupRegions = Object.values(regionUtils._regions).filter(
-                x => x.regionClass==regionClass
+                x => x.regionClass==regionClass && x.collectionIndex==collectionIndex
             )
             for (region of groupRegions) {
                 region.polycolor = newColor;
@@ -3160,17 +3199,17 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         });
         td4.appendChild(regioncolorinput);
 
-        var check0=HTMLElementUtils.createElement({"kind":"input", "id":"regionUI_"+regionClassID+"_check","extraAttributes":{"class":"form-check-input regionUI-region-input","type":"checkbox" }});
+        var check0=HTMLElementUtils.createElement({"kind":"input", "id":"regionUI_"+collectionIndex + "_" + regionClassID+"_check","extraAttributes":{"class":"form-check-input regionUI-region-input","type":"checkbox" }});
         check0.checked = true;
         td5.appendChild(check0);
         interfaceUtils._rGenUIFuncs.checkboxToEye(check0);
         
         check0.addEventListener('input', function (event) {
             var visible = event.target.checked;
-            clist = interfaceUtils.getElementsByClassName("regionUI-region-"+regionClassID+"-input");
+            clist = interfaceUtils.getElementsByClassName("regionUI-region-"+collectionIndex + "_" + regionClassID+"-input");
             for (var i = 0; i < clist.length; ++i) { clist[i].checked_eye = visible; }
             groupRegions = Object.values(regionUtils._regions).filter(
-                x => x.regionClass==regionClass
+                x => x.regionClass==regionClass && x.collectionIndex==collectionIndex
             );
             for (region of groupRegions) {
                 region.visibility = visible;
@@ -3190,7 +3229,7 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
             .then(function(_confirm){
                 if (_confirm) {
                     groupRegions = Object.values(regionUtils._regions).filter(
-                        x => x.regionClass==regionClass
+                        x => x.regionClass==regionClass && x.collectionIndex==collectionIndex
                     ).forEach(function (region) {
                         regionUtils.deleteRegion(region.id, true);
                     });
@@ -3250,10 +3289,11 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         td_subregions.classList.add("p-0")
         td_subregions.setAttribute("colspan","100");
         let table_subregions=HTMLElementUtils.createElement({"kind":"table","extraAttributes":{"class":"table marker_table"}});
-        var tbody_subregions=HTMLElementUtils.createElement({"kind":"tbody","id":"tbody_subregions_"+regionClassID});
+        var tbody_subregions=HTMLElementUtils.createElement({"kind":"tbody","id":"tbody_subregions_"+collectionIndex + "_" + regionClassID});
         let collapse_div=HTMLElementUtils.createElement({"kind":"div"});
-        collapse_div.id = "collapse_region_" + regionClassID;
+        collapse_div.id = "collapse_region_" + collectionIndex + "_" + regionClassID;
         collapse_div.setAttribute("data-region-class", regionClass);
+        collapse_div.setAttribute("data-region-collectionIndex", collectionIndex);
         collapse_div.setAttribute("data-region-classID", regionClassID);
         collapse_div.classList.add("collapse")
         collapse_div.classList.add("container")
@@ -3264,7 +3304,8 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
             groupContainer.removeAttribute("data-region-selected");
             let selectedRegionClass = this.getAttribute("data-region-class");
             let selectedRegionClassID = this.getAttribute("data-region-classID");
-            let tbody_subregions = document.getElementById("tbody_subregions_" + selectedRegionClassID);
+            let selectedCollectionIndex = this.getAttribute("data-region-collectionIndex");
+            let tbody_subregions = document.getElementById("tbody_subregions_" + selectedCollectionIndex + "_" + selectedRegionClassID);
             if (tbody_subregions.innerHTML != "" && selectedRegionID != undefined) {
                 let escapedRegionId = HTMLElementUtils.stringToId(selectedRegionID);
                 var tr = document.querySelectorAll('[data-escapedid="'+escapedRegionId+'"]')[0];
@@ -3273,7 +3314,7 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
             if (tbody_subregions.innerHTML == "") {
                 var numberOfItemsPerPage = 100;
                 let groupRegions = Object.values(regionUtils._regions).filter(
-                    x => x.regionClass==selectedRegionClass
+                    x => x.regionClass==selectedRegionClass && x.collectionIndex==selectedCollectionIndex
                 )
                 let selectedIndex = 0;
                 if (selectedRegionID != undefined) {
@@ -3291,7 +3332,7 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
                 groupContainer.setAttribute("data-region-max", max);
                 groupContainer.setAttribute("data-region-min", min);
                 $(groupContainer).bind('scroll', function(){
-                    let tbody_subregions = document.getElementById("tbody_subregions_" + selectedRegionClassID);
+                    let tbody_subregions = document.getElementById("tbody_subregions_" + selectedCollectionIndex + "_" + selectedRegionClassID);
                     if($(groupContainer).scrollTop() + $(this).innerHeight() >= $(this)[0].scrollHeight - 500){
                         maxItem = parseInt(groupContainer.getAttribute("data-region-max"));
                         if (maxItem >= groupRegions.length) return;

@@ -440,7 +440,8 @@ regionUtils.highlightRegion = async function (regionid) {
     const region = regionUtils._regions[regionid];
     const escapedRegionId = HTMLElementUtils.stringToId(region.id);
     const regionClassID = HTMLElementUtils.stringToId("region_" + region.regionClass);
-    const collapsibleRow = $(`#collapse_region_${regionClassID}`);
+    const collectionIndex = region.collectionIndex
+    const collapsibleRow = $(`#collapse_region_${collectionIndex}_${regionClassID}`);
     collapsibleRow[0].setAttribute("data-region-selected", escapedRegionId);
     if (collapsibleRow) {
       collapsibleRow.collapse("show");
