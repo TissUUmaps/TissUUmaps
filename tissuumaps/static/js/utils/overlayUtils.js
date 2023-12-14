@@ -392,6 +392,9 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
         elt.style.zIndex = "100";
         var span = document.createElement('div');
         span.innerHTML = "Channel 1"
+        if (tmapp.layers[0]) {
+            span.innerHTML = "Channel 1: " + tmapp.layers[0].name;
+        }
         span.id = "channelValue"
         span.style.maxWidth="200px";
         span.style.overflow="hidden";
