@@ -185,6 +185,7 @@ tmapp.init = function () {
     tmapp["ISS_viewer"].addHandler("zoom", function animationFinishHandler(event){
         const zoom = event.zoom;
         var op = tmapp["object_prefix"];
+        if (!tmapp[op + "_viewer"].world.getItemAt(0)) return;
         let imageZoom = tmapp[op + "_viewer"].world.getItemAt(0).viewportToImageZoom(zoom)
         if (imageZoom > 0.8) {
             tmapp[op + "_viewer"].drawer.setImageSmoothingEnabled(false);
