@@ -21,15 +21,15 @@ glUtils = {
     _query: null,
     _caps: {},
 
-    // Marker settings and info stored per UID (this could perhaps be
-    // better handled by having an object per UID that stores all info
-    // and is easy to delete when closing a marker tab...)
+    // Marker rendering settings and info stored per UID (this could perhaps be
+    // better handled by having an object per UID that stores all info and is
+    // easy to delete when closing a marker tab...)
     _numPoints: {},              // {uid: numPoints, ...}
     _numEdges: {},               // {uid: numEdges, ...}
     _zOrder: {},                 // {uid: float, ...}
     _markerScalarRange: {},      // {uid: [minval, maxval], ...}
-    _markerScaleFactor: {},      // {uid: float}
     _markerScalarPropertyName: {},  // {uid: string, ...}
+    _markerScaleFactor: {},      // {uid: float, ...}
     _markerOpacity: {},          // {uid: alpha, ...}
     _markerStrokeWidth: {},      // {uid: float, ...}
     _markerFilled: {},           // {uid: boolean, ...}
@@ -50,7 +50,7 @@ glUtils = {
     _markerInputsCached: {},     // {uid: dict, ...}
     _edgeInputsCached: {},       // {uid: dict, ...}
 
-    // Global marker settings and info
+    // Global marker rendering settings and info
     _markerScale: 1.0,
     _useMarkerScaleFix: true,
     _globalMarkerScale: 1.0,
@@ -64,6 +64,8 @@ glUtils = {
     _useInstancing: true,         // Use instancing and gl.TRIANGLE_STRIP to avoid size limit of gl.POINTS
     _showEdgesExperimental: true,
     _edgeThicknessRatio: 0.1,     // Ratio between edge thickness and marker size
+
+    // Global region rendering settings and info
     _regionOpacity: 0.5,
     _regionStrokeWidth: 1.0,      // Base stroke width in pixels (larger values can give artifacts, so use with care!)
     _regionFillRule: "never",     // Possible values: "never" | "nonzero" | "oddeven"
@@ -73,6 +75,8 @@ glUtils = {
     _regionDataSize: {},          // Size stored per region data texture and used for dynamic resizing
     _regionPicked: null,          // Key to regionUtils._regions dict, or null if no region is picked
     _regionMaxNumRegions: 524288, // Limit used for the LUT texture size (will be automatically increased if needed)
+
+    // Other settings
     _logPerformance: false,       // Use GPU timer queries to log performance
     _piechartPaletteDefault: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
