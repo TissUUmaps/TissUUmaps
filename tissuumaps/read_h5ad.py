@@ -150,7 +150,13 @@ def h5ad_to_tmap(basedir, path, library_id=None):
         "tSNE",
     ]:
         if coordinates in list(adata.get("obsm", [])):
-            globalX, globalY = f"/obsm/{coordinates};0", f"/obsm/{coordinates};1"
+            if (
+                isinstance(adata.get(f"/obsm/{coordinates}"), h5py.Group)
+                and "x" in adata.get(f"/obsm/{coordinates}").keys()
+            ):
+                globalX, globalY = f"/obsm/{coordinates}/x", f"/obsm/{coordinates}/y"
+            else:
+                globalX, globalY = f"/obsm/{coordinates};0", f"/obsm/{coordinates};1"
             break
 
     if list(adata.get("/obs/__categories/", [])) != []:
@@ -292,14 +298,16 @@ def h5ad_to_tmap(basedir, path, library_id=None):
     obsListCategorical = []
     obsListNumerical = []
     palette = {}
-
-    obsIndex = str(adata.get("/obs").attrs["_index"])
+    try:
+        obsIndex = str(adata.get("/obs").attrs["_index"])
+    except Exception:
+        obsIndex = ""
     for obs in obsList:
         if adata.get(f"/obs/{obs}/categories") is not None:
             obsListCategorical.append(obs)
             p = getPalette(adata, obs)
             palette[obs] = p
-        elif adata.get(f"/obs/{obs}").dtype.kind in "iuf":
+        elif adata.get(f"/obs/{obs}") and adata.get(f"/obs/{obs}").dtype.kind in "iuf":
             obsListNumerical.append(obs)
         elif obs == obsIndex:
             continue

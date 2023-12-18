@@ -188,6 +188,10 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
     opacity.classList.add("overlay-slider");
     opacity.classList.add("form-range");
     opacity.type = "range";
+    // make scroll prevent default
+    opacity.addEventListener("wheel", function(ev) {
+        ev.preventDefault();
+    });
     opacity.setAttribute("min", "0");
     opacity.setAttribute("max", "1");
     opacity.setAttribute("step", "0.1");
@@ -223,6 +227,10 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
         if (filterParams.type == "range") {
             filterInput.classList.add("overlay-slider");
             filterInput.classList.add("form-range");
+            // make scroll prevent default
+            filterInput.addEventListener("wheel", function(ev) {
+                ev.preventDefault();
+            });
         }
         else if (filterParams.type == "checkbox") {
             filterInput.classList.add("form-check-input");
@@ -384,6 +392,9 @@ overlayUtils.addLayerSettings = function(layerName, tileSource, layerIndex, chec
         elt.style.zIndex = "100";
         var span = document.createElement('div');
         span.innerHTML = "Channel 1"
+        if (tmapp.layers[0]) {
+            span.innerHTML = "Channel 1: " + tmapp.layers[0].name;
+        }
         span.id = "channelValue"
         span.style.maxWidth="200px";
         span.style.overflow="hidden";
