@@ -148,6 +148,15 @@ class ImageConverter:
                     minVal = imgVips.percent(min_percent)
                     maxVal = imgVips.percent(max_percent)
 
+                    if app.config["VIPS_EXCLUDE_MIN_INTENSITY"]:
+                        absoluteMinVal = imgVips.min()
+                        imgVips_tmp = (
+                            (imgVips == absoluteMinVal)
+                            .bandand()
+                            .ifthenelse(maxVal + 1, imgVips)
+                        )
+                        minVal = imgVips_tmp.percent(min_percent)
+
                     if minVal == maxVal:
                         minVal = 0
                         maxVal = 255
