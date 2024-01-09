@@ -967,6 +967,7 @@ def main():
 
     if opts.DEBUG:
         views.app.config["DEBUG_CLI"] = True
+    if views.app.config["DEBUG_CLI"]:
         log = logging.getLogger("werkzeug")
         log.setLevel(logging.DEBUG)
         log = logging.getLogger("pyvips")
@@ -982,7 +983,6 @@ def main():
 
         # os.environ['WERKZEUG_RUN_MAIN'] = 'true'
     else:
-        views.app.config["DEBUG_CLI"] = False
         log = logging.getLogger("werkzeug")
         log.setLevel(logging.ERROR)
         log = logging.getLogger("pyvips")
