@@ -69,6 +69,10 @@ app.config["PLUGIN_FOLDER_USER"] = os.path.join(
     os.path.expanduser("~"), ".tissuumaps", "plugins"
 )
 app.config.from_envvar("TISSUUMAPS_CONF", silent=True)
+userConfigFile = os.path.join(os.path.expanduser("~"), ".tissuumaps", "tissuumaps.cfg")
+
+if os.path.isfile(userConfigFile):
+    app.config.from_pyfile(userConfigFile)
 
 
 def getPluginInFolder(folder):
