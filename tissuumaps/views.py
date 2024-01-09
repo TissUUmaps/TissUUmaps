@@ -142,12 +142,20 @@ class ImageConverter:
             def convertThread():
                 try:
                     imgVips = pyvips.Image.new_from_file(self.inputImage)
-                    minVal = imgVips.percent(0.5)
-                    maxVal = imgVips.percent(99.5)
+                    min_percent = app.config["VIPS_MIN_OUTLIER_PERC"]
+                    max_percent = app.config["VIPS_MAX_OUTLIER_PERC"]
+
+                    minVal = imgVips.percent(min_percent)
+                    maxVal = imgVips.percent(max_percent)
+
                     if minVal == maxVal:
                         minVal = 0
                         maxVal = 255
-                    if minVal < 0 or maxVal > 255:
+                    if (
+                        app.config["VIPS_FORCE_RESCALE"]
+                        or imgVips.percent(0) < 0
+                        or imgVips.percent(100) > 255
+                    ):
                         logging.debug(
                             f"Rescaling image {self.inputImage}: "
                             f"{minVal} - {maxVal} to 0 - 255"
@@ -163,7 +171,7 @@ class ImageConverter:
                         tile_width=256,
                         tile_height=256,
                         compression="jpeg",
-                        Q=95,
+                        Q=app.config["VIPS_JPEG_COMPRESSION"],
                         properties=True,
                     )
                 except Exception:
