@@ -141,7 +141,8 @@ InteractionQC.loadFromH5AD = async function () {
   data_obj = dataUtils.data[_dataset];
   if (!data_obj._filetype == "h5") return;
   try {
-    let obs = data_obj._gb_col.replace(/\/obs/g, "");
+    let obs = data_obj._gb_col.replace(/\/obs/g, "").replace(/\//g, "");
+    InteractionQC._className = obs;
     let matrix = await dataUtils._hdf5Api.get(data_obj._csv_path, {
       path: InteractionQC.get("_uns_postfix").replace("{obs}", obs),
     });
