@@ -53,7 +53,7 @@
         "js": "InteractionQC.js",
         "name": "InteractionV&QC plugin",
         "py": "InteractionQC.py",
-        "version": 1.1,
+        "version": "1.1.1",
         "yml": "InteractionQC.yml"
     },
     {
