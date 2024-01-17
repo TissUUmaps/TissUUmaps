@@ -204,19 +204,19 @@ InteractionQC.run = async function () {
       tickvals: _matrix_header,
       ticktext: _matrix_header.map(function (text) {
         let color = document.getElementById(
-          _dataset + "_" + text + "_color",
+          _dataset + "_" + text.replace(/ /g, "_") + "_color",
         )?.value;
-        return "<span style='font-weight:bold;color:" + color + "'>███</span>";
+        return "<span style='font-weight:bold;color:" + color + "'>█</span>";
       }),
       ticks: "",
-      tickangle: 90,
+      tickangle: 0,
       title: {
         text: InteractionQC._className,
         font: {
-          size: 25,
+          size: 20,
           color: "black",
         },
-        standoff: 5,
+        standoff: 20,
       },
     },
     xaxis: {
@@ -227,18 +227,16 @@ InteractionQC.run = async function () {
         .reverse()
         .map(function (text) {
           let color = document.getElementById(
-            _dataset + "_" + text + "_color",
+            _dataset + "_" + text.replace(/ /g, "_") + "_color",
           )?.value;
-          return (
-            "<span style='font-weight:bold;color:" + color + "'>███</span>"
-          );
+          return "<span style='font-weight:bold;color:" + color + "'>█</span>";
         }),
       ticks: "",
-      tickangle: 0,
+      tickangle: 90,
       title: {
         text: InteractionQC._className,
         font: {
-          size: 25,
+          size: 20,
           color: "black",
         },
         standoff: 5,
@@ -263,7 +261,7 @@ InteractionQC.run = async function () {
   let legend = "";
   for (type of _matrix_header) {
     let typecolor = document.getElementById(
-      _dataset + "_" + type + "_color",
+      _dataset + "_" + type.replace(/ /g, "_") + "_color",
     )?.value;
     legend +=
       "<div style='display:inline-block;margin-right:10px;'><span style='width:15px;color:" +
@@ -294,6 +292,13 @@ InteractionQC.run = async function () {
               data.points[i].y.toPrecision(4) + '\n\n';
       }
       alert('Closest point clicked:\n\n'+pts);*/
+    })
+    .on("plotly_doubleclick", function () {
+      setTimeout(function () {
+        var uid = _dataset;
+        document.getElementById(uid + "_all_check").checked = false;
+        document.getElementById(uid + "_all_check").click();
+      }, 200);
     });
 };
 
