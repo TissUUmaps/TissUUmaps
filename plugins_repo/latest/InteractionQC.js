@@ -147,7 +147,10 @@ InteractionQC.loadFromH5AD = async function () {
       path: InteractionQC.get("_uns_postfix").replace("{obs}", obs),
     });
     console.log(matrix);
-    let _matrix_header = Object.keys(data_obj._groupgarden);
+    let _matrix_header = await dataUtils._hdf5Api.get(data_obj._csv_path, {
+      path: "/obs/" + obs + "/categories",
+    });
+    _matrix_header = _matrix_header.value;
     // convert matrix from 1D typed array of shape NxN to array of arrays
 
     InteractionQC._matrix = [];
