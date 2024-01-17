@@ -22,6 +22,11 @@ InteractionQC = {
       type: "section",
       collapsed: true,
     },
+    _uns_postfix: {
+      label: "For HDF5 files, postfix of the uns key containing the matrix:",
+      type: "text",
+      default: "/uns/{obs}_nhood_enrichment/zscore",
+    },
   },
   _matrix: null,
   _matrix_header: null,
@@ -53,7 +58,7 @@ InteractionQC.init = function (container) {
     kind: "label",
     extraAttributes: { for: "matrix" },
   });
-  label412.innerText = "Select file";
+  label412.innerText = "For CSV file, select it on disk:";
 
   input411.addEventListener("change", (event) => {
     var reader = new FileReader();
@@ -138,7 +143,7 @@ InteractionQC.loadFromH5AD = async function () {
   try {
     let obs = data_obj._gb_col.replace(/\/obs/g, "");
     let matrix = await dataUtils._hdf5Api.get(data_obj._csv_path, {
-      path: "/uns/" + obs + "_nhood_enrichment/zscore",
+      path: InteractionQC.get("_uns_postfix").replace("{obs}", obs),
     });
     console.log(matrix);
     let _matrix_header = Object.keys(data_obj._groupgarden);
@@ -173,6 +178,8 @@ InteractionQC.run = async function () {
   let _matrix_header = InteractionQC._matrix_header;
   if (!InteractionQC._matrix_header) {
     _matrix_header = await InteractionQC.loadFromH5AD();
+  } else {
+    InteractionQC._className = "Cell classes";
   }
   var op = tmapp["object_prefix"];
 
@@ -204,11 +211,12 @@ InteractionQC.run = async function () {
       ticks: "",
       tickangle: 90,
       title: {
-        text: "Cell class 2",
+        text: InteractionQC._className,
         font: {
           size: 25,
           color: "black",
         },
+        standoff: 5,
       },
     },
     xaxis: {
@@ -228,11 +236,12 @@ InteractionQC.run = async function () {
       ticks: "",
       tickangle: 0,
       title: {
-        text: "Cell class 1",
+        text: InteractionQC._className,
         font: {
           size: 25,
           color: "black",
         },
+        standoff: 5,
       },
       ticklabelposition: "top",
       side: "top",
