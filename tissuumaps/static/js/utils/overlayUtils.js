@@ -84,9 +84,9 @@ overlayUtils.addAllLayersSettings = function() {
     var settingsPanel = document.getElementById("image-overlay-panel");
     settingsPanel.innerHTML = "";
 
-    // Toggle all channels UI & logic
+    // Toggle all layers UI & logic
     overlayUtils.addAllLayersTogglingButtons();
-    // end toggle all channels UI & logic
+    // end toggle all layers UI & logic
 
     tmapp.layers.forEach(function(layer, i) {
         overlayUtils.addLayerSettings(layer.name, layer.tileSource, i-1);
