@@ -37,11 +37,57 @@ overlayUtils.addAllLayers = function() {
     setTimeout(overlayUtils.setCollectionMode,500);
 }
 
+overlayUtils.addAllLayersTogglingButtons = function(){
+    const settingsPanel = document.getElementById("image-overlay-panel");
+
+    const layerTogglingContainer = document.createElement("div");
+
+    layerTogglingContainer.setAttribute("class", "d-flex p-2")
+
+    const showAllLayersButton = HTMLElementUtils.createButton({
+        extraAttributes: { class: "btn btn-primary btn-sm me-2" },
+    });
+    showAllLayersButton.innerText = "Show all";
+
+    showAllLayersButton.addEventListener("click", () => {
+        tmapp.layers.forEach((_, i) => {
+            const slider = document.getElementById("opacity-layer-" + i);
+            const checkbox = document.getElementById("visible-layer-" + i);
+            checkbox.checked = true;
+            overlayUtils._layerOpacities[i] = slider.value;
+            overlayUtils.setItemOpacity(i);
+        })
+    })
+
+    const hideAllLayersButton = HTMLElementUtils.createButton({
+        extraAttributes: { class: "btn btn-primary btn-sm" },
+    });
+    hideAllLayersButton.innerText = "Hide all";
+
+    hideAllLayersButton.addEventListener("click", () => {
+        tmapp.layers.forEach((layer, i) => {
+            const checkbox = document.getElementById("visible-layer-" + i);
+            checkbox.checked = false;
+            overlayUtils._layerOpacities[i] = 0;
+            overlayUtils.setItemOpacity(i);
+        })
+    })
+
+    layerTogglingContainer.appendChild(showAllLayersButton);
+    layerTogglingContainer.appendChild(hideAllLayersButton);
+    settingsPanel.appendChild(layerTogglingContainer)
+}
+
 /**
  * This method is used to add all layer settings */
 overlayUtils.addAllLayersSettings = function() {
     var settingsPanel = document.getElementById("image-overlay-panel");
     settingsPanel.innerHTML = "";
+
+    // Toggle all channels UI & logic
+    overlayUtils.addAllLayersTogglingButtons();
+    // end toggle all channels UI & logic
+
     tmapp.layers.forEach(function(layer, i) {
         overlayUtils.addLayerSettings(layer.name, layer.tileSource, i-1);
     });
