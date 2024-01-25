@@ -31,6 +31,7 @@ glUtils = {
     _markerScalarPropertyName: {},  // {uid: string, ...}
     _markerScaleFactor: {},      // {uid: float, ...}
     _markerOpacity: {},          // {uid: alpha, ...}
+    _markerBlendMode: {},        // {uid: string, ...}
     _markerStrokeWidth: {},      // {uid: float, ...}
     _markerFilled: {},           // {uid: boolean, ...}
     _markerOutline: {},          // {uid: boolean, ...}
@@ -925,6 +926,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
     const opacityPropertyName = newInputs.opacityPropertyName = dataUtils.data[uid]["_opacity_col"];
     const useOpacityFromMarker = newInputs.useOpacityFromMarker = dataUtils.data[uid]["_opacity_col"] != null;
     const markerOpacityFactor = dataUtils.data[uid]["_opacity"];
+    const markerBlendMode = glUtils._markerBlendMode[uid] != undefined ? glUtils._markerBlendMode[uid] : "over";  // TODO
 
     const markerStrokeWidth = dataUtils.data[uid]["_stroke_width"];
     const markerFilled = !dataUtils.data[uid]["_no_fill"];
@@ -1184,6 +1186,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
     glUtils._markerScalarPropertyName[uid] = scalarPropertyName;
     glUtils._markerScaleFactor[uid] = markerScaleFactor;
     glUtils._markerOpacity[uid] = markerOpacityFactor;
+    glUtils._markerBlendMode[uid] = markerBlendMode;
     glUtils._markerStrokeWidth[uid] = markerStrokeWidth;
     glUtils._markerFilled[uid] = markerFilled;
     glUtils._markerOutline[uid] = markerOutline;
@@ -1226,6 +1229,7 @@ glUtils.deleteMarkers = function(uid) {
     delete glUtils._markerScalarRange[uid];
     delete glUtils._markerScalarPropertyName[uid];
     delete glUtils._markerOpacity[uid];
+    delete glUtils._markerBlendMode[uid];
     delete glUtils._markerStrokeWidth[uid];
     delete glUtils._markerFilled[uid];
     delete glUtils._markerOutline[uid];
@@ -2048,7 +2052,22 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
     const program = glUtils._programs[glUtils._useInstancing ? "markers_instanced" : "markers"];
     gl.useProgram(program);
     gl.enable(gl.BLEND);
-    gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    if (glUtils._markerBlendMode[uid] == "coverage") {
+        // Note: this blend mode will invert the draw order, s.t. that if
+        // markers for example were sorted by scalar value in ascending order,
+        // the marker with the lowest scalar value will appear on top! A
+        // workaround is to just reverse the sorting when using this mode.
+        gl.blendFuncSeparate(gl.SRC_ALPHA_SATURATE, gl.ONE, gl.ONE, gl.ONE);
+    } else if (glUtils._markerBlendMode[uid] == "add") {
+        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE, gl.ONE, gl.ONE);
+    } else if (glUtils._markerBlendMode[uid] == "max") {
+        // This looks quite bad when premultiplied alpha is used to composite
+        // the WebGL canvas. So might want to manually set premultipliedAlpha to
+        // false via glUtils._options in projects that need this blend mode.
+        gl.blendEquationSeparate(gl.MAX, gl.MAX);
+    } else {  // glUtils._markerBlendMode[uid] == "over"
+        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    }
 
     // Set per-scene uniforms
     gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
@@ -2122,6 +2141,7 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
     gl.bindVertexArray(null);
     gl.colorMask(true, true, true, true);
     gl.blendFunc(gl.ONE, gl.ONE);
+    gl.blendEquation(gl.FUNC_ADD);
     gl.disable(gl.BLEND);
     gl.useProgram(null);
 }
