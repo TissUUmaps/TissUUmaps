@@ -69,6 +69,11 @@ regionUtils.getLayerFromCoord = function (coordinates) {
         let imageCoord = tiledImage.viewportToImageCoordinates(
             coordinates.x, coordinates.y, true
         );
+        if (tiledImage.getFlip()) {
+            // TiledImage.viewportToImageCoordinates() does not take
+            // flip into account, so need to apply it manually here
+            imageCoord.x = tiledImage.getContentSize().x - imageCoord.x;
+        }
         if (imageCoord.x > 0 && imageCoord.y > 0 &&
             imageCoord.x < tiledImage.getContentSize().x && imageCoord.y < tiledImage.getContentSize().y) {
                 return i;
@@ -94,6 +99,11 @@ regionUtils.globalPointsToViewportPoints = function (globalPoints, layerIndex) {
                 let x = globalPoints[i][j][k].x;
                 let y = globalPoints[i][j][k].y;
                 let tiledImage = viewer.world.getItemAt(layerIndex);
+                if (tiledImage.getFlip()) {
+                    // TiledImage.imageToViewportCoordinates() does not take
+                    // flip into account, so need to apply it manually here
+                    x = tiledImage.getContentSize().x - x;
+                }
                 let imageCoord = tiledImage.imageToViewportCoordinates(
                     x, y, true
                 );
@@ -127,6 +137,11 @@ regionUtils.viewportPointsToGlobalPoints = function (viewportPoints, layerIndex)
                 let imageCoord = tiledImage.viewportToImageCoordinates(
                     x, y, true
                 );
+                if (tiledImage.getFlip()) {
+                    // TiledImage.viewportToImageCoordinates() does not take
+                    // flip into account, so need to apply it manually here
+                    imageCoord.x = tiledImage.getContentSize().x - imageCoord.x;
+                }
                 polygon.push({ "x": imageCoord.x, "y": imageCoord.y });
             }
             subregion.push(polygon);
@@ -493,6 +508,11 @@ regionUtils.addRegion = function (points, regionid, color, regionClass, collecti
                     let imageCoord = tiledImage.viewportToImageCoordinates(
                         x, y, true
                     );
+                    if (tiledImage.getFlip()) {
+                        // TiledImage.viewportToImageCoordinates() does not take
+                        // flip into account, so need to apply it manually here
+                        imageCoord.x = tiledImage.getContentSize().x - imageCoord.x;
+                    }
                     x = imageCoord.x;
                     y = imageCoord.y;
                 }
@@ -2267,6 +2287,11 @@ regionUtils._findRegionByPoint = function(position) {
         const scanlineHeight = imageBounds[3] / numScanlines;
 
         const imageCoord = image.viewerElementToImageCoordinates(position);
+        if (image.getFlip()) {
+            // TiledImage.viewerElementToCoordinates() does not take flip into
+            // account, so need to apply it manually here
+            imageCoord.x = image.getContentSize().x - imageCoord.x;
+        }
         const px = imageCoord.x;
         const py = imageCoord.y;
         const scanline = Math.floor(py / scanlineHeight);
