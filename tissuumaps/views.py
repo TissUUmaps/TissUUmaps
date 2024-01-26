@@ -162,8 +162,8 @@ class ImageConverter:
                         maxVal = 255
                     if (
                         app.config["VIPS_FORCE_RESCALE"]
-                        or imgVips.percent(0) < 0
-                        or imgVips.percent(100) > 255
+                        or imgVips.min() < 0
+                        or imgVips.max() > 255
                     ):
                         logging.debug(
                             f"Rescaling image {self.inputImage}: "
