@@ -2086,7 +2086,7 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
     // Set per-markerset uniforms
     gl.uniform1i(gl.getUniformLocation(program, "u_transformIndex"),
         glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
-    gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), glUtils._markerScaleFactor[uid]);
+    gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), (glUtils._useAbsoluteMarkerSize[uid] ? glUtils._markerScale * 0.25 : 1.0) * glUtils._markerScaleFactor[uid]);
     gl.uniform2fv(gl.getUniformLocation(program, "u_markerScalarRange"), glUtils._markerScalarRange[uid]);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerStrokeWidth"), glUtils._markerStrokeWidth[uid]);
