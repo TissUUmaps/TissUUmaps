@@ -1509,6 +1509,11 @@ glUtils._updateBarcodeToLUTIndexDict = function (uid, markerData, keyName, maxNu
                                              // since this causes problems with pie-chart markers
         }
     }
+    if (Object.keys(barcodeToLUTIndex).length > maxNumBarcodes) {
+        interfaceUtils.generateNotification("Markerset contains more than " + maxNumBarcodes +
+            " number of unique keys or groups. Some parts of the visualization " +
+            "(colors and selection) might not work correctly.", "barcode_warning", false, false);
+    }
     glUtils._barcodeToLUTIndex[uid] = barcodeToLUTIndex;
     glUtils._barcodeToKey[uid] = barcodeToKey;
     console.log("barcodeToLUTIndex, barcodeToKey", barcodeToLUTIndex, barcodeToKey);
