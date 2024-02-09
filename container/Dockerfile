@@ -1,5 +1,11 @@
 FROM python:3.10-alpine
 
+# Set usertmap as a variable
+ENV USER=usertmap
+
+# Create a non-root user
+RUN adduser -D $USER
+
 COPY ./container/requirements.txt /requirements.txt
 
 # Install libvips
@@ -41,11 +47,14 @@ RUN pip3 install gunicorn gevent
 
 COPY ./container/tissuumaps.cfg /tissuumaps.cfg
 COPY ./tissuumaps/ /app/tissuumaps
+
+# Set up permissions and environment variables
 WORKDIR /app/
 ENV PYTHONPATH /app
-
 ENV GUNICORN_CMD_ARGS "--bind=0.0.0.0:80 --workers=8 --thread=8 --worker-class=gevent --forwarded-allow-ips='*' -"
-
 ENV TISSUUMAPS_CONF /tissuumaps.cfg
+
+# Change to the non-root user
+USER $USER
 
 CMD ["gunicorn", "tissuumaps:app"]
