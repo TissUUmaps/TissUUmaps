@@ -21,16 +21,17 @@ glUtils = {
     _query: null,
     _caps: {},
 
-    // Marker settings and info stored per UID (this could perhaps be
-    // better handled by having an object per UID that stores all info
-    // and is easy to delete when closing a marker tab...)
+    // Marker rendering settings and info stored per UID (this could perhaps be
+    // better handled by having an object per UID that stores all info and is
+    // easy to delete when closing a marker tab...)
     _numPoints: {},              // {uid: numPoints, ...}
     _numEdges: {},               // {uid: numEdges, ...}
     _zOrder: {},                 // {uid: float, ...}
     _markerScalarRange: {},      // {uid: [minval, maxval], ...}
-    _markerScaleFactor: {},      // {uid: float}
     _markerScalarPropertyName: {},  // {uid: string, ...}
+    _markerScaleFactor: {},      // {uid: float, ...}
     _markerOpacity: {},          // {uid: alpha, ...}
+    _markerBlendMode: {},        // {uid: string, ...}
     _markerStrokeWidth: {},      // {uid: float, ...}
     _markerFilled: {},           // {uid: boolean, ...}
     _markerOutline: {},          // {uid: boolean, ...}
@@ -40,6 +41,7 @@ glUtils = {
     _useOpacityFromMarker: {},   // {uid: boolean, ...}
     _usePiechartFromMarker: {},  // {uid: boolean, ...}
     _useShapeFromMarker: {},     // {uid: boolean, ...}
+    _useAbsoluteMarkerSize: {},  // {uid: boolean, ...}
     _piechartPalette: {},        // {uid: array or dict of colors, ...}
     _useSortByCol: {},           // {uid: boolean, ...}
     _colorscaleName: {},         // {uid: colorscaleName, ...}
@@ -50,7 +52,7 @@ glUtils = {
     _markerInputsCached: {},     // {uid: dict, ...}
     _edgeInputsCached: {},       // {uid: dict, ...}
 
-    // Global marker settings and info
+    // Global marker rendering settings and info
     _markerScale: 1.0,
     _useMarkerScaleFix: true,
     _globalMarkerScale: 1.0,
@@ -64,6 +66,8 @@ glUtils = {
     _useInstancing: true,         // Use instancing and gl.TRIANGLE_STRIP to avoid size limit of gl.POINTS
     _showEdgesExperimental: true,
     _edgeThicknessRatio: 0.1,     // Ratio between edge thickness and marker size
+
+    // Global region rendering settings and info
     _regionOpacity: 0.5,
     _regionStrokeWidth: 1.0,      // Base stroke width in pixels (larger values can give artifacts, so use with care!)
     _regionFillRule: "never",     // Possible values: "never" | "nonzero" | "oddeven"
@@ -73,6 +77,8 @@ glUtils = {
     _regionDataSize: {},          // Size stored per region data texture and used for dynamic resizing
     _regionPicked: null,          // Key to regionUtils._regions dict, or null if no region is picked
     _regionMaxNumRegions: 524288, // Limit used for the LUT texture size (will be automatically increased if needed)
+
+    // Other settings
     _logPerformance: false,       // Use GPU timer queries to log performance
     _piechartPaletteDefault: ["#fff100", "#ff8c00", "#e81123", "#ec008c", "#68217a", "#00188f", "#00bcf2", "#00b294", "#009e49", "#bad80a"]
 }
@@ -101,6 +107,7 @@ glUtils._markersVS = `
     uniform bool u_useColorFromColormap;
     uniform bool u_usePiechartFromMarker;
     uniform bool u_useShapeFromMarker;
+    uniform bool u_useAbsoluteMarkerSize;
     uniform bool u_alphaPass;
     uniform int u_pickedMarker;
     uniform sampler2D u_colorLUT;
@@ -138,9 +145,7 @@ glUtils._markersVS = `
         int transformIndex = u_transformIndex >= 0 ? u_transformIndex : int(in_transform);
         mat3x2 imageToViewport = mat3x2(transpose(u_transformUBO.imageToViewport[transformIndex]));
         vec2 viewportPos = imageToViewport * vec3(in_position.xy, 1.0);
-        vec2 ndcPos = viewportPos * 2.0 - 1.0;
-        ndcPos.y = -ndcPos.y;
-        ndcPos = u_viewportTransform * ndcPos;
+        vec2 ndcPos = u_viewportTransform * ((viewportPos * 2.0 - 1.0) * vec2(1.0, -1.0));
 
         int lutIndex = int(mod(in_position.z, float(MAX_NUM_BARCODES)));
         v_color = texelFetch(u_colorLUT, ivec2(lutIndex & 4095, lutIndex >> 12), 0);
@@ -171,7 +176,18 @@ glUtils._markersVS = `
         }
 
         gl_Position = vec4(ndcPos, 0.0, 1.0);
-        gl_PointSize = (in_scale * u_markerScale * u_globalMarkerScale) * SCALE_FIX;
+
+        if (u_useAbsoluteMarkerSize) {
+            vec2 viewportPos2 = imageToViewport * vec3(in_position.xy + vec2(1.0, 0.0), 1.0);
+            vec2 ndcPos2 = u_viewportTransform * ((viewportPos2 * 2.0 - 1.0) * vec2(1.0, -1.0));
+            // When computing this scale factor, we want square markers with
+            // unit size to match approx. one pixel in the image layer
+            float imagePixelFactor = length((ndcPos2 - ndcPos) * u_canvasSize) * 0.68;
+            gl_PointSize = (in_scale * u_markerScale * imagePixelFactor) * SCALE_FIX;
+        } else {
+            // Use default relative marker size
+            gl_PointSize = (in_scale * u_markerScale * u_globalMarkerScale) * SCALE_FIX;
+        }
         float alphaFactorSize = clamp(gl_PointSize, 0.2, 1.0); 
         gl_PointSize = clamp(gl_PointSize, 1.0, u_maxPointSize);
 
@@ -315,6 +331,7 @@ glUtils._pickingVS = `
     uniform float u_maxPointSize;
     uniform bool u_usePiechartFromMarker;
     uniform bool u_useShapeFromMarker;
+    uniform bool u_useAbsoluteMarkerSize;
     uniform int u_op;
     uniform sampler2D u_colorLUT;
     uniform sampler2D u_shapeAtlas;
@@ -343,9 +360,7 @@ glUtils._pickingVS = `
         int transformIndex = u_transformIndex >= 0 ? u_transformIndex : int(in_transform);
         mat3x2 imageToViewport = mat3x2(transpose(u_transformUBO.imageToViewport[transformIndex]));
         vec2 viewportPos = imageToViewport * vec3(in_position.xy, 1.0);
-        vec2 ndcPos = viewportPos * 2.0 - 1.0;
-        ndcPos.y = -ndcPos.y;
-        ndcPos = u_viewportTransform * ndcPos;
+        vec2 ndcPos = u_viewportTransform * ((viewportPos * 2.0 - 1.0) * vec2(1.0, -1.0));
 
         v_color = vec4(0.0);
         if (u_op == OP_WRITE_INDEX) {
@@ -369,8 +384,20 @@ glUtils._pickingVS = `
 
             vec2 canvasPos = (ndcPos * 0.5 + 0.5) * u_canvasSize;
             canvasPos.y = (u_canvasSize.y - canvasPos.y);  // Y-axis is inverted
-            float pointSize = (in_scale * u_markerScale * u_globalMarkerScale) * SCALE_FIX;
-            pointSize = clamp(pointSize, 2.0, u_maxPointSize);
+
+            float pointSize = 0.0;
+            if (u_useAbsoluteMarkerSize) {
+                vec2 viewportPos2 = imageToViewport * vec3(in_position.xy + vec2(1.0, 0.0), 1.0);
+                vec2 ndcPos2 = u_viewportTransform * ((viewportPos2 * 2.0 - 1.0) * vec2(1.0, -1.0));
+                // When computing this scale factor, we want square markers with
+                // unit size to match approx. one pixel in the image layer
+                float imagePixelFactor = length((ndcPos2 - ndcPos) * u_canvasSize) * 0.68;
+                pointSize = (in_scale * u_markerScale * imagePixelFactor) * SCALE_FIX;
+            } else {
+                // Use default relative marker size
+                pointSize = (in_scale * u_markerScale * u_globalMarkerScale) * SCALE_FIX;
+            }
+            pointSize = clamp(pointSize, 1.0, u_maxPointSize);
 
             // Do coarse inside/outside test against bounding box for marker
             vec2 uv = (canvasPos - u_pickingLocation) / pointSize + 0.5;
@@ -872,8 +899,8 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
     const scalePropertyName = newInputs.scalePropertyName = dataUtils.data[uid]["_scale_col"];
     const useScaleFromMarker = newInputs.useScaleFromMarker = dataUtils.data[uid]["_scale_col"] != null;
     const markerScaleFactor = dataUtils.data[uid]["_scale_factor"];
-    
     const markerCoordFactor = newInputs.markerCoordFactor = dataUtils.data[uid]["_coord_factor"];
+    const useAbsoluteMarkerSize = glUtils._useAbsoluteMarkerSize[uid] != undefined ? glUtils._useAbsoluteMarkerSize[uid] : false;  // TODO
     
     const sectorsPropertyName = newInputs.sectorsPropertyName = dataUtils.data[uid]["_pie_col"];
     const usePiechartFromMarker = dataUtils.data[uid]["_pie_col"] != null;
@@ -899,6 +926,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
     const opacityPropertyName = newInputs.opacityPropertyName = dataUtils.data[uid]["_opacity_col"];
     const useOpacityFromMarker = newInputs.useOpacityFromMarker = dataUtils.data[uid]["_opacity_col"] != null;
     const markerOpacityFactor = dataUtils.data[uid]["_opacity"];
+    const markerBlendMode = glUtils._markerBlendMode[uid] != undefined ? glUtils._markerBlendMode[uid] : "over";  // TODO
 
     const markerStrokeWidth = dataUtils.data[uid]["_stroke_width"];
     const markerFilled = !dataUtils.data[uid]["_no_fill"];
@@ -1158,6 +1186,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
     glUtils._markerScalarPropertyName[uid] = scalarPropertyName;
     glUtils._markerScaleFactor[uid] = markerScaleFactor;
     glUtils._markerOpacity[uid] = markerOpacityFactor;
+    glUtils._markerBlendMode[uid] = markerBlendMode;
     glUtils._markerStrokeWidth[uid] = markerStrokeWidth;
     glUtils._markerFilled[uid] = markerFilled;
     glUtils._markerOutline[uid] = markerOutline;
@@ -1167,6 +1196,7 @@ glUtils.loadMarkers = function(uid, forceUpdate) {
     glUtils._useOpacityFromMarker[uid] = useOpacityFromMarker;
     glUtils._usePiechartFromMarker[uid] = usePiechartFromMarker;
     glUtils._useShapeFromMarker[uid] = useShapeFromMarker;
+    glUtils._useAbsoluteMarkerSize[uid] = useAbsoluteMarkerSize;
     glUtils._piechartPalette[uid] = piechartPalette;
     glUtils._useSortByCol[uid] = useSortByCol;
     glUtils._colorscaleName[uid] = colorscaleName;
@@ -1199,6 +1229,7 @@ glUtils.deleteMarkers = function(uid) {
     delete glUtils._markerScalarRange[uid];
     delete glUtils._markerScalarPropertyName[uid];
     delete glUtils._markerOpacity[uid];
+    delete glUtils._markerBlendMode[uid];
     delete glUtils._markerStrokeWidth[uid];
     delete glUtils._markerFilled[uid];
     delete glUtils._markerOutline[uid];
@@ -1208,6 +1239,7 @@ glUtils.deleteMarkers = function(uid) {
     delete glUtils._useOpacityFromMarker[uid];
     delete glUtils._usePiechartFromMarker[uid];
     delete glUtils._useShapeFromMarker[uid];
+    delete glUtils._useAbsoluteMarkerSize[uid];
     delete glUtils._piechartPalette[uid];
     delete glUtils._useSortByCol[uid];
     delete glUtils._colorscaleName[uid];
@@ -1243,10 +1275,10 @@ glUtils.deleteMarkers = function(uid) {
 }
 
 
-glUtils._updateBindingOffsetsForCurrentVAO = function(gl, uid, offset, numPoints) {
+glUtils._updateBindingOffsetsForCurrentMarkerVAO = function(gl, uid, offset, numPoints) {
     // This function is used for updating the offsets of vertex bindings for
     // instanced drawing. This is only necessary because drawArrayInstanced and
-    // drawElementsInstanced ignores any offset or first parameters we provide
+    // drawElementsInstanced ignores any offset/first parameters we provide
     // for instanced arrays (arrays with non-zero vertex attrib divisor).
 
     // Additional info about the vertex format. Make sure to update these values
@@ -1324,7 +1356,7 @@ glUtils._loadEdges = function(uid, forceUpdate) {
           TRANSFORM_OFFSET = numEdges * 22;
     const POINT_LOCATION = 0,      // Re-use the same attribute locations that
           INDEX_LOCATION = 1,      // are used also for drawing the markers
-          OPACITY_LOCATION = 4;
+          OPACITY_LOCATION = 4,
           TRANSFORM_LOCATION = 5;
 
     const lastInputs = glUtils._edgeInputsCached[uid];
@@ -1438,6 +1470,31 @@ glUtils._loadEdges = function(uid, forceUpdate) {
 }
 
 
+glUtils._updateBindingOffsetsForCurrentEdgesVAO = function(gl, uid, offset, numEdges) {
+    // This function is used for updating the offsets of vertex bindings for
+    // instanced drawing. This is only necessary because drawArrayInstanced and
+    // drawElementsInstanced ignores any offset/first parameters we provide
+    // for instanced arrays (arrays with non-zero vertex attrib divisor).
+
+    // Additional info about the vertex format. Make sure to update these values
+    // if/when also changing the vertex format in glUtils.loadEdges!    
+    const POINT_OFFSET = numEdges * 0,
+          INDEX_OFFSET = numEdges * 16,
+          OPACITY_OFFSET = numEdges * 20,
+          TRANSFORM_OFFSET = numEdges * 22;
+    const POINT_LOCATION = 0,
+          INDEX_LOCATION = 1,
+          OPACITY_LOCATION = 4,
+          TRANSFORM_LOCATION = 5;
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, glUtils._buffers[uid + "_edges"]);
+    gl.vertexAttribPointer(POINT_LOCATION, 4, gl.FLOAT, false, 0, POINT_OFFSET + offset * 16);
+    gl.vertexAttribIPointer(INDEX_LOCATION, 1, gl.INT, 0, INDEX_OFFSET + offset * 4);
+    gl.vertexAttribPointer(OPACITY_LOCATION, 1, gl.UNSIGNED_SHORT, true, 0, OPACITY_OFFSET + offset * 2);
+    gl.vertexAttribPointer(TRANSFORM_LOCATION, 1, gl.UNSIGNED_SHORT, false, 0, TRANSFORM_OFFSET + offset * 2);
+}
+
+
 glUtils._updateBarcodeToLUTIndexDict = function (uid, markerData, keyName, maxNumBarcodes=32768) {
     const barcodeToLUTIndex = {};
     const barcodeToKey = {};
@@ -1451,6 +1508,11 @@ glUtils._updateBarcodeToLUTIndexDict = function (uid, markerData, keyName, maxNu
             index = index % maxNumBarcodes;  // Prevent index from becoming >= the maximum LUT size,
                                              // since this causes problems with pie-chart markers
         }
+    }
+    if (Object.keys(barcodeToLUTIndex).length > maxNumBarcodes) {
+        interfaceUtils.generateNotification("Markerset contains more than " + maxNumBarcodes +
+            " number of unique keys or groups. Some parts of the visualization " +
+            "(colors and selection) might not work correctly.", "barcode_warning", false, false);
     }
     glUtils._barcodeToLUTIndex[uid] = barcodeToLUTIndex;
     glUtils._barcodeToKey[uid] = barcodeToKey;
@@ -1995,12 +2057,27 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
     const program = glUtils._programs[glUtils._useInstancing ? "markers_instanced" : "markers"];
     gl.useProgram(program);
     gl.enable(gl.BLEND);
-    gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    if (glUtils._markerBlendMode[uid] == "coverage") {
+        // Note: this blend mode will invert the draw order, s.t. that if
+        // markers for example were sorted by scalar value in ascending order,
+        // the marker with the lowest scalar value will appear on top! A
+        // workaround is to just reverse the sorting when using this mode.
+        gl.blendFuncSeparate(gl.SRC_ALPHA_SATURATE, gl.ONE, gl.ONE, gl.ONE);
+    } else if (glUtils._markerBlendMode[uid] == "add") {
+        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE, gl.ONE, gl.ONE);
+    } else if (glUtils._markerBlendMode[uid] == "max") {
+        // This looks quite bad when premultiplied alpha is used to composite
+        // the WebGL canvas. So might want to manually set premultipliedAlpha to
+        // false via glUtils._options in projects that need this blend mode.
+        gl.blendEquationSeparate(gl.MAX, gl.MAX);
+    } else {  // glUtils._markerBlendMode[uid] == "over"
+        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    }
 
     // Set per-scene uniforms
     gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
     gl.uniform2fv(gl.getUniformLocation(program, "u_canvasSize"), [gl.canvas.width, gl.canvas.height]);
-    gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
+    gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * markerScaleAdjusted);
     gl.uniform1f(gl.getUniformLocation(program, "u_maxPointSize"),
         glUtils._useInstancing ? 2048 : glUtils._caps[gl.ALIASED_POINT_SIZE_RANGE][1]);
     gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, "TransformUniforms"), 0);
@@ -2014,7 +2091,7 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
     // Set per-markerset uniforms
     gl.uniform1i(gl.getUniformLocation(program, "u_transformIndex"),
         glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
-    gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
+    gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), (glUtils._useAbsoluteMarkerSize[uid] ? glUtils._markerScale * 0.25 : 1.0) * glUtils._markerScaleFactor[uid]);
     gl.uniform2fv(gl.getUniformLocation(program, "u_markerScalarRange"), glUtils._markerScalarRange[uid]);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerStrokeWidth"), glUtils._markerStrokeWidth[uid]);
@@ -2024,6 +2101,7 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
     gl.uniform1i(gl.getUniformLocation(program, "u_useColorFromColormap"), glUtils._useColorFromColormap[uid]);
     gl.uniform1i(gl.getUniformLocation(program, "u_usePiechartFromMarker"), glUtils._usePiechartFromMarker[uid]);
     gl.uniform1i(gl.getUniformLocation(program, "u_useShapeFromMarker"), glUtils._useShapeFromMarker[uid]);
+    gl.uniform1i(gl.getUniformLocation(program, "u_useAbsoluteMarkerSize"), glUtils._useAbsoluteMarkerSize[uid]);
     gl.uniform1i(gl.getUniformLocation(program, "u_pickedMarker"),
         glUtils._pickedMarker[0] == uid ? glUtils._pickedMarker[1] : -1);
     gl.activeTexture(gl.TEXTURE1);
@@ -2039,7 +2117,7 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
         for (let offset = 0; offset < numPoints; offset += chunkSize) {
             const count = (offset + chunkSize >= numPoints) ? numPoints - offset : chunkSize;
             if (glUtils._useInstancing) {
-                glUtils._updateBindingOffsetsForCurrentVAO(gl, uid, offset, numPoints);
+                glUtils._updateBindingOffsetsForCurrentMarkerVAO(gl, uid, offset, numPoints);
                 gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
             } else {
                 gl.drawArrays(gl.POINTS, offset, count);
@@ -2054,7 +2132,7 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
     for (let offset = 0; offset < numPoints; offset += chunkSize) {
         const count = (offset + chunkSize >= numPoints) ? numPoints - offset : chunkSize;
         if (glUtils._useInstancing) {
-            glUtils._updateBindingOffsetsForCurrentVAO(gl, uid, offset, numPoints);
+            glUtils._updateBindingOffsetsForCurrentMarkerVAO(gl, uid, offset, numPoints);
             gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
         } else {
             gl.drawArrays(gl.POINTS, offset, count);
@@ -2063,11 +2141,12 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
 
     // Restore render pipeline state
     if (glUtils._useInstancing) {
-        glUtils._updateBindingOffsetsForCurrentVAO(gl, uid, 0, numPoints);
+        glUtils._updateBindingOffsetsForCurrentMarkerVAO(gl, uid, 0, numPoints);
     }
     gl.bindVertexArray(null);
     gl.colorMask(true, true, true, true);
     gl.blendFunc(gl.ONE, gl.ONE);
+    gl.blendEquation(gl.FUNC_ADD);
     gl.disable(gl.BLEND);
     gl.useProgram(null);
 }
@@ -2076,6 +2155,11 @@ glUtils._drawMarkersByUID = function(gl, viewportTransform, markerScaleAdjusted,
 glUtils._drawEdgesByUID = function(gl, viewportTransform, markerScaleAdjusted, uid) {
     const numEdges = glUtils._numEdges[uid];
     if (numEdges == 0) return;
+
+    // Chunk size used to split a single large draw call into smaller chunks. On
+    // some Android phones, drawing larger datasets can result in WebGL context
+    // loss or crashes, so this should be a workaround.
+    const chunkSize = 65536;
 
     // Set up render pipeline
     const program = glUtils._programs["edges"];
@@ -2093,22 +2177,21 @@ glUtils._drawEdgesByUID = function(gl, viewportTransform, markerScaleAdjusted, u
     gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, "TransformUniforms"), 0);
     gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, glUtils._buffers["transformUBO"]);
 
-    gl.bindVertexArray(glUtils._vaos[uid + "_edges"]);
-
     // Set per-markerset uniforms
     gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
     gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
     gl.uniform1i(gl.getUniformLocation(program, "u_transformIndex"),
         glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
-
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorLUT"]);
     gl.uniform1i(gl.getUniformLocation(program, "u_colorLUT"), 0);
 
-    // (TODO: this draw call should also be split into smaller chunks (as in
-    // glUtils._drawMarkersByUID and glUtils._drawPickingPass) to avoid problem
-    // with rendering larger datasets on some Android phones)
-    gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, numEdges);
+    gl.bindVertexArray(glUtils._vaos[uid + "_edges"]);
+    for (let offset = 0; offset < numEdges; offset += chunkSize) {
+        const count = (offset + chunkSize >= numEdges) ? numEdges - offset : chunkSize;
+        glUtils._updateBindingOffsetsForCurrentEdgesVAO(gl, uid, offset, numEdges);
+        gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, count);
+    }
 
     // Restore render pipeline state
     gl.bindVertexArray(null);
@@ -2196,7 +2279,7 @@ glUtils._drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) 
     gl.uniformMatrix2fv(gl.getUniformLocation(program, "u_viewportTransform"), false, viewportTransform);
     gl.uniform2fv(gl.getUniformLocation(program, "u_canvasSize"), [gl.canvas.width, gl.canvas.height]);
     gl.uniform2fv(gl.getUniformLocation(program, "u_pickingLocation"), glUtils._pickingLocation);
-    gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), markerScaleAdjusted);
+    gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * markerScaleAdjusted);
     gl.uniform1f(gl.getUniformLocation(program, "u_maxPointSize"),
         glUtils._useInstancing ? 2048 : glUtils._caps[gl.ALIASED_POINT_SIZE_RANGE][1]);
     gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, "TransformUniforms"), 0);
@@ -2222,9 +2305,10 @@ glUtils._drawPickingPass = function(gl, viewportTransform, markerScaleAdjusted) 
         // Set per-markerset uniforms
         gl.uniform1i(gl.getUniformLocation(program, "u_transformIndex"),
             glUtils._collectionItemIndex[uid] != null ? glUtils._collectionItemIndex[uid] : -1);
-        gl.uniform1f(gl.getUniformLocation(program, "u_globalMarkerScale"), glUtils._globalMarkerScale * glUtils._markerScaleFactor[uid]);
+        gl.uniform1f(gl.getUniformLocation(program, "u_markerScale"), glUtils._markerScaleFactor[uid]);
         gl.uniform1i(gl.getUniformLocation(program, "u_usePiechartFromMarker"), glUtils._usePiechartFromMarker[uid]);
         gl.uniform1i(gl.getUniformLocation(program, "u_useShapeFromMarker"), glUtils._useShapeFromMarker[uid]);
+        gl.uniform1i(gl.getUniformLocation(program, "u_useAbsoluteMarkerSize"), glUtils._useAbsoluteMarkerSize[uid]);
         gl.uniform1f(gl.getUniformLocation(program, "u_markerOpacity"), glUtils._markerOpacity[uid]);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, glUtils._textures[uid + "_colorLUT"]);
