@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.2.0.4
+
+- Run Docker container as non-root user
+- Allow marker size slider to be used with absolute scaling
+- Fix incorrect transforms of region points when image layer is flipped
+- Fix MacOS X libvps issue with percent value
+- Add new blend modes for marker rendering
+
 ## 3.2
 
 - Add annotation tools (in collaboration with Sanofi Digital R&D)
