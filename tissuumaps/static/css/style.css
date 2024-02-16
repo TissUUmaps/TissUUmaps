@@ -10293,8 +10293,8 @@ html {
   display: block;
   position: absolute;
   z-index: 100;
-  top: 10px;
-  left: 10px;
+  margin-top: 10px;
+  margin-left: 10px;
   border-radius: 50%;
   line-height: normal;
   cursor: pointer;

@@ -494,9 +494,6 @@
       /* I'm in a frame! */
       OpenSeadragon.MouseTracker.passiveWheelEvents = false;
       document.getElementById("main-navbar").classList.add("collapse");
-      document
-        .getElementById("floating-navbar-toggler")
-        .classList.remove("d-none");
       //document.html.style.zoom=0.6
       document.getElementById("ISS_menu").style.zoom = 0.7;
       document.getElementById("ISS_menu").classList.remove("col-xl-4");
@@ -551,9 +548,17 @@
       interfaceUtils.generateNotification("{{warning|safe}}", "loading_alert", false, 3000, "warning");
       {% endif %}
       if (window!=window.top) {
+          document.getElementById("main-navbar").classList.add("collapse");
           elt = document.getElementById("powered_by_tissuumaps");
           tmapp["ISS_viewer"].addControl(elt,{
               anchor: OpenSeadragon.ControlAnchor.BOTTOM_LEFT,
+          });
+          elt.classList.remove("d-none");
+          elt = document
+          .getElementById("floating-navbar-toggler")
+          tmapp["ISS_viewer"].addControl(elt,{
+              anchor: OpenSeadragon.ControlAnchor.TOP_LEFT,
+              attachToViewer: true
           });
           elt.classList.remove("d-none");
       }
