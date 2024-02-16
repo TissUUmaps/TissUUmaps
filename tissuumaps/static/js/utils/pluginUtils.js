@@ -58,7 +58,10 @@ pluginUtils.loadParameters = function (pluginID, pluginDiv, parameters) {
         if (document.getElementById(parameterID) !== null) {
             document.getElementById(parameterID).value = value;
             document.getElementById(parameterID).checked = value;
-            if (document.getElementById(parameterID).tagName == "INPUT" && document.getElementById(parameterID).type == "button") {
+            if (
+                (document.getElementById(parameterID).tagName == "INPUT" && document.getElementById(parameterID).type == "button" ) ||
+                (document.getElementById(parameterID).tagName == "BUTTON" && document.getElementById(parameterID).type == "submit" )
+             ) {
                 document.getElementById(parameterID)?.click();
             }
         }
