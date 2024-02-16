@@ -421,6 +421,7 @@ def index():
         plugins=[p["module"] for p in app.config["PLUGINS"]],
         isStandalone=app.config["isStandalone"],
         readOnly=app.config["READ_ONLY"],
+        collapseTopMenu=app.config["COLLAPSE_TOP_MENU"],
         version=app.config["VERSION"],
         schema_version=current_schema_module.VERSION,
     )
@@ -617,6 +618,25 @@ def tmapFile(filename):
         else:
             plugins = [p["module"] for p in app.config["PLUGINS"]]
 
+        # Add project list if app.config["PROJECT_LIST"] is True
+        projectList = []
+        if app.config["PROJECT_LIST"]:
+            # Browse the directory of json_filename, with only one level
+            for item in os.listdir(os.path.dirname(json_filename)):
+                file = os.path.join(os.path.dirname(json_filename), item)
+                if os.path.isfile(file) and file.endswith(".tmap"):
+                    # Add file relative to the basedir
+                    file = os.path.relpath(file, app.basedir)
+                    projectList.append(file)
+
+        projectList = [
+            {"name": p[:-5], "path": p, "selected": False} for p in projectList
+        ]
+        file = os.path.relpath(json_filename, app.basedir)
+        for p in projectList:
+            if p["path"] == file:
+                p["selected"] = True
+
         # Render the template with appropriate data
         return render_template(
             "tissuumaps.html",
@@ -624,6 +644,8 @@ def tmapFile(filename):
             jsonProject=state,
             isStandalone=app.config["isStandalone"],
             readOnly=app.config["READ_ONLY"],
+            collapseTopMenu=app.config["COLLAPSE_TOP_MENU"],
+            projectList=projectList,
             version=app.config["VERSION"],
             schema_version=current_schema_module.VERSION,
             message=errorMessage,
@@ -844,6 +866,7 @@ def h5ad(filename, ext):
         jsonProject=state,
         isStandalone=app.config["isStandalone"],
         readOnly=app.config["READ_ONLY"],
+        collapseTopMenu=app.config["COLLAPSE_TOP_MENU"],
         version=app.config["VERSION"],
         schema_version=current_schema_module.VERSION,
     )
@@ -996,6 +1019,7 @@ def exportToStatic(state, folderpath, previouspath):
                 jsonProject=state,
                 isStandalone=False,
                 readOnly=True,
+                collapseTopMenu=app.config["COLLAPSE_TOP_MENU"],
                 version=app.config["VERSION"],
                 schema_version=current_schema_module.VERSION,
             )

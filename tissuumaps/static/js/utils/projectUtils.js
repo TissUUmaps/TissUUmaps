@@ -393,7 +393,15 @@ projectUtils.loadProjectFileFromServer = function(path) {
     }
     if (state.filename) {
         tmapp.slideFilename = state.filename;
-        document.getElementById("project_title").innerHTML = state.filename;
+        if (document.getElementById("project_title")) {
+            document.getElementById("project_title").innerHTML = state.filename;
+        }
+        if (document.getElementById("project_title_top")) {
+            document.getElementById("project_title_top").innerHTML = state.filename;
+        }
+    }
+    if (state.description && document.getElementById("project_description")) {
+        document.getElementById("project_description").innerHTML = state.description;
     }
     if (state.link) {
         document.getElementById("project_title").href = state.link;

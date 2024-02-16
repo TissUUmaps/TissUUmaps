@@ -31,6 +31,10 @@ tmapp.registerActions = function () {
     interfaceUtils.listen("plus-1-button","click",function(){interfaceUtils.generateDataTabUI()},false)
     interfaceUtils.listen('save_project_menu', 'click', function() { projectUtils.saveProject() }, false);
     interfaceUtils.listen('load_project_menu', 'click', function() { projectUtils.loadProjectFile() }, false);
+    interfaceUtils.listen('project_select', 'change', function() { 
+        // go to url of selected project value
+        window.location.href = window.location.origin + "/" + this.value;
+     }, false);
     document.addEventListener("mousedown",function(){tmapp["ISS_viewer"].removeOverlay("ISS_marker_info");});
 
     // dataUtils.processEventForCSV("morphology",cpop + '_csv');

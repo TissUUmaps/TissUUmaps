@@ -41,15 +41,16 @@
     >
       <nav
         id="main-navbar"
-        class="navbar navbar-expand-lg navbar-dark border-bottom border-dark flex-shrink-0 {% if isStandalone %}d-none{% endif %}"
+        class="navbar navbar-expand-lg navbar-dark border-bottom border-dark flex-shrink-0 {% if isStandalone %}d-none{% endif %} {% if collapseTopMenu %}collapse{% endif %}"
       >
         <div class="container-fluid">
-          <a class="navbar-brand" href="https://tissuumaps.research.it.uu.se/">
+          <a class="navbar-brand" href="https://tissuumaps.github.io/">
             <img
-              src="static/misc/uulogowhitetuum.png"
-              width="166"
+              src="static/misc/logo.png"
+              width="37"
               height="40"
-              alt="Uppsala University Logotype"
+              alt="TissUUmaps Logotype"
+              title="TissUUmaps"
             />
           </a>
           <button
@@ -104,7 +105,7 @@
                 <a
                   class="nav-link active"
                   aria-current="page"
-                  id="project_title"
+                  id="project_title_top"
                   href="#"
                 ></a>
               </li>
@@ -156,6 +157,33 @@
           id="ISS_menu"
           class="ISS_menu col-xl-4 col-lg-5 col-md-6 col-sm-8 col-xs-12 mh-100 overflow-auto"
         >
+          {% if projectList %}
+          <div class="row pb-2 p-2">
+            <div class="card border-primary p5">
+              <div class="card-body">
+                <h5 class="card-title" id="project_title"></h5>
+                <p class="card-text" id="project_description"></p>
+                <strong>Select dataset to display:</strong>
+                <br />
+                <select class="form-select" id="project_select">
+                  {% for project in projectList %}
+                  <option
+                    value="{{project.path}}"
+                    {%
+                    if
+                    project.selected
+                    %}selected{%
+                    endif
+                    %}
+                  >
+                    {{project.name}}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+          {% endif %}
           <div class="row pb-2">
             <!-- Level 0 tabs -->
             <ul id="main-tabs-menu" class="nav nav-tabs pt-1 sticky-top">
@@ -189,7 +217,7 @@
                   class="nav-link"
                   id="title-tab-image"
                 >
-                  Image layers
+                  Layers
                 </button>
               </li>
               <li>
@@ -494,6 +522,7 @@
       /* I'm in a frame! */
       OpenSeadragon.MouseTracker.passiveWheelEvents = false;
       document.getElementById("main-navbar").classList.add("collapse");
+
       //document.html.style.zoom=0.6
       document.getElementById("ISS_menu").style.zoom = 0.7;
       document.getElementById("ISS_menu").classList.remove("col-xl-4");
@@ -547,7 +576,7 @@
       {% if warning %}
       interfaceUtils.generateNotification("{{warning|safe}}", "loading_alert", false, 3000, "warning");
       {% endif %}
-      if (window!=window.top) {
+      if (window!=window.top {% if collapseTopMenu %} || true {% endif %}) {
           document.getElementById("main-navbar").classList.add("collapse");
           elt = document.getElementById("powered_by_tissuumaps");
           tmapp["ISS_viewer"].addControl(elt,{
@@ -558,7 +587,8 @@
           .getElementById("floating-navbar-toggler")
           tmapp["ISS_viewer"].addControl(elt,{
               anchor: OpenSeadragon.ControlAnchor.TOP_LEFT,
-              attachToViewer: true
+              attachToViewer: true,
+              autoFade: false
           });
           elt.classList.remove("d-none");
       }
