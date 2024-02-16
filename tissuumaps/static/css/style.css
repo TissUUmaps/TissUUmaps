@@ -10370,9 +10370,14 @@ html {
 .alert pre {
   max-height: 100px; }
 
-.dropdown-menu .dropdown-submenu {
-  max-height: 80vh;
+.dropdown-menu {
+  max-height: 60vh;
   overflow-y: auto;
+  overflow-x: clip; }
+
+.dropdown-menu:has(li>ul) {
+  max-height: none;
+  overflow-y: inherit;
   overflow-x: inherit; }
 
 /* ============ desktop view ============ */
