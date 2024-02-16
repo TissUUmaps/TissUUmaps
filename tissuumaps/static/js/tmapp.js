@@ -28,6 +28,7 @@ tmapp.registerActions = function () {
     interfaceUtils.listen(op + '_export_regions_csv','click', function () { regionUtils.pointsInRegionsToCSV() },false);
     interfaceUtils.listen(op + '_fillregions_btn','click', function () { regionUtils.fillAllRegions(); },false);
     interfaceUtils.listen("capture_viewport","click",function(){overlayUtils.savePNG()},false)
+    interfaceUtils.listen("see_version","click",function(){tmapp.seeVersion()},false)
     interfaceUtils.listen("plus-1-button","click",function(){interfaceUtils.generateDataTabUI()},false)
     interfaceUtils.listen('save_project_menu', 'click', function() { projectUtils.saveProject() }, false);
     interfaceUtils.listen('load_project_menu', 'click', function() { projectUtils.loadProjectFile() }, false);
@@ -274,6 +275,10 @@ tmapp.init = function () {
         dataUtils._hdf5Api = new H5AD_API()
     }
 } //finish init
+
+tmapp.seeVersion = function() {
+    interfaceUtils.alert("TissUUmaps version: <b>" + tmapp.version + "</b><br/>TissUUmaps-Schema version: <b>" + tmapp.schema_version + "</b>", "Software version");
+}
 
 /**
  * Options for the fixed and moving OSD 
