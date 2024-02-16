@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.2.0.5
+
+- Fix MacOs X libvips issue with 90% jpeg compression
+- Make top menu collapsible in config
+- Add project list and description in upper corner (optional)
+
 ## 3.2.0.4
 
 - Run Docker container as non-root user
