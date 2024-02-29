@@ -432,25 +432,11 @@ projectUtils.loadProjectFileFromServer = function(path) {
         });
     }
     if (state.mpp !== undefined) {
-        // If ppm == 0, we display pixel size
-        // If ppm != 0, we display scale bar with metric length
-        var PIXEL_LENGTH = function(ppm, minSize) {
-            return OpenSeadragon.ScalebarSizeAndTextRenderer.METRIC_GENERIC(ppm, minSize, "pixels")
+        if (state.mpp == null) {
+            state.mpp = "";
         }
-        var op = tmapp["object_prefix"];
-        var vname = op + "_viewer";
-        tmapp[vname].scalebar({
-            pixelsPerMeter: state.mpp ? (1e6 / state.mpp) : 1,
-            xOffset: 200,
-            yOffset: 10,
-            zIndex: 12,
-            barThickness: 3,
-            color: '#555555',
-            fontColor: '#333333',
-            backgroundColor: 'rgba(255, 255, 255, 0.5)',
-            sizeAndTextRenderer: state.mpp ? OpenSeadragon.ScalebarSizeAndTextRenderer.METRIC_LENGTH : PIXEL_LENGTH,
-            location: OpenSeadragon.ScalebarLocation.BOTTOM_RIGHT
-        });
+        document.getElementById("project_mpp_input").value = state.mpp;
+        overlayUtils.addScaleBar();
     }
     // for backward compatibility only:
     if (state.compositeMode == "collection") {

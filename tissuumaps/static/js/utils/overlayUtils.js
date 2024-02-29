@@ -627,7 +627,37 @@ overlayUtils.addLayer = function(layer, i, visible) {
     });
 }
 
-
+/**
+ * @summary Add a scale bar to the viewer
+ * @description Add a scale bar to the viewer
+ */
+overlayUtils.addScaleBar = function() {
+    // If ppm == 0, we display pixel size
+    // If ppm != 0, we display scale bar with metric length
+    let state = projectUtils._activeState;
+    if ((state.mpp === undefined || state.mpp === null || state.mpp === "") 
+        && tmapp.ISS_viewer.scalebarInstance !== undefined) {
+        tmapp.ISS_viewer.scalebarInstance.location = null;
+        return;
+    }
+    var PIXEL_LENGTH = function(ppm, minSize) {
+        return OpenSeadragon.ScalebarSizeAndTextRenderer.METRIC_GENERIC(ppm, minSize, "pixels")
+    }
+    var op = tmapp["object_prefix"];
+    var vname = op + "_viewer";
+    tmapp[vname].scalebar({
+        pixelsPerMeter: state.mpp ? (1e6 / state.mpp) : 1,
+        xOffset: 200,
+        yOffset: 10,
+        zIndex: 12,
+        barThickness: 3,
+        color: '#555555',
+        fontColor: '#333333',
+        backgroundColor: 'rgba(255, 255, 255, 0.5)',
+        sizeAndTextRenderer: state.mpp ? OpenSeadragon.ScalebarSizeAndTextRenderer.METRIC_LENGTH : PIXEL_LENGTH,
+        location: OpenSeadragon.ScalebarLocation.BOTTOM_RIGHT
+    });
+}
 /** 
  * @param {Number} item Index of an OSD tile source
  * @summary Set the opacity of a tile source */
@@ -788,7 +818,6 @@ overlayUtils.savePNG=function() {
                 glUtils._regionStrokeWidth = strokeWidthGL;
                 glUtils._useInstancing = useInstancing;
                 tmapp.ISS_viewer.world.getItemAt(0).immediateRender = false
-                tmapp.ISS_viewer.viewport.fitBounds(bounds, true);
                 interfaceUtils.closeModal(loading);
                 
                 document.getElementById("ISS_viewer").style.setProperty("visibility", "unset");
@@ -878,6 +907,33 @@ overlayUtils.savePNG=function() {
         glUtils._updateColorbarCanvas(1);
         return ctx;
     }
+    function add_scalebar (ctx, resolution) {
+        let bounds = tmapp.ISS_viewer.viewport.getBounds();
+        tmapp.ISS_viewer.viewport.zoomBy(resolution, null, true);
+
+        tmapp.ISS_viewer.scalebarInstance.minWidth = 150 * resolution
+        tmapp.ISS_viewer.scalebarInstance.fontSize = (1 * resolution).toString() + "rem"
+        tmapp.ISS_viewer.scalebarInstance.barThickness = 3 * resolution
+        tmapp.ISS_viewer.scalebarInstance.refresh()
+        
+        var scalebarCanvas = tmapp.ISS_viewer.scalebarInstance.getAsCanvas();
+        tmapp.ISS_viewer.viewport.fitBounds(bounds, true);
+
+        tmapp.ISS_viewer.scalebarInstance.minWidth = 150
+        tmapp.ISS_viewer.scalebarInstance.fontSize = "1rem"
+        tmapp.ISS_viewer.scalebarInstance.barThickness = 3
+        tmapp.ISS_viewer.scalebarInstance.refresh()
+
+        var location = tmapp.ISS_viewer.scalebarInstance.getScalebarLocation();
+        ctx.drawImage(
+            scalebarCanvas, 
+            location.x * resolution, 
+            location.y * resolution,
+            scalebarCanvas.width * 1,
+            scalebarCanvas.height * 1
+        );
+        return ctx;
+    }
     return new Promise((resolve, reject) => {
         if (tiling > 1) {
             var canvas = document.createElement("canvas");
@@ -888,19 +944,24 @@ overlayUtils.savePNG=function() {
             canvas.height = tiling * Math.min(ctx_osd.canvas.height, ctx_webgl.canvas.height);
             var bounds = tmapp.ISS_viewer.viewport.getBounds();
             getCanvasCtx_aux(0, tiling, ctx, bounds).then((ctx_tiling) => {
-                ctx_tiling = add_colorbar (ctx_tiling, tiling);
-                var png = ctx_tiling.canvas.toDataURL("image/png");
-                
-                var a = document.createElement("a"); //Create <a>
-                a.href = png; //Image Base64 Goes here
-                a.download = "TissUUmaps_capture.png"; //File name Here
-                a.click(); //Downloaded file
-                resolve(png);
+                tmapp.ISS_viewer.viewport.fitBounds(bounds, true);
+                setTimeout(() => {
+                    ctx_tiling = add_colorbar (ctx_tiling, tiling);
+                    ctx_tiling = add_scalebar (ctx_tiling, tiling);
+                    var png = ctx_tiling.canvas.toDataURL("image/png");
+                    
+                    var a = document.createElement("a"); //Create <a>
+                    a.href = png; //Image Base64 Goes here
+                    a.download = "TissUUmaps_capture.png"; //File name Here
+                    a.click(); //Downloaded file
+                    resolve(png);
+                }, 500);
             })
         }
         else {
             overlayUtils.getCanvasCtx().then((ctx)  =>{
                 ctx = add_colorbar (ctx, 1);
+                ctx = add_scalebar (ctx, 1);
                 var png = ctx.canvas.toDataURL("image/png");
                 
                 var a = document.createElement("a"); //Create <a>
