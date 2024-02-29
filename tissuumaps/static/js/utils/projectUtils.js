@@ -395,6 +395,7 @@ projectUtils.loadProjectFileFromServer = function(path) {
         tmapp.slideFilename = state.filename;
         if (document.getElementById("project_title")) {
             document.getElementById("project_title").innerHTML = state.filename;
+            document.getElementById("project_title").classList.remove("d-none");
         }
         if (document.getElementById("project_title_top")) {
             document.getElementById("project_title_top").innerHTML = state.filename;
@@ -402,8 +403,9 @@ projectUtils.loadProjectFileFromServer = function(path) {
     }
     if (state.description && document.getElementById("project_description")) {
         document.getElementById("project_description").innerHTML = state.description;
+        document.getElementById("project_description").classList.remove("d-none");
     }
-    if (state.link) {
+    if (document.getElementById("project_title") && state.link) {
         document.getElementById("project_title").href = state.link;
         document.getElementById("project_title").target = "_blank";
     }

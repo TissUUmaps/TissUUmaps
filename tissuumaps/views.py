@@ -405,11 +405,32 @@ def get_view_function(url, method="GET"):
 @requires_auth
 def index():
     if app.config["DEFAULT_PROJECT"]:
-        view_function = get_view_function(
-            "/" + app.config["DEFAULT_PROJECT"], method="GET"
-        )
-        if view_function:
-            return view_function[0](**view_function[1])
+        # Check if the default project exists and is accessible
+        default_project = os.path.join(app.basedir, app.config["DEFAULT_PROJECT"])
+        if os.path.isfile(default_project):
+            view_function = get_view_function(
+                "/" + app.config["DEFAULT_PROJECT"], method="GET"
+            )
+            if view_function:
+                return view_function[0](**view_function[1])
+
+        elif app.config["PROJECT_LIST"]:
+            projectList = [
+                {"name": "Select a dataset", "path": "", "selected": True}
+            ] + getProjectList(os.path.dirname(default_project))
+            if len(projectList) > 0:
+                projectList[0]["selected"] = True
+                return render_template(
+                    "tissuumaps.html",
+                    plugins=[],
+                    jsonProject={},
+                    isStandalone=app.config["isStandalone"],
+                    readOnly=app.config["READ_ONLY"],
+                    collapseTopMenu=app.config["COLLAPSE_TOP_MENU"],
+                    projectList=projectList,
+                    version=app.config["VERSION"],
+                    schema_version=current_schema_module.VERSION,
+                )
 
     indexPath = os.path.abspath(os.path.join(app.basedir, "index.html"))
     if os.path.isfile(indexPath) and app.config["READ_ONLY"]:
@@ -502,6 +523,20 @@ def h5adFile_old(path, filename, ext):
     if path == "":
         path = "./"
     return redirect(url_for("h5ad", filename=filename, ext=ext) + "?path=" + path)
+
+
+def getProjectList(path):
+    # Add project list if app.config["PROJECT_LIST"] is True
+    projectList = []
+    # Browse the directory of json_filename, with only one level
+    for item in os.listdir(path):
+        file = os.path.join(path, item)
+        if os.path.isfile(file) and file.endswith(".tmap"):
+            # Add file relative to the basedir
+            file = os.path.relpath(file, app.basedir)
+            project = {"name": file[:-5], "path": file, "selected": False}
+            projectList.append(project)
+    return projectList
 
 
 @app.route("/<string:filename>.tmap", methods=["GET", "POST"])
@@ -618,20 +653,12 @@ def tmapFile(filename):
         else:
             plugins = [p["module"] for p in app.config["PLUGINS"]]
 
-        # Add project list if app.config["PROJECT_LIST"] is True
-        projectList = []
-        if app.config["PROJECT_LIST"]:
-            # Browse the directory of json_filename, with only one level
-            for item in os.listdir(os.path.dirname(json_filename)):
-                file = os.path.join(os.path.dirname(json_filename), item)
-                if os.path.isfile(file) and file.endswith(".tmap"):
-                    # Add file relative to the basedir
-                    file = os.path.relpath(file, app.basedir)
-                    projectList.append(file)
-
-        projectList = [
-            {"name": p[:-5], "path": p, "selected": False} for p in projectList
-        ]
+        # Get the list of projects in the current directory
+        projectList = (
+            getProjectList(os.path.dirname(json_filename))
+            if app.config["PROJECT_LIST"]
+            else []
+        )
         file = os.path.relpath(json_filename, app.basedir)
         for p in projectList:
             if p["path"] == file:
