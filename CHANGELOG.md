@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.2.1
+
+- Add scalebar to capture
+- Add project tab with project settings
+
 ## 3.2.0.5
 
 - Fix MacOs X libvips issue with 90% jpeg compression
