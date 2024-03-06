@@ -284,6 +284,8 @@ def h5ad_to_tmap(basedir, path, library_id=None):
     obsList = getObsList(adata)
     new_tmap_project = copy.deepcopy(tmap_template)
 
+    new_tmap_project["layers"] = layers
+    new_tmap_project["plugins"] = plugins
     if "tmap" in list(adata.get("uns", [])):
         new_tmap_project = json.loads(
             adata.get(
@@ -293,14 +295,6 @@ def h5ad_to_tmap(basedir, path, library_id=None):
         )
         if "markerFiles" not in new_tmap_project.keys():
             new_tmap_project["markerFiles"] = []
-    if "layers" in new_tmap_project.keys():
-        new_tmap_project["layers"] += layers
-    else:
-        new_tmap_project["layers"] = layers
-    if "plugins" in new_tmap_project.keys():
-        new_tmap_project["plugins"] += plugins
-    else:
-        new_tmap_project["plugins"] = plugins
     obsListCategorical = []
     obsListNumerical = []
     palette = {}
