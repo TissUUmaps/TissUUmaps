@@ -84,16 +84,6 @@
                   id="menubar_File"
                   aria-labelledby="navbarDropdownMenuLink"
                 >
-                  <li id="menubar_File_Import">
-                    <a class="dropdown-item" href="#" id="load_project_menu">
-                      <span>Import TMAP project</span>
-                    </a>
-                  </li>
-                  <li id="menubar_File_Export">
-                    <a class="dropdown-item" href="#" id="save_project_menu">
-                      <span>Export TMAP project</span>
-                    </a>
-                  </li>
                   <li>
                     <a class="dropdown-item" href="#" id="capture_viewport">
                       <span>Capture viewport</span>
@@ -227,6 +217,17 @@
               </li>
               <li>
                 <button
+                  data-bs-target="#project-gui"
+                  data-bs-toggle="tab"
+                  aria-expanded="false"
+                  class="nav-link"
+                  id="title-tab-project"
+                >
+                  <u class="bi bi-gear-fill"></u>
+                </button>
+              </li>
+              <li>
+                <button
                   data-bs-target="#plugins-gui"
                   data-bs-toggle="tab"
                   aria-expanded="false"
@@ -269,7 +270,7 @@
                   </div>
                 </div>
               </div>
-              <!-- TAB 1.3 Region data ----------------------------------------------------------------------------- -->
+              <!-- TAB 1.2 Region data ----------------------------------------------------------------------------- -->
               <div class="tab-pane" id="markers-regions-gui">
                 <div class="panel panel-default">
                   <div class="panel-body">
@@ -411,7 +412,7 @@
                   </div>
                 </div>
               </div>
-              <!-- TAB 1.4 Overlay data ----------------------------------------------------------------------------- -->
+              <!-- TAB 1.3 Overlay data ----------------------------------------------------------------------------- -->
               <div class="tab-pane" id="image-gui">
                 <div class="panel panel-default">
                   <div class="panel-body">
@@ -458,6 +459,99 @@
                 </div>
                 <!-- end of a main panel -->
               </div>
+              <!-- TAB 1.5 Project data ----------------------------------------------------------------------------- -->
+              <div class="tab-pane" id="project-gui">
+                <div class="panel panel-default">
+                  <div class="panel-body">
+                    <h6 class="my-2">Project title:</h6>
+                    <div class="row">
+                      <div class="col-12">
+                        <input
+                          class="form-control tmap_project_param_input"
+                          type="text"
+                          id="project_title_input"
+                          placeholder="Project title"
+                          data-param="filename"
+                          data-type="str"
+                        />
+                      </div>
+                    </div>
+                    <h6 class="my-2">Project description (html):</h6>
+                    <div class="row">
+                      <div class="col-12">
+                        <textarea
+                          class="form-control tmap_project_param_input"
+                          id="project_description_input"
+                          rows="3"
+                          placeholder="Project description"
+                          data-param="description"
+                          data-type="str"
+                        ></textarea>
+                      </div>
+                    </div>
+                    <!-- List of plugins used in the project-->
+                    <h6 class="my-2">List of plugins:</h6>
+                    <div class="row">
+                      <div class="col-12">
+                        <input
+                          class="form-control tmap_project_param_input"
+                          type="text"
+                          id="project_plugins_input"
+                          placeholder="Plugin1, Plugin2, ..."
+                          data-param="plugins"
+                          data-type="list"
+                        />
+                      </div>
+                    </div>
+                    <!-- List of plugins used in the project-->
+                    <h6 class="my-2">Scalebar pixel resolution (mpp):</h6>
+                    <div class="row">
+                      <div class="col-12">
+                        <input
+                          class="form-control tmap_project_param_input"
+                          type="text"
+                          id="project_mpp_input"
+                          placeholder="0"
+                          data-param="mpp"
+                          data-type="number"
+                        />
+                      </div>
+                    </div>
+                    <!--Import and export tmap project button, with ids load_project_menu and save_project_menu -->
+                    <div class="row mt-2">
+                      <div class="col-4">
+                        <button
+                          id="load_project_menu"
+                          class="btn btn-primary w-100"
+                          type="button"
+                        >
+                          Import project
+                        </button>
+                      </div>
+                      <div class="col-4">
+                        <button
+                          id="save_project_menu"
+                          class="btn btn-primary w-100"
+                          type="button"
+                        >
+                          Export project
+                        </button>
+                      </div>
+                      <div class="col-4">
+                        <button
+                          id="edit_project_json"
+                          class="btn btn-primary w-100"
+                          type="button"
+                        >
+                          Edit tmap JSON
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- end of a main panel -->
+              </div>
+              <!-- end of Plugin-gui-->
               <!-- end of Plugin-gui-->
             </div>
             <!-- end of TM-tabs-->
@@ -504,6 +598,7 @@
   <script src="static/vendor/CamanJS-4.1.2/dist/caman.min.js"></script>
   <script src="static/vendor/PapaParse-5.3.0/papaparse.min.js"></script>
   <script src="static/vendor/sorttable/sorttable.js"></script>
+  <script src="static/vendor/jsoneditor/jsoneditor.min.js"></script>
   <script src="static/js/utils/interfaceUtils.js"></script>
   <script src="static/js/utils/customElementUtils.js"></script>
   <script src="static/js/utils/dataUtils.js"></script>

@@ -46,8 +46,6 @@ var projectUtils = {
     projectUtils.getActiveProject().then((state) => {
         interfaceUtils.prompt("Save project under the name:","NewProject")
         .then((filename) => {
-            state.filename = filename;
-
             var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 4));
             var dlAnchorElem=document.createElement("a");
             dlAnchorElem.setAttribute("hidden","");
@@ -409,6 +407,10 @@ projectUtils.loadProjectFileFromServer = function(path) {
         document.getElementById("project_title").href = state.link;
         document.getElementById("project_title").target = "_blank";
     }
+    if (document.getElementById("project_title_top") && state.link) {
+        document.getElementById("project_title_top").href = state.link;
+        document.getElementById("project_title_top").target = "_blank";
+    }
     if (state.settings) {
         projectUtils.applySettings(state.settings);
     }
@@ -446,6 +448,74 @@ projectUtils.loadProjectFileFromServer = function(path) {
     projectUtils.loadLayers(state);
     
     //tmapp[tmapp["object_prefix"] + "_viewer"].world.resetItems()
+}
+
+projectUtils.updateProjectParameters = function() {
+    // go through all .tmap_project_param_input inputs, get the data-param and value, and update the project state
+    var inputs = document.getElementsByClassName("tmap_project_param_input");
+    for (var i = 0; i < inputs.length; i++) {
+        let input = inputs[i];
+        let param = input.getAttribute("data-param");
+        let type = input.getAttribute("data-type");
+        let value = input.value;
+        if (type == "number") {
+            if (value !== "") {
+                value = parseFloat(this.value);
+            }
+            else {
+                value = null;
+            }
+        }
+        if (type == "list") {
+            value = value.split(",");
+            // remove leading and trailing spaces
+            value = value.map(function(item) {
+                return item.trim();
+            });
+            // remove empty strings
+            value = value.filter(function(item) {
+                return item !== "";
+            });
+        }
+        projectUtils._activeState[param] = value;
+    }
+    overlayUtils.addScaleBar();
+}
+
+projectUtils.editJSON = function () {
+    let modalUID = "editJSON";
+    let content = HTMLElementUtils.createElement({"kind":"div"});
+    let buttons = HTMLElementUtils.createElement({"kind":"div"});
+    let button1 = HTMLElementUtils.createButton({"id":modalUID+"_close","extraAttributes":{ "class":"btn btn-secondary mx-2", "data-bs-dismiss":"modal"}})
+    button1.innerText = "Close";
+    let button2 = HTMLElementUtils.createButton({"id":modalUID+"_save","extraAttributes":{ "class":"btn btn-secondary mx-2", "data-bs-dismiss":"modal"}})
+    button2.innerText = "Save";
+    buttons.appendChild(button1);
+    buttons.appendChild(button2);
+    button1.addEventListener("click",function(event) {
+        $(`#${modalUID}_modal`).modal('hide');
+    });
+    interfaceUtils.generateModal("Edit JSON tmap", content, buttons, modalUID);
+    content.style.maxHeight = "calc(100vh - 300px)";
+    content.style.overflowY = "auto";
+    $(".modal-dialog").css("max-width", "750px");
+    // load https://tissuumaps.github.io/TissUUmaps-schema/1/project.json in a variable using ajax:
+    $.getJSON("https://tissuumaps.github.io/TissUUmaps-schema/1/project.json", function(json) {
+        var editor = new JSONEditor(content,
+            {
+                theme: 'bootstrap5',
+                schema: json,
+                startval: projectUtils._activeState,
+                form_name_root: "Project"
+            }
+        );
+        
+        // Hook up the submit button to log to the console
+        button2.addEventListener('click',function() {
+            // Get the value from the editor
+            projectUtils.loadProject(editor.getValue());
+        });
+    });
 }
 
 /**

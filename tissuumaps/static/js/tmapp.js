@@ -32,6 +32,11 @@ tmapp.registerActions = function () {
     interfaceUtils.listen("plus-1-button","click",function(){interfaceUtils.generateDataTabUI()},false)
     interfaceUtils.listen('save_project_menu', 'click', function() { projectUtils.saveProject() }, false);
     interfaceUtils.listen('load_project_menu', 'click', function() { projectUtils.loadProjectFile() }, false);
+    interfaceUtils.listen('edit_project_json', 'click', function() { projectUtils.editJSON() }, false);
+    var elements = document.getElementsByClassName("tmap_project_param_input");
+    Array.from(elements).forEach(function(element) {
+        element.addEventListener('change', projectUtils.updateProjectParameters);
+    });
     interfaceUtils.listen('project_select', 'change', function() { 
         // go to url of selected project value
         window.location.href = window.location.origin + "/" + this.value;
