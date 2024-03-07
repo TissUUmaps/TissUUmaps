@@ -351,6 +351,10 @@ projectUtils.loadProjectFileFromServer = function(path) {
         $(".openseadragon-canvas")[0].style.backgroundColor=state.backgroundColor;
     }
     if (state.plugins) {
+        //change project_plugins_input value to comma separated list
+        if (document.getElementById("project_plugins_input")) {
+            document.getElementById("project_plugins_input").value = state.plugins.join(", ");
+        }
         state.plugins.forEach(function(pluginName) {
             pluginUtils.addPlugin(pluginName);
         });
@@ -391,6 +395,10 @@ projectUtils.loadProjectFileFromServer = function(path) {
     }
     if (state.filename) {
         tmapp.slideFilename = state.filename;
+        //change project_title_input value
+        if (document.getElementById("project_title_input")) {
+            document.getElementById("project_title_input").value = state.filename;
+        }
         if (document.getElementById("project_title")) {
             document.getElementById("project_title").innerHTML = state.filename;
             document.getElementById("project_title").classList.remove("d-none");
@@ -398,10 +406,17 @@ projectUtils.loadProjectFileFromServer = function(path) {
         if (document.getElementById("project_title_top")) {
             document.getElementById("project_title_top").innerHTML = state.filename;
         }
+        
     }
-    if (state.description && document.getElementById("project_description")) {
-        document.getElementById("project_description").innerHTML = state.description;
-        document.getElementById("project_description").classList.remove("d-none");
+    if (state.description) {
+        //change project_description_input value
+        if (document.getElementById("project_description_input")) {
+            document.getElementById("project_description_input").value = state.description;
+        }
+        if (document.getElementById("project_description")) {
+            document.getElementById("project_description").innerHTML = state.description;
+            document.getElementById("project_description").classList.remove("d-none");
+        }
     }
     if (document.getElementById("project_title") && state.link) {
         document.getElementById("project_title").href = state.link;
