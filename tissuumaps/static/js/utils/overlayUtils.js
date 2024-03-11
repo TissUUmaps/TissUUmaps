@@ -140,6 +140,10 @@ overlayUtils.updateTransform = function (layerIndex) {
     tiledImage2.setWidth(scale*layerNX/layer0X);
     var point = new OpenSeadragon.Point(x/layer0X, y/layer0X);
     tiledImage2.setPosition(point);
+    // check if collectionMode is on, if yes run overlayUtils.setCollectionMode();
+    if (overlayUtils._collectionMode) {
+        overlayUtils.setCollectionMode();
+    }
     tiledImage2.setRotation(rotation);
     tiledImage2.setFlip(flip);
     glUtils.draw();
