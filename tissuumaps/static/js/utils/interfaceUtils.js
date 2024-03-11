@@ -3431,7 +3431,6 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
         if (region.regionName !== newName) {
             let oldName = region.regionName;
             region.regionName = newName;
-            delete regionUtils._regions[oldName];
         }
         regionUtils.updateAllRegionClassUI();
     });
