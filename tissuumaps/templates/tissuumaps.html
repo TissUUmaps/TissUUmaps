@@ -152,12 +152,13 @@
           id="ISS_menu"
           class="ISS_menu col-xl-4 col-lg-5 col-md-6 col-sm-8 col-xs-12 mh-100 overflow-auto"
         >
-          {% if projectList %} {% if projectList|length > 1 %}
+          {% if projectList %}
           <div class="row pb-2 p-2">
             <div class="card border-primary p5">
               <div class="card-body">
                 <h5 class="card-title d-none" id="project_title"></h5>
                 <p class="card-text d-none" id="project_description"></p>
+                {% if projectList|length > 1 or not(projectList.0.selected) %}
                 <strong>Select dataset to display:</strong>
                 <br />
                 <select class="form-select" id="project_select">
@@ -175,10 +176,11 @@
                   </option>
                   {% endfor %}
                 </select>
+                {% endif %}
               </div>
             </div>
           </div>
-          {% endif %} {% endif %}
+          {% endif %}
           <div class="row pb-2">
             <!-- Level 0 tabs -->
             <ul id="main-tabs-menu" class="nav nav-tabs pt-1 sticky-top">
