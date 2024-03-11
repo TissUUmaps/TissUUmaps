@@ -529,7 +529,7 @@ def getProjectList(path):
     # Add project list if app.config["PROJECT_LIST"] is True
     projectList = []
     # Browse the directory of json_filename, with only one level
-    for item in os.listdir(path):
+    for item in sorted(os.listdir(path)):
         file = os.path.join(path, item)
         if os.path.isfile(file) and file.endswith(".tmap"):
             # Add file relative to the basedir
