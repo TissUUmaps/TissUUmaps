@@ -3036,17 +3036,7 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
             region.visibility = visible;
         };
         glUtils.updateRegionLUTTextures();
-        glUtils.draw();
-        /*let newVisibility = this.checked;
-        let groupRegions = Object.values(regionUtils._regions).filter(
-            x => x.regionClass==regionClass
-        ).forEach(function (region) {
-            region.visibility = newVisibility;
-            if (document.getElementById(region.id + "_fill_ta"))
-                document.getElementById(region.id + "_fill_ta").checked = newVisibility;
-        });
-        glUtils.updateRegionLUTTextures();
-        glUtils.draw(); */      
+        glUtils.draw();  
     });
     td5.appendChild(check0);
 
@@ -3069,12 +3059,12 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
     interfaceUtils._rGenUIFuncs.checkboxToEye(check0);
     thead2.appendChild(tr);
     
-    function getUniqueCombinations(array) {
+    function getUniqueCombinations(array, separateCollectionIndex) {
         const uniqueCombinationsSet = new Set();
         const result = [];
       
         for (const { collectionIndex, regionClass } of array) {
-            const combination = `${collectionIndex},${regionClass}`;
+            const combination = separateCollectionIndex ? `${collectionIndex},${regionClass}` : `${regionClass}`;
         
             if (!uniqueCombinationsSet.has(combination)) {
                 uniqueCombinationsSet.add(combination);
@@ -3083,8 +3073,8 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         }
         // sort result by collectionIndex and then by regionClass
         result.sort((a, b) => {
-            if (a.collectionIndex < b.collectionIndex) return -1;
-            if (a.collectionIndex > b.collectionIndex) return 1;
+            if (a.collectionIndex < b.collectionIndex && separateCollectionIndex) return -1;
+            if (a.collectionIndex > b.collectionIndex && separateCollectionIndex) return 1;
             if (a.regionClass < b.regionClass) return -1;
             if (a.regionClass > b.regionClass) return 1;
             return 0;
@@ -3093,14 +3083,16 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
     }
     
     let allRegionClasses = Object.values(regionUtils._regions).map(function(e) { return [e.collectionIndex, e.regionClass]; })
-    let singleRegionClasses = getUniqueCombinations(Object.values(regionUtils._regions));
+    let singleRegionClasses = getUniqueCombinations(Object.values(regionUtils._regions), regionUtils._groupRegionsPerCollectionIndex);
     
     for (i of Object.keys(singleRegionClasses)) {
         let collectionIndex = singleRegionClasses[i].collectionIndex;
         let regionClass = singleRegionClasses[i].regionClass;
         console.log(regionClass, collectionIndex, singleRegionClasses[i]);
         let regionClassID = HTMLElementUtils.stringToId("region_" + regionClass);
-        let numRegions = allRegionClasses.filter(x => x[0] == collectionIndex && x[1]==regionClass).length
+        let numRegions = allRegionClasses.filter(x => 
+            (x[0] == collectionIndex || !regionUtils._groupRegionsPerCollectionIndex)&& x[1]==regionClass
+        ).length
 
         //row
         var tr=HTMLElementUtils.createElement({"kind":"tr",extraAttributes:{"data-escapedID":regionClassID}});
@@ -3136,7 +3128,7 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
                 "extraAttributes":{
                     "for":"regionUI_"+collectionIndex + "_" + regionClassID+"_check","class":"cursor-pointer"
                 },
-                "innerHTML": collectionIndex + "&nbsp;/"
+                "innerHTML": regionUtils._groupRegionsPerCollectionIndex?collectionIndex + "&nbsp;/":""
             }
         )
         td1.appendChild(regionclasslabel);
@@ -3153,10 +3145,10 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         regionclasstext.addEventListener('change', function () {
             var newClass = this.value;
             const color = Object.values(regionUtils._regions).find(
-                x => x.regionClass==newClass && x.collectionIndex==collectionIndex
+                x => x.regionClass==newClass && (x.collectionIndex==collectionIndex || !regionUtils._groupRegionsPerCollectionIndex)
             )?.polycolor;
             groupRegions = Object.values(regionUtils._regions).filter(
-                x => x.regionClass==regionClass && x.collectionIndex==collectionIndex
+                x => x.regionClass==regionClass && (x.collectionIndex==collectionIndex || !regionUtils._groupRegionsPerCollectionIndex)
             );
             for (region of groupRegions) {
                 const escapedRegionID = HTMLElementUtils.stringToId(region.id);
@@ -3177,7 +3169,7 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         let lastColor = interfaceUtils.getElementById("regionUI_"+collectionIndex + "_" + regionClassID+"_color", false);
         if (lastColor == null) {
             let groupRegions = Object.values(regionUtils._regions).filter(
-                x => x.regionClass==regionClass && x.collectionIndex==collectionIndex
+                x => x.regionClass==regionClass && (x.collectionIndex==collectionIndex || !regionUtils._groupRegionsPerCollectionIndex)
             );
             if (groupRegions.length > 0) {
                 lastColor = groupRegions[0].polycolor;
@@ -3196,7 +3188,7 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
         regioncolorinput.addEventListener('change', function () {
             var newColor = this.value;
             groupRegions = Object.values(regionUtils._regions).filter(
-                x => x.regionClass==regionClass && x.collectionIndex==collectionIndex
+                x => x.regionClass==regionClass && (x.collectionIndex==collectionIndex || !regionUtils._groupRegionsPerCollectionIndex)
             )
             for (region of groupRegions) {
                 region.polycolor = newColor;
@@ -3221,7 +3213,7 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
             clist = interfaceUtils.getElementsByClassName("regionUI-region-"+collectionIndex + "_" + regionClassID+"-input");
             for (var i = 0; i < clist.length; ++i) { clist[i].checked_eye = visible; }
             groupRegions = Object.values(regionUtils._regions).filter(
-                x => x.regionClass==regionClass && x.collectionIndex==collectionIndex
+                x => x.regionClass==regionClass && (x.collectionIndex==collectionIndex || !regionUtils._groupRegionsPerCollectionIndex)
             );
             for (region of groupRegions) {
                 region.visibility = visible;
@@ -3241,7 +3233,7 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
             .then(function(_confirm){
                 if (_confirm) {
                     groupRegions = Object.values(regionUtils._regions).filter(
-                        x => x.regionClass==regionClass && x.collectionIndex==collectionIndex
+                        x => x.regionClass==regionClass && (x.collectionIndex==collectionIndex || !regionUtils._groupRegionsPerCollectionIndex)
                     ).forEach(function (region) {
                         regionUtils.deleteRegion(region.id, true);
                     });
@@ -3326,7 +3318,7 @@ interfaceUtils._rGenUIFuncs.createTable=function(){
             if (tbody_subregions.innerHTML == "") {
                 var numberOfItemsPerPage = 100;
                 let groupRegions = Object.values(regionUtils._regions).filter(
-                    x => x.regionClass==selectedRegionClass && x.collectionIndex==selectedCollectionIndex
+                    x => x.regionClass==selectedRegionClass && (x.collectionIndex==collectionIndex || !regionUtils._groupRegionsPerCollectionIndex)
                 )
                 let selectedIndex = 0;
                 if (selectedRegionID != undefined) {
