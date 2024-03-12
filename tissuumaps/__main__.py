@@ -76,14 +76,6 @@ def main():
         help="tile size [254]",
     )
     parser.add_option(
-        "-D",
-        "--depth",
-        metavar="LEVELS",
-        dest="FOLDER_DEPTH",
-        type="int",
-        help="folder depth search for opening files [4]",
-    )
-    parser.add_option(
         "-r",
         "--readonly",
         dest="READ_ONLY",

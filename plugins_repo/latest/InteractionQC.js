@@ -22,6 +22,11 @@ InteractionQC = {
       type: "section",
       collapsed: true,
     },
+    _uns_postfix: {
+      label: "For HDF5 files, postfix of the uns key containing the matrix:",
+      type: "text",
+      default: "/uns/{obs}_nhood_enrichment/zscore",
+    },
   },
   _matrix: null,
   _matrix_header: null,
@@ -53,7 +58,7 @@ InteractionQC.init = function (container) {
     kind: "label",
     extraAttributes: { for: "matrix" },
   });
-  label412.innerText = "Select file";
+  label412.innerText = "For CSV file, select it on disk:";
 
   input411.addEventListener("change", (event) => {
     var reader = new FileReader();
@@ -136,12 +141,16 @@ InteractionQC.loadFromH5AD = async function () {
   data_obj = dataUtils.data[_dataset];
   if (!data_obj._filetype == "h5") return;
   try {
-    let obs = data_obj._gb_col.replace(/\/obs/g, "");
+    let obs = data_obj._gb_col.replace(/\/obs/g, "").replace(/\//g, "");
+    InteractionQC._className = obs;
     let matrix = await dataUtils._hdf5Api.get(data_obj._csv_path, {
-      path: "/uns/" + obs + "_nhood_enrichment/zscore",
+      path: InteractionQC.get("_uns_postfix").replace("{obs}", obs),
     });
     console.log(matrix);
-    let _matrix_header = Object.keys(data_obj._groupgarden);
+    let _matrix_header = await dataUtils._hdf5Api.get(data_obj._csv_path, {
+      path: "/obs/" + obs + "/categories",
+    });
+    _matrix_header = _matrix_header.value;
     // convert matrix from 1D typed array of shape NxN to array of arrays
 
     InteractionQC._matrix = [];
@@ -173,6 +182,8 @@ InteractionQC.run = async function () {
   let _matrix_header = InteractionQC._matrix_header;
   if (!InteractionQC._matrix_header) {
     _matrix_header = await InteractionQC.loadFromH5AD();
+  } else {
+    InteractionQC._className = "Cell classes";
   }
   var op = tmapp["object_prefix"];
 
@@ -197,18 +208,19 @@ InteractionQC.run = async function () {
       tickvals: _matrix_header,
       ticktext: _matrix_header.map(function (text) {
         let color = document.getElementById(
-          _dataset + "_" + text + "_color",
+          _dataset + "_" + text.replace(/ /g, "_") + "_color",
         )?.value;
-        return "<span style='font-weight:bold;color:" + color + "'>███</span>";
+        return "<span style='font-weight:bold;color:" + color + "'>█</span>";
       }),
       ticks: "",
-      tickangle: 90,
+      tickangle: 0,
       title: {
-        text: "Cell class 2",
+        text: InteractionQC._className,
         font: {
-          size: 25,
+          size: 20,
           color: "black",
         },
+        standoff: 20,
       },
     },
     xaxis: {
@@ -219,20 +231,19 @@ InteractionQC.run = async function () {
         .reverse()
         .map(function (text) {
           let color = document.getElementById(
-            _dataset + "_" + text + "_color",
+            _dataset + "_" + text.replace(/ /g, "_") + "_color",
           )?.value;
-          return (
-            "<span style='font-weight:bold;color:" + color + "'>███</span>"
-          );
+          return "<span style='font-weight:bold;color:" + color + "'>█</span>";
         }),
       ticks: "",
-      tickangle: 0,
+      tickangle: 90,
       title: {
-        text: "Cell class 1",
+        text: InteractionQC._className,
         font: {
-          size: 25,
+          size: 20,
           color: "black",
         },
+        standoff: 5,
       },
       ticklabelposition: "top",
       side: "top",
@@ -254,7 +265,7 @@ InteractionQC.run = async function () {
   let legend = "";
   for (type of _matrix_header) {
     let typecolor = document.getElementById(
-      _dataset + "_" + type + "_color",
+      _dataset + "_" + type.replace(/ /g, "_") + "_color",
     )?.value;
     legend +=
       "<div style='display:inline-block;margin-right:10px;'><span style='width:15px;color:" +
@@ -285,6 +296,13 @@ InteractionQC.run = async function () {
               data.points[i].y.toPrecision(4) + '\n\n';
       }
       alert('Closest point clicked:\n\n'+pts);*/
+    })
+    .on("plotly_doubleclick", function () {
+      setTimeout(function () {
+        var uid = _dataset;
+        document.getElementById(uid + "_all_check").checked = false;
+        document.getElementById(uid + "_all_check").click();
+      }, 200);
     });
 };
 

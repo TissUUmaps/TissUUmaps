@@ -1,5 +1,24 @@
 # Changelog
 
+## 3.2.1
+
+- Add scalebar to capture
+- Add project tab with project settings
+
+## 3.2.0.5
+
+- Fix MacOs X libvips issue with 90% jpeg compression
+- Make top menu collapsible in config
+- Add project list and description in upper corner (optional)
+
+## 3.2.0.4
+
+- Run Docker container as non-root user
+- Allow marker size slider to be used with absolute scaling
+- Fix incorrect transforms of region points when image layer is flipped
+- Fix MacOS X libvps issue with percent value
+- Add new blend modes for marker rendering
+
 ## 3.2
 
 - Add annotation tools (in collaboration with Sanofi Digital R&D)

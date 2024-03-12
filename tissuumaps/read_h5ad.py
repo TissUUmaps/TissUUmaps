@@ -150,7 +150,13 @@ def h5ad_to_tmap(basedir, path, library_id=None):
         "tSNE",
     ]:
         if coordinates in list(adata.get("obsm", [])):
-            globalX, globalY = f"/obsm/{coordinates};0", f"/obsm/{coordinates};1"
+            if (
+                isinstance(adata.get(f"/obsm/{coordinates}"), h5py.Group)
+                and "x" in adata.get(f"/obsm/{coordinates}").keys()
+            ):
+                globalX, globalY = f"/obsm/{coordinates}/x", f"/obsm/{coordinates}/y"
+            else:
+                globalX, globalY = f"/obsm/{coordinates};0", f"/obsm/{coordinates};1"
             break
 
     if list(adata.get("/obs/__categories/", [])) != []:
@@ -170,13 +176,6 @@ def h5ad_to_tmap(basedir, path, library_id=None):
 
     layers = []
     library_ids = list(adata.get("uns/spatial", []))
-    try:
-        library_ids = adata["/obs/library_id/categories"].asstr()[...]
-    except Exception:
-        try:
-            library_ids = adata["/obs/__categories/library_id"].asstr()[...]
-        except Exception:
-            pass
 
     coord_factor = 1
     for library_id in library_ids:
@@ -217,15 +216,27 @@ def h5ad_to_tmap(basedir, path, library_id=None):
             import traceback
 
             logging.error(traceback.format_exc())
+    try:
+        library_ids = adata["/obs/library_id/categories"][...]
+    except Exception:
+        import traceback
+
+        logging.error(traceback.format_exc())
+        try:
+            library_ids = adata["/obs/__categories/library_id"][...]
+        except Exception:
+            import traceback
+
+            logging.error(traceback.format_exc())
 
     use_libraries = len(library_ids) > 1
 
     library_col = ""
     if use_libraries:
-        if "/obsm/spatial;" in globalX:
+        if "/obsm/spatial;" in globalX or "/obsm/X_spatial;" in globalX:
             try:
                 library_codes_array = adata["/obs/library_id/codes"][...]
-                library_categ_array = adata["/obs/library_id/categories"].asstr()[...]
+                library_categ_array = adata["/obs/library_id/categories"][...]
                 library_col = "/obs/library_id/codes"
             except Exception:
                 library_codes_array = adata["/obs/library_id"][...]
@@ -236,16 +247,21 @@ def h5ad_to_tmap(basedir, path, library_id=None):
                 if not write_adata:
                     write_adata = True
                     adata, path = get_write_adata(adata, path, basedir)
-                spatial_array = adata["/obsm/spatial"][()]
+                spatial_array = adata[globalX.split(";")[0]][()]
 
                 spatial_scaled_array = np.ones(spatial_array.shape)
                 for library_index, library_id in enumerate(library_categ_array):
-                    scale_factor = float(
-                        adata.get(
-                            f"/uns/spatial/{library_id}/scalefactors/tissue_{img_key}_scalef",
-                            1,
-                        )[()]
-                    )
+                    try:
+                        # Try to get the value from the specified path
+                        scale_factor = float(
+                            adata[
+                                f"/uns/spatial/{library_id}/scalefactors/tissue_{img_key}_scalef"
+                            ][()]
+                        )
+                    except (KeyError, TypeError, ValueError):
+                        # Set default value to 1 if
+                        # path does not exist or if there's an error
+                        scale_factor = 1.0
                     spatial_scaled_array[library_codes_array == library_index] = (
                         spatial_array[library_codes_array == library_index]
                         * scale_factor

@@ -58,7 +58,7 @@
      * @param {Integer} options.referenceItemIdx Specify the item from
      * viewer.world to which options.pixelsPerMeter is refering.
      * default: 0
-     * @param (String} options.minWidth The minimal width of the scale bar as a
+     * @param {String} options.minWidth The minimal width of the scale bar as a
      * CSS string (ex: 100px, 1em, 1% etc...) default: 150px
      * @param {OpenSeadragon.ScalebarLocation} options.location The location
      * of the scale bar inside the viewer. default: bottom left

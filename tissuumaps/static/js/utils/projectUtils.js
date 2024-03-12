@@ -46,8 +46,6 @@ var projectUtils = {
     projectUtils.getActiveProject().then((state) => {
         interfaceUtils.prompt("Save project under the name:","NewProject")
         .then((filename) => {
-            state.filename = filename;
-
             var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 4));
             var dlAnchorElem=document.createElement("a");
             dlAnchorElem.setAttribute("hidden","");
@@ -353,6 +351,10 @@ projectUtils.loadProjectFileFromServer = function(path) {
         $(".openseadragon-canvas")[0].style.backgroundColor=state.backgroundColor;
     }
     if (state.plugins) {
+        //change project_plugins_input value to comma separated list
+        if (document.getElementById("project_plugins_input")) {
+            document.getElementById("project_plugins_input").value = state.plugins.join(", ");
+        }
         state.plugins.forEach(function(pluginName) {
             pluginUtils.addPlugin(pluginName);
         });
@@ -393,11 +395,36 @@ projectUtils.loadProjectFileFromServer = function(path) {
     }
     if (state.filename) {
         tmapp.slideFilename = state.filename;
-        document.getElementById("project_title").innerHTML = state.filename;
+        //change project_title_input value
+        if (document.getElementById("project_title_input")) {
+            document.getElementById("project_title_input").value = state.filename;
+        }
+        if (document.getElementById("project_title")) {
+            document.getElementById("project_title").innerHTML = state.filename;
+            document.getElementById("project_title").classList.remove("d-none");
+        }
+        if (document.getElementById("project_title_top")) {
+            document.getElementById("project_title_top").innerHTML = state.filename;
+        }
+        
     }
-    if (state.link) {
+    if (state.description) {
+        //change project_description_input value
+        if (document.getElementById("project_description_input")) {
+            document.getElementById("project_description_input").value = state.description;
+        }
+        if (document.getElementById("project_description")) {
+            document.getElementById("project_description").innerHTML = state.description;
+            document.getElementById("project_description").classList.remove("d-none");
+        }
+    }
+    if (document.getElementById("project_title") && state.link) {
         document.getElementById("project_title").href = state.link;
         document.getElementById("project_title").target = "_blank";
+    }
+    if (document.getElementById("project_title_top") && state.link) {
+        document.getElementById("project_title_top").href = state.link;
+        document.getElementById("project_title_top").target = "_blank";
     }
     if (state.settings) {
         projectUtils.applySettings(state.settings);
@@ -422,25 +449,11 @@ projectUtils.loadProjectFileFromServer = function(path) {
         });
     }
     if (state.mpp !== undefined) {
-        // If ppm == 0, we display pixel size
-        // If ppm != 0, we display scale bar with metric length
-        var PIXEL_LENGTH = function(ppm, minSize) {
-            return OpenSeadragon.ScalebarSizeAndTextRenderer.METRIC_GENERIC(ppm, minSize, "pixels")
+        if (state.mpp == null) {
+            state.mpp = "";
         }
-        var op = tmapp["object_prefix"];
-        var vname = op + "_viewer";
-        tmapp[vname].scalebar({
-            pixelsPerMeter: state.mpp ? (1e6 / state.mpp) : 1,
-            xOffset: 200,
-            yOffset: 10,
-            zIndex: 12,
-            barThickness: 3,
-            color: '#555555',
-            fontColor: '#333333',
-            backgroundColor: 'rgba(255, 255, 255, 0.5)',
-            sizeAndTextRenderer: state.mpp ? OpenSeadragon.ScalebarSizeAndTextRenderer.METRIC_LENGTH : PIXEL_LENGTH,
-            location: OpenSeadragon.ScalebarLocation.BOTTOM_RIGHT
-        });
+        document.getElementById("project_mpp_input").value = state.mpp;
+        overlayUtils.addScaleBar();
     }
     // for backward compatibility only:
     if (state.compositeMode == "collection") {
@@ -450,6 +463,74 @@ projectUtils.loadProjectFileFromServer = function(path) {
     projectUtils.loadLayers(state);
     
     //tmapp[tmapp["object_prefix"] + "_viewer"].world.resetItems()
+}
+
+projectUtils.updateProjectParameters = function() {
+    // go through all .tmap_project_param_input inputs, get the data-param and value, and update the project state
+    var inputs = document.getElementsByClassName("tmap_project_param_input");
+    for (var i = 0; i < inputs.length; i++) {
+        let input = inputs[i];
+        let param = input.getAttribute("data-param");
+        let type = input.getAttribute("data-type");
+        let value = input.value;
+        if (type == "number") {
+            if (value !== "") {
+                value = parseFloat(this.value);
+            }
+            else {
+                value = null;
+            }
+        }
+        if (type == "list") {
+            value = value.split(",");
+            // remove leading and trailing spaces
+            value = value.map(function(item) {
+                return item.trim();
+            });
+            // remove empty strings
+            value = value.filter(function(item) {
+                return item !== "";
+            });
+        }
+        projectUtils._activeState[param] = value;
+    }
+    overlayUtils.addScaleBar();
+}
+
+projectUtils.editJSON = function () {
+    let modalUID = "editJSON";
+    let content = HTMLElementUtils.createElement({"kind":"div"});
+    let buttons = HTMLElementUtils.createElement({"kind":"div"});
+    let button1 = HTMLElementUtils.createButton({"id":modalUID+"_close","extraAttributes":{ "class":"btn btn-secondary mx-2", "data-bs-dismiss":"modal"}})
+    button1.innerText = "Close";
+    let button2 = HTMLElementUtils.createButton({"id":modalUID+"_save","extraAttributes":{ "class":"btn btn-secondary mx-2", "data-bs-dismiss":"modal"}})
+    button2.innerText = "Save";
+    buttons.appendChild(button1);
+    buttons.appendChild(button2);
+    button1.addEventListener("click",function(event) {
+        $(`#${modalUID}_modal`).modal('hide');
+    });
+    interfaceUtils.generateModal("Edit JSON tmap", content, buttons, modalUID);
+    content.style.maxHeight = "calc(100vh - 300px)";
+    content.style.overflowY = "auto";
+    $(".modal-dialog").css("max-width", "750px");
+    // load https://tissuumaps.github.io/TissUUmaps-schema/1/project.json in a variable using ajax:
+    $.getJSON("https://tissuumaps.github.io/TissUUmaps-schema/1/project.json", function(json) {
+        var editor = new JSONEditor(content,
+            {
+                theme: 'bootstrap5',
+                schema: json,
+                startval: projectUtils._activeState,
+                form_name_root: "Project"
+            }
+        );
+        
+        // Hook up the submit button to log to the console
+        button2.addEventListener('click',function() {
+            // Get the value from the editor
+            projectUtils.loadProject(editor.getValue());
+        });
+    });
 }
 
 /**

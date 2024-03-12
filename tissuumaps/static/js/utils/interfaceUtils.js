@@ -683,6 +683,18 @@ interfaceUtils._mGenUIFuncs.intputToH5 = function(uid, inputDropDown){
                     return {"value": completePath, "data": completePath };
                 },
                 (error)=>{console.log("Error!",error)});
+                // sort keys with keys containing query string on top
+                keys.sort(function(a, b) {
+                    var aContainsQuery = a.value.toLowerCase().indexOf(query.toLowerCase()) !== -1;
+                    var bContainsQuery = b.value.toLowerCase().indexOf(query.toLowerCase()) !== -1;
+                    if (aContainsQuery && !bContainsQuery) {
+                        return -1;
+                    } else if (!aContainsQuery && bContainsQuery) {
+                        return 1;
+                    } else {
+                        return 0;
+                    }
+                });
                 var result = {
                     suggestions: keys
                 };
@@ -3460,7 +3472,6 @@ interfaceUtils._rGenUIFuncs.createRegionRow=function(regionId){
         if (region.regionName !== newName) {
             let oldName = region.regionName;
             region.regionName = newName;
-            delete regionUtils._regions[oldName];
         }
         regionUtils.updateAllRegionClassUI();
     });

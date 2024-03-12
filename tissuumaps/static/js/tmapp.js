@@ -28,9 +28,19 @@ tmapp.registerActions = function () {
     interfaceUtils.listen(op + '_export_regions_csv','click', function () { regionUtils.pointsInRegionsToCSV() },false);
     interfaceUtils.listen(op + '_fillregions_btn','click', function () { regionUtils.fillAllRegions(); },false);
     interfaceUtils.listen("capture_viewport","click",function(){overlayUtils.savePNG()},false)
+    interfaceUtils.listen("see_version","click",function(){tmapp.seeVersion()},false)
     interfaceUtils.listen("plus-1-button","click",function(){interfaceUtils.generateDataTabUI()},false)
     interfaceUtils.listen('save_project_menu', 'click', function() { projectUtils.saveProject() }, false);
     interfaceUtils.listen('load_project_menu', 'click', function() { projectUtils.loadProjectFile() }, false);
+    interfaceUtils.listen('edit_project_json', 'click', function() { projectUtils.editJSON() }, false);
+    var elements = document.getElementsByClassName("tmap_project_param_input");
+    Array.from(elements).forEach(function(element) {
+        element.addEventListener('change', projectUtils.updateProjectParameters);
+    });
+    interfaceUtils.listen('project_select', 'change', function() { 
+        // go to url of selected project value
+        window.location.href = window.location.origin + "/" + this.value;
+     }, false);
     document.addEventListener("mousedown",function(){tmapp["ISS_viewer"].removeOverlay("ISS_marker_info");});
 
     // dataUtils.processEventForCSV("morphology",cpop + '_csv');
@@ -185,6 +195,7 @@ tmapp.init = function () {
     tmapp["ISS_viewer"].addHandler("zoom", function animationFinishHandler(event){
         const zoom = event.zoom;
         var op = tmapp["object_prefix"];
+        if (!tmapp[op + "_viewer"].world.getItemAt(0)) return;
         let imageZoom = tmapp[op + "_viewer"].world.getItemAt(0).viewportToImageZoom(zoom)
         if (imageZoom > 0.8) {
             tmapp[op + "_viewer"].drawer.setImageSmoothingEnabled(false);
@@ -269,6 +280,10 @@ tmapp.init = function () {
         dataUtils._hdf5Api = new H5AD_API()
     }
 } //finish init
+
+tmapp.seeVersion = function() {
+    interfaceUtils.alert("TissUUmaps version: <b>" + tmapp.version + "</b><br/>TissUUmaps-Schema version: <b>" + tmapp.schema_version + "</b>", "Software version");
+}
 
 /**
  * Options for the fixed and moving OSD 

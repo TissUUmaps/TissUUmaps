@@ -171,8 +171,6 @@ flask.server = {}
 
 flask.server.init = function () {
     flask.init();
-    document.getElementById("menubar_File_Import").classList.add("d-none");
-    document.getElementById("menubar_File_Export").classList.add("d-none");
 
     interfaceUtils.addMenuItem(["File","Save project"],function(){
         var modalUID = "messagebox";

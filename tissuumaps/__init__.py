@@ -30,16 +30,24 @@ log.setLevel(logging.INFO)
 SLIDE_DIR = "/mnt/data/shared/"
 DEFAULT_PROJECT = False
 SLIDE_CACHE_SIZE = 60
+
 DEEPZOOM_FORMAT = "jpeg"
 DEEPZOOM_TILE_SIZE = 254
 DEEPZOOM_OVERLAP = 1
 DEEPZOOM_LIMIT_BOUNDS = True
 DEEPZOOM_TILE_QUALITY = 90
 
-FOLDER_DEPTH = 4
-PLUGINS = []
+VIPS_MIN_OUTLIER_PERC = 0.5
+VIPS_MAX_OUTLIER_PERC = 99.5
+VIPS_FORCE_RESCALE = False
+VIPS_JPEG_COMPRESSION = 85
+VIPS_EXCLUDE_MIN_INTENSITY = False
 
+PLUGINS = []
+DEBUG_CLI = False
 READ_ONLY = False
+COLLAPSE_TOP_MENU = False
+PROJECT_LIST = False
 
 # determine if application is a script file or frozen exe
 if getattr(sys, "frozen", False):
@@ -69,6 +77,10 @@ app.config["PLUGIN_FOLDER_USER"] = os.path.join(
     os.path.expanduser("~"), ".tissuumaps", "plugins"
 )
 app.config.from_envvar("TISSUUMAPS_CONF", silent=True)
+userConfigFile = os.path.join(os.path.expanduser("~"), ".tissuumaps", "tissuumaps.cfg")
+
+if os.path.isfile(userConfigFile):
+    app.config.from_pyfile(userConfigFile)
 
 
 def getPluginInFolder(folder):
