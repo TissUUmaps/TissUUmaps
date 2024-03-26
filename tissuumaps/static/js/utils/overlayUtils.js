@@ -659,7 +659,8 @@ overlayUtils.addScaleBar = function() {
         fontColor: '#333333',
         backgroundColor: 'rgba(255, 255, 255, 0.5)',
         sizeAndTextRenderer: state.mpp ? OpenSeadragon.ScalebarSizeAndTextRenderer.METRIC_LENGTH : PIXEL_LENGTH,
-        location: OpenSeadragon.ScalebarLocation.BOTTOM_RIGHT
+        location: OpenSeadragon.ScalebarLocation.BOTTOM_RIGHT,
+        stayInsideImage: false
     });
 }
 /** 
