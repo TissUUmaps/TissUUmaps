@@ -41,17 +41,22 @@
     >
       <nav
         id="main-navbar"
-        class="navbar navbar-expand-lg navbar-dark border-bottom border-dark flex-shrink-0 {% if isStandalone %}d-none{% endif %} {% if collapseTopMenu %}collapse{% endif %}"
+        class="navbar navbar-expand-lg navbar-light border-bottom border-dark flex-shrink-0 {% if isStandalone %}d-none{% endif %}"
       >
         <div class="container-fluid">
-          <a class="navbar-brand" href="https://tissuumaps.github.io/">
+          <a
+            class="navbar-brand pt-0"
+            target="_blank"
+            href="https://tissuumaps.github.io/"
+          >
             <img
               src="static/misc/logo_40.png"
-              width="37"
-              height="40"
+              width="25"
+              height="27"
               alt="TissUUmaps Logotype"
               title="TissUUmaps"
             />
+            <span class="ms-2 pt-2 small">TissUUmaps</span>
           </a>
           <button
             class="navbar-toggler"
@@ -678,7 +683,7 @@
       {% if warning %}
       interfaceUtils.generateNotification("{{warning|safe}}", "loading_alert", false, 3000, "warning");
       {% endif %}
-      if (window!=window.top {% if collapseTopMenu %} || true {% endif %}) {
+      if (window!=window.top) {
           document.getElementById("main-navbar").classList.add("collapse");
           elt = document.getElementById("powered_by_tissuumaps");
           tmapp["ISS_viewer"].addControl(elt,{
