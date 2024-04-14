@@ -2398,6 +2398,12 @@ interfaceUtils.confirm = function (text, title) {
         content=HTMLElementUtils.createElement({"kind":"p", "extraAttributes":{"class":""}});
         content.innerHTML = text;
         interfaceUtils.generateModal(title, content, buttons, modalUID);
+        // Make enter key equal to OK
+        document.getElementById(modalUID + "_modal").addEventListener('keydown', function(event) {
+            if (event.key === "Enter") {
+                button1.click();
+            }
+        });
     })
 }
 
@@ -2440,6 +2446,12 @@ interfaceUtils.prompt = function (text, value, title, type) {
         interfaceUtils.generateModal(title, content, buttons, modalUID);
         input112.focus();
         input112.select();
+        // Make enter key validate the prompt
+        document.getElementById(modalUID + "_modal").addEventListener('keydown', function(event) {
+            if (event.key === "Enter") {
+                button1.click();
+            }
+        });
     })
 }
 
@@ -2505,6 +2517,12 @@ interfaceUtils.generateModal = function(title, content, buttons, uid, noClose, n
         $draggable.closest(".modal").one("bs.modal.hide", function() {
             $("body").off("mousemove.draggable");
         });
+    });
+    // Make escape key close the modal
+    $(document).on('keydown', function(event) {
+        if (event.key === "Escape") {
+            $(modalWindow).modal("hide");
+        }
     });
     return modalWindow;
 }
