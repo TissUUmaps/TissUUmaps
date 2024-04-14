@@ -3,9 +3,14 @@
 ## 3.2.1.5
 
 - Add enter and escape keys to close modals
+- Fix empty mpp issue
 - Fix scalebar position when multiple images
 
 ## 3.2.1.2
+
+- Fix renamed regions disapearing
+
+## 3.2.1.1
 
 - Fix jsonEditor path
 
