@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.2.1.5
+
+- Add enter and escape keys to close modals
+- Fix scalebar position when multiple images
+
+## 3.2.1.2
+
+- Fix jsonEditor path
+
 ## 3.2.1
 
 - Add scalebar to capture
