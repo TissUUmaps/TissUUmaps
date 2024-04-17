@@ -426,7 +426,6 @@ def index():
                     jsonProject={},
                     isStandalone=app.config["isStandalone"],
                     readOnly=app.config["READ_ONLY"],
-                    collapseTopMenu=app.config["COLLAPSE_TOP_MENU"],
                     projectList=projectList,
                     version=app.config["VERSION"],
                     schema_version=current_schema_module.VERSION,
@@ -442,7 +441,6 @@ def index():
         plugins=[p["module"] for p in app.config["PLUGINS"]],
         isStandalone=app.config["isStandalone"],
         readOnly=app.config["READ_ONLY"],
-        collapseTopMenu=app.config["COLLAPSE_TOP_MENU"],
         version=app.config["VERSION"],
         schema_version=current_schema_module.VERSION,
     )
@@ -671,7 +669,6 @@ def tmapFile(filename):
             jsonProject=state,
             isStandalone=app.config["isStandalone"],
             readOnly=app.config["READ_ONLY"],
-            collapseTopMenu=app.config["COLLAPSE_TOP_MENU"],
             projectList=projectList,
             version=app.config["VERSION"],
             schema_version=current_schema_module.VERSION,
@@ -893,7 +890,6 @@ def h5ad(filename, ext):
         jsonProject=state,
         isStandalone=app.config["isStandalone"],
         readOnly=app.config["READ_ONLY"],
-        collapseTopMenu=app.config["COLLAPSE_TOP_MENU"],
         version=app.config["VERSION"],
         schema_version=current_schema_module.VERSION,
     )
@@ -1046,7 +1042,6 @@ def exportToStatic(state, folderpath, previouspath):
                 jsonProject=state,
                 isStandalone=False,
                 readOnly=True,
-                collapseTopMenu=app.config["COLLAPSE_TOP_MENU"],
                 version=app.config["VERSION"],
                 schema_version=current_schema_module.VERSION,
             )
