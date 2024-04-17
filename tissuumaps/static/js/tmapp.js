@@ -33,6 +33,7 @@ tmapp.registerActions = function () {
     interfaceUtils.listen('save_project_menu', 'click', function() { projectUtils.saveProject() }, false);
     interfaceUtils.listen('load_project_menu', 'click', function() { projectUtils.loadProjectFile() }, false);
     interfaceUtils.listen('edit_project_json', 'click', function() { projectUtils.editJSON() }, false);
+    interfaceUtils.listen('download_all_files', 'click', function() { projectUtils.downloadTar() }, false);
     var elements = document.getElementsByClassName("tmap_project_param_input");
     Array.from(elements).forEach(function(element) {
         element.addEventListener('change', projectUtils.updateProjectParameters);

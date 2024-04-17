@@ -13,6 +13,7 @@ import os
 import pathlib
 import re
 import sys
+import tempfile
 import threading
 import time
 import traceback
@@ -47,7 +48,7 @@ from tissuumaps_schema.utils import (
 from werkzeug.exceptions import MethodNotAllowed, NotFound
 from werkzeug.routing import RequestRedirect
 
-from tissuumaps import app, read_h5ad
+from tissuumaps import app, read_h5ad, tarfile_stream
 
 import openslide  # isort: skip
 from openslide import OpenSlide  # isort: skip
@@ -540,6 +541,8 @@ def getProjectList(path):
 @app.route("/<string:filename>.tmap", methods=["GET", "POST"])
 @requires_auth
 def tmapFile(filename):
+    if request.args.get("dl", default=0) != 0:
+        return dlTmapFile(filename)
     # Get the path from the request arguments or use the current directory
     path = request.args.get("path", default="./")
 
@@ -1016,6 +1019,117 @@ def exportToStatic(state, folderpath, previouspath):
         return {"success": True}
     except Exception:
         return {"success": False, "error": traceback.format_exc()}
+
+
+def dlTmapFile(filename):
+    # Get the path from the request arguments or use the current directory
+    path = request.args.get("path", default="./")
+    previous_path = os.path.join(app.basedir, path)
+    # Create the absolute path to the JSON file
+    json_filename = os.path.abspath(os.path.join(app.basedir, path, filename) + ".tmap")
+    with open(json_filename, "r") as json_file:
+        state = json.load(json_file)
+
+    imgFiles = []
+    otherFiles = []
+
+    def addRelativePath(state, relativePath):
+        nonlocal imgFiles, otherFiles
+
+        def addRelativePath_aux(state, path, isImg):
+            nonlocal imgFiles, otherFiles
+            if path[0] not in state.keys():
+                return
+            if len(path) == 1:
+                if path[0] not in state.keys():
+                    return
+                if state[path[0]] is None:
+                    return
+                if isinstance(state[path[0]], list):
+                    if isImg:
+                        imgFiles += [s for s in state[path[0]]]
+                        state[path[0]] = [
+                            "data/images/"
+                            + os.path.basename(s.replace("/", "_").replace("\\", "_"))
+                            for s in state[path[0]]
+                        ]
+                    else:
+                        otherFiles += [relativePath + "/" + s for s in state[path[0]]]
+                        state[path[0]] = [
+                            "data/files/" + os.path.basename(s) for s in state[path[0]]
+                        ]
+
+                else:
+                    if isImg:
+                        imgFiles += [state[path[0]]]
+                        state[path[0]] = "data/images/" + os.path.basename(
+                            state[path[0]].replace("/", "_").replace("\\", "_")
+                        )
+                    else:
+                        otherFiles += [state[path[0]]]
+                        state[path[0]] = "data/files/" + os.path.basename(
+                            state[path[0]]
+                        )
+                return
+            else:
+                if path[0] not in state.keys():
+                    return
+                if isinstance(state[path[0]], list):
+                    for state_ in state[path[0]]:
+                        addRelativePath_aux(state_, path[1:], isImg)
+                else:
+                    addRelativePath_aux(state[path[0]], path[1:], isImg)
+
+        try:
+            relativePath = relativePath.replace("\\", "/")
+            paths = [
+                ["layers", "tileSource"],
+                ["markerFiles", "path"],
+                ["regionFiles", "path"],
+                ["regionFile"],
+            ]
+            for path in paths:
+                addRelativePath_aux(state, path, path[0] == "layers")
+        except Exception:
+            logging.error(traceback.format_exc())
+
+        return state
+
+    state = addRelativePath(state, "./")
+
+    # Create a temp file called "TissUUmaps_project.tmap" using tempfile
+    tmp_tmap = os.path.join(tempfile.gettempdir(), "TissUUmaps_project.tmap")
+    with open(tmp_tmap, "w") as f:
+        json.dump(state, f)
+
+    def stream_file():
+        tar = tarfile_stream.open(mode="w|tar")
+        yield from tar.header()
+        for image in imgFiles:
+            image = image.replace(".dzi", "")
+            yield from tar.add(
+                os.path.join(previous_path, image),
+                os.path.join(
+                    "data/images",
+                    os.path.basename(image.replace("/", "_").replace("\\", "_")),
+                ),
+            )
+
+        for file in set(otherFiles):
+            yield from tar.add(
+                os.path.join(previous_path, file),
+                os.path.join("data/files", os.path.basename(file)),
+            )
+        yield from tar.add(tmp_tmap, os.path.basename(json_filename))
+        yield from tar.footer()
+
+    return app.response_class(
+        stream_file(),
+        headers={
+            "Content-Disposition": "attachment; filename=TissUUmaps_project.tar",
+            "filename": "TissUUmaps_project.tar",
+        },
+    )
 
 
 def load_plugin(name):

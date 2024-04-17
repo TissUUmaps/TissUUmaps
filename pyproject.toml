@@ -4,4 +4,4 @@ build-backend = "setuptools.build_meta"
 
 [tool.ruff]
 select = ["E", "F", "I"]
-exclude = ["examples", "plugins_repo"]
+exclude = ["examples", "plugins_repo", "tissuumaps/tarfile_stream.py"]

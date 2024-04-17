@@ -497,6 +497,18 @@ projectUtils.updateProjectParameters = function() {
     overlayUtils.addScaleBar();
 }
 
+projectUtils.downloadTar = function() {
+    // Add &dl=1 to url and download the tar file
+    var url = window.location.href;
+    if (url.includes("?")) {
+        url += "&dl=1";
+    }
+    else {
+        url += "?dl=1";
+    }
+    window.open(url, '_self')?.focus();
+}
+
 projectUtils.editJSON = function () {
     let modalUID = "editJSON";
     let content = HTMLElementUtils.createElement({"kind":"div"});
