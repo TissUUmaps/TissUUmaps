@@ -20,7 +20,7 @@ from collections import OrderedDict
 from functools import wraps
 from shutil import copyfile, copytree
 from threading import Lock
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import parse_qs, urlparse
 
 import pyvips
 
@@ -895,37 +895,6 @@ def h5ad(filename, ext):
     )
 
 
-@app.route(
-    "/<path:path>.<any(h5ad, adata):ext>_files/csv/<string:type>/<string:filename>.csv"
-)
-def h5ad_csv(path, type, filename, ext):
-    completePath = os.path.join(app.basedir, path + "." + ext)
-    filename = unquote(filename)
-    csvPath = f"{completePath}_files/csv/{type}/{filename}.csv"
-    generate_csv = True
-    if os.path.isfile(csvPath):
-        if os.path.getmtime(completePath) > os.path.getmtime(csvPath):
-            # In this case, the h5ad file has been recently modified and the csv file is
-            # stale, so it must be regenerated.
-            generate_csv = True
-        else:
-            generate_csv = False
-    logging.info("Generate_csv: " + str(generate_csv))
-    if generate_csv:
-        if type == "obs":
-            read_h5ad.h5ad_obs_to_csv(app.basedir, path + "." + ext, filename)
-        elif type == "var":
-            read_h5ad.h5ad_var_to_csv(app.basedir, path + "." + ext, filename)
-        elif type == "uns":
-            read_h5ad.h5ad_uns_to_csv(app.basedir, path + "." + ext, filename)
-
-    if not os.path.isfile(csvPath):
-        abort(404)
-    directory = os.path.dirname(csvPath)
-    filename = os.path.basename(csvPath)
-    return send_from_directory(directory, filename)
-
-
 def exportToStatic(state, folderpath, previouspath):
     imgFiles = []
     otherFiles = []
@@ -1011,20 +980,6 @@ def exportToStatic(state, folderpath, previouspath):
                 ),
             ).convertToDZI()
         for file in set(otherFiles):
-            m = re.match(
-                r"(.*)\.(h5ad|adata)_files(\/*|\\*)csv(\/*|\\*)(obs|var)(\/*|\\*)(.*).csv",
-                file,
-            )
-            if m is not None:
-                try:
-                    h5ad_csv(
-                        previouspath + "/" + m.group(1),
-                        m.group(5),
-                        m.group(7),
-                        m.group(2),
-                    )
-                except Exception:
-                    pass
             copyfile(
                 os.path.join(previouspath, file),
                 os.path.join(folderpath, "data/files", os.path.basename(file)),
