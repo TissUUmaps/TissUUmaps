@@ -363,14 +363,14 @@ function toggleFullscreen() {
 }
 
 function toggleNavbar(turn_on = null) {
-    let main_navbar = document.getElementsByTagName("nav")[0];
+    let main_navbar = document.getElementById("main-navbar");
 
     if (turn_on === true) {
-        main_navbar.classList.remove("d-none");
+        main_navbar?.classList.remove("d-none");
     } else if (turn_on === false) {
-        main_navbar.classList.add("d-none");
+        main_navbar?.classList.add("d-none");
     } else if (turn_on === null) {
-        if (main_navbar.classList.contains("d-none")) {
+        if (main_navbar?.classList.contains("d-none")) {
             toggleNavbar(true);
         } else {
             toggleNavbar(false);
