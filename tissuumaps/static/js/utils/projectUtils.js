@@ -475,7 +475,7 @@ projectUtils.updateProjectParameters = function() {
         let value = input.value;
         if (type == "number") {
             if (value !== "") {
-                value = parseFloat(this.value);
+                value = parseFloat(value);
             }
             else {
                 value = null;
