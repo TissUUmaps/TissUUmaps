@@ -28,6 +28,10 @@ flask.init = function () {
 flask.standalone = {}
 
 flask.standalone.init = function () {
+    
+    toggleNavbar = function toggleNavbar(turn_on = null) {
+        return false;
+    }
     flask.init();
     flask.standalone.backend = null;
     new QWebChannel(qt.webChannelTransport, function (channel) {
@@ -274,11 +278,6 @@ flask.server.loading = function (message) {
 flask.server.hideloading = function (message) {
     $('#loadingModal').modal('hide');
 }
-
-function toggleNavbar(turn_on = null) {
-    return false;
-}
-
 
 /**
  * Save the current canvas as a PNG image

@@ -639,9 +639,10 @@ overlayUtils.addScaleBar = function() {
     // If ppm == 0, we display pixel size
     // If ppm != 0, we display scale bar with metric length
     let state = projectUtils._activeState;
-    if ((state.mpp === undefined || state.mpp === null || state.mpp === "") 
-        && tmapp.ISS_viewer.scalebarInstance !== undefined) {
-        tmapp.ISS_viewer.scalebarInstance.location = null;
+    if (state.mpp === undefined || state.mpp === null || state.mpp === "") {
+        if (tmapp.ISS_viewer.scalebarInstance !== undefined) {
+            tmapp.ISS_viewer.scalebarInstance.location = null;
+        }
         return;
     }
     var PIXEL_LENGTH = function(ppm, minSize) {
@@ -703,14 +704,14 @@ overlayUtils.waitLayersReady = async function (acceptNoLayers=true) {
             tmapp[op + "_viewer"].world.getItemCount() < tmapp.layers.length ||
             (!acceptNoLayers && tmapp[op + "_viewer"].world.getItemCount() == 0)
         ) {
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise(r => setTimeout(r, 100));
     }
 }
 
 overlayUtils.waitFullyLoaded = async function () {
     await new Promise(r => setTimeout(r, 200));
     while (!overlayUtils.areAllFullyLoaded()) {
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise(r => setTimeout(r, 100));
     }
 }
 
@@ -930,6 +931,7 @@ overlayUtils.savePNG=function() {
         tmapp.ISS_viewer.scalebarInstance.refresh()
 
         var location = tmapp.ISS_viewer.scalebarInstance.getScalebarLocation();
+        if (location == null) return ctx;
         ctx.drawImage(
             scalebarCanvas, 
             location.x * resolution, 

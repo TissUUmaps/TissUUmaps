@@ -46,7 +46,6 @@ VIPS_EXCLUDE_MIN_INTENSITY = False
 PLUGINS = []
 DEBUG_CLI = False
 READ_ONLY = False
-COLLAPSE_TOP_MENU = False
 PROJECT_LIST = False
 
 # determine if application is a script file or frozen exe

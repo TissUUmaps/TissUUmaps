@@ -51,7 +51,7 @@ COPY ./tissuumaps/ /app/tissuumaps
 # Set up permissions and environment variables
 WORKDIR /app/
 ENV PYTHONPATH /app
-ENV GUNICORN_CMD_ARGS "--bind=0.0.0.0:80 --workers=8 --thread=8 --worker-class=gevent --forwarded-allow-ips='*' -"
+ENV GUNICORN_CMD_ARGS "--bind=0.0.0.0:80 --workers=8 --thread=8 --timeout=600 --worker-class=gevent --forwarded-allow-ips='*' -"
 ENV TISSUUMAPS_CONF /tissuumaps.cfg
 
 # Change to the non-root user

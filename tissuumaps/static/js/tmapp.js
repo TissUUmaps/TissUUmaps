@@ -33,10 +33,12 @@ tmapp.registerActions = function () {
     interfaceUtils.listen('save_project_menu', 'click', function() { projectUtils.saveProject() }, false);
     interfaceUtils.listen('load_project_menu', 'click', function() { projectUtils.loadProjectFile() }, false);
     interfaceUtils.listen('edit_project_json', 'click', function() { projectUtils.editJSON() }, false);
+    interfaceUtils.listen('download_all_files', 'click', function() { projectUtils.downloadTar() }, false);
     var elements = document.getElementsByClassName("tmap_project_param_input");
     Array.from(elements).forEach(function(element) {
         element.addEventListener('change', projectUtils.updateProjectParameters);
     });
+    interfaceUtils.listen('project_boundingBox_actual', 'click', function() { projectUtils.setBoundingBoxActual() }, false);
     interfaceUtils.listen('project_select', 'change', function() { 
         // go to url of selected project value
         window.location.href = window.location.origin + "/" + this.value;
@@ -275,7 +277,21 @@ tmapp.init = function () {
     } else {
         console.log("Using CPU-based marker drawing (SVG canvas)")
     }
-    
+
+     // listen for keyups in both input widget AND dropdown
+    $("body").on('keyup', ".select2", function(e) {
+  var KEYS = {UP: 38, DOWN: 40};
+  var sel = $(this).closest('.select2-container').parent().find('select');
+  if (e.keyCode === KEYS.DOWN) {
+    newValue = $(sel).find(':selected').next().val();
+  } else if (e.keyCode === KEYS.UP) {
+    newValue = $(sel).find(':selected').prev().val();
+  }
+  if (newValue != undefined) {
+    $(sel).val(newValue).trigger('change');
+  }
+});
+
     if (dataUtils._hdf5Api === undefined) {
         dataUtils._hdf5Api = new H5AD_API()
     }
@@ -347,14 +363,14 @@ function toggleFullscreen() {
 }
 
 function toggleNavbar(turn_on = null) {
-    let main_navbar = document.getElementsByTagName("nav")[0];
+    let main_navbar = document.getElementById("main-navbar");
 
     if (turn_on === true) {
-        main_navbar.classList.remove("d-none");
+        main_navbar?.classList.remove("d-none");
     } else if (turn_on === false) {
-        main_navbar.classList.add("d-none");
+        main_navbar?.classList.add("d-none");
     } else if (turn_on === null) {
-        if (main_navbar.classList.contains("d-none")) {
+        if (main_navbar?.classList.contains("d-none")) {
             toggleNavbar(true);
         } else {
             toggleNavbar(false);

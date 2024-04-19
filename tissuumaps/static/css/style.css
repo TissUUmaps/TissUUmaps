@@ -1,6 +1,9 @@
 .navbar-dark {
   background-color: #ad1d28; }
 
+  .navbar-light {
+    background-color: #ffffff; }  
+
 .ISS_viewer {
   background-color: white; }
 

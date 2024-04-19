@@ -475,7 +475,7 @@ projectUtils.updateProjectParameters = function() {
         let value = input.value;
         if (type == "number") {
             if (value !== "") {
-                value = parseFloat(this.value);
+                value = parseFloat(value);
             }
             else {
                 value = null;
@@ -492,9 +492,43 @@ projectUtils.updateProjectParameters = function() {
                 return item !== "";
             });
         }
-        projectUtils._activeState[param] = value;
+        // If there is a "." in the param, we need to split it and update the nested object
+        if (param.includes(".")) {
+            let paramSplit = param.split(".");
+            if (projectUtils._activeState[paramSplit[0]] === undefined || projectUtils._activeState[paramSplit[0]] === null) {
+                projectUtils._activeState[paramSplit[0]] = {};
+            }
+            projectUtils._activeState[paramSplit[0]][paramSplit[1]] = value;
+        }
+        else {
+            projectUtils._activeState[param] = value;
+        }
     }
     overlayUtils.addScaleBar();
+}
+
+projectUtils.setBoundingBoxActual = function() {
+    // set project_boundingBox_width etc according to the current viewport
+    // viewport.getBounds()
+    var bounds = tmapp[tmapp["object_prefix"] + "_viewer"].viewport.getBounds();
+    document.getElementById("project_boundingBox_x").value = bounds.x;
+    document.getElementById("project_boundingBox_y").value = bounds.y;
+    document.getElementById("project_boundingBox_width").value = bounds.width;
+    document.getElementById("project_boundingBox_height").value = bounds.height;
+    // trigger change event
+    document.getElementById("project_boundingBox_x").dispatchEvent(new Event('change'));
+}
+
+projectUtils.downloadTar = function() {
+    // Add &dl=1 to url and download the tar file
+    var url = window.location.href;
+    if (url.includes("?")) {
+        url += "&dl=1";
+    }
+    else {
+        url += "?dl=1";
+    }
+    window.open(url, '_self')?.focus();
 }
 
 projectUtils.editJSON = function () {
@@ -535,7 +569,7 @@ projectUtils.editJSON = function () {
 
 /**
  * This method is used to load the TissUUmaps layers from state */
- projectUtils.loadLayers = function(state) {
+ projectUtils.loadLayers = async function(state) {
     tmapp.layers = state.layers;
     if (state.filters) {
         filterUtils._filtersUsed = state.filters;
@@ -549,38 +583,33 @@ projectUtils.editJSON = function () {
     }
     tmapp[tmapp["object_prefix"] + "_viewer"].world.removeAll();
     overlayUtils.addAllLayers();
+    await overlayUtils.waitLayersReady();
+    if (state.rotate) {
+        var op = tmapp["object_prefix"];
+        var vname = op + "_viewer";
+        tmapp[vname].viewport.setRotation(state.rotate);
+    }
+    if (state.boundingBox) {
+        // set project_boundingBox_width etc
+        document.getElementById("project_boundingBox_x").value = state.boundingBox.x;
+        document.getElementById("project_boundingBox_y").value = state.boundingBox.y;
+        document.getElementById("project_boundingBox_width").value = state.boundingBox.width;
+        document.getElementById("project_boundingBox_height").value = state.boundingBox.height;
+        tmapp[tmapp["object_prefix"] + "_viewer"].viewport.fitBounds(new OpenSeadragon.Rect(state.boundingBox.x, state.boundingBox.y, state.boundingBox.width, state.boundingBox.height), false);
+    }
     if (state.compositeMode) {
         filterUtils._compositeMode = state.compositeMode;
         filterUtils.setCompositeOperation();
     }
-    /*if (projectUtils._hideCSVImport) {
-        document.getElementById("ISS_data_panel").style.display="none";
-    }*/
-    setTimeout(function(){
-        if (state.rotate) {
-            var op = tmapp["object_prefix"];
-            var vname = op + "_viewer";
-            tmapp[vname].viewport.setRotation(state.rotate);
-        }
-        if (state.boundingBox) {
-            setTimeout(function() {
-                tmapp[tmapp["object_prefix"] + "_viewer"].viewport.fitBounds(new OpenSeadragon.Rect(state.boundingBox.x, state.boundingBox.y, state.boundingBox.width, state.boundingBox.height), false);
-            },1000);
-        }
-        if (state.compositeMode) {
-            filterUtils._compositeMode = state.compositeMode;
-            filterUtils.setCompositeOperation();
-        }
-        if (state.layerOpacities && state.layerVisibilities) {
-            $(".visible-layers").prop("checked",true);$(".visible-layers").click();
-            tmapp.layers.forEach(function(layer, i) {
-                $("#opacity-layer-"+i).val(state.layerOpacities[i]?state.layerOpacities[i]:1);
-                if (state.layerVisibilities[i] != 0) {
-                    $("#visible-layer-"+i).click();
-                }
-            });
-        }
-    },300);
+    if (state.layerOpacities && state.layerVisibilities) {
+        $(".visible-layers").prop("checked",true);$(".visible-layers").click();
+        tmapp.layers.forEach(function(layer, i) {
+            $("#opacity-layer-"+i).val(state.layerOpacities[i]?state.layerOpacities[i]:1);
+            if (state.layerVisibilities[i] != 0) {
+                $("#visible-layer-"+i).click();
+            }
+        });
+    }
 }
 
 /**

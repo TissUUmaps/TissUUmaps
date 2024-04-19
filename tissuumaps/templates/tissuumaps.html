@@ -41,17 +41,22 @@
     >
       <nav
         id="main-navbar"
-        class="navbar navbar-expand-lg navbar-dark border-bottom border-dark flex-shrink-0 {% if isStandalone %}d-none{% endif %} {% if collapseTopMenu %}collapse{% endif %}"
+        class="navbar navbar-expand-lg navbar-light border-bottom border-dark flex-shrink-0 {% if isStandalone %}d-none{% endif %}"
       >
         <div class="container-fluid">
-          <a class="navbar-brand" href="https://tissuumaps.github.io/">
+          <a
+            class="navbar-brand pt-0"
+            target="_blank"
+            href="https://tissuumaps.github.io/"
+          >
             <img
               src="static/misc/logo_40.png"
-              width="37"
-              height="40"
+              width="25"
+              height="27"
               alt="TissUUmaps Logotype"
               title="TissUUmaps"
             />
+            <span class="ms-2 pt-2 small">TissUUmaps</span>
           </a>
           <button
             class="navbar-toggler"
@@ -519,9 +524,83 @@
                         />
                       </div>
                     </div>
+                    <!-- Starting Viewport Bounding Box, as x, y, width, and height floats -->
+                    <h6 class="my-2">Starting viewport:</h6>
+                    <div class="row">
+                      <div class="col-2">
+                        <div class="row">
+                          <label class="col-4" for="project_boundingBox_x"
+                            >X:</label
+                          >
+                          <input
+                            class="col-8 form-control tmap_project_param_input"
+                            type="text"
+                            id="project_boundingBox_x"
+                            placeholder="0"
+                            data-param="boundingBox.x"
+                            data-type="number"
+                          />
+                        </div>
+                      </div>
+                      <div class="col-2">
+                        <div class="row">
+                          <label class="col-4" for="project_boundingBox_y"
+                            >Y:</label
+                          >
+                          <input
+                            class="col-8 form-control tmap_project_param_input"
+                            type="text"
+                            id="project_boundingBox_y"
+                            placeholder="0"
+                            data-param="boundingBox.y"
+                            data-type="number"
+                          />
+                        </div>
+                      </div>
+                      <div class="col-2">
+                        <div class="row">
+                          <label class="col-4" for="project_boundingBox_width"
+                            >W:</label
+                          >
+                          <input
+                            class="col-8 form-control tmap_project_param_input"
+                            type="text"
+                            id="project_boundingBox_width"
+                            placeholder="0"
+                            data-param="boundingBox.width"
+                            data-type="number"
+                          />
+                        </div>
+                      </div>
+                      <div class="col-2">
+                        <div class="row">
+                          <label class="col-4" for="project_boundingBox_height"
+                            >H:</label
+                          >
+                          <input
+                            class="col-8 form-control tmap_project_param_input"
+                            type="text"
+                            id="project_boundingBox_height"
+                            placeholder="0"
+                            data-param="boundingBox.height"
+                            data-type="number"
+                          />
+                        </div>
+                      </div>
+                      <div class="col-4">
+                        <!-- Add button to use actual boundingBox -->
+                        <button
+                          id="project_boundingBox_actual"
+                          class="w-100 btn btn-primary"
+                          type="button"
+                        >
+                          Use actual viewport
+                        </button>
+                      </div>
+                    </div>
                     <!--Import and export tmap project button, with ids load_project_menu and save_project_menu -->
                     <div class="row mt-2">
-                      <div class="col-4">
+                      <div class="col-6">
                         <button
                           id="load_project_menu"
                           class="btn btn-primary w-100"
@@ -530,7 +609,7 @@
                           Import project
                         </button>
                       </div>
-                      <div class="col-4">
+                      <div class="col-6">
                         <button
                           id="save_project_menu"
                           class="btn btn-primary w-100"
@@ -539,13 +618,24 @@
                           Export project
                         </button>
                       </div>
-                      <div class="col-4">
+                    </div>
+                    <div class="row mt-2">
+                      <div class="col-6">
                         <button
                           id="edit_project_json"
                           class="btn btn-primary w-100"
                           type="button"
                         >
                           Edit tmap JSON
+                        </button>
+                      </div>
+                      <div class="col-6">
+                        <button
+                          id="download_all_files"
+                          class="btn btn-primary w-100"
+                          type="button"
+                        >
+                          Download project archive (.tar)
                         </button>
                       </div>
                     </div>
@@ -680,7 +770,7 @@
       {% if warning %}
       interfaceUtils.generateNotification("{{warning|safe}}", "loading_alert", false, 3000, "warning");
       {% endif %}
-      if (window!=window.top {% if collapseTopMenu %} || true {% endif %}) {
+      if (window!=window.top) {
           document.getElementById("main-navbar").classList.add("collapse");
           elt = document.getElementById("powered_by_tissuumaps");
           tmapp["ISS_viewer"].addControl(elt,{
