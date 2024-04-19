@@ -547,7 +547,7 @@ projectUtils.editJSON = function () {
 
 /**
  * This method is used to load the TissUUmaps layers from state */
- projectUtils.loadLayers = function(state) {
+ projectUtils.loadLayers = async function(state) {
     tmapp.layers = state.layers;
     if (state.filters) {
         filterUtils._filtersUsed = state.filters;
@@ -561,38 +561,29 @@ projectUtils.editJSON = function () {
     }
     tmapp[tmapp["object_prefix"] + "_viewer"].world.removeAll();
     overlayUtils.addAllLayers();
+    await overlayUtils.waitLayersReady();
+    if (state.rotate) {
+        var op = tmapp["object_prefix"];
+        var vname = op + "_viewer";
+        tmapp[vname].viewport.setRotation(state.rotate);
+    }
+    if (state.boundingBox) {
+        // set project_boundingBox_width etc
+        tmapp[tmapp["object_prefix"] + "_viewer"].viewport.fitBounds(new OpenSeadragon.Rect(state.boundingBox.x, state.boundingBox.y, state.boundingBox.width, state.boundingBox.height), false);
+    }
     if (state.compositeMode) {
         filterUtils._compositeMode = state.compositeMode;
         filterUtils.setCompositeOperation();
     }
-    /*if (projectUtils._hideCSVImport) {
-        document.getElementById("ISS_data_panel").style.display="none";
-    }*/
-    setTimeout(function(){
-        if (state.rotate) {
-            var op = tmapp["object_prefix"];
-            var vname = op + "_viewer";
-            tmapp[vname].viewport.setRotation(state.rotate);
-        }
-        if (state.boundingBox) {
-            setTimeout(function() {
-                tmapp[tmapp["object_prefix"] + "_viewer"].viewport.fitBounds(new OpenSeadragon.Rect(state.boundingBox.x, state.boundingBox.y, state.boundingBox.width, state.boundingBox.height), false);
-            },1000);
-        }
-        if (state.compositeMode) {
-            filterUtils._compositeMode = state.compositeMode;
-            filterUtils.setCompositeOperation();
-        }
-        if (state.layerOpacities && state.layerVisibilities) {
-            $(".visible-layers").prop("checked",true);$(".visible-layers").click();
-            tmapp.layers.forEach(function(layer, i) {
-                $("#opacity-layer-"+i).val(state.layerOpacities[i]?state.layerOpacities[i]:1);
-                if (state.layerVisibilities[i] != 0) {
-                    $("#visible-layer-"+i).click();
-                }
-            });
-        }
-    },300);
+    if (state.layerOpacities && state.layerVisibilities) {
+        $(".visible-layers").prop("checked",true);$(".visible-layers").click();
+        tmapp.layers.forEach(function(layer, i) {
+            $("#opacity-layer-"+i).val(state.layerOpacities[i]?state.layerOpacities[i]:1);
+            if (state.layerVisibilities[i] != 0) {
+                $("#visible-layer-"+i).click();
+            }
+        });
+    }
 }
 
 /**
