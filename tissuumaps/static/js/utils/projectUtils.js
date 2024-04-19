@@ -507,6 +507,18 @@ projectUtils.updateProjectParameters = function() {
     overlayUtils.addScaleBar();
 }
 
+projectUtils.setBoundingBoxActual = function() {
+    // set project_boundingBox_width etc according to the current viewport
+    // viewport.getBounds()
+    var bounds = tmapp[tmapp["object_prefix"] + "_viewer"].viewport.getBounds();
+    document.getElementById("project_boundingBox_x").value = bounds.x;
+    document.getElementById("project_boundingBox_y").value = bounds.y;
+    document.getElementById("project_boundingBox_width").value = bounds.width;
+    document.getElementById("project_boundingBox_height").value = bounds.height;
+    // trigger change event
+    document.getElementById("project_boundingBox_x").dispatchEvent(new Event('change'));
+}
+
 projectUtils.downloadTar = function() {
     // Add &dl=1 to url and download the tar file
     var url = window.location.href;
@@ -579,6 +591,10 @@ projectUtils.editJSON = function () {
     }
     if (state.boundingBox) {
         // set project_boundingBox_width etc
+        document.getElementById("project_boundingBox_x").value = state.boundingBox.x;
+        document.getElementById("project_boundingBox_y").value = state.boundingBox.y;
+        document.getElementById("project_boundingBox_width").value = state.boundingBox.width;
+        document.getElementById("project_boundingBox_height").value = state.boundingBox.height;
         tmapp[tmapp["object_prefix"] + "_viewer"].viewport.fitBounds(new OpenSeadragon.Rect(state.boundingBox.x, state.boundingBox.y, state.boundingBox.width, state.boundingBox.height), false);
     }
     if (state.compositeMode) {

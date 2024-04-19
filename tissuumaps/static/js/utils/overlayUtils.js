@@ -704,14 +704,14 @@ overlayUtils.waitLayersReady = async function (acceptNoLayers=true) {
             tmapp[op + "_viewer"].world.getItemCount() < tmapp.layers.length ||
             (!acceptNoLayers && tmapp[op + "_viewer"].world.getItemCount() == 0)
         ) {
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise(r => setTimeout(r, 100));
     }
 }
 
 overlayUtils.waitFullyLoaded = async function () {
     await new Promise(r => setTimeout(r, 200));
     while (!overlayUtils.areAllFullyLoaded()) {
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise(r => setTimeout(r, 100));
     }
 }
 
