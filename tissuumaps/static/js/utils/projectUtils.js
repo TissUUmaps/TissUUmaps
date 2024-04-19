@@ -492,7 +492,17 @@ projectUtils.updateProjectParameters = function() {
                 return item !== "";
             });
         }
-        projectUtils._activeState[param] = value;
+        // If there is a "." in the param, we need to split it and update the nested object
+        if (param.includes(".")) {
+            let paramSplit = param.split(".");
+            if (projectUtils._activeState[paramSplit[0]] === undefined || projectUtils._activeState[paramSplit[0]] === null) {
+                projectUtils._activeState[paramSplit[0]] = {};
+            }
+            projectUtils._activeState[paramSplit[0]][paramSplit[1]] = value;
+        }
+        else {
+            projectUtils._activeState[param] = value;
+        }
     }
     overlayUtils.addScaleBar();
 }
