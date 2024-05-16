@@ -124,6 +124,16 @@ def get_write_adata(adata, path, basedir):
     return adata, path_out
 
 
+def hdf5_path_exists(h5file, path):
+    parts = path.strip("/").split("/")
+    node = h5file.get(parts[0])
+    for part in parts[1:]:
+        if node is None:
+            return False
+        node = node.get(part)
+    return node is not None
+
+
 def h5ad_to_tmap(basedir, path, library_id=None):
     write_adata = False
     os.path.splitext(path)[0] + "_tmap.h5ad"
@@ -216,18 +226,11 @@ def h5ad_to_tmap(basedir, path, library_id=None):
             import traceback
 
             logging.error(traceback.format_exc())
-    try:
+    # Check if "/obs/library_id/categories" exists
+    if hdf5_path_exists(adata, "/obs/library_id/categories"):
         library_ids = adata["/obs/library_id/categories"][...]
-    except Exception:
-        import traceback
-
-        logging.error(traceback.format_exc())
-        try:
-            library_ids = adata["/obs/__categories/library_id"][...]
-        except Exception:
-            import traceback
-
-            logging.error(traceback.format_exc())
+    elif hdf5_path_exists(adata, "/obs/__categories/library_id"):
+        library_ids = adata["/obs/__categories/library_id"][...]
 
     use_libraries = len(library_ids) > 1
 
