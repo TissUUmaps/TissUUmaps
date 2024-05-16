@@ -308,139 +308,122 @@ def h5ad_to_tmap(basedir, path, library_id=None):
         )
         if "markerFiles" not in new_tmap_project.keys():
             new_tmap_project["markerFiles"] = []
-    obsListCategorical = []
-    obsListNumerical = []
+    groupDirectories = {}
     palette = {}
     try:
         obsIndex = str(adata.get("/obs").attrs["_index"])
     except Exception:
         obsIndex = ""
+    allObservations = []
     for obs in obsList:
+        obs_type = "categorical"
         if adata.get(f"/obs/{obs}/categories") is not None:
-            obsListCategorical.append(obs)
             p = getPalette(adata, obs)
             palette[obs] = p
         elif adata.get(f"/obs/{obs}") and adata.get(f"/obs/{obs}").dtype.kind in "iuf":
-            obsListNumerical.append(obs)
+            obs_type = "numerical"
         elif obs == obsIndex:
             continue
-        else:
-            obsListCategorical.append(obs)
-            palette[obs] = {}
+        allObservations.append({"name": obs, "type": obs_type})
 
-    new_tmap_project["markerFiles"].append(
-        {
-            "expectedHeader": {
-                "X": globalX,
-                "Y": globalY,
-                "cb_cmap": "interpolateTurbo",
-                "cb_col": "",
-                "cb_gr_dict": "",
-                "gb_col": "",
-                "gb_name": "",
-                "opacity": "1",
-                "pie_col": "",
-                "scale_col": "",
-                "scale_factor": markerScale,
-                "coord_factor": coord_factor,
-                "shape_col": "",
-                "shape_fixed": "disc",
-                "shape_gr_dict": "",
-                "edges_col": spatial_connectivities,
-                "collectionItem_col": library_col,
-                "collectionItem_fixed": "0",
-            },
-            "expectedRadios": {
-                "cb_col": True,
-                "cb_gr": False,
-                "cb_gr_dict": True,
-                "cb_gr_key": True,
-                "cb_gr_rand": False,
-                "pie_check": False,
-                "scale_check": False,
-                "sortby_check": True,
-                "shape_col": False,
-                "shape_fixed": True,
-                "shape_gr": False,
-                "shape_gr_dict": False,
-                "shape_gr_rand": True,
-                "collectionItem_col": use_libraries,
-                "collectionItem_fixed": not use_libraries,
-            },
-            "hideSettings": True,
-            "name": "Numerical observations",
-            "path": os.path.basename(path),
-            "dropdownOptions": [
-                {
-                    "optionName": obs,
-                    "name": obs,
-                    "expectedHeader.cb_col": f"/obs/{obs}",
-                    "expectedHeader.sortby_col": f"/obs/{obs}",
-                    "expectedRadios.cb_gr_dict": False,
-                    "expectedRadios.cb_col": True,
-                    "expectedRadios.cb_gr": False,
-                    "expectedRadios.cb_gr_key": False,
-                    "expectedRadios.sortby_check": True,
-                }
-                for obs in obsListNumerical
-            ],
-            "title": "Numerical observations",
-            "uid": "mainTab",
+    if hdf5_path_exists(adata, "/uns/tmap_obsgroups"):
+        obs_groups = json.loads(
+            adata.get(
+                "/uns/tmap_obsgroups",
+                "{}",
+            )[()]
+        )
+        groupDirectories = {
+            group: [obs for obs in allObservations if obs["name"] in obs_groups[group]]
+            for group in obs_groups.keys()
         }
-    )
-    new_tmap_project["markerFiles"].append(
-        {
-            "expectedHeader": {
-                "X": globalX,
-                "Y": globalY,
-                "cb_gr_dict": "",
-                "gb_col": "obs",
-                "opacity": "1",
-                "scale_factor": markerScale,
-                "coord_factor": coord_factor,
-                "shape_fixed": "disc",
-                "edges_col": spatial_connectivities,
-                "collectionItem_col": library_col,
-                "collectionItem_fixed": "0",
-            },
-            "expectedRadios": {
-                "cb_col": False,
-                "cb_gr": True,
-                "cb_gr_dict": True,
-                "cb_gr_key": False,
-                "cb_gr_rand": False,
-                "pie_check": False,
-                "scale_check": False,
-                "shape_col": False,
-                "shape_fixed": True,
-                "sortby_check": False,
-                "shape_gr": False,
-                "shape_gr_dict": False,
-                "shape_gr_rand": True,
-                "collectionItem_col": use_libraries,
-                "collectionItem_fixed": not use_libraries,
-            },
-            "hideSettings": True,
-            "name": "Categorical observations",
-            "path": os.path.basename(path),
-            "dropdownOptions": [
-                {
-                    "optionName": obs,
-                    "name": obs,
-                    "expectedHeader.gb_col": f"/obs/{obs}",
-                    "expectedHeader.cb_gr_dict": json.dumps(palette[obs]),
-                    "expectedRadios.cb_gr_dict": True,
-                    "expectedRadios.cb_col": False,
-                    "expectedRadios.cb_gr": True,
-                    "expectedRadios.cb_gr_key": False,
-                    "expectedRadios.sortby_check": False,
-                }
-                for obs in obsListCategorical
+    else:
+        groupDirectories = {
+            "Numerical observations": [
+                obs for obs in allObservations if obs["type"] == "numerical"
             ],
-            "title": "Categorical observations",
-            "uid": "mainTab",
+            "Categorical observations": [
+                obs for obs in allObservations if obs["type"] == "categorical"
+            ],
         }
-    )
+    for group, obsList in groupDirectories.items():
+        if group == "remove":
+            continue
+        if len(obsList) == 0:
+            continue
+        new_tmap_project["markerFiles"].append(
+            {
+                "expectedHeader": {
+                    "X": globalX,
+                    "Y": globalY,
+                    "cb_gr_dict": "",
+                    "gb_col": "",
+                    "opacity": "1",
+                    "scale_factor": markerScale,
+                    "coord_factor": coord_factor,
+                    "shape_fixed": "disc",
+                    "edges_col": spatial_connectivities,
+                    "collectionItem_col": library_col,
+                    "collectionItem_fixed": "0",
+                    "cb_cmap": "interpolateTurbo",
+                },
+                "expectedRadios": {
+                    "cb_col": False,
+                    "cb_gr": True,
+                    "cb_gr_dict": True,
+                    "cb_gr_key": False,
+                    "cb_gr_rand": False,
+                    "pie_check": False,
+                    "scale_check": False,
+                    "shape_col": False,
+                    "shape_fixed": True,
+                    "sortby_check": False,
+                    "shape_gr": False,
+                    "shape_gr_dict": False,
+                    "shape_gr_rand": True,
+                    "collectionItem_col": use_libraries,
+                    "collectionItem_fixed": not use_libraries,
+                },
+                "hideSettings": True,
+                "name": group,
+                "path": os.path.basename(path),
+                "dropdownOptions": [
+                    {
+                        "optionName": obs["name"],
+                        "name": obs["name"],
+                        "expectedHeader.gb_col": "/obs/" + obs["name"],
+                        "expectedHeader.cb_gr_dict": json.dumps(palette[obs["name"]])
+                        if obs["name"] in palette
+                        else False,
+                        "expectedRadios.cb_gr_dict": True,
+                        "expectedRadios.cb_col": False,
+                        "expectedRadios.cb_gr": True,
+                        "expectedRadios.cb_gr_key": False,
+                        "expectedRadios.sortby_check": False,
+                    }
+                    for obs in obsList
+                    if obs["type"] == "categorical"
+                ]
+                + [
+                    {
+                        "optionName": obs["name"],
+                        "name": obs["name"],
+                        "expectedHeader.gb_col": "",
+                        "expectedHeader.cb_col": "/obs/" + obs["name"],
+                        "expectedHeader.sortby_col": "/obs/" + obs["name"],
+                        "expectedRadios.cb_gr_dict": False,
+                        "expectedRadios.cb_col": True,
+                        "expectedRadios.cb_gr": False,
+                        "expectedRadios.cb_gr_key": False,
+                        "expectedRadios.sortby_check": True,
+                    }
+                    for obs in obsList
+                    if obs["type"] == "numerical"
+                ],
+                "title": group,
+                "uid": "mainTab",
+            }
+        )
     new_tmap_project["markerFiles"].append(
         {
             "expectedHeader": {
