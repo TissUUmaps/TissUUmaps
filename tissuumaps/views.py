@@ -104,7 +104,7 @@ def requires_auth(f):
             path = getPathFromReferrer(request, "")
         else:
             path = os.path.abspath(os.path.join(app.basedir, kwargs["path"]))
-        activeFolder = os.path.dirname(path)
+        activeFolder = path
         while os.path.dirname(activeFolder) != activeFolder and not os.path.isfile(
             activeFolder + "/auth"
         ):
@@ -1171,6 +1171,7 @@ def pluginJS(pluginName, method):
 
 
 @app.route("/filetree")
+@requires_auth
 def get_tree():
     if not app.config["READ_ONLY"]:
         return render_template("filetree.html")
@@ -1179,6 +1180,7 @@ def get_tree():
 
 
 @app.route("/get_file_tree")
+@requires_auth
 def get_file_tree():
     if not app.config["READ_ONLY"]:
         root_path = app.config["SLIDE_DIR"] + "/" + request.args.get("root", "./")
