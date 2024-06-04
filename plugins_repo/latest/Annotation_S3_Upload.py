@@ -3,6 +3,10 @@ Methods to parse the .geojson files and push them to S3
 
 Developed by Mena S.A. Kamel (mena.sa.kamel@gmail.com | mena.kamel@sanofi.com)
 date: June 4, 2024
+
+Requirements: Set environment variables for AWS credentials:
+    - AWS_ACCESS_KEY: AWS key ID
+    - AWS_SECRET_KEY: AWS secret access key
 """
 import os
 import boto3

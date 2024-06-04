@@ -1,5 +1,8 @@
 // Developed by Mena S.A. Kamel (mena.sa.kamel@gmail.com | mena.kamel@sanofi.com)
 // date: June 4, 2024
+// Requirements: Set environment variables for AWS credentials:
+//     - AWS_ACCESS_KEY: AWS key ID
+//     - AWS_SECRET_KEY: AWS secret access key
 
 /**
  * @file Annotation_S3_Upload.js
