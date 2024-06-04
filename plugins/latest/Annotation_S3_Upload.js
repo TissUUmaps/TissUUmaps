@@ -53,13 +53,13 @@ Annotation_S3_Upload.s3BucketnameField =
     const bucketNameDescription = document.createElement('div');
     bucketNameDescription.innerText = "S3 bucket name";
     const bucketNameInput = HTMLElementUtils.inputTypeText({
-        extraAttributes: {
-            size: 100,
-            placeholder: "class",
-            value: "sample-bucket-name",
-            class: "col input-sm form-control form-control-sm",
-            style: "width: 300px;",
-        }
+      extraAttributes: {
+        size: 100,
+        placeholder: "class",
+        value: "sample-bucket-name",
+        class: "col input-sm form-control form-control-sm",
+        style: "width: 300px;",
+      }
     });
     container.appendChild(bucketNameRow);
     bucketNameRow.appendChild(bucketNameDescriptionCol);
@@ -84,13 +84,13 @@ Annotation_S3_Upload.s3LocationField =
     const s3KeyDescription = document.createElement('div');
     s3KeyDescription.innerText = "S3 file location";
     const s3KeyInput = HTMLElementUtils.inputTypeText({
-        extraAttributes: {
-            size: 100,
-            placeholder: "class",
-            value: "path/to/my-object.geojson",
-            class: "col input-sm form-control form-control-sm",
-            style: "width: 300px;",
-        }
+      extraAttributes: {
+        size: 100,
+        placeholder: "class",
+        value: "path/to/my-object.geojson",
+        class: "col input-sm form-control form-control-sm",
+        style: "width: 300px;",
+      }
     });
     container.appendChild(s3KeyRow);
     s3KeyRow.appendChild(s3KeyDescriptionCol);
@@ -117,7 +117,7 @@ Annotation_S3_Upload.UploadButton =
         console.log(bucketNameField.value);
         console.log(s3KeyField.value);
         await Annotation_S3_Upload.uploadAnnotations(geojsons, bucketNameField.value, s3KeyField.value);
-      } 
+      }
       catch {
         interfaceUtils.alert("Error Uploading Annotations!");
       }
