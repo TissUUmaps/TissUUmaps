@@ -1,5 +1,5 @@
 // Developed by Mena S.A. Kamel (mena.sa.kamel@gmail.com | mena.kamel@sanofi.com)
-// date: June 4, 2024
+// Date: June 4, 2024
 // Requirements: Set environment variables for AWS credentials:
 //     - AWS_ACCESS_KEY: AWS key ID
 //     - AWS_SECRET_KEY: AWS secret access key
@@ -38,97 +38,105 @@ Annotation_S3_Upload.getCurrentPath = function () {
   return urlParams.get("path");
 };
 
-Annotation_S3_Upload.s3BucketnameField =
-  function s3Bucketname(container) {
-    const bucketNameRow = HTMLElementUtils.createRow({});
-    const bucketNameDescriptionCol = HTMLElementUtils.createColumn({
-      width: 6,
-      extraAttributes: { class: "d-flex justify-content-start" },
-    });
-    const bucketNameInputCol = HTMLElementUtils.createColumn({
-      width: 6,
-      extraAttributes: { class: "d-flex justify-content-end" },
-    });
+Annotation_S3_Upload.s3BucketnameField = function s3Bucketname(container) {
+  const bucketNameRow = HTMLElementUtils.createRow({});
+  const bucketNameDescriptionCol = HTMLElementUtils.createColumn({
+    width: 6,
+    extraAttributes: { class: "d-flex justify-content-start" },
+  });
+  const bucketNameInputCol = HTMLElementUtils.createColumn({
+    width: 6,
+    extraAttributes: { class: "d-flex justify-content-end" },
+  });
 
-    const bucketNameDescription = document.createElement('div');
-    bucketNameDescription.innerText = "S3 bucket name";
-    const bucketNameInput = HTMLElementUtils.inputTypeText({
-        extraAttributes: {
-            size: 100,
-            placeholder: "class",
-            value: "sample-bucket-name",
-            class: "col input-sm form-control form-control-sm",
-            style: "width: 300px;",
-        }
-    });
-    container.appendChild(bucketNameRow);
-    bucketNameRow.appendChild(bucketNameDescriptionCol);
-    bucketNameRow.appendChild(bucketNameInputCol);
-    bucketNameDescriptionCol.appendChild(bucketNameDescription);
-    bucketNameInputCol.appendChild(bucketNameInput);
-    return bucketNameInput;
-  };
+  const bucketNameDescription = document.createElement("div");
+  bucketNameDescription.innerText = "S3 bucket name";
+  const bucketNameInput = HTMLElementUtils.inputTypeText({
+    extraAttributes: {
+      size: 100,
+      placeholder: "class",
+      value: "sample-bucket-name",
+      class: "col input-sm form-control form-control-sm",
+      style: "width: 300px;",
+    },
+  });
+  container.appendChild(bucketNameRow);
+  bucketNameRow.appendChild(bucketNameDescriptionCol);
+  bucketNameRow.appendChild(bucketNameInputCol);
+  bucketNameDescriptionCol.appendChild(bucketNameDescription);
+  bucketNameInputCol.appendChild(bucketNameInput);
+  return bucketNameInput;
+};
 
-Annotation_S3_Upload.s3LocationField =
-  function s3Location(container) {
-    const s3KeyRow = HTMLElementUtils.createRow({});
-    const s3KeyDescriptionCol = HTMLElementUtils.createColumn({
-      width: 6,
-      extraAttributes: { class: "d-flex justify-content-start" },
-    });
-    const s3KeyInputCol = HTMLElementUtils.createColumn({
-      width: 6,
-      extraAttributes: { class: "d-flex justify-content-end" },
-    });
+Annotation_S3_Upload.s3LocationField = function s3Location(container) {
+  const s3KeyRow = HTMLElementUtils.createRow({});
+  const s3KeyDescriptionCol = HTMLElementUtils.createColumn({
+    width: 6,
+    extraAttributes: { class: "d-flex justify-content-start" },
+  });
+  const s3KeyInputCol = HTMLElementUtils.createColumn({
+    width: 6,
+    extraAttributes: { class: "d-flex justify-content-end" },
+  });
 
-    const s3KeyDescription = document.createElement('div');
-    s3KeyDescription.innerText = "S3 file location";
-    const s3KeyInput = HTMLElementUtils.inputTypeText({
-        extraAttributes: {
-            size: 100,
-            placeholder: "class",
-            value: "path/to/my-object.geojson",
-            class: "col input-sm form-control form-control-sm",
-            style: "width: 300px;",
-        }
-    });
-    container.appendChild(s3KeyRow);
-    s3KeyRow.appendChild(s3KeyDescriptionCol);
-    s3KeyRow.appendChild(s3KeyInputCol);
-    s3KeyDescriptionCol.appendChild(s3KeyDescription);
-    s3KeyInputCol.appendChild(s3KeyInput);
-    return s3KeyInput;
-  };
+  const s3KeyDescription = document.createElement("div");
+  s3KeyDescription.innerText = "S3 file location";
+  const s3KeyInput = HTMLElementUtils.inputTypeText({
+    extraAttributes: {
+      size: 100,
+      placeholder: "class",
+      value: "path/to/my-object.geojson",
+      class: "col input-sm form-control form-control-sm",
+      style: "width: 300px;",
+    },
+  });
+  container.appendChild(s3KeyRow);
+  s3KeyRow.appendChild(s3KeyDescriptionCol);
+  s3KeyRow.appendChild(s3KeyInputCol);
+  s3KeyDescriptionCol.appendChild(s3KeyDescription);
+  s3KeyInputCol.appendChild(s3KeyInput);
+  return s3KeyInput;
+};
 
-Annotation_S3_Upload.UploadButton =
-  function UploadButton(container, bucketNameField, s3KeyField) {
-    const UploadButtonRow = HTMLElementUtils.createRow({});
-    const UploadButton = HTMLElementUtils.createButton({
-      extraAttributes: { class: "btn btn-primary" },
-    });
-    UploadButton.innerHTML = "Upload annotations to S3";
-    UploadButton.addEventListener("click", async (event) => {
-      UploadButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+Annotation_S3_Upload.UploadButton = function UploadButton(
+  container,
+  bucketNameField,
+  s3KeyField,
+) {
+  const UploadButtonRow = HTMLElementUtils.createRow({});
+  const UploadButton = HTMLElementUtils.createButton({
+    extraAttributes: { class: "btn btn-primary" },
+  });
+  UploadButton.innerHTML = "Upload annotations to S3";
+  UploadButton.addEventListener("click", async (event) => {
+    UploadButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
       <span class="sr-only">Wait...</span>`;
-      UploadButton.setAttribute("disabled", "true");
-      try {
-        geojsons = regionUtils.regions2GeoJSON(regionUtils._regions);
-        console.log(geojsons);
-        console.log(bucketNameField.value);
-        console.log(s3KeyField.value);
-        await Annotation_S3_Upload.uploadAnnotations(geojsons, bucketNameField.value, s3KeyField.value);
-      } 
-      catch {
-        interfaceUtils.alert("Error Uploading Annotations!");
-      }
-      UploadButton.innerHTML = "Upload annotations to S3";
-      UploadButton.removeAttribute("disabled");
-    });
-    container.appendChild(UploadButtonRow);
-    UploadButtonRow.appendChild(UploadButton);
-  };
+    UploadButton.setAttribute("disabled", "true");
+    try {
+      geojsons = regionUtils.regions2GeoJSON(regionUtils._regions);
+      console.log(geojsons);
+      console.log(bucketNameField.value);
+      console.log(s3KeyField.value);
+      await Annotation_S3_Upload.uploadAnnotations(
+        geojsons,
+        bucketNameField.value,
+        s3KeyField.value,
+      );
+    } catch {
+      interfaceUtils.alert("Error Uploading Annotations!");
+    }
+    UploadButton.innerHTML = "Upload annotations to S3";
+    UploadButton.removeAttribute("disabled");
+  });
+  container.appendChild(UploadButtonRow);
+  UploadButtonRow.appendChild(UploadButton);
+};
 
-Annotation_S3_Upload.uploadAnnotations = async function (geojsons, bucketName, fileLocation) {
+Annotation_S3_Upload.uploadAnnotations = async function (
+  geojsons,
+  bucketName,
+  fileLocation,
+) {
   // Get current path
   const response = await fetch(
     `/plugins/Annotation_S3_Upload/upload_annotations`,
@@ -143,7 +151,7 @@ Annotation_S3_Upload.uploadAnnotations = async function (geojsons, bucketName, f
         file_location: fileLocation,
         geojsons: geojsons,
       }),
-    }
+    },
   );
   return response.json();
 };
