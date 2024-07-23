@@ -239,7 +239,7 @@ def h5ad_to_tmap(basedir, path, library_id=None):
         if "/obsm/spatial;" in globalX or "/obsm/X_spatial;" in globalX:
             try:
                 library_codes_array = adata["/obs/library_id/codes"][...]
-                library_categ_array = adata["/obs/library_id/categories"][...]
+                library_categ_array = adata["/obs/library_id/categories"].asstr()[...]
                 library_col = "/obs/library_id/codes"
             except Exception:
                 library_codes_array = adata["/obs/library_id"][...]
