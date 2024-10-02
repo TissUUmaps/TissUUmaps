@@ -23,6 +23,10 @@ from shutil import copyfile, copytree
 from threading import Lock
 from urllib.parse import parse_qs, urlparse
 
+# Hack to get brew installe libvips to work:
+# ruff: noqa: E402
+os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = "/opt/homebrew/lib"
+
 import pyvips
 
 # Flask dependencies
