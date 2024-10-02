@@ -17,7 +17,8 @@ Points2Regions = {
       default: 8,
     },
     _min_pts_per_pixel: {
-      label: "Min points per pixel (increase to avoid regions with few markers):",
+      label:
+        "Min points per pixel (increase to avoid regions with few markers):",
       type: "number",
       default: 0,
     },
@@ -27,7 +28,8 @@ Points2Regions = {
       default: 1,
     },
     _pixel_smoothing: {
-      label: "Smoothing (increase to aggregate information over larger distances):",
+      label:
+        "Smoothing (increase to aggregate information over larger distances):",
       type: "number",
       default: 5,
     },
@@ -143,7 +145,7 @@ Points2Regions.run = function () {
     loadingModal = interfaceUtils.loadingModal(
       "Points2Regions... Please wait.",
     );
-    console.log("test")
+    console.log("test");
     $.ajax({
       type: "post",
       url: "/plugins/Points2Regions/Points2Regions",
@@ -193,7 +195,7 @@ Points2Regions.run = function () {
       },
     });
   } else {
-    var content = `    
+    var content = `
 from points2regions._points2regions import Points2Regions as p2r
 from js import dataUtils
 from js import Points2Regions
@@ -241,7 +243,7 @@ except Exception as e:
   Points2Regions.setMessage("Run failed. " + str(e))
 if mdl is not None:
   c = mdl.fit_predict(num_clusters=nclusters, output="marker")
-    
+
   if (Points2Regions.get("_format")== "GeoJSON polygons"):
       import json
       print("hej")
@@ -326,7 +328,6 @@ Points2Regions.inputTrigger = function (parameterName) {
   }
 };
 
-
 Points2Regions.selectStride = function (parameterName) {
   var startSelection = null;
   var pressHandler = function (event) {
@@ -386,8 +387,18 @@ Points2Regions.selectStride = function (parameterName) {
       .append("rect")
       .attr("width", width * Points2Regions.get("_pixel_smoothing"))
       .attr("height", width * Points2Regions.get("_pixel_smoothing"))
-      .attr("x", startSelection.x + width / 2 - width * Points2Regions.get("_pixel_smoothing") / 2)
-      .attr("y", startSelection.y + width / 2 - width * Points2Regions.get("_pixel_smoothing") / 2)
+      .attr(
+        "x",
+        startSelection.x +
+          width / 2 -
+          (width * Points2Regions.get("_pixel_smoothing")) / 2,
+      )
+      .attr(
+        "y",
+        startSelection.y +
+          width / 2 -
+          (width * Points2Regions.get("_pixel_smoothing")) / 2,
+      )
       .attr("fill", "#ADD8E6")
       .attr("stroke", "#ADD8E6")
       .attr("fill-opacity", 0.3)
