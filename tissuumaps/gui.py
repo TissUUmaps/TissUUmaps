@@ -57,6 +57,9 @@ from PySide6.QtWidgets import (
 
 from tissuumaps import views
 
+# Hack to get brew installe libvips to work:
+os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = "/opt/homebrew/lib"
+
 debug_logger = logging.getLogger("root")
 debug_logger.write = debug_logger.debug  # consider all prints as debug information
 debug_logger.flush = lambda: None  # this may be called when printing
