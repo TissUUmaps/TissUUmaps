@@ -168,6 +168,19 @@ regionUtils.addRegionToolbarUI = function () {
     tooltip.enable();
     fillHolesButton.innerHTML = '<i class="bi bi-egg-fried"></i>';
 
+    const moveRegionsButton = HTMLElementUtils.createButton({
+      extraAttributes: { class: "btn lh-1 btn-primary m-1 p-2 only-selected", "title": "Move region" },
+    });
+    moveRegionsButton.onclick = function () {
+      const regions = Object.values(regionUtils._selectedRegions);
+      regionUtils.moveRegionsModal(regions);
+    };
+    var tooltip = new bootstrap.Tooltip(moveRegionsButton, {
+      placement: "bottom", trigger : 'hover'
+    });
+    tooltip.enable();
+    moveRegionsButton.innerHTML = '<i class="bi bi-arrows-move"></i>';
+
     const unselectButton = HTMLElementUtils.createButton({
       extraAttributes: { class: "btn lh-1 btn-primary m-1 p-2 only-selected", "title": "Unselect all regions (escape)" },
     });
@@ -461,6 +474,7 @@ regionUtils.addRegionToolbarUI = function () {
     buttonsContainer.appendChild(unselectButton);
     buttonsContainer.appendChild(deleteButton);
     buttonsContainer.appendChild(duplicateButton);
+    buttonsContainer.appendChild(moveRegionsButton);
     buttonsContainer.appendChild(scaleButton);
     buttonsContainer.appendChild(dilateButton);
     buttonsContainer.appendChild(splitButton);
@@ -553,6 +567,100 @@ regionUtils.resizeRegionsModal = async function (regions) {
         divformcheck310.appendChild(label311);
         divformcheck310.appendChild(inputcheck310);
   const title = "Region scale"
+  const apply = await interfaceUtils.generateModal(
+    title, content, buttons, modalUID, true, true
+  );
+};
+
+/**
+ * @summary Move selected regions by a given offsetX and offsetY, and rotate in degrees.
+ * @param {*} regions Array of regions to be moved
+ */
+regionUtils.moveRegionsModal = async function (regions) {
+  if (regions.length < 1) {
+    interfaceUtils.alert("Please select at least one region");
+    return;
+  }
+  var modalUID = "move_messagebox"
+  let button1=HTMLElementUtils.createButton({"extraAttributes":{ "class":"btn btn-primary mx-2"}})
+  button1.innerText = "Apply";
+  let button2=HTMLElementUtils.createButton({"extraAttributes":{ "class":"btn btn-secondary mx-2", "data-bs-dismiss":"modal"}})
+  button2.innerText = "Cancel";
+  let buttons=divpane=HTMLElementUtils.createElement({"kind":"div"});
+  buttons.appendChild(button1);
+  buttons.appendChild(button2);
+  button1.addEventListener("click",function(event) {
+      $(`#${modalUID}_modal`).modal('hide');
+      const offsetX = parseFloat(document.getElementById(`move_value_X_${modalUID}`).value);
+      const offsetY = parseFloat(document.getElementById(`move_value_Y_${modalUID}`).value);
+      const angle = parseFloat(document.getElementById(`move_value_angle_${modalUID}`).value);
+
+      for (let region of regions) {
+        regionUtils.moveRegion(region.id, offsetX, offsetY, angle, false);
+      }
+      glUtils.updateRegionDataTextures();
+      glUtils.updateRegionLUTTextures();
+      glUtils.draw();
+  })
+  button2.addEventListener("click",function(event) {
+      d3.selectAll(".region_previewpoly").remove();
+      $(`#${modalUID}_modal`).modal('hide');
+  })
+  function preview (event) {
+    const preview = document.getElementById(`${modalUID}_preview`).checked;
+    if (!preview) {
+      d3.selectAll(".region_previewpoly").remove();
+      return;
+    };
+    const offsetX = parseFloat(document.getElementById(`move_value_X_${modalUID}`).value);
+    const offsetY = parseFloat(document.getElementById(`move_value_Y_${modalUID}`).value);
+    const angle = parseFloat(document.getElementById(`move_value_angle_${modalUID}`).value);
+    for (let region of regions) {
+      regionUtils.moveRegion(region.id, offsetX, offsetY, angle, true);
+    }
+  }
+  let content=HTMLElementUtils.createElement({"kind":"div"});
+    row1=HTMLElementUtils.createRow({});
+        col11=HTMLElementUtils.createColumn({"width":6});
+            label111=HTMLElementUtils.createElement({"kind":"label", "extraAttributes":{ "for":"move_value_X_" + modalUID }});
+            label111.innerText="Offset X:"
+            value112=HTMLElementUtils.createElement({"kind":"input", "id":"move_value_X_" + modalUID, "extraAttributes":{ "class":"form-text-input form-control", "type":"number", "value":0}});
+        col12=HTMLElementUtils.createColumn({"width":6});
+            label121=HTMLElementUtils.createElement({"kind":"label", "extraAttributes":{ "for":"move_value_Y_" + modalUID }});
+            label121.innerText="Offset Y:"
+            value122=HTMLElementUtils.createElement({"kind":"input", "id":"move_value_Y_" + modalUID, "extraAttributes":{ "class":"form-text-input form-control", "type":"number", "value":0}});
+    row2=HTMLElementUtils.createRow({});
+        col21=HTMLElementUtils.createColumn({"width":12});
+            label211=HTMLElementUtils.createElement({"kind":"label", "extraAttributes":{ "for":"move_value_angle_" + modalUID }});
+            label211.innerText="Angle in degrees:"
+            value212=HTMLElementUtils.createElement({"kind":"input", "id":"move_value_angle_" + modalUID, "extraAttributes":{ "class":"form-text-input form-control", "type":"number", "value":0}});
+    row3=HTMLElementUtils.createRow({});
+    col31=HTMLElementUtils.createColumn({"width":12});
+        divformcheck310=HTMLElementUtils.createElement({ "kind":"div", "extraAttributes":{"class":"form-check"}});
+            inputcheck310=HTMLElementUtils.createElement({"kind":"input", "id":modalUID+"_preview","extraAttributes":{"class":"form-check-input","type":"checkbox", "checked":true }});
+            label311=HTMLElementUtils.createElement({"kind":"label", "id":modalUID+"_preview-label", "extraAttributes":{ "for":modalUID+"_preview" }});
+            label311.innerText="Preview"
+  inputcheck310.addEventListener("input", preview);
+  value112.addEventListener("input", preview);
+  value122.addEventListener("input", preview);
+  value212.addEventListener("input", preview);
+  content.appendChild(row1);
+    row1.appendChild(col11);
+        col11.appendChild(label111);
+        col11.appendChild(value112);
+    row1.appendChild(col12);
+        col12.appendChild(label121);
+        col12.appendChild(value122);
+  content.appendChild(row2);
+    row2.appendChild(col21);
+        col21.appendChild(label211);
+        col21.appendChild(value212);
+    content.appendChild(row3);
+    row3.appendChild(col31);
+      col31.appendChild(divformcheck310);
+        divformcheck310.appendChild(label311);
+        divformcheck310.appendChild(inputcheck310);
+  const title = "Region move"
   const apply = await interfaceUtils.generateModal(
     title, content, buttons, modalUID, true, true
   );
