@@ -17,7 +17,7 @@ jobs:
             extension: deb
           - os: ubuntu-22.04
             extension: deb
-          - os: macos-12
+          - os: macos-13
             extension: dmg
           - os: macos-14
             extension: dmg
@@ -86,7 +86,7 @@ jobs:
         shell: cmd
 
       - name: 💻 Create Mac App DMG
-        if: matrix.os == 'macos-12' || matrix.os == 'macos-14'
+        if: matrix.os == 'macos-13' || matrix.os == 'macos-14'
         run: |
           cd standalone
           # Install Mac DMG Creator
