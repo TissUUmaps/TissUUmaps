@@ -565,13 +565,14 @@ Points2Regions.initPython = function () {
   if (!document.getElementById("pyScript")) {
     Points2Regions.setMessage("Loading Python interpreter...");
     var link = document.createElement("link");
-    link.src = "https://pyscript.net/latest/pyscript.css";
+    link.src = "https://pyscript.net/releases/2023.11.1/core.css";
     link.id = "pyScript";
     link.rel = "stylesheet";
     document.head.appendChild(link);
 
     var script = document.createElement("script");
-    script.src = "https://pyscript.net/latest/pyscript.js";
+    script.src = "https://pyscript.net/releases/2023.11.1/core.js";
+    script.type = "module";
     script.defer = true;
     document.head.appendChild(script);
 

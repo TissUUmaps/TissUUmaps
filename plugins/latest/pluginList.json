@@ -19,7 +19,7 @@
         "js": "DEPICTER.js",
         "name": "DEPICTER",
         "py": "DEPICTER.py",
-        "version": "0.1.0",
+        "version": "0.1.1",
         "yml": "DEPICTER.yml"
     },
     {
@@ -86,7 +86,7 @@
         "js": "Points2Regions.js",
         "name": "Points2Regions",
         "py": "Points2Regions.py",
-        "version": "0.6.6",
+        "version": "0.6.7",
         "yml": "Points2Regions.yml"
     },
     {
