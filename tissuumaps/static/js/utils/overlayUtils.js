@@ -914,6 +914,7 @@ overlayUtils.savePNG=function() {
         return ctx;
     }
     function add_scalebar (ctx, resolution) {
+        if (tmapp.ISS_viewer.scalebarInstance == undefined) return ctx;
         let bounds = tmapp.ISS_viewer.viewport.getBounds();
         tmapp.ISS_viewer.viewport.zoomBy(resolution, null, true);
 

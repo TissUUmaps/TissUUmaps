@@ -23,6 +23,10 @@ from shutil import copyfile, copytree
 from threading import Lock
 from urllib.parse import parse_qs, urlparse
 
+# Hack to get brew installe libvips to work:
+# ruff: noqa: E402
+os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = "/opt/homebrew/lib"
+
 import pyvips
 
 # Flask dependencies
@@ -104,7 +108,7 @@ def requires_auth(f):
             path = getPathFromReferrer(request, "")
         else:
             path = os.path.abspath(os.path.join(app.basedir, kwargs["path"]))
-        activeFolder = os.path.dirname(path)
+        activeFolder = path
         while os.path.dirname(activeFolder) != activeFolder and not os.path.isfile(
             activeFolder + "/auth"
         ):
@@ -1171,6 +1175,7 @@ def pluginJS(pluginName, method):
 
 
 @app.route("/filetree")
+@requires_auth
 def get_tree():
     if not app.config["READ_ONLY"]:
         return render_template("filetree.html")
@@ -1179,6 +1184,7 @@ def get_tree():
 
 
 @app.route("/get_file_tree")
+@requires_auth
 def get_file_tree():
     if not app.config["READ_ONLY"]:
         root_path = app.config["SLIDE_DIR"] + "/" + request.args.get("root", "./")

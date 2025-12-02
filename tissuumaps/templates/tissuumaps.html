@@ -711,7 +711,32 @@
   <script src="static/js/tmapp.js"></script>
   <script src="static/js/flask.js"></script>
   <script>
-
+    //Workaround JQuery Issue 2292
+    //https://github.com/jquery/jquery-ui/issues/2292
+    $.fn.offset = (function (_super) {
+      return function () {
+        // Call base function
+        var originalResult = _super.apply(this, arguments);
+        //Define default value
+        var zoom = 1;
+        try {
+          //Use `currentCSSZoom` of HTML element
+          //https://caniuse.com/?search=currentCSSZoom
+          //https://developer.mozilla.org/de/docs/Web/API/Element/currentCSSZoom
+          if (this && this[0] && this[0].currentCSSZoom) {
+            zoom = this[0].currentCSSZoom;
+          }
+        } catch {
+          //Fallback for unexpected errors
+          zoom = 1;
+        }
+        //Modify result
+        originalResult.top = originalResult.top / zoom;
+        originalResult.left = originalResult.left / zoom;
+        //Return result
+        return originalResult;
+      };
+    })($.fn.offset);
     if (window!=window.top) {
       /* I'm in a frame! */
       OpenSeadragon.MouseTracker.passiveWheelEvents = false;

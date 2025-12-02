@@ -111,6 +111,23 @@ regionUtils.fillHolesRegions = function (regionIds) {
 };
 
 /**
+ * @summary Fill holes in regions
+ * @param {*} regions Array of regions to be deleted
+ */
+regionUtils.moveRegions = function (regionIds) {
+  if (regionIds.length < 1) {
+    interfaceUtils.alert("Please select at least one region");
+    return;
+  }
+  regionIds.forEach((id) => {
+    regionUtils.fillHolesRegion(id);
+  });
+  glUtils.updateRegionDataTextures();
+  glUtils.updateRegionLUTTextures();
+  glUtils.draw();
+};
+
+/**
  * @summary Duplicates regions
  * @param {*} regions Array of regions to be duplicated
  */
@@ -294,6 +311,84 @@ regionUtils.resizeRegion = function (regionId, scale, preview) {
     return [centroidX, centroidY];
   }
 };
+
+regionUtils.moveRegion = function (regionId, offsetX, offsetY, angle, preview) {
+  const region = regionUtils._regions[regionId];
+  // create a deep copy of the region points
+  const points = JSON.parse(JSON.stringify(region.globalPoints));
+
+  const escapedRegionId = HTMLElementUtils.stringToId(regionId);
+  const angleRad = (angle * Math.PI) / 180;
+  const cosAngle = Math.cos(angleRad);
+  const sinAngle = Math.sin(angleRad);
+  //Iterate through each of the polygons in the multipolygon
+  for (let i = 0; i < points.length; i++) {
+    const polygon = points[i];
+    const centroidBefore = calculatePolygonCentroid(polygon);
+    // Move coordinates based on current region scale and new scale
+    for (let j = 0; j < polygon.length; j++) {
+      const ring = polygon[j];
+      for (let k = 0; k < ring.length; k++) {
+        const point = ring[k];
+        const x = point.x - centroidBefore[0];
+        const y = point.y - centroidBefore[1];
+        point.x = x * cosAngle - y * sinAngle + centroidBefore[0];
+        point.y = x * sinAngle + y * cosAngle + centroidBefore[1];
+      }
+    }
+
+    // Calculate the difference between the previous center of the polygon and new one
+    const centroidAfter = calculatePolygonCentroid(polygon);
+    const centroidDiffX = centroidBefore[0] - centroidAfter[0];
+    const centroidDiffY = centroidBefore[1] - centroidAfter[1];
+
+    // Adjust coordinates to new polygon center
+    for (let j = 0; j < polygon.length; j++) {
+      const ring = polygon[j];
+      for (let k = 0; k < ring.length; k++) {
+        const point = ring[k];
+        point.x += centroidDiffX + offsetX;
+        point.y += centroidDiffY + offsetY;
+      }
+    }
+  }
+  
+  const newGlobalPoints = points;
+  d3.select("#" + escapedRegionId + "preview" + "_poly").remove();
+  if (preview) {
+    regionUtils.drawRegionPath(
+      regionUtils.globalPointsToViewportPoints(newGlobalPoints, region.collectionIndex),
+      escapedRegionId + "preview",
+      null, "#ffffff99"
+    );
+  }
+  else {
+    region.globalPoints = newGlobalPoints;
+    regionUtils.updateBbox(region);
+    regionUtils.deSelectRegion(region.id);
+    regionUtils.selectRegion(region);
+  }
+
+  // Returns the center of a given polygon
+  function calculatePolygonCentroid(polygon) {
+    let sumX = 0;
+    let sumY = 0;
+    let count = 0;
+
+    for (const ring of polygon) {
+      for (const point of ring) {
+        sumX += point.x;
+        sumY += point.y;
+        count++;
+      }
+    }
+
+    const centroidX = sumX / count;
+    const centroidY = sumY / count;
+
+    return [centroidX, centroidY];
+  }
+}
 
 regionUtils.dilateRegion = function (regionId, offset, preview, onlyBorder) {
   if (!offset) return;

@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.2.1.13
+
+- Fix Jquery issue with offsets when zoom with css
+
+## 3.2.1.10
+
+- Add `Download project` button to download the project as a `.tar` file
+- Fix image capture without mpp scalebar
+- Fix h5py import error in terminal
+- Add macos 14 ARM support
+
 ## 3.2.1.5
 
 - Add enter and escape keys to close modals
