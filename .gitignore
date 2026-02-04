@@ -2,7 +2,6 @@
 .DS_Store
 /.vscode
 /src/out
-/tests
 /.tissuumaps
 /plugins_repo/pluginList.json
 /tissuumaps/web/

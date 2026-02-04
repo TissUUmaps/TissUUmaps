@@ -5,3 +5,12 @@ build-backend = "setuptools.build_meta"
 [tool.ruff]
 select = ["E", "F", "I"]
 exclude = ["examples", "plugins_repo", "tissuumaps/tarfile_stream.py"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
