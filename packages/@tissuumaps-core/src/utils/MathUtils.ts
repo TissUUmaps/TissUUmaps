@@ -311,4 +311,56 @@ export class MathUtils {
     );
     return counts;
   }
+
+  /**
+   * Computes the indices that visit the values in ascending order
+   *
+   * The values are binned like {@link computeHistogram} and counting-sorted
+   * by bin, so the order is exact up to the bin width and linear in the number
+   * of values. Values in the same bin keep their relative order. Non-finite
+   * values come first.
+   *
+   * @param values - The values to sort
+   * @param range - The value range the bins span, as `[min, max]`
+   * @param options - Optional abort signal and number of bins (`bins`, a
+   *   positive integer, defaults to `65536`)
+   * @returns A promise that resolves to the indices of the values, in
+   * ascending order of their values
+   */
+  static async computeBinnedSortOrder(
+    values: TypedArray,
+    range: [number, number],
+    options?: { signal?: AbortSignal; bins?: number },
+  ): Promise<Uint32Array> {
+    const { signal, bins = 65536 } = options ?? {};
+    signal?.throwIfAborted();
+    const [vmin, vmax] = range;
+    const scale = vmin < vmax ? (bins - 1) / (vmax - vmin) : 0;
+    // bin 0 holds the non-finite values, bins 1 to `bins` the finite ones
+    const valueBins = new Uint32Array(values.length);
+    const binOffsets = new Uint32Array(bins + 2);
+    await AsyncUtils.forEach(
+      values,
+      (v, i) => {
+        const bin = Number.isFinite(v)
+          ? MathUtils.clamp(Math.round((v - vmin) * scale), 0, bins - 1) + 1
+          : 0;
+        valueBins[i] = bin;
+        binOffsets[bin + 1]! += 1;
+      },
+      { signal },
+    );
+    for (let bin = 1; bin < binOffsets.length; bin++) {
+      binOffsets[bin]! += binOffsets[bin - 1]!;
+    }
+    const order = new Uint32Array(values.length);
+    await AsyncUtils.forEach(
+      valueBins,
+      (bin, i) => {
+        order[binOffsets[bin]!++] = i;
+      },
+      { signal },
+    );
+    return order;
+  }
 }

@@ -177,6 +177,96 @@ describe("ColorResolver", () => {
     });
   });
 
+  describe("resolveColorOrder", () => {
+    it("orders the items by ascending value of the from column", async () => {
+      const ids = new Uint32Array([1, 2, 3, 4]);
+      const data = createMockTableData(ids, [3, "x", 1, 2], [1, 3]);
+      const loadTable = vi.fn().mockResolvedValue(data);
+      const config = {
+        from: { column: "col1", palette: testPalette.id },
+      } satisfies ColorConfig;
+
+      const order = await ColorResolver.resolveColorOrder(
+        ids,
+        config,
+        loadTable,
+      );
+
+      // the unparsable value comes first
+      expect(Array.from(order!)).toEqual([1, 2, 3, 0]);
+    });
+
+    it("looks the values up by ID", async () => {
+      const data = createMockTableData(
+        new Uint32Array([1, 2, 3]),
+        [30, 10, 20],
+        [10, 30],
+      );
+      const loadTable = vi.fn().mockResolvedValue(data);
+      const config = {
+        from: { column: "col1", palette: testPalette.id },
+      } satisfies ColorConfig;
+
+      const order = await ColorResolver.resolveColorOrder(
+        new Uint32Array([3, 1, 9]),
+        config,
+        loadTable,
+      );
+
+      // ID 9 is missing and comes first
+      expect(Array.from(order!)).toEqual([2, 0, 1]);
+    });
+
+    it("returns null for other sources", async () => {
+      const loadTable = vi.fn();
+      const config = { constant: { value: red } } satisfies ColorConfig;
+
+      const order = await ColorResolver.resolveColorOrder(
+        new Uint32Array([1, 2]),
+        config,
+        loadTable,
+      );
+
+      expect(order).toBeNull();
+      expect(loadTable).not.toHaveBeenCalled();
+    });
+
+    it("returns null if the table cannot be loaded", async () => {
+      const config = {
+        from: { table: "gone", column: "col1", palette: testPalette.id },
+      } satisfies ColorConfig;
+
+      const order = await ColorResolver.resolveColorOrder(
+        new Uint32Array([1, 2]),
+        config,
+        () => Promise.reject(new Error("Table with ID 'gone' not found")),
+      );
+
+      expect(order).toBeNull();
+    });
+
+    it("returns null if the column cannot be loaded", async () => {
+      const ids = new Uint32Array([1, 2]);
+      const data: TableData = {
+        ...createMockTableData(ids, [], [0, 1]),
+        loadValues: vi
+          .fn()
+          .mockRejectedValue(
+            new Error("Column col1 does not exist in the table"),
+          ),
+      };
+      const config = {
+        from: { column: "col1", palette: testPalette.id },
+      } satisfies ColorConfig;
+
+      const order = await ColorResolver.resolveColorOrder(ids, config, () =>
+        Promise.resolve(data),
+      );
+
+      expect(order).toBeNull();
+    });
+  });
+
   describe("resolveColorsFromTableValues", () => {
     it("maps table values through the color palette", async () => {
       const palette = colorPalettes[0]!;

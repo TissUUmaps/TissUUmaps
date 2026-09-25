@@ -533,4 +533,48 @@ describe("MathUtils", () => {
       ).rejects.toThrow("aborted");
     });
   });
+
+  describe("computeBinnedSortOrder", () => {
+    it("returns the indices in ascending order of the values", async () => {
+      const order = await MathUtils.computeBinnedSortOrder(
+        new Float64Array([3, 0, 2, 1]),
+        [0, 3],
+      );
+      expect(Array.from(order)).toEqual([1, 3, 2, 0]);
+    });
+
+    it("keeps the order of values in the same bin", async () => {
+      const order = await MathUtils.computeBinnedSortOrder(
+        new Float64Array([1, 0.1, 0, 0.9]),
+        [0, 1],
+        { bins: 2 },
+      );
+      expect(Array.from(order)).toEqual([1, 2, 0, 3]);
+    });
+
+    it("puts values outside the range in the edge bins", async () => {
+      const order = await MathUtils.computeBinnedSortOrder(
+        new Float64Array([20, -10, 5]),
+        [0, 10],
+        { bins: 3 },
+      );
+      expect(Array.from(order)).toEqual([1, 2, 0]);
+    });
+
+    it("puts non-finite values first", async () => {
+      const order = await MathUtils.computeBinnedSortOrder(
+        new Float64Array([2, NaN, 1, Infinity]),
+        [1, 2],
+      );
+      expect(Array.from(order)).toEqual([1, 3, 2, 0]);
+    });
+
+    it("keeps the order if the range is degenerate", async () => {
+      const order = await MathUtils.computeBinnedSortOrder(
+        new Float64Array([3, 1, 2]),
+        [1, 1],
+      );
+      expect(Array.from(order)).toEqual([0, 1, 2]);
+    });
+  });
 });

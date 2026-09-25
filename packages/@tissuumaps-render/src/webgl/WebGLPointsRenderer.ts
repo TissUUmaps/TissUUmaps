@@ -55,7 +55,9 @@ import { WebGLUtils } from "./WebGLUtils";
  *
  * Manages a shader program, a marker atlas texture, and per-object GPU
  * buffers. Points are rendered as `gl.POINTS` using per-vertex attributes (x,
- * y, size, color, marker), one draw call per object.
+ * y, size, color, marker), one draw call per object. Points colored `from` a
+ * table column are drawn in ascending order of its values, so that high
+ * values are on top (see {@link ColorResolver.resolveColorOrder}).
  *
  * Every object owns its vertex array and attribute buffers. Synchronizing
  * compares the current model against the snapshot those buffers were loaded
@@ -278,11 +280,20 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           0,
         );
       }
-      this.context.gl.drawArrays(
-        WebGL2RenderingContext.POINTS,
-        0,
-        renderedPoints.ref.itemIds.length,
-      );
+      if (renderedPoints.order !== undefined) {
+        this.context.gl.drawElements(
+          WebGL2RenderingContext.POINTS,
+          renderedPoints.ref.itemIds.length,
+          WebGL2RenderingContext.UNSIGNED_INT,
+          0,
+        );
+      } else {
+        this.context.gl.drawArrays(
+          WebGL2RenderingContext.POINTS,
+          0,
+          renderedPoints.ref.itemIds.length,
+        );
+      }
     }
     this.context.gl.bindVertexArray(null);
     this.context.disableAlphaBlending();
@@ -334,7 +345,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * before the first `await`, and then computes the bounds and folds the
    * resolved visibilities and opacities into the colors. An attribute whose
    * configuration is a constant is not resolved per point: it is prepared as
-   * the one packed value all points share (see {@link _backAttribute}).
+   * the one packed value all points share (see {@link _backAttribute}). The
+   * draw order is resolved again when the color configuration changed.
    *
    * See {@link WebGLRendererBase.prepareRenderedObject} for when this runs.
    *
@@ -375,6 +387,10 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         renderedPoints,
         renderConfigSnapshot,
       );
+    const pointOrderChanged = WebGLPointsRenderer._checkPointOrderChanged(
+      renderedPoints,
+      renderConfigSnapshot,
+    );
     const geometryPromise =
       renderedPoints === undefined
         ? newRef.data.loadGeometry({ signal })
@@ -445,6 +461,14 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
             { signal },
           )
         : undefined;
+    const pointOrderPromise = pointOrderChanged
+      ? ColorResolver.resolveColorOrder(
+          newRef.itemIds,
+          newRef.object.pointColor,
+          loadTable,
+          { signal },
+        )
+      : undefined;
     const [
       geometry,
       packedPointMarkers,
@@ -452,6 +476,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       packedPointColors,
       packedPointVisibilities,
       packedPointOpacities,
+      pointOrder,
     ] = await Promise.all([
       geometryPromise,
       packedPointMarkersPromise,
@@ -459,6 +484,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       packedPointColorsPromise,
       packedPointVisibilitiesPromise,
       packedPointOpacitiesPromise,
+      pointOrderPromise,
     ]);
     signal?.throwIfAborted();
     let maskedGeometry: PointsGeometry | undefined;
@@ -517,6 +543,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       packedPointMarkers,
       packedPointSizes,
       packedPointColors,
+      pointOrder,
       renderConfigSnapshot,
     };
   }
@@ -536,20 +563,23 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       prepared.maskedGeometry === undefined ||
       prepared.packedPointMarkers === undefined ||
       prepared.packedPointSizes === undefined ||
-      prepared.packedPointColors === undefined
+      prepared.packedPointColors === undefined ||
+      prepared.pointOrder === undefined
     ) {
       throw new Error("All attributes must be resolved for new points object");
     }
+    const vertexArray = this._createVertexArray(
+      prepared.maskedGeometry,
+      prepared.packedPointMarkers,
+      prepared.packedPointSizes,
+      prepared.packedPointColors,
+    );
     return {
       ref: newRef,
       renderConfigSnapshot: prepared.renderConfigSnapshot,
       objectBounds: prepared.objectBounds,
-      ...this._createVertexArray(
-        prepared.maskedGeometry,
-        prepared.packedPointMarkers,
-        prepared.packedPointSizes,
-        prepared.packedPointColors,
-      ),
+      ...vertexArray,
+      order: this._backOrder(vertexArray.vao, prepared.pointOrder),
     };
   }
 
@@ -561,7 +591,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    *
    * @param renderedPoints - The rendered object to update in place
    * @param prepared - Its preparation, holding the attributes that changed
-   * @returns Whether any attribute was backed again
+   * @returns Whether any attribute or the draw order was backed again
    */
   protected override updateRenderedObject(
     renderedPoints: RenderedPoints,
@@ -595,11 +625,19 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         attributes.color,
       );
     }
+    if (prepared.pointOrder !== undefined) {
+      renderedPoints.order = this._backOrder(
+        vao,
+        prepared.pointOrder,
+        renderedPoints.order,
+      );
+    }
     renderedPoints.renderConfigSnapshot = prepared.renderConfigSnapshot;
     return (
       prepared.packedPointMarkers !== undefined ||
       prepared.packedPointSizes !== undefined ||
-      prepared.packedPointColors !== undefined
+      prepared.packedPointColors !== undefined ||
+      prepared.pointOrder !== undefined
     );
   }
 
@@ -620,6 +658,9 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       if (typeof attribute !== "number") {
         this.context.gl.deleteBuffer(attribute);
       }
+    }
+    if (renderedPoints.order !== undefined) {
+      this.context.gl.deleteBuffer(renderedPoints.order);
     }
   }
 
@@ -773,6 +814,50 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       values,
       WebGL2RenderingContext.STATIC_DRAW,
     );
+    return buffer;
+  }
+
+  /**
+   * Brings the draw order of an object up to date, and returns the index
+   * buffer now holding it
+   *
+   * The index buffer is bound to the vertex array, so {@link draw} draws the
+   * points in its order. Without an order, an existing index buffer is
+   * released and the points are drawn in item order. As in
+   * {@link _backAttribute}, the buffer is released with the vertex array
+   * bound, so that the vertex array does not keep it alive.
+   *
+   * @param vao - The vertex array of the object
+   * @param order - The prepared draw order, or `null` for item order
+   * @param current - The current index buffer, if any
+   * @returns The index buffer, or `undefined` for item order
+   */
+  private _backOrder(
+    vao: WebGLVertexArrayObject,
+    order: Uint32Array | null,
+    current?: WebGLBuffer,
+  ): WebGLBuffer | undefined {
+    if (order === null) {
+      if (current !== undefined) {
+        this.context.gl.bindVertexArray(vao);
+        this.context.gl.deleteBuffer(current);
+        this.context.gl.bindVertexArray(null);
+      }
+      return undefined;
+    }
+    const buffer = current ?? this.context.createBuffer();
+    // the element array binding is part of the vertex array's state
+    this.context.gl.bindVertexArray(vao);
+    this.context.gl.bindBuffer(
+      WebGL2RenderingContext.ELEMENT_ARRAY_BUFFER,
+      buffer,
+    );
+    this.context.gl.bufferData(
+      WebGL2RenderingContext.ELEMENT_ARRAY_BUFFER,
+      order,
+      WebGL2RenderingContext.STATIC_DRAW,
+    );
+    this.context.gl.bindVertexArray(null);
     return buffer;
   }
 
@@ -947,6 +1032,25 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   }
 
   /**
+   * Returns whether the draw order of an object has to be resolved again
+   *
+   * The order only depends on the color configuration (see
+   * {@link ColorResolver.resolveColorOrder}).
+   */
+  private static _checkPointOrderChanged(
+    renderedPoints: RenderedPoints | undefined,
+    newSnapshot: RenderedPoints["renderConfigSnapshot"],
+  ): boolean {
+    return (
+      renderedPoints === undefined ||
+      !deepEqual(
+        renderedPoints.renderConfigSnapshot.pointColor,
+        newSnapshot.pointColor,
+      )
+    );
+  }
+
+  /**
    * Resolves the packed RGBA color all points share if the color, visibility
    * and opacity configurations are all constants, `undefined` otherwise
    *
@@ -1039,6 +1143,7 @@ type PreparedPoints = {
   packedPointMarkers: Uint8Array | number | undefined;
   packedPointSizes: Float32Array | number | undefined;
   packedPointColors: Uint32Array | number | undefined;
+  pointOrder: Uint32Array | null | undefined;
   renderConfigSnapshot: RenderedPoints["renderConfigSnapshot"];
 };
 
@@ -1048,7 +1153,8 @@ type PreparedPoints = {
  * Holds the vertex array, the coordinate buffers it is configured with, and
  * the per-point attributes, each backed by a buffer holding one value per
  * point or by one constant value for all points (see
- * {@link WebGLPointsRenderer._backAttribute}), plus a snapshot of the model
+ * {@link WebGLPointsRenderer._backAttribute}), the index buffer holding the
+ * draw order, if any (see {@link WebGLPointsRenderer._backOrder}), plus a snapshot of the model
  * values they were loaded from, which the change predicates compare against
  * (see {@link WebGLPointsRenderer._createRenderConfigSnapshot}). Layer- and
  * object-level properties are read from the current model when drawing (see
@@ -1065,6 +1171,7 @@ type RenderedPoints = RenderedObjectBase<Points, PointsData> & {
     size: WebGLBuffer | number;
     color: WebGLBuffer | number;
   };
+  order: WebGLBuffer | undefined;
   renderConfigSnapshot: Pick<
     Points,
     | "pointMarker"
