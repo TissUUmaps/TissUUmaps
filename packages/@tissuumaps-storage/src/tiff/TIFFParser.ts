@@ -2,9 +2,9 @@ import type { GeoTIFF, GeoTIFFImage } from "geotiff";
 
 import type { Color } from "@tissuumaps/core";
 
-import { OMETIFFParser } from "./OMETIFFParser";
-import { PlainTIFFParser } from "./PlainTIFFParser";
-import { QPTIFFParser } from "./QPTIFFParser";
+import { OMETIFFParser } from "./profiles/OMETIFFParser";
+import { PlainTIFFParser } from "./profiles/PlainTIFFParser";
+import { QPTIFFParser } from "./profiles/QPTIFFParser";
 
 /** What a parser reads about a channel of a multi-channel TIFF file */
 export type TIFFChannelMetadata = {
@@ -27,7 +27,7 @@ export type TIFFStructure = {
   channels: TIFFChannelMetadata[] | undefined;
 };
 
-/** Reads the structure of one TIFF flavor */
+/** Reads the structure of one TIFF profile */
 export interface TIFFParser {
   /**
    * Whether this parser reads the file

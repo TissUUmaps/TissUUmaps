@@ -10,7 +10,7 @@ import type {
   TypedArray,
 } from "@tissuumaps/core";
 
-import type { TIFFChannelMetadata } from "./formats/TIFFParser";
+import type { TIFFChannelMetadata } from "./TIFFParser";
 import { tiffRasterType } from "./installTIFFTileSource";
 
 /** A channel of a loaded multi-channel TIFF file */

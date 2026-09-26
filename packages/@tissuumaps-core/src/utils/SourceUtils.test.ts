@@ -6,7 +6,7 @@ const baseUrl = "https://app.example/tm/index.html";
 const projectUrl = "https://data.example/projects/p1/project.json";
 const projectPath = "/proj/project.json";
 
-type FakeFile = { kind: "file"; name: string };
+type FakeFile = { kind: "file"; name: string; getFile?: () => Promise<File> };
 type FakeDir = {
   kind: "directory";
   name: string;
@@ -588,6 +588,57 @@ describe("SourceUtils", () => {
       await expect(
         SourceUtils.resolveSourceFile("/proj/missing.csv", workspace),
       ).rejects.toMatchObject({ name: "NotFoundError" });
+    });
+  });
+
+  describe("openSourceFile", () => {
+    const opened = new File(["a,b"], "y.csv");
+    let onGetFile: (() => void) | undefined;
+    const openableWorkspace = makeDir("", {
+      proj: makeDir("proj", {
+        sub: makeDir("sub", {
+          "y.csv": {
+            ...makeFile("y.csv"),
+            getFile: () => {
+              onGetFile?.();
+              return Promise.resolve(opened);
+            },
+          },
+        }),
+      }),
+    }) as unknown as FileSystemDirectoryHandle;
+
+    afterEach(() => {
+      onGetFile = undefined;
+    });
+
+    it("returns URLs as is", async () => {
+      await expect(
+        SourceUtils.openSourceFile("https://x.example/f.csv", workspace),
+      ).resolves.toEqual({ url: "https://x.example/f.csv" });
+    });
+
+    it("opens a file", async () => {
+      await expect(
+        SourceUtils.openSourceFile("/proj/sub/y.csv", openableWorkspace),
+      ).resolves.toEqual({ file: opened });
+    });
+
+    it("rejects like resolveSourceFile", async () => {
+      await expect(
+        SourceUtils.openSourceFile("/proj/sub", workspace),
+      ).rejects.toMatchObject({ name: "TypeMismatchError" });
+    });
+
+    it("rejects with the abort reason if aborted while opening the file", async () => {
+      const controller = new AbortController();
+      const reason = new Error("stop");
+      onGetFile = () => controller.abort(reason);
+      await expect(
+        SourceUtils.openSourceFile("/proj/sub/y.csv", openableWorkspace, {
+          signal: controller.signal,
+        }),
+      ).rejects.toBe(reason);
     });
   });
 
