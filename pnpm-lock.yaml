@@ -260,13 +260,13 @@ importers:
       gl-matrix:
         specifier: ^3.4.4
         version: 3.4.4
-      openseadragon:
-        specifier: ^6.1.1
-        version: 6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6)
     devDependencies:
       "@tissuumaps/core":
         specifier: workspace:^
         version: link:../@tissuumaps-core
+      openseadragon:
+        specifier: ^6.1.1
+        version: 6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6)
 
   packages/@tissuumaps-storage:
     dependencies:
