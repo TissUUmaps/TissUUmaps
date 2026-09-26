@@ -1,16 +1,9 @@
 import type { GeoTIFF, GeoTIFFImage } from "geotiff";
 
-import type { Color } from "@tissuumaps/core";
-
-import { OMETIFFParser } from "./OMETIFFParser";
-import { PlainTIFFParser } from "./PlainTIFFParser";
-import { QPTIFFParser } from "./QPTIFFParser";
-
-/** What a parser reads about a channel of a multi-channel TIFF file */
-export type TIFFChannelMetadata = {
-  name?: string;
-  color?: Color;
-};
+import type { TIFFChannelMetadata } from "./TIFFImageData";
+import { OMETIFFParser } from "./profiles/OMETIFFParser";
+import { PlainTIFFParser } from "./profiles/PlainTIFFParser";
+import { QPTIFFParser } from "./profiles/QPTIFFParser";
 
 /** The pyramid and channel metadata of a TIFF file */
 export type TIFFStructure = {

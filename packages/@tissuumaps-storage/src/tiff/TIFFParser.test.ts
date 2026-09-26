@@ -7,10 +7,10 @@ import {
 } from "geotiff";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { OMETIFFParser } from "./OMETIFFParser";
-import { PlainTIFFParser } from "./PlainTIFFParser";
-import { QPTIFFParser } from "./QPTIFFParser";
 import { type TIFFStructure, findTIFFParser } from "./TIFFParser";
+import { OMETIFFParser } from "./profiles/OMETIFFParser";
+import { PlainTIFFParser } from "./profiles/PlainTIFFParser";
+import { QPTIFFParser } from "./profiles/QPTIFFParser";
 
 // The three parsers are tested together, rather than one file each, because
 // they share the fake-TIFF fixtures below: the same directories have to be

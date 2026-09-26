@@ -8,7 +8,7 @@ import {
 
 import { type DataProviderLoadOptions, SourceUtils } from "@tissuumaps/core";
 
-import { type TIFFStructure, findTIFFParser } from "./formats/TIFFParser";
+import { type TIFFStructure, findTIFFParser } from "./TIFFParser";
 
 /**
  * Remote files are read in 64 KiB blocks, of which 256 (16 MiB) are cached per

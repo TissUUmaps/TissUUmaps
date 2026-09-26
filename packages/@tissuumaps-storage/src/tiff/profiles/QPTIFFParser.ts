@@ -2,13 +2,10 @@ import type { GeoTIFF, GeoTIFFImage } from "geotiff";
 
 import type { Color } from "@tissuumaps/core";
 
+import type { TIFFChannelMetadata } from "../TIFFImageData";
+import type { TIFFParser, TIFFStructure } from "../TIFFParser";
 import { TIFFUtils } from "../TIFFUtils";
 import { XMLUtils } from "../XMLUtils";
-import type {
-  TIFFChannelMetadata,
-  TIFFParser,
-  TIFFStructure,
-} from "./TIFFParser";
 
 /** The root element of the XML description written by PerkinElmer/Akoya scanners */
 const rootElement = "PerkinElmer-QPI-ImageDescription";

@@ -1,7 +1,7 @@
 import type { GeoTIFF } from "geotiff";
 
+import type { TIFFParser, TIFFStructure } from "../TIFFParser";
 import { TIFFUtils } from "../TIFFUtils";
-import type { TIFFParser, TIFFStructure } from "./TIFFParser";
 
 /**
  * Plain pyramidal TIFF: the largest IFDs are the channels, and the pyramid
