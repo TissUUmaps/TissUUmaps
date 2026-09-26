@@ -307,9 +307,15 @@ importers:
       hyparquet-compressors:
         specifier: ^1.1.1
         version: 1.1.1
+      ome-zarr.js:
+        specifier: 0.0.20
+        version: 0.0.20
       openseadragon:
         specifier: ^6.1.1
         version: 6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6)
+      zarrita:
+        specifier: ^0.7.5
+        version: 0.7.5
 
   packages/@tissuumaps-viewer:
     devDependencies:

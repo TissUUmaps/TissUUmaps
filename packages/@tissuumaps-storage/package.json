@@ -89,11 +89,16 @@
     "h5wasm": "^0.10.3",
     "hyparquet": "^1.26.1",
     "hyparquet-compressors": "^1.1.1",
-    "openseadragon": "^6.1.1"
+    "ome-zarr.js": "0.0.20",
+    "openseadragon": "^6.1.1",
+    "zarrita": "^0.7.5"
   },
   "peerDependencies": {
     "@tissuumaps/core": "workspace:^",
-    "openseadragon": "^6.1.1"
+    "@zarrita/storage": "^0.2.0",
+    "ome-zarr.js": "0.0.20",
+    "openseadragon": "^6.1.1",
+    "zarrita": "^0.7.5"
   },
   "engines": {
     "node": ">=22.22.1"
