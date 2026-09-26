@@ -1,10 +1,7 @@
 import type {
-  CellData,
   ColumnSort,
   ColumnVisibilityState,
-  RowData,
   SortingState,
-  TableFeatures,
 } from "@tanstack/react-table";
 import { useCallback, useMemo, useState } from "react";
 
@@ -22,20 +19,6 @@ import {
 } from "./GroupColumnPicker";
 import { GroupVisibilityCell } from "./cells/GroupVisibilityCell";
 import { InactiveCell } from "./cells/InactiveCell";
-
-declare module "@tanstack/react-table" {
-  /* eslint-disable @typescript-eslint/no-unused-vars -- the type parameters
-     must match the declaration that this one merges into */
-  interface ColumnMeta<
-    in out TFeatures extends TableFeatures,
-    in out TData extends RowData,
-    TValue extends CellData = CellData,
-  > {
-    /** Whether a group table column is shown until the user picks the columns */
-    isShownByDefault?: boolean;
-  }
-  /* eslint-enable @typescript-eslint/no-unused-vars */
-}
 
 export type GroupAnnotationsTableRowData = {
   group: string;

@@ -7,6 +7,7 @@ import {
   columnSizingFeature,
   columnVisibilityFeature,
   functionalUpdate,
+  metaHelper,
   rowSortingFeature,
   tableFeatures,
   useTable,
@@ -26,21 +27,29 @@ import {
 import { useCompressedRowVirtualizer } from "@/hooks/useCompressedRowVirtualizer";
 import { cn } from "@/lib/utils";
 
+/** Column metadata of a virtual table */
+export type VirtualTableColumnMeta = {
+  /** Whether the caller shows the column until the user picks the columns */
+  isShownByDefault?: boolean;
+};
+
 /**
- * The table features a virtual table uses
+ * The table features of a virtual table
  *
- * A table only has the APIs of the features registered here. Column sizing
- * gives every cell the width of its column, which the user can resize, and
- * columns can be hidden. The table only holds the visible rows, so it cannot
- * sort them: sorting is manual, the table keeps the sort state and toggles it
- * from the headers of the columns with an accessor, while the caller sorts all
- * rows.
+ * A table only has the APIs of the features registered here.
  */
 const features = tableFeatures({
+  // every cell takes the width of its column
   columnSizingFeature,
+  // the user resizes a column by dragging the edge of its header
   columnResizingFeature,
+  // columns can be hidden
   columnVisibilityFeature,
+  // the headers toggle the sort state; the caller sorts the rows, as the table
+  // only holds the visible ones
   rowSortingFeature,
+  // the type of `columnDef.meta`
+  columnMeta: metaHelper<VirtualTableColumnMeta>(),
 });
 
 /**
