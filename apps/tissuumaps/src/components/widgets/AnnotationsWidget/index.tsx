@@ -19,6 +19,9 @@ import type { GroupVisibility } from "./useGroupVisibility";
 // offset alone; cells must fit within it
 const tableRowHeight = 28;
 
+/** Groups beyond which the group table shows a message instead of its rows */
+const maxGroupCount = 200_000;
+
 /**
  * Keeps the groups whose name contains a query, ignoring case
  *
@@ -74,10 +77,16 @@ export function AnnotationsWidget({
 }: AnnotationsWidgetProps) {
   const [nameQuery, setNameQuery] = useState("");
 
+  // the cap counts every group, as a new map is filled with every group
+  const hasTooManyGroups =
+    groupCounts !== null && groupCounts.size > maxGroupCount;
+
   const filteredGroupCounts = useMemo(
     () =>
-      groupCounts !== null ? filterGroupsByName(groupCounts, nameQuery) : null,
-    [groupCounts, nameQuery],
+      groupCounts !== null && !hasTooManyGroups
+        ? filterGroupsByName(groupCounts, nameQuery)
+        : groupCounts,
+    [groupCounts, hasTooManyGroups, nameQuery],
   );
 
   const isGroupVisible = groupVisibility?.isVisible;
@@ -125,7 +134,7 @@ export function AnnotationsWidget({
           onValueChange={onSelectedGroupByColumnChange}
         />
       </Field>
-      <Field disabled={selectedGroupByColumn === null}>
+      <Field disabled={selectedGroupByColumn === null || hasTooManyGroups}>
         <FieldLabel>Filter groups</FieldLabel>
         <Input
           value={nameQuery}
@@ -133,15 +142,22 @@ export function AnnotationsWidget({
         />
       </Field>
       {tableId !== null && selectedGroupByColumn !== null ? (
-        <GroupAnnotationsTable
-          height={tableHeight}
-          rowHeight={tableRowHeight}
-          annotatedObject={annotatedObject}
-          groupByColumn={selectedGroupByColumn}
-          groupCounts={filteredGroupCounts}
-          groupVisibility={groupVisibility}
-          groupColumnDefs={groupColumnDefs}
-        />
+        hasTooManyGroups ? (
+          <span className="text-xs text-muted-foreground">
+            {groupCounts.size.toLocaleString()} groups: too many to list. Group
+            by a column with at most {maxGroupCount.toLocaleString()} values.
+          </span>
+        ) : (
+          <GroupAnnotationsTable
+            height={tableHeight}
+            rowHeight={tableRowHeight}
+            annotatedObject={annotatedObject}
+            groupByColumn={selectedGroupByColumn}
+            groupCounts={filteredGroupCounts}
+            groupVisibility={groupVisibility}
+            groupColumnDefs={groupColumnDefs}
+          />
+        )
       ) : (
         <ItemAnnotationsTable
           data={data}
