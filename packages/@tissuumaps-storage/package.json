@@ -27,7 +27,7 @@
       "default": "./dist/geojson.js"
     },
     "./hdf5": {
-      "tissuumaps-development": "./src/hierarchical-tables/hdf5/index.ts",
+      "tissuumaps-development": "./src/hierarchical/hdf5/index.ts",
       "types": "./dist/hdf5.d.ts",
       "import": "./dist/hdf5.js",
       "default": "./dist/hdf5.js"
@@ -63,7 +63,7 @@
       "default": "./dist/tiff.js"
     },
     "./zarr": {
-      "tissuumaps-development": "./src/hierarchical-tables/zarr/index.ts",
+      "tissuumaps-development": "./src/hierarchical/zarr/index.ts",
       "types": "./dist/zarr.d.ts",
       "import": "./dist/zarr.js",
       "default": "./dist/zarr.js"

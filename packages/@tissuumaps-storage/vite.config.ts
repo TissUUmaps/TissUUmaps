@@ -31,10 +31,7 @@ export default defineConfig(({ mode }) => ({
         index: resolve(import.meta.dirname, "src/index.ts"),
         csv: resolve(import.meta.dirname, "src/csv/index.ts"),
         geojson: resolve(import.meta.dirname, "src/geojson/index.ts"),
-        hdf5: resolve(
-          import.meta.dirname,
-          "src/hierarchical-tables/hdf5/index.ts",
-        ),
+        hdf5: resolve(import.meta.dirname, "src/hierarchical/hdf5/index.ts"),
         "ome-zarr": resolve(import.meta.dirname, "src/ome-zarr/index.ts"),
         openseadragon: resolve(
           import.meta.dirname,
@@ -43,10 +40,7 @@ export default defineConfig(({ mode }) => ({
         parquet: resolve(import.meta.dirname, "src/parquet/index.ts"),
         table: resolve(import.meta.dirname, "src/table/index.ts"),
         tiff: resolve(import.meta.dirname, "src/tiff/index.ts"),
-        zarr: resolve(
-          import.meta.dirname,
-          "src/hierarchical-tables/zarr/index.ts",
-        ),
+        zarr: resolve(import.meta.dirname, "src/hierarchical/zarr/index.ts"),
       },
       formats: ["es"],
     },
