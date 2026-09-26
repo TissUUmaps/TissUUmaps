@@ -1,3 +1,4 @@
+export { ZarrTableData } from "./ZarrTableData";
 export { ZarrTableDataProvider } from "./ZarrTableDataProvider";
 export {
   zarrTableDataSourceType,

@@ -10,8 +10,13 @@ import {
 import { ColumnQueryUtils } from "./ColumnQueryUtils";
 import type { HierarchicalTable } from "./HierarchicalTable";
 
-/** The {@link TableData} of a hierarchical table; owns the table and closes it */
-export class HierarchicalTableData implements TableData {
+/**
+ * The {@link TableData} of a hierarchical table; owns the table and closes it
+ *
+ * Extended by every container format, see
+ * {@link HierarchicalTableDataProviderBase.createTableData}.
+ */
+export abstract class HierarchicalTableDataBase implements TableData {
   private readonly _table: HierarchicalTable;
   private readonly _numRows: number;
   private _ids: IDArray | undefined;

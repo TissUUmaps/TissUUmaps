@@ -1,12 +1,13 @@
 import {
   ArrayUtils,
   type DataProviderLoadOptions,
+  type IDArray,
   SourceUtils,
   type TableDataProvider,
 } from "@tissuumaps/core";
 
 import type { HierarchicalTable } from "./HierarchicalTable";
-import { HierarchicalTableData } from "./HierarchicalTableData";
+import type { HierarchicalTableDataBase } from "./HierarchicalTableDataBase";
 import type { HierarchicalTableDataSource } from "./HierarchicalTableDataSource";
 
 /**
@@ -15,13 +16,17 @@ import type { HierarchicalTableDataSource } from "./HierarchicalTableDataSource"
  * Handles the form, source normalization and the ID and name columns. A
  * container format only has to open a {@link HierarchicalTable} for a
  * normalized source, see
- * {@link HierarchicalTableDataProviderBase.openHierarchicalTable}.
+ * {@link HierarchicalTableDataProviderBase.openHierarchicalTable}, and wrap
+ * it in its data class, see
+ * {@link HierarchicalTableDataProviderBase.createTableData}.
  *
  * @typeParam TDataSource - The data source type of the container format
+ * @typeParam TData - The data class of the container format
  */
 export abstract class HierarchicalTableDataProviderBase<
   TDataSource extends HierarchicalTableDataSource,
-> implements TableDataProvider<TDataSource, HierarchicalTableData> {
+  TData extends HierarchicalTableDataBase,
+> implements TableDataProvider<TDataSource, TData> {
   abstract readonly name: string;
 
   readonly schema = {
@@ -79,7 +84,7 @@ export abstract class HierarchicalTableDataProviderBase<
   async load(
     normalizedDataSource: TDataSource,
     options?: DataProviderLoadOptions,
-  ): Promise<HierarchicalTableData> {
+  ): Promise<TData> {
     const { signal, workspace = null } = options ?? {};
     signal?.throwIfAborted();
 
@@ -114,7 +119,7 @@ export abstract class HierarchicalTableDataProviderBase<
           `ID column "${idColumn}" and name column "${nameColumn}" have different lengths.`,
         );
       }
-      return new HierarchicalTableData(table, numRows, ids, names);
+      return this.createTableData(table, numRows, ids, names);
     } catch (error) {
       table.close();
       throw error;
@@ -128,7 +133,7 @@ export abstract class HierarchicalTableDataProviderBase<
    * @param options - `signal` aborts the load; `workspace` is the directory
    * handle of the open workspace, required for workspace-relative sources
    * @returns The open table; closed by the returned
-   * {@link HierarchicalTableData}
+   * {@link HierarchicalTableDataBase}
    */
   protected abstract openHierarchicalTable(
     normalizedSource: string,
@@ -137,4 +142,20 @@ export abstract class HierarchicalTableDataProviderBase<
       workspace: FileSystemDirectoryHandle | null;
     },
   ): Promise<HierarchicalTable>;
+
+  /**
+   * Wraps an open table in the data class of the container format
+   *
+   * @param table - The open table, which the data owns and closes
+   * @param numRows - The number of rows
+   * @param ids - The row IDs, `undefined` for sequential IDs
+   * @param names - The row names, if any
+   * @returns The data, which owns the table
+   */
+  protected abstract createTableData(
+    table: HierarchicalTable,
+    numRows: number,
+    ids: IDArray | undefined,
+    names: string[] | undefined,
+  ): TData;
 }

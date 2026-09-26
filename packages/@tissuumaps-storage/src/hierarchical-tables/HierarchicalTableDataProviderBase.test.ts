@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import type { TypedArrayOrArray } from "@tissuumaps/core";
+import type { IDArray, TypedArrayOrArray } from "@tissuumaps/core";
 
 import type { HierarchicalTable } from "./HierarchicalTable";
+import { HierarchicalTableDataBase } from "./HierarchicalTableDataBase";
 import { HierarchicalTableDataProviderBase } from "./HierarchicalTableDataProviderBase";
 import type { HierarchicalTableDataSource } from "./HierarchicalTableDataSource";
 
@@ -31,7 +32,12 @@ function createTable() {
   };
 }
 
-class TestTableDataProvider extends HierarchicalTableDataProviderBase<HierarchicalTableDataSource> {
+class TestTableData extends HierarchicalTableDataBase {}
+
+class TestTableDataProvider extends HierarchicalTableDataProviderBase<
+  HierarchicalTableDataSource,
+  TestTableData
+> {
   readonly name = "Test";
   private readonly _table: HierarchicalTable;
 
@@ -40,8 +46,17 @@ class TestTableDataProvider extends HierarchicalTableDataProviderBase<Hierarchic
     this._table = table;
   }
 
-  protected openHierarchicalTable(): Promise<HierarchicalTable> {
+  protected override openHierarchicalTable(): Promise<HierarchicalTable> {
     return Promise.resolve(this._table);
+  }
+
+  protected override createTableData(
+    table: HierarchicalTable,
+    numRows: number,
+    ids: IDArray | undefined,
+    names: string[] | undefined,
+  ): TestTableData {
+    return new TestTableData(table, numRows, ids, names);
   }
 }
 

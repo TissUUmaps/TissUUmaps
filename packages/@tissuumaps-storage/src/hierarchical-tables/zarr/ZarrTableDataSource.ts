@@ -2,6 +2,7 @@ import type { HierarchicalTableDataSource } from "../HierarchicalTableDataSource
 
 export const zarrTableDataSourceType = "zarr";
 
-export type ZarrTableDataSource = HierarchicalTableDataSource<
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface ZarrTableDataSource extends HierarchicalTableDataSource<
   typeof zarrTableDataSourceType
->;
+> {}
