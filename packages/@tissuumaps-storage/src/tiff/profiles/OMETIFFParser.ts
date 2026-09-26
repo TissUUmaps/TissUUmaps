@@ -2,9 +2,9 @@ import type { GeoTIFF } from "geotiff";
 
 import type { Color } from "@tissuumaps/core";
 
+import type { TIFFParser, TIFFStructure } from "../TIFFParser";
 import { TIFFUtils } from "../TIFFUtils";
 import { XMLUtils } from "../XMLUtils";
-import type { TIFFParser, TIFFStructure } from "./TIFFParser";
 
 type TiffData = {
   ifd: number;

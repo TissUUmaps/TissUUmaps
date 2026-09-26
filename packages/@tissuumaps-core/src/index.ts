@@ -244,6 +244,7 @@ export { ImageUtils } from "./utils/ImageUtils";
 export { JSONUtils } from "./utils/JSONUtils";
 export { MathUtils } from "./utils/MathUtils";
 export { NumberUtils } from "./utils/NumberUtils";
+export { ProjectUtils } from "./utils/ProjectUtils";
 export { RandomUtils } from "./utils/RandomUtils";
 export { SourceUtils } from "./utils/SourceUtils";
 export { TableUtils } from "./utils/TableUtils";

@@ -2,6 +2,7 @@ import { RefreshCwIcon, Square } from "lucide-react";
 
 import {
   MathUtils,
+  ProjectUtils,
   RandomUtils,
   categoricalColorPalettes,
   continuousColorPalettes,
@@ -10,7 +11,6 @@ import {
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { SimpleColorPicker } from "@/components/common/simple-color-picker";
-import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
 import {
   InputGroup,
@@ -19,6 +19,8 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
+import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
+import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 
 import { ColorPaletteSelect } from "./ColorPaletteSelect";
@@ -247,6 +249,10 @@ function GroupByColorConfigWidget({
   } = adapter;
 
   const colorMaps = useProjectStore((state) => state.colorMaps);
+  const deleteColorMap = useProjectStore((state) => state.deleteColorMap);
+  const referencedMapIds = useReferencedMapIds((project) =>
+    ProjectUtils.getColorConfigs(project),
+  );
 
   return (
     <div className={className}>
@@ -268,13 +274,12 @@ function GroupByColorConfigWidget({
       </Field>
       <Field>
         <FieldLabel>Color map</FieldLabel>
-        <SimpleSelect
-          items={colorMaps}
-          itemLabel={(colorMap) => colorMap.name}
-          itemValue={(colorMap) => colorMap.id}
+        <GroupValueMapSelect
+          maps={colorMaps}
+          isMapDeletable={(map) => !referencedMapIds.has(map.id)}
           value={map}
           onValueChange={setMap}
-          nullable
+          onMapDelete={deleteColorMap}
         />
       </Field>
     </div>

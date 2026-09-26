@@ -18,15 +18,25 @@ TIFF data sources have the `type` `"tiff"` and accept the following fields:
 | `t`      | `integer` | Timepoint to open (0-based), for OME-TIFF files with a time series. Defaults to `0`.                |
 | `table`  | `string`  | _Labels only._ ID of the table annotating the labels (see [Data model](../concepts/data-model.md)). |
 
-## Images
+## Profiles
 
-The format is recognized from the file's metadata:
+The profile of a file is detected from its metadata. It determines how the pyramid and the channels of the file are read, for images and labels alike:
 
-- **OME-TIFF**: the OME-XML describes the channels. `z` and `t` select the plane. Pyramid levels are read from SubIFDs. Files with several images show the largest one.
-- **QPTIFF**: each IFD has an XML description with the channel name and color. Thumbnail, overview and label images are skipped.
-- **Plain TIFF**: the largest IFDs are the channels, smaller IFDs with the same aspect ratio are the pyramid levels. SubIFDs are used when present.
+### OME-TIFF
+
+The OME-XML in the file describes the channels. `z` and `t` select the plane. Pyramid levels are read from SubIFDs. Files with several images show the largest one.
+
+### QPTIFF
+
+Each IFD has an XML description with the channel name and color. Thumbnail, overview and label images are skipped.
+
+### Plain TIFF
+
+Any other file: the largest IFDs are the channels, smaller IFDs with the same aspect ratio are the pyramid levels. SubIFDs are used when present.
 
 Files without a pyramid open too, but slowly.
+
+## Images
 
 ### Channels
 
@@ -47,7 +57,7 @@ All of these can be overridden per channel in the project file through the image
 
 ## Labels
 
-TIFF files can also be opened as **labels**, where every pixel value is a label (segment) ID and `0` is background. The formats and the pyramid are read as for images, with two restrictions: the file has to hold a **single channel** (an RGB file, or a multi-channel file, is rejected), and its samples have to be **integers of at most 32 bits** (signed or unsigned).
+TIFF files can also be opened as **labels**, where every pixel value is a label (segment) ID and `0` is background. The [profile](#profiles) and the pyramid are read as for images, with two restrictions: the file has to hold a **single channel** (an RGB file, or a multi-channel file, is rejected), and its samples have to be **integers of at most 32 bits** (signed or unsigned).
 
 Pyramid levels of a label mask have to be downsampled with nearest-neighbor sampling. Averaging or interpolating label IDs invents IDs that are not in the mask, and those show up as wrong labels at lower zoom levels.
 
@@ -108,7 +118,6 @@ Both the image and the labels are TIFF files served next to the project file, an
 
 - JPEG 2000 compression is not supported.
 - Multi-file OME-TIFF is not supported; the planes have to be in the file that is opened.
-- Workspace files need an open workspace.
 - Files with several palette or white-is-zero images are rejected; a single one is drawn in its own colors.
 - RGB, multi-channel and floating point files are not opened as labels. Convert them to a single integer channel of at most 32 bits.
 

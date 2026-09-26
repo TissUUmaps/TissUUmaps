@@ -1,9 +1,10 @@
-import { MathUtils } from "@tissuumaps/core";
+import { MathUtils, ProjectUtils } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
-import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
+import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
+import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 
 import type { OpacityConfigWidgetAdapter } from "./adapter";
@@ -118,6 +119,10 @@ function GroupByOpacityConfigWidget({
   } = adapter;
 
   const opacityMaps = useProjectStore((state) => state.opacityMaps);
+  const deleteOpacityMap = useProjectStore((state) => state.deleteOpacityMap);
+  const referencedMapIds = useReferencedMapIds((project) =>
+    ProjectUtils.getOpacityConfigs(project),
+  );
 
   return (
     <div className={className}>
@@ -131,13 +136,12 @@ function GroupByOpacityConfigWidget({
       </Field>
       <Field>
         <FieldLabel>Opacity map</FieldLabel>
-        <SimpleSelect
-          items={opacityMaps}
-          itemLabel={(opacityMap) => opacityMap.name}
-          itemValue={(opacityMap) => opacityMap.id}
+        <GroupValueMapSelect
+          maps={opacityMaps}
+          isMapDeletable={(map) => !referencedMapIds.has(map.id)}
           value={map}
           onValueChange={setMap}
-          nullable
+          onMapDelete={deleteOpacityMap}
         />
       </Field>
     </div>

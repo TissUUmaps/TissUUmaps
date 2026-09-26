@@ -2,12 +2,14 @@ import {
   type Config,
   type GroupByConfig,
   getActiveConfigSource,
+  isConstantConfig,
+  isFromConfig,
   isGroupByConfig,
 } from "../model/configs";
-import type { GroupValueMap } from "../model/primitives";
+import type { CoordinateSpace, GroupValueMap } from "../model/primitives";
 import { HashUtils } from "./HashUtils";
 
-/** Utility methods for resolving the values of property configurations */
+/** Utility methods for property configurations */
 export class ConfigUtils {
   /**
    * Returns the group-to-value map that a configuration resolves its values
@@ -35,6 +37,25 @@ export class ConfigUtils {
       return maps.find((map) => map.id === config.groupBy.map);
     }
     return undefined;
+  }
+
+  /**
+   * Returns the IDs of the maps that configurations refer to
+   *
+   * A configuration refers to its map whatever its active source, as switching
+   * back to `groupBy` uses the map again.
+   *
+   * @param configs - The configurations
+   * @returns The IDs of the referenced maps
+   */
+  static getGroupByMapIds(configs: Config<string>[]): Set<string> {
+    const mapIds = new Set<string>();
+    for (const config of configs) {
+      if (isGroupByConfig<false>(config) && config.groupBy.map !== undefined) {
+        mapIds.add(config.groupBy.map);
+      }
+    }
+    return mapIds;
   }
 
   /**
@@ -72,5 +93,85 @@ export class ConfigUtils {
       return () => defaultValue;
     }
     return (group) => palette[HashUtils.hash(group) % palette.length]!;
+  }
+
+  /**
+   * Returns the table column a configuration groups by
+   *
+   * @param config - The configuration
+   * @returns The column, or `undefined` if `groupBy` is not the active source
+   */
+  static getGroupByColumn(config: Config<string>): string | undefined {
+    return getActiveConfigSource(config) === "groupBy" &&
+      isGroupByConfig(config)
+      ? config.groupBy.column
+      : undefined;
+  }
+
+  /**
+   * Points a configuration at a map, grouping by a column
+   *
+   * The configuration keeps its other sources and the extra fields of its
+   * `groupBy` specification (e.g. a palette), so that switching back to them
+   * restores them. The unit of the active source, which only sizes have, is
+   * carried over, so that the values keep their scale. A configuration that
+   * already groups by the column with the map is returned as is, so that
+   * updating an object with it changes nothing.
+   *
+   * @param config - The configuration
+   * @param column - Name of the categorical table column to group by
+   * @param mapId - ID of the project-global map to take the group values from
+   * @returns The configuration, with `groupBy` as its active source
+   */
+  static withGroupByMap(
+    config: Config<string>,
+    column: string,
+    mapId: string,
+  ): GroupByConfig<true> {
+    if (
+      ConfigUtils.getGroupByColumn(config) === column &&
+      isGroupByConfig<true>(config) &&
+      config.groupBy.map === mapId
+    ) {
+      return config;
+    }
+    const groupBy = isGroupByConfig<false, { unit?: CoordinateSpace }>(config)
+      ? config.groupBy
+      : undefined;
+    const unit = ConfigUtils.getUnit(config);
+    return {
+      ...config,
+      source: "groupBy",
+      groupBy: {
+        ...groupBy,
+        ...((unit !== undefined || groupBy?.unit !== undefined) && { unit }),
+        column,
+        map: mapId,
+      },
+    };
+  }
+
+  /**
+   * Returns the unit of the active source of a configuration
+   *
+   * @param config - The configuration, of which only sizes have a unit
+   * @returns The unit, or `undefined` if the active source has none
+   */
+  static getUnit(config: Config<string>): CoordinateSpace | undefined {
+    type Unit = { unit?: CoordinateSpace };
+    switch (getActiveConfigSource(config)) {
+      case "constant":
+        return isConstantConfig<unknown, Unit>(config)
+          ? config.constant.unit
+          : undefined;
+      case "from":
+        return isFromConfig<Unit>(config) ? config.from.unit : undefined;
+      case "groupBy":
+        return isGroupByConfig<false, Unit>(config)
+          ? config.groupBy.unit
+          : undefined;
+      default:
+        return undefined;
+    }
   }
 }

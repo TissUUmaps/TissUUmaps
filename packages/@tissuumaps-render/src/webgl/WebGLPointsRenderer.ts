@@ -28,7 +28,6 @@ import {
   defaultPointSize,
   defaultPointSizeUnit,
   defaultPointVisibility,
-  getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
   isGroupByConfig,
@@ -785,20 +784,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * @param points - The points object being drawn, as of the current model
    */
   private static _computePointSizeFactor(layer: Layer, points: Points): number {
-    let activeUnit: CoordinateSpace;
-    const activeSource = getActiveConfigSource(points.pointSize);
-    if (activeSource === "constant" && isConstantConfig(points.pointSize)) {
-      activeUnit = points.pointSize.constant.unit ?? defaultPointSizeUnit;
-    } else if (activeSource === "from" && isFromConfig(points.pointSize)) {
-      activeUnit = points.pointSize.from.unit ?? defaultPointSizeUnit;
-    } else if (
-      activeSource === "groupBy" &&
-      isGroupByConfig(points.pointSize)
-    ) {
-      activeUnit = points.pointSize.groupBy.unit ?? defaultPointSizeUnit;
-    } else {
-      activeUnit = defaultPointSizeUnit;
-    }
+    const activeUnit =
+      ConfigUtils.getUnit(points.pointSize) ?? defaultPointSizeUnit;
     let sizeFactor = points.pointSizeFactor * layer.pointSizeFactor;
     if (activeUnit === "data") {
       sizeFactor *= points.transform.scale;

@@ -4,6 +4,7 @@ import type { Image } from "../../model/image";
 import type { Labels } from "../../model/labels";
 import type { Layer } from "../../model/layer";
 import type { Points } from "../../model/points";
+import type { Color, GroupValueMap, Marker } from "../../model/primitives";
 import type { Project } from "../../model/project";
 import type { Shapes } from "../../model/shapes";
 import type { Table } from "../../model/table";
@@ -48,6 +49,8 @@ export type ProjectStoreState = Project & {
  * Adding an object whose ID is already taken, referring to one that is not
  * part of the project, or passing an index outside of a collection's bounds is
  * an error.
+ *
+ * The lists of maps are not reordered, so they have no `move*` actions.
  */
 export type ProjectStoreActions = {
   /**
@@ -112,6 +115,41 @@ export type ProjectStoreActions = {
   addTable: (table: Table, index?: number) => void;
 
   /**
+   * Adds a marker map to the project
+   *
+   * @param map - The map to add
+   */
+  addMarkerMap: (map: GroupValueMap<Marker>) => void;
+
+  /**
+   * Adds a size map to the project
+   *
+   * @param map - The map to add
+   */
+  addSizeMap: (map: GroupValueMap<number>) => void;
+
+  /**
+   * Adds a color map to the project
+   *
+   * @param map - The map to add
+   */
+  addColorMap: (map: GroupValueMap<Color>) => void;
+
+  /**
+   * Adds a visibility map to the project
+   *
+   * @param map - The map to add
+   */
+  addVisibilityMap: (map: GroupValueMap<boolean>) => void;
+
+  /**
+   * Adds an opacity map to the project
+   *
+   * @param map - The map to add
+   */
+  addOpacityMap: (map: GroupValueMap<number>) => void;
+
+  /**
    * Applies updates to a layer of the project
    *
    * @param layerId - The ID of the layer to update
@@ -167,6 +205,61 @@ export type ProjectStoreActions = {
    * @param updates - The properties to overwrite on the table
    */
   updateTable: (tableId: string, updates: Partial<Omit<Table, "id">>) => void;
+
+  /**
+   * Applies updates to a marker map of the project
+   *
+   * @param mapId - The ID of the map to update
+   * @param updates - The properties to overwrite on the map
+   */
+  updateMarkerMap: (
+    mapId: string,
+    updates: Partial<Omit<GroupValueMap<Marker>, "id">>,
+  ) => void;
+
+  /**
+   * Applies updates to a size map of the project
+   *
+   * @param mapId - The ID of the map to update
+   * @param updates - The properties to overwrite on the map
+   */
+  updateSizeMap: (
+    mapId: string,
+    updates: Partial<Omit<GroupValueMap<number>, "id">>,
+  ) => void;
+
+  /**
+   * Applies updates to a color map of the project
+   *
+   * @param mapId - The ID of the map to update
+   * @param updates - The properties to overwrite on the map
+   */
+  updateColorMap: (
+    mapId: string,
+    updates: Partial<Omit<GroupValueMap<Color>, "id">>,
+  ) => void;
+
+  /**
+   * Applies updates to a visibility map of the project
+   *
+   * @param mapId - The ID of the map to update
+   * @param updates - The properties to overwrite on the map
+   */
+  updateVisibilityMap: (
+    mapId: string,
+    updates: Partial<Omit<GroupValueMap<boolean>, "id">>,
+  ) => void;
+
+  /**
+   * Applies updates to an opacity map of the project
+   *
+   * @param mapId - The ID of the map to update
+   * @param updates - The properties to overwrite on the map
+   */
+  updateOpacityMap: (
+    mapId: string,
+    updates: Partial<Omit<GroupValueMap<number>, "id">>,
+  ) => void;
 
   /**
    * Moves a layer of the project to another index
@@ -259,6 +352,41 @@ export type ProjectStoreActions = {
   deleteTable: (tableId: string) => void;
 
   /**
+   * Removes a marker map from the project
+   *
+   * @param mapId - The ID of the map to remove
+   */
+  deleteMarkerMap: (mapId: string) => void;
+
+  /**
+   * Removes a size map from the project
+   *
+   * @param mapId - The ID of the map to remove
+   */
+  deleteSizeMap: (mapId: string) => void;
+
+  /**
+   * Removes a color map from the project
+   *
+   * @param mapId - The ID of the map to remove
+   */
+  deleteColorMap: (mapId: string) => void;
+
+  /**
+   * Removes a visibility map from the project
+   *
+   * @param mapId - The ID of the map to remove
+   */
+  deleteVisibilityMap: (mapId: string) => void;
+
+  /**
+   * Removes an opacity map from the project
+   *
+   * @param mapId - The ID of the map to remove
+   */
+  deleteOpacityMap: (mapId: string) => void;
+
+  /**
    * Removes all layers from the project
    */
   clearLayers: () => void;
@@ -287,6 +415,31 @@ export type ProjectStoreActions = {
    * Removes all tables from the project
    */
   clearTables: () => void;
+
+  /**
+   * Removes all marker maps from the project
+   */
+  clearMarkerMaps: () => void;
+
+  /**
+   * Removes all size maps from the project
+   */
+  clearSizeMaps: () => void;
+
+  /**
+   * Removes all color maps from the project
+   */
+  clearColorMaps: () => void;
+
+  /**
+   * Removes all visibility maps from the project
+   */
+  clearVisibilityMaps: () => void;
+
+  /**
+   * Removes all opacity maps from the project
+   */
+  clearOpacityMaps: () => void;
 
   /**
    * Sets the project's OpenSeadragon viewer options
