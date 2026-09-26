@@ -28,6 +28,7 @@ export default defineConfig(({ mode }) => ({
         "@tissuumaps/core",
         "@tissuumaps/render",
         "react",
+        "react/jsx-runtime",
         "react-dom",
       ],
       checks: {
