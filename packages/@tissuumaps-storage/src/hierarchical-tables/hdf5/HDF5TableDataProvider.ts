@@ -24,21 +24,14 @@ export class HDF5TableDataProvider extends HierarchicalTableDataProviderBase<HDF
   ): Promise<HierarchicalTable> {
     const { signal, workspace } = options;
     signal?.throwIfAborted();
-    const resolvedSource = await SourceUtils.resolveSourceFile(
+    const source = await SourceUtils.openSourceFile(
       normalizedSource,
       workspace,
       { signal },
     );
-    let source;
-    if (typeof resolvedSource === "string") {
-      source = resolvedSource;
-    } else {
-      source = await resolvedSource.getFile();
-      signal?.throwIfAborted(); // getFile() does not throw on abort
-    }
     return await HierarchicalTableWorkerClient.open(
       new HDF5WorkerScript(),
-      source,
+      source.url !== undefined ? source.url : source.file,
       { signal },
     );
   }
