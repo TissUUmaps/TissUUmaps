@@ -52,7 +52,6 @@ export default defineConfig(({ mode }) => ({
       external: [
         "@tissuumaps/core",
         "geotiff",
-        "geotiff-tilesource",
         "omezarr-tilesource",
         "openseadragon",
         "papaparse",

@@ -273,9 +273,6 @@ importers:
       geotiff:
         specifier: ^3.0.5
         version: 3.0.5(patch_hash=f60e899d63103d3fd3b8f95e1e6c13bc94e447d920206d5da9c45b008127200b)
-      geotiff-tilesource:
-        specifier: github:TissUUmaps/GeoTIFFTileSource#fcea2d0e47c94414b2f35e380328e6b99ebdbf28
-        version: https://codeload.github.com/TissUUmaps/GeoTIFFTileSource/tar.gz/fcea2d0e47c94414b2f35e380328e6b99ebdbf28(geotiff@3.0.5(patch_hash=f60e899d63103d3fd3b8f95e1e6c13bc94e447d920206d5da9c45b008127200b))(openseadragon@6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6))
       omezarr-tilesource:
         specifier: ^0.8.0
         version: 0.8.0(@zarrita/storage@https://codeload.github.com/TissUUmaps/zarrita.js/tar.gz/9a1af2ec95f9a32dd03b3c0bf3054a9801a961b0#path:packages/@zarrita-storage)(ome-zarr.js@0.0.20)(openseadragon@6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6))(zarrita@0.7.5)
@@ -298,6 +295,9 @@ importers:
       "@zarrita/storage":
         specifier: github:TissUUmaps/zarrita.js#9a1af2ec95f9a32dd03b3c0bf3054a9801a961b0&path:packages/@zarrita-storage
         version: https://codeload.github.com/TissUUmaps/zarrita.js/tar.gz/9a1af2ec95f9a32dd03b3c0bf3054a9801a961b0#path:packages/@zarrita-storage
+      geotiff-tilesource:
+        specifier: github:TissUUmaps/GeoTIFFTileSource#fcea2d0e47c94414b2f35e380328e6b99ebdbf28
+        version: https://codeload.github.com/TissUUmaps/GeoTIFFTileSource/tar.gz/fcea2d0e47c94414b2f35e380328e6b99ebdbf28(geotiff@3.0.5(patch_hash=f60e899d63103d3fd3b8f95e1e6c13bc94e447d920206d5da9c45b008127200b))(openseadragon@6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6))
       h5wasm:
         specifier: ^0.10.3
         version: 0.10.3
