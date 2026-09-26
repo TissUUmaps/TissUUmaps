@@ -4,9 +4,7 @@ sidebar_position: 9
 
 # Zarr
 
-Tables stored in [Zarr](https://zarr.dev/) stores, including the AnnData tables of [SpatialData](https://spatialdata.scverse.org/) stores. Images of a Zarr store are read by the [OME-Zarr](./ome-zarr) data provider instead.
-
-Columns are addressed as in [HDF5](./hdf5) files: a column is the path of an array within the store, and one column of a matrix is `path[i]`, or `path[name]` for an AnnData expression matrix. AnnData objects are recognized and decoded the same way, whether the source points at one or at a store containing them.
+The built-in **Zarr data provider** opens [Zarr](https://zarr.dev/) stores as **tables**, including the AnnData tables of [SpatialData](https://spatialdata.scverse.org/) stores. Stores are read in the browser with [zarrita](https://github.com/manzt/zarrita.js); reads are fetches, so no worker is needed. Images of a Zarr store are read by the [OME-Zarr](./ome-zarr) data provider instead.
 
 ## Data source
 
@@ -25,6 +23,18 @@ The source may point at the store itself, or at a group inside it. A SpatialData
 - `https://example.org/visium.zarr`, whose columns are `tables/adata/obs/area`, and so on.
 
 A store holding several tables must be opened at one of them. Consolidated metadata is written at the root of a store, so it is looked up at the source and then at each of its ancestors.
+
+## Tables
+
+Any Zarr store with consolidated metadata is read as a table of its arrays. Columns are addressed as in [HDF5](./hdf5#tables) files: a column is the path of an array within the store, and one column of a matrix is `path[i]`, or `path[name]` for an AnnData expression matrix.
+
+## Profiles
+
+One profile is detected from the store's attributes:
+
+### AnnData
+
+AnnData objects are recognized and decoded as in [HDF5](./hdf5#anndata) files, whether the source points at one or at a store containing them.
 
 ## Example
 
@@ -61,7 +71,7 @@ The source points at the table inside the store; its consolidated metadata is fo
 
 ## Limitations
 
-- The store must have consolidated metadata (Zarr v2 `.zmetadata` or Zarr v3 `zarr.json`). A Zarr store is a key-value store, so without it the columns cannot be listed. SpatialData writes consolidated metadata.
+- The store must have consolidated metadata (in Zarr v2 `.zmetadata` or Zarr v3 `zarr.json`). A Zarr store is a key-value store, so without it the columns cannot be listed. SpatialData writes consolidated metadata.
 - Nodes whose metadata cannot be read are skipped instead of failing the store. AnnData writes a few of them under `uns`.
 - Zipped stores are not supported.
 - The [HDF5 limitations](./hdf5#limitations) on sparse matrices, 64-bit integers, row counts, variable names and column lengths apply as well. AnnData writes `X` as CSR by default.

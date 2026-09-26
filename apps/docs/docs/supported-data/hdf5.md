@@ -4,9 +4,7 @@ sidebar_position: 8
 
 # HDF5
 
-Tables stored in HDF5 files, including [AnnData](https://anndata.readthedocs.io/) `.h5ad` files.
-
-An [AnnData object](#anndata-files) is recognized by its `encoding-type` attribute, wherever it sits in the file. Plain HDF5 files are read as their datasets.
+The built-in **HDF5 data provider** opens [HDF5](https://www.hdfgroup.org/solutions/hdf5/) files as **tables**, including [AnnData](https://anndata.readthedocs.io/) `.h5ad` files. Files are read in the browser with [h5wasm](https://github.com/usnistgov/h5wasm), in a worker that lives as long as the table; a remote file is read through HTTP range requests.
 
 ## Data source
 
@@ -19,14 +17,18 @@ HDF5 data sources have the `type` `"hdf5"` and accept the following fields:
 | `idColumn`   | `string` | Column of the row IDs, integers or strings without missing values. Sequential IDs are used if omitted. |
 | `nameColumn` | `string` | Column of the row names.                                                                               |
 
-## Columns
+## Tables
 
-A column is addressed by the path of a dataset within the file, for example `obs/area`. Column inputs offer autocompletion: an empty query lists the root of the file, and a query ending in `/` lists the children of that group. Paths are matched exactly, or ignoring case if that matches a single column.
+Any HDF5 file is read as a table of its datasets. A column is addressed by the path of a dataset within the file, for example `obs/area`. Column inputs offer autocompletion: an empty query lists the root of the file, and a query ending in `/` lists the children of that group. Paths are matched exactly, or ignoring case if that matches a single column.
 
 - One-dimensional datasets are columns.
 - Two-dimensional datasets expose one column per matrix column as `path[i]`, for example `obsm/spatial[0]` and `obsm/spatial[1]` for spatial coordinates.
 
-## AnnData files
+## Profiles
+
+One profile is detected from the file's attributes:
+
+### AnnData
 
 Groups with an AnnData `encoding-type` attribute are decoded wherever they are in the file:
 
@@ -35,7 +37,7 @@ Groups with an AnnData `encoding-type` attribute are decoded wherever they are i
 - `nullable-integer` and `nullable-boolean` groups are numeric columns; missing values are `NaN`.
 - `nullable-string-array` groups are string columns; missing values are empty strings.
 
-A group whose `encoding-type` is `anndata` is an AnnData object. A file may hold only one. Its `obs` index gives the number of rows. Its `X`, `layers` and their `raw` counterparts are addressed by variable name as well as by index, for example `X[CD3]` besides `X[12]`. The names are the index of the `var` dataframe of the object, and `raw/var` for `raw/X`. Names are matched exactly, or ignoring case if that matches a single name. A number between the brackets is always an index, so numeric, duplicate and empty names are addressed by index.
+A group whose `encoding-type` is `anndata` is an [AnnData object](https://anndata.readthedocs.io/). A file may hold only one. Its `obs` index gives the number of rows. Its `X`, `layers` and their `raw` counterparts are addressed by variable name as well as by index, for example `X[CD3]` besides `X[12]`. The names are the index of the `var` dataframe of the object, and `raw/var` for `raw/X`. Names are matched exactly, or ignoring case if that matches a single name. A number between the brackets is always an index, so numeric, duplicate and empty names are addressed by index.
 
 ## Example
 
