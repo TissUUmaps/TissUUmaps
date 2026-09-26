@@ -52,7 +52,7 @@ type GeoMetadata = {
  * geometry column, e.g. `geometry[x]` and `geometry[y]`, so that point
  * geometries can be used wherever a numeric column is expected.
  */
-export class GeoParquetMetadataUtils {
+export class GeoParquetUtils {
   /** Reads the 2D bounds of a `bbox`, which lists Z bounds too for 3D columns */
   private static _readBBox(
     bbox: number[] | undefined,
@@ -87,7 +87,7 @@ export class GeoParquetMetadataUtils {
         name,
         primary: name === primary_column,
         geometryTypes: column.geometry_types ?? [],
-        bbox: GeoParquetMetadataUtils._readBBox(column.bbox),
+        bbox: GeoParquetUtils._readBBox(column.bbox),
       }));
   }
 
@@ -136,7 +136,7 @@ export class GeoParquetMetadataUtils {
       .filter(
         (geoColumn) =>
           geoColumn.geometryTypes.length === 0 ||
-          GeoParquetMetadataUtils.isPointColumn(geoColumn),
+          GeoParquetUtils.isPointColumn(geoColumn),
       )
       .flatMap(({ name }) => [
         { column: `${name}[x]`, geometryColumn: name, axis: "x" as const },

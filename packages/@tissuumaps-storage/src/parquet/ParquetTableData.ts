@@ -8,7 +8,7 @@ import {
   type TypedArrayOrArray,
 } from "@tissuumaps/core";
 
-import type { CoordinateColumn } from "./GeoParquetMetadataUtils";
+import type { CoordinateColumn } from "./profiles/GeoParquetUtils";
 import { runParquetWorker } from "./runParquetWorker";
 import type { ParquetSource } from "./types";
 

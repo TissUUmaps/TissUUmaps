@@ -1,7 +1,7 @@
 import type { FileMetaData } from "hyparquet";
 import { describe, expect, it } from "vitest";
 
-import { GeoParquetMetadataUtils } from "./GeoParquetMetadataUtils";
+import { GeoParquetUtils } from "./GeoParquetUtils";
 
 function fakeMetadata(geo?: string): FileMetaData {
   return {
@@ -41,10 +41,10 @@ const polygons = fakeMetadata(
   }),
 );
 
-describe("GeoParquetMetadataUtils", () => {
+describe("GeoParquetUtils", () => {
   describe("readGeoColumns", () => {
     it("reads the geometry columns of a GeoParquet file", () => {
-      expect(GeoParquetMetadataUtils.readGeoColumns(points)).toEqual([
+      expect(GeoParquetUtils.readGeoColumns(points)).toEqual([
         {
           name: "geometry",
           primary: true,
@@ -55,9 +55,7 @@ describe("GeoParquetMetadataUtils", () => {
     });
 
     it("reads no columns from a file without GeoParquet metadata", () => {
-      expect(GeoParquetMetadataUtils.readGeoColumns(fakeMetadata())).toEqual(
-        [],
-      );
+      expect(GeoParquetUtils.readGeoColumns(fakeMetadata())).toEqual([]);
     });
 
     it("skips columns that are not encoded as WKB", () => {
@@ -67,7 +65,7 @@ describe("GeoParquetMetadataUtils", () => {
           columns: { geometry: { encoding: "point" } },
         }),
       );
-      expect(GeoParquetMetadataUtils.readGeoColumns(metadata)).toEqual([]);
+      expect(GeoParquetUtils.readGeoColumns(metadata)).toEqual([]);
     });
 
     it("reads no bounds from a column without a complete bounding box", () => {
@@ -79,9 +77,7 @@ describe("GeoParquetMetadataUtils", () => {
           },
         }),
       );
-      expect(
-        GeoParquetMetadataUtils.readGeoColumns(metadata)[0]!.bbox,
-      ).toBeUndefined();
+      expect(GeoParquetUtils.readGeoColumns(metadata)[0]!.bbox).toBeUndefined();
     });
 
     it("reads the 2D bounds of a 3D bounding box", () => {
@@ -93,15 +89,15 @@ describe("GeoParquetMetadataUtils", () => {
           },
         }),
       );
-      expect(GeoParquetMetadataUtils.readGeoColumns(metadata)[0]!.bbox).toEqual(
-        [0, 1, 10, 11],
-      );
+      expect(GeoParquetUtils.readGeoColumns(metadata)[0]!.bbox).toEqual([
+        0, 1, 10, 11,
+      ]);
     });
   });
 
   describe("getPrimaryColumn", () => {
     it("returns the column marked as primary", () => {
-      const geoColumns = GeoParquetMetadataUtils.readGeoColumns(
+      const geoColumns = GeoParquetUtils.readGeoColumns(
         fakeMetadata(
           JSON.stringify({
             primary_column: "outline",
@@ -112,27 +108,27 @@ describe("GeoParquetMetadataUtils", () => {
           }),
         ),
       );
-      expect(GeoParquetMetadataUtils.getPrimaryColumn(geoColumns)?.name).toBe(
+      expect(GeoParquetUtils.getPrimaryColumn(geoColumns)?.name).toBe(
         "outline",
       );
     });
 
     it("returns no column for a file without geometry columns", () => {
-      expect(GeoParquetMetadataUtils.getPrimaryColumn([])).toBeUndefined();
+      expect(GeoParquetUtils.getPrimaryColumn([])).toBeUndefined();
     });
   });
 
   describe("getCoordinateColumns", () => {
     it("derives a coordinate column pair per point geometry column", () => {
-      const geoColumns = GeoParquetMetadataUtils.readGeoColumns(points);
-      expect(GeoParquetMetadataUtils.getCoordinateColumns(geoColumns)).toEqual([
+      const geoColumns = GeoParquetUtils.readGeoColumns(points);
+      expect(GeoParquetUtils.getCoordinateColumns(geoColumns)).toEqual([
         { column: "geometry[x]", geometryColumn: "geometry", axis: "x" },
         { column: "geometry[y]", geometryColumn: "geometry", axis: "y" },
       ]);
     });
 
     it("derives a pair from a column that declares no geometry types", () => {
-      const geoColumns = GeoParquetMetadataUtils.readGeoColumns(
+      const geoColumns = GeoParquetUtils.readGeoColumns(
         fakeMetadata(
           JSON.stringify({
             primary_column: "geometry",
@@ -140,17 +136,15 @@ describe("GeoParquetMetadataUtils", () => {
           }),
         ),
       );
-      expect(GeoParquetMetadataUtils.getCoordinateColumns(geoColumns)).toEqual([
+      expect(GeoParquetUtils.getCoordinateColumns(geoColumns)).toEqual([
         { column: "geometry[x]", geometryColumn: "geometry", axis: "x" },
         { column: "geometry[y]", geometryColumn: "geometry", axis: "y" },
       ]);
     });
 
     it("derives no coordinate columns from polygons", () => {
-      const geoColumns = GeoParquetMetadataUtils.readGeoColumns(polygons);
-      expect(GeoParquetMetadataUtils.getCoordinateColumns(geoColumns)).toEqual(
-        [],
-      );
+      const geoColumns = GeoParquetUtils.readGeoColumns(polygons);
+      expect(GeoParquetUtils.getCoordinateColumns(geoColumns)).toEqual([]);
     });
   });
 });

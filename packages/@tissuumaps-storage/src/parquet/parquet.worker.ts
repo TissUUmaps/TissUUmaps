@@ -20,11 +20,11 @@ import {
 } from "@tissuumaps/core";
 
 import { ShapesGeometryBuilder } from "../common/ShapesGeometryBuilder";
+import { PandasMetadataUtils } from "./PandasMetadataUtils";
 import {
   type CoordinateColumn,
-  GeoParquetMetadataUtils,
-} from "./GeoParquetMetadataUtils";
-import { PandasMetadataUtils } from "./PandasMetadataUtils";
+  GeoParquetUtils,
+} from "./profiles/GeoParquetUtils";
 import type { ParquetSource } from "./types";
 
 /**
@@ -494,9 +494,8 @@ async function handleFileRequest(
     request.nameColumn,
     onProgress,
   );
-  const geoColumns = GeoParquetMetadataUtils.readGeoColumns(metadata);
-  const coordinateColumns =
-    GeoParquetMetadataUtils.getCoordinateColumns(geoColumns);
+  const geoColumns = GeoParquetUtils.readGeoColumns(metadata);
+  const coordinateColumns = GeoParquetUtils.getCoordinateColumns(geoColumns);
   return {
     response: {
       op: "file",
@@ -615,11 +614,11 @@ async function handleShapesRequest(
 }> {
   const buffer = await openParquet(request.source);
   const metadata = await parquetMetadataAsync(buffer);
-  const geoColumns = GeoParquetMetadataUtils.readGeoColumns(metadata);
+  const geoColumns = GeoParquetUtils.readGeoColumns(metadata);
   const geoColumn =
     request.geometryColumn !== undefined
       ? geoColumns.find(({ name }) => name === request.geometryColumn)
-      : GeoParquetMetadataUtils.getPrimaryColumn(geoColumns);
+      : GeoParquetUtils.getPrimaryColumn(geoColumns);
   if (geoColumn === undefined) {
     throw new Error(
       request.geometryColumn !== undefined
@@ -630,7 +629,7 @@ async function handleShapesRequest(
   const pointColumnMessage =
     `Geometry column "${geoColumn.name}" holds points, which are read as ` +
     `the "${geoColumn.name}[x]" and "${geoColumn.name}[y]" columns of a table`;
-  if (GeoParquetMetadataUtils.isPointColumn(geoColumn)) {
+  if (GeoParquetUtils.isPointColumn(geoColumn)) {
     throw new Error(pointColumnMessage);
   }
   // Progress only tracks the geometry, which dwarfs the ID and name columns
@@ -719,7 +718,7 @@ async function handleRangeRequest(
   const buffer = await openParquet(request.source);
   const metadata = await parquetMetadataAsync(buffer);
   if (request.axis !== undefined) {
-    const { bbox } = GeoParquetMetadataUtils.readGeoColumns(metadata).find(
+    const { bbox } = GeoParquetUtils.readGeoColumns(metadata).find(
       ({ name }) => name === request.column,
     ) ?? { bbox: undefined };
     return {
