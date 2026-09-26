@@ -6,7 +6,7 @@ const baseUrl = "https://app.example/tm/index.html";
 const projectUrl = "https://data.example/projects/p1/project.json";
 const projectPath = "/proj/project.json";
 
-type FakeFile = { kind: "file"; name: string };
+type FakeFile = { kind: "file"; name: string; getFile?: () => Promise<File> };
 type FakeDir = {
   kind: "directory";
   name: string;
