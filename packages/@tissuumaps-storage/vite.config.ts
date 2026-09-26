@@ -44,10 +44,17 @@ export default defineConfig(({ mode }) => ({
       },
       formats: ["es"],
     },
-    // Worker-only deps (hyparquet, hyparquet-compressors, h5wasm) are
-    // intentionally NOT externalized: the workers are imported with
-    // `?worker&inline`, so they must be self-contained and their deps get
-    // bundled into the inline worker.
+    // Only published dependencies and peers are external; the rest is bundled:
+    // - Inline workers (`?worker&inline`) must be self-contained, so they bundle
+    //   their deps (hyparquet, hyparquet-compressors, h5wasm), including what
+    //   they use from @tissuumaps/core (which must therefore stay tree-shakable,
+    //   see e.g. its palettes.ts).
+    // - The git-hosted forks of @zarrita/storage and geotiff-tilesource are
+    //   bundled and kept as devDependencies, so the published manifest has no
+    //   git dependencies; revert once the changes are released upstream.
+    // - omezarr-tilesource's peers (zarrita, ome-zarr.js) are declared as peers
+    //   (and devDependencies) of this package, as their types are part of its
+    //   public API (e.g. OMEZarr).
     rolldownOptions: {
       external: [
         "@tissuumaps/core",
