@@ -6,7 +6,6 @@ settings:
 
 patchedDependencies:
   geotiff@3.0.5: f60e899d63103d3fd3b8f95e1e6c13bc94e447d920206d5da9c45b008127200b
-  openseadragon@6.1.1: 4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6
 
 importers:
   .:
@@ -241,7 +240,7 @@ importers:
         version: 3.1.0
       openseadragon:
         specifier: ^6.1.1
-        version: 6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6)
+        version: 6.1.1
       zustand:
         specifier: ^5.0.15
         version: 5.0.15(@types/react@19.2.18)(immer@11.1.18)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))
@@ -266,7 +265,7 @@ importers:
         version: link:../@tissuumaps-core
       openseadragon:
         specifier: ^6.1.1
-        version: 6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6)
+        version: 6.1.1
 
   packages/@tissuumaps-storage:
     dependencies:
@@ -278,7 +277,7 @@ importers:
         version: 3.0.5(patch_hash=f60e899d63103d3fd3b8f95e1e6c13bc94e447d920206d5da9c45b008127200b)
       omezarr-tilesource:
         specifier: ^0.8.1
-        version: 0.8.1(ome-zarr.js@0.0.20)(openseadragon@6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6))(zarrita@0.7.5)
+        version: 0.8.1(ome-zarr.js@0.0.20)(openseadragon@6.1.1)(zarrita@0.7.5)
       papaparse:
         specifier: ^5.5.4
         version: 5.6.0
@@ -294,7 +293,7 @@ importers:
         version: https://codeload.github.com/TissUUmaps/zarrita.js/tar.gz/9a1af2ec95f9a32dd03b3c0bf3054a9801a961b0#path:packages/@zarrita-storage
       geotiff-tilesource:
         specifier: github:TissUUmaps/GeoTIFFTileSource#fcea2d0e47c94414b2f35e380328e6b99ebdbf28
-        version: https://codeload.github.com/TissUUmaps/GeoTIFFTileSource/tar.gz/fcea2d0e47c94414b2f35e380328e6b99ebdbf28(geotiff@3.0.5(patch_hash=f60e899d63103d3fd3b8f95e1e6c13bc94e447d920206d5da9c45b008127200b))(openseadragon@6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6))
+        version: https://codeload.github.com/TissUUmaps/GeoTIFFTileSource/tar.gz/fcea2d0e47c94414b2f35e380328e6b99ebdbf28(geotiff@3.0.5(patch_hash=f60e899d63103d3fd3b8f95e1e6c13bc94e447d920206d5da9c45b008127200b))(openseadragon@6.1.1)
       h5wasm:
         specifier: ^0.10.3
         version: 0.10.3
@@ -309,7 +308,7 @@ importers:
         version: 0.0.20
       openseadragon:
         specifier: ^6.1.1
-        version: 6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6)
+        version: 6.1.1
       zarrita:
         specifier: ^0.7.5
         version: 0.7.5
@@ -18202,10 +18201,10 @@ snapshots:
 
   gensync@1.0.0-beta.2: {}
 
-  geotiff-tilesource@https://codeload.github.com/TissUUmaps/GeoTIFFTileSource/tar.gz/fcea2d0e47c94414b2f35e380328e6b99ebdbf28(geotiff@3.0.5(patch_hash=f60e899d63103d3fd3b8f95e1e6c13bc94e447d920206d5da9c45b008127200b))(openseadragon@6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6)):
+  geotiff-tilesource@https://codeload.github.com/TissUUmaps/GeoTIFFTileSource/tar.gz/fcea2d0e47c94414b2f35e380328e6b99ebdbf28(geotiff@3.0.5(patch_hash=f60e899d63103d3fd3b8f95e1e6c13bc94e447d920206d5da9c45b008127200b))(openseadragon@6.1.1):
     dependencies:
       geotiff: 3.0.5(patch_hash=f60e899d63103d3fd3b8f95e1e6c13bc94e447d920206d5da9c45b008127200b)
-      openseadragon: 6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6)
+      openseadragon: 6.1.1
 
   geotiff@3.0.5(patch_hash=f60e899d63103d3fd3b8f95e1e6c13bc94e447d920206d5da9c45b008127200b):
     dependencies:
@@ -19777,11 +19776,11 @@ snapshots:
     dependencies:
       zarrita: 0.7.5
 
-  omezarr-tilesource@0.8.1(ome-zarr.js@0.0.20)(openseadragon@6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6))(zarrita@0.7.5):
+  omezarr-tilesource@0.8.1(ome-zarr.js@0.0.20)(openseadragon@6.1.1)(zarrita@0.7.5):
     dependencies:
       "@zarrita/storage": 0.2.0
       ome-zarr.js: 0.0.20
-      openseadragon: 6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6)
+      openseadragon: 6.1.1
       zarrita: 0.7.5
 
   on-finished@2.4.1:
@@ -19813,8 +19812,7 @@ snapshots:
 
   opener@1.5.2: {}
 
-  openseadragon@6.1.1(patch_hash=4bdc88de027d9dea6e0fbcec7b32bdf34ded85d3eb0ad7c99a4ce6c5b6f777e6):
-    {}
+  openseadragon@6.1.1: {}
 
   optionator@0.9.4:
     dependencies:

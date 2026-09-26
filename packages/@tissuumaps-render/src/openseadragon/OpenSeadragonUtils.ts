@@ -10,13 +10,16 @@ import {
 } from "@tissuumaps/core";
 
 /**
- * Helpers for constructing OpenSeadragon tile sources and for computing the
- * geometry of OpenSeadragon tiled images
+ * Helpers for constructing OpenSeadragon tile sources, for computing the
+ * geometry of OpenSeadragon tiled images, and for working around OpenSeadragon
+ * bugs
  */
 export class OpenSeadragonUtils {
   private static readonly _relativeBoundsTolerance = 1e-9;
+  private static readonly _tileCacheCounterBugVersion = "6.1.1";
   private static _transparentBlackPixelUrl: string | undefined;
   private static _opaqueBlackPixelUrl: string | undefined;
+  private static _tileCacheCounterFixed = false;
 
   /**
    * A single transparent pixel, as a PNG data URL
@@ -40,6 +43,47 @@ export class OpenSeadragonUtils {
     OpenSeadragonUtils._opaqueBlackPixelUrl ??=
       OpenSeadragonUtils.createPixelUrl(0, 0, 0, 1);
     return OpenSeadragonUtils._opaqueBlackPixelUrl;
+  }
+
+  /**
+   * Fixes OpenSeadragon 6.1.1's tile cache, which stops evicting recolored tiles
+   *
+   * `TileCache.injectCache` never counts the record it injects, so every recolor
+   * lowers the cache's record count until eviction stops. This wraps it to count
+   * the record, like OpenSeadragon PR #2960. Only applies to
+   * {@link _tileCacheCounterBugVersion}; remove once the minimum supported
+   * version includes the fix.
+   *
+   * Idempotent; call before creating a viewer.
+   */
+  static fixTileCacheCounter(): void {
+    if (
+      OpenSeadragonUtils._tileCacheCounterFixed ||
+      OpenSeadragon.version.versionStr !==
+        OpenSeadragonUtils._tileCacheCounterBugVersion
+    ) {
+      return;
+    }
+    OpenSeadragonUtils._tileCacheCounterFixed = true;
+    const tileCachePrototype = OpenSeadragon.TileCache.prototype as unknown as {
+      _cachesLoaded: Record<string, unknown>;
+      _cachesLoadedCount: number;
+      injectCache: (options: { cache: unknown; targetKey: string }) => void;
+    };
+    const injectCache = tileCachePrototype.injectCache;
+    tileCachePrototype.injectCache = function (options) {
+      const replaced = this._cachesLoaded[options.targetKey] !== undefined;
+      const count = this._cachesLoadedCount;
+      injectCache.call(this, options);
+      // Count the record if it was registered into a free key: nothing was
+      // replaced, or the replaced record was freed (decrementing the count)
+      if (
+        this._cachesLoaded[options.targetKey] === options.cache &&
+        (!replaced || this._cachesLoadedCount < count)
+      ) {
+        this._cachesLoadedCount++;
+      }
+    };
   }
 
   /**

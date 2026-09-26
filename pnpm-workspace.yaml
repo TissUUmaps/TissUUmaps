@@ -15,4 +15,3 @@ minimumReleaseAgeExclude:
 
 patchedDependencies:
   geotiff@3.0.5: patches/geotiff@3.0.5.patch
-  openseadragon@6.1.1: patches/openseadragon@6.1.1.patch
