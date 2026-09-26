@@ -4,7 +4,11 @@ import type { HierarchicalTable } from "../HierarchicalTable";
 import { HierarchicalTableDataProviderBase } from "../HierarchicalTableDataProviderBase";
 import { HierarchicalTableWorkerClient } from "../worker/HierarchicalTableWorkerClient";
 import { HDF5TableData } from "./HDF5TableData";
-import type { HDF5TableDataSource } from "./HDF5TableDataSource";
+import {
+  type HDF5TableDataSource,
+  type NormalizedHDF5TableDataSource,
+  hdf5TableDataSourceDefaults,
+} from "./HDF5TableDataSource";
 import HDF5WorkerScript from "./hdf5.worker?worker&inline";
 
 /**
@@ -15,9 +19,26 @@ import HDF5WorkerScript from "./hdf5.worker?worker&inline";
  */
 export class HDF5TableDataProvider extends HierarchicalTableDataProviderBase<
   HDF5TableDataSource,
-  HDF5TableData
+  HDF5TableData,
+  NormalizedHDF5TableDataSource
 > {
   readonly name = "HDF5";
+
+  override normalize(
+    dataSource: HDF5TableDataSource,
+    workspace: FileSystemDirectoryHandle | null,
+    projectSource: string | null,
+  ): NormalizedHDF5TableDataSource {
+    return {
+      ...hdf5TableDataSourceDefaults,
+      ...dataSource,
+      source: SourceUtils.normalizeSource(
+        dataSource.source,
+        workspace,
+        projectSource,
+      ),
+    };
+  }
 
   protected override async openHierarchicalTable(
     normalizedSource: string,

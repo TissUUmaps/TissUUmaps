@@ -1,10 +1,14 @@
-import type { IDArray } from "@tissuumaps/core";
+import { type IDArray, SourceUtils } from "@tissuumaps/core";
 
 import type { HierarchicalTable } from "../HierarchicalTable";
 import { HierarchicalTableDataProviderBase } from "../HierarchicalTableDataProviderBase";
 import { HierarchicalTableReader } from "../HierarchicalTableReader";
 import { ZarrTableData } from "./ZarrTableData";
-import type { ZarrTableDataSource } from "./ZarrTableDataSource";
+import {
+  type NormalizedZarrTableDataSource,
+  type ZarrTableDataSource,
+  zarrTableDataSourceDefaults,
+} from "./ZarrTableDataSource";
 import { openZarrStore } from "./openZarrStore";
 
 /**
@@ -15,9 +19,26 @@ import { openZarrStore } from "./openZarrStore";
  */
 export class ZarrTableDataProvider extends HierarchicalTableDataProviderBase<
   ZarrTableDataSource,
-  ZarrTableData
+  ZarrTableData,
+  NormalizedZarrTableDataSource
 > {
   readonly name = "Zarr";
+
+  override normalize(
+    dataSource: ZarrTableDataSource,
+    workspace: FileSystemDirectoryHandle | null,
+    projectSource: string | null,
+  ): NormalizedZarrTableDataSource {
+    return {
+      ...zarrTableDataSourceDefaults,
+      ...dataSource,
+      source: SourceUtils.normalizeSource(
+        dataSource.source,
+        workspace,
+        projectSource,
+      ),
+    };
+  }
 
   protected override async openHierarchicalTable(
     normalizedSource: string,

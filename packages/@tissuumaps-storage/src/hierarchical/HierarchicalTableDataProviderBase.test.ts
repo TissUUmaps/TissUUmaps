@@ -46,6 +46,12 @@ class TestTableDataProvider extends HierarchicalTableDataProviderBase<
     this._table = table;
   }
 
+  override normalize(
+    dataSource: HierarchicalTableDataSource,
+  ): HierarchicalTableDataSource {
+    return dataSource;
+  }
+
   protected override openHierarchicalTable(): Promise<HierarchicalTable> {
     return Promise.resolve(this._table);
   }

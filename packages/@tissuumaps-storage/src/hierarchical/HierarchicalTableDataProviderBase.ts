@@ -2,7 +2,6 @@ import {
   ArrayUtils,
   type DataProviderLoadOptions,
   type IDArray,
-  SourceUtils,
   type TableDataProvider,
 } from "@tissuumaps/core";
 
@@ -13,20 +12,23 @@ import type { HierarchicalTableDataSource } from "./HierarchicalTableDataSource"
 /**
  * Base class of table data providers reading hierarchical containers
  *
- * Handles the form, source normalization and the ID and name columns. A
- * container format only has to open a {@link HierarchicalTable} for a
- * normalized source, see
- * {@link HierarchicalTableDataProviderBase.openHierarchicalTable}, and wrap
+ * Handles the form and the ID and name columns. A container format
+ * normalizes its data source as every provider does, opens a
+ * {@link HierarchicalTable} for the normalized source, see
+ * {@link HierarchicalTableDataProviderBase.openHierarchicalTable}, and wraps
  * it in its data class, see
  * {@link HierarchicalTableDataProviderBase.createTableData}.
  *
  * @typeParam TDataSource - The data source type of the container format
  * @typeParam TData - The data class of the container format
+ * @typeParam TNormalizedDataSource - The normalized data source type of the
+ * container format
  */
 export abstract class HierarchicalTableDataProviderBase<
   TDataSource extends HierarchicalTableDataSource,
   TData extends HierarchicalTableDataBase,
-> implements TableDataProvider<TDataSource, TData> {
+  TNormalizedDataSource extends TDataSource = TDataSource,
+> implements TableDataProvider<TDataSource, TData, TNormalizedDataSource> {
   abstract readonly name: string;
 
   readonly schema = {
@@ -66,23 +68,14 @@ export abstract class HierarchicalTableDataProviderBase<
     ],
   };
 
-  normalize(
+  abstract normalize(
     dataSource: TDataSource,
     workspace: FileSystemDirectoryHandle | null,
     projectSource: string | null,
-  ): TDataSource {
-    return {
-      ...dataSource,
-      source: SourceUtils.normalizeSource(
-        dataSource.source,
-        workspace,
-        projectSource,
-      ),
-    };
-  }
+  ): TNormalizedDataSource;
 
   async load(
-    normalizedDataSource: TDataSource,
+    normalizedDataSource: TNormalizedDataSource,
     options?: DataProviderLoadOptions,
   ): Promise<TData> {
     const { signal, workspace = null } = options ?? {};
