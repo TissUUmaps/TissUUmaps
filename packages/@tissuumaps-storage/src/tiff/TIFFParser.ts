@@ -20,7 +20,7 @@ export type TIFFStructure = {
   channels: TIFFChannelMetadata[] | undefined;
 };
 
-/** Reads the structure of one TIFF flavor */
+/** Reads the structure of one TIFF profile */
 export interface TIFFParser {
   /**
    * Whether this parser reads the file
