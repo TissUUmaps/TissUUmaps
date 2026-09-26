@@ -105,8 +105,8 @@ export type VirtualTableProps<TRowData extends RowData> = {
   headerAction?: ReactNode;
 
   /**
-   * The column the rows are sorted by, which the caller sorts them by; the
-   * columns are not sortable without
+   * The column the rows are sorted by, if any, which the caller sorts them by;
+   * the columns are not sortable without
    */
   sorting?: SortingState;
 
@@ -172,7 +172,6 @@ export function VirtualTable<TRowData extends RowData>({
     manualSorting: true,
     enableSorting: sorting !== undefined,
     enableMultiSort: false,
-    enableSortingRemoval: false,
     sortDescFirst: false,
   });
 

@@ -1,5 +1,4 @@
 import type {
-  ColumnSort,
   ColumnVisibilityState,
   SortingState,
 } from "@tanstack/react-table";
@@ -34,9 +33,6 @@ export type GroupAnnotationsTableRowData = {
  */
 export type GroupAnnotationsTableColumnDef =
   VirtualTableColumnDef<GroupAnnotationsTableRowData>;
-
-/** The group rows are listed by name until a column is sorted by */
-const defaultSorting: ColumnSort = { id: "group", desc: false };
 
 /** Compares text with its numbers by value, so that `2` sorts before `10` */
 const textCollator = new Intl.Collator(undefined, { numeric: true });
@@ -77,7 +73,7 @@ export function GroupAnnotationsTable({
   groupVisibility,
   groupColumnDefs,
 }: GroupAnnotationsTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([defaultSorting]);
+  const [sorting, setSorting] = useState<SortingState>([]);
   const [shownColumns, setShownColumns] = useState<ColumnVisibilityState>({});
 
   // the columns the rows can sort by, which do not depend on the rows
@@ -114,9 +110,11 @@ export function GroupAnnotationsTable({
     return { ...columnVisibility, ...shownColumns };
   }, [sortableColumnDefs, shownColumns]);
 
-  const [sortedColumn = defaultSorting] = sorting;
+  const [sortedColumn] = sorting;
   const activeSorting =
-    columnVisibility[sortedColumn.id] === true ? sortedColumn : defaultSorting;
+    sortedColumn !== undefined && columnVisibility[sortedColumn.id] === true
+      ? sortedColumn
+      : undefined;
 
   const pickableColumns: GroupColumnPickerProps["columns"] = [
     ...(groupVisibility !== undefined
@@ -147,19 +145,21 @@ export function GroupAnnotationsTable({
       count,
     }));
     const sortedColumnDef = sortableColumnDefs.find(
-      (columnDef) => columnDef.id === activeSorting.id,
+      (columnDef) => columnDef.id === activeSorting?.id,
     );
-    const getSortValue =
-      sortedColumnDef !== undefined && "accessorFn" in sortedColumnDef
-        ? sortedColumnDef.accessorFn
-        : undefined;
+    if (
+      activeSorting === undefined ||
+      sortedColumnDef === undefined ||
+      !("accessorFn" in sortedColumnDef)
+    ) {
+      return groupRows;
+    }
+    const getSortValue = sortedColumnDef.accessorFn;
     const order = activeSorting.desc ? -1 : 1;
+    // the sort is stable, so that rows with the same value keep the table order
     groupRows.sort(
       (a, b) =>
-        order *
-        ((getSortValue !== undefined
-          ? compareSortValues(getSortValue(a, 0), getSortValue(b, 0))
-          : 0) || textCollator.compare(a.group, b.group)),
+        order * compareSortValues(getSortValue(a, 0), getSortValue(b, 0)),
     );
     return groupRows;
   }, [groupCounts, activeSorting, sortableColumnDefs]);
@@ -231,7 +231,7 @@ export function GroupAnnotationsTable({
       columnDefs={columnDefs}
       rowHeight={rowHeight}
       height={height}
-      sorting={[activeSorting]}
+      sorting={activeSorting !== undefined ? [activeSorting] : []}
       onSortingChange={setSorting}
       columnVisibility={columnVisibility}
       headerAction={

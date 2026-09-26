@@ -77,7 +77,8 @@ export interface TableData extends ItemsData {
    * @typeParam T - Element type of the column
    * @param column - The column name
    * @param options - Optional abort signal and progress callback
-   * @returns The row count of every unique column value, keyed by value
+   * @returns The row count of every unique column value, keyed by value, in the
+   * order the values first appear
    */
   loadUniqueValueCounts<T>(
     column: string,
