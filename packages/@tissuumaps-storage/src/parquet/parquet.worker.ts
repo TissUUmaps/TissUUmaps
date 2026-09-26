@@ -1,14 +1,11 @@
-import type { Geometry } from "geojson";
 import {
   type AsyncBuffer,
   type FileMetaData,
   type SchemaElement,
   asyncBufferFromUrl,
   parquetMetadataAsync,
-  parquetRead,
   parquetSchema,
 } from "hyparquet";
-import { compressors } from "hyparquet-compressors";
 
 import {
   ArrayUtils,
@@ -19,38 +16,13 @@ import {
   type TypedArrayOrArray,
 } from "@tissuumaps/core";
 
-import { ShapesGeometryBuilder } from "../common/ShapesGeometryBuilder";
 import { PandasMetadataUtils } from "./PandasMetadataUtils";
+import { ParquetUtils } from "./ParquetUtils";
 import {
   type CoordinateColumn,
   GeoParquetUtils,
 } from "./profiles/GeoParquetUtils";
 import type { ParquetSource } from "./types";
-
-/**
- * Appends a GeoJSON geometry, as decoded from a WKB column, as one shape
- *
- * @param builder - The builder of the shapes geometry under construction
- * @param geometry - The geometry to add
- * @param id - The ID of the shape
- * @param name - The name of the shape, if any
- */
-function addGeometry(
-  builder: ShapesGeometryBuilder,
-  geometry: Geometry,
-  id: number | string,
-  name?: string,
-): void {
-  if (geometry.type === "Polygon") {
-    builder.addShape([geometry.coordinates], id, name);
-    return;
-  }
-  if (geometry.type === "MultiPolygon") {
-    builder.addShape(geometry.coordinates, id, name);
-    return;
-  }
-  console.warn(`Unsupported geometry type: ${geometry.type}`);
-}
 
 export type ParquetRequest<TOp extends string = string> = {
   op: TOp;
@@ -209,45 +181,6 @@ function openParquet(source: ParquetSource): Promise<AsyncBuffer> {
   return Promise.reject(new Error("A URL or file is required to load data."));
 }
 
-function getNumRows(metadata: FileMetaData): number {
-  const numRows = Number(metadata.num_rows);
-  if (!Number.isSafeInteger(numRows)) {
-    throw new Error("Parquet file has too many rows");
-  }
-  return numRows;
-}
-
-function getColumns(metadata: FileMetaData): string[] {
-  return parquetSchema(metadata).children.map(
-    (columnMetadata) => columnMetadata.element.name,
-  );
-}
-
-function readColumnChunks(
-  buffer: AsyncBuffer,
-  metadata: FileMetaData,
-  column: string,
-  onChunk: (columnData: unknown, rowStart: number) => void,
-  onProgress: (progress: number, total: number) => void,
-): Promise<void> {
-  let bytesRead = 0;
-  return parquetRead({
-    file: {
-      byteLength: buffer.byteLength,
-      async slice(start, end) {
-        const chunk = await buffer.slice(start, end);
-        bytesRead += chunk.byteLength;
-        onProgress(bytesRead, buffer.byteLength);
-        return chunk;
-      },
-    },
-    metadata,
-    compressors,
-    columns: [column],
-    onChunk: ({ columnData, rowStart }) => onChunk(columnData, rowStart),
-  });
-}
-
 /**
  * Returns the typed array type a column is read as, or `undefined` for a
  * column read as a plain array
@@ -338,7 +271,7 @@ async function readParquetColumn(
   if (element === undefined) {
     throw new Error(`Column "${column}" not found in Parquet file`);
   }
-  const numRows = getNumRows(metadata);
+  const numRows = ParquetUtils.getNumRows(metadata);
   const arrayType = getColumnArrayType(element);
   let result: TypedArray | unknown[];
   if (arrayType === undefined) {
@@ -353,7 +286,7 @@ async function readParquetColumn(
   } else {
     result = new Float64Array(numRows).fill(NaN);
   }
-  await readColumnChunks(
+  await ParquetUtils.readColumnChunks(
     buffer,
     metadata,
     column,
@@ -388,28 +321,6 @@ async function readParquetColumn(
     onProgress,
   );
   return result;
-}
-
-function readGeometryColumn(
-  buffer: AsyncBuffer,
-  metadata: FileMetaData,
-  column: string,
-  onGeometry: (geometry: Geometry | null, row: number) => void,
-  onProgress: (progress: number, total: number) => void,
-): Promise<void> {
-  return readColumnChunks(
-    buffer,
-    metadata,
-    column,
-    (columnData, rowStart) => {
-      // WKB columns are decoded to GeoJSON geometries by the Parquet reader
-      const geometries = columnData as (Geometry | null | undefined)[];
-      for (let i = 0; i < geometries.length; i++) {
-        onGeometry(geometries[i] ?? null, rowStart + i);
-      }
-    },
-    onProgress,
-  );
 }
 
 async function readIdsAndNames(
@@ -494,18 +405,15 @@ async function handleFileRequest(
     request.nameColumn,
     onProgress,
   );
-  const geoColumns = GeoParquetUtils.readGeoColumns(metadata);
-  const coordinateColumns = GeoParquetUtils.getCoordinateColumns(geoColumns);
+  const { columns, coordinateColumns } = GeoParquetUtils.replaceGeometryColumns(
+    metadata,
+    ParquetUtils.getColumns(metadata),
+  );
   return {
     response: {
       op: "file",
-      numRows: getNumRows(metadata),
-      columns: [
-        ...getColumns(metadata).filter(
-          (column) => !geoColumns.some(({ name }) => name === column),
-        ),
-        ...coordinateColumns.map(({ column }) => column),
-      ],
+      numRows: ParquetUtils.getNumRows(metadata),
+      columns,
       coordinateColumns,
       ids,
       names,
@@ -517,49 +425,6 @@ async function handleFileRequest(
   };
 }
 
-/**
- * Reads both coordinate axes of a point geometry column in one pass
- *
- * The WKB column is decoded once for both axes, so that a point cloud reading
- * its x and y from the same column does not decode it twice.
- *
- * @param buffer - The file to read from
- * @param metadata - The file metadata
- * @param column - The point geometry column to read
- * @param onProgress - Callback reporting the read progress
- * @returns The x and y coordinates of every row
- * @throws Error if a row holds no geometry, or one that is not a point
- */
-async function readCoordinateColumns(
-  buffer: AsyncBuffer,
-  metadata: FileMetaData,
-  column: string,
-  onProgress: (progress: number, total: number) => void,
-): Promise<{ x: Float32Array; y: Float32Array }> {
-  const numRows = getNumRows(metadata);
-  const x = new Float32Array(numRows);
-  const y = new Float32Array(numRows);
-  await readGeometryColumn(
-    buffer,
-    metadata,
-    column,
-    (geometry, row) => {
-      if (geometry === null) {
-        throw new Error(`Missing geometry in column "${column}"`);
-      }
-      if (geometry.type !== "Point") {
-        throw new Error(
-          `Column "${column}" contains a ${geometry.type} geometry`,
-        );
-      }
-      x[row] = geometry.coordinates[0]!;
-      y[row] = geometry.coordinates[1]!;
-    },
-    onProgress,
-  );
-  return { x, y };
-}
-
 async function handleCoordinatesRequest(
   request: ParquetCoordinatesRequest,
   onProgress: (progress: number, total: number) => void,
@@ -569,7 +434,7 @@ async function handleCoordinatesRequest(
 }> {
   const buffer = await openParquet(request.source);
   const metadata = await parquetMetadataAsync(buffer);
-  const { x, y } = await readCoordinateColumns(
+  const { x, y } = await GeoParquetUtils.readCoordinateColumns(
     buffer,
     metadata,
     request.geometryColumn,
@@ -614,24 +479,10 @@ async function handleShapesRequest(
 }> {
   const buffer = await openParquet(request.source);
   const metadata = await parquetMetadataAsync(buffer);
-  const geoColumns = GeoParquetUtils.readGeoColumns(metadata);
-  const geoColumn =
-    request.geometryColumn !== undefined
-      ? geoColumns.find(({ name }) => name === request.geometryColumn)
-      : GeoParquetUtils.getPrimaryColumn(geoColumns);
-  if (geoColumn === undefined) {
-    throw new Error(
-      request.geometryColumn !== undefined
-        ? `Geometry column "${request.geometryColumn}" is missing or not encoded as WKB`
-        : "Parquet file has no GeoParquet geometry column",
-    );
-  }
-  const pointColumnMessage =
-    `Geometry column "${geoColumn.name}" holds points, which are read as ` +
-    `the "${geoColumn.name}[x]" and "${geoColumn.name}[y]" columns of a table`;
-  if (GeoParquetUtils.isPointColumn(geoColumn)) {
-    throw new Error(pointColumnMessage);
-  }
+  const geoColumn = GeoParquetUtils.getShapesColumn(
+    metadata,
+    request.geometryColumn,
+  );
   // Progress only tracks the geometry, which dwarfs the ID and name columns
   const { ids: rowIds, names: rowNames } = await readIdsAndNames(
     buffer,
@@ -640,46 +491,12 @@ async function handleShapesRequest(
     request.nameColumn,
     () => {},
   );
-  const builder = new ShapesGeometryBuilder();
-  // A column whose "geo" metadata lists no geometry types is only found to
-  // hold points while decoding it
-  let numPoints = 0;
-  await readGeometryColumn(
+  const { geometry, ids, names } = await GeoParquetUtils.readShapes(
     buffer,
     metadata,
-    geoColumn.name,
-    (rowGeometry, row) => {
-      if (rowGeometry === null) {
-        console.warn("Skipping row without geometry.");
-        return;
-      }
-      if (rowGeometry.type === "Point") {
-        numPoints++;
-        return;
-      }
-      addGeometry(
-        builder,
-        rowGeometry,
-        rowIds !== undefined ? rowIds[row]! : row,
-        rowNames?.[row],
-      );
-    },
-    onProgress,
+    geoColumn,
+    { ids: rowIds, names: rowNames, onProgress },
   );
-  if (builder.size === 0) {
-    throw new Error(
-      numPoints > 0
-        ? pointColumnMessage
-        : `No valid geometries found in column "${geoColumn.name}"`,
-    );
-  }
-  if (numPoints > 0) {
-    console.warn(
-      `Skipped ${numPoints} points in column "${geoColumn.name}", which are ` +
-        `not shapes.`,
-    );
-  }
-  const { geometry, ids, names } = builder.build();
   return {
     response: {
       op: "shapes",
@@ -718,18 +535,14 @@ async function handleRangeRequest(
   const buffer = await openParquet(request.source);
   const metadata = await parquetMetadataAsync(buffer);
   if (request.axis !== undefined) {
-    const { bbox } = GeoParquetUtils.readGeoColumns(metadata).find(
-      ({ name }) => name === request.column,
-    ) ?? { bbox: undefined };
     return {
       response: {
         op: "range",
-        range:
-          bbox !== undefined
-            ? request.axis === "x"
-              ? [bbox[0], bbox[2]]
-              : [bbox[1], bbox[3]]
-            : undefined,
+        range: GeoParquetUtils.getAxisRange(
+          metadata,
+          request.column,
+          request.axis,
+        ),
       },
     };
   }
