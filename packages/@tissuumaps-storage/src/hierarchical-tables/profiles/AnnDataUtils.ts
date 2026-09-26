@@ -53,7 +53,7 @@ export class AnnDataUtils {
    * @returns Whether the node holds the category labels of a file written by
    * anndata < 0.8, which are never a column
    */
-  static isLegacyCategoriesGroup(name: string): boolean {
+  static isLegacyCategoriesGroupName(name: string): boolean {
     return name === AnnDataUtils._legacyCategoriesGroupName;
   }
 
@@ -67,8 +67,8 @@ export class AnnDataUtils {
 
   /**
    * @param group - A group of the store
-   * @returns Whether the group is encoded as one column or as a matrix,
-   * rather than holding other nodes
+   * @returns Whether the group is encoded as one column or as a matrix, and
+   * so is not walked for columns
    */
   static isColumnGroup(group: HierarchicalStoreGroup): boolean {
     const encodingType = AnnDataUtils.getEncodingType(group);
@@ -175,7 +175,7 @@ export class AnnDataUtils {
         return await AnnDataUtils._readCategorical(store, path, { signal });
       case "nullable-integer":
       case "nullable-boolean":
-        return await AnnDataUtils._readNullable(store, path, { signal });
+        return await AnnDataUtils._readNullableNumbers(store, path, { signal });
       case "nullable-string-array":
         return await AnnDataUtils._readNullableStrings(store, path, {
           signal,
@@ -240,7 +240,7 @@ export class AnnDataUtils {
    * @param annDataPath - The path of the AnnData object of the store, if any
    * @param options - Optional abort signal
    */
-  static async readMatrixSelectors(
+  static async assignMatrixSelectors(
     store: HierarchicalStore,
     columns: HierarchicalTableColumn[],
     annDataPath: string | undefined,
@@ -435,7 +435,7 @@ export class AnnDataUtils {
     return Array.from(values, (value, i) => (mask[i] ? "" : String(value)));
   }
 
-  private static async _readNullable(
+  private static async _readNullableNumbers(
     store: HierarchicalStore,
     path: string,
     options?: { signal?: AbortSignal },

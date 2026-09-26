@@ -83,7 +83,7 @@ export class HierarchicalTableReader implements HierarchicalTable {
       const numRows = await inferNumRows(store, columns, annDataPath, {
         signal,
       });
-      await AnnDataUtils.readMatrixSelectors(store, columns, annDataPath, {
+      await AnnDataUtils.assignMatrixSelectors(store, columns, annDataPath, {
         signal,
       });
       return new HierarchicalTableReader(store, columns, numRows);
@@ -173,7 +173,7 @@ async function collectColumns(
   // sorted, as a store may list its nodes in write order
   for (const name of group.keys.toSorted()) {
     if (
-      AnnDataUtils.isLegacyCategoriesGroup(name) ||
+      AnnDataUtils.isLegacyCategoriesGroupName(name) ||
       !ColumnQueryUtils.isQueryableName(name)
     ) {
       continue;
