@@ -8,6 +8,7 @@ import type {
   HierarchicalStoreNode,
   HierarchicalStoreValues,
 } from "../HierarchicalStore";
+import { ConsolidatedMetadataUtils } from "./ConsolidatedMetadataUtils";
 
 /** A Zarr store whose nodes can be listed */
 type ListableStore = zarr.Listable<zarr.AsyncReadable>;
@@ -80,7 +81,9 @@ export class ZarrStore implements HierarchicalStore {
   ): Promise<ZarrStore> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const listableStore = await openConsolidated(store, { signal });
+    const listableStore = await ConsolidatedMetadataUtils.open(store, {
+      signal,
+    });
     if (listableStore === null) {
       throw new Error(
         "The Zarr store has no consolidated metadata, so its columns cannot be listed.",
@@ -167,35 +170,6 @@ export class ZarrStore implements HierarchicalStore {
 
   // nothing to release: reads are fetches
   close(): void {}
-}
-
-/**
- * Reads the consolidated metadata of a Zarr store
- *
- * @param store - Any asynchronous store zarrita can read
- * @param options - Optional abort signal
- * @returns The store with its nodes listed, or `null` if it has no
- * consolidated metadata
- */
-async function openConsolidated(
-  store: zarr.AsyncReadable,
-  options?: { signal?: AbortSignal },
-): Promise<ListableStore | null> {
-  const { signal } = options ?? {};
-  signal?.throwIfAborted();
-  const consolidatedStore = await zarr.withMaybeConsolidatedMetadata(store);
-  signal?.throwIfAborted(); // withMaybeConsolidatedMetadata() does not throw on abort
-  if ("contents" in consolidatedStore) {
-    return consolidatedStore;
-  }
-  // spatialdata writes the Zarr v2 consolidated metadata without the leading
-  // dot the spec prescribes, and so do the Vitessce fixtures
-  const undottedStore = await zarr.withMaybeConsolidatedMetadata(store, {
-    format: "v2",
-    metadataKey: "zmetadata",
-  });
-  signal?.throwIfAborted(); // withMaybeConsolidatedMetadata() does not throw on abort
-  return "contents" in undottedStore ? undottedStore : null;
 }
 
 class ZarrGroup implements HierarchicalStoreGroup {
