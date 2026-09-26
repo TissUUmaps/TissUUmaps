@@ -28,7 +28,7 @@ The `idProperty` names the feature property holding the shape IDs, which keep th
 
 ## Limitations
 
-- `idProperty` and `nameProperty` apply to a `FeatureCollection` only.
+- `idProperty` and `nameProperty` can only be set for a `FeatureCollection`. Setting one for another root fails the load.
 - Only polygons and multi-polygons are read. Points and lines are skipped.
 
 ## API

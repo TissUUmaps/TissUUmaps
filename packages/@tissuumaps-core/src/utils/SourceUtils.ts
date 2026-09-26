@@ -246,6 +246,11 @@ export class SourceUtils {
    * @returns A promise that resolves to the absolute URL, or to the opened
    *   file for sources within the workspace
    * @throws See {@link SourceUtils.resolveSourceFile}
+   * @throws DOMException if the file cannot be opened, e.g. because it was
+   *   removed (`NotFoundError`) or its read permission was revoked
+   *   (`NotAllowedError`)
+   * @throws The abort reason of the signal, if it is aborted once the file
+   *   is open
    */
   static async openSourceFile(
     normalizedSource: string,

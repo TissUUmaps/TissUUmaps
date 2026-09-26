@@ -10,13 +10,8 @@ import type {
   TypedArray,
 } from "@tissuumaps/core";
 
+import type { TIFFChannelMetadata } from "./TIFFParser";
 import { tiffRasterType } from "./installTIFFTileSource";
-
-/** What a parser reads about a channel of a multi-channel TIFF file */
-export type TIFFChannelMetadata = {
-  name?: string;
-  color?: Color;
-};
 
 /** A channel of a loaded multi-channel TIFF file */
 export type TIFFChannel = TIFFChannelMetadata & {

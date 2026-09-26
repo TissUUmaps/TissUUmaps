@@ -90,8 +90,7 @@ export class ParquetTableDataProvider implements TableDataProvider<
     const parquetSource = {
       file,
       url,
-      headers:
-        url !== undefined ? normalizedDataSource.requestHeaders : undefined,
+      headers: normalizedDataSource.requestHeaders,
     };
     const { idColumn, nameColumn } = normalizedDataSource;
     const { numRows, columns, coordinateColumns, ids, names } =

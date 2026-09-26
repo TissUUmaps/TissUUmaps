@@ -1,8 +1,4 @@
-export {
-  TIFFImageData,
-  type TIFFChannel,
-  type TIFFChannelMetadata,
-} from "./TIFFImageData";
+export { TIFFImageData, type TIFFChannel } from "./TIFFImageData";
 export { TIFFImageDataProvider } from "./TIFFImageDataProvider";
 export {
   tiffImageDataSourceDefaults,
@@ -18,3 +14,4 @@ export {
   type NormalizedTIFFLabelsDataSource,
   type TIFFLabelsDataSource,
 } from "./TIFFLabelsDataSource";
+export { type TIFFChannelMetadata } from "./TIFFParser";

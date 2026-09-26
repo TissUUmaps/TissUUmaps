@@ -106,8 +106,7 @@ export class ParquetShapesDataProvider implements ShapesDataProvider<
     const parquetSource = {
       file,
       url,
-      headers:
-        url !== undefined ? normalizedDataSource.requestHeaders : undefined,
+      headers: normalizedDataSource.requestHeaders,
     };
     const { geometryColumn, idColumn, nameColumn } = normalizedDataSource;
     const { geometry, ids, names } = await runParquetWorker(
