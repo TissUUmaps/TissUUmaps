@@ -67,8 +67,6 @@ export function usePluginPanels(
           title: plugin.name,
           component: "PluginPanel",
           tabComponent: "PluginPanelHeader",
-          // keep the panel mounted while another tab of its group is active
-          renderer: "always",
           // do not steal the active tab from whatever the user is looking at
           inactive: true,
           params: { pluginId: plugin.id },
