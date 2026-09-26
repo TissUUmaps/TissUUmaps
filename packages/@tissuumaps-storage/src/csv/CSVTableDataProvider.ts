@@ -250,14 +250,14 @@ export class CSVTableDataProvider implements TableDataProvider<
       resolve(columnValues);
     };
 
-    const resolvedSource = await SourceUtils.resolveSourceFile(
+    const source = await SourceUtils.openSourceFile(
       normalizedDataSource.source,
       workspace,
       { signal },
     );
     let columnValues: Map<string, ColumnValues>;
-    if (typeof resolvedSource === "string") {
-      const url = resolvedSource;
+    if (source.url !== undefined) {
+      const { url } = source;
       if (onProgress !== undefined) {
         try {
           const headResponse = await fetch(url, { method: "HEAD", signal });
@@ -283,8 +283,7 @@ export class CSVTableDataProvider implements TableDataProvider<
         { signal },
       );
     } else {
-      const file = await resolvedSource.getFile();
-      signal?.throwIfAborted(); // getFile() does not throw on abort
+      const { file } = source;
       byteLength = file.size;
       columnValues = await AsyncUtils.raceSignal(
         new Promise<Map<string, ColumnValues>>((resolve, reject) =>

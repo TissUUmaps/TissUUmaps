@@ -23,7 +23,7 @@ const remoteSourceOptions: RemoteSourceOptions & BlockedSourceOptions = {
 /**
  * Opens the TIFF file a data source points to and reads its structure
  *
- * The normalized source is resolved with `SourceUtils.resolveSourceFile`:
+ * The normalized source is resolved with `SourceUtils.openSourceFile`:
  * files in the open workspace are read through their file handle, remote files
  * over HTTP range requests (see {@link remoteSourceOptions}).
  *
@@ -65,15 +65,11 @@ async function openFile(
 ): Promise<GeoTIFF> {
   const { signal, workspace = null } = options ?? {};
   signal?.throwIfAborted();
-  const resolvedSource = await SourceUtils.resolveSourceFile(
-    normalizedSource,
-    workspace,
-    { signal },
-  );
-  if (typeof resolvedSource === "string") {
-    return await fromUrl(resolvedSource, remoteSourceOptions, signal);
+  const source = await SourceUtils.openSourceFile(normalizedSource, workspace, {
+    signal,
+  });
+  if (source.url !== undefined) {
+    return await fromUrl(source.url, remoteSourceOptions, signal);
   }
-  const file = await resolvedSource.getFile();
-  signal?.throwIfAborted(); // getFile() does not throw on abort
-  return await fromBlob(file, signal);
+  return await fromBlob(source.file, signal);
 }

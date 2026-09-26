@@ -29,7 +29,8 @@
  * 2. {@link SourceUtils.resolveSource} opens the file or directory that a
  *    normalized workspace-relative path refers to;
  *    {@link SourceUtils.resolveSourceFile} and
- *    {@link SourceUtils.resolveSourceDirectory} accept only one of the two.
+ *    {@link SourceUtils.resolveSourceDirectory} accept only one of the two,
+ *    and {@link SourceUtils.openSourceFile} also opens the file.
  *    URLs need no such step and are returned as is.
  *
  * Paths use `/` as separator and may contain `.` and `..` segments. Resolving
@@ -229,6 +230,42 @@ export class SourceUtils {
       );
     }
     return resolvedSource;
+  }
+
+  /**
+   * Resolves a normalized source to an absolute URL or an opened file
+   *
+   * Like {@link SourceUtils.resolveSourceFile}, for readers that take either
+   * a URL or a `File`: a file in the workspace is opened right away.
+   *
+   * @param normalizedSource - See {@link SourceUtils.resolveSource}
+   * @param workspace - See {@link SourceUtils.resolveSource}
+   * @param options - See {@link SourceUtils.resolveSource}; the signal is
+   *   also checked once the file is open, as opening it does not throw on
+   *   abort
+   * @returns A promise that resolves to the absolute URL, or to the opened
+   *   file for sources within the workspace
+   * @throws See {@link SourceUtils.resolveSourceFile}
+   */
+  static async openSourceFile(
+    normalizedSource: string,
+    workspace: FileSystemDirectoryHandle | null,
+    options?: { signal?: AbortSignal },
+  ): Promise<
+    { url: string; file?: undefined } | { url?: undefined; file: File }
+  > {
+    const { signal } = options ?? {};
+    const resolvedSource = await SourceUtils.resolveSourceFile(
+      normalizedSource,
+      workspace,
+      options,
+    );
+    if (typeof resolvedSource === "string") {
+      return { url: resolvedSource };
+    }
+    const file = await resolvedSource.getFile();
+    signal?.throwIfAborted(); // getFile() does not throw on abort
+    return { file };
   }
 
   /**
