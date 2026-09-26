@@ -1,6 +1,14 @@
 {
   "name": "@tissuumaps/render",
   "version": "0.1.0",
+  "description": "Rendering backends for TissUUmaps images, labels, points and shapes",
+  "homepage": "https://tissuumaps.github.io/TissUUmaps4/",
+  "bugs": "https://github.com/TissUUmaps/TissUUmaps4/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TissUUmaps/TissUUmaps4.git",
+    "directory": "packages/@tissuumaps-render"
+  },
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -31,6 +39,9 @@
   "peerDependencies": {
     "@tissuumaps/core": "workspace:^",
     "openseadragon": "^6.1.1"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "engines": {
     "node": ">=22.22.1"

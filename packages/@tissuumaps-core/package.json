@@ -1,6 +1,14 @@
 {
   "name": "@tissuumaps/core",
   "version": "0.1.0",
+  "description": "Core model, types and utilities shared by the TissUUmaps packages",
+  "homepage": "https://tissuumaps.github.io/TissUUmaps4/",
+  "bugs": "https://github.com/TissUUmaps/TissUUmaps4/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TissUUmaps/TissUUmaps4.git",
+    "directory": "packages/@tissuumaps-core"
+  },
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -36,6 +44,9 @@
     "@jsonforms/core": "^3.8.0",
     "openseadragon": "^6.1.1",
     "zustand": "^5.0.15"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "engines": {
     "node": ">=22.22.1"

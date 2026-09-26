@@ -1,6 +1,14 @@
 {
   "name": "@tissuumaps/viewer",
   "version": "0.1.0",
+  "description": "React viewer component for TissUUmaps",
+  "homepage": "https://tissuumaps.github.io/TissUUmaps4/",
+  "bugs": "https://github.com/TissUUmaps/TissUUmaps4/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TissUUmaps/TissUUmaps4.git",
+    "directory": "packages/@tissuumaps-viewer"
+  },
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -33,6 +41,9 @@
     "@tissuumaps/render": "workspace:^",
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "engines": {
     "node": ">=22.22.1"
