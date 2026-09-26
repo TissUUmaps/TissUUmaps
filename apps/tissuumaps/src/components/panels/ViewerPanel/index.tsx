@@ -82,9 +82,14 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
   // Memoized on its own: the renderers compare the opacity map it builds by
   // identity, so rebuilding it for an unrelated change of the adapter would
   // re-resolve and re-upload the colors of every highlighted object.
+  const { labels, points, shapes, opacityMaps } = projectState;
   const highlightedState = useMemo(
-    () => highlightItemGroup(projectState, highlightedItemGroup),
-    [projectState, highlightedItemGroup],
+    () =>
+      highlightItemGroup(
+        { labels, points, shapes, opacityMaps },
+        highlightedItemGroup,
+      ),
+    [labels, points, shapes, opacityMaps, highlightedItemGroup],
   );
 
   const viewerAdapter: ViewerAdapter = useMemo(
