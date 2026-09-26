@@ -64,15 +64,14 @@ export function createGroupValues<TValue, TConfig extends Config<string>>(
     getActiveConfigSource(config) === "constant" &&
     isConstantConfig<TValue>(config)
   ) {
-    const value = config.constant.value;
-    getValue = () => value;
+    getValue = () => config.constant.value;
   } else {
     getValue = () => defaultValue;
     isInactive = true;
   }
 
   // a map replaces the palette, so a new map holds the current value of every
-  // group, not only of the edited ones
+  // group; groups it lacks take the renderer's default
   const setValues = (newValues: { [group: string]: TValue }) => {
     let mapId: string;
     if (map !== undefined) {
@@ -89,7 +88,6 @@ export function createGroupValues<TValue, TConfig extends Config<string>>(
           ),
           ...newValues,
         },
-        default: defaultValue,
       });
     }
     property.onConfigChange(ConfigUtils.withGroupByMap(config, column, mapId));

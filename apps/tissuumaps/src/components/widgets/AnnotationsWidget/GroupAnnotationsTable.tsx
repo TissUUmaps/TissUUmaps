@@ -19,6 +19,7 @@ import {
 } from "./GroupColumnPicker";
 import { GroupVisibilityCell } from "./cells/GroupVisibilityCell";
 import { InactiveCell } from "./cells/InactiveCell";
+import type { GroupVisibility } from "./useGroupVisibility";
 
 export type GroupAnnotationsTableRowData = {
   group: string;
@@ -33,16 +34,6 @@ export type GroupAnnotationsTableRowData = {
  */
 export type GroupAnnotationsTableColumnDef =
   VirtualTableColumnDef<GroupAnnotationsTableRowData>;
-
-/** How the group table shows and toggles the visibility of a group */
-export type GroupVisibility = {
-  isVisible: (group: string) => boolean;
-
-  /** Whether the eye buttons are grayed out, as toggling them changes the property source */
-  isInactive: boolean;
-
-  onVisibleChange: (groups: string[], visible: boolean) => void;
-};
 
 /** The group rows are listed by name until a column is sorted by */
 const defaultSorting: ColumnSort = { id: "group", desc: false };

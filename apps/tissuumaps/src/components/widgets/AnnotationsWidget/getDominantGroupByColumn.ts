@@ -16,14 +16,14 @@ export function getDominantGroupByColumn(
       counts.set(column, (counts.get(column) ?? 0) + 1);
     }
   }
-  let bestColumn: string | null = null;
-  let bestCount = 0;
+  let dominantColumn: string | null = null;
+  let dominantCount = 0;
   // the insertion order of the counts is the priority order of the configs
   for (const [column, count] of counts) {
-    if (count > bestCount) {
-      bestColumn = column;
-      bestCount = count;
+    if (count > dominantCount) {
+      dominantColumn = column;
+      dominantCount = count;
     }
   }
-  return bestColumn;
+  return dominantColumn;
 }

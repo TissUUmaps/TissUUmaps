@@ -8,7 +8,7 @@ import {
 
 import { useProjectStore } from "@/stores/project";
 
-import { type GroupValuesAdapter, groupColumnSize } from "./adapter";
+import { type GroupValuesAdapter, defaultGroupColumnSize } from "./adapter";
 import { GroupMarkerCell } from "./cells/GroupMarkerCell";
 
 /** Returns the group table adapter of the marker maps */
@@ -24,7 +24,7 @@ export function useMarkerGroupValues(): GroupValuesAdapter<
       maps,
       addMap,
       updateMap,
-      columnSize: groupColumnSize,
+      columnSize: defaultGroupColumnSize,
       getSortValue: (marker) => marker,
       renderCell: (marker, onMarkerChange) => (
         <GroupMarkerCell marker={marker} onMarkerChange={onMarkerChange} />

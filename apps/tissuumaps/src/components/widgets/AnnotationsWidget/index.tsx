@@ -11,32 +11,32 @@ import { cn } from "@/lib/utils";
 import {
   GroupAnnotationsTable,
   type GroupAnnotationsTableColumnDef,
-  type GroupVisibility,
 } from "./GroupAnnotationsTable";
 import { ItemAnnotationsTable } from "./ItemAnnotationsTable";
+import type { GroupVisibility } from "./useGroupVisibility";
 
 // rows have a fixed height, so that the visible range follows from the scroll
 // offset alone; cells must fit within it
 const tableRowHeight = 28;
 
 /**
- * Keeps the groups whose name contains a filter, ignoring case
+ * Keeps the groups whose name contains a query, ignoring case
  *
  * @param groupCounts - The row count of every group
- * @param groupFilter - The text to look for, or `""` to keep every group
- * @returns The row count of every group that passes the filter
+ * @param nameQuery - The text to look for, or `""` to keep every group
+ * @returns The row count of every group whose name contains the query
  */
-function filterGroupCounts(
+function filterGroupsByName(
   groupCounts: Map<string, number>,
-  groupFilter: string,
+  nameQuery: string,
 ): Map<string, number> {
-  const lowerCaseGroupFilter = groupFilter.toLowerCase();
-  if (lowerCaseGroupFilter === "") {
+  const lowerCaseNameQuery = nameQuery.toLowerCase();
+  if (lowerCaseNameQuery === "") {
     return groupCounts;
   }
   return new Map(
     Array.from(groupCounts).filter(([group]) =>
-      group.toLowerCase().includes(lowerCaseGroupFilter),
+      group.toLowerCase().includes(lowerCaseNameQuery),
     ),
   );
 }
@@ -72,12 +72,12 @@ export function AnnotationsWidget({
   groupColumnDefs,
   className,
 }: AnnotationsWidgetProps) {
-  const [groupFilter, setGroupFilter] = useState("");
+  const [nameQuery, setNameQuery] = useState("");
 
   const filteredGroupCounts = useMemo(
     () =>
-      groupCounts !== null ? filterGroupCounts(groupCounts, groupFilter) : null,
-    [groupCounts, groupFilter],
+      groupCounts !== null ? filterGroupsByName(groupCounts, nameQuery) : null,
+    [groupCounts, nameQuery],
   );
 
   const isGroupVisible = groupVisibility?.isVisible;
@@ -128,8 +128,8 @@ export function AnnotationsWidget({
       <Field disabled={selectedGroupByColumn === null}>
         <FieldLabel>Filter groups</FieldLabel>
         <Input
-          value={groupFilter}
-          onChange={(event) => setGroupFilter(event.target.value)}
+          value={nameQuery}
+          onChange={(event) => setNameQuery(event.target.value)}
         />
       </Field>
       {tableId !== null && selectedGroupByColumn !== null ? (
