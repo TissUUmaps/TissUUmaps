@@ -47,12 +47,14 @@ jobs:
         env:
           VITE_CUSTOM_HTML_FILE: ${{ github.workspace }}/development/.github/pages/custom.html
           DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/docs-dev/
+          TISSUUMAPS_APP_URL: https://tissuumaps.github.io/${{ github.event.repository.name }}/live-dev/
       - name: Build production
         working-directory: production
         run: pnpm install --frozen-lockfile && pnpm run build && pnpm run --filter docs build
         env:
           VITE_CUSTOM_HTML_FILE: ${{ github.workspace }}/development/.github/pages/custom.html
           DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/docs/
+          TISSUUMAPS_APP_URL: https://tissuumaps.github.io/${{ github.event.repository.name }}/live/
       - name: Prepare deployment
         run: |
           mkdir _site

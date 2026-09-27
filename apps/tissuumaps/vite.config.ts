@@ -10,6 +10,10 @@ import {
 } from "vite";
 import { viteSingleFile } from "vite-plugin-singlefile";
 
+const packageJson = JSON.parse(
+  readFileSync(resolve(import.meta.dirname, "./package.json"), "utf8"),
+) as { version: string; repository: { url: string } };
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss(), mode === "production" && viteSingleFile()],
@@ -51,6 +55,10 @@ export default defineConfig(({ mode }) => ({
     },
   },
   define: {
+    __APP_VERSION__: JSON.stringify(packageJson.version),
+    __APP_REPOSITORY_URL__: JSON.stringify(
+      packageJson.repository.url.replace(/^git\+/, "").replace(/\.git$/, ""),
+    ),
     "import.meta.env.VITE_CUSTOM_HTML": JSON.stringify(
       process.env.VITE_CUSTOM_HTML_FILE
         ? readFileSync(process.env.VITE_CUSTOM_HTML_FILE, "utf8")

@@ -5,6 +5,7 @@
   },
   "references": [{ "path": "./tsconfig.src.json" }],
   "include": [
+    "./src/vite-env.d.ts",
     "./src/**/*.test.js",
     "./src/**/*.test.jsx",
     "./src/**/*.test.ts",

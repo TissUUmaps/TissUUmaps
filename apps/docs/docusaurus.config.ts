@@ -4,6 +4,13 @@ import { themes as prismThemes } from "prism-react-renderer";
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
+// The application the "Live" links point at: the deployed version alongside
+// the documentation, or the development server when building locally
+const appUrl = (
+  process.env.TISSUUMAPS_APP_URL || "http://localhost:5173/"
+).replace(/\/?$/, "/");
+const demoUrl = `${appUrl}?project=https://user.it.uu.se/~chrav452/TissUUmaps4/data/heart_cropped/project.json`;
+
 const config: Config = {
   title: "TissUUmaps",
   tagline: "Spatial Biology Visualization",
@@ -83,12 +90,12 @@ const config: Config = {
           position: "right",
         },
         {
-          href: "https://tissuumaps.github.io/TissUUmaps4/live-dev/",
+          href: appUrl,
           label: "Live",
           position: "right",
         },
         {
-          href: "https://tissuumaps.github.io/TissUUmaps4/live-dev/?project=https://user.it.uu.se/~chrav452/TissUUmaps4/data/heart_cropped/project.json",
+          href: demoUrl,
           label: "Live (demo)",
           position: "right",
         },
@@ -127,11 +134,11 @@ const config: Config = {
               href: "https://github.com/TissUUmaps/TissUUmaps4/",
             },
             {
-              href: "https://tissuumaps.github.io/TissUUmaps4/live-dev/",
+              href: appUrl,
               label: "Live",
             },
             {
-              href: "https://tissuumaps.github.io/TissUUmaps4/live-dev/?project=https://user.it.uu.se/~chrav452/TissUUmaps4/data/heart_cropped/project.json",
+              href: demoUrl,
               label: "Live (demo)",
             },
           ],
