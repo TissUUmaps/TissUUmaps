@@ -15,16 +15,17 @@ This project is structured as a pnpm monorepo as follows:
   - @tissuumaps-render   # Rendering backends (OpenSeadragon, WebGL, SVG)
   - @tissuumaps-storage  # Officially supported data providers
   - @tissuumaps-plugins  # Officially supported TissUUmaps plugins
-  - @tissuumaps-viewer   # The TissUUmaps viewer (React component)
+  - @tissuumaps-react    # The TissUUmaps viewer (React component)
 ```
 
-Each package's `exports` point at its build output in `dist` only, so that
-published packages contain nothing monorepo-specific. During development,
-packages are resolved to their TypeScript sources instead, via a private
-`tissuumaps-development` export condition: `customConditions` in `tsconfig.base.json`
+Each package's `exports` point at its build output in `dist`. During
+development, packages are resolved to their TypeScript sources instead, via a
+private `tissuumaps-development` export condition: `customConditions` in `tsconfig.base.json`
 for TypeScript (and thus for editor navigation), and `resolve.conditions` /
-`ssr.resolve.conditions` in the Vite configs for Vite and Vitest. Because no
-consumer's bundler declares that condition, it is inert in published packages.
+`ssr.resolve.conditions` in the Vite configs for Vite and Vitest. So that
+published packages contain nothing monorepo-specific, `publishConfig.exports`
+replaces `exports` on publishing with a copy that lacks the condition; keep the
+two in sync.
 
 The Vite configs add that condition only when the mode is not `production`, so
 that production builds go through each package's `exports` and `dist` — the very
@@ -41,7 +42,7 @@ flowchart BT
     render["@tissuumaps/render"]
     render --> core
 
-    viewer["@tissuumaps/viewer"]
+    viewer["@tissuumaps/react"]
     viewer --> core
     viewer --> render
 
@@ -59,7 +60,7 @@ flowchart BT
     tissuumaps --> viewer
 ```
 
-Packages declare their `@tissuumaps/*` dependencies as peer dependencies and externalize them in their Vite builds; only the application bundles them.
+Packages declare their `@tissuumaps/*` dependencies as peer dependencies; only the application bundles them. More generally, each package's Vite build externalizes the dependencies and peer dependencies in its `package.json`, including their subpaths, and bundles everything else, such as packages that are only `devDependencies`.
 
 ## @tissuumaps/core
 
@@ -98,12 +99,12 @@ Utilities are exclusively implemented as static classes.
 
 ## @tissuumaps/render
 
-This package contains the rendering backends and exposes the core TissUUmaps rendering functionality as an imperative API. It does not depend on React and can be used independently of `@tissuumaps/viewer`. There are three backends: OpenSeadragon (images and labels), WebGL 2 (points and shapes), and an SVG overlay (interactive shape drawing).
+This package contains the rendering backends and exposes the core TissUUmaps rendering functionality as an imperative API. It does not depend on React and can be used independently of `@tissuumaps/react`. There are three backends: OpenSeadragon (images and labels), WebGL 2 (points and shapes), and an SVG overlay (interactive shape drawing).
 
 **Contexts** wrap the underlying rendering technology and manage shared low-level state:
 
 - `OpenSeadragonContext` wraps an `OpenSeadragon.Viewer`, managing viewer options, animation handlers, world bounds, and the (asynchronous, FIFO-ordered) addition/removal of `OpenSeadragon.TiledImage` instances.
-- `WebGLContext` wraps a `WebGL2RenderingContext`, providing helpers for creating programs, buffers, and textures, as well as canvas resizing. Context loss and restoration are handled by `@tissuumaps/viewer`.
+- `WebGLContext` wraps a `WebGL2RenderingContext`, providing helpers for creating programs, buffers, and textures, as well as canvas resizing. Context loss and restoration are handled by `@tissuumaps/react`.
 
 **Renderers** track the state of the objects currently displayed and reconcile changes in the application state (layers, objects, attribute maps) with the rendering context via a `synchronize()` method:
 
@@ -143,7 +144,7 @@ Format metadata belongs in the data provider: channel count, names, colors and c
 
 Each plugin has its own dedicated directory and is separately exported in the `package.json` and `vite.config.ts` files. The plugin contract itself lives in `@tissuumaps/core` (see [Plugins](./plugins.md)).
 
-## @tissuumaps/viewer
+## @tissuumaps/react
 
 The TissUUmaps `Viewer` component uses an adapter pattern facilitated by the `ViewerAdapter` interface, which decouples rendering from any particular application state management. It makes use of custom hooks that each encapsulate one rendering backend from `@tissuumaps/render` (separation of concerns): `useOpenSeadragon` (image and labels renderers), `useWebGL` (points and shapes renderers, including WebGL context loss and restoration), and `useSVG` (interactive drawing overlay). The WebGL canvas element and the SVG overlay element are appended as children to the `viewer.canvas` div element (child of the `viewer.container` div element, parent of the `viewer.drawer.canvas` canvas element) to allow for proper compositioning, where `viewer` is the `OpenSeadragon.Viewer` instance. The WebGL renderers' bounds are fed back into the OpenSeadragon world bounds, so that points and shapes count towards the navigable area.
 

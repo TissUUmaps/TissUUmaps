@@ -69,18 +69,27 @@ export class ParquetTableData implements TableData {
     currentQuery: string,
   ): Promise<TableColumnQuerySuggestion[]> {
     const lowerCaseQuery = currentQuery.toLowerCase();
+    const exactMatches: string[] = [];
+    const prefixMatches: string[] = [];
     const matches: string[] = [];
     const others: string[] = [];
     for (const column of this._columns) {
+      const lowerCaseColumn = column.toLowerCase();
       if (column === currentQuery) {
-        matches.unshift(column);
-      } else if (column.toLowerCase().includes(lowerCaseQuery)) {
+        exactMatches.push(column);
+      } else if (lowerCaseColumn.startsWith(lowerCaseQuery)) {
+        prefixMatches.push(column);
+      } else if (lowerCaseColumn.includes(lowerCaseQuery)) {
         matches.push(column);
       } else {
         others.push(column);
       }
     }
-    return Promise.resolve([...matches, ...others].map((query) => ({ query })));
+    return Promise.resolve(
+      [...exactMatches, ...prefixMatches, ...matches, ...others].map(
+        (query) => ({ query }),
+      ),
+    );
   }
 
   resolveColumnQuery(query: string): Promise<string | null> {

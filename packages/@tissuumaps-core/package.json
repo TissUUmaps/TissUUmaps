@@ -1,22 +1,32 @@
 {
   "name": "@tissuumaps/core",
   "version": "0.1.0",
+  "description": "Core model, types and utilities shared by the TissUUmaps packages",
+  "homepage": "https://tissuumaps.github.io/TissUUmaps4/",
+  "bugs": "https://github.com/TissUUmaps/TissUUmaps4/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TissUUmaps/TissUUmaps4.git",
+    "directory": "packages/@tissuumaps-core"
+  },
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
   "files": [
-    "./dist"
+    "./dist",
+    "./CHANGELOG.md"
   ],
   "exports": {
     ".": {
       "tissuumaps-development": "./src/index.ts",
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
       "default": "./dist/index.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "scripts": {
     "build": "tsc -b tsconfig.src.json && vite build",
+    "prepack": "pnpm --filter \"{.}...\" run build",
     "clean": "rm -rf build dist node_modules",
     "test": "vitest run --passWithNoTests"
   },
@@ -37,7 +47,25 @@
     "openseadragon": "^6.1.1",
     "zustand": "^5.0.15"
   },
-  "engines": {
-    "node": ">=22.22.1"
+  "peerDependenciesMeta": {
+    "@jsonforms/core": {
+      "optional": true
+    },
+    "openseadragon": {
+      "optional": true
+    },
+    "zustand": {
+      "optional": true
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json"
+    }
   }
 }

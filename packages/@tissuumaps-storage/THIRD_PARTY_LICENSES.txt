@@ -1,0 +1,748 @@
+Third-party software bundled with @tissuumaps/storage
+=====================================================
+
+The published files of @tissuumaps/storage include code from the third-party
+packages listed below, either in its entry points or in its inline web workers.
+Its other dependencies are installed alongside it and are not included here. The
+license texts of the bundled packages follow.
+
+Contents:
+
+  - fzstd 0.1.1 (MIT)
+  - geotiff 3.0.5 (MIT)
+  - geotiff-tilesource 2.3.2 (MIT) [fork]
+  - h5wasm 0.10.3 (NIST-Software)
+  - hyparquet 1.29.1 (MIT)
+  - hyparquet-compressors 1.1.1 (MIT)
+  - hysnappy 1.0.0 (MIT)
+  - lerc 3.0.0 (Apache-2.0)
+  - pako 2.2.0 (MIT AND Zlib)
+  - @zarrita/storage 0.2.0 (MIT) [fork]
+  - zstddec 0.2.0 (MIT AND BSD-3-Clause)
+
+Third-party code embedded in the packages above:
+
+  - JPEG decoder (jpgjs) (Apache-2.0), in geotiff
+  - HDF5 2.0.0 (WebAssembly build) (BSD-3-Clause-style HDF5 license), in h5wasm
+  - zlib (part of the HDF5 WebAssembly build) (Zlib), in h5wasm
+  - libaec (szip, part of the HDF5 WebAssembly build) (BSD-2-Clause), in h5wasm
+  - snappyjs (MIT), in hyparquet
+  - Brotli decoder (adapted from brotli.js) (MIT AND Apache-2.0), in hyparquet-compressors
+  - gzip decoder (adapted from fflate) (MIT), in hyparquet-compressors
+  - zlib (ported) (Zlib), in pako
+
+--------------------------------------------------------------------------------
+
+fzstd 0.1.1 (MIT)
+https://github.com/101arrowz/fzstd
+
+MIT License
+
+Copyright (c) 2020 Arjun Barrett
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+geotiff 3.0.5 (MIT)
+https://github.com/geotiffjs/geotiff.js
+
+The MIT License (MIT)
+
+Copyright (c) 2015 EOX IT Services GmbH
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+geotiff-tilesource 2.3.2 (MIT)
+https://github.com/TissUUmaps/GeoTIFFTileSource
+TissUUmaps fork (https://github.com/TissUUmaps/GeoTIFFTileSource, commit fcea2d0e47c9) of https://github.com/pearcetm/GeoTIFFTileSource
+
+MIT License
+
+Copyright (c) 2022-2024 Thomas Pearce (pearcetm) and contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+h5wasm 0.10.3 (NIST-Software)
+https://github.com/usnistgov/h5wasm
+
+h5wasm license statement:
+
+NIST-developed software is provided by NIST as a public service. You may use, 
+copy, and distribute copies of the software in any medium, provided that you 
+keep intact this entire notice. You may improve, modify, and create derivative 
+works of the software or any portion of the software, and you may copy and 
+distribute such modifications or works. Modified works should carry a notice 
+stating that you changed the software and should note the date and nature of 
+any such change. Please explicitly acknowledge the National Institute of 
+Standards and Technology as the source of the software. 
+
+NIST-developed software is expressly provided "AS IS." NIST MAKES NO WARRANTY 
+OF ANY KIND, EXPRESS, IMPLIED, IN FACT, OR ARISING BY OPERATION OF LAW, 
+INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTY OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, AND DATA ACCURACY. NIST 
+NEITHER REPRESENTS NOR WARRANTS THAT THE OPERATION OF THE SOFTWARE WILL BE 
+UNINTERRUPTED OR ERROR-FREE, OR THAT ANY DEFECTS WILL BE CORRECTED. NIST DOES 
+NOT WARRANT OR MAKE ANY REPRESENTATIONS REGARDING THE USE OF THE SOFTWARE OR 
+THE RESULTS THEREOF, INCLUDING BUT NOT LIMITED TO THE CORRECTNESS, ACCURACY, 
+RELIABILITY, OR USEFULNESS OF THE SOFTWARE.
+
+You are solely responsible for determining the appropriateness of using and 
+distributing the software and you assume all risks associated with its use, 
+including but not limited to the risks and costs of program errors, compliance 
+with applicable laws, damage to or loss of data, programs or equipment, 
+and the unavailability or interruption of operation. This software is not 
+intended to be used in any situation where a failure could cause risk of 
+injury or damage to property. The software developed by NIST employees is not 
+subject to copyright protection within the United States.
+
+
+Some elements of the build procedure for libhdf5 were adapted from 
+  - https://github.com/aertslab/webhdf5
+  - https://github.com/attilaolah/wasm (lib/hdf and lib/hdf5)
+
+Some access patterns for using the HDF5 C API were copied from
+  - https://support.hdfgroup.org/HDF5/examples/api-c.html
+  - https://github.com/HDFGroup/hdf5/blob/develop/tools/src/h5dump/h5dump_xml.c
+
+
+Built using the HDF5 library.  HDF5 Copyright statement is included below:
+
+Copyright Notice and License Terms for 
+HDF5 (Hierarchical Data Format 5) Software Library and Utilities
+-----------------------------------------------------------------------------
+
+HDF5 (Hierarchical Data Format 5) Software Library and Utilities
+Copyright 2006 by The HDF Group. 
+
+NCSA HDF5 (Hierarchical Data Format 5) Software Library and Utilities
+Copyright 1998-2006 by The Board of Trustees of the University of Illinois. 
+
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without 
+modification, are permitted for any purpose (including commercial purposes) 
+provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, 
+   this list of conditions, and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice, 
+   this list of conditions, and the following disclaimer in the documentation 
+   and/or materials provided with the distribution.
+
+3. Neither the name of The HDF Group, the name of the University, nor the 
+   name of any Contributor may be used to endorse or promote products derived 
+   from this software without specific prior written permission from 
+   The HDF Group, the University, or the Contributor, respectively.
+
+DISCLAIMER: 
+THIS SOFTWARE IS PROVIDED BY THE HDF GROUP AND THE CONTRIBUTORS 
+"AS IS" WITH NO WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED. IN NO 
+EVENT SHALL THE HDF GROUP OR THE CONTRIBUTORS BE LIABLE FOR ANY DAMAGES 
+SUFFERED BY THE USERS ARISING OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+You are under no obligation whatsoever to provide any bug fixes, patches, or 
+upgrades to the features, functionality or performance of the source code 
+("Enhancements") to anyone; however, if you choose to make your Enhancements 
+available either publicly, or directly to The HDF Group, without imposing a 
+separate written license agreement for such Enhancements, then you hereby 
+grant the following license: a non-exclusive, royalty-free perpetual license 
+to install, use, modify, prepare derivative works, incorporate into other 
+computer software, distribute, and sublicense such enhancements or derivative 
+works thereof, in binary and source code form.
+
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+
+Limited portions of HDF5 were developed by Lawrence Berkeley National 
+Laboratory (LBNL). LBNL's Copyright Notice and Licensing Terms can be
+found here: COPYING_LBNL_HDF5 file in this directory or at 
+http://support.hdfgroup.org/ftp/HDF5/releases/COPYING_LBNL_HDF5. 
+
+-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------
+
+Contributors:   National Center for Supercomputing Applications (NCSA) at 
+the University of Illinois, Fortner Software, Unidata Program Center 
+(netCDF), The Independent JPEG Group (JPEG), Jean-loup Gailly and Mark Adler 
+(gzip), and Digital Equipment Corporation (DEC).
+
+-----------------------------------------------------------------------------
+ 
+Portions of HDF5 were developed with support from the Lawrence Berkeley 
+National Laboratory (LBNL) and the United States Department of Energy 
+under Prime Contract No. DE-AC02-05CH11231.
+
+-----------------------------------------------------------------------------
+
+Portions of HDF5 were developed with support from the University of 
+California, Lawrence Livermore National Laboratory (UC LLNL).  
+The following statement applies to those portions of the product and must 
+be retained in any redistribution of source code, binaries, documentation, 
+and/or accompanying materials:
+
+   This work was partially produced at the University of California, 
+   Lawrence Livermore National Laboratory (UC LLNL) under contract 
+   no. W-7405-ENG-48 (Contract 48) between the U.S. Department of Energy 
+   (DOE) and The Regents of the University of California (University) 
+   for the operation of UC LLNL.
+
+   DISCLAIMER: 
+   THIS WORK WAS PREPARED AS AN ACCOUNT OF WORK SPONSORED BY AN AGENCY OF 
+   THE UNITED STATES GOVERNMENT. NEITHER THE UNITED STATES GOVERNMENT NOR 
+   THE UNIVERSITY OF CALIFORNIA NOR ANY OF THEIR EMPLOYEES, MAKES ANY 
+   WARRANTY, EXPRESS OR IMPLIED, OR ASSUMES ANY LIABILITY OR RESPONSIBILITY 
+   FOR THE ACCURACY, COMPLETENESS, OR USEFULNESS OF ANY INFORMATION, 
+   APPARATUS, PRODUCT, OR PROCESS DISCLOSED, OR REPRESENTS THAT ITS USE 
+   WOULD NOT INFRINGE PRIVATELY- OWNED RIGHTS. REFERENCE HEREIN TO ANY 
+   SPECIFIC COMMERCIAL PRODUCTS, PROCESS, OR SERVICE BY TRADE NAME, 
+   TRADEMARK, MANUFACTURER, OR OTHERWISE, DOES NOT NECESSARILY CONSTITUTE 
+   OR IMPLY ITS ENDORSEMENT, RECOMMENDATION, OR FAVORING BY THE UNITED 
+   STATES GOVERNMENT OR THE UNIVERSITY OF CALIFORNIA. THE VIEWS AND 
+   OPINIONS OF AUTHORS EXPRESSED HEREIN DO NOT NECESSARILY STATE OR REFLECT 
+   THOSE OF THE UNITED STATES GOVERNMENT OR THE UNIVERSITY OF CALIFORNIA, 
+   AND SHALL NOT BE USED FOR ADVERTISING OR PRODUCT ENDORSEMENT PURPOSES.
+
+-----------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+
+hyparquet 1.29.1 (MIT)
+https://github.com/hyparam/hyparquet
+
+The MIT License (MIT)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+hyparquet-compressors 1.1.1 (MIT)
+https://github.com/hyparam/hyparquet-compressors
+
+The MIT License (MIT)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+hysnappy 1.0.0 (MIT)
+https://github.com/hyparam/hysnappy
+
+The MIT License (MIT)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+lerc 3.0.0 (Apache-2.0)
+https://github.com/Esri/lerc
+
+Apache License - 2.0
+
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+1. Definitions.
+
+"License" shall mean the terms and conditions for use, reproduction, and distribution as defined by Sections 1 through 9 of this document.
+
+"Licensor" shall mean the copyright owner or entity authorized by the copyright owner that is granting the License.
+
+"Legal Entity" shall mean the union of the acting entity and all other entities that control, are controlled by, or are under common control 
+with that entity. For the purposes of this definition, "control" means (i) the power, direct or indirect, to cause the direction or management 
+of such entity, whether by contract or otherwise, or (ii) ownership of fifty percent (50%) or more of the outstanding shares, or (iii) beneficial 
+ownership of such entity.
+
+"You" (or "Your") shall mean an individual or Legal Entity exercising permissions granted by this License.
+
+"Source" form shall mean the preferred form for making modifications, including but not limited to software source code, documentation source, 
+and configuration files.
+
+"Object" form shall mean any form resulting from mechanical transformation or translation of a Source form, including but not limited to 
+compiled object code, generated documentation, and conversions to other media types.
+
+"Work" shall mean the work of authorship, whether in Source or Object form, made available under the License, as indicated by a copyright notice 
+that is included in or attached to the work (an example is provided in the Appendix below).
+
+"Derivative Works" shall mean any work, whether in Source or Object form, that is based on (or derived from) the Work and for which the 
+editorial revisions, annotations, elaborations, or other modifications represent, as a whole, an original work of authorship. For the purposes 
+of this License, Derivative Works shall not include works that remain separable from, or merely link (or bind by name) to the interfaces of, 
+the Work and Derivative Works thereof.
+
+"Contribution" shall mean any work of authorship, including the original version of the Work and any modifications or additions to that Work 
+or Derivative Works thereof, that is intentionally submitted to Licensor for inclusion in the Work by the copyright owner or by an individual 
+or Legal Entity authorized to submit on behalf of the copyright owner. For the purposes of this definition, "submitted" means any form of 
+electronic, verbal, or written communication sent to the Licensor or its representatives, including but not limited to communication on 
+electronic mailing lists, source code control systems, and issue tracking systems that are managed by, or on behalf of, the Licensor for 
+the purpose of discussing and improving the Work, but excluding communication that is conspicuously marked or otherwise designated in writing 
+by the copyright owner as "Not a Contribution."
+
+"Contributor" shall mean Licensor and any individual or Legal Entity on behalf of whom a Contribution has been received by Licensor and 
+subsequently incorporated within the Work.
+
+2. Grant of Copyright License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, 
+worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare Derivative Works of, publicly display, 
+publicly perform, sublicense, and distribute the Work and such Derivative Works in Source or Object form.
+
+3. Grant of Patent License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, 
+non-exclusive, no-charge, royalty-free, irrevocable (except as stated in this section) patent license to make, have made, use, offer to sell, 
+sell, import, and otherwise transfer the Work, where such license applies only to those patent claims licensable by such Contributor that are 
+necessarily infringed by their Contribution(s) alone or by combination of their Contribution(s) with the Work to which such Contribution(s) was
+submitted. If You institute patent litigation against any entity (including a cross-claim or counterclaim in a lawsuit) alleging that the Work
+or a Contribution incorporated within the Work constitutes direct or contributory patent infringement, then any patent licenses granted to You
+under this License for that Work shall terminate as of the date such litigation is filed.
+
+4. Redistribution. You may reproduce and distribute copies of the Work or Derivative Works thereof in any medium, with or without modifications,
+and in Source or Object form, provided that You meet the following conditions:
+
+    1. You must give any other recipients of the Work or Derivative Works a copy of this License; and
+
+    2. You must cause any modified files to carry prominent notices stating that You changed the files; and
+
+    3. You must retain, in the Source form of any Derivative Works that You distribute, all copyright, patent, trademark, and attribution notices 
+    from the Source form of the Work, excluding those notices that do not pertain to any part of the Derivative Works; and
+
+    4. If the Work includes a "NOTICE" text file as part of its distribution, then any Derivative Works that You distribute must include a 
+    readable copy of the attribution notices contained within such NOTICE file, excluding those notices that do not pertain to any part of the 
+    Derivative Works, in at least one of the following places: within a NOTICE text file distributed as part of the Derivative Works; within the 
+    Source form or documentation, if provided along with the Derivative Works; or, within a display generated by the Derivative Works, if and wherever 
+    such third-party notices normally appear. The contents of the NOTICE file are for informational purposes only and do not modify the License. 
+    You may add Your own attribution notices within Derivative Works that You distribute, alongside or as an addendum to the NOTICE text from the Work, 
+    provided that such additional attribution notices cannot be construed as modifying the License. You may add Your own copyright statement to 
+    Your modifications and may provide additional or different license terms and conditions for use, reproduction, or distribution of Your 
+    modifications, or for any such Derivative Works as a whole, provided Your use, reproduction, and distribution of the Work otherwise complies with 
+    the conditions stated in this License.
+
+5. Submission of Contributions. Unless You explicitly state otherwise, any Contribution intentionally submitted for inclusion in the Work by You 
+to the Licensor shall be under the terms and conditions of this License, without any additional terms or conditions. Notwithstanding the above, 
+nothing herein shall supersede or modify the terms of any separate license agreement you may have executed with Licensor regarding such Contributions.
+
+6. Trademarks. This License does not grant permission to use the trade names, trademarks, service marks, or product names of the Licensor, except 
+as required for reasonable and customary use in describing the origin of the Work and reproducing the content of the NOTICE file.
+
+7. Disclaimer of Warranty. Unless required by applicable law or agreed to in writing, Licensor provides the Work (and each Contributor provides 
+its Contributions) on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied, including, without limitation, 
+any warranties or conditions of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A PARTICULAR PURPOSE. You are solely responsible for 
+determining the appropriateness of using or redistributing the Work and assume any risks associated with Your exercise of permissions under 
+this License.
+
+8. Limitation of Liability. In no event and under no legal theory, whether in tort (including negligence), contract, or otherwise, unless required
+by applicable law (such as deliberate and grossly negligent acts) or agreed to in writing, shall any Contributor be liable to You for damages, 
+including any direct, indirect, special, incidental, or consequential damages of any character arising as a result of this License or out of the 
+use or inability to use the Work (including but not limited to damages for loss of goodwill, work stoppage, computer failure or malfunction, or 
+any and all other commercial damages or losses), even if such Contributor has been advised of the possibility of such damages.
+
+9. Accepting Warranty or Additional Liability. While redistributing the Work or Derivative Works thereof, You may choose to offer, and charge a 
+fee for, acceptance of support, warranty, indemnity, or other liability obligations and/or rights consistent with this License. However, in accepting 
+such obligations, You may act only on Your own behalf and on Your sole responsibility, not on behalf of any other Contributor, and only if You agree 
+to indemnify, defend, and hold each Contributor harmless for any liability incurred by, or claims asserted against, such Contributor by reason of your
+accepting any such warranty or additional liability.
+
+END OF TERMS AND CONDITIONS
+
+NOTICE:
+
+LERC
+Copyright 2015-2018 Esri
+
+This software embodiment is an implementation of
+
+United States Patent 9,002,126, Limited Error Raster Compression (LERC).
+Assignee: Esri.
+Assignors/Inventors: Maurer, Thomas (Redlands, CA); Gao, Peng (Redlands, CA); Becker, Peter (Redlands, CA).
+
+The right to practice this patent is hereby granted under the Apache V2.0 License Agreement,
+Clause 3 - Grant of Patent License.
+
+The license is available at
+http://github.com/Esri/lerc/
+
+For additional information, contact:
+
+Environmental Systems Research Institute, Inc.
+Attn: Contracts and Legal Department
+380 New York Street
+Redlands, CA 92373
+E-mail: contracts@esri.com
+
+--------------------------------------------------------------------------------
+
+pako 2.2.0 (MIT AND Zlib)
+https://github.com/nodeca/pako
+
+(The MIT License)
+
+Copyright (C) 2014-2017 by Vitaly Puzrin and Andrei Tuputcyn
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+@zarrita/storage 0.2.0 (MIT)
+https://github.com/TissUUmaps/zarrita.js
+TissUUmaps fork (https://github.com/TissUUmaps/zarrita.js, commit 9a1af2ec95f9) of https://github.com/manzt/zarrita.js
+
+MIT License
+
+Copyright (c) 2020-2023 Trevor Manz
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+zstddec 0.2.0 (MIT AND BSD-3-Clause)
+https://github.com/donmccurdy/zstddec
+
+The MIT License (MIT)
+
+Copyright (c) 2020 Don McCurdy
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+***
+
+BSD License
+
+For Zstandard software
+
+Copyright (c) 2016-present, Yann Collet, Facebook, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+ * Redistributions of source code must retain the above copyright notice, this
+ list of conditions and the following disclaimer.
+
+ * Redistributions in binary form must reproduce the above copyright notice,
+ this list of conditions and the following disclaimer in the documentation
+ and/or other materials provided with the distribution.
+
+ * Neither the name Facebook nor the names of its contributors may be used to
+ endorse or promote products derived from this software without specific
+ prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+--------------------------------------------------------------------------------
+
+JPEG decoder (jpgjs) (Apache-2.0)
+https://github.com/notmasteryet/jpgjs
+Embedded in geotiff
+
+Copyright 2011 notmasteryet
+
+Licensed under the Apache License, Version 2.0; its full text is reproduced for
+lerc above.
+
+--------------------------------------------------------------------------------
+
+HDF5 2.0.0 (WebAssembly build) (BSD-3-Clause-style HDF5 license)
+https://github.com/HDFGroup/hdf5
+Embedded in h5wasm
+
+Copyright 2006 by The HDF Group.
+Copyright 1998-2006 by The Board of Trustees of the University of Illinois.
+
+Its copyright notice and license terms are reproduced for h5wasm above.
+
+--------------------------------------------------------------------------------
+
+zlib (part of the HDF5 WebAssembly build) (Zlib)
+https://zlib.net
+Embedded in h5wasm
+
+Copyright notice:
+
+ (C) 1995-2026 Jean-loup Gailly and Mark Adler
+
+  This software is provided 'as-is', without any express or implied
+  warranty.  In no event will the authors be held liable for any damages
+  arising from the use of this software.
+
+  Permission is granted to anyone to use this software for any purpose,
+  including commercial applications, and to alter it and redistribute it
+  freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+
+  Jean-loup Gailly        Mark Adler
+  jloup@gzip.org          madler@alumni.caltech.edu
+
+--------------------------------------------------------------------------------
+
+libaec (szip, part of the HDF5 WebAssembly build) (BSD-2-Clause)
+https://gitlab.dkrz.de/k202009/libaec
+Embedded in h5wasm
+
+Copyright 2026 Mathis Rosenhauer, Moritz Hanke, Joerg Behrens, Luis Kornblueh
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+--------------------------------------------------------------------------------
+
+snappyjs (MIT)
+https://github.com/zhipeng-jia/snappyjs
+Embedded in hyparquet
+
+The MIT License (MIT)
+
+Copyright (c) 2016 Zhipeng Jia
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+Brotli decoder (adapted from brotli.js) (MIT AND Apache-2.0)
+https://github.com/foliojs/brotli.js
+Embedded in hyparquet-compressors
+
+Copyright 2015 Devon Govett, MIT License
+Copyright 2013 Google Inc, Apache License 2.0
+
+MIT License
+
+Copyright (c) 2015 Devon Govett
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+The portions copyright Google Inc are licensed under the Apache License, Version
+2.0; its full text is reproduced for lerc above.
+
+--------------------------------------------------------------------------------
+
+gzip decoder (adapted from fflate) (MIT)
+https://github.com/101arrowz/fflate
+Embedded in hyparquet-compressors
+
+MIT License
+
+Copyright (c) 2026 Arjun Barrett
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+zlib (ported) (Zlib)
+https://zlib.net
+Embedded in pako
+
+Copyright notice:
+
+ (C) 1995-2013 Jean-loup Gailly and Mark Adler
+
+  This software is provided 'as-is', without any express or implied
+  warranty.  In no event will the authors be held liable for any damages
+  arising from the use of this software.
+
+  Permission is granted to anyone to use this software for any purpose,
+  including commercial applications, and to alter it and redistribute it
+  freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+
+  Jean-loup Gailly        Mark Adler
+  jloup@gzip.org          madler@alumni.caltech.edu
+

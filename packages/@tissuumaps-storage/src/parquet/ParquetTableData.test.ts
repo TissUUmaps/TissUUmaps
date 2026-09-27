@@ -32,6 +32,16 @@ describe("ParquetTableData", () => {
       );
     });
 
+    it("lists prefix matches before other matches", async () => {
+      await expect(
+        createTableData([
+          "cell_type",
+          "total_counts",
+          "type",
+        ]).suggestColumnQueries("T"),
+      ).resolves.toEqual(suggestions("total_counts", "type", "cell_type"));
+    });
+
     it("lists an exact match first", async () => {
       await expect(
         createTableData(["Area_um2", "area"]).suggestColumnQueries("area"),

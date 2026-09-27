@@ -4,15 +4,10 @@ packages:
 
 allowBuilds:
   "@swc/core": true
-  canvas: true
   core-js: true
   omezarr-tilesource: true
 
 minimumReleaseAge: 1440
 
-minimumReleaseAgeExclude:
-  - omezarr-tilesource@0.8.0
-
 patchedDependencies:
   geotiff@3.0.5: patches/geotiff@3.0.5.patch
-  openseadragon@6.1.1: patches/openseadragon@6.1.1.patch

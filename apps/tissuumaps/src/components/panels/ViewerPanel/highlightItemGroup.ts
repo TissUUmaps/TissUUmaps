@@ -1,4 +1,5 @@
 import type {
+  GroupValueMap,
   HighlightedItemGroup,
   Labels,
   OpacityConfig,
@@ -6,7 +7,6 @@ import type {
   Shapes,
   VisibilityConfig,
 } from "@tissuumaps/core";
-import type { ViewerAdapter } from "@tissuumaps/viewer";
 
 /**
  * ID of the transient opacity map that shows only the highlighted group
@@ -17,10 +17,12 @@ import type { ViewerAdapter } from "@tissuumaps/viewer";
  */
 const highlightOpacityMapId = "highlightedItemGroup";
 
-export type HighlightableState = Pick<
-  ViewerAdapter,
-  "labels" | "points" | "shapes" | "opacityMaps"
->;
+export type HighlightableState = {
+  labels: Labels[];
+  points: Points[];
+  shapes: Shapes[];
+  opacityMaps: GroupValueMap<number>[];
+};
 
 /**
  * Overrides the opacity configuration of the highlighted group's object so that

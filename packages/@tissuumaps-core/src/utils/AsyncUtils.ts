@@ -135,4 +135,24 @@ export class AsyncUtils {
       );
     });
   }
+
+  /**
+   * Creates a promise together with the functions that resolve and reject it,
+   * like `Promise.withResolvers()`, which is not yet widely available.
+   *
+   * @returns The promise and the functions that resolve and reject it
+   */
+  static withResolvers<T>(): {
+    promise: Promise<T>;
+    resolve: (value: T | PromiseLike<T>) => void;
+    reject: (reason?: unknown) => void;
+  } {
+    let resolve!: (value: T | PromiseLike<T>) => void;
+    let reject!: (reason?: unknown) => void;
+    const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+      resolve = resolvePromise;
+      reject = rejectPromise;
+    });
+    return { promise, resolve, reject };
+  }
 }

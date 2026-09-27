@@ -32,7 +32,8 @@ export interface TableData extends ItemsData {
    * Returns column query suggestions for the current query
    *
    * The query format is up to the provider. Suggestions matching the current
-   * query come first.
+   * query come first, best matches first, followed by the other suggestions.
+   * The list is not capped.
    *
    * @param currentQuery - The partial column query to autocomplete
    * @param options - Optional abort signal

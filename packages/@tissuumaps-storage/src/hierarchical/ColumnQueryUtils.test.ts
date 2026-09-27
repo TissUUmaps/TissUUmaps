@@ -163,21 +163,27 @@ describe("ColumnQueryUtils", () => {
       );
     });
 
-    it("filters children by the partial name, ignoring case", () => {
+    it("lists children matching the partial name first, ignoring case", () => {
       expect(ColumnQueryUtils.suggestColumnQueries(columns, "obs/ce")).toEqual(
-        complete("obs/cell_type"),
+        complete("obs/cell_type", "obs/_index", "obs/area"),
       );
       expect(ColumnQueryUtils.suggestColumnQueries(columns, "OBS/CE")).toEqual(
-        complete("obs/cell_type"),
+        complete("obs/cell_type", "obs/_index", "obs/area"),
       );
       expect(ColumnQueryUtils.suggestColumnQueries(columns, "obs")).toEqual(
-        partial("obs/", "obsm/"),
+        partial("obs/", "obsm/", "X", "layers/", "var/"),
+      );
+    });
+
+    it("lists all children in path order when none matches", () => {
+      expect(ColumnQueryUtils.suggestColumnQueries(columns, "obs/z")).toEqual(
+        complete("obs/_index", "obs/area", "obs/cell_type"),
       );
     });
 
     it("ignores a leading slash", () => {
       expect(ColumnQueryUtils.suggestColumnQueries(columns, "/obs/ar")).toEqual(
-        complete("obs/area"),
+        complete("obs/area", "obs/_index", "obs/cell_type"),
       );
     });
 
@@ -190,7 +196,7 @@ describe("ColumnQueryUtils", () => {
       };
       expect(
         ColumnQueryUtils.suggestColumnQueries([matrix], "X[HLA-A/"),
-      ).toEqual(complete("X[HLA-A/B]"));
+      ).toEqual(complete("X[HLA-A/B]", "X[CD3]"));
     });
 
     it("expands a fully typed matrix to its columns", () => {
@@ -199,8 +205,13 @@ describe("ColumnQueryUtils", () => {
       ).toEqual(complete("obsm/spatial[0]", "obsm/spatial[1]"));
     });
 
-    it("filters matrix columns by the typed index", () => {
-      expect(ColumnQueryUtils.suggestColumnQueries(columns, "X[24")).toEqual(
+    it("lists matrix columns matching the typed index first", () => {
+      const suggestions = ColumnQueryUtils.suggestColumnQueries(
+        columns,
+        "X[24",
+      );
+      expect(suggestions).toHaveLength(250);
+      expect(suggestions.slice(0, 12)).toEqual(
         complete(
           "X[24]",
           "X[240]",
@@ -213,6 +224,7 @@ describe("ColumnQueryUtils", () => {
           "X[247]",
           "X[248]",
           "X[249]",
+          "X[0]",
         ),
       );
     });
@@ -229,16 +241,24 @@ describe("ColumnQueryUtils", () => {
       );
       expect(
         ColumnQueryUtils.suggestColumnQueries(columns, "layers/counts[cd4"),
-      ).toEqual(complete("layers/counts[CD4]"));
-    });
-
-    it("lists every column of a large matrix", () => {
-      expect(ColumnQueryUtils.suggestColumnQueries(columns, "X")).toHaveLength(
-        250,
+      ).toEqual(
+        complete(
+          "layers/counts[CD4]",
+          "layers/counts[CD3]",
+          "layers/counts[CD8]",
+        ),
       );
     });
 
-    it("lists names equal to, then starting with, then containing the partial name", () => {
+    it("lists every column of a large matrix, then the other names", () => {
+      const suggestions = ColumnQueryUtils.suggestColumnQueries(columns, "X");
+      expect(suggestions).toHaveLength(254);
+      expect(suggestions.slice(250)).toEqual(
+        partial("layers/", "obs/", "obsm/", "var/"),
+      );
+    });
+
+    it("lists names equal to, then starting with, then containing the partial name, then the others", () => {
       const obs: HierarchicalTableColumn[] = [
         { kind: "dataset", path: "obs/cell_type" },
         { kind: "dataset", path: "obs/total_counts" },
@@ -248,7 +268,7 @@ describe("ColumnQueryUtils", () => {
         complete("obs/total_counts", "obs/type", "obs/cell_type"),
       );
       expect(ColumnQueryUtils.suggestColumnQueries(obs, "obs/TYPE")).toEqual(
-        complete("obs/type", "obs/cell_type"),
+        complete("obs/type", "obs/cell_type", "obs/total_counts"),
       );
     });
 
@@ -264,10 +284,25 @@ describe("ColumnQueryUtils", () => {
       );
     });
 
-    it("returns nothing when nothing matches", () => {
-      expect(ColumnQueryUtils.suggestColumnQueries(columns, "nope/")).toEqual(
-        [],
+    it("lists the root children for an unknown group", () => {
+      expect(ColumnQueryUtils.suggestColumnQueries(columns, "nope/x")).toEqual(
+        partial("X", "layers/", "obs/", "obsm/", "var/"),
       );
+      expect(ColumnQueryUtils.suggestColumnQueries(columns, "//x")).toEqual(
+        partial("X", "layers/", "obs/", "obsm/", "var/"),
+      );
+    });
+
+    it("lists the children of the nearest existing group", () => {
+      expect(
+        ColumnQueryUtils.suggestColumnQueries(columns, "obs/nope/x"),
+      ).toEqual(complete("obs/_index", "obs/area", "obs/cell_type"));
+      expect(
+        ColumnQueryUtils.suggestColumnQueries(columns, "OBS/nope/"),
+      ).toEqual(complete("obs/_index", "obs/area", "obs/cell_type"));
+    });
+
+    it("returns nothing for a selector on a dataset", () => {
       expect(
         ColumnQueryUtils.suggestColumnQueries(columns, "obs/area["),
       ).toEqual([]);

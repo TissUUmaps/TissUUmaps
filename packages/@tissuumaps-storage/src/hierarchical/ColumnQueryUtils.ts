@@ -137,19 +137,21 @@ export class ColumnQueryUtils {
   }
 
   /**
-   * Suggests column queries matching the current query
+   * Suggests column queries for the current query
    *
-   * The children of the query's parent path whose name contains its partial
-   * name, ignoring case, are suggested: groups with a trailing slash, dataset
-   * columns as their path, and matrix columns as the `path[selector]` queries
-   * matching the typed selector.
+   * The children of the query's parent path are suggested: groups with a
+   * trailing slash, dataset columns as their path, and the columns of a matrix
+   * named by the query as its `path[selector]` queries (see
+   * `_suggestMatrixColumns`). An unknown parent path falls back to its nearest
+   * existing ancestor, e.g. the root.
    *
    * Groups and matrix columns suggested without a selector are group
    * suggestions: a group continues into its children, a matrix column into
    * its bracket.
    *
-   * Names equal to the partial name come first, then names starting with it,
-   * then names containing it, each in path order.
+   * Names equal to the partial name come first, ignoring case, then names
+   * starting with it, then names containing it, then the other names, each in
+   * path order.
    *
    * @param columns - The columns of the table
    * @param currentQuery - The partial column query
@@ -166,12 +168,20 @@ export class ColumnQueryUtils {
     const path = bracket >= 0 ? query.slice(0, bracket) : query;
     const partialSelector =
       bracket >= 0 ? query.slice(bracket + 1).replace("]", "") : undefined;
-    const lastSlash = path.lastIndexOf("/");
+    let lastSlash = path.lastIndexOf("/");
+    const hasChildren = (prefix: string) =>
+      columns.some((column) => column.path.toLowerCase().startsWith(prefix));
+    while (
+      lastSlash >= 0 &&
+      !hasChildren(path.slice(0, lastSlash + 1).toLowerCase())
+    ) {
+      lastSlash = lastSlash > 0 ? path.lastIndexOf("/", lastSlash - 1) : -1;
+    }
     const prefix = path.slice(0, lastSlash + 1).toLowerCase();
     const partialName = path.slice(lastSlash + 1).toLowerCase();
 
-    // by the rank of their name, see `_rankMatch`
-    const rankedSuggestions: TableColumnQuerySuggestion[][] = [[], [], []];
+    // by the rank of their name (see `_rankMatch`), the other names last
+    const rankedSuggestions: TableColumnQuerySuggestion[][] = [[], [], [], []];
     const seenNames = new Set<string>();
     for (const column of columns) {
       if (!column.path.toLowerCase().startsWith(prefix)) {
@@ -192,10 +202,10 @@ export class ColumnQueryUtils {
         rankedSuggestions[0] = rankedSuggestions[0]!.concat(
           ColumnQueryUtils._suggestMatrixColumns(column, partialSelector),
         );
-      } else if (partialSelector === undefined && rank >= 0) {
+      } else if (partialSelector === undefined) {
         seenNames.add(name);
         // a matrix column only addresses a column with a bracketed selector
-        rankedSuggestions[rank]!.push(
+        rankedSuggestions[rank >= 0 ? rank : 3]!.push(
           slash >= 0
             ? { query: `${columnPrefix}${name}/`, group: true }
             : column.kind === "matrix"
@@ -281,7 +291,7 @@ export class ColumnQueryUtils {
    *
    * Columns with selectors are matched by their selector, ignoring case, and
    * ranked like names (see `_rankMatch`). The others are matched by the digits
-   * of their index, in index order.
+   * of their index, in index order. Columns that do not match come last.
    *
    * @param column - The matrix column
    * @param partialSelector - The partially typed selector, or `undefined` if
@@ -295,26 +305,28 @@ export class ColumnQueryUtils {
     const { selectors } = column;
     if (selectors !== undefined) {
       const partial = (partialSelector ?? "").toLowerCase();
-      const rankedSelectors: string[][] = [[], [], []];
+      const rankedSelectors: string[][] = [[], [], [], []];
       for (const selector of selectors) {
         const rank = ColumnQueryUtils._rankMatch(selector, partial);
-        if (rank >= 0) {
-          rankedSelectors[rank]!.push(selector);
-        }
+        rankedSelectors[rank >= 0 ? rank : 3]!.push(selector);
       }
       return rankedSelectors
         .flat()
         .map((selector) => ({ query: `${column.path}[${selector}]` }));
     }
-    const suggestions: TableColumnQuerySuggestion[] = [];
+    const matches: TableColumnQuerySuggestion[] = [];
+    const others: TableColumnQuerySuggestion[] = [];
     for (let i = 0; i < column.numColumns; i++) {
+      const suggestion = { query: `${column.path}[${i}]` };
       if (
         partialSelector === undefined ||
         String(i).startsWith(partialSelector)
       ) {
-        suggestions.push({ query: `${column.path}[${i}]` });
+        matches.push(suggestion);
+      } else {
+        others.push(suggestion);
       }
     }
-    return suggestions;
+    return [...matches, ...others];
   }
 }

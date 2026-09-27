@@ -1,37 +1,55 @@
 {
   "name": "@tissuumaps/render",
   "version": "0.1.0",
+  "description": "Rendering backends for TissUUmaps images, labels, points and shapes",
+  "homepage": "https://tissuumaps.github.io/TissUUmaps4/",
+  "bugs": "https://github.com/TissUUmaps/TissUUmaps4/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TissUUmaps/TissUUmaps4.git",
+    "directory": "packages/@tissuumaps-render"
+  },
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
   "files": [
-    "./dist"
+    "./dist",
+    "./CHANGELOG.md"
   ],
   "exports": {
     ".": {
       "tissuumaps-development": "./src/index.ts",
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
       "default": "./dist/index.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "scripts": {
     "build": "tsc -b tsconfig.src.json && vite build",
+    "prepack": "pnpm --filter \"{.}...\" run build",
     "clean": "rm -rf build dist node_modules",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "fast-equals": "^6.0.0",
-    "gl-matrix": "^3.4.4",
-    "openseadragon": "^6.1.1"
+    "gl-matrix": "^3.4.4"
   },
   "devDependencies": {
-    "@tissuumaps/core": "workspace:^"
+    "@tissuumaps/core": "workspace:^",
+    "openseadragon": "^6.1.1"
   },
   "peerDependencies": {
-    "@tissuumaps/core": "workspace:^"
+    "@tissuumaps/core": "workspace:^",
+    "openseadragon": "^6.1.1"
   },
-  "engines": {
-    "node": ">=22.22.1"
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json"
+    }
   }
 }
