@@ -5,6 +5,7 @@ import {
   pickProjectFile,
   pickWorkspace,
   pickWorkspacePath,
+  pickWorkspaceSaveFile,
 } from "./workspace";
 
 const directory = {
@@ -176,6 +177,39 @@ describe("workspace", () => {
       stubOpenFilePicker(() => Promise.resolve([dataFile]));
       await expect(
         pickWorkspacePath(makeWorkspace(["image.ome.zarr"]), "directory"),
+      ).resolves.toBeNull();
+    });
+  });
+
+  describe("pickWorkspaceSaveFile", () => {
+    it("returns the chosen file and its workspace path", async () => {
+      const workspace = makeWorkspace(["study", "copy.tm4"]);
+      const picker = vi.fn(() => Promise.resolve(projectFile));
+      vi.stubGlobal("showSaveFilePicker", picker);
+      await expect(
+        pickWorkspaceSaveFile(workspace, "copy.tm4"),
+      ).resolves.toEqual({ file: projectFile, source: "/study/copy.tm4" });
+      expect(picker).toHaveBeenCalledWith(
+        expect.objectContaining({
+          startIn: workspace,
+          suggestedName: "copy.tm4",
+        }),
+      );
+    });
+
+    it("rejects a file outside the workspace", async () => {
+      vi.stubGlobal("showSaveFilePicker", () => Promise.resolve(projectFile));
+      await expect(
+        pickWorkspaceSaveFile(makeWorkspace(null), "copy.tm4"),
+      ).rejects.toThrow(/not in the connected folder/);
+    });
+
+    it("returns null when the user cancels", async () => {
+      vi.stubGlobal("showSaveFilePicker", () =>
+        Promise.reject(new DOMException("Aborted", "AbortError")),
+      );
+      await expect(
+        pickWorkspaceSaveFile(makeWorkspace(["copy.tm4"]), "copy.tm4"),
       ).resolves.toBeNull();
     });
   });

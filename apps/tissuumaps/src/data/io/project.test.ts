@@ -10,7 +10,10 @@ import { projectStore } from "@/stores/project";
 import {
   hasUnsavedChanges,
   loadProject,
+  makeProjectFileName,
+  rebaseProjectSources,
   resolveProjectSource,
+  saveProjectAs,
   saveProjectToSourceFile,
 } from "./project";
 
@@ -125,7 +128,7 @@ describe("hasUnsavedChanges", () => {
 
   it("ignores where the project was loaded from", () => {
     expect(
-      hasUnsavedChanges({ ...state, source: "https://example.com/p.tmap" }),
+      hasUnsavedChanges({ ...state, source: "https://example.com/p.tm4" }),
     ).toBe(false);
   });
 });
@@ -150,7 +153,7 @@ function makeSourceFile(writable: ReturnType<typeof makeWritable>) {
     createWritable,
     sourceFile: {
       kind: "file",
-      name: "project.tmap",
+      name: "project.tm4",
       createWritable,
     } as unknown as FileSystemFileHandle,
   };
@@ -165,11 +168,7 @@ describe("saveProjectToSourceFile", () => {
   it("writes the project and marks it saved once the file is closed", async () => {
     const writable = makeWritable();
     const { sourceFile } = makeSourceFile(writable);
-    loadProject(
-      createProject({ name: "Project" }),
-      "/project.tmap",
-      sourceFile,
-    );
+    loadProject(createProject({ name: "Project" }), "/project.tm4", sourceFile);
     projectStore.getState().setName("Renamed");
     writable.close.mockImplementation(() => {
       expect(hasUnsavedChanges(projectStore.getState())).toBe(true);
@@ -185,11 +184,7 @@ describe("saveProjectToSourceFile", () => {
     writable.write.mockRejectedValue(new Error("disk full"));
     writable.abort.mockRejectedValue(new Error("abort failed"));
     const { sourceFile } = makeSourceFile(writable);
-    loadProject(
-      createProject({ name: "Project" }),
-      "/project.tmap",
-      sourceFile,
-    );
+    loadProject(createProject({ name: "Project" }), "/project.tm4", sourceFile);
     projectStore.getState().setName("Renamed");
     await expect(saveProjectToSourceFile()).rejects.toThrow("disk full");
     expect(writable.abort).toHaveBeenCalled();
@@ -199,11 +194,7 @@ describe("saveProjectToSourceFile", () => {
   it("does not mark a project loaded during the write as saved", async () => {
     const writable = makeWritable();
     const { sourceFile } = makeSourceFile(writable);
-    loadProject(
-      createProject({ name: "Project" }),
-      "/project.tmap",
-      sourceFile,
-    );
+    loadProject(createProject({ name: "Project" }), "/project.tm4", sourceFile);
     writable.write.mockImplementation(() => {
       loadProject(createProject({ name: "Other" }), null);
       projectStore.getState().setName("Other renamed");
@@ -211,5 +202,108 @@ describe("saveProjectToSourceFile", () => {
     });
     await saveProjectToSourceFile();
     expect(hasUnsavedChanges(projectStore.getState())).toBe(true);
+  });
+});
+
+const workspace = {
+  kind: "directory",
+  name: "workspace",
+} as FileSystemDirectoryHandle;
+
+/**
+ * Creates a project with one image per source
+ */
+function makeProjectWithSources(sources: string[]) {
+  return createProject({
+    name: "Project",
+    images: sources.map((source, i) => ({
+      id: `image${i}`,
+      name: `Image ${i}`,
+      layer: "layer",
+      dataSource: { type: "tiff", source },
+    })),
+  });
+}
+
+describe("rebaseProjectSources", () => {
+  it("makes workspace paths relative to the new file", () => {
+    const project = makeProjectWithSources(["/data/a.tif", "/shared/b.tif"]);
+    const rebased = rebaseProjectSources(
+      project,
+      workspace,
+      null,
+      "/data/study.tm4",
+    );
+    expect(rebased.images.map((image) => image.dataSource.source)).toEqual([
+      "a.tif",
+      "../shared/b.tif",
+    ]);
+  });
+
+  it("rebases paths relative to the old file", () => {
+    const project = makeProjectWithSources(["images/a.tif"]);
+    const rebased = rebaseProjectSources(
+      project,
+      workspace,
+      "/old/project.tm4",
+      "/new/sub/project.tm4",
+    );
+    expect(rebased.images[0]?.dataSource.source).toBe("../../old/images/a.tif");
+  });
+
+  it("keeps URLs and app-relative paths", () => {
+    const project = makeProjectWithSources([
+      "https://example.com/a.tif",
+      "//data/b.tif",
+    ]);
+    const rebased = rebaseProjectSources(
+      project,
+      workspace,
+      null,
+      "/study.tm4",
+    );
+    expect(rebased.images.map((image) => image.dataSource.source)).toEqual([
+      "https://example.com/a.tif",
+      "//data/b.tif",
+    ]);
+  });
+
+  it("makes paths relative to a URL project absolute", () => {
+    const project = makeProjectWithSources(["images/a.tif"]);
+    const rebased = rebaseProjectSources(
+      project,
+      workspace,
+      "https://example.com/study/project.tm4",
+      "/study.tm4",
+    );
+    expect(rebased.images[0]?.dataSource.source).toBe(
+      "https://example.com/study/images/a.tif",
+    );
+  });
+});
+
+describe("makeProjectFileName", () => {
+  it("sanitizes the project name", () => {
+    expect(makeProjectFileName(" My study: v2 ")).toBe("My-study-v2.tm4");
+  });
+
+  it("falls back to Untitled", () => {
+    expect(makeProjectFileName("!!!")).toBe("Untitled.tm4");
+  });
+});
+
+describe("saveProjectAs", () => {
+  it("writes the rebased project and switches to the new file", async () => {
+    const writable = makeWritable();
+    const { sourceFile } = makeSourceFile(writable);
+    loadProject(makeProjectWithSources(["/data/a.tif"]), null);
+    projectStore.getState().setName("Renamed");
+    await saveProjectAs(sourceFile, "/data/study.tm4", workspace);
+    const state = projectStore.getState();
+    expect(writable.write.mock.calls[0]?.[0]).toContain('"a.tif"');
+    expect(state.source).toBe("/data/study.tm4");
+    expect(state.sourceFile).toBe(sourceFile);
+    expect(state.images[0]?.dataSource.source).toBe("a.tif");
+    expect(hasUnsavedChanges(state)).toBe(false);
   });
 });

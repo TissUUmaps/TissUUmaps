@@ -299,26 +299,37 @@ export function saveProjectToJSON(project?: Project): string {
 }
 
 /**
+ * Makes the name of a project file from the name of the project
+ *
+ * @param projectName - The name of the project
+ * @returns The project name with whitespace replaced by hyphens and any other
+ * non-alphanumeric characters removed, falling back to `Untitled`, with the
+ * `.tm4` extension
+ */
+export function makeProjectFileName(projectName: string): string {
+  const sanitizedProjectName = projectName
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-zA-Z0-9_-]+/g, "")
+    .replace(/^[-_]+|[-_]+$/g, "");
+  return `${sanitizedProjectName || "Untitled"}.tm4`;
+}
+
+/**
  * Serializes a project to JSON and downloads it as a `.tm4` file
  *
- * The file is named after the project, with whitespace replaced by hyphens and
- * any other non-alphanumeric characters removed, falling back to `Untitled`.
+ * The file is named after the project (see {@link makeProjectFileName}).
  *
  * @param project - The project to download, defaulting to the currently open
  * project
  */
 export function saveAndDownloadProjectToJSON(project?: Project): void {
   const savedProject = saveProject(project);
-  const sanitizedProjectName = savedProject.name
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-zA-Z0-9_-]+/g, "")
-    .replace(/^[-_]+|[-_]+$/g, "");
   const projectJSON = JSONUtils.stringify(savedProject);
   const projectBlob = new Blob([projectJSON], { type: "application/json" });
   const projectUrl = URL.createObjectURL(projectBlob);
   const projectLink = document.createElement("a");
-  projectLink.download = `${sanitizedProjectName || "Untitled"}.tm4`;
+  projectLink.download = makeProjectFileName(savedProject.name);
   projectLink.href = projectUrl;
   projectLink.click();
   setTimeout(() => URL.revokeObjectURL(projectUrl), 60_000);
@@ -351,7 +362,145 @@ export async function saveProjectToSourceFile(options?: {
   }
   const { instanceId } = state;
   const project = pickProject(state);
-  const writable = await state.sourceFile.createWritable();
+  await writeProjectFile(state.sourceFile, project, options);
+  if (projectStore.getState().instanceId === instanceId) {
+    projectStore.setState({ savedProject: project });
+  }
+}
+
+/**
+ * Saves the currently open project to a new file within the workspace, and
+ * makes that file the one the project was loaded from
+ *
+ * The sources of the project's data objects are rewritten for the new file
+ * (see {@link rebaseProjectSources}), and the open project takes them over, so
+ * that saving it again writes to the new file. The project is only switched
+ * over if it is still open once written.
+ *
+ * @param projectFile - The handle of the new file
+ * @param projectSource - The workspace-relative path of the new file (with `/`
+ * prefix)
+ * @param workspace - The directory handle of the open workspace
+ * @param options - Optional abort signal
+ * @throws Error if a source of the project is invalid
+ * @throws DOMException if the file cannot be written, e.g. because the
+ * permission to write it was denied (`NotAllowedError`)
+ */
+export async function saveProjectAs(
+  projectFile: FileSystemFileHandle,
+  projectSource: string,
+  workspace: FileSystemDirectoryHandle,
+  options?: { signal?: AbortSignal },
+): Promise<void> {
+  const { signal } = options ?? {};
+  signal?.throwIfAborted();
+  const state = projectStore.getState();
+  const { instanceId } = state;
+  const project = rebaseProjectSources(
+    pickProject(state),
+    workspace,
+    state.source,
+    projectSource,
+  );
+  await writeProjectFile(projectFile, project, options);
+  if (projectStore.getState().instanceId === instanceId) {
+    projectStore.setState(
+      freeze(
+        {
+          ...project,
+          source: projectSource,
+          sourceFile: projectFile,
+          savedProject: project,
+        },
+        true,
+      ),
+    );
+  }
+}
+
+/**
+ * Rewrites the sources of a project's data objects for a new project file
+ * within the workspace
+ *
+ * Sources within the workspace, whether workspace-relative or relative to the
+ * current project file, become relative to the new project file. URLs and
+ * app-relative paths stay as they are, and paths relative to a project loaded
+ * from a URL become absolute URLs, as the new file cannot reach them relatively.
+ *
+ * @param project - The project whose sources to rewrite
+ * @param workspace - The directory handle of the open workspace
+ * @param fromProjectSource - Where the project was loaded from (see
+ * `ProjectStoreState.source`)
+ * @param toProjectSource - The workspace-relative path of the new project file
+ * (with `/` prefix)
+ * @returns The project with rewritten sources, sharing the unchanged parts
+ * @throws Error if a source is invalid (see `SourceUtils.normalizeSource`)
+ */
+export function rebaseProjectSources(
+  project: Project,
+  workspace: FileSystemDirectoryHandle | null,
+  fromProjectSource: string | null,
+  toProjectSource: string,
+): Project {
+  const directory =
+    SourceUtils.getParentSource(toProjectSource)?.parentSource ?? "/";
+  const rebaseSource = (source: string | undefined): string | undefined => {
+    if (source === undefined || source === "") {
+      return source;
+    }
+    const isAppPath =
+      source.startsWith("/") && !SourceUtils.isWorkspacePath(source);
+    if (isAppPath) {
+      return source;
+    }
+    const normalizedSource = SourceUtils.normalizeSource(
+      source,
+      workspace,
+      fromProjectSource,
+    );
+    return SourceUtils.isWorkspacePath(normalizedSource)
+      ? SourceUtils.makeRelativePath(normalizedSource, directory)
+      : normalizedSource;
+  };
+  const rebase = <TObject extends { dataSource: { source?: string } }>(
+    object: TObject,
+  ): TObject => ({
+    ...object,
+    dataSource: {
+      ...object.dataSource,
+      source: rebaseSource(object.dataSource.source),
+    },
+  });
+  return {
+    ...project,
+    images: project.images.map(rebase),
+    labels: project.labels.map(rebase),
+    points: project.points.map(rebase),
+    shapes: project.shapes.map(rebase),
+    tables: project.tables.map(rebase),
+  };
+}
+
+/**
+ * Writes a project to a file, replacing its contents
+ *
+ * A failed write discards the partly written contents, leaving the file as it
+ * was.
+ *
+ * @param projectFile - The handle of the file to write
+ * @param project - The project to write
+ * @param options - Optional abort signal
+ * @throws DOMException if the file cannot be written, e.g. because the
+ * permission to write it was denied (`NotAllowedError`)
+ */
+async function writeProjectFile(
+  projectFile: FileSystemFileHandle,
+  project: Project,
+  options?: { signal?: AbortSignal },
+): Promise<void> {
+  const { signal } = options ?? {};
+  signal?.throwIfAborted();
+  const writable = await projectFile.createWritable();
   try {
     signal?.throwIfAborted(); // createWritable() does not throw on abort
     await writable.write(saveProjectToJSON(project));
@@ -361,9 +510,6 @@ export async function saveProjectToSourceFile(options?: {
     // partly written file
     await writable.abort().catch(() => undefined);
     throw error;
-  }
-  if (projectStore.getState().instanceId === instanceId) {
-    projectStore.setState({ savedProject: project });
   }
 }
 
