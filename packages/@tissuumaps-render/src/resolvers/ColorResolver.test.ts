@@ -576,13 +576,19 @@ describe("ColorResolver", () => {
 
     it("loads the table the config names", async () => {
       const palette = colorPalettes[0]!;
-      const data = createMockTableData([1], [0], [0, 1]);
+      const data = createMockTableData(new Uint32Array([1]), [0], [0, 1]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = {
         from: { table: "other", column: "col1", palette: palette.id },
       } satisfies ColorConfig;
 
-      await ColorResolver.resolveColors([1], config, [], black, loadTable);
+      await ColorResolver.resolveColors(
+        new Uint32Array([1]),
+        config,
+        [],
+        black,
+        loadTable,
+      );
 
       expect(loadTable).toHaveBeenCalledWith("other", { signal: undefined });
     });
