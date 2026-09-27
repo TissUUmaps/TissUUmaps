@@ -2,7 +2,6 @@ import type { Autocomplete as AutocompletePrimitive } from "@base-ui/react/autoc
 import { FolderIcon } from "lucide-react";
 import {
   type Ref,
-  useCallback,
   useEffect,
   useEffectEvent,
   useImperativeHandle,
@@ -27,8 +26,7 @@ import {
 } from "@/components/common/autocomplete";
 import { InputGroupAddon } from "@/components/ui/input-group";
 import { useCompressedRowVirtualizer } from "@/hooks/useCompressedRowVirtualizer";
-import { useTableDataLoader } from "@/hooks/useDataLoader";
-import { useProjectStore } from "@/stores/project";
+import { useLazyTableData } from "@/hooks/useLazyData";
 
 export type TableColumnInputProps = {
   tableId: string | null;
@@ -76,25 +74,6 @@ function SuggestionText({ suggestion, query }: SuggestionTextProps) {
         </span>
       )}
     </span>
-  );
-}
-
-/**
- * Loads the data of a table on demand
- *
- * @param tableId - The ID of the table
- * @returns A callback yielding the table data, or `null` if the table is not
- * part of the current project
- */
-function useLoadTableData(tableId: string | null) {
-  const tables = useProjectStore((state) => state.tables);
-  const loadTable = useTableDataLoader();
-  return useCallback(
-    async (options?: { signal?: AbortSignal }) => {
-      const table = tables.find((table) => table.id === tableId);
-      return table !== undefined ? await loadTable(table, options) : null;
-    },
-    [tables, tableId, loadTable],
   );
 }
 
@@ -180,7 +159,7 @@ export function TableColumnInput({
   onValueChange,
   className,
 }: TableColumnInputProps) {
-  const loadTableData = useLoadTableData(tableId);
+  const loadTableData = useLazyTableData(tableId);
 
   const query = value ?? "";
 
