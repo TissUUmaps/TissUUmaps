@@ -7,6 +7,21 @@ import {
   defineConfig,
 } from "vite";
 
+import packageJson from "./package.json" with { type: "json" };
+
+// published dependencies and peers, which are external with their subpaths
+const {
+  dependencies = {},
+  peerDependencies = {},
+}: {
+  dependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+} = packageJson;
+const externalPackages = [
+  ...Object.keys(dependencies),
+  ...Object.keys(peerDependencies),
+];
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [
@@ -56,14 +71,10 @@ export default defineConfig(({ mode }) => ({
     //   (and devDependencies) of this package, as their types are part of its
     //   public API (e.g. OMEZarr).
     rolldownOptions: {
-      external: [
-        "@tissuumaps/core",
-        "geotiff",
-        "omezarr-tilesource",
-        "openseadragon",
-        "papaparse",
-        "zarrita",
-      ],
+      external: (id) =>
+        externalPackages.some(
+          (name) => id === name || id.startsWith(`${name}/`),
+        ),
       checks: {
         pluginTimings: false,
       },

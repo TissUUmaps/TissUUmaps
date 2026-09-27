@@ -7,6 +7,21 @@ import {
   defineConfig,
 } from "vite";
 
+import packageJson from "./package.json" with { type: "json" };
+
+// published dependencies and peers, which are external with their subpaths
+const {
+  dependencies = {},
+  peerDependencies = {},
+}: {
+  dependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+} = packageJson;
+const externalPackages = [
+  ...Object.keys(dependencies),
+  ...Object.keys(peerDependencies),
+];
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [
@@ -22,12 +37,10 @@ export default defineConfig(({ mode }) => ({
       fileName: "index",
     },
     rolldownOptions: {
-      external: [
-        "@tissuumaps/core",
-        "fast-equals",
-        "gl-matrix",
-        "openseadragon",
-      ],
+      external: (id) =>
+        externalPackages.some(
+          (name) => id === name || id.startsWith(`${name}/`),
+        ),
       checks: {
         pluginTimings: false,
       },
