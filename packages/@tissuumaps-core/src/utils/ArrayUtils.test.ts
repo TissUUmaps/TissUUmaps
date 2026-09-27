@@ -71,4 +71,21 @@ describe("ArrayUtils", () => {
       );
     });
   });
+
+  describe("parseSafeInts", () => {
+    it("converts 64-bit integers to 64-bit floats", () => {
+      expect(ArrayUtils.parseSafeInts(new BigInt64Array([1n, -2n]))).toEqual(
+        new Float64Array([1, -2]),
+      );
+      expect(ArrayUtils.parseSafeInts(new BigUint64Array([3n]))).toEqual(
+        new Float64Array([3]),
+      );
+    });
+
+    it("throws for an integer outside the safe integer range", () => {
+      expect(() =>
+        ArrayUtils.parseSafeInts(new BigInt64Array([2n ** 60n])),
+      ).toThrow();
+    });
+  });
 });

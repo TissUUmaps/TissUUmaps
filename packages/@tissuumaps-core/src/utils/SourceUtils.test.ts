@@ -123,6 +123,45 @@ describe("SourceUtils", () => {
     });
   });
 
+  describe("getParentSource", () => {
+    it("returns the parent directory of a URL, keeping its query", () => {
+      expect(
+        SourceUtils.getParentSource("https://data.example/a/b.zarr/?key=1"),
+      ).toEqual({
+        parentSource: "https://data.example/a?key=1",
+        name: "b.zarr",
+      });
+    });
+
+    it("decodes the name but keeps the parent URL encoded", () => {
+      expect(
+        SourceUtils.getParentSource("https://data.example/my%20dir/a%20b"),
+      ).toEqual({
+        parentSource: "https://data.example/my%20dir",
+        name: "a b",
+      });
+    });
+
+    it("goes up to the root of a URL's path, and no further", () => {
+      expect(SourceUtils.getParentSource("https://data.example/a")).toEqual({
+        parentSource: "https://data.example/",
+        name: "a",
+      });
+      expect(SourceUtils.getParentSource("https://data.example/")).toBeNull();
+    });
+
+    it("returns the parent directory of a workspace-relative path", () => {
+      expect(SourceUtils.getParentSource("/proj/data/b.zarr")).toEqual({
+        parentSource: "/proj/data",
+        name: "b.zarr",
+      });
+    });
+
+    it("returns null directly in the workspace", () => {
+      expect(SourceUtils.getParentSource("/b.zarr")).toBeNull();
+    });
+  });
+
   describe("normalizeSource", () => {
     afterEach(() => {
       vi.unstubAllGlobals();
