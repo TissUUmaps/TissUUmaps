@@ -21,6 +21,7 @@ import { useProjectStore } from "@/stores/project";
 
 import { InteractionModeViewerControls } from "./InteractionModeViewerControls";
 import { PointSizeViewerControl } from "./PointSizeViewerControl";
+import { highlightItemGroup } from "./highlightItemGroup";
 
 export type ViewerPanelProps = {
   className?: string;
@@ -50,6 +51,10 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
     [images, imageChannelPreview],
   );
 
+  const highlightedItemGroup = useAppStore(
+    (state) => state.highlightedItemGroup,
+  );
+
   const projectState = useProjectStore(
     useShallow((state) => ({
       projectInstanceId: state.instanceId,
@@ -74,9 +79,23 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
   const loadShapes = useShapesDataLoader();
   const loadTable = useTableDataLoader();
 
+  // Memoized on its own: the renderers compare the opacity map it builds by
+  // identity, so rebuilding it for an unrelated change of the adapter would
+  // re-resolve and re-upload the colors of every highlighted object.
+  const { labels, points, shapes, opacityMaps } = projectState;
+  const highlightedState = useMemo(
+    () =>
+      highlightItemGroup(
+        { labels, points, shapes, opacityMaps },
+        highlightedItemGroup,
+      ),
+    [labels, points, shapes, opacityMaps, highlightedItemGroup],
+  );
+
   const viewerAdapter: ViewerAdapter = useMemo(
     () => ({
       ...projectState,
+      ...highlightedState,
       images: previewedImages,
       interactionMode,
       loadImage,
@@ -88,6 +107,7 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
     [
       projectState,
       previewedImages,
+      highlightedState,
       interactionMode,
       loadImage,
       loadLabels,

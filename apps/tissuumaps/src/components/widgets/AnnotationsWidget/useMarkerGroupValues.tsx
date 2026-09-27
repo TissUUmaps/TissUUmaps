@@ -6,10 +6,10 @@ import {
   markerPalette,
 } from "@tissuumaps/core";
 
-import { markers } from "@/components/markers";
 import { useProjectStore } from "@/stores/project";
 
-import type { GroupValuesAdapter } from "./adapter";
+import { type GroupValuesAdapter, defaultGroupColumnSize } from "./adapter";
+import { GroupMarkerCell } from "./cells/GroupMarkerCell";
 
 /** Returns the group table adapter of the marker maps */
 export function useMarkerGroupValues(): GroupValuesAdapter<
@@ -17,12 +17,20 @@ export function useMarkerGroupValues(): GroupValuesAdapter<
   MarkerConfig
 > {
   const maps = useProjectStore((state) => state.markerMaps);
+  const addMap = useProjectStore((state) => state.addMarkerMap);
+  const updateMap = useProjectStore((state) => state.updateMarkerMap);
   return useMemo(
     () => ({
       maps,
-      renderValue: (marker) => markers.find((m) => m.value === marker)!.icon,
+      addMap,
+      updateMap,
+      columnSize: defaultGroupColumnSize,
+      getSortValue: (marker) => marker,
+      renderCell: (marker, onMarkerChange) => (
+        <GroupMarkerCell marker={marker} onMarkerChange={onMarkerChange} />
+      ),
       getPalette: () => markerPalette,
     }),
-    [maps],
+    [maps, addMap, updateMap],
   );
 }

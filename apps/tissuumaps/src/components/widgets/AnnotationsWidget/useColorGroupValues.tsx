@@ -1,4 +1,3 @@
-import { Square } from "lucide-react";
 import { useMemo } from "react";
 
 import {
@@ -9,22 +8,25 @@ import {
 
 import { useProjectStore } from "@/stores/project";
 
-import type { GroupValuesAdapter } from "./adapter";
+import { type GroupValuesAdapter, defaultGroupColumnSize } from "./adapter";
+import { GroupColorCell } from "./cells/GroupColorCell";
 
 /** Returns the group table adapter of the color maps */
 export function useColorGroupValues(): GroupValuesAdapter<Color, ColorConfig> {
   const maps = useProjectStore((state) => state.colorMaps);
+  const addMap = useProjectStore((state) => state.addColorMap);
+  const updateMap = useProjectStore((state) => state.updateColorMap);
   return useMemo(
     () => ({
       maps,
-      renderValue: (color) => (
-        <Square
-          fill={`rgb(${color.r}, ${color.g}, ${color.b})`}
-          className="size-4"
-        />
+      addMap,
+      updateMap,
+      columnSize: defaultGroupColumnSize,
+      renderCell: (color, onColorChange) => (
+        <GroupColorCell color={color} onColorChange={onColorChange} />
       ),
       getPalette: (config) => findColorPalette(config.groupBy.palette)?.colors,
     }),
-    [maps],
+    [maps, addMap, updateMap],
   );
 }

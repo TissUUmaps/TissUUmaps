@@ -292,7 +292,8 @@ export class MathUtils {
    * @typeParam T - Element type of the values
    * @param values - The values to count
    * @param options - Optional abort signal
-   * @returns A promise that resolves to the count of every distinct value
+   * @returns A promise that resolves to the count of every distinct value, in
+   * the order the values first appear
    */
   static async computeUniqueValueCounts<T>(
     values: TypedArrayOrArray<T>,
