@@ -1,5 +1,5 @@
 import { DragDropProvider } from "@dnd-kit/react";
-import { isSortable, useSortable } from "@dnd-kit/react/sortable";
+import { useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
 
 import { type Image, MathUtils, createImage } from "@tissuumaps/core";
@@ -22,6 +22,7 @@ import {
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { useImageData } from "@/hooks/useData";
+import { useTopFirstSortable } from "@/hooks/useTopFirstSortable";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -40,21 +41,13 @@ export function ImagesPanel({ className }: ImagesPanelProps) {
   const images = useProjectStore((state) => state.images);
   const addImage = useProjectStore((state) => state.addImage);
   const moveImage = useProjectStore((state) => state.moveImage);
+  const { topFirstItems, onDragEnd } = useTopFirstSortable(images, moveImage);
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
-      <DragDropProvider
-        onDragEnd={(event) => {
-          const { source, canceled } = event.operation;
-          if (isSortable(source) && !canceled) {
-            // dnd-kit optimistically updates the DOM
-            // https://github.com/clauderic/dnd-kit/issues/1564
-            moveImage(source.id as string, source.index);
-          }
-        }}
-      >
+      <DragDropProvider onDragEnd={onDragEnd}>
         <Accordion multiple className="gap-y-2">
-          {images.map((image, index) => (
+          {topFirstItems.map((image, index) => (
             <ImageAccordionItem key={image.id} image={image} index={index} />
           ))}
         </Accordion>

@@ -1,5 +1,5 @@
 import { DragDropProvider } from "@dnd-kit/react";
-import { isSortable, useSortable } from "@dnd-kit/react/sortable";
+import { useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/input-group";
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { useTopFirstSortable } from "@/hooks/useTopFirstSortable";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -41,21 +42,13 @@ export function LabelsPanel({ className }: LabelsPanelProps) {
   const labels = useProjectStore((state) => state.labels);
   const addLabels = useProjectStore((state) => state.addLabels);
   const moveLabels = useProjectStore((state) => state.moveLabels);
+  const { topFirstItems, onDragEnd } = useTopFirstSortable(labels, moveLabels);
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
-      <DragDropProvider
-        onDragEnd={(event) => {
-          const { source, canceled } = event.operation;
-          if (isSortable(source) && !canceled) {
-            // dnd-kit optimistically updates the DOM
-            // https://github.com/clauderic/dnd-kit/issues/1564
-            moveLabels(source.id as string, source.index);
-          }
-        }}
-      >
+      <DragDropProvider onDragEnd={onDragEnd}>
         <Accordion multiple className="gap-y-2">
-          {labels.map((currentLabels, index) => (
+          {topFirstItems.map((currentLabels, index) => (
             <LabelsAccordionItem
               key={currentLabels.id}
               labels={currentLabels}
