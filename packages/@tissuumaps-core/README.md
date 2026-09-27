@@ -13,7 +13,9 @@ npm install @tissuumaps/core
 
 Its peer dependencies `@jsonforms/core`, `openseadragon` and `zustand` are
 optional: they are only referenced by its type declarations, so install them
-if you use TypeScript.
+if you use TypeScript. Without them, the types that reference them (e.g. the
+stores and the data provider interfaces) silently degrade to `any` when
+`skipLibCheck` is enabled, and fail to resolve otherwise.
 
 ## Documentation
 

@@ -15,6 +15,9 @@ npm install @tissuumaps/render
 Its peer dependencies `@tissuumaps/core` and `openseadragon` are installed
 automatically by npm 7+, pnpm and Bun; with Yarn, install them yourself.
 
+The WebGL points renderer loads its marker atlas from a `data:` URL. Under a
+Content Security Policy, allow it with `img-src data:`.
+
 ## Documentation
 
 - [API reference](https://tissuumaps.github.io/TissUUmaps4/docs/docs/api/@tissuumaps/render/)

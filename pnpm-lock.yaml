@@ -273,7 +273,7 @@ importers:
         specifier: ^5.5.2
         version: 5.5.2
       geotiff:
-        specifier: ^3.0.5
+        specifier: 3.0.5
         version: 3.0.5(patch_hash=f60e899d63103d3fd3b8f95e1e6c13bc94e447d920206d5da9c45b008127200b)
       omezarr-tilesource:
         specifier: ^0.8.1

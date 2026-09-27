@@ -85,7 +85,7 @@
   },
   "dependencies": {
     "@types/papaparse": "^5.5.2",
-    "geotiff": "^3.0.5",
+    "geotiff": "3.0.5",
     "omezarr-tilesource": "^0.8.1",
     "papaparse": "^5.5.4"
   },

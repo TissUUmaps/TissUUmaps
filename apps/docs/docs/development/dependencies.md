@@ -68,6 +68,11 @@ past 4093 dictionary codes. Until both fixes are released upstream, such a
 project has to apply `patches/geotiff@3.0.5.patch` itself (see the
 `@tissuumaps/storage` README). The app in this repository is unaffected.
 
+`@tissuumaps/storage` pins `geotiff` to exactly 3.0.5, so that such a project
+resolves the version the patch applies to, and the version bundled into the
+TIFF worker, which has to speak the message protocol of the main thread's
+`Pool`. Restore a caret range once the patch is dropped.
+
 Bugs in peer dependencies cannot be patched for such projects, as they bring
 their own copy. These are worked around at runtime instead:
 
