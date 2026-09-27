@@ -7,7 +7,7 @@ import {
   type ViewerAdapter,
   ViewerControl,
   ViewerControlAnchor,
-} from "@tissuumaps/viewer";
+} from "@tissuumaps/react";
 
 import {
   useImageDataLoader,

@@ -20,7 +20,7 @@
     "@tissuumaps/plugins": "workspace:^",
     "@tissuumaps/render": "workspace:^",
     "@tissuumaps/storage": "workspace:^",
-    "@tissuumaps/viewer": "workspace:^",
+    "@tissuumaps/react": "workspace:^",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dockview-react": "^7.0.2",

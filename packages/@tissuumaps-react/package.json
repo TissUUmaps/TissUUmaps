@@ -1,5 +1,5 @@
 {
-  "name": "@tissuumaps/viewer",
+  "name": "@tissuumaps/react",
   "version": "0.1.0",
   "description": "React viewer component for TissUUmaps",
   "homepage": "https://tissuumaps.github.io/TissUUmaps4/",
@@ -7,7 +7,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/TissUUmaps/TissUUmaps4.git",
-    "directory": "packages/@tissuumaps-viewer"
+    "directory": "packages/@tissuumaps-react"
   },
   "license": "MIT",
   "type": "module",

@@ -3,7 +3,7 @@
 Rendering backends of [TissUUmaps](https://github.com/TissUUmaps/TissUUmaps4),
 exposed as an imperative API: OpenSeadragon for images and labels, WebGL 2 for
 points and shapes, and an SVG overlay for interactive shape drawing. It does
-not depend on React; see `@tissuumaps/viewer` for a React component built on
+not depend on React; see `@tissuumaps/react` for a React component built on
 top of it.
 
 ## Installation
