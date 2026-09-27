@@ -10,6 +10,7 @@ export type HierarchicalTableOpenRequest = {
 
 /** The columns and row count of the opened table */
 export type HierarchicalTableOpenResponse = {
+  op: "open";
   columns: HierarchicalTableColumn[];
   numRows: number;
 };
@@ -23,6 +24,7 @@ export type HierarchicalTableColumnRequest = {
 
 /** The values of a column */
 export type HierarchicalTableColumnResponse = {
+  op: "column";
   data: TypedArrayOrArray<unknown>;
 };
 
@@ -35,6 +37,7 @@ export type HierarchicalTableRangeRequest = {
 
 /** The value range of a column */
 export type HierarchicalTableRangeResponse = {
+  op: "range";
   range: [number, number] | undefined;
 };
 
@@ -49,6 +52,11 @@ export type HierarchicalTableWorkerResponse =
   | HierarchicalTableOpenResponse
   | HierarchicalTableColumnResponse
   | HierarchicalTableRangeResponse;
+
+/** The response to a request, by the operation the request names */
+export type HierarchicalTableWorkerResponseFor<
+  TRequest extends HierarchicalTableWorkerRequest,
+> = Extract<HierarchicalTableWorkerResponse, { op: TRequest["op"] }>;
 
 /** A request to the worker, answered by the message with the same id */
 export type HierarchicalTableWorkerRequestMessage = {

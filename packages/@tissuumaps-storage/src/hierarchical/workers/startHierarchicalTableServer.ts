@@ -7,17 +7,18 @@ import type {
 } from "./messages";
 
 /**
- * Serves one hierarchical table from the calling Web Worker
+ * Starts serving one hierarchical table from the calling Web Worker
  *
  * Call once from a worker entry script. One `open` request opens the store,
- * `column` and `range` requests then read from it. Responses carry the id of
- * their request, so several can be in flight at once.
+ * `column` and `range` requests then read from it. Responses carry the id
+ * and the operation of their request, so several can be in flight at once.
  *
  * @param openStore - Opens the store of a file or URL
+ * @returns A teardown callback that stops serving and closes the open table
  */
-export function serveHierarchicalTable(
+export function startHierarchicalTableServer(
   openStore: (source: File | string) => Promise<HierarchicalStore>,
-): void {
+): () => void {
   const ctx = self as unknown as {
     onmessage:
       | ((event: MessageEvent<HierarchicalTableWorkerRequestMessage>) => void)
@@ -51,6 +52,7 @@ export function serveHierarchicalTable(
             );
             ctx.postMessage({
               id,
+              op: "open",
               columns: table.columns,
               numRows: table.numRows,
             });
@@ -61,7 +63,7 @@ export function serveHierarchicalTable(
               numRows: event.data.numRows,
             });
             ctx.postMessage(
-              { id, data },
+              { id, op: "column", data },
               ArrayBuffer.isView(data) && data.buffer instanceof ArrayBuffer
                 ? [data.buffer]
                 : undefined,
@@ -72,7 +74,7 @@ export function serveHierarchicalTable(
             const range = await getTable().readRange(event.data.column, {
               numRows: event.data.numRows,
             });
-            ctx.postMessage({ id, range });
+            ctx.postMessage({ id, op: "range", range });
             break;
           }
           default:
@@ -85,5 +87,11 @@ export function serveHierarchicalTable(
         });
       }
     })();
+  };
+
+  return () => {
+    ctx.onmessage = null;
+    table?.close();
+    table = undefined;
   };
 }

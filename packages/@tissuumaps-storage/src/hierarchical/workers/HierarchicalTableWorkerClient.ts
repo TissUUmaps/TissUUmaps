@@ -5,17 +5,15 @@ import type {
   HierarchicalTableColumn,
 } from "../HierarchicalTable";
 import type {
-  HierarchicalTableColumnResponse,
-  HierarchicalTableOpenResponse,
-  HierarchicalTableRangeResponse,
   HierarchicalTableWorkerRequest,
   HierarchicalTableWorkerResponse,
+  HierarchicalTableWorkerResponseFor,
   HierarchicalTableWorkerResponseMessage,
 } from "./messages";
 
 /**
  * A {@link HierarchicalTable} served by a Web Worker running
- * {@link serveHierarchicalTable}
+ * {@link startHierarchicalTableServer}
  *
  * The worker stays alive between requests: each start would reload the
  * container library and the store metadata.
@@ -39,7 +37,7 @@ export class HierarchicalTableWorkerClient implements HierarchicalTable {
    * Opens a hierarchical table in a worker
    *
    * @param worker - A freshly started worker running
-   * {@link serveHierarchicalTable}; terminated if opening fails
+   * {@link startHierarchicalTableServer}; terminated if opening fails
    * @param source - The file or URL to open
    * @param options - Optional abort signal
    * @returns The client, which owns the worker
@@ -54,10 +52,10 @@ export class HierarchicalTableWorkerClient implements HierarchicalTable {
     const channel = new WorkerChannel(worker);
     try {
       signal?.throwIfAborted();
-      const { columns, numRows } = (await channel.request(
+      const { columns, numRows } = await channel.request(
         { op: "open", source },
         { signal },
-      )) as HierarchicalTableOpenResponse;
+      );
       return new HierarchicalTableWorkerClient(channel, columns, numRows);
     } catch (error) {
       channel.terminate();
@@ -71,10 +69,10 @@ export class HierarchicalTableWorkerClient implements HierarchicalTable {
   ): Promise<TypedArrayOrArray<unknown>> {
     const { numRows, signal } = options ?? {};
     signal?.throwIfAborted();
-    const { data } = (await this._channel.request(
+    const { data } = await this._channel.request(
       { op: "column", column: query, numRows },
       { signal },
-    )) as HierarchicalTableColumnResponse;
+    );
     return data;
   }
 
@@ -84,10 +82,10 @@ export class HierarchicalTableWorkerClient implements HierarchicalTable {
   ): Promise<[number, number] | undefined> {
     const { numRows, signal } = options ?? {};
     signal?.throwIfAborted();
-    const { range } = (await this._channel.request(
+    const { range } = await this._channel.request(
       { op: "range", column: query, numRows },
       { signal },
-    )) as HierarchicalTableRangeResponse;
+    );
     return range;
   }
 
@@ -105,7 +103,7 @@ type PendingRequest = {
 };
 
 /**
- * Correlates the requests to a worker running {@link serveHierarchicalTable}
+ * Correlates the requests to a worker running {@link startHierarchicalTableServer}
  * with its responses by id
  */
 class WorkerChannel {
@@ -156,10 +154,10 @@ class WorkerChannel {
    * @throws Error if the worker has been terminated, or if the request fails
    * in the worker
    */
-  request(
-    request: HierarchicalTableWorkerRequest,
+  request<TRequest extends HierarchicalTableWorkerRequest>(
+    request: TRequest,
     options?: { signal?: AbortSignal },
-  ): Promise<HierarchicalTableWorkerResponse> {
+  ): Promise<HierarchicalTableWorkerResponseFor<TRequest>> {
     const { signal } = options ?? {};
     if (signal?.aborted) {
       return Promise.reject(signal.reason as Error);
@@ -174,7 +172,13 @@ class WorkerChannel {
         reject(signal!.reason as Error);
       };
       signal?.addEventListener("abort", onAbort, { once: true });
-      this._pendingRequests.set(id, { resolve, reject, signal, onAbort });
+      this._pendingRequests.set(id, {
+        // the response to a request is the one for its operation
+        resolve: resolve as (response: HierarchicalTableWorkerResponse) => void,
+        reject,
+        signal,
+        onAbort,
+      });
       this._worker.postMessage({ ...request, id });
     });
   }

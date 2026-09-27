@@ -5,9 +5,9 @@ import type {
   HierarchicalTableWorkerRequestMessage,
   HierarchicalTableWorkerResponseMessage,
 } from "./messages";
-import { serveHierarchicalTable } from "./serveHierarchicalTable";
+import { startHierarchicalTableServer } from "./startHierarchicalTableServer";
 
-function createStore(): HierarchicalStore {
+function createStore(): HierarchicalStore & { closeCalls: number } {
   return {
     get: (path) => {
       if (path === "") {
@@ -24,7 +24,10 @@ function createStore(): HierarchicalStore {
       }
       return Promise.resolve(null);
     },
-    close: () => {},
+    closeCalls: 0,
+    close() {
+      this.closeCalls++;
+    },
   };
 }
 
@@ -46,8 +49,9 @@ function serve() {
     },
   };
   vi.stubGlobal("self", scope);
-  serveHierarchicalTable(() => Promise.resolve(createStore()));
-  return async (data: HierarchicalTableWorkerRequestMessage) => {
+  const store = createStore();
+  const stop = startHierarchicalTableServer(() => Promise.resolve(store));
+  const request = async (data: HierarchicalTableWorkerRequestMessage) => {
     const response = new Promise<void>((resolve) => {
       notify = resolve;
     });
@@ -55,25 +59,27 @@ function serve() {
     await response;
     return posted.at(-1)!;
   };
+  return { request, stop, scope, store };
 }
 
-describe("serveHierarchicalTable", () => {
+describe("startHierarchicalTableServer", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
   it("opens the store and responds with its columns", async () => {
-    const request = serve();
+    const { request } = serve();
     const { message } = await request({ id: 0, op: "open", source: "a.h5" });
     expect(message).toEqual({
       id: 0,
+      op: "open",
       columns: [{ kind: "dataset", path: "a" }],
       numRows: 3,
     });
   });
 
   it("transfers the buffer of a typed column", async () => {
-    const request = serve();
+    const { request } = serve();
     await request({ id: 0, op: "open", source: "a.h5" });
     const { message, transfer } = await request({
       id: 1,
@@ -81,19 +87,23 @@ describe("serveHierarchicalTable", () => {
       column: "a",
       numRows: 3,
     });
-    expect(message).toEqual({ id: 1, data: new Float64Array([1, 2, 3]) });
+    expect(message).toEqual({
+      id: 1,
+      op: "column",
+      data: new Float64Array([1, 2, 3]),
+    });
     expect(transfer).toEqual([(message as { data: Float64Array }).data.buffer]);
   });
 
   it("responds with the range of a column", async () => {
-    const request = serve();
+    const { request } = serve();
     await request({ id: 0, op: "open", source: "a.h5" });
     const { message } = await request({ id: 1, op: "range", column: "a" });
-    expect(message).toEqual({ id: 1, range: [1, 3] });
+    expect(message).toEqual({ id: 1, op: "range", range: [1, 3] });
   });
 
   it("responds with the error of a failed request", async () => {
-    const request = serve();
+    const { request } = serve();
     expect(
       (await request({ id: 0, op: "column", column: "a" })).message,
     ).toEqual({ id: 0, error: "No table has been opened" });
@@ -101,5 +111,13 @@ describe("serveHierarchicalTable", () => {
     expect(
       (await request({ id: 2, op: "open", source: "a.h5" })).message,
     ).toEqual({ id: 2, error: "A table is already open in this worker" });
+  });
+
+  it("stops serving and closes the table on teardown", async () => {
+    const { request, stop, scope, store } = serve();
+    await request({ id: 0, op: "open", source: "a.h5" });
+    stop();
+    expect(scope.onmessage).toBeNull();
+    expect(store.closeCalls).toBe(1);
   });
 });

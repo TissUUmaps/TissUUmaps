@@ -33,7 +33,7 @@ async function openClient() {
     worker as unknown as Worker,
     "table.h5ad",
   );
-  worker.respond({ id: 0, columns, numRows: 3 });
+  worker.respond({ id: 0, op: "open", columns, numRows: 3 });
   return { worker, client: await client };
 }
 
@@ -85,7 +85,7 @@ describe("HierarchicalTableWorkerClient", () => {
     it("requests the column with the row count and returns its data", async () => {
       const { worker, client } = await openClient();
       const data = client.readColumn("obs/area", { numRows: 3 });
-      worker.respond({ id: 1, data: [1, 2, 3] });
+      worker.respond({ id: 1, op: "column", data: [1, 2, 3] });
       await expect(data).resolves.toEqual([1, 2, 3]);
       expect(worker.messages[1]).toEqual({
         op: "column",
@@ -101,15 +101,17 @@ describe("HierarchicalTableWorkerClient", () => {
       const { worker, client } = await openClient();
       const first = client.readRange("a");
       const second = client.readRange("b");
-      worker.respond({ id: 2, range: [2, 3] });
-      worker.respond({ id: 1, range: [0, 1] });
+      worker.respond({ id: 2, op: "range", range: [2, 3] });
+      worker.respond({ id: 1, op: "range", range: [0, 1] });
       await expect(first).resolves.toEqual([0, 1]);
       await expect(second).resolves.toEqual([2, 3]);
     });
 
     it("ignores a response without a pending request", async () => {
       const { worker } = await openClient();
-      expect(() => worker.respond({ id: 7, range: undefined })).not.toThrow();
+      expect(() =>
+        worker.respond({ id: 7, op: "range", range: undefined }),
+      ).not.toThrow();
     });
 
     it("rejects with the abort reason and ignores the late response", async () => {
@@ -119,7 +121,9 @@ describe("HierarchicalTableWorkerClient", () => {
       const range = client.readRange("a", { signal: controller.signal });
       controller.abort(reason);
       await expect(range).rejects.toBe(reason);
-      expect(() => worker.respond({ id: 1, range: [0, 1] })).not.toThrow();
+      expect(() =>
+        worker.respond({ id: 1, op: "range", range: [0, 1] }),
+      ).not.toThrow();
     });
 
     it("rejects without posting when the signal is already aborted", async () => {
@@ -135,7 +139,7 @@ describe("HierarchicalTableWorkerClient", () => {
       const { worker, client } = await openClient();
       const controller = new AbortController();
       const range = client.readRange("a", { signal: controller.signal });
-      worker.respond({ id: 1, range: [0, 1] });
+      worker.respond({ id: 1, op: "range", range: [0, 1] });
       controller.abort();
       await expect(range).resolves.toEqual([0, 1]);
     });
@@ -163,7 +167,7 @@ describe("HierarchicalTableWorkerClient", () => {
     it("requests the range with the row count and returns it", async () => {
       const { worker, client } = await openClient();
       const range = client.readRange("obs/area", { numRows: 3 });
-      worker.respond({ id: 1, range: [1, 3] });
+      worker.respond({ id: 1, op: "range", range: [1, 3] });
       await expect(range).resolves.toEqual([1, 3]);
       expect(worker.messages[1]).toEqual({
         op: "range",

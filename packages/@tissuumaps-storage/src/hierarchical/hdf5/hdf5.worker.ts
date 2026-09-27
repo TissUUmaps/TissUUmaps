@@ -1,4 +1,4 @@
-import { serveHierarchicalTable } from "../workers/serveHierarchicalTable";
+import { startHierarchicalTableServer } from "../workers/startHierarchicalTableServer";
 import { HDF5Store } from "./HDF5Store";
 
-serveHierarchicalTable((source) => HDF5Store.open(source));
+startHierarchicalTableServer((source) => HDF5Store.open(source));
