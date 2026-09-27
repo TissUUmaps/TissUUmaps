@@ -286,3 +286,17 @@ describe("AsyncUtils.raceSignal", () => {
     );
   });
 });
+
+describe("AsyncUtils.withResolvers", () => {
+  it("resolves the promise with the value passed to resolve", async () => {
+    const { promise, resolve } = AsyncUtils.withResolvers<string>();
+    resolve("value");
+    await expect(promise).resolves.toBe("value");
+  });
+
+  it("rejects the promise with the reason passed to reject", async () => {
+    const { promise, reject } = AsyncUtils.withResolvers<string>();
+    reject(new Error("boom"));
+    await expect(promise).rejects.toThrow("boom");
+  });
+});

@@ -150,6 +150,76 @@ describe("OpenSeadragonUtils", () => {
     });
   });
 
+  describe("fixTileCacheCounter", () => {
+    it("keeps the count of loaded cache records in sync when tiles are recolored", () => {
+      OpenSeadragonUtils.fixTileCacheCounter();
+      const tileCache = new OpenSeadragon.TileCache({});
+      const bounds = new OpenSeadragon.Rect(0, 0, 1, 1);
+      const tile = new OpenSeadragon.Tile(
+        0,
+        0,
+        0,
+        bounds,
+        true,
+        "",
+        undefined,
+        false,
+        {},
+        bounds,
+        "",
+        "tile",
+      );
+      // The cache internals involved are untyped; mirror what OpenSeadragon
+      // does when a tile-invalidated handler sets new data for a tile
+      const internalTile = tile as unknown as {
+        tiledImage: unknown;
+        addCache: (
+          key: string,
+          data: unknown,
+          type: string,
+          setAsMainCache: boolean,
+          safely: boolean,
+        ) => void;
+        buildDistinctMainCacheKey: () => string;
+      };
+      const internalTileCache = tileCache as unknown as {
+        _cachesLoaded: Record<string, unknown>;
+        injectCache: (options: {
+          tile: OpenSeadragon.Tile;
+          cache: unknown;
+          targetKey: string;
+          setAsMainCache: boolean;
+        }) => void;
+      };
+      internalTile.tiledImage = { _tileCache: tileCache };
+      tile.loaded = true;
+      internalTile.addCache(tile.cacheKey, {}, "test", true, false);
+      for (let i = 0; i < 3; i++) {
+        const workingCache = (
+          new OpenSeadragon.CacheRecord() as unknown as {
+            withTileReference: (tile: OpenSeadragon.Tile) => {
+              addTile: (
+                tile: OpenSeadragon.Tile,
+                data: unknown,
+                type: string,
+              ) => void;
+            };
+          }
+        ).withTileReference(tile);
+        workingCache.addTile(tile, {}, "test");
+        internalTileCache.injectCache({
+          tile,
+          cache: workingCache,
+          targetKey: internalTile.buildDistinctMainCacheKey(),
+          setAsMainCache: true,
+        });
+        expect(tileCache.numCachesLoaded()).toBe(
+          Object.keys(internalTileCache._cachesLoaded).length,
+        );
+      }
+    });
+  });
+
   describe("getTiledImageTransform", () => {
     it("returns the content size at the origin for identity transforms", () => {
       const geom = OpenSeadragonUtils.getTiledImageTransform(

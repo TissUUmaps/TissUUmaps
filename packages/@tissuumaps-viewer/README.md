@@ -1,1 +1,0 @@
-# @tissuumaps/viewer

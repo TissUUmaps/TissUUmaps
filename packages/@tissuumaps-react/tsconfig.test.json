@@ -1,7 +1,6 @@
 {
   "extends": "./tsconfig.src.json",
   "compilerOptions": {
-    "composite": true,
     "types": ["vite/client", "vitest/globals"]
   },
   "references": [{ "path": "./tsconfig.src.json" }],

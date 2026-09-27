@@ -45,7 +45,7 @@ export default defineConfig([
   {
     files: [
       "apps/tissuumaps/**/*.{js,jsx,ts,tsx}",
-      "packages/@tissuumaps-viewer/**/*.{js,jsx,ts,tsx}",
+      "packages/@tissuumaps-react/**/*.{js,jsx,ts,tsx}",
     ],
     extends: [reactHooks.configs.flat.recommended, reactRefresh.configs.vite],
   },

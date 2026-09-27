@@ -141,6 +141,7 @@ export class OpenSeadragonContext {
     backgroundColor: Color,
     viewerOptions?: OpenSeadragonViewerOptions,
   ) {
+    OpenSeadragonUtils.fixTileCacheCounter();
     this.viewer = new OpenSeadragon.Viewer({
       ...viewerOptions,
       element: viewerElement,
