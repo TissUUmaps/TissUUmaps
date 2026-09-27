@@ -6,7 +6,7 @@ import { useLatestCallback } from "@/hooks/useLatestCallback";
 
 import type { GroupAnnotationsTableColumnDef } from "./GroupAnnotationsTable";
 import type { GroupValuesAdapter } from "./adapter";
-import { InactiveCell } from "./cells/InactiveCell";
+import { MutedCell } from "./cells/MutedCell";
 import { createGroupValues, isGroupedByColumn } from "./createGroupValues";
 import type { GroupTableState } from "./useGroupTable";
 
@@ -80,11 +80,11 @@ export function useGroupColumn<TValue, TConfig extends Config<string>>(
         accessorFn: (row) => getSortValue(getValue(row.group)),
       }),
       cell: ({ row }) => (
-        <InactiveCell isInactive={isInactive}>
+        <MutedCell isMuted={isInactive}>
           {adapter.renderCell(getValue(row.original.group), (value) =>
             setValues({ [row.original.group]: value }),
           )}
-        </InactiveCell>
+        </MutedCell>
       ),
     };
   }, [

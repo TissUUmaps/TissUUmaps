@@ -9,16 +9,19 @@ describe("ProjectUtils", () => {
   const labels = createLabels({
     id: "labels",
     name: "Labels",
+    layer: "layer",
     dataSource: { type: "tiff" },
   });
   const points = createPoints({
     id: "points",
     name: "Points",
+    layer: "layer",
     dataSource: { type: "csv" },
   });
   const shapes = createShapes({
     id: "shapes",
     name: "Shapes",
+    layer: "layer",
     dataSource: { type: "geojson" },
   });
   const project = { labels: [labels], points: [points], shapes: [shapes] };

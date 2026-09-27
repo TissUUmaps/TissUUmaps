@@ -12,8 +12,8 @@ import {
   type TIFFLabelsDataSource,
   tiffLabelsDataSourceDefaults,
 } from "./TIFFLabelsDataSource";
+import type { TIFFStructure } from "./TIFFParser";
 import { TIFFUtils } from "./TIFFUtils";
-import type { TIFFStructure } from "./formats/TIFFParser";
 import { installTIFFTileSource } from "./installTIFFTileSource";
 import { openTIFF } from "./openTIFF";
 

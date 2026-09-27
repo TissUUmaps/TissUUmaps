@@ -2,11 +2,11 @@ import type { ReactNode } from "react";
 
 import type { Config, GroupByConfig, GroupValueMap } from "@tissuumaps/core";
 
-/** Width of a column of markers, colors or eye buttons, in pixels */
-export const groupColumnSize = 60;
+/** Initial width of a column of markers, colors or eye buttons, in pixels */
+export const defaultGroupColumnSize = 60;
 
-/** Width of a column of number inputs, in pixels */
-export const numericGroupColumnSize = 90;
+/** Initial width of a column of number inputs, in pixels */
+export const defaultNumericGroupColumnSize = 90;
 
 /**
  * What the group table needs to know about one type of group value
@@ -26,7 +26,7 @@ export type GroupValuesAdapter<TValue, TConfig extends Config<string>> = {
     updates: Partial<Omit<GroupValueMap<TValue>, "id">>,
   ) => void;
 
-  /** Width of the value's column, in pixels */
+  /** Initial width of the value's column, in pixels */
   columnSize: number;
 
   /** The value that the rows sort by; the column is not sortable without */

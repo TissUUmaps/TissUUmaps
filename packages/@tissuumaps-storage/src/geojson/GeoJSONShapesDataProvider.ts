@@ -86,18 +86,11 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
   ): Promise<GeoJSONShapesData> {
     const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
-    const resolvedSource = await SourceUtils.resolveSourceFile(
+    const { file, url } = await SourceUtils.openSourceFile(
       normalizedDataSource.source,
       workspace,
       { signal },
     );
-    let file, url;
-    if (typeof resolvedSource === "string") {
-      url = resolvedSource;
-    } else {
-      file = await resolvedSource.getFile();
-      signal?.throwIfAborted(); // getFile() does not throw on abort
-    }
     const { idProperty, nameProperty } = normalizedDataSource;
     const { ids, names, geometry } = await runGeoJSONWorker(
       { op: "file", file, url, idProperty, nameProperty },

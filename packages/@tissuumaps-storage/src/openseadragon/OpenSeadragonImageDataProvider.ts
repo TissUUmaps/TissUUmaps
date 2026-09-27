@@ -77,17 +77,15 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
         "A tile source configuration or a source is required to load data.",
       );
     }
-    const resolvedSource = await SourceUtils.resolveSourceFile(
+    const source = await SourceUtils.openSourceFile(
       normalizedDataSource.source,
       workspace,
       { signal },
     );
-    if (typeof resolvedSource === "string") {
-      return new OpenSeadragonImageData(resolvedSource);
+    if (source.url !== undefined) {
+      return new OpenSeadragonImageData(source.url);
     }
-    const file = await resolvedSource.getFile();
-    signal?.throwIfAborted(); // getFile() does not throw on abort
-    const objectUrl = URL.createObjectURL(file);
+    const objectUrl = URL.createObjectURL(source.file);
     return new OpenSeadragonImageData(objectUrl, objectUrl);
   }
 }

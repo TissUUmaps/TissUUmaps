@@ -4,7 +4,7 @@ import type { VisibilityConfig } from "@tissuumaps/core";
 
 import { useProjectStore } from "@/stores/project";
 
-import { type GroupValuesAdapter, groupColumnSize } from "./adapter";
+import { type GroupValuesAdapter, defaultGroupColumnSize } from "./adapter";
 import { GroupVisibilityCell } from "./cells/GroupVisibilityCell";
 
 /** Returns the group table adapter of the visibility maps */
@@ -20,7 +20,7 @@ export function useVisibilityGroupValues(): GroupValuesAdapter<
       maps,
       addMap,
       updateMap,
-      columnSize: groupColumnSize,
+      columnSize: defaultGroupColumnSize,
       getSortValue: (visible) => Number(visible),
       renderCell: (visible, onVisibleChange) => (
         <GroupVisibilityCell

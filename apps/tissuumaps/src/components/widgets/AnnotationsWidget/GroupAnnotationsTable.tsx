@@ -1,10 +1,6 @@
 import type {
-  CellData,
-  ColumnSort,
   ColumnVisibilityState,
-  RowData,
   SortingState,
-  TableFeatures,
 } from "@tanstack/react-table";
 import { useCallback, useMemo, useState } from "react";
 
@@ -21,21 +17,8 @@ import {
   type GroupColumnPickerProps,
 } from "./GroupColumnPicker";
 import { GroupVisibilityCell } from "./cells/GroupVisibilityCell";
-import { InactiveCell } from "./cells/InactiveCell";
-
-declare module "@tanstack/react-table" {
-  /* eslint-disable @typescript-eslint/no-unused-vars -- the type parameters
-     must match the declaration that this one merges into */
-  interface ColumnMeta<
-    in out TFeatures extends TableFeatures,
-    in out TData extends RowData,
-    TValue extends CellData = CellData,
-  > {
-    /** Whether a group table column is shown until the user picks the columns */
-    isShownByDefault?: boolean;
-  }
-  /* eslint-enable @typescript-eslint/no-unused-vars */
-}
+import { MutedCell } from "./cells/MutedCell";
+import type { GroupVisibility } from "./useGroupVisibility";
 
 export type GroupAnnotationsTableRowData = {
   group: string;
@@ -50,19 +33,6 @@ export type GroupAnnotationsTableRowData = {
  */
 export type GroupAnnotationsTableColumnDef =
   VirtualTableColumnDef<GroupAnnotationsTableRowData>;
-
-/** How the group table shows and toggles the visibility of a group */
-export type GroupVisibility = {
-  isVisible: (group: string) => boolean;
-
-  /** Whether the eye buttons are grayed out, as toggling them changes the property source */
-  isInactive: boolean;
-
-  onVisibleChange: (groups: string[], visible: boolean) => void;
-};
-
-/** The group rows are listed by name until a column is sorted by */
-const defaultSorting: ColumnSort = { id: "group", desc: false };
 
 /** Compares text with its numbers by value, so that `2` sorts before `10` */
 const textCollator = new Intl.Collator(undefined, { numeric: true });
@@ -103,7 +73,7 @@ export function GroupAnnotationsTable({
   groupVisibility,
   groupColumnDefs,
 }: GroupAnnotationsTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([defaultSorting]);
+  const [sorting, setSorting] = useState<SortingState>([]);
   const [shownColumns, setShownColumns] = useState<ColumnVisibilityState>({});
 
   // the columns the rows can sort by, which do not depend on the rows
@@ -140,9 +110,11 @@ export function GroupAnnotationsTable({
     return { ...columnVisibility, ...shownColumns };
   }, [sortableColumnDefs, shownColumns]);
 
-  const [sortedColumn = defaultSorting] = sorting;
+  const [sortedColumn] = sorting;
   const activeSorting =
-    columnVisibility[sortedColumn.id] === true ? sortedColumn : defaultSorting;
+    sortedColumn !== undefined && columnVisibility[sortedColumn.id] === true
+      ? sortedColumn
+      : undefined;
 
   const pickableColumns: GroupColumnPickerProps["columns"] = [
     ...(groupVisibility !== undefined
@@ -173,19 +145,21 @@ export function GroupAnnotationsTable({
       count,
     }));
     const sortedColumnDef = sortableColumnDefs.find(
-      (columnDef) => columnDef.id === activeSorting.id,
+      (columnDef) => columnDef.id === activeSorting?.id,
     );
-    const getSortValue =
-      sortedColumnDef !== undefined && "accessorFn" in sortedColumnDef
-        ? sortedColumnDef.accessorFn
-        : undefined;
+    if (
+      activeSorting === undefined ||
+      sortedColumnDef === undefined ||
+      !("accessorFn" in sortedColumnDef)
+    ) {
+      return groupRows;
+    }
+    const getSortValue = sortedColumnDef.accessorFn;
     const order = activeSorting.desc ? -1 : 1;
+    // the sort is stable, so that rows with the same value keep the table order
     groupRows.sort(
       (a, b) =>
-        order *
-        ((getSortValue !== undefined
-          ? compareSortValues(getSortValue(a, 0), getSortValue(b, 0))
-          : 0) || textCollator.compare(a.group, b.group)),
+        order * compareSortValues(getSortValue(a, 0), getSortValue(b, 0)),
     );
     return groupRows;
   }, [groupCounts, activeSorting, sortableColumnDefs]);
@@ -208,7 +182,7 @@ export function GroupAnnotationsTable({
       size: 36,
       enableResizing: false,
       header: () => (
-        <InactiveCell isInactive={isInactive}>
+        <MutedCell isMuted={isInactive}>
           <span className="flex h-6 w-full items-center px-1">
             <Checkbox
               checked={groups.length > 0 && numVisibleGroups === groups.length}
@@ -222,10 +196,10 @@ export function GroupAnnotationsTable({
               aria-label="Show listed groups"
             />
           </span>
-        </InactiveCell>
+        </MutedCell>
       ),
       cell: ({ row }) => (
-        <InactiveCell isInactive={isInactive}>
+        <MutedCell isMuted={isInactive}>
           <GroupVisibilityCell
             visible={isVisible(row.original.group)}
             onVisibleChange={(visible) => {
@@ -237,7 +211,7 @@ export function GroupAnnotationsTable({
               group: row.original.group,
             }}
           />
-        </InactiveCell>
+        </MutedCell>
       ),
     };
     return [visibleColumnDef, ...sortableColumnDefs];
@@ -257,7 +231,7 @@ export function GroupAnnotationsTable({
       columnDefs={columnDefs}
       rowHeight={rowHeight}
       height={height}
-      sorting={[activeSorting]}
+      sorting={activeSorting !== undefined ? [activeSorting] : []}
       onSortingChange={setSorting}
       columnVisibility={columnVisibility}
       headerAction={

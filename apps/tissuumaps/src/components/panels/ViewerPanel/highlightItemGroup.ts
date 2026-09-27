@@ -8,7 +8,13 @@ import type {
 } from "@tissuumaps/core";
 import type { ViewerAdapter } from "@tissuumaps/viewer";
 
-/** ID of the transient opacity map that shows only the highlighted group */
+/**
+ * ID of the transient opacity map that shows only the highlighted group
+ *
+ * The map comes first, so a project map with this ID never replaces it. While
+ * a group is highlighted, other objects that refer to such a project map see
+ * the transient map instead. The app creates map IDs with `randomUUID`.
+ */
 const highlightOpacityMapId = "highlightedItemGroup";
 
 export type HighlightableState = Pick<

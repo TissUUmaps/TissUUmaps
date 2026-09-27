@@ -16,13 +16,16 @@ describe("ConfigUtils", () => {
     ];
 
     it("returns the map of an active group-by source as it is", () => {
-      const config = { groupBy: { column: "cluster", map: "map1" } };
+      const config: GroupByConfig<false> = {
+        groupBy: { column: "cluster", map: "map1" },
+      };
 
       expect(ConfigUtils.findGroupByMap(config, maps)).toBe(maps[0]);
     });
 
     it("returns undefined if group-by is not the active source", () => {
-      const config = {
+      const config: ConstantConfig<number> &
+        Pick<GroupByConfig<false>, "groupBy"> = {
         source: "constant",
         constant: { value: 1 },
         groupBy: { column: "cluster", map: "map1" },
@@ -32,7 +35,9 @@ describe("ConfigUtils", () => {
     });
 
     it("returns undefined if the map does not exist", () => {
-      const config = { groupBy: { column: "cluster", map: "missing" } };
+      const config: GroupByConfig<false> = {
+        groupBy: { column: "cluster", map: "missing" },
+      };
 
       expect(ConfigUtils.findGroupByMap(config, maps)).toBeUndefined();
     });
@@ -40,18 +45,24 @@ describe("ConfigUtils", () => {
 
   describe("getGroupByMapIds", () => {
     it("returns the map IDs of the group-by configurations, whatever their active source", () => {
-      expect(
-        ConfigUtils.getGroupByMapIds([
-          { groupBy: { column: "cluster", map: "colorMap" } },
-          {
-            source: "constant",
-            constant: { value: 1 },
-            groupBy: { column: "cluster", map: "opacityMap" },
-          },
-          { groupBy: { column: "cluster", map: undefined } },
-          { constant: { value: 1 } },
-        ]),
-      ).toEqual(new Set(["colorMap", "opacityMap"]));
+      const configs: (
+        | ConstantConfig<number>
+        | GroupByConfig<false>
+        | (ConstantConfig<number> & Pick<GroupByConfig<false>, "groupBy">)
+      )[] = [
+        { groupBy: { column: "cluster", map: "colorMap" } },
+        {
+          source: "constant",
+          constant: { value: 1 },
+          groupBy: { column: "cluster", map: "opacityMap" },
+        },
+        { groupBy: { column: "cluster", map: undefined } },
+        { constant: { value: 1 } },
+      ];
+
+      expect(ConfigUtils.getGroupByMapIds(configs)).toEqual(
+        new Set(["colorMap", "opacityMap"]),
+      );
     });
   });
 
@@ -165,9 +176,10 @@ describe("ConfigUtils", () => {
     });
 
     it("carries the unit of the active source over", () => {
-      const config = {
-        constant: { value: 1, unit: "data" as const },
-        groupBy: { column: "cluster", map: "map1", unit: "world" as const },
+      const config: ConstantConfig<number, { unit: "data" }> &
+        GroupByConfig<false, { unit: "world" }> = {
+        constant: { value: 1, unit: "data" },
+        groupBy: { column: "cluster", map: "map1", unit: "world" },
       };
 
       expect(
@@ -206,37 +218,43 @@ describe("ConfigUtils", () => {
 
   describe("getGroupByColumn", () => {
     it("returns the column of an active group-by source", () => {
-      expect(
-        ConfigUtils.getGroupByColumn({
-          groupBy: { column: "cluster", map: "map1" },
-        }),
-      ).toEqual({ column: "cluster" });
+      const config: GroupByConfig<false> = {
+        groupBy: { column: "cluster", map: "map1" },
+      };
+
+      expect(ConfigUtils.getGroupByColumn(config)).toEqual({
+        column: "cluster",
+      });
     });
 
     it("returns undefined if group-by is not the active source", () => {
-      expect(
-        ConfigUtils.getGroupByColumn({
-          source: "constant",
-          constant: { value: 1 },
-          groupBy: { column: "cluster", map: "map1" },
-        }),
-      ).toBeUndefined();
+      const config: ConstantConfig<number> &
+        Pick<GroupByConfig<false>, "groupBy"> = {
+        source: "constant",
+        constant: { value: 1 },
+        groupBy: { column: "cluster", map: "map1" },
+      };
+
+      expect(ConfigUtils.getGroupByColumn(config)).toBeUndefined();
     });
   });
 
   describe("getUnit", () => {
     it("returns the unit of the active source", () => {
-      expect(
-        ConfigUtils.getUnit({
-          source: "constant",
-          constant: { value: 1, unit: "data" },
-          groupBy: { column: "cluster", map: "map1", unit: "world" },
-        }),
-      ).toBe("data");
+      const config: ConstantConfig<number, { unit: "data" }> &
+        Pick<GroupByConfig<false, { unit: "world" }>, "groupBy"> = {
+        source: "constant",
+        constant: { value: 1, unit: "data" },
+        groupBy: { column: "cluster", map: "map1", unit: "world" },
+      };
+
+      expect(ConfigUtils.getUnit(config)).toBe("data");
     });
 
     it("returns undefined if the active source has no unit", () => {
-      expect(ConfigUtils.getUnit({ constant: { value: 1 } })).toBeUndefined();
+      const config: ConstantConfig<number> = { constant: { value: 1 } };
+
+      expect(ConfigUtils.getUnit(config)).toBeUndefined();
     });
   });
 

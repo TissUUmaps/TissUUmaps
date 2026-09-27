@@ -18,8 +18,8 @@ type LoadedGroupCounts = {
  *
  * @param tableId - The ID of the table, if any
  * @param column - The name of the categorical table column, if any
- * @returns The row count of every group, or `null` without a table or column,
- * while loading, or if loading failed
+ * @returns The row count of every group, in the order the groups first appear,
+ * or `null` without a table or column, while loading, or if loading failed
  */
 export function useItemGroupCounts(
   tableId: string | null,

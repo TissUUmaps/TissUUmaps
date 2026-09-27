@@ -8,7 +8,7 @@ import {
 
 import { useProjectStore } from "@/stores/project";
 
-import { type GroupValuesAdapter, groupColumnSize } from "./adapter";
+import { type GroupValuesAdapter, defaultGroupColumnSize } from "./adapter";
 import { GroupColorCell } from "./cells/GroupColorCell";
 
 /** Returns the group table adapter of the color maps */
@@ -21,7 +21,7 @@ export function useColorGroupValues(): GroupValuesAdapter<Color, ColorConfig> {
       maps,
       addMap,
       updateMap,
-      columnSize: groupColumnSize,
+      columnSize: defaultGroupColumnSize,
       renderCell: (color, onColorChange) => (
         <GroupColorCell color={color} onColorChange={onColorChange} />
       ),

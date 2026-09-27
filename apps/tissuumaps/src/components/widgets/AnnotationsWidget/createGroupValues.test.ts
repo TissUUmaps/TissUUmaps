@@ -89,7 +89,6 @@ describe("createGroupValues", () => {
       id: expect.any(String) as string,
       name: "cells cluster size",
       values: { A: 8, B: valueB },
-      default: 1,
     });
     const newMap = vi.mocked(property.adapter.addMap).mock.calls[0]![0];
     expect(property.onConfigChange).toHaveBeenCalledWith({

@@ -4,19 +4,28 @@ import type { VisibilityConfig } from "@tissuumaps/core";
 
 import { useLatestCallback } from "@/hooks/useLatestCallback";
 
-import type { GroupVisibility } from "./GroupAnnotationsTable";
 import { createGroupValues } from "./createGroupValues";
 import type { GroupProperty } from "./useGroupColumn";
 import type { GroupTableState } from "./useGroupTable";
 
+/** How the group table shows and toggles the visibility of a group */
+export type GroupVisibility = {
+  isVisible: (group: string) => boolean;
+
+  /** Whether the eye buttons are grayed out, as toggling them changes the property source */
+  isInactive: boolean;
+
+  onVisibleChange: (groups: string[], visible: boolean) => void;
+};
+
 /**
- * Returns the eye column of the group table, showing and toggling a visibility
- * property for each group
+ * Returns how the group table shows and toggles a visibility property for each
+ * group
  *
  * @param groupTable - The state of the group table
  * @param property - The visibility property
- * @returns The eye column, or `undefined` while the table has no column or
- * groups
+ * @returns The group visibility, or `undefined` while the table has no column
+ * or groups
  */
 export function useGroupVisibility(
   groupTable: GroupTableState,
