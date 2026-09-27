@@ -120,25 +120,27 @@ export class ConfigUtils {
    * updating an object with it changes nothing.
    *
    * @param config - The configuration
-   * @param column - The categorical table column to group by
+   * @param groupBy - The categorical table column to group by
    * @param mapId - ID of the project-global map to take the group values from
    * @returns The configuration, with `groupBy` as its active source
    */
   static withGroupByMap(
     config: Config<string>,
-    column: TableColumnRef,
+    groupBy: TableColumnRef,
     mapId: string,
   ): GroupByConfig<true> {
-    const groupByColumn = ConfigUtils.getGroupByColumn(config);
+    const currentGroupBy = ConfigUtils.getGroupByColumn(config);
     if (
-      groupByColumn !== undefined &&
-      ConfigUtils.isSameTableColumn(groupByColumn, column) &&
+      currentGroupBy !== undefined &&
+      ConfigUtils.isSameTableColumn(currentGroupBy, groupBy) &&
       isGroupByConfig<true>(config) &&
       config.groupBy.map === mapId
     ) {
       return config;
     }
-    const groupBy = isGroupByConfig<false, { unit?: CoordinateSpace }>(config)
+    const prevGroupBy = isGroupByConfig<false, { unit?: CoordinateSpace }>(
+      config,
+    )
       ? config.groupBy
       : undefined;
     const unit = ConfigUtils.getUnit(config);
@@ -146,10 +148,12 @@ export class ConfigUtils {
       ...config,
       source: "groupBy",
       groupBy: {
-        ...groupBy,
-        ...((unit !== undefined || groupBy?.unit !== undefined) && { unit }),
-        table: column.table,
-        column: column.column,
+        ...prevGroupBy,
+        ...((unit !== undefined || prevGroupBy?.unit !== undefined) && {
+          unit,
+        }),
+        table: groupBy.table,
+        column: groupBy.column,
         map: mapId,
       },
     };

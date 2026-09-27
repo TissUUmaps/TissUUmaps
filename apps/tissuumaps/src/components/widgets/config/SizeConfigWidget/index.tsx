@@ -105,9 +105,9 @@ function FromSizeConfigWidget({
 }: FromSizeConfigWidgetProps) {
   const {
     tableId,
-    currentFromTableColumn: column,
+    currentFromTableColumn: from,
     currentFromUnit: unit,
-    setCurrentFromTableColumn: setColumn,
+    setCurrentFromTableColumn: setFrom,
     setCurrentFromUnit: setUnit,
   } = adapter;
 
@@ -116,8 +116,8 @@ function FromSizeConfigWidget({
       <TableColumnField
         label="Column"
         tableId={tableId}
-        value={column}
-        onValueChange={setColumn}
+        value={from}
+        onValueChange={setFrom}
       />
       <Field>
         <FieldLabel>Size unit</FieldLabel>
@@ -155,10 +155,10 @@ function GroupBySizeConfigWidget({
 }: GroupBySizeConfigWidgetProps) {
   const {
     tableId,
-    currentGroupByTableColumn: column,
+    currentGroupByTableColumn: groupBy,
     currentGroupByMap: map,
     currentGroupByUnit: unit,
-    setCurrentGroupByTableColumn: setColumn,
+    setCurrentGroupByTableColumn: setGroupBy,
     setCurrentGroupByMap: setMap,
     setCurrentGroupByUnit: setUnit,
   } = adapter;
@@ -174,8 +174,8 @@ function GroupBySizeConfigWidget({
       <TableColumnField
         label="Column"
         tableId={tableId}
-        value={column}
-        onValueChange={setColumn}
+        value={groupBy}
+        onValueChange={setGroupBy}
       />
       <Field>
         <FieldLabel>Size map</FieldLabel>

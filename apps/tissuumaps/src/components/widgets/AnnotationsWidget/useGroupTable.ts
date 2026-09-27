@@ -28,21 +28,21 @@ export type GroupTableState = {
   tableId: string | null;
 
   /** The table column that the group table groups by, if any */
-  column: TableColumnRef | null;
+  groupBy: TableColumnRef | null;
 
-  setColumn: (column: TableColumnRef | null) => void;
+  setGroupBy: (groupBy: TableColumnRef | null) => void;
 
   /** The row count of every group, or `null` while there is none */
   groupCounts: Map<string, number> | null;
 };
 
-function isSameGroupByColumn(
-  column: TableColumnRef | null,
-  otherColumn: TableColumnRef | null,
+function isSameGroupBy(
+  groupBy: TableColumnRef | null,
+  otherGroupBy: TableColumnRef | null,
 ): boolean {
-  return column === null || otherColumn === null
-    ? column === otherColumn
-    : ConfigUtils.isSameTableColumn(column, otherColumn);
+  return groupBy === null || otherGroupBy === null
+    ? groupBy === otherGroupBy
+    : ConfigUtils.isSameTableColumn(groupBy, otherGroupBy);
 }
 
 /**
@@ -68,47 +68,44 @@ export function useGroupTable(
   const activeConfig = settings.find(
     (setting) => setting.category === activeSettingsCategory,
   )?.config;
-  const activeGroupByColumn =
+  const activeGroupBy =
     tableId !== null && activeConfig !== undefined
       ? (ConfigUtils.getGroupByColumn(activeConfig) ?? null)
       : null;
 
-  const defaultGroupByColumn =
+  const defaultGroupBy =
     tableId !== null
-      ? (activeGroupByColumn ??
+      ? (activeGroupBy ??
         getDominantGroupByColumn(
           settings.map((setting) => setting.config),
           tableId,
         ))
       : null;
 
-  const [column, setColumn] = useState<TableColumnRef | null>(
-    defaultGroupByColumn,
-  );
+  const [groupBy, setGroupBy] = useState<TableColumnRef | null>(defaultGroupBy);
 
   // https://react.dev/reference/react/useState#storing-information-from-previous-renders
   const [prevTableId, setPrevTableId] = useState(tableId);
   if (tableId !== prevTableId) {
     setPrevTableId(tableId);
-    setColumn(defaultGroupByColumn);
+    setGroupBy(defaultGroupBy);
   }
 
-  const [prevActiveGroupByColumn, setPrevActiveGroupByColumn] =
-    useState(activeGroupByColumn);
-  if (!isSameGroupByColumn(activeGroupByColumn, prevActiveGroupByColumn)) {
-    setPrevActiveGroupByColumn(activeGroupByColumn);
-    if (activeGroupByColumn !== null) {
-      setColumn(activeGroupByColumn);
+  const [prevActiveGroupBy, setPrevActiveGroupBy] = useState(activeGroupBy);
+  if (!isSameGroupBy(activeGroupBy, prevActiveGroupBy)) {
+    setPrevActiveGroupBy(activeGroupBy);
+    if (activeGroupBy !== null) {
+      setGroupBy(activeGroupBy);
     }
   }
 
   const groupCounts = useItemGroupCounts(
-    column?.table ?? tableId,
-    column?.column ?? null,
+    groupBy?.table ?? tableId,
+    groupBy?.column ?? null,
   );
 
   return useMemo(
-    () => ({ objectName, tableId, column, setColumn, groupCounts }),
-    [objectName, tableId, column, groupCounts],
+    () => ({ objectName, tableId, groupBy, setGroupBy, groupCounts }),
+    [objectName, tableId, groupBy, groupCounts],
   );
 }

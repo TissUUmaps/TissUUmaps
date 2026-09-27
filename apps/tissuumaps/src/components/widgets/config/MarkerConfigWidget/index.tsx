@@ -83,8 +83,8 @@ function FromMarkerConfigWidget({
 }: FromMarkerConfigWidgetProps) {
   const {
     tableId,
-    currentFromTableColumn: column,
-    setCurrentFromTableColumn: setColumn,
+    currentFromTableColumn: from,
+    setCurrentFromTableColumn: setFrom,
   } = adapter;
 
   return (
@@ -92,8 +92,8 @@ function FromMarkerConfigWidget({
       <TableColumnField
         label="Column"
         tableId={tableId}
-        value={column}
-        onValueChange={setColumn}
+        value={from}
+        onValueChange={setFrom}
       />
     </div>
   );
@@ -110,9 +110,9 @@ function GroupByMarkerConfigWidget({
 }: GroupByMarkerConfigWidgetProps) {
   const {
     tableId,
-    currentGroupByTableColumn: column,
+    currentGroupByTableColumn: groupBy,
     currentGroupByMap: map,
-    setCurrentGroupByTableColumn: setColumn,
+    setCurrentGroupByTableColumn: setGroupBy,
     setCurrentGroupByMap: setMap,
   } = adapter;
 
@@ -127,8 +127,8 @@ function GroupByMarkerConfigWidget({
       <TableColumnField
         label="Column"
         tableId={tableId}
-        value={column}
-        onValueChange={setColumn}
+        value={groupBy}
+        onValueChange={setGroupBy}
       />
       <Field>
         <FieldLabel>Marker map</FieldLabel>

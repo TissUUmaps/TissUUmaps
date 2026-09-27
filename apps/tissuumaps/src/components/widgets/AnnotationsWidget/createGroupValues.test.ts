@@ -16,8 +16,8 @@ type NumberConfig = ConstantConfig<number> | FromConfig | GroupByConfig<false>;
 const groupTable: GroupTableState = {
   objectName: "cells",
   tableId: "cells",
-  column: { column: "cluster" },
-  setColumn: () => {},
+  groupBy: { column: "cluster" },
+  setGroupBy: () => {},
   groupCounts: new Map([
     ["A", 2],
     ["B", 1],
@@ -50,7 +50,7 @@ describe("createGroupValues", () => {
     const property = createProperty({ constant: { value: 5 } });
 
     expect(
-      createGroupValues({ ...groupTable, column: null }, property),
+      createGroupValues({ ...groupTable, groupBy: null }, property),
     ).toBeUndefined();
     expect(
       createGroupValues({ ...groupTable, groupCounts: null }, property),

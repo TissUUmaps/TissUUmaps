@@ -15,23 +15,23 @@ export function getDominantGroupByColumn(
   configs: Config<string>[],
   defaultTable?: string,
 ): TableColumnRef | null {
-  const counts = new Map<string, { column: TableColumnRef; count: number }>();
+  const counts = new Map<string, { groupBy: TableColumnRef; count: number }>();
   for (const config of configs) {
-    const column = ConfigUtils.getGroupByColumn(config);
-    if (column !== undefined) {
+    const groupBy = ConfigUtils.getGroupByColumn(config);
+    if (groupBy !== undefined) {
       // table IDs contain no colon
-      const key = `${column.table ?? defaultTable ?? ""}:${column.column}`;
-      counts.set(key, { column, count: (counts.get(key)?.count ?? 0) + 1 });
+      const key = `${groupBy.table ?? defaultTable ?? ""}:${groupBy.column}`;
+      counts.set(key, { groupBy, count: (counts.get(key)?.count ?? 0) + 1 });
     }
   }
-  let dominantColumn: TableColumnRef | null = null;
+  let dominantGroupBy: TableColumnRef | null = null;
   let dominantCount = 0;
   // the insertion order of the counts is the priority order of the configs
-  for (const { column, count } of counts.values()) {
+  for (const { groupBy, count } of counts.values()) {
     if (count > dominantCount) {
-      dominantColumn = column;
+      dominantGroupBy = groupBy;
       dominantCount = count;
     }
   }
-  return dominantColumn;
+  return dominantGroupBy;
 }

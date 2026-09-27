@@ -79,8 +79,8 @@ function FromVisibilityConfigWidget({
 }: FromVisibilityConfigWidgetProps) {
   const {
     tableId,
-    currentFromTableColumn: column,
-    setCurrentFromTableColumn: setColumn,
+    currentFromTableColumn: from,
+    setCurrentFromTableColumn: setFrom,
   } = adapter;
 
   return (
@@ -88,8 +88,8 @@ function FromVisibilityConfigWidget({
       <TableColumnField
         label="Column"
         tableId={tableId}
-        value={column}
-        onValueChange={setColumn}
+        value={from}
+        onValueChange={setFrom}
       />
     </div>
   );
@@ -106,9 +106,9 @@ function GroupByVisibilityConfigWidget({
 }: GroupByVisibilityConfigWidgetProps) {
   const {
     tableId,
-    currentGroupByTableColumn: column,
+    currentGroupByTableColumn: groupBy,
     currentGroupByMap: map,
-    setCurrentGroupByTableColumn: setColumn,
+    setCurrentGroupByTableColumn: setGroupBy,
     setCurrentGroupByMap: setMap,
   } = adapter;
 
@@ -125,8 +125,8 @@ function GroupByVisibilityConfigWidget({
       <TableColumnField
         label="Column"
         tableId={tableId}
-        value={column}
-        onValueChange={setColumn}
+        value={groupBy}
+        onValueChange={setGroupBy}
       />
       <Field>
         <FieldLabel>Visibility map</FieldLabel>

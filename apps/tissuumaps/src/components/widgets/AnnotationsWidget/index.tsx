@@ -59,8 +59,8 @@ export type AnnotationsWidgetProps = {
    */
   annotatedObject: HighlightedItemGroup["annotatedObject"];
 
-  selectedGroupByColumn: TableColumnRef | null;
-  onSelectedGroupByColumnChange: (column: TableColumnRef | null) => void;
+  selectedGroupBy: TableColumnRef | null;
+  onSelectedGroupByChange: (column: TableColumnRef | null) => void;
   groupCounts: Map<string, number> | null;
   groupVisibility?: GroupVisibility;
   groupColumnDefs?: GroupAnnotationsTableColumnDef[];
@@ -72,8 +72,8 @@ export function AnnotationsWidget({
   tableHeight,
   tableId,
   annotatedObject,
-  selectedGroupByColumn,
-  onSelectedGroupByColumnChange,
+  selectedGroupBy,
+  onSelectedGroupByChange,
   groupCounts,
   groupVisibility,
   groupColumnDefs,
@@ -133,17 +133,17 @@ export function AnnotationsWidget({
       <TableColumnField
         label="Group by column"
         tableId={tableId}
-        value={selectedGroupByColumn}
-        onValueChange={onSelectedGroupByColumnChange}
+        value={selectedGroupBy}
+        onValueChange={onSelectedGroupByChange}
       />
-      <Field disabled={selectedGroupByColumn === null || hasTooManyGroups}>
+      <Field disabled={selectedGroupBy === null || hasTooManyGroups}>
         <FieldLabel>Filter groups</FieldLabel>
         <Input
           value={nameQuery}
           onChange={(event) => setNameQuery(event.target.value)}
         />
       </Field>
-      {tableId !== null && selectedGroupByColumn !== null ? (
+      {tableId !== null && selectedGroupBy !== null ? (
         hasTooManyGroups ? (
           <span className="text-xs text-muted-foreground">
             {groupCounts.size.toLocaleString()} groups: too many to list. Group
@@ -154,7 +154,7 @@ export function AnnotationsWidget({
             height={tableHeight}
             rowHeight={tableRowHeight}
             annotatedObject={annotatedObject}
-            groupByColumn={selectedGroupByColumn}
+            groupBy={selectedGroupBy}
             groupCounts={filteredGroupCounts}
             groupVisibility={groupVisibility}
             groupColumnDefs={groupColumnDefs}

@@ -58,7 +58,7 @@ export type GroupAnnotationsTableProps = {
   /** The object whose items are grouped, which the eye buttons highlight */
   annotatedObject: HighlightedItemGroup["annotatedObject"];
 
-  groupByColumn: TableColumnRef;
+  groupBy: TableColumnRef;
   groupCounts: Map<string, number> | null;
   groupVisibility?: GroupVisibility;
   groupColumnDefs?: GroupAnnotationsTableColumnDef[];
@@ -68,7 +68,7 @@ export function GroupAnnotationsTable({
   height,
   rowHeight,
   annotatedObject,
-  groupByColumn,
+  groupBy,
   groupCounts,
   groupVisibility,
   groupColumnDefs,
@@ -81,7 +81,7 @@ export function GroupAnnotationsTable({
     (): GroupAnnotationsTableColumnDef[] => [
       {
         id: "group",
-        header: groupByColumn.column,
+        header: groupBy.column,
         accessorFn: (row) => row.group,
         enableHiding: false,
         size: 110,
@@ -98,7 +98,7 @@ export function GroupAnnotationsTable({
       },
       ...(groupColumnDefs ?? []),
     ],
-    [groupByColumn, groupColumnDefs],
+    [groupBy, groupColumnDefs],
   );
 
   const columnVisibility = useMemo(() => {
@@ -207,7 +207,7 @@ export function GroupAnnotationsTable({
             }}
             itemGroup={{
               annotatedObject,
-              groupBy: groupByColumn,
+              groupBy,
               group: row.original.group,
             }}
           />
@@ -219,7 +219,7 @@ export function GroupAnnotationsTable({
     groupVisibility,
     groupRows,
     annotatedObject,
-    groupByColumn,
+    groupBy,
     sortableColumnDefs,
   ]);
 

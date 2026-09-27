@@ -149,11 +149,11 @@ function FromColorConfigWidget({
   const {
     tableId,
     fromColumnValueRange: columnValueRange,
-    currentFromTableColumn: column,
+    currentFromTableColumn: from,
     currentFromRangeMin: rangeMin,
     currentFromRangeMax: rangeMax,
     currentFromPalette: palette,
-    setCurrentFromTableColumn: setColumn,
+    setCurrentFromTableColumn: setFrom,
     setCurrentFromRangeMin: setRangeMin,
     setCurrentFromRangeMax: setRangeMax,
     setCurrentFromPalette: setPalette,
@@ -164,8 +164,8 @@ function FromColorConfigWidget({
       <TableColumnField
         label="Column"
         tableId={tableId}
-        value={column}
-        onValueChange={setColumn}
+        value={from}
+        onValueChange={setFrom}
       />
       <Field>
         <FieldLabel>Color palette</FieldLabel>
@@ -238,10 +238,10 @@ function GroupByColorConfigWidget({
 }: GroupByColorConfigWidgetProps) {
   const {
     tableId,
-    currentGroupByTableColumn: column,
+    currentGroupByTableColumn: groupBy,
     currentGroupByPalette: palette,
     currentGroupByMap: map,
-    setCurrentGroupByTableColumn: setColumn,
+    setCurrentGroupByTableColumn: setGroupBy,
     setCurrentGroupByPalette: setPalette,
     setCurrentGroupByMap: setMap,
   } = adapter;
@@ -257,8 +257,8 @@ function GroupByColorConfigWidget({
       <TableColumnField
         label="Column"
         tableId={tableId}
-        value={column}
-        onValueChange={setColumn}
+        value={groupBy}
+        onValueChange={setGroupBy}
       />
       <Field disabled={map !== null}>
         <FieldLabel>Color palette</FieldLabel>

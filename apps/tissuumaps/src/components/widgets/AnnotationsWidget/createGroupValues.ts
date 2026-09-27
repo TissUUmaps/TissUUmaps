@@ -34,8 +34,8 @@ export function createGroupValues<TValue, TConfig extends Config<string>>(
   groupTable: GroupTableState,
   property: GroupProperty<TValue, TConfig>,
 ): GroupValues<TValue> | undefined {
-  const { objectName, column, groupCounts } = groupTable;
-  if (column === null || groupCounts === null) {
+  const { objectName, groupBy, groupCounts } = groupTable;
+  if (groupBy === null || groupCounts === null) {
     return undefined;
   }
   const { name, config, default: defaultValue, adapter } = property;
@@ -74,7 +74,7 @@ export function createGroupValues<TValue, TConfig extends Config<string>>(
       mapId = crypto.randomUUID();
       adapter.addMap({
         id: mapId,
-        name: `${objectName} ${column.column} ${name}`,
+        name: `${objectName} ${groupBy.column} ${name}`,
         values: {
           ...Object.fromEntries(
             Array.from(groupCounts.keys(), (group) => [group, getValue(group)]),
@@ -83,7 +83,7 @@ export function createGroupValues<TValue, TConfig extends Config<string>>(
         },
       });
     }
-    property.onConfigChange(ConfigUtils.withGroupByMap(config, column, mapId));
+    property.onConfigChange(ConfigUtils.withGroupByMap(config, groupBy, mapId));
   };
 
   return { getValue, setValues, isInactive };

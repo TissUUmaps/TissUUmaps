@@ -13,13 +13,13 @@ export function isGroupedByColumn<TConfig extends Config<string>>(
   config: TConfig,
   groupTable: GroupTableState,
 ): config is Extract<TConfig, GroupByConfig<false>> {
-  const groupByColumn = ConfigUtils.getGroupByColumn(config);
+  const groupBy = ConfigUtils.getGroupByColumn(config);
   return (
-    groupTable.column !== null &&
-    groupByColumn !== undefined &&
+    groupTable.groupBy !== null &&
+    groupBy !== undefined &&
     ConfigUtils.isSameTableColumn(
-      groupByColumn,
-      groupTable.column,
+      groupBy,
+      groupTable.groupBy,
       groupTable.tableId ?? undefined,
     )
   );

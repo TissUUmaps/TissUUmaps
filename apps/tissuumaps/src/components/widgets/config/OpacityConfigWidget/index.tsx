@@ -83,8 +83,8 @@ function FromOpacityConfigWidget({
 }: FromOpacityConfigWidgetProps) {
   const {
     tableId,
-    currentFromTableColumn: column,
-    setCurrentFromTableColumn: setColumn,
+    currentFromTableColumn: from,
+    setCurrentFromTableColumn: setFrom,
   } = adapter;
 
   return (
@@ -92,8 +92,8 @@ function FromOpacityConfigWidget({
       <TableColumnField
         label="Column"
         tableId={tableId}
-        value={column}
-        onValueChange={setColumn}
+        value={from}
+        onValueChange={setFrom}
       />
     </div>
   );
@@ -110,9 +110,9 @@ function GroupByOpacityConfigWidget({
 }: GroupByOpacityConfigWidgetProps) {
   const {
     tableId,
-    currentGroupByTableColumn: column,
+    currentGroupByTableColumn: groupBy,
     currentGroupByMap: map,
-    setCurrentGroupByTableColumn: setColumn,
+    setCurrentGroupByTableColumn: setGroupBy,
     setCurrentGroupByMap: setMap,
   } = adapter;
 
@@ -127,8 +127,8 @@ function GroupByOpacityConfigWidget({
       <TableColumnField
         label="Column"
         tableId={tableId}
-        value={column}
-        onValueChange={setColumn}
+        value={groupBy}
+        onValueChange={setGroupBy}
       />
       <Field>
         <FieldLabel>Opacity map</FieldLabel>
