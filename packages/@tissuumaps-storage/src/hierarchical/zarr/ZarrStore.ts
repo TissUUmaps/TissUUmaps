@@ -161,10 +161,11 @@ export class ZarrStore implements HierarchicalStore {
               signal,
             });
       return new ZarrArray(array);
-    } catch {
+    } catch (error) {
       signal?.throwIfAborted();
       // a node whose metadata zarrita cannot read, such as a structured
       // dtype under "uns", is reported as absent rather than failing the store
+      console.warn(`Skipping node "${path}" of the Zarr store:`, error);
       return null;
     }
   }

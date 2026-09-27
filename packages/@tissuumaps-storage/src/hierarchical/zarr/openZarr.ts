@@ -23,7 +23,8 @@ import { ZarrStore } from "./ZarrStore";
  * handle of the open workspace, required for workspace-relative sources
  * @returns The store, rooted at the group the source points to
  * @throws Error if neither the source nor any of its ancestors opens as a
- * Zarr store with consolidated metadata; the last failure is the cause
+ * Zarr store with consolidated metadata; the failure at the source itself is
+ * the cause, as the ancestors are only tried on its behalf
  */
 export async function openZarr(
   normalizedSource: string,
@@ -36,7 +37,7 @@ export async function openZarr(
   signal?.throwIfAborted();
   let rootSource = normalizedSource;
   const groupSegments: string[] = [];
-  let lastError: unknown;
+  let sourceError: unknown;
   for (;;) {
     try {
       const resolvedRootSource = await SourceUtils.resolveSourceDirectory(
@@ -51,7 +52,7 @@ export async function openZarr(
       return await ZarrStore.open(store, groupSegments.join("/"), { signal });
     } catch (error) {
       signal?.throwIfAborted();
-      lastError = error;
+      sourceError ??= error;
     }
     const parent = SourceUtils.getParentSource(rootSource);
     if (parent === null) {
@@ -62,6 +63,6 @@ export async function openZarr(
   }
   throw new Error(
     `No Zarr store with consolidated metadata found at "${normalizedSource}" or above it.`,
-    { cause: lastError },
+    { cause: sourceError },
   );
 }
