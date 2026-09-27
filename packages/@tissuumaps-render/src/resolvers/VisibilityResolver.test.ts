@@ -2,13 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 
 import type {
   GroupValueMap,
+  IDArray,
   TableData,
   VisibilityConfig,
 } from "@tissuumaps/core";
 
 import { VisibilityResolver } from "./VisibilityResolver";
 
-function createMockTableData(ids: number[], values: unknown[]): TableData {
+function createMockTableData(ids: IDArray, values: unknown[]): TableData {
   return {
     getIds: () => ids,
     getSize: () => ids.length,
@@ -87,7 +88,7 @@ describe("VisibilityResolver", () => {
     it("fills the buffer with the constant visibility", () => {
       const config = { constant: { value: true } } satisfies VisibilityConfig;
       const packedVisibilities = VisibilityResolver.resolveUniformVisibilities(
-        [1, 2],
+        new Uint32Array([1, 2]),
         config,
       );
       expect(Array.from(packedVisibilities)).toEqual([1, 1]);
@@ -96,7 +97,7 @@ describe("VisibilityResolver", () => {
 
   describe("resolveVisibilitiesFromTableValues", () => {
     it("reads visibilities from the table column", async () => {
-      const ids = [1, 2, 3];
+      const ids = new Uint32Array([1, 2, 3]);
       const data = createMockTableData(ids, [1, 0, 5]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies VisibilityConfig;
@@ -113,7 +114,7 @@ describe("VisibilityResolver", () => {
     });
 
     it("uses the default visibility for invalid values", async () => {
-      const ids = [1, 2];
+      const ids = new Uint32Array([1, 2]);
       const data = createMockTableData(ids, ["bad", 0]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies VisibilityConfig;
@@ -132,12 +133,12 @@ describe("VisibilityResolver", () => {
 
     it("forwards the signal to loadTable", async () => {
       const controller = new AbortController();
-      const data = createMockTableData([1], [1]);
+      const data = createMockTableData(new Uint32Array([1]), [1]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies VisibilityConfig;
 
       await VisibilityResolver.resolveVisibilitiesFromTableValues(
-        [1],
+        new Uint32Array([1]),
         config,
         false,
         loadTable,
@@ -150,15 +151,15 @@ describe("VisibilityResolver", () => {
 
   describe("resolveVisibilitiesFromTableGroups", () => {
     it("maps groups to visibilities using the visibility map", async () => {
-      const ids = [1, 2];
+      const ids = new Uint32Array([1, 2]);
       const data = createMockTableData(ids, ["A", "B"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const visibilityMap: GroupValueMap<boolean> = {
         id: "vm1",
         name: "Visibility Map",
         values: {
-          [JSON.stringify("A")]: true,
-          [JSON.stringify("B")]: false,
+          A: true,
+          B: false,
         },
       };
       const config = {
@@ -178,7 +179,7 @@ describe("VisibilityResolver", () => {
     });
 
     it("uses the visibility map default for unmapped groups", async () => {
-      const ids = [1];
+      const ids = new Uint32Array([1]);
       const data = createMockTableData(ids, ["missing"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const visibilityMap: GroupValueMap<boolean> = {
@@ -211,7 +212,7 @@ describe("VisibilityResolver", () => {
 
       const packedVisibilities =
         await VisibilityResolver.resolveVisibilitiesFromTableGroups(
-          [1, 2],
+          new Uint32Array([1, 2]),
           config,
           [],
           true,
@@ -269,7 +270,7 @@ describe("VisibilityResolver", () => {
     it("dispatches to constant", async () => {
       const config = { constant: { value: false } } satisfies VisibilityConfig;
       const packedVisibilities = await VisibilityResolver.resolveVisibilities(
-        [1, 2],
+        new Uint32Array([1, 2]),
         config,
         [],
         true,
@@ -278,12 +279,12 @@ describe("VisibilityResolver", () => {
     });
 
     it("dispatches to from config when loadTable is given", async () => {
-      const data = createMockTableData([1], [1]);
+      const data = createMockTableData(new Uint32Array([1]), [1]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies VisibilityConfig;
 
       const packedVisibilities = await VisibilityResolver.resolveVisibilities(
-        [1],
+        new Uint32Array([1]),
         config,
         [],
         false,
@@ -295,19 +296,19 @@ describe("VisibilityResolver", () => {
     });
 
     it("dispatches to groupBy config when loadTable is given", async () => {
-      const data = createMockTableData([1], ["A"]);
+      const data = createMockTableData(new Uint32Array([1]), ["A"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const visibilityMap: GroupValueMap<boolean> = {
         id: "vm1",
         name: "Visibility Map",
-        values: { [JSON.stringify("A")]: true },
+        values: { A: true },
       };
       const config = {
         groupBy: { column: "col1", map: "vm1" },
       } satisfies VisibilityConfig;
 
       const packedVisibilities = await VisibilityResolver.resolveVisibilities(
-        [1],
+        new Uint32Array([1]),
         config,
         [visibilityMap],
         false,
@@ -321,7 +322,7 @@ describe("VisibilityResolver", () => {
     it("falls back to the default visibility when the config has no active source", async () => {
       const config = {} as VisibilityConfig;
       const packedVisibilities = await VisibilityResolver.resolveVisibilities(
-        [1, 2],
+        new Uint32Array([1, 2]),
         config,
         [],
         true,
@@ -333,7 +334,7 @@ describe("VisibilityResolver", () => {
       const config = { from: { column: "col1" } } satisfies VisibilityConfig;
 
       const packedVisibilities = await VisibilityResolver.resolveVisibilities(
-        [1],
+        new Uint32Array([1]),
         config,
         [],
         true,
@@ -346,14 +347,14 @@ describe("VisibilityResolver", () => {
       const visibilityMap: GroupValueMap<boolean> = {
         id: "vm1",
         name: "Visibility Map",
-        values: { [JSON.stringify("A")]: false },
+        values: { A: false },
       };
       const config = {
         groupBy: { column: "col1", map: "vm1" },
       } satisfies VisibilityConfig;
 
       const packedVisibilities = await VisibilityResolver.resolveVisibilities(
-        [1],
+        new Uint32Array([1]),
         config,
         [visibilityMap],
         true,
@@ -369,9 +370,15 @@ describe("VisibilityResolver", () => {
       const config = { constant: { value: true } } satisfies VisibilityConfig;
 
       await expect(
-        VisibilityResolver.resolveVisibilities([1], config, [], false, {
-          signal: controller.signal,
-        }),
+        VisibilityResolver.resolveVisibilities(
+          new Uint32Array([1]),
+          config,
+          [],
+          false,
+          {
+            signal: controller.signal,
+          },
+        ),
       ).rejects.toThrow();
     });
   });

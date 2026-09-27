@@ -14,5 +14,4 @@ export {
   type NormalizedTIFFLabelsDataSource,
   type TIFFLabelsDataSource,
 } from "./TIFFLabelsDataSource";
-export { type TIFFChannelMetadata } from "./formats/TIFFParser";
-export { openTIFF } from "./openTIFF";
+export { type TIFFChannelMetadata } from "./TIFFParser";

@@ -27,7 +27,7 @@ export const defaultLabelColor = {
 } as const satisfies Color;
 
 /** ID of the default color palette for random label colors */
-export const defaultLabelColorPalette = "batlowS";
+export const defaultLabelColorPalette = "distinct";
 
 /** Default label visibility */
 export const defaultLabelVisibility = true;
@@ -56,6 +56,12 @@ export const defaultPointVisibility = true;
 
 /** Default point opacity */
 export const defaultPointOpacity = 1;
+
+/** Default shape visibility */
+export const defaultShapeVisibility = true;
+
+/** Default shape opacity */
+export const defaultShapeOpacity = 1;
 
 /** Default shape fill color */
 export const defaultShapeFillColor = {

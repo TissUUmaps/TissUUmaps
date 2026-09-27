@@ -66,9 +66,9 @@ describe("PandasMetadataUtils", () => {
       expect(PandasMetadataUtils.readIndexColumn(metadata)).toBeUndefined();
     });
 
-    it("reads no column for an index that is not an integer", () => {
+    it("reads a string index column", () => {
       // As written by geopandas for a SpatialData Xenium element with string
-      // cell IDs, which item IDs cannot hold
+      // cell IDs
       const metadata = fakePandasMetadata(
         JSON.stringify({
           index_columns: ["__index_level_0__"],
@@ -82,7 +82,20 @@ describe("PandasMetadataUtils", () => {
         }),
         ["__index_level_0__"],
       );
-      expect(PandasMetadataUtils.readIndexColumn(metadata)).toBeUndefined();
+      expect(PandasMetadataUtils.readIndexColumn(metadata)).toBe(
+        "__index_level_0__",
+      );
+    });
+
+    it("reads an index column of any dtype", () => {
+      const metadata = fakePandasMetadata(
+        JSON.stringify({
+          index_columns: ["cell_id"],
+          columns: [{ field_name: "cell_id", pandas_type: "float64" }],
+        }),
+        ["cell_id"],
+      );
+      expect(PandasMetadataUtils.readIndexColumn(metadata)).toBe("cell_id");
     });
 
     it("reads no column for a multi-level index", () => {
@@ -94,14 +107,6 @@ describe("PandasMetadataUtils", () => {
             { field_name: "cell_id", pandas_type: "int64" },
           ],
         }),
-      );
-      expect(PandasMetadataUtils.readIndexColumn(metadata)).toBeUndefined();
-    });
-
-    it("reads no column for an index missing from the column metadata", () => {
-      const metadata = fakePandasMetadata(
-        JSON.stringify({ index_columns: ["cell_id"] }),
-        ["cell_id"],
       );
       expect(PandasMetadataUtils.readIndexColumn(metadata)).toBeUndefined();
     });

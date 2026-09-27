@@ -6,7 +6,6 @@ import {
   type ImageDataProvider,
   ImageUtils,
   MathUtils,
-  type NumericArray,
   SourceUtils,
 } from "@tissuumaps/core";
 
@@ -259,12 +258,12 @@ export class TIFFImageDataProvider implements ImageDataProvider<
     );
     const image = largeEnough[largeEnough.length - 1] ?? pyramid[0]!;
     // a single sample, interleaved, is read as one typed array
-    const values = (await image.readRasters({
+    const values = await image.readRasters({
       samples: [0],
       interleave: true,
       pool,
       signal,
-    })) as unknown as NumericArray;
+    });
     const range = await MathUtils.computeRange(values, { signal });
     // a channel without finite values, or with a single one, has no range to
     // spread bins over; the renderer falls back to its data type range

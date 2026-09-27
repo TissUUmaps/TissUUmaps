@@ -42,7 +42,7 @@ export function AccordionTrigger({
   return (
     <AccordionPrimitive.Trigger
       className={cn(
-        "flex flex-row items-center group/accordion-trigger",
+        "flex flex-row items-center group/accordion-trigger data-disabled:pointer-events-none data-disabled:opacity-50",
         className,
       )}
       {...props}
@@ -58,7 +58,10 @@ export function AccordionTriggerRightDownIcon({
 }: Omit<AccordionPrimitive.Trigger.Props, "children">) {
   return (
     <AccordionPrimitive.Trigger
-      className={cn("group/accordion-trigger", className)}
+      className={cn(
+        "group/accordion-trigger data-disabled:pointer-events-none data-disabled:opacity-50",
+        className,
+      )}
       aria-label="Expand/collapse"
       {...props}
     >
@@ -74,7 +77,10 @@ export function AccordionTriggerDownUpIcon({
 }: Omit<AccordionPrimitive.Trigger.Props, "children">) {
   return (
     <AccordionPrimitive.Trigger
-      className={cn("group/accordion-trigger", className)}
+      className={cn(
+        "group/accordion-trigger data-disabled:pointer-events-none data-disabled:opacity-50",
+        className,
+      )}
       aria-label="Expand/collapse"
       {...props}
     >

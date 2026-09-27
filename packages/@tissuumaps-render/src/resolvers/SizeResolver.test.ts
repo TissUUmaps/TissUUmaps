@@ -1,10 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { GroupValueMap, SizeConfig, TableData } from "@tissuumaps/core";
+import type {
+  GroupValueMap,
+  IDArray,
+  SizeConfig,
+  TableData,
+} from "@tissuumaps/core";
 
 import { SizeResolver } from "./SizeResolver";
 
-function createMockTableData(ids: number[], values: unknown[]): TableData {
+function createMockTableData(ids: IDArray, values: unknown[]): TableData {
   return {
     getIds: () => ids,
     getSize: () => ids.length,
@@ -68,14 +73,17 @@ describe("SizeResolver", () => {
   describe("resolveUniformSizes", () => {
     it("fills the buffer with the constant size", () => {
       const config = { constant: { value: 9 } } satisfies SizeConfig;
-      const packedSizes = SizeResolver.resolveUniformSizes([1, 2], config);
+      const packedSizes = SizeResolver.resolveUniformSizes(
+        new Uint32Array([1, 2]),
+        config,
+      );
       expect(Array.from(packedSizes)).toEqual([9, 9]);
     });
   });
 
   describe("resolveSizesFromTableValues", () => {
     it("reads sizes from the table column", async () => {
-      const ids = [1, 2];
+      const ids = new Uint32Array([1, 2]);
       const data = createMockTableData(ids, [3, 4]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies SizeConfig;
@@ -91,7 +99,7 @@ describe("SizeResolver", () => {
     });
 
     it("uses the default size for invalid values", async () => {
-      const ids = [1, 2];
+      const ids = new Uint32Array([1, 2]);
       const data = createMockTableData(ids, ["bad", 4]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies SizeConfig;
@@ -108,12 +116,12 @@ describe("SizeResolver", () => {
 
     it("forwards the signal to loadTable", async () => {
       const controller = new AbortController();
-      const data = createMockTableData([1], [3]);
+      const data = createMockTableData(new Uint32Array([1]), [3]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies SizeConfig;
 
       await SizeResolver.resolveSizesFromTableValues(
-        [1],
+        new Uint32Array([1]),
         config,
         1,
         loadTable,
@@ -126,15 +134,15 @@ describe("SizeResolver", () => {
 
   describe("resolveSizesFromTableGroups", () => {
     it("maps groups to sizes using the size map", async () => {
-      const ids = [1, 2];
+      const ids = new Uint32Array([1, 2]);
       const data = createMockTableData(ids, ["A", "B"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const sizeMap: GroupValueMap<number> = {
         id: "sm1",
         name: "Size Map",
         values: {
-          [JSON.stringify("A")]: 2,
-          [JSON.stringify("B")]: 4,
+          A: 2,
+          B: 4,
         },
       };
       const config = {
@@ -153,7 +161,7 @@ describe("SizeResolver", () => {
     });
 
     it("uses the size map default for unmapped groups", async () => {
-      const ids = [1];
+      const ids = new Uint32Array([1]);
       const data = createMockTableData(ids, ["missing"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const sizeMap: GroupValueMap<number> = {
@@ -184,7 +192,7 @@ describe("SizeResolver", () => {
       } satisfies SizeConfig;
 
       const packedSizes = await SizeResolver.resolveSizesFromTableGroups(
-        [1, 2],
+        new Uint32Array([1, 2]),
         config,
         [],
         5,
@@ -228,7 +236,7 @@ describe("SizeResolver", () => {
     it("dispatches to constant", async () => {
       const config = { constant: { value: 8 } } satisfies SizeConfig;
       const packedSizes = await SizeResolver.resolveSizes(
-        [1, 2],
+        new Uint32Array([1, 2]),
         config,
         [],
         1,
@@ -237,32 +245,38 @@ describe("SizeResolver", () => {
     });
 
     it("dispatches to from config when loadTable is given", async () => {
-      const data = createMockTableData([1], [3]);
+      const data = createMockTableData(new Uint32Array([1]), [3]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies SizeConfig;
 
-      const packedSizes = await SizeResolver.resolveSizes([1], config, [], 1, {
-        loadTable,
-      });
+      const packedSizes = await SizeResolver.resolveSizes(
+        new Uint32Array([1]),
+        config,
+        [],
+        1,
+        {
+          loadTable,
+        },
+      );
 
       expect(loadTable).toHaveBeenCalledOnce();
       expect(packedSizes[0]).toBe(3);
     });
 
     it("dispatches to groupBy config when loadTable is given", async () => {
-      const data = createMockTableData([1], ["A"]);
+      const data = createMockTableData(new Uint32Array([1]), ["A"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const sizeMap: GroupValueMap<number> = {
         id: "sm1",
         name: "Size Map",
-        values: { [JSON.stringify("A")]: 5 },
+        values: { A: 5 },
       };
       const config = {
         groupBy: { column: "col1", map: "sm1" },
       } satisfies SizeConfig;
 
       const packedSizes = await SizeResolver.resolveSizes(
-        [1],
+        new Uint32Array([1]),
         config,
         [sizeMap],
         1,
@@ -276,7 +290,7 @@ describe("SizeResolver", () => {
     it("falls back to the default size when the config has no active source", async () => {
       const config = {} as SizeConfig;
       const packedSizes = await SizeResolver.resolveSizes(
-        [1, 2],
+        new Uint32Array([1, 2]),
         config,
         [],
         3,
@@ -287,7 +301,12 @@ describe("SizeResolver", () => {
     it("falls back to the default size for a from config without loadTable", async () => {
       const config = { from: { column: "col1" } } satisfies SizeConfig;
 
-      const packedSizes = await SizeResolver.resolveSizes([1], config, [], 3);
+      const packedSizes = await SizeResolver.resolveSizes(
+        new Uint32Array([1]),
+        config,
+        [],
+        3,
+      );
 
       expect(packedSizes[0]).toBe(3);
     });
@@ -296,14 +315,14 @@ describe("SizeResolver", () => {
       const sizeMap: GroupValueMap<number> = {
         id: "sm1",
         name: "Size Map",
-        values: { [JSON.stringify("A")]: 5 },
+        values: { A: 5 },
       };
       const config = {
         groupBy: { column: "col1", map: "sm1" },
       } satisfies SizeConfig;
 
       const packedSizes = await SizeResolver.resolveSizes(
-        [1],
+        new Uint32Array([1]),
         config,
         [sizeMap],
         3,
@@ -319,7 +338,7 @@ describe("SizeResolver", () => {
       const config = { constant: { value: 8 } } satisfies SizeConfig;
 
       await expect(
-        SizeResolver.resolveSizes([1], config, [], 1, {
+        SizeResolver.resolveSizes(new Uint32Array([1]), config, [], 1, {
           signal: controller.signal,
         }),
       ).rejects.toThrow();

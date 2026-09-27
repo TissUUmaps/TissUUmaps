@@ -1,11 +1,21 @@
 import { Field as FieldPrimitive } from "@base-ui/react/field";
 
+import { cn } from "@/lib/utils";
+
 export function Field(props: FieldPrimitive.Root.Props) {
   return <FieldPrimitive.Root {...props} />;
 }
 
-export function FieldLabel(props: FieldPrimitive.Label.Props) {
-  return <FieldPrimitive.Label {...props} className="text-foreground" />;
+export function FieldLabel({
+  className,
+  ...props
+}: FieldPrimitive.Label.Props) {
+  return (
+    <FieldPrimitive.Label
+      className={cn("text-foreground data-disabled:opacity-50", className)}
+      {...props}
+    />
+  );
 }
 
 export function FieldControl(props: FieldPrimitive.Control.Props) {

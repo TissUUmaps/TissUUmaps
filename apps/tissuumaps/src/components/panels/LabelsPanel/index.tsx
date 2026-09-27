@@ -1,6 +1,7 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
+import { useState } from "react";
 
 import { type Labels, MathUtils, createLabels } from "@tissuumaps/core";
 
@@ -20,15 +21,14 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
-import { AnnotationsWidget } from "@/components/widgets/AnnotationsWidget";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
+import { LabelsAnnotationsWidget } from "./LabelsAnnotationsWidget";
 import { LabelsSettingsWidget } from "./LabelsSettingsWidget";
-import { useLabelsAnnotationsColumns } from "./useLabelsAnnotationsColumns";
-import { useLabelsAnnotationsWidget } from "./useLabelsAnnotationsWidget";
+import type { LabelsSettingsCategory } from "./category";
 
 export type LabelsPanelProps = {
   className?: string;
@@ -89,23 +89,14 @@ type LabelsAccordionItemProps = {
 };
 
 function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
-  const {
-    activeSettingsCategory,
-    setActiveSettingsCategory,
-    selectedGroupByColumn,
-    setSelectedGroupByColumn,
-  } = useLabelsAnnotationsWidget(labels);
-
   const labelsDataProviders = useAppStore((state) => state.labelsDataProviders);
 
   const updateLabels = useProjectStore((state) => state.updateLabels);
   const deleteLabels = useProjectStore((state) => state.deleteLabels);
   const confirm = useConfirmDialog();
 
-  const { extraGroupColumnDefs } = useLabelsAnnotationsColumns(
-    labels,
-    selectedGroupByColumn,
-  );
+  const [activeSettingsCategory, setActiveSettingsCategory] =
+    useState<LabelsSettingsCategory | null>(null);
 
   const { ref, handleRef } = useSortable({ id: labels.id, index });
 
@@ -185,12 +176,9 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
             className="bg-card"
           />
           {labels.dataSource.table !== undefined && (
-            <AnnotationsWidget
-              tableHeight={200}
-              table={labels.dataSource.table}
-              selectedGroupByColumn={selectedGroupByColumn}
-              onSelectedGroupByColumnChange={setSelectedGroupByColumn}
-              extraGroupColumnDefs={extraGroupColumnDefs}
+            <LabelsAnnotationsWidget
+              labels={labels}
+              activeSettingsCategory={activeSettingsCategory}
               className="bg-card"
             />
           )}

@@ -14,7 +14,10 @@ export function CollapsibleTrigger({
 }: CollapsiblePrimitive.Trigger.Props) {
   return (
     <CollapsiblePrimitive.Trigger
-      className={cn("flex flex-row items-center", className)}
+      className={cn(
+        "flex flex-row items-center data-disabled:pointer-events-none data-disabled:opacity-50",
+        className,
+      )}
       {...props}
     >
       {children}
@@ -28,7 +31,10 @@ export function CollapsibleTriggerRightDownIcon({
 }: Omit<CollapsiblePrimitive.Trigger.Props, "children">) {
   return (
     <CollapsiblePrimitive.Trigger
-      className={cn("group/collapsible-trigger", className)}
+      className={cn(
+        "group/collapsible-trigger data-disabled:pointer-events-none data-disabled:opacity-50",
+        className,
+      )}
       aria-label="Expand/collapse"
       {...props}
     >

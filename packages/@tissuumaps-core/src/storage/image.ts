@@ -123,7 +123,7 @@ export interface ImageData extends RasterData {
    * and otherwise over the value range that the data type of their channel data
    * can hold, as returned by {@link ImageUtils.getDataTypeRange} (the full
    * integer range for integer typed arrays, `[0, 1]` for floating-point typed
-   * arrays, `[0, 255]` for plain arrays).
+   * arrays).
    *
    * @param c - The channel index (0-based)
    * @returns The channel's contrast limits, in the channel's value range, or

@@ -1,6 +1,7 @@
 import { type Mock, describe, expect, it, vi } from "vitest";
 
 import type { TableData } from "../storage/table";
+import type { IDArray } from "../types/arrays";
 import { TableUtils } from "./TableUtils";
 
 /**
@@ -8,7 +9,7 @@ import { TableUtils } from "./TableUtils";
  * assertions do not have to reference the methods through `data`
  */
 function createMockTableData(
-  ids: number[],
+  ids: IDArray,
   values: unknown[] = [],
   valueRange?: [number, number],
 ): { data: TableData; loadValues: Mock; loadValueRange: Mock } {
@@ -32,7 +33,7 @@ function createMockTableData(
 }
 
 async function collectRows(
-  ids: number[],
+  ids: IDArray,
   tableData: TableData,
   options?: { signal?: AbortSignal },
 ): Promise<(number | undefined)[]> {
@@ -51,7 +52,7 @@ async function collectRows(
 describe("TableUtils", () => {
   describe("forEachRow", () => {
     it("maps the table's own IDs to their positions without looking them up", async () => {
-      const ids = [10, 20, 30];
+      const ids = new Uint32Array([10, 20, 30]);
       const { data } = createMockTableData(ids);
       const getRowIndices = vi.spyOn(TableUtils, "getRowIndices");
       expect(await collectRows(ids, data)).toEqual([0, 1, 2]);
@@ -60,45 +61,66 @@ describe("TableUtils", () => {
     });
 
     it("looks up the rows of other IDs, reporting missing ones as undefined", async () => {
-      const { data } = createMockTableData([10, 20, 30]);
-      expect(await collectRows([30, 99, 10], data)).toEqual([2, undefined, 0]);
+      const { data } = createMockTableData(new Uint32Array([10, 20, 30]));
+      expect(await collectRows(new Uint32Array([30, 99, 10]), data)).toEqual([
+        2,
+        undefined,
+        0,
+      ]);
     });
 
     it("maps an ID occurring more than once to its last row, with a warning", async () => {
-      const { data } = createMockTableData([10, 20, 10]);
+      const { data } = createMockTableData(new Uint32Array([10, 20, 10]));
       const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-      expect(await collectRows([10], data)).toEqual([2]);
+      expect(await collectRows(new Uint32Array([10]), data)).toEqual([2]);
       expect(warn).toHaveBeenCalledOnce();
       expect(warn.mock.calls[0]![0]).toContain("1 duplicated");
       warn.mockRestore();
     });
 
     it("does not warn about unique IDs", async () => {
-      const { data } = createMockTableData([10, 20, 30]);
+      const { data } = createMockTableData(new Uint32Array([10, 20, 30]));
       const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-      await collectRows([20], data);
+      await collectRows(new Uint32Array([20]), data);
       expect(warn).not.toHaveBeenCalled();
       warn.mockRestore();
     });
 
+    it("looks up string IDs", async () => {
+      const { data } = createMockTableData(["a", "b", "c"]);
+      expect(await collectRows(["c", "x", "a"], data)).toEqual([
+        2,
+        undefined,
+        0,
+      ]);
+    });
+
+    it("does not match numeric IDs to string IDs", async () => {
+      const { data } = createMockTableData(["1", "2"]);
+      expect(await collectRows(new Uint32Array([1, 2]), data)).toEqual([
+        undefined,
+        undefined,
+      ]);
+    });
+
     it("handles empty IDs", async () => {
-      const { data } = createMockTableData([10, 20]);
-      expect(await collectRows([], data)).toEqual([]);
+      const { data } = createMockTableData(new Uint32Array([10, 20]));
+      expect(await collectRows(new Uint32Array([]), data)).toEqual([]);
     });
 
     it("rejects when the signal is already aborted", async () => {
-      const { data } = createMockTableData([10]);
+      const { data } = createMockTableData(new Uint32Array([10]));
       const controller = new AbortController();
       controller.abort();
       await expect(
-        collectRows([10], data, { signal: controller.signal }),
+        collectRows(new Uint32Array([10]), data, { signal: controller.signal }),
       ).rejects.toThrow();
     });
   });
 
   describe("getRowIndices", () => {
     it("builds the row indices once per ID array", async () => {
-      const { data } = createMockTableData([10, 20]);
+      const { data } = createMockTableData(new Uint32Array([10, 20]));
       const first = await TableUtils.getRowIndices(data);
       const second = await TableUtils.getRowIndices(data);
       expect(second).toBe(first);
@@ -110,10 +132,10 @@ describe("TableUtils", () => {
 
     it("rebuilds for a different ID array with the same content", async () => {
       const first = await TableUtils.getRowIndices(
-        createMockTableData([10, 20]).data,
+        createMockTableData(new Uint32Array([10, 20])).data,
       );
       const second = await TableUtils.getRowIndices(
-        createMockTableData([10, 20]).data,
+        createMockTableData(new Uint32Array([10, 20])).data,
       );
       expect(second).not.toBe(first);
       expect(second).toEqual(first);
@@ -121,7 +143,7 @@ describe("TableUtils", () => {
 
     it("shares a pending build between concurrent callers", async () => {
       const { data } = createMockTableData(
-        Array.from({ length: 5000 }, (_, i) => i),
+        Uint32Array.from({ length: 5000 }, (_, i) => i),
       );
       const [first, second] = await Promise.all([
         TableUtils.getRowIndices(data),
@@ -133,7 +155,7 @@ describe("TableUtils", () => {
 
     it("keeps building for other callers when one aborts", async () => {
       const { data } = createMockTableData(
-        Array.from({ length: 5000 }, (_, i) => i),
+        Uint32Array.from({ length: 5000 }, (_, i) => i),
       );
       const controller = new AbortController();
       const aborted = TableUtils.getRowIndices(data, {
@@ -146,10 +168,10 @@ describe("TableUtils", () => {
     });
 
     it("rejects rather than throws for an already aborted signal", async () => {
-      const { data } = createMockTableData([1, 2, 3]);
+      const { data } = createMockTableData(new Uint32Array([1, 2, 3]));
       const controller = new AbortController();
       controller.abort();
-      let rowIndices: Promise<ReadonlyMap<number, number>> | undefined;
+      let rowIndices: Promise<ReadonlyMap<number | string, number>> | undefined;
       expect(() => {
         rowIndices = TableUtils.getRowIndices(data, {
           signal: controller.signal,
@@ -161,8 +183,11 @@ describe("TableUtils", () => {
 
   describe("fillFromTableValues", () => {
     it("fills the buffer from table values using parseTableValue and packValue", async () => {
-      const ids = [1, 2, 3];
-      const { data } = createMockTableData([1, 2, 3], [10, 20, 30]);
+      const ids = new Uint32Array([1, 2, 3]);
+      const { data } = createMockTableData(
+        new Uint32Array([1, 2, 3]),
+        [10, 20, 30],
+      );
       const buffer = new Float32Array(3);
 
       await TableUtils.fillFromTableValues(
@@ -180,7 +205,7 @@ describe("TableUtils", () => {
 
     it("loads the column values, but not the value range, from the given table data", async () => {
       const { data, loadValues, loadValueRange } = createMockTableData(
-        [1],
+        new Uint32Array([1]),
         [10],
         [0, 10],
       );
@@ -189,7 +214,7 @@ describe("TableUtils", () => {
       await TableUtils.fillFromTableValues(
         buffer,
         data,
-        [1],
+        new Uint32Array([1]),
         "col1",
         0,
         (value) => (typeof value === "number" ? value : undefined),
@@ -204,13 +229,16 @@ describe("TableUtils", () => {
 
     it("forwards the signal to the table data load", async () => {
       const controller = new AbortController();
-      const { data, loadValues } = createMockTableData([1], [10]);
+      const { data, loadValues } = createMockTableData(
+        new Uint32Array([1]),
+        [10],
+      );
       const buffer = new Float32Array(1);
 
       await TableUtils.fillFromTableValues(
         buffer,
         data,
-        [1],
+        new Uint32Array([1]),
         "col1",
         0,
         (value) => (typeof value === "number" ? value : undefined),
@@ -224,8 +252,8 @@ describe("TableUtils", () => {
     });
 
     it("uses defaultValue when parseTableValue returns undefined", async () => {
-      const ids = [1, 2];
-      const { data } = createMockTableData([1, 2], ["bad", 5]);
+      const ids = new Uint32Array([1, 2]);
+      const { data } = createMockTableData(new Uint32Array([1, 2]), ["bad", 5]);
       const buffer = new Float32Array(2);
       const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -246,8 +274,8 @@ describe("TableUtils", () => {
     });
 
     it("uses defaultValue when the ID is missing from the table data", async () => {
-      const ids = [1, 2, 3];
-      const { data } = createMockTableData([1, 3], [10, 30]);
+      const ids = new Uint32Array([1, 2, 3]);
+      const { data } = createMockTableData(new Uint32Array([1, 3]), [10, 30]);
       const buffer = new Float32Array(3);
       const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -269,13 +297,16 @@ describe("TableUtils", () => {
     });
 
     it("matches table rows by ID rather than by position", async () => {
-      const { data } = createMockTableData([3, 1, 2], [30, 10, 20]);
+      const { data } = createMockTableData(
+        new Uint32Array([3, 1, 2]),
+        [30, 10, 20],
+      );
       const buffer = new Float32Array(3);
 
       await TableUtils.fillFromTableValues(
         buffer,
         data,
-        [1, 2, 3],
+        new Uint32Array([1, 2, 3]),
         "col1",
         0,
         (value) => (typeof value === "number" ? value : undefined),
@@ -286,7 +317,7 @@ describe("TableUtils", () => {
     });
 
     it("passes the raw cell value to parseTableValue", async () => {
-      const { data } = createMockTableData([1], [50]);
+      const { data } = createMockTableData(new Uint32Array([1]), [50]);
       const buffer = new Float32Array(1);
       const parseTableValue = vi
         .fn<(value: unknown) => number | undefined>()
@@ -295,7 +326,7 @@ describe("TableUtils", () => {
       await TableUtils.fillFromTableValues(
         buffer,
         data,
-        [1],
+        new Uint32Array([1]),
         "col1",
         0,
         parseTableValue,
@@ -308,14 +339,17 @@ describe("TableUtils", () => {
     it("throws when the signal is already aborted", async () => {
       const controller = new AbortController();
       controller.abort();
-      const { data, loadValues } = createMockTableData([1], [10]);
+      const { data, loadValues } = createMockTableData(
+        new Uint32Array([1]),
+        [10],
+      );
       const buffer = new Float32Array(1);
 
       await expect(
         TableUtils.fillFromTableValues(
           buffer,
           data,
-          [1],
+          new Uint32Array([1]),
           "col1",
           0,
           vi.fn(),
@@ -329,16 +363,16 @@ describe("TableUtils", () => {
 
   describe("fillFromTableGroups", () => {
     it("fills the buffer by grouping table values and mapping groups", async () => {
-      const ids = [1, 2, 3];
-      const { data } = createMockTableData([1, 2, 3], ["A", "B", "A"]);
+      const ids = new Uint32Array([1, 2, 3]);
+      const { data } = createMockTableData(new Uint32Array([1, 2, 3]), [
+        "A",
+        "B",
+        "A",
+      ]);
       const buffer = new Uint8Array(3);
       const mapGroupToValue = vi
-        .fn<(group: string) => number | undefined>()
-        .mockImplementation((group) => {
-          if (group === JSON.stringify("A")) return 10;
-          if (group === JSON.stringify("B")) return 20;
-          return undefined;
-        });
+        .fn<(group: string) => number>()
+        .mockImplementation((group) => (group === "A" ? 10 : 20));
 
       await TableUtils.fillFromTableGroups(
         buffer,
@@ -355,7 +389,7 @@ describe("TableUtils", () => {
 
     it("loads the column values from the given table data", async () => {
       const { data, loadValues, loadValueRange } = createMockTableData(
-        [1],
+        new Uint32Array([1]),
         ["A"],
       );
       const buffer = new Uint8Array(1);
@@ -363,7 +397,7 @@ describe("TableUtils", () => {
       await TableUtils.fillFromTableGroups(
         buffer,
         data,
-        [1],
+        new Uint32Array([1]),
         "col1",
         0,
         () => 10,
@@ -379,13 +413,15 @@ describe("TableUtils", () => {
 
     it("forwards the signal to the table data load", async () => {
       const controller = new AbortController();
-      const { data, loadValues } = createMockTableData([1], ["A"]);
+      const { data, loadValues } = createMockTableData(new Uint32Array([1]), [
+        "A",
+      ]);
       const buffer = new Uint8Array(1);
 
       await TableUtils.fillFromTableGroups(
         buffer,
         data,
-        [1],
+        new Uint32Array([1]),
         "col1",
         0,
         () => 10,
@@ -398,29 +434,9 @@ describe("TableUtils", () => {
       });
     });
 
-    it("uses defaultValue when mapGroupToValue returns undefined", async () => {
-      const { data } = createMockTableData([1], ["unknown"]);
-      const buffer = new Uint8Array(1);
-      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-      await TableUtils.fillFromTableGroups(
-        buffer,
-        data,
-        [1],
-        "col1",
-        42,
-        () => undefined,
-        (value) => value,
-      );
-
-      expect(buffer[0]).toBe(42);
-      expect(warn).toHaveBeenCalledOnce();
-      warn.mockRestore();
-    });
-
     it("uses defaultValue when the ID is missing from the table data", async () => {
-      const ids = [1, 2];
-      const { data } = createMockTableData([1], ["A"]);
+      const ids = new Uint32Array([1, 2]);
+      const { data } = createMockTableData(new Uint32Array([1]), ["A"]);
       const buffer = new Uint8Array(2);
       const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -441,8 +457,8 @@ describe("TableUtils", () => {
     });
 
     it("warns once, rather than per item, about missing IDs", async () => {
-      const ids = [1, 2, 3, 4];
-      const { data } = createMockTableData([1], ["A"]);
+      const ids = new Uint32Array([1, 2, 3, 4]);
+      const { data } = createMockTableData(new Uint32Array([1]), ["A"]);
       const buffer = new Uint8Array(4);
       const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -462,52 +478,57 @@ describe("TableUtils", () => {
     });
 
     it("matches table rows by ID rather than by position", async () => {
-      const { data } = createMockTableData([3, 1, 2], ["C", "A", "B"]);
+      const { data } = createMockTableData(new Uint32Array([3, 1, 2]), [
+        "C",
+        "A",
+        "B",
+      ]);
       const buffer = new Uint8Array(3);
 
       await TableUtils.fillFromTableGroups(
         buffer,
         data,
-        [1, 2, 3],
+        new Uint32Array([1, 2, 3]),
         "col1",
         0,
-        (group) => group.length, // JSON.stringify adds the quotes
+        (group) => group.length,
         (value) => value,
       );
 
-      expect(Array.from(buffer)).toEqual([3, 3, 3]);
+      expect(Array.from(buffer)).toEqual([1, 1, 1]);
     });
 
-    it("JSON-stringifies group values before mapping", async () => {
-      const { data } = createMockTableData([1], [42]);
+    it("converts group values to strings before mapping", async () => {
+      const { data } = createMockTableData(new Uint32Array([1]), [42]);
       const buffer = new Uint8Array(1);
       const mapGroupToValue = vi
-        .fn<(group: string) => number | undefined>()
+        .fn<(group: string) => number>()
         .mockReturnValue(1);
 
       await TableUtils.fillFromTableGroups(
         buffer,
         data,
-        [1],
+        new Uint32Array([1]),
         "col1",
         0,
         mapGroupToValue,
         (value) => value,
       );
 
-      // numeric 42 becomes "42" after JSON.stringify
       expect(mapGroupToValue).toHaveBeenCalledWith("42");
     });
 
     it("maps each distinct raw group only once", async () => {
-      const ids = [1, 2, 3];
-      const { data } = createMockTableData([1, 2, 3], ["A", "A", "B"]);
+      const ids = new Uint32Array([1, 2, 3]);
+      const { data } = createMockTableData(new Uint32Array([1, 2, 3]), [
+        "A",
+        "A",
+        "B",
+      ]);
       const buffer = new Uint8Array(3);
       const mapGroupToValue = vi
-        .fn<(group: string) => number | undefined>()
-        .mockImplementation((group) =>
-          group === JSON.stringify("A") ? 10 : 20,
-        );
+        .fn<(group: string) => number>()
+        .mockImplementation((group) => (group === "A" ? 10 : 20));
 
       await TableUtils.fillFromTableGroups(
         buffer,
@@ -527,14 +548,16 @@ describe("TableUtils", () => {
     it("throws when the signal is already aborted", async () => {
       const controller = new AbortController();
       controller.abort();
-      const { data, loadValues } = createMockTableData([1], ["A"]);
+      const { data, loadValues } = createMockTableData(new Uint32Array([1]), [
+        "A",
+      ]);
       const buffer = new Uint8Array(1);
 
       await expect(
         TableUtils.fillFromTableGroups(
           buffer,
           data,
-          [1],
+          new Uint32Array([1]),
           "col1",
           0,
           vi.fn(),

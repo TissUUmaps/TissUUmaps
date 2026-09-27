@@ -1,8 +1,10 @@
 import {
+  ConfigUtils,
   type ConstantConfig,
   type FromConfig,
   type GroupByConfig,
   type GroupValueMap,
+  type IDArray,
   MathUtils,
   NumberUtils,
   type SizeConfig,
@@ -32,7 +34,7 @@ export class SizeResolver {
    * @returns A `Float32Array` of packed size values, one per ID
    */
   static async resolveSizes(
-    ids: number[],
+    ids: IDArray,
     config: SizeConfig,
     sizeMaps: GroupValueMap<number>[],
     defaultSize: number,
@@ -118,7 +120,7 @@ export class SizeResolver {
    * @returns The packed size value
    */
   static resolveSizeWithoutTable(
-    _id: number,
+    _id: number | string,
     config: SizeConfig,
     defaultSize: number,
   ): number {
@@ -137,7 +139,7 @@ export class SizeResolver {
    * @returns A `Float32Array` filled with the packed constant size
    */
   static resolveUniformSizes(
-    ids: number[],
+    ids: IDArray,
     config: Extract<SizeConfig, ConstantConfig<number>>,
     options?: { align?: number },
   ): Float32Array {
@@ -158,7 +160,7 @@ export class SizeResolver {
    * @returns A `Float32Array` of packed size values
    */
   static async resolveSizesFromTableValues(
-    ids: number[],
+    ids: IDArray,
     config: Extract<SizeConfig, FromConfig>,
     defaultSize: number,
     loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
@@ -194,7 +196,7 @@ export class SizeResolver {
    * @returns A `Float32Array` of packed size values
    */
   static async resolveSizesFromTableGroups(
-    ids: number[],
+    ids: IDArray,
     config: Extract<SizeConfig, GroupByConfig<true>>,
     sizeMaps: GroupValueMap<number>[],
     defaultSize: number,
@@ -203,9 +205,7 @@ export class SizeResolver {
   ): Promise<Float32Array> {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    const sizeMap = sizeMaps.find(
-      (sizeMap) => sizeMap.id === config.groupBy.map,
-    );
+    const sizeMap = ConfigUtils.findGroupByMap(config, sizeMaps);
     if (sizeMap === undefined) {
       console.warn(
         `Size map ${config.groupBy.map} not found, using default size`,
@@ -216,14 +216,13 @@ export class SizeResolver {
     }
     const data = await loadTable({ signal });
     const packedSizes = SizeResolver.createSizeBuffer(ids.length, { align });
-    const groupSizes = new Map(Object.entries(sizeMap.values));
     await TableUtils.fillFromTableGroups(
       packedSizes,
       data,
       ids,
       config.groupBy.column,
       sizeMap.default ?? defaultSize,
-      (group) => groupSizes.get(group),
+      ConfigUtils.createGroupValueGetter(config, sizeMap, defaultSize),
       (size) => SizeResolver.packSize(size),
       { signal },
     );

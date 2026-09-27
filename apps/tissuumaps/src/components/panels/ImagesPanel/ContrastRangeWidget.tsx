@@ -248,11 +248,11 @@ function getBarHeights(
   histogram: ImageChannelHistogram,
   sliderRange: [number, number],
 ): number[] {
-  const counts = MathUtils.rebinHistogram(
+  const { hist } = MathUtils.rebinHistogram(
     histogram,
     sliderRange,
     histogramBarCount,
   );
-  const peak = Math.sqrt(Math.max(...counts, 1));
-  return counts.map((count) => (Math.sqrt(count) / peak) * histogramHeight);
+  const peak = Math.sqrt(Math.max(...hist, 1));
+  return hist.map((count) => (Math.sqrt(count) / peak) * histogramHeight);
 }

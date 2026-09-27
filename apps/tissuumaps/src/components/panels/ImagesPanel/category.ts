@@ -1,7 +1,6 @@
 export const ImageSettingsCategory = {
   general: "general",
   transform: "transform",
-  channels: "channels",
 };
 
 export type ImageSettingsCategory =

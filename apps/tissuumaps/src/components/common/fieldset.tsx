@@ -10,6 +10,14 @@ export function Fieldset({ className, ...props }: FielsetPrimitive.Root.Props) {
   );
 }
 
-export function FieldsetLegend(props: FielsetPrimitive.Legend.Props) {
-  return <FielsetPrimitive.Legend {...props} />;
+export function FieldsetLegend({
+  className,
+  ...props
+}: FielsetPrimitive.Legend.Props) {
+  return (
+    <FielsetPrimitive.Legend
+      className={cn("data-disabled:opacity-50", className)}
+      {...props}
+    />
+  );
 }

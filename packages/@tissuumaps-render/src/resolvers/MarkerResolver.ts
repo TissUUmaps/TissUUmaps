@@ -1,9 +1,10 @@
 import {
+  ConfigUtils,
   type ConstantConfig,
   type FromConfig,
   type GroupByConfig,
   type GroupValueMap,
-  HashUtils,
+  type IDArray,
   type Marker,
   type MarkerConfig,
   MathUtils,
@@ -35,7 +36,7 @@ export class MarkerResolver {
    * @returns A `Uint8Array` of packed marker values, one per ID
    */
   static async resolveMarkers(
-    ids: number[],
+    ids: IDArray,
     config: MarkerConfig,
     markerMaps: GroupValueMap<Marker>[],
     defaultMarker: Marker,
@@ -119,7 +120,7 @@ export class MarkerResolver {
    * @returns The packed marker index
    */
   static resolveMarkerWithoutTable(
-    _id: number,
+    _id: number | string,
     config: MarkerConfig,
     defaultMarker: Marker,
   ): number {
@@ -138,7 +139,7 @@ export class MarkerResolver {
    * @returns A `Uint8Array` filled with the packed constant marker
    */
   static resolveUniformMarkers(
-    ids: number[],
+    ids: IDArray,
     config: Extract<MarkerConfig, ConstantConfig<Marker>>,
     options?: { align?: number },
   ): Uint8Array {
@@ -161,7 +162,7 @@ export class MarkerResolver {
    * @returns A `Uint8Array` of packed marker values
    */
   static async resolveMarkersFromTableValues(
-    ids: number[],
+    ids: IDArray,
     config: Extract<MarkerConfig, FromConfig>,
     defaultMarker: Marker,
     loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
@@ -199,7 +200,7 @@ export class MarkerResolver {
    * @returns A `Uint8Array` of packed marker values
    */
   static async resolveMarkersFromTableGroups(
-    ids: number[],
+    ids: IDArray,
     config: Extract<MarkerConfig, GroupByConfig<false>>,
     markerMaps: GroupValueMap<Marker>[],
     defaultMarker: Marker,
@@ -208,34 +209,14 @@ export class MarkerResolver {
   ) {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    if (config.groupBy.map !== undefined) {
-      const markerMap = markerMaps.find(
-        (markerMap) => markerMap.id === config.groupBy.map,
+    const markerMap = ConfigUtils.findGroupByMap(config, markerMaps);
+    if (config.groupBy.map !== undefined && markerMap === undefined) {
+      console.warn(
+        `Marker map ${config.groupBy.map} not found, using default marker`,
       );
-      if (markerMap === undefined) {
-        console.warn(
-          `Marker map ${config.groupBy.map} not found, using default marker`,
-        );
-        return MarkerResolver.createUniformMarkers(ids.length, defaultMarker, {
-          align,
-        });
-      }
-      const data = await loadTable({ signal });
-      const packedMarkers = MarkerResolver.createMarkerBuffer(ids.length, {
+      return MarkerResolver.createUniformMarkers(ids.length, defaultMarker, {
         align,
       });
-      const groupMarkers = new Map(Object.entries(markerMap.values));
-      await TableUtils.fillFromTableGroups(
-        packedMarkers,
-        data,
-        ids,
-        config.groupBy.column,
-        markerMap.default ?? defaultMarker,
-        (group) => groupMarkers.get(group),
-        (marker) => MarkerResolver.packMarker(marker),
-        { signal },
-      );
-      return packedMarkers;
     }
     const data = await loadTable({ signal });
     const packedMarkers = MarkerResolver.createMarkerBuffer(ids.length, {
@@ -246,8 +227,13 @@ export class MarkerResolver {
       data,
       ids,
       config.groupBy.column,
-      defaultMarker,
-      (group) => markerPalette[HashUtils.hash(group) % markerPalette.length]!,
+      markerMap?.default ?? defaultMarker,
+      ConfigUtils.createGroupValueGetter(
+        config,
+        markerMap,
+        defaultMarker,
+        markerPalette,
+      ),
       (marker) => MarkerResolver.packMarker(marker),
       { signal },
     );

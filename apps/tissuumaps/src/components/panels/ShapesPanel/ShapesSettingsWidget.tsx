@@ -4,9 +4,11 @@ import {
   defaultShapeFillColor,
   defaultShapeFillOpacity,
   defaultShapeFillVisibility,
+  defaultShapeOpacity,
   defaultShapeStrokeColor,
   defaultShapeStrokeOpacity,
   defaultShapeStrokeVisibility,
+  defaultShapeVisibility,
 } from "@tissuumaps/core";
 
 import {
@@ -70,6 +72,20 @@ export function ShapesSettingsWidget({
 
   const updateShapes = useProjectStore((state) => state.updateShapes);
 
+  const shapeVisibilityConfigWidgetAdapter = useVisibilityConfigWidget(
+    shapes.shapeVisibility,
+    (newVisibilityConfig) =>
+      updateShapes(shapes.id, { shapeVisibility: newVisibilityConfig }),
+    defaultShapeVisibility,
+    shapes.dataSource.table ?? null,
+  );
+  const shapeOpacityConfigWidgetAdapter = useOpacityConfigWidget(
+    shapes.shapeOpacity,
+    (newOpacityConfig) =>
+      updateShapes(shapes.id, { shapeOpacity: newOpacityConfig }),
+    defaultShapeOpacity,
+    shapes.dataSource.table ?? null,
+  );
   const shapeFillColorConfigWidgetAdapter = useColorConfigWidget(
     shapes.shapeFillColor,
     (newColorConfig) =>
@@ -153,6 +169,44 @@ export function ShapesSettingsWidget({
                 updateShapes(shapes.id, { transform })
               }
             />
+          </AccordionPanel>
+        </AccordionItem>
+        {/* Shape visibility */}
+        <AccordionItem value={ShapesSettingsCategory.shapeVisibility}>
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Visibility</AccordionTrigger>
+            <ActiveVisibilityConfigValue
+              adapter={shapeVisibilityConfigWidgetAdapter}
+              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
+            />
+          </AccordionHeader>
+          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+            <VisibilityConfigSourceToggleGroup
+              adapter={shapeVisibilityConfigWidgetAdapter}
+              className="border rounded"
+            />
+            <VisibilityConfigWidget
+              adapter={shapeVisibilityConfigWidgetAdapter}
+            />
+          </AccordionPanel>
+        </AccordionItem>
+        {/* Shape opacity */}
+        <AccordionItem value={ShapesSettingsCategory.shapeOpacity}>
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Opacity</AccordionTrigger>
+            <ActiveOpacityConfigValue
+              adapter={shapeOpacityConfigWidgetAdapter}
+              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
+            />
+          </AccordionHeader>
+          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+            <OpacityConfigSourceToggleGroup
+              adapter={shapeOpacityConfigWidgetAdapter}
+              className="border rounded"
+            />
+            <OpacityConfigWidget adapter={shapeOpacityConfigWidgetAdapter} />
           </AccordionPanel>
         </AccordionItem>
         {/* Shape fill color */}

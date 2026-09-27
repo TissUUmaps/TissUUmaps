@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   type GroupValueMap,
   HashUtils,
+  type IDArray,
   Marker,
   type MarkerConfig,
   type TableData,
@@ -11,7 +12,7 @@ import {
 
 import { MarkerResolver } from "./MarkerResolver";
 
-function createMockTableData(ids: number[], values: unknown[]): TableData {
+function createMockTableData(ids: IDArray, values: unknown[]): TableData {
   return {
     getIds: () => ids,
     getSize: () => ids.length,
@@ -83,7 +84,7 @@ describe("MarkerResolver", () => {
         constant: { value: Marker.Diamond },
       } satisfies MarkerConfig;
       const packedMarkers = MarkerResolver.resolveUniformMarkers(
-        [1, 2],
+        new Uint32Array([1, 2]),
         config,
       );
       expect(Array.from(packedMarkers)).toEqual([
@@ -95,7 +96,7 @@ describe("MarkerResolver", () => {
 
   describe("resolveMarkersFromTableValues", () => {
     it("reads markers from the table column", async () => {
-      const ids = [1, 2];
+      const ids = new Uint32Array([1, 2]);
       const data = createMockTableData(ids, [Marker.Disc, Marker.Star]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies MarkerConfig;
@@ -111,7 +112,7 @@ describe("MarkerResolver", () => {
     });
 
     it("uses the default marker for invalid values", async () => {
-      const ids = [1, 2];
+      const ids = new Uint32Array([1, 2]);
       const data = createMockTableData(ids, ["bad", Marker.Star]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies MarkerConfig;
@@ -129,12 +130,12 @@ describe("MarkerResolver", () => {
 
     it("forwards the signal to loadTable", async () => {
       const controller = new AbortController();
-      const data = createMockTableData([1], [Marker.Star]);
+      const data = createMockTableData(new Uint32Array([1]), [Marker.Star]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies MarkerConfig;
 
       await MarkerResolver.resolveMarkersFromTableValues(
-        [1],
+        new Uint32Array([1]),
         config,
         Marker.Cross,
         loadTable,
@@ -147,15 +148,15 @@ describe("MarkerResolver", () => {
 
   describe("resolveMarkersFromTableGroups", () => {
     it("maps groups to markers using the marker map", async () => {
-      const ids = [1, 2];
+      const ids = new Uint32Array([1, 2]);
       const data = createMockTableData(ids, ["A", "B"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const markerMap: GroupValueMap<Marker> = {
         id: "mm1",
         name: "Marker Map",
         values: {
-          [JSON.stringify("A")]: Marker.Disc,
-          [JSON.stringify("B")]: Marker.Square,
+          A: Marker.Disc,
+          B: Marker.Square,
         },
       };
       const config = {
@@ -174,7 +175,7 @@ describe("MarkerResolver", () => {
     });
 
     it("uses the marker map default for unmapped groups", async () => {
-      const ids = [1];
+      const ids = new Uint32Array([1]);
       const data = createMockTableData(ids, ["missing"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const markerMap: GroupValueMap<Marker> = {
@@ -205,7 +206,7 @@ describe("MarkerResolver", () => {
       } satisfies MarkerConfig;
 
       const packedMarkers = await MarkerResolver.resolveMarkersFromTableGroups(
-        [1, 2],
+        new Uint32Array([1, 2]),
         config,
         [],
         Marker.Star,
@@ -217,7 +218,7 @@ describe("MarkerResolver", () => {
     });
 
     it("hashes group names through the marker palette when no map is given", async () => {
-      const ids = [1, 2];
+      const ids = new Uint32Array([1, 2]);
       const data = createMockTableData(ids, ["groupA", "groupB"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = {
@@ -233,14 +234,10 @@ describe("MarkerResolver", () => {
       );
 
       expect(packedMarkers[0]).toBe(
-        markerPalette[
-          HashUtils.hash(JSON.stringify("groupA")) % markerPalette.length
-        ],
+        markerPalette[HashUtils.hash("groupA") % markerPalette.length],
       );
       expect(packedMarkers[1]).toBe(
-        markerPalette[
-          HashUtils.hash(JSON.stringify("groupB")) % markerPalette.length
-        ],
+        markerPalette[HashUtils.hash("groupB") % markerPalette.length],
       );
     });
   });
@@ -293,7 +290,7 @@ describe("MarkerResolver", () => {
         constant: { value: Marker.Disc },
       } satisfies MarkerConfig;
       const packedMarkers = await MarkerResolver.resolveMarkers(
-        [1, 2],
+        new Uint32Array([1, 2]),
         config,
         [],
         Marker.Cross,
@@ -302,12 +299,12 @@ describe("MarkerResolver", () => {
     });
 
     it("dispatches to from config when loadTable is given", async () => {
-      const data = createMockTableData([1], [Marker.Star]);
+      const data = createMockTableData(new Uint32Array([1]), [Marker.Star]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies MarkerConfig;
 
       const packedMarkers = await MarkerResolver.resolveMarkers(
-        [1],
+        new Uint32Array([1]),
         config,
         [],
         Marker.Cross,
@@ -319,19 +316,19 @@ describe("MarkerResolver", () => {
     });
 
     it("dispatches to groupBy config when loadTable is given", async () => {
-      const data = createMockTableData([1], ["A"]);
+      const data = createMockTableData(new Uint32Array([1]), ["A"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const markerMap: GroupValueMap<Marker> = {
         id: "mm1",
         name: "Marker Map",
-        values: { [JSON.stringify("A")]: Marker.Diamond },
+        values: { A: Marker.Diamond },
       };
       const config = {
         groupBy: { column: "col1", map: "mm1" },
       } satisfies MarkerConfig;
 
       const packedMarkers = await MarkerResolver.resolveMarkers(
-        [1],
+        new Uint32Array([1]),
         config,
         [markerMap],
         Marker.Cross,
@@ -345,7 +342,7 @@ describe("MarkerResolver", () => {
     it("falls back to the default marker when the config has no active source", async () => {
       const config = {} as MarkerConfig;
       const packedMarkers = await MarkerResolver.resolveMarkers(
-        [1, 2],
+        new Uint32Array([1, 2]),
         config,
         [],
         Marker.Ring,
@@ -357,7 +354,7 @@ describe("MarkerResolver", () => {
       const config = { from: { column: "col1" } } satisfies MarkerConfig;
 
       const packedMarkers = await MarkerResolver.resolveMarkers(
-        [1],
+        new Uint32Array([1]),
         config,
         [],
         Marker.Ring,
@@ -370,14 +367,14 @@ describe("MarkerResolver", () => {
       const markerMap: GroupValueMap<Marker> = {
         id: "mm1",
         name: "Marker Map",
-        values: { [JSON.stringify("A")]: Marker.Diamond },
+        values: { A: Marker.Diamond },
       };
       const config = {
         groupBy: { column: "col1", map: "mm1" },
       } satisfies MarkerConfig;
 
       const packedMarkers = await MarkerResolver.resolveMarkers(
-        [1],
+        new Uint32Array([1]),
         config,
         [markerMap],
         Marker.Ring,
@@ -395,9 +392,15 @@ describe("MarkerResolver", () => {
       } satisfies MarkerConfig;
 
       await expect(
-        MarkerResolver.resolveMarkers([1], config, [], Marker.Cross, {
-          signal: controller.signal,
-        }),
+        MarkerResolver.resolveMarkers(
+          new Uint32Array([1]),
+          config,
+          [],
+          Marker.Cross,
+          {
+            signal: controller.signal,
+          },
+        ),
       ).rejects.toThrow();
     });
   });

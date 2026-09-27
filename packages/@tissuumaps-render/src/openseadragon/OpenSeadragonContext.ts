@@ -5,9 +5,9 @@ import {
   type Color,
   type Dims,
   GeometryUtils,
-  type NumericArray,
   type OpenSeadragonViewerOptions,
   type Rect,
+  type TypedArray,
 } from "@tissuumaps/core";
 
 import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
@@ -29,8 +29,8 @@ import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
 export type DataTransfer = {
   getTileData: (
     event: OpenSeadragon.TileInvalidatedEvent,
-  ) => Promise<{ values: NumericArray; width: number; height: number }>;
-  transferValues: (values: NumericArray, pixelBuffer: Uint32Array) => void;
+  ) => Promise<{ values: TypedArray; width: number; height: number }>;
+  transferValues: (values: TypedArray, pixelBuffer: Uint32Array) => void;
 };
 
 /**

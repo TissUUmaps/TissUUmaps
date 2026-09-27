@@ -7,12 +7,12 @@ export type ColorConfigWidgetAdapter = {
   defaultColor: Color;
   tableId: string | null;
   activeSource: ColorConfigSource;
+  fromColumnValueRange: [number, number] | null;
   currentSource: ColorConfigSource;
   currentConstantValue: Color;
   currentFromColumn: string | null;
   currentFromRangeMin: number | null;
   currentFromRangeMax: number | null;
-  currentFromColumnValueRange: [number, number] | null;
   currentFromPalette: string | null;
   currentGroupByColumn: string | null;
   currentGroupByPalette: string | null;

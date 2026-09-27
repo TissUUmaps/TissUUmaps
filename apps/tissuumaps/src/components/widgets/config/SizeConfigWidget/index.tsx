@@ -1,10 +1,11 @@
-import type { CoordinateSpace } from "@tissuumaps/core";
+import { type CoordinateSpace, ProjectUtils } from "@tissuumaps/core";
 
 import { Field, FieldItem, FieldLabel } from "@/components/common/field";
-import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
+import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
+import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 
 import type { SizeConfigWidgetAdapter } from "./adapter";
@@ -165,6 +166,10 @@ function GroupBySizeConfigWidget({
   } = adapter;
 
   const sizeMaps = useProjectStore((state) => state.sizeMaps);
+  const deleteSizeMap = useProjectStore((state) => state.deleteSizeMap);
+  const referencedMapIds = useReferencedMapIds((project) =>
+    ProjectUtils.getSizeConfigs(project),
+  );
 
   return (
     <div className={className}>
@@ -178,13 +183,12 @@ function GroupBySizeConfigWidget({
       </Field>
       <Field>
         <FieldLabel>Size map</FieldLabel>
-        <SimpleSelect
-          items={sizeMaps}
-          itemLabel={(sizeMap) => sizeMap.name}
-          itemValue={(sizeMap) => sizeMap.id}
+        <GroupValueMapSelect
+          maps={sizeMaps}
+          isMapDeletable={(map) => !referencedMapIds.has(map.id)}
           value={map}
           onValueChange={setMap}
-          nullable
+          onMapDelete={deleteSizeMap}
         />
       </Field>
       <Field>

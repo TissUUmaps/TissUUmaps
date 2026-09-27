@@ -132,44 +132,70 @@ describe("MathUtils", () => {
   describe("computeWeightedMedian", () => {
     it("returns the value at which the cumulative weight reaches half the total", () => {
       expect(
-        MathUtils.computeWeightedMedian([3, 1, 2], new Float64Array([1, 1, 1])),
+        MathUtils.computeWeightedMedian(
+          new Float64Array([3, 1, 2]),
+          new Float64Array([1, 1, 1]),
+        ),
       ).toBe(2);
-      expect(MathUtils.computeWeightedMedian([1, 2, 10], [1, 1, 40])).toBe(10);
+      expect(
+        MathUtils.computeWeightedMedian(
+          new Uint8Array([1, 2, 10]),
+          new Uint8Array([1, 1, 40]),
+        ),
+      ).toBe(10);
     });
 
     it("returns the smaller value when the cumulative weight is exactly half", () => {
-      expect(MathUtils.computeWeightedMedian([1, 2], [1, 1])).toBe(1);
+      expect(
+        MathUtils.computeWeightedMedian(
+          new Uint8Array([1, 2]),
+          new Uint8Array([1, 1]),
+        ),
+      ).toBe(1);
     });
 
     it("ignores values without weight", () => {
-      expect(MathUtils.computeWeightedMedian([0, 5, 7], [0, 1, 0])).toBe(5);
+      expect(
+        MathUtils.computeWeightedMedian(
+          new Uint8Array([0, 5, 7]),
+          new Uint8Array([0, 1, 0]),
+        ),
+      ).toBe(5);
     });
 
     it("weights all values equally if the total weight is zero", () => {
-      expect(MathUtils.computeWeightedMedian([3, 1, 2], [0, 0, 0])).toBe(2);
+      expect(
+        MathUtils.computeWeightedMedian(
+          new Uint8Array([3, 1, 2]),
+          new Uint8Array([0, 0, 0]),
+        ),
+      ).toBe(2);
     });
 
     it("throws error when values are empty", () => {
-      expect(() => MathUtils.computeWeightedMedian([], [])).toThrow(
-        "values must not be empty",
-      );
+      expect(() =>
+        MathUtils.computeWeightedMedian(new Uint8Array(0), new Uint8Array(0)),
+      ).toThrow("values must not be empty");
     });
 
     it("throws error when weights have a different length", () => {
-      expect(() => MathUtils.computeWeightedMedian([1, 2], [1])).toThrow(
-        "weights must have the same length as values",
-      );
+      expect(() =>
+        MathUtils.computeWeightedMedian(
+          new Uint8Array([1, 2]),
+          new Uint8Array([1]),
+        ),
+      ).toThrow("weights must have the same length as values");
     });
   });
 
   describe("computeRange", () => {
-    it("returns the minimum and maximum of plain arrays", async () => {
-      await expect(MathUtils.computeRange([3, -1, 7, 2])).resolves.toEqual([
-        -1, 7,
-      ]);
+    it("returns the minimum and maximum of integer typed arrays", async () => {
+      await expect(
+        MathUtils.computeRange(new Int8Array([3, -1, 7, 2])),
+      ).resolves.toEqual([-1, 7]);
     });
 
-    it("returns the minimum and maximum of typed arrays", async () => {
+    it("returns the minimum and maximum of other typed arrays", async () => {
       await expect(
         MathUtils.computeRange(new Float32Array([0.5, -2.5, 1.5])),
       ).resolves.toEqual([-2.5, 1.5]);
@@ -179,8 +205,12 @@ describe("MathUtils", () => {
     });
 
     it("returns a degenerate range for a single value", async () => {
-      await expect(MathUtils.computeRange([4])).resolves.toEqual([4, 4]);
-      await expect(MathUtils.computeRange([4, 4, 4])).resolves.toEqual([4, 4]);
+      await expect(
+        MathUtils.computeRange(new Uint8Array([4])),
+      ).resolves.toEqual([4, 4]);
+      await expect(
+        MathUtils.computeRange(new Uint8Array([4, 4, 4])),
+      ).resolves.toEqual([4, 4]);
     });
 
     it("ignores non-finite values", async () => {
@@ -192,14 +222,13 @@ describe("MathUtils", () => {
     });
 
     it("returns the empty range when no finite value is found", async () => {
-      await expect(MathUtils.computeRange([])).resolves.toEqual([
+      await expect(MathUtils.computeRange(new Uint8Array(0))).resolves.toEqual([
         Infinity,
         -Infinity,
       ]);
-      await expect(MathUtils.computeRange([NaN, Infinity])).resolves.toEqual([
-        Infinity,
-        -Infinity,
-      ]);
+      await expect(
+        MathUtils.computeRange(new Float32Array([NaN, Infinity])),
+      ).resolves.toEqual([Infinity, -Infinity]);
     });
 
     it("handles large data", async () => {
@@ -221,7 +250,7 @@ describe("MathUtils", () => {
   describe("computeHistogram", () => {
     it("assigns values to the nearest bin over the given range", async () => {
       const { hist, range } = await MathUtils.computeHistogram(
-        [0, 1, 2, 3, 4],
+        new Uint8Array([0, 1, 2, 3, 4]),
         [0, 4],
         { bins: 5 },
       );
@@ -247,7 +276,7 @@ describe("MathUtils", () => {
 
     it("counts values outside the range in the edge bins", async () => {
       const { hist } = await MathUtils.computeHistogram(
-        [-10, 0, 5, 10, 20],
+        new Int8Array([-10, 0, 5, 10, 20]),
         [0, 10],
         { bins: 3 },
       );
@@ -265,7 +294,7 @@ describe("MathUtils", () => {
 
     it("puts all values into the first bin for a degenerate range", async () => {
       const { hist, range } = await MathUtils.computeHistogram(
-        [6, 7, 8],
+        new Uint8Array([6, 7, 8]),
         [7, 7],
         { bins: 4 },
       );
@@ -274,15 +303,19 @@ describe("MathUtils", () => {
     });
 
     it("puts all values into a single bin", async () => {
-      const { hist } = await MathUtils.computeHistogram([1, 5, 9], [1, 9], {
-        bins: 1,
-      });
+      const { hist } = await MathUtils.computeHistogram(
+        new Uint8Array([1, 5, 9]),
+        [1, 9],
+        {
+          bins: 1,
+        },
+      );
       expect(hist).toEqual([3]);
     });
 
     it("returns zero counts for empty data", async () => {
       await expect(
-        MathUtils.computeHistogram([], [0, 255], { bins: 3 }),
+        MathUtils.computeHistogram(new Uint8Array(0), [0, 255], { bins: 3 }),
       ).resolves.toEqual({ hist: [0, 0, 0], range: [0, 255] });
     });
 
@@ -388,7 +421,7 @@ describe("MathUtils", () => {
       });
 
       it("counts every value once when sample is 0 or not below the length", async () => {
-        const data = [0, 1, 2, 3, 4];
+        const data = new Uint8Array([0, 1, 2, 3, 4]);
         const full = await MathUtils.computeHistogram(data, [0, 4], {
           bins: 5,
         });
@@ -403,7 +436,10 @@ describe("MathUtils", () => {
 
       it("returns zero counts for empty data", async () => {
         await expect(
-          MathUtils.computeHistogram([], [0, 255], { bins: 3, sample: 10 }),
+          MathUtils.computeHistogram(new Uint8Array(0), [0, 255], {
+            bins: 3,
+            sample: 10,
+          }),
         ).resolves.toEqual({ hist: [0, 0, 0], range: [0, 255] });
       });
 
@@ -429,13 +465,13 @@ describe("MathUtils", () => {
           [0, 4],
           2,
         ),
-      ).toEqual([3, 7]);
+      ).toEqual({ hist: [3, 7], range: [0, 4] });
     });
 
     it("counts the upper bound in the last bin", () => {
       expect(
         MathUtils.rebinHistogram({ hist: [1, 2, 3], range: [0, 2] }, [0, 2], 2),
-      ).toEqual([1, 5]);
+      ).toEqual({ hist: [1, 5], range: [0, 2] });
     });
 
     it("drops bins outside the range", () => {
@@ -445,13 +481,13 @@ describe("MathUtils", () => {
           [1, 2],
           2,
         ),
-      ).toEqual([2, 3]);
+      ).toEqual({ hist: [2, 3], range: [1, 2] });
     });
 
     it("puts all counts into the first bin for a degenerate range", () => {
       expect(
         MathUtils.rebinHistogram({ hist: [1, 2, 3], range: [0, 2] }, [5, 5], 3),
-      ).toEqual([6, 0, 0]);
+      ).toEqual({ hist: [6, 0, 0], range: [5, 5] });
     });
   });
 
@@ -476,7 +512,7 @@ describe("MathUtils", () => {
 
     it("returns no counts for empty data", async () => {
       await expect(
-        MathUtils.computeUniqueValueCounts<number>([]),
+        MathUtils.computeUniqueValueCounts(new Uint8Array(0)),
       ).resolves.toEqual(new Map());
     });
 

@@ -2,7 +2,7 @@ import type { JsonSchema, UISchemaElement } from "@jsonforms/core";
 import type OpenSeadragon from "openseadragon";
 
 import type { AnnotatedDataSource, DataSource } from "../model/base";
-import type { NumericArray } from "../types/arrays";
+import type { IDArray, TypedArray } from "../types/arrays";
 import type { ProgressCallback } from "../types/callbacks";
 import type {
   CustomTileSource,
@@ -36,13 +36,15 @@ export interface ItemsData extends Data {
   /**
    * Returns an array of item IDs
    *
-   * The returned array is owned by this data object: callers must not modify it,
-   * and every call returns the very same array (see {@link ItemsData}). IDs are
-   * expected to be unique, which is not checked.
+   * IDs are either integers, held by an integer typed array or by 64-bit
+   * floats (safe integers only), or strings, held by a plain array (see
+   * `IDArray`). The returned array is owned by this data object: callers must
+   * not modify it, and every call returns the very same array (see
+   * {@link ItemsData}). IDs are expected to be unique, which is not checked.
    *
    * @returns The item IDs
    */
-  getIds(): number[];
+  getIds(): IDArray;
 
   /**
    * Returns the total number of items
@@ -101,7 +103,7 @@ export interface RasterData extends Data {
    */
   getTileData?: (
     event: OpenSeadragon.TileInvalidatedEvent,
-  ) => Promise<{ values: NumericArray; width: number; height: number }>;
+  ) => Promise<{ values: TypedArray; width: number; height: number }>;
 }
 
 /**

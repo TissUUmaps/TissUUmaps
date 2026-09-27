@@ -11,15 +11,19 @@ import {
   defaultShapeFillColor,
   defaultShapeFillOpacity,
   defaultShapeFillVisibility,
+  defaultShapeOpacity,
   defaultShapeStrokeColor,
   defaultShapeStrokeOpacity,
   defaultShapeStrokeVisibility,
+  defaultShapeVisibility,
 } from "./constants";
 
 /**
  * Default values for {@link RawShapes}
  */
 export const shapesDefaults = {
+  shapeVisibility: { constant: { value: defaultShapeVisibility } },
+  shapeOpacity: { constant: { value: defaultShapeOpacity } },
   shapeFillColor: { constant: { value: defaultShapeFillColor } },
   shapeFillVisibility: { constant: { value: defaultShapeFillVisibility } },
   shapeFillOpacity: { constant: { value: defaultShapeFillOpacity } },
@@ -34,6 +38,25 @@ export const shapesDefaults = {
 export interface RawShapes extends RawRenderedItemsDataObject<
   RawShapesDataSource<string>
 > {
+  /**
+   * Shape visibility
+   *
+   * Applies to both the fill and the stroke of a shape, on top of
+   * {@link shapeFillVisibility} and {@link shapeStrokeVisibility}.
+   *
+   * @defaultValue {@link shapesDefaults.shapeVisibility}
+   */
+  shapeVisibility?: VisibilityConfig;
+
+  /**
+   * Shape opacity
+   *
+   * Multiplies {@link shapeFillOpacity} and {@link shapeStrokeOpacity}.
+   *
+   * @defaultValue {@link shapesDefaults.shapeOpacity}
+   */
+  shapeOpacity?: OpacityConfig;
+
   /**
    * Shape fill color
    *

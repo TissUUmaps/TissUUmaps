@@ -6,7 +6,12 @@ export type GroupValueMap<TValue> = {
   /** Human-readable map name */
   name: string;
 
-  /** Mapping from group names to values */
+  /**
+   * Mapping from group names to values
+   *
+   * Group names are the table cell values as strings, e.g. `"3"` for a numeric
+   * cell.
+   */
   values: { [key: string]: TValue };
 
   /** Default value for groups not present in {@link values} */

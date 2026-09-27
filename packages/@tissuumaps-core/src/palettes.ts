@@ -52,6 +52,7 @@ import {
 
 import batlow from "./assets/palettes/batlow.txt?raw";
 import batlowS from "./assets/palettes/batlowS.txt?raw";
+import distinct from "./assets/palettes/distinct.txt?raw";
 import { type Color, Marker } from "./model/primitives";
 import { ColorUtils } from "./utils/ColorUtils";
 
@@ -127,11 +128,6 @@ function hexColorPalette(
 
 /** Color palettes suitable for continuous data */
 export const continuousColorPalettes: ColorPalette[] = [
-  {
-    id: "batlow",
-    name: "Batlow",
-    colors: ColorUtils.parsePalette(batlow),
-  },
   sampledColorPalette("viridis", "Viridis", interpolateViridis),
   sampledColorPalette("magma", "Magma", interpolateMagma),
   sampledColorPalette("inferno", "Inferno", interpolateInferno),
@@ -170,14 +166,19 @@ export const continuousColorPalettes: ColorPalette[] = [
   sampledColorPalette("ylgnbu", "YlGnBu", interpolateYlGnBu),
   sampledColorPalette("ylorbr", "YlOrBr", interpolateYlOrBr),
   sampledColorPalette("ylorrd", "YlOrRd", interpolateYlOrRd),
+  {
+    id: "batlow",
+    name: "Batlow",
+    colors: ColorUtils.parsePalette(batlow),
+  },
 ];
 
 /** Color palettes suitable for categorical data */
 export const categoricalColorPalettes: ColorPalette[] = [
   {
-    id: "batlowS",
-    name: "Batlow",
-    colors: ColorUtils.parsePalette(batlowS),
+    id: "distinct",
+    name: "Distinct",
+    colors: ColorUtils.parsePalette(distinct, { maxValue: 255 }),
   },
   hexColorPalette("category10", "Category 10", schemeCategory10),
   hexColorPalette("observable10", "Observable 10", schemeObservable10),
@@ -190,6 +191,11 @@ export const categoricalColorPalettes: ColorPalette[] = [
   hexColorPalette("set1", "Set 1", schemeSet1),
   hexColorPalette("set2", "Set 2", schemeSet2),
   hexColorPalette("set3", "Set 3", schemeSet3),
+  {
+    id: "batlowS",
+    name: "Batlow",
+    colors: ColorUtils.parsePalette(batlowS),
+  },
 ];
 
 /** All available color palettes, continuous and categorical */
@@ -197,3 +203,17 @@ export const colorPalettes: ColorPalette[] = [
   ...continuousColorPalettes,
   ...categoricalColorPalettes,
 ];
+
+/**
+ * Looks up a color palette by ID
+ *
+ * @param colorPaletteId - The ID of the color palette
+ * @returns The color palette, or `undefined` if no palette has the ID
+ */
+export function findColorPalette(
+  colorPaletteId: string | undefined,
+): ColorPalette | undefined {
+  return colorPalettes.find(
+    (colorPalette) => colorPalette.id === colorPaletteId,
+  );
+}

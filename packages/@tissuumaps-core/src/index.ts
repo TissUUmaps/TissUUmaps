@@ -32,7 +32,6 @@ export {
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
-  findGroupByConfigMap,
   isGroupByConfig,
   isRandomConfig,
   type ColorConfig,
@@ -132,9 +131,11 @@ export {
   defaultShapeFillColor,
   defaultShapeFillOpacity,
   defaultShapeFillVisibility,
+  defaultShapeOpacity,
   defaultShapeStrokeColor,
   defaultShapeStrokeOpacity,
   defaultShapeStrokeVisibility,
+  defaultShapeVisibility,
   identityTransform,
 } from "./model/constants";
 
@@ -171,10 +172,11 @@ export {
 
 export {
   type FloatArray,
-  type GenericArray,
+  type IDArray,
   type IntArray,
-  type NumericArray,
+  type IntOrUintArray,
   type TypedArray,
+  type TypedArrayOrArray,
   type UintArray,
 } from "./types/arrays";
 export { type ProgressCallback } from "./types/callbacks";
@@ -210,6 +212,7 @@ export {
   type AppStoreActions,
   type AppStore,
   type AppStoreApi,
+  type HighlightedItemGroup,
 } from "./types/stores/app";
 export {
   type DataRef,
@@ -231,15 +234,18 @@ export {
   type SettingsStoreApi,
 } from "./types/stores/settings";
 
+export { ArrayUtils } from "./utils/ArrayUtils";
 export { AsyncUtils } from "./utils/AsyncUtils";
 export { BitUtils } from "./utils/BitUtils";
 export { ColorUtils } from "./utils/ColorUtils";
+export { ConfigUtils } from "./utils/ConfigUtils";
 export { GeometryUtils } from "./utils/GeometryUtils";
 export { type Fmix32Config, HashUtils } from "./utils/HashUtils";
 export { ImageUtils } from "./utils/ImageUtils";
 export { JSONUtils } from "./utils/JSONUtils";
 export { MathUtils } from "./utils/MathUtils";
 export { NumberUtils } from "./utils/NumberUtils";
+export { ProjectUtils } from "./utils/ProjectUtils";
 export { RandomUtils } from "./utils/RandomUtils";
 export { SourceUtils } from "./utils/SourceUtils";
 export { TableUtils } from "./utils/TableUtils";
@@ -251,4 +257,5 @@ export {
   continuousColorPalettes,
   categoricalColorPalettes,
   colorPalettes,
+  findColorPalette,
 } from "./palettes";

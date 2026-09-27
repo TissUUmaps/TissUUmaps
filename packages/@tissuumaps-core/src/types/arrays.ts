@@ -5,29 +5,38 @@ type Float16Array = typeof globalThis extends {
   ? TFloat16ArrayPrototype
   : never;
 
-/** Union of signed integer typed arrays */
+/** Union of all natively supported signed integer typed arrays */
 export type IntArray = Int8Array | Int16Array | Int32Array;
 
-/** Union of unsigned integer typed arrays */
-export type UintArray = Uint8Array | Uint16Array | Uint32Array;
+/** Union of all natively supported unsigned integer typed arrays */
+export type UintArray =
+  Uint8Array | Uint8ClampedArray | Uint16Array | Uint32Array;
 
-/** Union of floating-point typed arrays */
+/** Union of all natively supported integer typed arrays */
+export type IntOrUintArray = IntArray | UintArray;
+
+/** Union of all natively supported floating-point typed arrays */
 export type FloatArray = Float16Array | Float32Array | Float64Array;
 
-/** Union of all numeric typed arrays */
-export type TypedArray = IntArray | UintArray | FloatArray;
+/** Union of all natively supported numeric typed arrays */
+export type TypedArray = IntOrUintArray | FloatArray;
 
-/** Union of all array types that can hold numeric values */
-export type NumericArray = number[] | TypedArray;
+/**
+ * The array types that can hold ID values
+ *
+ * Integer IDs are held by an integer typed array or by 64-bit floats (safe
+ * integers only), string IDs by a plain array.
+ */
+export type IDArray = IntOrUintArray | Float64Array | string[];
 
 /**
  * The array types that can hold values of type `T`
  *
- * Numbers may be held by a plain array or by any numeric typed array, anything
- * else only by a plain array. For an unconstrained `T`, both are possible.
+ * Numbers are held by numeric typed arrays only, anything else by a plain
+ * array. For an unconstrained `T`, both are possible.
  */
-export type GenericArray<T> = T extends number
-  ? NumericArray
+export type TypedArrayOrArray<T> = [T] extends [number]
+  ? TypedArray
   : unknown extends T
-    ? NumericArray | T[]
+    ? TypedArray | T[]
     : T[];

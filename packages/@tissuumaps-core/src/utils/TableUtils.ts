@@ -1,5 +1,5 @@
 import type { TableData } from "../storage/table";
-import type { TypedArray } from "../types/arrays";
+import type { IDArray, TypedArray } from "../types/arrays";
 import { AsyncUtils } from "./AsyncUtils";
 
 /**
@@ -39,8 +39,8 @@ export class TableUtils {
    * so that concurrent lookups share it.
    */
   private static readonly _rowIndicesCache = new WeakMap<
-    number[],
-    Promise<ReadonlyMap<number, number>>
+    IDArray,
+    Promise<ReadonlyMap<number | string, number>>
   >();
 
   /**
@@ -65,7 +65,7 @@ export class TableUtils {
   static async fillFromTableValues<TValue>(
     packedValues: TypedArray,
     tableData: TableData,
-    ids: number[],
+    ids: IDArray,
     column: string,
     defaultValue: TValue,
     parseTableValue: (value: unknown) => TValue | undefined,
@@ -110,18 +110,19 @@ export class TableUtils {
    * Fills `packedValues` by grouping IDs by the given table column and mapping the groups to values
    *
    * For each ID in `ids`, the corresponding row is looked up in the table by ID
-   * (see {@link forEachRow}). The raw cell value is JSON-stringified into a
-   * group key, which `mapGroupToValue` maps to a value; if that fails, or if the
-   * table does not contain the ID, `defaultValue` is used instead. Groups are
-   * resolved once per distinct cell value, i.e. `mapGroupToValue` is not called
-   * per item.
+   * (see {@link forEachRow}). The raw cell value is converted to a string to
+   * form the group key, which `mapGroupToValue` maps to a value; if the table
+   * does not contain the ID, `defaultValue` is used instead. Groups are
+   * resolved once per distinct cell value, i.e. `mapGroupToValue` is not
+   * called per item.
    *
    * @param packedValues - Output typed array to fill, in the order of `ids`
    * @param tableData - The table to look up group keys in
    * @param ids - Ordered list of item IDs
    * @param column - Name of the table column to load group keys from
-   * @param defaultValue - Value used when the ID is missing or the group is unmapped
-   * @param mapGroupToValue - Maps a JSON-stringified group key to `TValue`, or to `undefined`
+   * @param defaultValue - Value used when the ID is missing
+   * @param mapGroupToValue - Maps a group key (the cell value as a string) to
+   * `TValue`
    * @param packValue - Converts `TValue` to the numeric representation stored
    * in `packedValues`
    * @param options - Optional abort signal
@@ -129,10 +130,10 @@ export class TableUtils {
   static async fillFromTableGroups<TValue>(
     packedValues: TypedArray,
     tableData: TableData,
-    ids: number[],
+    ids: IDArray,
     column: string,
     defaultValue: TValue,
-    mapGroupToValue: (group: string) => TValue | undefined,
+    mapGroupToValue: (group: string) => TValue,
     packValue: (value: TValue) => number,
     options?: { signal?: AbortSignal },
   ): Promise<void> {
@@ -140,7 +141,6 @@ export class TableUtils {
     signal?.throwIfAborted();
     const tableGroups = await tableData.loadValues(column, { signal });
     let numMissingIds = 0;
-    let numUnmappedGroups = 0;
     const packedValueByTableGroup = new Map<unknown, number>();
     await TableUtils.forEachRow(
       ids,
@@ -150,12 +150,7 @@ export class TableUtils {
           const tableGroup = tableGroups[rowIndex];
           let packedValue = packedValueByTableGroup.get(tableGroup);
           if (packedValue === undefined) {
-            const group = JSON.stringify(tableGroup);
-            const value = mapGroupToValue(group);
-            if (value === undefined) {
-              numUnmappedGroups++;
-            }
-            packedValue = packValue(value ?? defaultValue);
+            packedValue = packValue(mapGroupToValue(String(tableGroup)));
             packedValueByTableGroup.set(tableGroup, packedValue);
           }
           packedValues[i] = packedValue;
@@ -169,11 +164,6 @@ export class TableUtils {
     if (numMissingIds > 0) {
       console.warn(
         `${numMissingIds} IDs missing in column ${column}, using default value`,
-      );
-    }
-    if (numUnmappedGroups > 0) {
-      console.warn(
-        `Failed to map ${numUnmappedGroups} groups from column ${column}, using default value`,
       );
     }
   }
@@ -193,7 +183,7 @@ export class TableUtils {
    * @param options - Optional abort signal
    */
   static async forEachRow(
-    ids: number[],
+    ids: IDArray,
     tableData: TableData,
     callback: (rowIndex: number | undefined, i: number) => void,
     options?: { signal?: AbortSignal },
@@ -201,13 +191,17 @@ export class TableUtils {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     if (ids === tableData.getIds()) {
-      await AsyncUtils.forEach(ids, (_, i) => callback(i, i), { signal });
+      await AsyncUtils.forEach<number | string>(ids, (_, i) => callback(i, i), {
+        signal,
+      });
       return;
     }
     const rowIndices = await TableUtils.getRowIndices(tableData, { signal });
-    await AsyncUtils.forEach(ids, (id, i) => callback(rowIndices.get(id), i), {
-      signal,
-    });
+    await AsyncUtils.forEach<number | string>(
+      ids,
+      (id, i) => callback(rowIndices.get(id), i),
+      { signal },
+    );
   }
 
   /**
@@ -225,7 +219,7 @@ export class TableUtils {
   static getRowIndices(
     tableData: TableData,
     options?: { signal?: AbortSignal },
-  ): Promise<ReadonlyMap<number, number>> {
+  ): Promise<ReadonlyMap<number | string, number>> {
     const tableIds = tableData.getIds();
     let rowIndicesPromise = TableUtils._rowIndicesCache.get(tableIds);
     if (rowIndicesPromise === undefined) {
@@ -239,10 +233,10 @@ export class TableUtils {
    * Builds the row indices by item ID for the given table IDs
    */
   private static async _buildRowIndices(
-    tableIds: number[],
-  ): Promise<ReadonlyMap<number, number>> {
-    const rowIndices = new Map<number, number>();
-    await AsyncUtils.forEach(tableIds, (id, i) => {
+    tableIds: IDArray,
+  ): Promise<ReadonlyMap<number | string, number>> {
+    const rowIndices = new Map<number | string, number>();
+    await AsyncUtils.forEach<number | string>(tableIds, (id, i) => {
       rowIndices.set(id, i);
     });
     if (rowIndices.size !== tableIds.length) {

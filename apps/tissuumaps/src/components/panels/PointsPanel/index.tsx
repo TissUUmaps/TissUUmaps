@@ -1,6 +1,7 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
+import { useState } from "react";
 
 import { MathUtils, type Points, createPoints } from "@tissuumaps/core";
 
@@ -20,16 +21,15 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
-import { AnnotationsWidget } from "@/components/widgets/AnnotationsWidget";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { usePointsData } from "@/hooks/useData";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
+import { PointsAnnotationsWidget } from "./PointsAnnotationsWidget";
 import { PointsSettingsWidget } from "./PointsSettingsWidget";
-import { usePointsAnnotationsColumns } from "./usePointsAnnotationsColumns";
-import { usePointsAnnotationsWidget } from "./usePointsAnnotationsWidget";
+import type { PointsSettingsCategory } from "./category";
 
 export type PointsPanelProps = {
   className?: string;
@@ -90,13 +90,6 @@ type PointsAccordionItemProps = {
 };
 
 function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
-  const {
-    activeSettingsCategory,
-    setActiveSettingsCategory,
-    selectedGroupByColumn,
-    setSelectedGroupByColumn,
-  } = usePointsAnnotationsWidget(points);
-
   const pointsDataProviders = useAppStore((state) => state.pointsDataProviders);
 
   const updatePoints = useProjectStore((state) => state.updatePoints);
@@ -105,10 +98,8 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
 
   const pointsData = usePointsData(points.id);
 
-  const { extraGroupColumnDefs } = usePointsAnnotationsColumns(
-    points,
-    selectedGroupByColumn,
-  );
+  const [activeSettingsCategory, setActiveSettingsCategory] =
+    useState<PointsSettingsCategory | null>(null);
 
   const { ref, handleRef } = useSortable({ id: points.id, index });
 
@@ -207,13 +198,10 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
             className="bg-card"
           />
           {pointsData !== null && (
-            <AnnotationsWidget
+            <PointsAnnotationsWidget
+              points={points}
               data={pointsData}
-              tableHeight={200}
-              table={points.dataSource.table ?? null}
-              selectedGroupByColumn={selectedGroupByColumn}
-              onSelectedGroupByColumnChange={setSelectedGroupByColumn}
-              extraGroupColumnDefs={extraGroupColumnDefs}
+              activeSettingsCategory={activeSettingsCategory}
               className="bg-card"
             />
           )}

@@ -1,10 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { GroupValueMap, OpacityConfig, TableData } from "@tissuumaps/core";
+import type {
+  GroupValueMap,
+  IDArray,
+  OpacityConfig,
+  TableData,
+} from "@tissuumaps/core";
 
 import { OpacityResolver } from "./OpacityResolver";
 
-function createMockTableData(ids: number[], values: unknown[]): TableData {
+function createMockTableData(ids: IDArray, values: unknown[]): TableData {
   return {
     getIds: () => ids,
     getSize: () => ids.length,
@@ -80,7 +85,7 @@ describe("OpacityResolver", () => {
     it("fills the buffer with the constant opacity", () => {
       const config = { constant: { value: 1 } } satisfies OpacityConfig;
       const packedOpacities = OpacityResolver.resolveUniformOpacities(
-        [1, 2],
+        new Uint32Array([1, 2]),
         config,
       );
       expect(Array.from(packedOpacities)).toEqual([255, 255]);
@@ -89,7 +94,7 @@ describe("OpacityResolver", () => {
 
   describe("resolveOpacitiesFromTableValues", () => {
     it("reads opacities from the table column", async () => {
-      const ids = [1, 2];
+      const ids = new Uint32Array([1, 2]);
       const data = createMockTableData(ids, [0, 1]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies OpacityConfig;
@@ -106,7 +111,7 @@ describe("OpacityResolver", () => {
     });
 
     it("uses the default opacity for invalid values", async () => {
-      const ids = [1, 2];
+      const ids = new Uint32Array([1, 2]);
       const data = createMockTableData(ids, ["bad", 1]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies OpacityConfig;
@@ -125,12 +130,12 @@ describe("OpacityResolver", () => {
 
     it("forwards the signal to loadTable", async () => {
       const controller = new AbortController();
-      const data = createMockTableData([1], [1]);
+      const data = createMockTableData(new Uint32Array([1]), [1]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies OpacityConfig;
 
       await OpacityResolver.resolveOpacitiesFromTableValues(
-        [1],
+        new Uint32Array([1]),
         config,
         1,
         loadTable,
@@ -143,15 +148,15 @@ describe("OpacityResolver", () => {
 
   describe("resolveOpacitiesFromTableGroups", () => {
     it("maps groups to opacities using the opacity map", async () => {
-      const ids = [1, 2];
+      const ids = new Uint32Array([1, 2]);
       const data = createMockTableData(ids, ["A", "B"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const opacityMap: GroupValueMap<number> = {
         id: "om1",
         name: "Opacity Map",
         values: {
-          [JSON.stringify("A")]: 1,
-          [JSON.stringify("B")]: 0.5,
+          A: 1,
+          B: 0.5,
         },
       };
       const config = {
@@ -171,7 +176,7 @@ describe("OpacityResolver", () => {
     });
 
     it("uses the opacity map default for unmapped groups", async () => {
-      const ids = [1];
+      const ids = new Uint32Array([1]);
       const data = createMockTableData(ids, ["missing"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const opacityMap: GroupValueMap<number> = {
@@ -204,7 +209,7 @@ describe("OpacityResolver", () => {
 
       const packedOpacities =
         await OpacityResolver.resolveOpacitiesFromTableGroups(
-          [1, 2],
+          new Uint32Array([1, 2]),
           config,
           [],
           1,
@@ -254,7 +259,7 @@ describe("OpacityResolver", () => {
     it("dispatches to constant", async () => {
       const config = { constant: { value: 1 } } satisfies OpacityConfig;
       const packedOpacities = await OpacityResolver.resolveOpacities(
-        [1, 2],
+        new Uint32Array([1, 2]),
         config,
         [],
         0,
@@ -263,12 +268,12 @@ describe("OpacityResolver", () => {
     });
 
     it("dispatches to from config when loadTable is given", async () => {
-      const data = createMockTableData([1], [0.5]);
+      const data = createMockTableData(new Uint32Array([1]), [0.5]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies OpacityConfig;
 
       const packedOpacities = await OpacityResolver.resolveOpacities(
-        [1],
+        new Uint32Array([1]),
         config,
         [],
         0,
@@ -280,19 +285,19 @@ describe("OpacityResolver", () => {
     });
 
     it("dispatches to groupBy config when loadTable is given", async () => {
-      const data = createMockTableData([1], ["A"]);
+      const data = createMockTableData(new Uint32Array([1]), ["A"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const opacityMap: GroupValueMap<number> = {
         id: "om1",
         name: "Opacity Map",
-        values: { [JSON.stringify("A")]: 1 },
+        values: { A: 1 },
       };
       const config = {
         groupBy: { column: "col1", map: "om1" },
       } satisfies OpacityConfig;
 
       const packedOpacities = await OpacityResolver.resolveOpacities(
-        [1],
+        new Uint32Array([1]),
         config,
         [opacityMap],
         0,
@@ -306,7 +311,7 @@ describe("OpacityResolver", () => {
     it("falls back to the default opacity when the config has no active source", async () => {
       const config = {} as OpacityConfig;
       const packedOpacities = await OpacityResolver.resolveOpacities(
-        [1, 2],
+        new Uint32Array([1, 2]),
         config,
         [],
         1,
@@ -318,7 +323,7 @@ describe("OpacityResolver", () => {
       const config = { from: { column: "col1" } } satisfies OpacityConfig;
 
       const packedOpacities = await OpacityResolver.resolveOpacities(
-        [1],
+        new Uint32Array([1]),
         config,
         [],
         1,
@@ -331,14 +336,14 @@ describe("OpacityResolver", () => {
       const opacityMap: GroupValueMap<number> = {
         id: "om1",
         name: "Opacity Map",
-        values: { [JSON.stringify("A")]: 0.5 },
+        values: { A: 0.5 },
       };
       const config = {
         groupBy: { column: "col1", map: "om1" },
       } satisfies OpacityConfig;
 
       const packedOpacities = await OpacityResolver.resolveOpacities(
-        [1],
+        new Uint32Array([1]),
         config,
         [opacityMap],
         1,
@@ -354,7 +359,7 @@ describe("OpacityResolver", () => {
       const config = { constant: { value: 1 } } satisfies OpacityConfig;
 
       await expect(
-        OpacityResolver.resolveOpacities([1], config, [], 0, {
+        OpacityResolver.resolveOpacities(new Uint32Array([1]), config, [], 0, {
           signal: controller.signal,
         }),
       ).rejects.toThrow();

@@ -3,10 +3,9 @@ import type OpenSeadragon from "openseadragon";
 
 import type {
   CustomTileSource,
-  IntArray,
+  IntOrUintArray,
   LabelsData,
   TileSourceConfig,
-  UintArray,
 } from "@tissuumaps/core";
 
 /**
@@ -53,7 +52,7 @@ export class OMEZarrLabelsData implements LabelsData {
    */
   async getTileData(
     event: OpenSeadragon.TileInvalidatedEvent,
-  ): Promise<{ values: IntArray | UintArray; width: number; height: number }> {
+  ): Promise<{ values: IntOrUintArray; width: number; height: number }> {
     const data = (await event.getData("ome-zarr")) as OMEZarrTileData;
     if (data.chunks.length !== 1) {
       throw new Error(`Expected a single tile, got ${data.chunks.length}`);

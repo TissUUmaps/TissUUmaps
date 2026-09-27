@@ -1,5 +1,4 @@
-import type { ImageChannelHistogram } from "../storage/image";
-import type { GenericArray, NumericArray } from "../types/arrays";
+import type { TypedArray, TypedArrayOrArray } from "../types/arrays";
 import { AsyncUtils } from "./AsyncUtils";
 import { RandomUtils } from "./RandomUtils";
 
@@ -103,8 +102,8 @@ export class MathUtils {
    * @throws Error if `values` is empty, or if `weights` has a different length
    */
   static computeWeightedMedian(
-    values: NumericArray,
-    weights: NumericArray,
+    values: TypedArray,
+    weights: TypedArray,
   ): number {
     if (values.length === 0) {
       throw new Error("values must not be empty");
@@ -147,7 +146,7 @@ export class MathUtils {
    * @returns A promise that resolves to the range, as `[min, max]`
    */
   static async computeRange(
-    values: NumericArray,
+    values: TypedArray,
     options?: { signal?: AbortSignal },
   ): Promise<[number, number]> {
     const { signal } = options ?? {};
@@ -200,11 +199,11 @@ export class MathUtils {
    *   (`bins`, a positive integer, defaults to `1024`), number of values to
    *   sample (`sample`; omitting it, `0`, or at least the number of values
    *   disables sampling), and seed for sampling (`seed`, defaults to `0`)
-   * @returns A promise that resolves to the histogram, as bin counts and the
-   * given value range
+   * @returns A promise that resolves to the histogram, as bin counts (`hist`)
+   * and the given value range (`range`)
    */
   static async computeHistogram(
-    values: NumericArray,
+    values: TypedArray,
     range: [number, number],
     options?: {
       signal?: AbortSignal;
@@ -212,7 +211,7 @@ export class MathUtils {
       sample?: number;
       seed?: number;
     },
-  ): Promise<ImageChannelHistogram> {
+  ): Promise<{ hist: number[]; range: [number, number] }> {
     const { signal, bins = 1024, sample, seed = 0 } = options ?? {};
     signal?.throwIfAborted();
     const [vmin, vmax] = range;
@@ -245,36 +244,38 @@ export class MathUtils {
    *
    * The new bins split `range` into `bins` equal intervals, the upper bound
    * counting in the last one. Each bin of `histogram` is counted in the new bin
-   * that its value falls into (see {@link ImageChannelHistogram.hist}), or
-   * dropped if its value is outside `range`. If `range` is degenerate (upper
-   * bound not above lower bound), all counts fall into bin `0`.
+   * that its value falls into (see {@link computeHistogram}), or dropped if
+   * its value is outside `range`. If `range` is degenerate (upper bound not
+   * above lower bound), all counts fall into bin `0`.
    *
-   * @param histogram - The histogram to redistribute
+   * @param histogram - The histogram to redistribute, as bin counts (`hist`)
+   * and the value range they span (`range`)
    * @param range - The value range the new bins span, as `[min, max]`
    * @param bins - The number of new bins, a positive integer
-   * @returns The counts of the new bins
+   * @returns The redistributed histogram, as the counts of the new bins
+   * (`hist`) and the given value range (`range`)
    */
   static rebinHistogram(
-    histogram: ImageChannelHistogram,
+    histogram: { hist: number[]; range: [number, number] },
     range: [number, number],
     bins: number,
-  ): number[] {
-    const { hist, range: histogramRange } = histogram;
+  ): { hist: number[]; range: [number, number] } {
+    const { hist: origHist, range: origRange } = histogram;
     const [min, max] = range;
-    const lastHistogramBin = Math.max(hist.length - 1, 1);
-    const counts = new Array<number>(bins).fill(0);
+    const lastHistogramBin = Math.max(origHist.length - 1, 1);
+    const hist = new Array<number>(bins).fill(0);
     if (min >= max) {
-      counts[0] = hist.reduce((sum, count) => sum + count, 0);
-      return counts;
+      hist[0] = origHist.reduce((sum, count) => sum + count, 0);
+      return { hist, range };
     }
-    for (let i = 0; i < hist.length; i++) {
-      const value = MathUtils.remap(i, [0, lastHistogramBin], histogramRange);
+    for (let i = 0; i < origHist.length; i++) {
+      const value = MathUtils.remap(i, [0, lastHistogramBin], origRange);
       if (value >= min && value <= max) {
         const bin = Math.floor(MathUtils.remap(value, range, [0, bins]));
-        counts[Math.min(bin, bins - 1)]! += hist[i]!;
+        hist[Math.min(bin, bins - 1)]! += origHist[i]!;
       }
     }
-    return counts;
+    return { hist, range };
   }
 
   /**
@@ -291,10 +292,11 @@ export class MathUtils {
    * @typeParam T - Element type of the values
    * @param values - The values to count
    * @param options - Optional abort signal
-   * @returns A promise that resolves to the count of every distinct value
+   * @returns A promise that resolves to the count of every distinct value, in
+   * the order the values first appear
    */
   static async computeUniqueValueCounts<T>(
-    values: GenericArray<T>,
+    values: TypedArrayOrArray<T>,
     options?: { signal?: AbortSignal },
   ): Promise<Map<T, number>> {
     const { signal } = options ?? {};

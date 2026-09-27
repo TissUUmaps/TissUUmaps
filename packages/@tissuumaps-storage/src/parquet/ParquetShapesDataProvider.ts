@@ -98,20 +98,16 @@ export class ParquetShapesDataProvider implements ShapesDataProvider<
   ): Promise<ParquetShapesData> {
     const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
-    const resolvedSource = await SourceUtils.resolveSourceFile(
+    const { file, url } = await SourceUtils.openSourceFile(
       normalizedDataSource.source,
       workspace,
       { signal },
     );
-    let file, url, headers;
-    if (typeof resolvedSource === "string") {
-      url = resolvedSource;
-      headers = normalizedDataSource.requestHeaders;
-    } else {
-      file = await resolvedSource.getFile();
-      signal?.throwIfAborted(); // getFile() does not throw on abort
-    }
-    const parquetSource = { file, url, headers };
+    const parquetSource = {
+      file,
+      url,
+      headers: normalizedDataSource.requestHeaders,
+    };
     const { geometryColumn, idColumn, nameColumn } = normalizedDataSource;
     const { geometry, ids, names } = await runParquetWorker(
       {

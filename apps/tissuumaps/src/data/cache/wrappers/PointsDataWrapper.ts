@@ -1,4 +1,5 @@
 import type {
+  IDArray,
   PointsData,
   PointsGeometry,
   ProgressCallback,
@@ -27,7 +28,7 @@ export class PointsDataWrapper
     }
   }
 
-  getIds(): number[] {
+  getIds(): IDArray {
     return this.data.getIds();
   }
 

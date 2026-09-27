@@ -49,6 +49,26 @@ export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
         set((draft) => {
           addCollectionItem(draft.tables, table, index);
         }),
+      addMarkerMap: (map) =>
+        set((draft) => {
+          addCollectionItem(draft.markerMaps, map);
+        }),
+      addSizeMap: (map) =>
+        set((draft) => {
+          addCollectionItem(draft.sizeMaps, map);
+        }),
+      addColorMap: (map) =>
+        set((draft) => {
+          addCollectionItem(draft.colorMaps, map);
+        }),
+      addVisibilityMap: (map) =>
+        set((draft) => {
+          addCollectionItem(draft.visibilityMaps, map);
+        }),
+      addOpacityMap: (map) =>
+        set((draft) => {
+          addCollectionItem(draft.opacityMaps, map);
+        }),
       updateLayer: (layerId, updates) =>
         set((draft) => {
           updateCollectionItem(draft.layers, layerId, updates);
@@ -72,6 +92,26 @@ export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
       updateTable: (tableId, updates) =>
         set((draft) => {
           updateCollectionItem(draft.tables, tableId, updates);
+        }),
+      updateMarkerMap: (mapId, updates) =>
+        set((draft) => {
+          updateCollectionItem(draft.markerMaps, mapId, updates);
+        }),
+      updateSizeMap: (mapId, updates) =>
+        set((draft) => {
+          updateCollectionItem(draft.sizeMaps, mapId, updates);
+        }),
+      updateColorMap: (mapId, updates) =>
+        set((draft) => {
+          updateCollectionItem(draft.colorMaps, mapId, updates);
+        }),
+      updateVisibilityMap: (mapId, updates) =>
+        set((draft) => {
+          updateCollectionItem(draft.visibilityMaps, mapId, updates);
+        }),
+      updateOpacityMap: (mapId, updates) =>
+        set((draft) => {
+          updateCollectionItem(draft.opacityMaps, mapId, updates);
         }),
       moveLayer: (layerId, newIndex) =>
         set((draft) => {
@@ -121,12 +161,37 @@ export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
         set((draft) => {
           deleteCollectionItem(draft.tables, tableId);
         }),
+      deleteMarkerMap: (mapId) =>
+        set((draft) => {
+          deleteCollectionItem(draft.markerMaps, mapId);
+        }),
+      deleteSizeMap: (mapId) =>
+        set((draft) => {
+          deleteCollectionItem(draft.sizeMaps, mapId);
+        }),
+      deleteColorMap: (mapId) =>
+        set((draft) => {
+          deleteCollectionItem(draft.colorMaps, mapId);
+        }),
+      deleteVisibilityMap: (mapId) =>
+        set((draft) => {
+          deleteCollectionItem(draft.visibilityMaps, mapId);
+        }),
+      deleteOpacityMap: (mapId) =>
+        set((draft) => {
+          deleteCollectionItem(draft.opacityMaps, mapId);
+        }),
       clearLayers: () => set({ layers: [] }),
       clearImages: () => set({ images: [] }),
       clearLabels: () => set({ labels: [] }),
       clearPoints: () => set({ points: [] }),
       clearShapes: () => set({ shapes: [] }),
       clearTables: () => set({ tables: [] }),
+      clearMarkerMaps: () => set({ markerMaps: [] }),
+      clearSizeMaps: () => set({ sizeMaps: [] }),
+      clearColorMaps: () => set({ colorMaps: [] }),
+      clearVisibilityMaps: () => set({ visibilityMaps: [] }),
+      clearOpacityMaps: () => set({ opacityMaps: [] }),
       setOSOptions: (osOptions) => set({ osOptions }),
       setGLOptions: (glOptions) => set({ glOptions }),
       clear: () => set(createInitialProjectStoreState()),

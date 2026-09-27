@@ -1,13 +1,14 @@
 import {
   AsyncUtils,
-  type GenericArray,
+  type IDArray,
   MathUtils,
   type ProgressCallback,
   type TableColumnQuerySuggestion,
   type TableData,
+  type TypedArrayOrArray,
 } from "@tissuumaps/core";
 
-import type { CoordinateColumn } from "./GeoParquetMetadataUtils";
+import type { CoordinateColumn } from "./profiles/GeoParquetUtils";
 import { runParquetWorker } from "./runParquetWorker";
 import type { ParquetSource } from "./types";
 
@@ -18,7 +19,7 @@ export class ParquetTableData implements TableData {
   // The coordinate columns of the file, by name: a column is derived only if
   // the reader said so, never because its name looks derived.
   private readonly _coordinateColumns: Map<string, CoordinateColumn>;
-  private _ids: number[] | undefined;
+  private _ids: IDArray | undefined;
   private readonly _names: string[] | undefined;
   // Both axes of a point geometry column are decoded in one pass, so the
   // second axis a point cloud reads does not decode the column again.
@@ -32,7 +33,7 @@ export class ParquetTableData implements TableData {
     numRows: number,
     columns: string[],
     coordinateColumns: CoordinateColumn[],
-    ids: number[] | undefined,
+    ids: IDArray | undefined,
     names: string[] | undefined,
   ) {
     this._source = source;
@@ -48,10 +49,10 @@ export class ParquetTableData implements TableData {
     this._names = names;
   }
 
-  getIds(): number[] {
+  getIds(): IDArray {
     if (this._ids === undefined) {
       console.warn("No ID column specified, using sequential IDs instead");
-      this._ids = Array.from({ length: this.getSize() }, (_, i) => i);
+      this._ids = Uint32Array.from({ length: this.getSize() }, (_, i) => i);
     }
     return this._ids;
   }
@@ -106,7 +107,7 @@ export class ParquetTableData implements TableData {
   async loadValues<T>(
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<GenericArray<T>> {
+  ): Promise<TypedArrayOrArray<T>> {
     const { signal, onProgress } = options ?? {};
     signal?.throwIfAborted();
     const coordinateColumn = this._coordinateColumns.get(column);
@@ -115,13 +116,13 @@ export class ParquetTableData implements TableData {
         this._loadCoordinates(coordinateColumn.geometryColumn, { onProgress }),
         { signal },
       );
-      return (coordinateColumn.axis === "x" ? x : y) as GenericArray<T>;
+      return (coordinateColumn.axis === "x" ? x : y) as TypedArrayOrArray<T>;
     }
     const { data } = await runParquetWorker(
       { op: "column", source: this._source, column },
       { signal, onProgress },
     );
-    return data as GenericArray<T>;
+    return data as TypedArrayOrArray<T>;
   }
 
   // No signal option: the read is shared by both axes, so one caller must not

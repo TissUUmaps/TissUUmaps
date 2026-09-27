@@ -1,7 +1,7 @@
 import type OpenSeadragon from "openseadragon";
 
 import type { LabelsDataSource } from "../model/labels";
-import type { IntArray, UintArray } from "../types/arrays";
+import type { IntOrUintArray } from "../types/arrays";
 import type { AnnotatedDataProvider, RasterData } from "./base";
 
 /**
@@ -26,7 +26,7 @@ export interface LabelsData extends RasterData {
    * @throws Error if the event does not contain label image data
    */
   getTileData(event: OpenSeadragon.TileInvalidatedEvent): Promise<{
-    values: number[] | IntArray | UintArray;
+    values: IntOrUintArray;
     width: number;
     height: number;
   }>;

@@ -1,8 +1,9 @@
 import type {
-  GenericArray,
+  IDArray,
   ProgressCallback,
   TableColumnQuerySuggestion,
   TableData,
+  TypedArrayOrArray,
 } from "@tissuumaps/core";
 
 import { SharedOperation } from "../SharedOperation";
@@ -22,7 +23,7 @@ export class TableDataWrapper
 {
   private readonly _loadValuesOps = new Map<
     string,
-    SharedOperation<GenericArray<unknown>>
+    SharedOperation<TypedArrayOrArray<unknown>>
   >();
   private readonly _loadUniqueValueCountsOps = new Map<
     string,
@@ -42,7 +43,7 @@ export class TableDataWrapper
     }
   }
 
-  getIds(): number[] {
+  getIds(): IDArray {
     return this.data.getIds();
   }
 
@@ -76,7 +77,7 @@ export class TableDataWrapper
   loadValues<T>(
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<GenericArray<T>> {
+  ): Promise<TypedArrayOrArray<T>> {
     if (this.destroyed) {
       return Promise.reject(new Error("Data has been destroyed"));
     }
@@ -97,7 +98,7 @@ export class TableDataWrapper
       this._loadValuesOps.set(column, newOp);
       op = newOp;
     }
-    return op.subscribe(options) as Promise<GenericArray<T>>;
+    return op.subscribe(options) as Promise<TypedArrayOrArray<T>>;
   }
 
   /**

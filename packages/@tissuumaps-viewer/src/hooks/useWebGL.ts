@@ -27,8 +27,9 @@ type GL = {
 function drawGL(gl: GL | null) {
   if (gl !== null) {
     gl.context.clear();
-    gl.pointsRenderer.draw();
+    // points are drawn over shapes, so that transcripts show over filled cells
     gl.shapesRenderer.draw();
+    gl.pointsRenderer.draw();
   }
 }
 

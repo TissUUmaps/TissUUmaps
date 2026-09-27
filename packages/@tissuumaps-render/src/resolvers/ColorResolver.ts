@@ -4,18 +4,20 @@ import {
   type ColorConfig,
   type ColorPalette,
   ColorUtils,
+  ConfigUtils,
   type ConstantConfig,
   type FromConfig,
   type GroupByConfig,
   type GroupValueMap,
   HashUtils,
+  type IDArray,
   MathUtils,
   NumberUtils,
   type RandomConfig,
   type TableData,
   TableUtils,
-  colorPalettes,
   defaultRandomSeed,
+  findColorPalette,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -45,7 +47,7 @@ export class ColorResolver {
    * @returns A `Uint32Array` of packed RGB color values, one per ID
    */
   static async resolveColors(
-    ids: number[],
+    ids: IDArray,
     config: ColorConfig,
     colorMaps: GroupValueMap<Color>[],
     defaultColor: Color,
@@ -140,7 +142,7 @@ export class ColorResolver {
    * @returns The packed RGB color value, without alpha
    */
   static resolveColorWithoutTable(
-    id: number,
+    id: number | string,
     config: ColorConfig,
     defaultColor: Color,
   ): number {
@@ -149,9 +151,7 @@ export class ColorResolver {
       return constantColor;
     }
     if (getActiveConfigSource(config) === "random" && isRandomConfig(config)) {
-      const colorPalette = colorPalettes.find(
-        (colorPalette) => colorPalette.id === config.random.palette,
-      );
+      const colorPalette = findColorPalette(config.random.palette);
       if (colorPalette !== undefined) {
         const color = ColorResolver.pickRandomColor(
           id,
@@ -173,7 +173,7 @@ export class ColorResolver {
    * @returns A `Uint32Array` filled with the packed constant color, without alpha
    */
   static resolveUniformColors(
-    ids: number[],
+    ids: IDArray,
     config: Extract<ColorConfig, ConstantConfig<Color>>,
     options?: { align?: number },
   ): Uint32Array {
@@ -197,7 +197,7 @@ export class ColorResolver {
    * @returns A `Uint32Array` of packed color values
    */
   static async resolveColorsFromTableValues(
-    ids: number[],
+    ids: IDArray,
     config: Extract<ColorConfig, FromConfig>,
     defaultColor: Color,
     loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
@@ -205,9 +205,7 @@ export class ColorResolver {
   ): Promise<Uint32Array> {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    const colorPalette = colorPalettes.find(
-      (colorPalette) => colorPalette.id === config.from.palette,
-    );
+    const colorPalette = findColorPalette(config.from.palette);
     if (colorPalette === undefined) {
       console.warn(
         `Color palette ${config.from.palette} not found, using default color`,
@@ -247,7 +245,7 @@ export class ColorResolver {
    * @returns A `Uint32Array` of packed color values
    */
   static async resolveColorsFromTableGroups(
-    ids: number[],
+    ids: IDArray,
     config: Extract<ColorConfig, GroupByConfig<false>>,
     colorMaps: GroupValueMap<Color>[],
     defaultColor: Color,
@@ -256,72 +254,46 @@ export class ColorResolver {
   ): Promise<Uint32Array> {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    if (config.groupBy.map !== undefined) {
-      const colorMap = colorMaps.find(
-        (colorMap) => colorMap.id === config.groupBy.map,
+    const colorMap = ConfigUtils.findGroupByMap(config, colorMaps);
+    const colorPalette = findColorPalette(config.groupBy.palette);
+    if (config.groupBy.map !== undefined && colorMap === undefined) {
+      console.warn(
+        `Color map ${config.groupBy.map} not found, using default color`,
       );
-      if (colorMap === undefined) {
-        console.warn(
-          `Color map ${config.groupBy.map} not found, using default color`,
-        );
-        return ColorResolver.createUniformColors(ids.length, defaultColor, {
-          align,
-        });
-      }
-      const data = await loadTable({ signal });
-      const packedColors = ColorResolver.createColorBuffer(ids.length, {
+      return ColorResolver.createUniformColors(ids.length, defaultColor, {
         align,
       });
-      const groupColors = new Map(Object.entries(colorMap.values));
-      await TableUtils.fillFromTableGroups(
-        packedColors,
-        data,
-        ids,
-        config.groupBy.column,
-        colorMap.default ?? defaultColor,
-        (group) => groupColors.get(group),
-        (color) => ColorResolver.packColor(color),
-        { signal },
-      );
-      return packedColors;
     }
-    if (config.groupBy.palette !== undefined) {
-      const colorPalette = colorPalettes.find(
-        (colorPalette) => colorPalette.id === config.groupBy.palette,
+    if (config.groupBy.map === undefined && colorPalette === undefined) {
+      console.warn(
+        config.groupBy.palette !== undefined
+          ? `Color palette ${config.groupBy.palette} not found, using default color`
+          : `No color map or color palette specified, using default color`,
       );
-      if (colorPalette === undefined) {
-        console.warn(
-          `Color palette ${config.groupBy.palette} not found, using default color`,
-        );
-        return ColorResolver.createUniformColors(ids.length, defaultColor, {
-          align,
-        });
-      }
-      const data = await loadTable({ signal });
-      const packedColors = ColorResolver.createColorBuffer(ids.length, {
+      return ColorResolver.createUniformColors(ids.length, defaultColor, {
         align,
       });
-      await TableUtils.fillFromTableGroups(
-        packedColors,
-        data,
-        ids,
-        config.groupBy.column,
-        defaultColor,
-        (group) =>
-          colorPalette.colors[
-            HashUtils.hash(group) % colorPalette.colors.length
-          ]!,
-        (color) => ColorResolver.packColor(color),
-        { signal },
-      );
-      return packedColors;
     }
-    console.warn(
-      `No color map or color palette specified, using default color`,
-    );
-    return ColorResolver.createUniformColors(ids.length, defaultColor, {
+    const data = await loadTable({ signal });
+    const packedColors = ColorResolver.createColorBuffer(ids.length, {
       align,
     });
+    await TableUtils.fillFromTableGroups(
+      packedColors,
+      data,
+      ids,
+      config.groupBy.column,
+      colorMap?.default ?? defaultColor,
+      ConfigUtils.createGroupValueGetter(
+        config,
+        colorMap,
+        defaultColor,
+        colorPalette?.colors,
+      ),
+      (color) => ColorResolver.packColor(color),
+      { signal },
+    );
+    return packedColors;
   }
 
   /**
@@ -337,16 +309,14 @@ export class ColorResolver {
    * @returns A `Uint32Array` of packed random color values
    */
   static async resolveRandomColors(
-    ids: number[],
+    ids: IDArray,
     config: Extract<ColorConfig, RandomConfig<unknown>>,
     defaultColor: Color,
     options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint32Array> {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    const colorPalette = colorPalettes.find(
-      (colorPalette) => colorPalette.id === config.random.palette,
-    );
+    const colorPalette = findColorPalette(config.random.palette);
     if (colorPalette === undefined) {
       console.warn(
         `Color palette ${config.random.palette} not found, using default color`,
@@ -356,7 +326,7 @@ export class ColorResolver {
       });
     }
     const packedColors = ColorResolver.createColorBuffer(ids.length, { align });
-    await AsyncUtils.forEach(
+    await AsyncUtils.forEach<number | string>(
       ids,
       (id, i) => {
         const color = ColorResolver.pickRandomColor(
@@ -374,8 +344,9 @@ export class ColorResolver {
   /**
    * Deterministically picks a random color for an item from a palette
    *
-   * The pick is a seeded hash of the ID, so it is stable across resolutions
-   * and scatters consecutive IDs over the palette.
+   * The pick is a seeded hash of the ID (see {@link HashUtils.mix} for
+   * integer IDs and {@link HashUtils.hash} for string IDs), so it is stable
+   * across resolutions and scatters consecutive IDs over the palette.
    *
    * @param id - The item ID
    * @param seed - The seed of the random configuration
@@ -383,13 +354,15 @@ export class ColorResolver {
    * @returns The picked {@link Color}
    */
   static pickRandomColor(
-    id: number,
+    id: number | string,
     seed: number,
     colorPalette: ColorPalette,
   ): Color {
-    return colorPalette.colors[
-      HashUtils.mix(id, seed) % colorPalette.colors.length
-    ]!;
+    const hash =
+      typeof id === "string"
+        ? HashUtils.hash(id, seed)
+        : HashUtils.mix(id, seed);
+    return colorPalette.colors[hash % colorPalette.colors.length]!;
   }
 
   /**

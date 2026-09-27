@@ -111,12 +111,16 @@ export interface RawProject extends RawModel {
   /**
    * Project-global marker maps, referenced by {@link GroupByConfig} marker configurations
    *
+   * Map IDs are unique within this list; the other lists of maps may reuse them.
+   *
    * @defaultValue {@link projectDefaults.markerMaps}
    */
   markerMaps?: GroupValueMap<Marker>[];
 
   /**
    * Project-global size maps, referenced by {@link GroupByConfig} size configurations
+   *
+   * Map IDs are unique within this list; the other lists of maps may reuse them.
    *
    * @defaultValue {@link projectDefaults.sizeMaps}
    */
@@ -125,6 +129,8 @@ export interface RawProject extends RawModel {
   /**
    * Project-global color maps, referenced by {@link GroupByConfig} color configurations
    *
+   * Map IDs are unique within this list; the other lists of maps may reuse them.
+   *
    * @defaultValue {@link projectDefaults.colorMaps}
    */
   colorMaps?: GroupValueMap<Color>[];
@@ -132,12 +138,16 @@ export interface RawProject extends RawModel {
   /**
    * Project-global visibility maps, referenced by {@link GroupByConfig} visibility configurations
    *
+   * Map IDs are unique within this list; the other lists of maps may reuse them.
+   *
    * @defaultValue {@link projectDefaults.visibilityMaps}
    */
   visibilityMaps?: GroupValueMap<boolean>[];
 
   /**
    * Project-global opacity maps, referenced by {@link GroupByConfig} opacity configurations
+   *
+   * Map IDs are unique within this list; the other lists of maps may reuse them.
    *
    * @defaultValue {@link projectDefaults.opacityMaps}
    */

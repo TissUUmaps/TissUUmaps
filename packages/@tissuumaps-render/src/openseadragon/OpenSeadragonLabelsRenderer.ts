@@ -4,6 +4,7 @@ import {
   AsyncUtils,
   type Color,
   ColorUtils,
+  ConfigUtils,
   type GroupValueMap,
   type Labels,
   type LabelsData,
@@ -12,7 +13,6 @@ import {
   defaultLabelColor,
   defaultLabelOpacity,
   defaultLabelVisibility,
-  findGroupByConfigMap,
   getActiveConfigSource,
 } from "@tissuumaps/core";
 
@@ -100,7 +100,7 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
    *
    * An object's data transfer is kept as long as its data, its label color,
    * visibility and opacity configurations, and the group-to-value maps those
-   * configurations resolve from (see {@link findGroupByConfigMap}) are
+   * configurations resolve from (see {@link ConfigUtils.findGroupByMap}) are
    * unchanged, and is resolved anew otherwise (see
    * {@link _resolveDataTransfer}). Configurations are compared by value, maps
    * by identity. If resolving from the referenced table fails, e.g. because the
@@ -127,12 +127,15 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
       labelColor: structuredClone(labels.labelColor),
       labelVisibility: structuredClone(labels.labelVisibility),
       labelOpacity: structuredClone(labels.labelOpacity),
-      labelColorMap: findGroupByConfigMap(labels.labelColor, context.colorMaps),
-      labelVisibilityMap: findGroupByConfigMap(
+      labelColorMap: ConfigUtils.findGroupByMap(
+        labels.labelColor,
+        context.colorMaps,
+      ),
+      labelVisibilityMap: ConfigUtils.findGroupByMap(
         labels.labelVisibility,
         context.visibilityMaps,
       ),
-      labelOpacityMap: findGroupByConfigMap(
+      labelOpacityMap: ConfigUtils.findGroupByMap(
         labels.labelOpacity,
         context.opacityMaps,
       ),
@@ -230,6 +233,9 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
         try {
           const tableData = await context.loadTable(table, { signal });
           const labelIds = tableData.getIds();
+          if (Array.isArray(labelIds)) {
+            throw new Error("String IDs cannot address label values");
+          }
           const loadTable = () => Promise.resolve(tableData);
           const [
             packedLabelColors,

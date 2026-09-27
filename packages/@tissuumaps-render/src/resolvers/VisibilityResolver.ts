@@ -1,9 +1,11 @@
 import {
   ColorUtils,
+  ConfigUtils,
   type ConstantConfig,
   type FromConfig,
   type GroupByConfig,
   type GroupValueMap,
+  type IDArray,
   MathUtils,
   NumberUtils,
   type TableData,
@@ -33,7 +35,7 @@ export class VisibilityResolver {
    * @returns A `Uint8Array` of packed visibility values (0 or 1), one per ID
    */
   static async resolveVisibilities(
-    ids: number[],
+    ids: IDArray,
     config: VisibilityConfig,
     visibilityMaps: GroupValueMap<boolean>[],
     defaultVisibility: boolean,
@@ -122,7 +124,7 @@ export class VisibilityResolver {
    * @returns The packed visibility (`0` or `1`)
    */
   static resolveVisibilityWithoutTable(
-    _id: number,
+    _id: number | string,
     config: VisibilityConfig,
     defaultVisibility: boolean,
   ): number {
@@ -141,7 +143,7 @@ export class VisibilityResolver {
    * @returns A `Uint8Array` filled with the packed constant visibility
    */
   static resolveUniformVisibilities(
-    ids: number[],
+    ids: IDArray,
     config: Extract<VisibilityConfig, ConstantConfig<boolean>>,
     options?: { align?: number },
   ): Uint8Array {
@@ -164,7 +166,7 @@ export class VisibilityResolver {
    * @returns A `Uint8Array` of packed visibility values
    */
   static async resolveVisibilitiesFromTableValues(
-    ids: number[],
+    ids: IDArray,
     config: Extract<VisibilityConfig, FromConfig>,
     defaultVisibility: boolean,
     loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
@@ -203,7 +205,7 @@ export class VisibilityResolver {
    * @returns A `Uint8Array` of packed visibility values
    */
   static async resolveVisibilitiesFromTableGroups(
-    ids: number[],
+    ids: IDArray,
     config: Extract<VisibilityConfig, GroupByConfig<true>>,
     visibilityMaps: GroupValueMap<boolean>[],
     defaultVisibility: boolean,
@@ -212,9 +214,7 @@ export class VisibilityResolver {
   ): Promise<Uint8Array> {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    const visibilityMap = visibilityMaps.find(
-      (visibilityMap) => visibilityMap.id === config.groupBy.map,
-    );
+    const visibilityMap = ConfigUtils.findGroupByMap(config, visibilityMaps);
     if (visibilityMap === undefined) {
       console.warn(
         `Visibility map ${config.groupBy.map} not found, using default visibility`,
@@ -230,14 +230,17 @@ export class VisibilityResolver {
       ids.length,
       { align },
     );
-    const groupVisibilities = new Map(Object.entries(visibilityMap.values));
     await TableUtils.fillFromTableGroups(
       packedVisibilities,
       data,
       ids,
       config.groupBy.column,
       visibilityMap.default ?? defaultVisibility,
-      (group) => groupVisibilities.get(group),
+      ConfigUtils.createGroupValueGetter(
+        config,
+        visibilityMap,
+        defaultVisibility,
+      ),
       (visibility) => VisibilityResolver.packVisibility(visibility),
       { signal },
     );

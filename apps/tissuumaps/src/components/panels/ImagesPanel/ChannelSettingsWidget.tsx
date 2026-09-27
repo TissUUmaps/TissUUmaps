@@ -16,6 +16,7 @@ import {
   CollapsibleTrigger,
   CollapsibleTriggerRightDownIcon,
 } from "@/components/common/collapsible";
+import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { SimpleColorPicker } from "@/components/common/simple-color-picker";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -53,7 +54,7 @@ export function ChannelSettingsWidget({
   // Base UI's accordion would take the radios from the radio group, which then
   // no longer moves the active channel on arrow keys
   const rows = (
-    <div className="flex flex-col gap-y-1">
+    <div className="flex flex-col gap-y-1 text-sm">
       {Array.from({ length: sizeC }, (_, c) => (
         <ChannelSettingsRow
           key={c}
@@ -72,31 +73,36 @@ export function ChannelSettingsWidget({
   );
 
   return (
-    <div className={cn("flex flex-col gap-y-2 text-sm", className)}>
-      <ToggleGroup
-        size="sm"
-        value={[image.channelViewMode]}
-        onValueChange={(value) => {
-          if (value.length > 0) {
-            updateImage(image.id, {
-              channelViewMode: value[0] as ImageChannelViewMode,
-            });
-          }
-        }}
-        className="border rounded"
-      >
-        {Object.values(ImageChannelViewMode).map((mode) => (
-          <ToggleGroupItem
-            key={mode}
-            value={mode}
-            className={
-              image.channelViewMode === mode ? "font-medium" : "font-normal"
+    <Fieldset
+      className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
+    >
+      <FieldsetLegend className="flex flex-row items-center gap-x-1 font-medium text-foreground">
+        Channels
+        <ToggleGroup
+          size="sm"
+          value={[image.channelViewMode]}
+          onValueChange={(value) => {
+            if (value.length > 0) {
+              updateImage(image.id, {
+                channelViewMode: value[0] as ImageChannelViewMode,
+              });
             }
-          >
-            {channelViewModeLabels[mode]}
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
+          }}
+          className="ml-auto border rounded"
+        >
+          {Object.values(ImageChannelViewMode).map((mode) => (
+            <ToggleGroupItem
+              key={mode}
+              value={mode}
+              className={
+                image.channelViewMode === mode ? "font-medium" : "font-normal"
+              }
+            >
+              {channelViewModeLabels[mode]}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      </FieldsetLegend>
       {image.channelViewMode !== ImageChannelViewMode.composite ? (
         <RadioGroup
           value={String(ImageUtils.getActiveChannel(image, sizeC))}
@@ -121,7 +127,7 @@ export function ChannelSettingsWidget({
       ) : (
         rows
       )}
-    </div>
+    </Fieldset>
   );
 }
 

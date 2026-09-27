@@ -1,4 +1,8 @@
-import type { ShapesGeometry } from "@tissuumaps/core";
+import {
+  ArrayUtils,
+  type IDArray,
+  type ShapesGeometry,
+} from "@tissuumaps/core";
 
 /** A ring of a polygon, as a sequence of positions holding x and y first */
 export type ShapesRing = readonly (readonly number[])[];
@@ -12,14 +16,15 @@ export type ShapesPolygon = readonly ShapesRing[];
  * The CSR offset arrays are grown as shapes are added, so the shapes of a file
  * can be consumed as they are decoded rather than collected first. The IDs and
  * the names are collected alongside, so that they stay aligned with the
- * geometry when a shape is skipped.
+ * geometry when a shape is skipped. IDs are either all integers or all strings
+ * (see `IDArray`), which is only checked when building.
  */
 export class ShapesGeometryBuilder {
   private readonly _shapePolygonOffsets: number[] = [0];
   private readonly _polygonRingOffsets: number[] = [0];
   private readonly _ringVertexOffsets: number[] = [0];
   private readonly _coords: number[] = [];
-  private readonly _ids: number[] = [];
+  private readonly _ids: (number | string)[] = [];
   private readonly _names: string[] = [];
   private _built = false;
 
@@ -37,7 +42,7 @@ export class ShapesGeometryBuilder {
    */
   addShape(
     polygons: readonly ShapesPolygon[],
-    id: number,
+    id: number | string,
     name?: string,
   ): void {
     if (this._built) {
@@ -86,11 +91,12 @@ export class ShapesGeometryBuilder {
    * @returns The shapes geometry, in typed arrays ready to be transferred,
    * along with the IDs and the names of the added shapes. Names are returned
    * only if every added shape was given one.
-   * @throws Error if the geometry has already been built
+   * @throws Error if the geometry has already been built, or if the IDs mix
+   * integers and strings (see `ArrayUtils.toIDArray`)
    */
   build(): {
     geometry: ShapesGeometry;
-    ids: number[];
+    ids: IDArray;
     names: string[] | undefined;
   } {
     if (this._built) {
@@ -104,7 +110,7 @@ export class ShapesGeometryBuilder {
         ringVertexOffsets: new Uint32Array(this._ringVertexOffsets),
         coords: new Float32Array(this._coords),
       },
-      ids: this._ids,
+      ids: ArrayUtils.toIDArray(this._ids),
       names: this._names.length === this._ids.length ? this._names : undefined,
     };
   }

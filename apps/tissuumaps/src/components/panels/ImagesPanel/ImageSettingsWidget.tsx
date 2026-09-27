@@ -15,13 +15,10 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { TransformSettingsWidget } from "@/components/widgets/TransformSettingsWidget";
 import { useControlled } from "@/hooks/useControlled";
-import { useImageData } from "@/hooks/useData";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
-import { ChannelSettingsWidget } from "./ChannelSettingsWidget";
 import { ImageSettingsCategory } from "./category";
-import { channelViewModeLabels } from "./channelViewMode";
 
 export type ImageSettingsWidgetProps = {
   image: Image;
@@ -39,8 +36,6 @@ export function ImageSettingsWidget({
   className,
 }: ImageSettingsWidgetProps) {
   const updateImage = useProjectStore((state) => state.updateImage);
-  const data = useImageData(image.id);
-  const sizeC = data?.getSizeC();
 
   const [activeCategory, setActiveCategory] = useControlled(
     controlledActiveCategory,
@@ -86,20 +81,6 @@ export function ImageSettingsWidget({
             />
           </AccordionPanel>
         </AccordionItem>
-        {data !== null && sizeC !== undefined ? (
-          <AccordionItem value={ImageSettingsCategory.channels}>
-            <AccordionHeader>
-              <AccordionTriggerRightDownIcon />
-              <AccordionTrigger>Channels</AccordionTrigger>
-              <span className="ml-auto text-sm text-slate-600 dark:text-slate-400">
-                {channelViewModeLabels[image.channelViewMode]}
-              </span>
-            </AccordionHeader>
-            <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-              <ChannelSettingsWidget image={image} data={data} sizeC={sizeC} />
-            </AccordionPanel>
-          </AccordionItem>
-        ) : null}
       </Accordion>
     </Fieldset>
   );

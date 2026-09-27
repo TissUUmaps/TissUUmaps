@@ -3,10 +3,9 @@ import type OpenSeadragon from "openseadragon";
 
 import type {
   CustomTileSource,
-  IntArray,
+  IntOrUintArray,
   LabelsData,
   TileSourceConfig,
-  UintArray,
 } from "@tissuumaps/core";
 
 import { tiffRasterType } from "./installTIFFTileSource";
@@ -47,7 +46,7 @@ export class TIFFLabelsData implements LabelsData {
    * @throws Error if the tile's raster has no band
    */
   async getTileData(event: OpenSeadragon.TileInvalidatedEvent): Promise<{
-    values: IntArray | UintArray;
+    values: IntOrUintArray;
     width: number;
     height: number;
   }> {
@@ -59,7 +58,7 @@ export class TIFFLabelsData implements LabelsData {
     // the provider opens integer files of at most 32 bits only, whose bands
     // geotiff.js decodes into a signed or unsigned integer array
     return {
-      values: band as IntArray | UintArray,
+      values: band as IntOrUintArray,
       width: raster.width,
       height: raster.height,
     };

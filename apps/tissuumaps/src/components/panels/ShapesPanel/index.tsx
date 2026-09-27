@@ -1,6 +1,7 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
+import { useState } from "react";
 
 import { MathUtils, type Shapes, createShapes } from "@tissuumaps/core";
 
@@ -20,16 +21,15 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
-import { AnnotationsWidget } from "@/components/widgets/AnnotationsWidget";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { useShapesData } from "@/hooks/useData";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
+import { ShapesAnnotationsWidget } from "./ShapesAnnotationsWidget";
 import { ShapesSettingsWidget } from "./ShapesSettingsWidget";
-import { useShapesAnnotationsColumns } from "./useShapesAnnotationsColumns";
-import { useShapesAnnotationsWidget } from "./useShapesAnnotationsWidget";
+import type { ShapesSettingsCategory } from "./category";
 
 export type ShapesPanelProps = {
   className?: string;
@@ -90,13 +90,6 @@ type ShapesAccordionItemProps = {
 };
 
 function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
-  const {
-    activeSettingsCategory,
-    setActiveSettingsCategory,
-    selectedGroupByColumn,
-    setSelectedGroupByColumn,
-  } = useShapesAnnotationsWidget(shapes);
-
   const shapesDataProviders = useAppStore((state) => state.shapesDataProviders);
 
   const updateShapes = useProjectStore((state) => state.updateShapes);
@@ -105,10 +98,8 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
 
   const shapesData = useShapesData(shapes.id);
 
-  const { extraGroupColumnDefs } = useShapesAnnotationsColumns(
-    shapes,
-    selectedGroupByColumn,
-  );
+  const [activeSettingsCategory, setActiveSettingsCategory] =
+    useState<ShapesSettingsCategory | null>(null);
 
   const { ref, handleRef } = useSortable({ id: shapes.id, index });
 
@@ -188,13 +179,10 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
             className="bg-card"
           />
           {shapesData !== null && (
-            <AnnotationsWidget
+            <ShapesAnnotationsWidget
+              shapes={shapes}
               data={shapesData}
-              tableHeight={200}
-              table={shapes.dataSource.table ?? null}
-              selectedGroupByColumn={selectedGroupByColumn}
-              onSelectedGroupByColumnChange={setSelectedGroupByColumn}
-              extraGroupColumnDefs={extraGroupColumnDefs}
+              activeSettingsCategory={activeSettingsCategory}
               className="bg-card"
             />
           )}

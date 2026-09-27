@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { colorPalettes } from "./palettes";
+import { colorPalettes, findColorPalette } from "./palettes";
 
 describe("colorPalettes", () => {
   it("assigns a unique ID to every palette", () => {
@@ -20,5 +20,17 @@ describe("colorPalettes", () => {
         expect([r, g, b].every(Number.isFinite), id).toBe(true);
       }
     }
+  });
+});
+
+describe("findColorPalette", () => {
+  it("finds a color palette by ID", () => {
+    const colorPalette = colorPalettes[0]!;
+    expect(findColorPalette(colorPalette.id)).toBe(colorPalette);
+  });
+
+  it("returns undefined for an unknown or missing ID", () => {
+    expect(findColorPalette("unknown")).toBeUndefined();
+    expect(findColorPalette(undefined)).toBeUndefined();
   });
 });

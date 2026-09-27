@@ -21,6 +21,22 @@ export type ImageChannelPreview = {
   channelIndex: number;
 };
 
+/** The items of one group of a labels, points or shapes object, highlighted in the viewer */
+export type HighlightedItemGroup = {
+  /**
+   * The object whose items are grouped, by the ID of its labels, points or
+   * shapes; IDs are only unique within each of these lists
+   */
+  annotatedObject:
+    { labelsId: string } | { pointsId: string } | { shapesId: string };
+
+  /** Name of the categorical column of the object's table */
+  column: string;
+
+  /** The group, i.e. the cell value as a string */
+  group: string;
+};
+
 /**
  * The state of the app store, holding what is not part of the project
  */
@@ -33,6 +49,12 @@ export type AppStoreState = {
 
   /** The channel previewed on its own while it is hovered, if any */
   imageChannelPreview: ImageChannelPreview | null;
+
+  /**
+   * The group shown alone in the viewer, hiding every other item of its
+   * object, or `null` for none
+   */
+  highlightedItemGroup: HighlightedItemGroup | null;
 
   /** The registered image data providers, by data source type */
   imageDataProviders: Map<
@@ -106,6 +128,16 @@ export type AppStoreActions = {
    */
   setImageChannelPreview: (
     imageChannelPreview: ImageChannelPreview | null,
+  ) => void;
+
+  /**
+   * Highlights a group of an object in the viewer
+   *
+   * @param highlightedItemGroup - The group to highlight, or `null` to highlight
+   * none
+   */
+  setHighlightedItemGroup: (
+    highlightedItemGroup: HighlightedItemGroup | null,
   ) => void;
 
   /**

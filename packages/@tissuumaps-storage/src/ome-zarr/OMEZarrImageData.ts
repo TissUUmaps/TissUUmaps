@@ -7,8 +7,8 @@ import {
   type ImageChannelHistogram,
   type ImageData,
   ImageUtils,
-  type NumericArray,
   type TileSourceConfig,
+  type TypedArray,
 } from "@tissuumaps/core";
 
 /**
@@ -24,8 +24,7 @@ import {
  * Extracts one sample per pixel from the raw OME-Zarr data of its tiles,
  * which the renderer contrast-stretches and colorizes. Integer tiles of up to
  * 32 bits and floating-point tiles are passed through as they are; 64-bit
- * integer tiles are rejected, as their values cannot be represented in a
- * `NumericArray` without loss.
+ * integer tiles are rejected.
  *
  * Multi-channel image data carries one precomputed value histogram per
  * channel, computed at load time from a downsampled resolution level (see
@@ -105,7 +104,7 @@ export class OMEZarrImageData implements ImageData {
    */
   async getTileData(
     event: OpenSeadragon.TileInvalidatedEvent,
-  ): Promise<{ values: NumericArray; width: number; height: number }> {
+  ): Promise<{ values: TypedArray; width: number; height: number }> {
     const data = (await event.getData("ome-zarr")) as OMEZarrTileData;
     if (data.chunks.length !== 1) {
       throw new Error(`Expected a single tile, got ${data.chunks.length}`);

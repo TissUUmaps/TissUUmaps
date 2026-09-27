@@ -5,6 +5,7 @@ import {
   AsyncUtils,
   type Color,
   ColorUtils,
+  ConfigUtils,
   GeometryUtils,
   type GroupValueMap,
   type Rect,
@@ -18,10 +19,11 @@ import {
   defaultShapeFillColor,
   defaultShapeFillOpacity,
   defaultShapeFillVisibility,
+  defaultShapeOpacity,
   defaultShapeStrokeColor,
   defaultShapeStrokeOpacity,
   defaultShapeStrokeVisibility,
-  findGroupByConfigMap,
+  defaultShapeVisibility,
   projectDefaults,
 } from "@tissuumaps/core";
 
@@ -362,6 +364,33 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     const geometryPromise = geometryChanged
       ? newRef.data.loadGeometry({ signal })
       : undefined;
+    const colorsChanged = fillColorsChanged || strokeColorsChanged;
+    const packedShapeVisibilitiesPromise = colorsChanged
+      ? VisibilityResolver.resolveVisibilities(
+          newRef.itemIds,
+          newRef.object.shapeVisibility,
+          syncContext.visibilityMaps,
+          defaultShapeVisibility,
+          {
+            signal,
+            loadTable,
+            align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
+          },
+        )
+      : undefined;
+    const packedShapeOpacitiesPromise = colorsChanged
+      ? OpacityResolver.resolveOpacities(
+          newRef.itemIds,
+          newRef.object.shapeOpacity,
+          syncContext.opacityMaps,
+          defaultShapeOpacity,
+          {
+            signal,
+            loadTable,
+            align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
+          },
+        )
+      : undefined;
     const packedShapeFillColorsPromise = fillColorsChanged
       ? ColorResolver.resolveColors(
           newRef.itemIds,
@@ -442,6 +471,8 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       : undefined;
     const [
       geometry,
+      packedShapeVisibilities,
+      packedShapeOpacities,
       packedShapeFillColors,
       packedShapeFillVisibilities,
       packedShapeFillOpacities,
@@ -450,6 +481,8 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       packedShapeStrokeOpacities,
     ] = await Promise.all([
       geometryPromise,
+      packedShapeVisibilitiesPromise,
+      packedShapeOpacitiesPromise,
       packedShapeFillColorsPromise,
       packedShapeFillVisibilitiesPromise,
       packedShapeFillOpacitiesPromise,
@@ -523,15 +556,22 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     if (
       packedShapeFillColors !== undefined &&
       packedShapeFillVisibilities !== undefined &&
-      packedShapeFillOpacities !== undefined
+      packedShapeFillOpacities !== undefined &&
+      packedShapeVisibilities !== undefined &&
+      packedShapeOpacities !== undefined
     ) {
       await AsyncUtils.forEach(
         packedShapeFillColors,
         (packedShapeFillColor, i) => {
           packedShapeFillColors[i] = ColorUtils.withAlpha(
             packedShapeFillColor,
-            packedShapeFillVisibilities[i]!,
-            packedShapeFillOpacities[i]!,
+            Math.min(
+              packedShapeVisibilities[i]!,
+              packedShapeFillVisibilities[i]!,
+            ),
+            Math.round(
+              (packedShapeOpacities[i]! * packedShapeFillOpacities[i]!) / 255,
+            ),
           );
         },
         { signal },
@@ -540,15 +580,22 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     if (
       packedShapeStrokeColors !== undefined &&
       packedShapeStrokeVisibilities !== undefined &&
-      packedShapeStrokeOpacities !== undefined
+      packedShapeStrokeOpacities !== undefined &&
+      packedShapeVisibilities !== undefined &&
+      packedShapeOpacities !== undefined
     ) {
       await AsyncUtils.forEach(
         packedShapeStrokeColors,
         (packedShapeStrokeColor, i) => {
           packedShapeStrokeColors[i] = ColorUtils.withAlpha(
             packedShapeStrokeColor,
-            packedShapeStrokeVisibilities[i]!,
-            packedShapeStrokeOpacities[i]!,
+            Math.min(
+              packedShapeVisibilities[i]!,
+              packedShapeStrokeVisibilities[i]!,
+            ),
+            Math.round(
+              (packedShapeOpacities[i]! * packedShapeStrokeOpacities[i]!) / 255,
+            ),
           );
         },
         { signal },
@@ -857,7 +904,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * Every property the change predicates read has to be captured here: the
    * item-level configurations, and the maps they resolve their values from,
    * looked up now so that the predicates compare maps rather than map IDs (see
-   * {@link findGroupByConfigMap}).
+   * {@link ConfigUtils.findGroupByMap}).
    *
    * @param newRef - The object to capture the snapshot of
    * @param syncContext - The inputs of the current synchronization, holding the maps
@@ -868,33 +915,43 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     syncContext: WebGLShapesSyncContext,
   ): RenderedShapes["renderConfigSnapshot"] {
     return {
+      shapeVisibility: newRef.object.shapeVisibility,
+      shapeOpacity: newRef.object.shapeOpacity,
       shapeFillColor: newRef.object.shapeFillColor,
       shapeFillVisibility: newRef.object.shapeFillVisibility,
       shapeFillOpacity: newRef.object.shapeFillOpacity,
       shapeStrokeColor: newRef.object.shapeStrokeColor,
       shapeStrokeVisibility: newRef.object.shapeStrokeVisibility,
       shapeStrokeOpacity: newRef.object.shapeStrokeOpacity,
-      shapeFillColorMap: findGroupByConfigMap(
+      shapeVisibilityMap: ConfigUtils.findGroupByMap(
+        newRef.object.shapeVisibility,
+        syncContext.visibilityMaps,
+      ),
+      shapeOpacityMap: ConfigUtils.findGroupByMap(
+        newRef.object.shapeOpacity,
+        syncContext.opacityMaps,
+      ),
+      shapeFillColorMap: ConfigUtils.findGroupByMap(
         newRef.object.shapeFillColor,
         syncContext.colorMaps,
       ),
-      shapeFillVisibilityMap: findGroupByConfigMap(
+      shapeFillVisibilityMap: ConfigUtils.findGroupByMap(
         newRef.object.shapeFillVisibility,
         syncContext.visibilityMaps,
       ),
-      shapeFillOpacityMap: findGroupByConfigMap(
+      shapeFillOpacityMap: ConfigUtils.findGroupByMap(
         newRef.object.shapeFillOpacity,
         syncContext.opacityMaps,
       ),
-      shapeStrokeColorMap: findGroupByConfigMap(
+      shapeStrokeColorMap: ConfigUtils.findGroupByMap(
         newRef.object.shapeStrokeColor,
         syncContext.colorMaps,
       ),
-      shapeStrokeVisibilityMap: findGroupByConfigMap(
+      shapeStrokeVisibilityMap: ConfigUtils.findGroupByMap(
         newRef.object.shapeStrokeVisibility,
         syncContext.visibilityMaps,
       ),
-      shapeStrokeOpacityMap: findGroupByConfigMap(
+      shapeStrokeOpacityMap: ConfigUtils.findGroupByMap(
         newRef.object.shapeStrokeOpacity,
         syncContext.opacityMaps,
       ),
@@ -904,9 +961,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   /**
    * Returns whether the fill colors of an object have to be resolved again
    *
-   * Colors carry the resolved shape visibilities and opacities in their alpha
-   * channel, so they also depend on those configurations. The layer- and
-   * object-level visibility and opacity are shader uniforms (see
+   * Colors carry the resolved shape and fill visibilities and opacities in
+   * their alpha channel, so they also depend on those configurations. The
+   * layer- and object-level visibility and opacity are shader uniforms (see
    * {@link WebGLRendererBase.computeOpacityFactor}) and do not matter here.
    * Also true for an object that has not been rendered yet, like the other
    * predicate. Configurations are compared by value, maps by identity (see
@@ -918,6 +975,18 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   ): boolean {
     return (
       renderedShapes === undefined ||
+      !deepEqual(
+        renderedShapes.renderConfigSnapshot.shapeVisibility,
+        newSnapshot.shapeVisibility,
+      ) ||
+      renderedShapes.renderConfigSnapshot.shapeVisibilityMap !==
+        newSnapshot.shapeVisibilityMap ||
+      !deepEqual(
+        renderedShapes.renderConfigSnapshot.shapeOpacity,
+        newSnapshot.shapeOpacity,
+      ) ||
+      renderedShapes.renderConfigSnapshot.shapeOpacityMap !==
+        newSnapshot.shapeOpacityMap ||
       !deepEqual(
         renderedShapes.renderConfigSnapshot.shapeFillColor,
         newSnapshot.shapeFillColor,
@@ -950,6 +1019,18 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   ): boolean {
     return (
       renderedShapes === undefined ||
+      !deepEqual(
+        renderedShapes.renderConfigSnapshot.shapeVisibility,
+        newSnapshot.shapeVisibility,
+      ) ||
+      renderedShapes.renderConfigSnapshot.shapeVisibilityMap !==
+        newSnapshot.shapeVisibilityMap ||
+      !deepEqual(
+        renderedShapes.renderConfigSnapshot.shapeOpacity,
+        newSnapshot.shapeOpacity,
+      ) ||
+      renderedShapes.renderConfigSnapshot.shapeOpacityMap !==
+        newSnapshot.shapeOpacityMap ||
       !deepEqual(
         renderedShapes.renderConfigSnapshot.shapeStrokeColor,
         newSnapshot.shapeStrokeColor,
@@ -1107,6 +1188,8 @@ type RenderedShapes = RenderedObjectBase<Shapes, ShapesData> & {
   shapeStrokeColorsTexture: WebGLTexture;
   renderConfigSnapshot: Pick<
     Shapes,
+    | "shapeVisibility"
+    | "shapeOpacity"
     | "shapeFillColor"
     | "shapeFillVisibility"
     | "shapeFillOpacity"
@@ -1114,6 +1197,8 @@ type RenderedShapes = RenderedObjectBase<Shapes, ShapesData> & {
     | "shapeStrokeVisibility"
     | "shapeStrokeOpacity"
   > & {
+    shapeVisibilityMap: GroupValueMap<boolean> | undefined;
+    shapeOpacityMap: GroupValueMap<number> | undefined;
     shapeFillColorMap: GroupValueMap<Color> | undefined;
     shapeFillVisibilityMap: GroupValueMap<boolean> | undefined;
     shapeFillOpacityMap: GroupValueMap<number> | undefined;

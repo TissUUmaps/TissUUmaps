@@ -7,6 +7,7 @@ import {
   ColorUtils,
   type GroupValueMap,
   HashUtils,
+  type IDArray,
   type TableData,
   colorPalettes,
   defaultRandomSeed,
@@ -15,7 +16,7 @@ import {
 import { ColorResolver } from "./ColorResolver";
 
 function createMockTableData(
-  ids: number[],
+  ids: IDArray,
   values: unknown[],
   valueRange?: [number, number],
 ): TableData {
@@ -161,7 +162,7 @@ describe("ColorResolver", () => {
     it("fills the buffer with the constant color", () => {
       const config = { constant: { value: green } } satisfies ColorConfig;
       const packedColors = ColorResolver.resolveUniformColors(
-        [1, 2, 3],
+        new Uint32Array([1, 2, 3]),
         config,
       );
       const packedColor = ColorResolver.packColor(green);
@@ -176,7 +177,7 @@ describe("ColorResolver", () => {
   describe("resolveColorsFromTableValues", () => {
     it("maps table values through the color palette", async () => {
       const palette = colorPalettes[0]!;
-      const ids = [1, 2];
+      const ids = new Uint32Array([1, 2]);
       const data = createMockTableData(ids, [0, 1], [0, 1]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = {
@@ -199,7 +200,7 @@ describe("ColorResolver", () => {
 
     it("normalizes within the loaded value range when no range is configured", async () => {
       const palette = colorPalettes[0]!;
-      const ids = [1, 2];
+      const ids = new Uint32Array([1, 2]);
       const loadValueRange = vi.fn().mockResolvedValue([-10, 30]);
       const data = { ...createMockTableData(ids, [-10, 30]), loadValueRange };
       const loadTable = vi.fn().mockResolvedValue(data);
@@ -226,7 +227,7 @@ describe("ColorResolver", () => {
 
     it("normalizes within the configured range without loading the value range", async () => {
       const palette = colorPalettes[0]!;
-      const ids = [1, 2];
+      const ids = new Uint32Array([1, 2]);
       const loadValueRange = vi.fn().mockResolvedValue([0, 100]);
       const data = { ...createMockTableData(ids, [0, 100]), loadValueRange };
       const loadTable = vi.fn().mockResolvedValue(data);
@@ -254,7 +255,7 @@ describe("ColorResolver", () => {
       } satisfies ColorConfig;
 
       const packedColors = await ColorResolver.resolveColorsFromTableValues(
-        [1, 2],
+        new Uint32Array([1, 2]),
         config,
         red,
         loadTable,
@@ -268,14 +269,14 @@ describe("ColorResolver", () => {
     it("forwards the signal to loadTable", async () => {
       const controller = new AbortController();
       const palette = colorPalettes[0]!;
-      const data = createMockTableData([1], [0], [0, 1]);
+      const data = createMockTableData(new Uint32Array([1]), [0], [0, 1]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = {
         from: { column: "col1", palette: palette.id },
       } satisfies ColorConfig;
 
       await ColorResolver.resolveColorsFromTableValues(
-        [1],
+        new Uint32Array([1]),
         config,
         black,
         loadTable,
@@ -288,15 +289,15 @@ describe("ColorResolver", () => {
 
   describe("resolveColorsFromTableGroups", () => {
     it("uses the color map when a map is specified and found", async () => {
-      const ids = [1, 2];
+      const ids = new Uint32Array([1, 2]);
       const data = createMockTableData(ids, ["cat-a", "cat-b"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const colorMap: GroupValueMap<Color> = {
         id: "cm1",
         name: "Color Map 1",
         values: {
-          [JSON.stringify("cat-a")]: red,
-          [JSON.stringify("cat-b")]: green,
+          "cat-a": red,
+          "cat-b": green,
         },
       };
       const config = {
@@ -316,7 +317,7 @@ describe("ColorResolver", () => {
     });
 
     it("uses the color map's default for unmapped groups", async () => {
-      const ids = [1];
+      const ids = new Uint32Array([1]);
       const data = createMockTableData(ids, ["missing"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const colorMap: GroupValueMap<Color> = {
@@ -347,7 +348,7 @@ describe("ColorResolver", () => {
       } satisfies ColorConfig;
 
       const packedColors = await ColorResolver.resolveColorsFromTableGroups(
-        [1],
+        new Uint32Array([1]),
         config,
         [],
         red,
@@ -362,7 +363,7 @@ describe("ColorResolver", () => {
       // resolveColorsFromTableGroups looks palettes up in the built-in
       // colorPalettes, rather than in a parameter
       const builtInPalette = colorPalettes[0]!;
-      const ids = [1, 2];
+      const ids = new Uint32Array([1, 2]);
       const data = createMockTableData(ids, ["groupA", "groupB"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = {
@@ -381,16 +382,14 @@ describe("ColorResolver", () => {
       expect(packedColors[0]).toBe(
         ColorResolver.packColor(
           builtInPalette.colors[
-            HashUtils.hash(JSON.stringify("groupA")) %
-              builtInPalette.colors.length
+            HashUtils.hash("groupA") % builtInPalette.colors.length
           ]!,
         ),
       );
       expect(packedColors[1]).toBe(
         ColorResolver.packColor(
           builtInPalette.colors[
-            HashUtils.hash(JSON.stringify("groupB")) %
-              builtInPalette.colors.length
+            HashUtils.hash("groupB") % builtInPalette.colors.length
           ]!,
         ),
       );
@@ -403,7 +402,7 @@ describe("ColorResolver", () => {
       } satisfies ColorConfig;
 
       const packedColors = await ColorResolver.resolveColorsFromTableGroups(
-        [1],
+        new Uint32Array([1]),
         config,
         [],
         red,
@@ -421,7 +420,7 @@ describe("ColorResolver", () => {
       } satisfies ColorConfig;
 
       const packedColors = await ColorResolver.resolveColorsFromTableGroups(
-        [1],
+        new Uint32Array([1]),
         config,
         [],
         green,
@@ -443,7 +442,7 @@ describe("ColorResolver", () => {
       } satisfies ColorConfig;
 
       const packedColors = await ColorResolver.resolveRandomColors(
-        [1, 2, 3],
+        new Uint32Array([1, 2, 3]),
         config,
         black,
         { signal: undefined, align: 1 },
@@ -464,7 +463,7 @@ describe("ColorResolver", () => {
       } satisfies ColorConfig;
 
       const packedColors = await ColorResolver.resolveRandomColors(
-        [5, 42, 1000],
+        new Uint32Array([5, 42, 1000]),
         config,
         black,
       );
@@ -478,18 +477,40 @@ describe("ColorResolver", () => {
       );
     });
 
+    it("draws the colors of string IDs from their hashes", async () => {
+      const config = {
+        random: { seed: 7, palette: builtInPalette.id },
+      } satisfies ColorConfig;
+
+      const packedColors = await ColorResolver.resolveRandomColors(
+        ["a", "b", "cell_42"],
+        config,
+        black,
+      );
+
+      expect(Array.from(packedColors)).toEqual(
+        ["a", "b", "cell_42"].map((id) =>
+          ColorResolver.packColor(
+            builtInPalette.colors[
+              HashUtils.hash(id, 7) % builtInPalette.colors.length
+            ]!,
+          ),
+        ),
+      );
+    });
+
     it("is deterministic across calls and independent of the ID order", async () => {
       const config = {
         random: { seed: 3, palette: builtInPalette.id },
       } satisfies ColorConfig;
 
       const first = await ColorResolver.resolveRandomColors(
-        [1, 2, 3],
+        new Uint32Array([1, 2, 3]),
         config,
         black,
       );
       const second = await ColorResolver.resolveRandomColors(
-        [3, 2, 1],
+        new Uint32Array([3, 2, 1]),
         config,
         black,
       );
@@ -503,7 +524,7 @@ describe("ColorResolver", () => {
       } satisfies ColorConfig;
 
       const packedColors = await ColorResolver.resolveRandomColors(
-        [1, 2],
+        new Uint32Array([1, 2]),
         config,
         red,
       );
@@ -515,7 +536,7 @@ describe("ColorResolver", () => {
 
   describe("resolveColors", () => {
     it("dispatches to constant, leaving the alpha channel to the caller", async () => {
-      const ids = [1, 2];
+      const ids = new Uint32Array([1, 2]);
       const config = { constant: { value: red } } satisfies ColorConfig;
 
       const packedColors = await ColorResolver.resolveColors(
@@ -531,14 +552,14 @@ describe("ColorResolver", () => {
 
     it("dispatches to from config when loadTable is given", async () => {
       const palette = colorPalettes[0]!;
-      const data = createMockTableData([1], [0], [0, 1]);
+      const data = createMockTableData(new Uint32Array([1]), [0], [0, 1]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = {
         from: { column: "col1", palette: palette.id },
       } satisfies ColorConfig;
 
       const packedColors = await ColorResolver.resolveColors(
-        [1],
+        new Uint32Array([1]),
         config,
         [],
         black,
@@ -553,13 +574,13 @@ describe("ColorResolver", () => {
     });
 
     it("dispatches to groupBy config when loadTable is given", async () => {
-      const ids = [1];
+      const ids = new Uint32Array([1]);
       const data = createMockTableData(ids, ["cat-a"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const colorMap: GroupValueMap<Color> = {
         id: "cm1",
         name: "CM",
-        values: { [JSON.stringify("cat-a")]: red },
+        values: { "cat-a": red },
       };
       const config = {
         groupBy: { column: "col1", map: "cm1" },
@@ -586,7 +607,7 @@ describe("ColorResolver", () => {
       } satisfies ColorConfig;
 
       const packedColors = await ColorResolver.resolveColors(
-        [1],
+        new Uint32Array([1]),
         config,
         [],
         black,
@@ -602,7 +623,7 @@ describe("ColorResolver", () => {
       const config = {} as ColorConfig;
 
       const packedColors = await ColorResolver.resolveColors(
-        [1],
+        new Uint32Array([1]),
         config,
         [],
         red,
@@ -617,7 +638,7 @@ describe("ColorResolver", () => {
       } satisfies ColorConfig;
 
       const packedColors = await ColorResolver.resolveColors(
-        [1],
+        new Uint32Array([1]),
         config,
         [],
         red,
@@ -630,14 +651,14 @@ describe("ColorResolver", () => {
       const colorMap: GroupValueMap<Color> = {
         id: "cm1",
         name: "CM",
-        values: { [JSON.stringify("cat-a")]: green },
+        values: { "cat-a": green },
       };
       const config = {
         groupBy: { column: "col1", map: "cm1" },
       } satisfies ColorConfig;
 
       const packedColors = await ColorResolver.resolveColors(
-        [1],
+        new Uint32Array([1]),
         config,
         [colorMap],
         red,
@@ -653,7 +674,7 @@ describe("ColorResolver", () => {
       const config = { constant: { value: red } } satisfies ColorConfig;
 
       await expect(
-        ColorResolver.resolveColors([1], config, [], black, {
+        ColorResolver.resolveColors(new Uint32Array([1]), config, [], black, {
           signal: controller.signal,
         }),
       ).rejects.toThrow();

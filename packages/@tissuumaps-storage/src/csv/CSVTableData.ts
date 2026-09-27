@@ -1,25 +1,27 @@
 import {
-  type GenericArray,
+  type IDArray,
   MathUtils,
-  type NumericArray,
   type TableColumnQuerySuggestion,
   type TableData,
-  type TypedArray,
+  type TypedArrayOrArray,
 } from "@tissuumaps/core";
 
 export class CSVTableData implements TableData {
   private readonly _n: number;
-  private _ids: number[] | undefined;
+  private _ids: IDArray | undefined;
   private readonly _names: string[] | undefined;
   private readonly _columns: string[];
-  private readonly _columnValues: Map<string, string[] | TypedArray>;
+  private readonly _columnValues: Map<
+    string,
+    string[] | Float32Array | Float64Array
+  >;
 
   constructor(
     n: number,
-    ids: number[] | undefined,
+    ids: IDArray | undefined,
     names: string[] | undefined,
     columns: string[],
-    columnValues: Map<string, string[] | TypedArray>,
+    columnValues: Map<string, string[] | Float32Array | Float64Array>,
   ) {
     this._n = n;
     this._ids = ids;
@@ -28,10 +30,10 @@ export class CSVTableData implements TableData {
     this._columnValues = columnValues;
   }
 
-  getIds(): number[] {
+  getIds(): IDArray {
     if (this._ids === undefined) {
       console.warn("No ID column specified, assigning sequential IDs instead");
-      this._ids = Array.from({ length: this.getSize() }, (_, i) => i);
+      this._ids = Uint32Array.from({ length: this.getSize() }, (_, i) => i);
     }
     return this._ids;
   }
@@ -83,14 +85,14 @@ export class CSVTableData implements TableData {
     return Promise.resolve(matches.length === 1 ? matches[0]! : null);
   }
 
-  loadValues<T>(column: string): Promise<GenericArray<T>> {
+  loadValues<T>(column: string): Promise<TypedArrayOrArray<T>> {
     const columnValues = this._columnValues.get(column);
     if (columnValues === undefined) {
       return Promise.reject(
         new Error(`Column ${column} does not exist in the table`),
       );
     }
-    return Promise.resolve(columnValues as GenericArray<T>);
+    return Promise.resolve(columnValues as TypedArrayOrArray<T>);
   }
 
   async loadUniqueValueCounts<T>(
@@ -112,11 +114,8 @@ export class CSVTableData implements TableData {
     signal?.throwIfAborted();
     const values = await this.loadValues(column);
     signal?.throwIfAborted(); // loadValues() does not throw on abort
-    if (typeof values[0] === "number") {
-      const [vmin, vmax] = await MathUtils.computeRange(
-        values as NumericArray,
-        { signal },
-      );
+    if (ArrayBuffer.isView(values)) {
+      const [vmin, vmax] = await MathUtils.computeRange(values, { signal });
       if (vmin < vmax) {
         return [vmin, vmax];
       }

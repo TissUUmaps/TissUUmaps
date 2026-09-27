@@ -1,6 +1,6 @@
 import type { Feature, GeoJSON, Geometry } from "geojson";
 
-import type { ShapesGeometry } from "@tissuumaps/core";
+import type { IDArray, ShapesGeometry } from "@tissuumaps/core";
 
 import {
   ShapesGeometryBuilder,
@@ -24,7 +24,7 @@ export type GeoJSONFileRequest = GeoJSONRequest<"file"> & {
 
 export type GeoJSONFileResponse = GeoJSONResponse<GeoJSONFileRequest> & {
   geometry: ShapesGeometry;
-  ids: number[];
+  ids: IDArray;
   names: string[] | undefined;
 };
 
@@ -171,7 +171,18 @@ async function handleFileRequest(
     request.nameProperty,
     onProgress,
   );
-  return { response: { op: "file", geometry, ids, names } };
+  return {
+    response: { op: "file", geometry, ids, names },
+    transfer: [
+      geometry.shapePolygonOffsets.buffer,
+      geometry.polygonRingOffsets.buffer,
+      geometry.ringVertexOffsets.buffer,
+      geometry.coords.buffer,
+      ...(ArrayBuffer.isView(ids) && ids.buffer instanceof ArrayBuffer
+        ? [ids.buffer]
+        : []),
+    ],
+  };
 }
 
 /**
@@ -212,16 +223,18 @@ function addPolygons(
 function readFeatureId(
   feature: Feature<Geometry | null>,
   idProperty: string,
-): number {
+): number | string {
   const id = feature.properties?.[idProperty] as unknown;
-  if (id === undefined || id === "") {
+  if (id === undefined || id === null || id === "") {
     throw new Error(`Feature is missing ID '${idProperty}'`);
   }
-  const numericId = Number(id);
-  if (!Number.isSafeInteger(numericId)) {
-    throw new Error(`Feature has invalid ID '${idProperty}'`);
+  if (typeof id === "string") {
+    return id;
   }
-  return numericId;
+  if (typeof id === "number" && Number.isSafeInteger(id)) {
+    return id;
+  }
+  throw new Error(`Feature has invalid ID '${idProperty}'`);
 }
 
 function readFeatureName(
@@ -242,7 +255,7 @@ function parseGeoJSON(
   nameProperty: string | undefined,
   onProgress: (progress: number, total: number) => void,
 ): {
-  ids: number[];
+  ids: IDArray;
   names: string[] | undefined;
   geometry: ShapesGeometry;
 } {

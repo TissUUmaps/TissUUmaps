@@ -2,6 +2,7 @@ import { deepEqual } from "fast-equals";
 
 import {
   GeometryUtils,
+  type IDArray,
   type Layer,
   type Points,
   type PointsData,
@@ -17,7 +18,7 @@ import {
 import type { WebGLContext } from "./WebGLContext";
 import { WebGLUtils } from "./WebGLUtils";
 
-type ItemsInfo = { itemIds: number[]; itemsMask: Uint8Array };
+type ItemsInfo = { itemIds: IDArray; itemsMask: Uint8Array };
 
 /**
  * Base class for WebGL renderers that draw the items of objects (points or shapes)
@@ -37,9 +38,9 @@ type ItemsInfo = { itemIds: number[]; itemsMask: Uint8Array };
  * so the loaders have to return immutable data that keeps its identity for as
  * long as its content is unchanged. Likewise, the renderers detect an edit to
  * a group-to-value map by comparing the maps that their objects' configurations
- * resolve from by identity (see `findGroupByConfigMap`), so the maps passed
- * to a synchronization have to keep their identity for as long as they are
- * unchanged.
+ * resolve from by identity (see `ConfigUtils.findGroupByMap`), so the maps
+ * passed to a synchronization have to keep their identity for as long as they
+ * are unchanged.
  */
 export abstract class WebGLRendererBase<
   TObject extends Points | Shapes,
@@ -840,7 +841,7 @@ export abstract class WebGLRendererBase<
     }
     if (newLayerIds.size > 0) {
       const itemIds = data.getIds();
-      const newLayerItemsInfos = new Map<string, ItemsInfo>();
+      const newItemsMasks = new Map<string, Uint8Array>();
       await TableUtils.forEachRow(
         itemIds,
         tableData,
@@ -848,27 +849,28 @@ export abstract class WebGLRendererBase<
           if (rowIndex === undefined) {
             return;
           }
-          const itemId = itemIds[i]!;
           const layerId = tableLayers[rowIndex]!;
           if (newLayerIds.has(layerId)) {
-            let newItemsInfo = newLayerItemsInfos.get(layerId);
-            if (newItemsInfo === undefined) {
-              newItemsInfo = {
-                itemIds: [],
-                itemsMask: new Uint8Array(itemIds.length),
-              };
-              newLayerItemsInfos.set(layerId, newItemsInfo);
+            let newItemsMask = newItemsMasks.get(layerId);
+            if (newItemsMask === undefined) {
+              newItemsMask = new Uint8Array(itemIds.length);
+              newItemsMasks.set(layerId, newItemsMask);
             }
-            newItemsInfo.itemIds.push(itemId);
-            newItemsInfo.itemsMask[i] = 1;
+            newItemsMask[i] = 1;
           }
         },
         { signal },
       );
       for (const newLayerId of newLayerIds) {
+        const newItemsMask = newItemsMasks.get(newLayerId);
         layerItemsInfos.set(
           newLayerId,
-          newLayerItemsInfos.get(newLayerId) ?? null,
+          newItemsMask !== undefined
+            ? {
+                itemIds: itemIds.filter((_, i) => newItemsMask[i] === 1),
+                itemsMask: newItemsMask,
+              }
+            : null,
         );
       }
     }
@@ -995,7 +997,7 @@ export type ObjectRef<
 > = {
   layerId: string;
   object: TObject;
-  itemIds: number[];
+  itemIds: IDArray;
   itemsMask: Uint8Array | undefined;
   data: TObjectData;
 };

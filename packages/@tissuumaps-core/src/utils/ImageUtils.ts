@@ -1,13 +1,14 @@
 import type { Image } from "../model/image";
 import type { Color } from "../model/primitives";
 import type { ImageChannelHistogram, ImageData } from "../storage/image";
-import type { NumericArray } from "../types/arrays";
+import type { TypedArray } from "../types/arrays";
 import { ColorUtils } from "./ColorUtils";
 import { MathUtils } from "./MathUtils";
 
 /** The integer typed arrays, with the bits and signedness of their type */
 const integerArrayTypes = [
   [Uint8Array, 8, false],
+  [Uint8ClampedArray, 8, false],
   [Uint16Array, 16, false],
   [Uint32Array, 32, false],
   [Int8Array, 8, true],
@@ -266,18 +267,17 @@ export class ImageUtils {
    * as default contrast limits of image channel data
    *
    * Integer typed arrays span their full integer range, floating-point typed
-   * arrays are taken to hold normalized values in `[0, 1]`, and plain arrays
-   * are taken to hold 8-bit values.
+   * arrays are taken to hold normalized values in `[0, 1]`.
    *
    * @param values - The array whose value range to return
    * @returns The value range, as `[min, max]`
    */
-  static getDataTypeRange(values: NumericArray): [number, number] {
+  static getDataTypeRange(values: TypedArray): [number, number] {
     for (const [arrayType, bits, signed] of integerArrayTypes) {
       if (values instanceof arrayType) {
         return ImageUtils.getIntegerTypeRange(bits, signed);
       }
     }
-    return Array.isArray(values) ? [0, 255] : [0, 1];
+    return [0, 1];
   }
 }

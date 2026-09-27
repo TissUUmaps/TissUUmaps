@@ -21,10 +21,12 @@ import {
 } from "@/components/ui/input-group";
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { useImageData } from "@/hooks/useData";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
+import { ChannelSettingsWidget } from "./ChannelSettingsWidget";
 import { ImageSettingsWidget } from "./ImageSettingsWidget";
 
 export type ImagesPanelProps = {
@@ -87,6 +89,9 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
   const updateImage = useProjectStore((state) => state.updateImage);
   const deleteImage = useProjectStore((state) => state.deleteImage);
   const confirm = useConfirmDialog();
+
+  const imageData = useImageData(image.id);
+  const sizeC = imageData?.getSizeC();
 
   const { ref, handleRef } = useSortable({ id: image.id, index });
 
@@ -160,6 +165,14 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
             className="bg-card"
           />
           <ImageSettingsWidget image={image} className="bg-card" />
+          {imageData !== null && sizeC !== undefined && (
+            <ChannelSettingsWidget
+              image={image}
+              data={imageData}
+              sizeC={sizeC}
+              className="bg-card"
+            />
+          )}
         </AccordionPanel>
       </AccordionItem>
     </div>

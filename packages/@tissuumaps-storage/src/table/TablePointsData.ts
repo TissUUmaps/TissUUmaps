@@ -1,4 +1,5 @@
 import type {
+  IDArray,
   PointsData,
   PointsGeometry,
   ProgressCallback,
@@ -16,7 +17,7 @@ export class TablePointsData implements PointsData {
     this._yColumn = yColumn;
   }
 
-  getIds(): number[] {
+  getIds(): IDArray {
     return this._tableData.getIds();
   }
 

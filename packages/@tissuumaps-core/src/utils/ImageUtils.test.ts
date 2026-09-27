@@ -17,8 +17,7 @@ function createImageData(
   }[],
 ): ImageData {
   return {
-    getSizeX: () => 1,
-    getSizeY: () => 1,
+    close: () => {},
     getSizeC: () => channels.length,
     getTileSource: () => "",
     getChannelColor: (c) => channels[c]?.color,
@@ -373,6 +372,7 @@ describe("ImageUtils", () => {
   describe("getDataTypeRange", () => {
     it.each([
       [new Uint8Array(1), [0, 255]],
+      [new Uint8ClampedArray(1), [0, 255]],
       [new Uint16Array(1), [0, 65535]],
       [new Uint32Array(1), [0, 4294967295]],
       [new Int8Array(1), [-128, 127]],
@@ -388,9 +388,5 @@ describe("ImageUtils", () => {
         expect(ImageUtils.getDataTypeRange(values)).toEqual([0, 1]);
       },
     );
-
-    it("returns the 8-bit range for plain arrays", () => {
-      expect(ImageUtils.getDataTypeRange([1, 2, 3])).toEqual([0, 255]);
-    });
   });
 });

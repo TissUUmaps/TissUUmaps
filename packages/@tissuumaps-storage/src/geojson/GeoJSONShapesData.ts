@@ -1,14 +1,14 @@
-import type { ShapesData, ShapesGeometry } from "@tissuumaps/core";
+import type { IDArray, ShapesData, ShapesGeometry } from "@tissuumaps/core";
 
 /** Shapes data of a GeoJSON file, fully loaded up front */
 export class GeoJSONShapesData implements ShapesData {
   private readonly _geometry: ShapesGeometry;
-  private readonly _ids: number[];
+  private readonly _ids: IDArray;
   private readonly _names: string[] | undefined;
 
   constructor(
     geometry: ShapesGeometry,
-    ids: number[],
+    ids: IDArray,
     names: string[] | undefined,
   ) {
     if (ids.length !== geometry.shapePolygonOffsets.length - 1) {
@@ -19,7 +19,7 @@ export class GeoJSONShapesData implements ShapesData {
     this._names = names;
   }
 
-  getIds(): number[] {
+  getIds(): IDArray {
     return this._ids;
   }
 

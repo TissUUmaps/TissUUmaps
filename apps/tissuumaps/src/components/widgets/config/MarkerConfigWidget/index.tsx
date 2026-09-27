@@ -1,7 +1,11 @@
+import { ProjectUtils } from "@tissuumaps/core";
+
 import { Field, FieldLabel } from "@/components/common/field";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { markers } from "@/components/markers";
 import { TableColumnInput } from "@/components/widgets/TableColumnInput";
+import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
+import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 
 import type { MarkerConfigWidgetAdapter } from "./adapter";
@@ -115,6 +119,10 @@ function GroupByMarkerConfigWidget({
   } = adapter;
 
   const markerMaps = useProjectStore((state) => state.markerMaps);
+  const deleteMarkerMap = useProjectStore((state) => state.deleteMarkerMap);
+  const referencedMapIds = useReferencedMapIds((project) =>
+    ProjectUtils.getMarkerConfigs(project),
+  );
 
   return (
     <div className={className}>
@@ -128,13 +136,12 @@ function GroupByMarkerConfigWidget({
       </Field>
       <Field>
         <FieldLabel>Marker map</FieldLabel>
-        <SimpleSelect
-          items={markerMaps}
-          itemLabel={(markerMap) => markerMap.name}
-          itemValue={(markerMap) => markerMap.id}
+        <GroupValueMapSelect
+          maps={markerMaps}
+          isMapDeletable={(map) => !referencedMapIds.has(map.id)}
           value={map}
           onValueChange={setMap}
-          nullable
+          onMapDelete={deleteMarkerMap}
         />
       </Field>
     </div>

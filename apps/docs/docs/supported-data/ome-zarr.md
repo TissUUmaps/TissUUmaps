@@ -6,6 +6,8 @@ sidebar_position: 3
 
 The built-in **OME-Zarr data provider** opens [OME-NGFF](https://ngff.openmicroscopy.org/) images stored in [Zarr](https://zarr.dev/) format as **images** and as **labels**. It reads OME-Zarr versions 0.1 through 0.5 (Zarr v2 and v3) and builds an OpenSeadragon tile source directly on the multiscales pyramid, so no server-side tiling is needed.
 
+The provider is named after OME-Zarr rather than Zarr: a Zarr array without the `multiscales` metadata is not an image, so there is no plain Zarr image provider.
+
 ## Data source
 
 OME-Zarr data sources have the `type` `"ome-zarr"` and accept the following fields:
@@ -111,7 +113,6 @@ Both the image and the labels are OME-Zarr images served next to the project fil
 ## Limitations
 
 - 64-bit integer image arrays and 64-bit or floating-point label arrays are not supported. Convert them to a narrower integer type when writing the OME-Zarr.
-- Workspace sources need an open workspace, and workspace files have to be zipped OME-Zarr files.
 - Plate and `bioformats2raw.layout` groups have to be referenced by one of their contained images.
 - `image-label` metadata is not read.
 

@@ -1,9 +1,4 @@
-import type {
-  Color,
-  CoordinateSpace,
-  GroupValueMap,
-  Marker,
-} from "./primitives";
+import type { Color, CoordinateSpace, Marker } from "./primitives";
 
 /**
  * Base type for property configurations that can be sourced from different providers
@@ -126,34 +121,6 @@ export function isGroupByConfig<
   return (
     (obj as GroupByConfig<TMapRequired, TGroupByExtra>).groupBy !== undefined
   );
-}
-
-/**
- * Returns the group-to-value map that a configuration resolves its values
- * from, if any
- *
- * Only an active `groupBy` source (see {@link getActiveConfigSource}) with a
- * map ID resolves from a map. The map is returned as found in `maps`, rather
- * than copied: maps are never mutated, as an edit replaces the map, so
- * callers can detect an edit by comparing the returned maps by identity.
- *
- * @param config - The configuration
- * @param maps - The project-global maps to look the referenced map up in
- * @returns The map, or `undefined` if the configuration does not resolve
- * from a map, or if the map it references does not exist
- */
-export function findGroupByConfigMap<TValue>(
-  config: Config<string>,
-  maps: GroupValueMap<TValue>[],
-): GroupValueMap<TValue> | undefined {
-  if (
-    getActiveConfigSource(config) === "groupBy" &&
-    isGroupByConfig<false>(config) &&
-    config.groupBy.map !== undefined
-  ) {
-    return maps.find((map) => map.id === config.groupBy.map);
-  }
-  return undefined;
 }
 
 /** Configuration to use random values */

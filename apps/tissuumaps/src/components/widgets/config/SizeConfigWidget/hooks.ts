@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 
 import {
   type CoordinateSpace,
@@ -9,7 +9,113 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
+import { useConfigWidgetState } from "../useConfigWidgetState";
 import type { SizeConfigSource, SizeConfigWidgetAdapter } from "./adapter";
+
+type SizeConfigWidgetState = {
+  currentSource: SizeConfigSource;
+  currentConstantValue: number;
+  currentConstantUnit: CoordinateSpace;
+  currentFromColumn: string | null;
+  currentFromUnit: CoordinateSpace;
+  currentGroupByColumn: string | null;
+  currentGroupByMap: string | null;
+  currentGroupByUnit: CoordinateSpace;
+};
+
+/**
+ * Returns the widget state that shows the given size configuration
+ *
+ * @param config - The size configuration
+ * @param defaultSize - The constant size if the configuration has none
+ * @param defaultSizeUnit - The unit of each source that has none
+ * @returns The widget state
+ */
+function configToState(
+  config: SizeConfig,
+  defaultSize: number,
+  defaultSizeUnit: CoordinateSpace,
+): SizeConfigWidgetState {
+  return {
+    currentSource: getActiveConfigSource(config) ?? "constant",
+    currentConstantValue: isConstantConfig(config)
+      ? config.constant.value
+      : defaultSize,
+    currentConstantUnit:
+      isConstantConfig(config) && config.constant.unit !== undefined
+        ? config.constant.unit
+        : defaultSizeUnit,
+    currentFromColumn: isFromConfig(config) ? config.from.column : null,
+    currentFromUnit:
+      isFromConfig(config) && config.from.unit !== undefined
+        ? config.from.unit
+        : defaultSizeUnit,
+    currentGroupByColumn: isGroupByConfig(config)
+      ? config.groupBy.column
+      : null,
+    currentGroupByMap:
+      isGroupByConfig(config) && config.groupBy.map !== undefined
+        ? config.groupBy.map
+        : null,
+    currentGroupByUnit:
+      isGroupByConfig(config) && config.groupBy.unit !== undefined
+        ? config.groupBy.unit
+        : defaultSizeUnit,
+  };
+}
+
+/**
+ * Returns the size configuration that the widget state sets
+ *
+ * @param state - The widget state
+ * @param config - The size configuration to update
+ * @returns The updated size configuration, or `null` if the current source is
+ * incomplete
+ */
+function stateToConfig(
+  state: SizeConfigWidgetState,
+  config: SizeConfig,
+): SizeConfig | null {
+  switch (state.currentSource) {
+    case "constant":
+      return {
+        ...config,
+        source: "constant",
+        constant: {
+          value: state.currentConstantValue,
+          unit: state.currentConstantUnit,
+        },
+      };
+    case "from":
+      if (state.currentFromColumn === null) {
+        return null;
+      }
+      return {
+        ...config,
+        source: "from",
+        from: {
+          column: state.currentFromColumn,
+          unit: state.currentFromUnit,
+        },
+      };
+    case "groupBy":
+      if (
+        state.currentGroupByColumn === null ||
+        state.currentGroupByMap === null
+      ) {
+        return null;
+      }
+      return {
+        ...config,
+        source: "groupBy",
+        groupBy: {
+          column: state.currentGroupByColumn,
+          map: state.currentGroupByMap,
+          unit: state.currentGroupByUnit,
+        },
+      };
+  }
+}
 
 export function useSizeConfigWidget(
   sizeConfig: SizeConfig,
@@ -19,113 +125,34 @@ export function useSizeConfigWidget(
   tableId: string | null,
 ): SizeConfigWidgetAdapter {
   const activeSource = getActiveConfigSource(sizeConfig) ?? "constant";
-  const [currentSource, setCurrentSource] =
-    useState<SizeConfigSource>(activeSource);
-
-  const [currentConstantValue, setCurrentConstantValue] = useState<number>(
-    isConstantConfig(sizeConfig) ? sizeConfig.constant.value : defaultSize,
-  );
-  const [currentConstantUnit, setCurrentConstantUnit] =
-    useState<CoordinateSpace>(
-      isConstantConfig(sizeConfig) && sizeConfig.constant.unit !== undefined
-        ? sizeConfig.constant.unit
-        : defaultSizeUnit,
-    );
-
-  const [currentFromColumn, setCurrentFromColumn] = useState<string | null>(
-    isFromConfig(sizeConfig) ? sizeConfig.from.column : null,
-  );
-  const [currentFromUnit, setCurrentFromUnit] = useState<CoordinateSpace>(
-    isFromConfig(sizeConfig) && sizeConfig.from.unit !== undefined
-      ? sizeConfig.from.unit
-      : defaultSizeUnit,
-  );
-
-  const [currentGroupByColumn, setCurrentGroupByColumn] = useState<
-    string | null
-  >(isGroupByConfig(sizeConfig) ? sizeConfig.groupBy.column : null);
-  const [currentGroupByMap, setCurrentGroupByMap] = useState<string | null>(
-    isGroupByConfig(sizeConfig) && sizeConfig.groupBy.map !== undefined
-      ? sizeConfig.groupBy.map
-      : null,
-  );
-  const [currentGroupByUnit, setCurrentGroupByUnit] = useState<CoordinateSpace>(
-    isGroupByConfig(sizeConfig) && sizeConfig.groupBy.unit !== undefined
-      ? sizeConfig.groupBy.unit
-      : defaultSizeUnit,
-  );
-
-  useEffect(() => {
-    if (
-      // constant is complete...
-      currentSource === "constant" &&
-      // ...and different from active config
-      (activeSource !== "constant" ||
-        !isConstantConfig(sizeConfig) ||
-        sizeConfig.constant.value !== currentConstantValue ||
-        sizeConfig.constant.unit !== currentConstantUnit)
-    ) {
-      onSizeConfigChange({
-        ...sizeConfig,
-        source: "constant",
-        constant: {
-          value: currentConstantValue,
-          unit: currentConstantUnit,
-        },
-      });
-    } else if (
-      // from is complete...
-      currentSource === "from" &&
-      currentFromColumn !== null &&
-      // ...and different from active config
-      (activeSource !== "from" ||
-        !isFromConfig(sizeConfig) ||
-        sizeConfig.from.column !== currentFromColumn ||
-        sizeConfig.from.unit !== currentFromUnit)
-    ) {
-      onSizeConfigChange({
-        ...sizeConfig,
-        source: "from",
-        from: {
-          column: currentFromColumn,
-          unit: currentFromUnit,
-        },
-      });
-    } else if (
-      // groupBy is complete...
-      currentSource === "groupBy" &&
-      currentGroupByColumn !== null &&
-      currentGroupByMap !== null &&
-      // ...and different from active config
-      (activeSource !== "groupBy" ||
-        !isGroupByConfig(sizeConfig) ||
-        sizeConfig.groupBy.column !== currentGroupByColumn ||
-        sizeConfig.groupBy.map !== currentGroupByMap ||
-        sizeConfig.groupBy.unit !== currentGroupByUnit)
-    ) {
-      onSizeConfigChange({
-        ...sizeConfig,
-        source: "groupBy",
-        groupBy: {
-          column: currentGroupByColumn,
-          map: currentGroupByMap,
-          unit: currentGroupByUnit,
-        },
-      });
-    }
-  }, [
+  const [state, setState] = useConfigWidgetState(
     sizeConfig,
-    activeSource,
-    currentSource,
-    currentConstantValue,
-    currentConstantUnit,
-    currentFromColumn,
-    currentFromUnit,
-    currentGroupByColumn,
-    currentGroupByMap,
-    currentGroupByUnit,
     onSizeConfigChange,
-  ]);
+    (config) => configToState(config, defaultSize, defaultSizeUnit),
+    stateToConfig,
+  );
+
+  const setters = useMemo(
+    () => ({
+      setCurrentSource: (currentSource: SizeConfigSource) =>
+        setState((state) => ({ ...state, currentSource })),
+      setCurrentConstantValue: (currentConstantValue: number) =>
+        setState((state) => ({ ...state, currentConstantValue })),
+      setCurrentConstantUnit: (currentConstantUnit: CoordinateSpace) =>
+        setState((state) => ({ ...state, currentConstantUnit })),
+      setCurrentFromColumn: (currentFromColumn: string | null) =>
+        setState((state) => ({ ...state, currentFromColumn })),
+      setCurrentFromUnit: (currentFromUnit: CoordinateSpace) =>
+        setState((state) => ({ ...state, currentFromUnit })),
+      setCurrentGroupByColumn: (currentGroupByColumn: string | null) =>
+        setState((state) => ({ ...state, currentGroupByColumn })),
+      setCurrentGroupByMap: (currentGroupByMap: string | null) =>
+        setState((state) => ({ ...state, currentGroupByMap })),
+      setCurrentGroupByUnit: (currentGroupByUnit: CoordinateSpace) =>
+        setState((state) => ({ ...state, currentGroupByUnit })),
+    }),
+    [setState],
+  );
 
   return {
     sizeConfig,
@@ -133,21 +160,7 @@ export function useSizeConfigWidget(
     defaultSizeUnit,
     tableId,
     activeSource,
-    currentSource,
-    currentConstantValue,
-    currentConstantUnit,
-    currentFromColumn,
-    currentFromUnit,
-    currentGroupByColumn,
-    currentGroupByMap,
-    currentGroupByUnit,
-    setCurrentSource,
-    setCurrentConstantValue,
-    setCurrentConstantUnit,
-    setCurrentFromColumn,
-    setCurrentFromUnit,
-    setCurrentGroupByColumn,
-    setCurrentGroupByMap,
-    setCurrentGroupByUnit,
+    ...state,
+    ...setters,
   };
 }

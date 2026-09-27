@@ -27,7 +27,7 @@ describe("ShapesGeometryBuilder", () => {
     expect(Array.from(geometry.polygonRingOffsets)).toEqual([0, 1]);
     expect(Array.from(geometry.ringVertexOffsets)).toEqual([0, 4]);
     expect(Array.from(geometry.coords)).toEqual([0, 0, 4, 0, 4, 4, 0, 4]);
-    expect(ids).toEqual([7]);
+    expect(ids).toEqual(new Float64Array([7]));
     expect(names).toBeUndefined();
   });
 
@@ -56,7 +56,7 @@ describe("ShapesGeometryBuilder", () => {
     const { geometry, ids, names } = builder.build();
     expect(Array.from(geometry.shapePolygonOffsets)).toEqual([0, 1, 2]);
     expect(Array.from(geometry.polygonRingOffsets)).toEqual([0, 1, 2]);
-    expect(ids).toEqual([10, 20]);
+    expect(ids).toEqual(new Float64Array([10, 20]));
     expect(names).toEqual(["first", "second"]);
   });
 
@@ -76,7 +76,7 @@ describe("ShapesGeometryBuilder", () => {
     );
     const { geometry, ids } = builder.build();
     expect(Array.from(geometry.shapePolygonOffsets)).toEqual([0]);
-    expect(ids).toEqual([]);
+    expect(ids).toEqual(new Uint32Array(0));
     warn.mockRestore();
   });
 
@@ -85,7 +85,7 @@ describe("ShapesGeometryBuilder", () => {
     builder.addShape([], 7);
     const { geometry, ids } = builder.build();
     expect(Array.from(geometry.shapePolygonOffsets)).toEqual([0]);
-    expect(ids).toEqual([]);
+    expect(ids).toEqual(new Uint32Array(0));
   });
 
   it("keeps the IDs aligned with the geometry when a shape is skipped", () => {
@@ -96,7 +96,7 @@ describe("ShapesGeometryBuilder", () => {
     builder.addShape([[square]], 30);
     const { geometry, ids } = builder.build();
     expect(geometry.shapePolygonOffsets.length - 1).toBe(2);
-    expect(ids).toEqual([10, 30]);
+    expect(ids).toEqual(new Float64Array([10, 30]));
     warn.mockRestore();
   });
 
@@ -117,7 +117,21 @@ describe("ShapesGeometryBuilder", () => {
     expect(() => builder.build()).toThrow(
       "The geometry has already been built.",
     );
-    expect(ids).toEqual([10]);
+    expect(ids).toEqual(new Float64Array([10]));
+  });
+
+  it("collects string IDs", () => {
+    const builder = new ShapesGeometryBuilder();
+    builder.addShape([[square]], "a");
+    builder.addShape([[square]], "b");
+    expect(builder.build().ids).toEqual(["a", "b"]);
+  });
+
+  it("refuses to build shapes mixing integer and string IDs", () => {
+    const builder = new ShapesGeometryBuilder();
+    builder.addShape([[square]], 1);
+    builder.addShape([[square]], "b");
+    expect(() => builder.build()).toThrow("ID is not a safe integer: b");
   });
 
   it("counts the shapes added so far", () => {
