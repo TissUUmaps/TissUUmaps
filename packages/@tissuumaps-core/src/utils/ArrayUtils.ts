@@ -69,11 +69,11 @@ export class ArrayUtils {
   /**
    * Converts 64-bit integers to 64-bit floats
    *
-   * @param values - The integers, as read from a file
+   * @param values - The integers, as read from a file (e.g. a `BigInt64Array`)
    * @returns The integers as floats
    * @throws Error if an integer is outside the safe integer range
    */
-  static parseSafeInts(values: BigInt64Array | BigUint64Array): Float64Array {
+  static parseSafeInts(values: ArrayLike<bigint>): Float64Array {
     return Float64Array.from(values, (v) => NumberUtils.parseSafeInt(v));
   }
 }
