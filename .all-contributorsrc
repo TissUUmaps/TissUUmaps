@@ -51,6 +51,15 @@
         "code",
         "review"
       ]
+    },
+    {
+      "login": "KattisLej",
+      "name": "Katarina Lejonlid",
+      "avatar_url": "https://avatars.githubusercontent.com/u/105041852?v=4",
+      "profile": "https://github.com/KattisLej",
+      "contributions": [
+        "code"
+      ]
     }
   ]
 }
