@@ -9,7 +9,7 @@ import {
   type ZarrTableDataSource,
   zarrTableDataSourceDefaults,
 } from "./ZarrTableDataSource";
-import { openZarrStore } from "./openZarrStore";
+import { openZarr } from "./openZarr";
 
 /**
  * Reads tables from Zarr stores, including the AnnData tables of SpatialData
@@ -49,7 +49,7 @@ export class ZarrTableDataProvider extends HierarchicalTableDataProviderBase<
   ): Promise<HierarchicalTable> {
     const { signal, workspace } = options;
     signal?.throwIfAborted();
-    const store = await openZarrStore(normalizedSource, { signal, workspace });
+    const store = await openZarr(normalizedSource, { signal, workspace });
     return await HierarchicalTableReader.open(store, { signal });
   }
 

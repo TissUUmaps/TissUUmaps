@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { HierarchicalStoreArray } from "../HierarchicalStore";
 import type { ZarrStore } from "./ZarrStore";
-import { openZarrStore } from "./openZarrStore";
+import { openZarr } from "./openZarr";
 
 type FakeFile = { kind: "file"; name: string; getFile: () => Promise<File> };
 type FakeDir = {
@@ -170,7 +170,7 @@ async function expectTable(store: ZarrStore): Promise<void> {
   expect(await array.read()).toEqual(new Int32Array([1, 2, 3]));
 }
 
-describe("openZarrStore", () => {
+describe("openZarr", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -178,13 +178,13 @@ describe("openZarrStore", () => {
   it("opens a group below the store root of a URL", async () => {
     serveStore("/data/sdata.zarr", writeStore("tables/adata"));
     await expectTable(
-      await openZarrStore("https://example.org/data/sdata.zarr/tables/adata"),
+      await openZarr("https://example.org/data/sdata.zarr/tables/adata"),
     );
   });
 
   it("opens a store at the root of a host", async () => {
     serveStore("", writeStore("tables/adata"));
-    await expectTable(await openZarrStore("https://example.org/tables/adata"));
+    await expectTable(await openZarr("https://example.org/tables/adata"));
   });
 
   it("decodes the group path but keeps the root URL encoded", async () => {
@@ -193,7 +193,7 @@ describe("openZarrStore", () => {
       writeStore("tables/my table"),
     );
     await expectTable(
-      await openZarrStore(
+      await openZarr(
         "https://example.org/my%20data/sdata.zarr/tables/my%20table",
       ),
     );
@@ -209,7 +209,7 @@ describe("openZarrStore", () => {
       path.startsWith("/data/sdata.zarr/tables/") ? 403 : 404,
     );
     await expectTable(
-      await openZarrStore("https://example.org/data/sdata.zarr/tables/adata"),
+      await openZarr("https://example.org/data/sdata.zarr/tables/adata"),
     );
   });
 
@@ -220,7 +220,7 @@ describe("openZarrStore", () => {
       toJson({ zarr_format: 3, node_type: "group", attributes: {} }),
     );
     serveStore("/data/sdata.zarr", files);
-    const promise = openZarrStore(
+    const promise = openZarr(
       "https://example.org/data/sdata.zarr/tables/adata",
     );
     await expect(promise).rejects.toThrow(
@@ -236,7 +236,7 @@ describe("openZarrStore", () => {
       "sdata.zarr": makeDirTree("sdata.zarr", writeStore("tables/adata")),
     }) as unknown as FileSystemDirectoryHandle;
     await expectTable(
-      await openZarrStore("/sdata.zarr/tables/adata", { workspace }),
+      await openZarr("/sdata.zarr/tables/adata", { workspace }),
     );
   });
 
@@ -249,7 +249,7 @@ describe("openZarrStore", () => {
     const reason = new Error("aborted");
     controller.abort(reason);
     await expect(
-      openZarrStore("https://example.org/data/sdata.zarr/tables/adata", {
+      openZarr("https://example.org/data/sdata.zarr/tables/adata", {
         signal: controller.signal,
       }),
     ).rejects.toBe(reason);

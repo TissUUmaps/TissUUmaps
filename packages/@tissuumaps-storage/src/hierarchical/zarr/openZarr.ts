@@ -25,7 +25,7 @@ import { ZarrStore } from "./ZarrStore";
  * @throws Error if neither the source nor any of its ancestors opens as a
  * Zarr store with consolidated metadata; the last failure is the cause
  */
-export async function openZarrStore(
+export async function openZarr(
   normalizedSource: string,
   options?: {
     signal?: AbortSignal;
