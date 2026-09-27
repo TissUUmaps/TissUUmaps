@@ -72,6 +72,7 @@ The source points at the table inside the store; its consolidated metadata is fo
 ## Limitations
 
 - The store must have consolidated metadata (in Zarr v2 `.zmetadata` or Zarr v3 `zarr.json`). A Zarr store is a key-value store, so without it the columns cannot be listed. SpatialData writes consolidated metadata.
+- Zarr v3 arrays whose chunks are compressed inside shards (the `sharding_indexed` codec with an inner compressor, which zarr-python 3 and anndata write by default) cannot be read yet. Write them without sharding (`shards=None`) or as Zarr v2, which SpatialData does.
 - Nodes whose metadata cannot be read are skipped instead of failing the store. AnnData writes a few of them under `uns`.
 - Zipped stores are not supported.
 - The [HDF5 limitations](./hdf5#limitations) on sparse matrices, 64-bit integers, row counts, variable names and column lengths apply as well. AnnData writes `X` as CSR by default.

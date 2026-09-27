@@ -81,6 +81,7 @@ The table has one row per cell, as the `obs` index gives the number of rows. Any
 - Remote files are read through HTTP range requests. The server must send `Accept-Ranges: bytes` and, for cross-origin requests, expose it via `Access-Control-Expose-Headers`; otherwise the whole file is downloaded before the first read. The parts of the file read so far stay in memory while the table is open.
 - A column must have as many rows as the table.
 - Scalars, arrays of more than two dimensions, compound datasets and nodes whose name contains a bracket are skipped.
+- Files written by anndata before 0.8 carry no `encoding-type` attributes and are read as plain HDF5 files: their `obs` and `var` are compound datasets, which are skipped, and their sparse `X` is read as its `data`, `indices` and `indptr` arrays. Rewrite them with a current anndata version.
 
 ## API
 
