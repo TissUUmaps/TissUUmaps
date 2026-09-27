@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 
 import {
-  ConfigUtils,
   type TableColumnRef,
   type VisibilityConfig,
   getActiveConfigSource,
@@ -40,12 +39,8 @@ function configToState(
     currentConstantValue: isConstantConfig(config)
       ? config.constant.value
       : defaultVisibility,
-    currentFromTableColumn: isFromConfig(config)
-      ? ConfigUtils.getTableColumnRef(config.from)
-      : null,
-    currentGroupByTableColumn: isGroupByConfig(config)
-      ? ConfigUtils.getTableColumnRef(config.groupBy)
-      : null,
+    currentFromTableColumn: isFromConfig(config) ? config.from : null,
+    currentGroupByTableColumn: isGroupByConfig(config) ? config.groupBy : null,
     currentGroupByMap:
       isGroupByConfig(config) && config.groupBy.map !== undefined
         ? config.groupBy.map

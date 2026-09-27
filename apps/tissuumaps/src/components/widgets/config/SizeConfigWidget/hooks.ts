@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 
 import {
-  ConfigUtils,
   type CoordinateSpace,
   type SizeConfig,
   type TableColumnRef,
@@ -47,16 +46,12 @@ function configToState(
       isConstantConfig(config) && config.constant.unit !== undefined
         ? config.constant.unit
         : defaultSizeUnit,
-    currentFromTableColumn: isFromConfig(config)
-      ? ConfigUtils.getTableColumnRef(config.from)
-      : null,
+    currentFromTableColumn: isFromConfig(config) ? config.from : null,
     currentFromUnit:
       isFromConfig(config) && config.from.unit !== undefined
         ? config.from.unit
         : defaultSizeUnit,
-    currentGroupByTableColumn: isGroupByConfig(config)
-      ? ConfigUtils.getTableColumnRef(config.groupBy)
-      : null,
+    currentGroupByTableColumn: isGroupByConfig(config) ? config.groupBy : null,
     currentGroupByMap:
       isGroupByConfig(config) && config.groupBy.map !== undefined
         ? config.groupBy.map

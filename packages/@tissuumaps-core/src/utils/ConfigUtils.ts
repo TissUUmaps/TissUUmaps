@@ -105,7 +105,7 @@ export class ConfigUtils {
   static getGroupByColumn(config: Config<string>): TableColumnRef | undefined {
     return getActiveConfigSource(config) === "groupBy" &&
       isGroupByConfig(config)
-      ? ConfigUtils.getTableColumnRef(config.groupBy)
+      ? config.groupBy
       : undefined;
   }
 
@@ -148,7 +148,8 @@ export class ConfigUtils {
       groupBy: {
         ...groupBy,
         ...((unit !== undefined || groupBy?.unit !== undefined) && { unit }),
-        ...ConfigUtils.getTableColumnRef(column),
+        table: column.table,
+        column: column.column,
         map: mapId,
       },
     };
@@ -176,17 +177,6 @@ export class ConfigUtils {
       default:
         return undefined;
     }
-  }
-
-  /**
-   * Narrows a configuration's column specification to the column it references
-   *
-   * @param tableColumnRef - The column specification, with any extra fields the
-   * configuration carries alongside it
-   * @returns The table column reference alone
-   */
-  static getTableColumnRef(tableColumnRef: TableColumnRef): TableColumnRef {
-    return { table: tableColumnRef.table, column: tableColumnRef.column };
   }
 
   /**

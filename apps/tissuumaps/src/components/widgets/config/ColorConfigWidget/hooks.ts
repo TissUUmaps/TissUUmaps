@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   type Color,
   type ColorConfig,
-  ConfigUtils,
   type TableColumnRef,
   getActiveConfigSource,
   isConstantConfig,
@@ -47,9 +46,7 @@ function configToState(
     currentConstantValue: isConstantConfig(config)
       ? config.constant.value
       : defaultColor,
-    currentFromTableColumn: isFromConfig(config)
-      ? ConfigUtils.getTableColumnRef(config.from)
-      : null,
+    currentFromTableColumn: isFromConfig(config) ? config.from : null,
     currentFromRangeMin:
       isFromConfig(config) && config.from.range !== undefined
         ? config.from.range[0]
@@ -59,9 +56,7 @@ function configToState(
         ? config.from.range[1]
         : null,
     currentFromPalette: isFromConfig(config) ? config.from.palette : null,
-    currentGroupByTableColumn: isGroupByConfig(config)
-      ? ConfigUtils.getTableColumnRef(config.groupBy)
-      : null,
+    currentGroupByTableColumn: isGroupByConfig(config) ? config.groupBy : null,
     currentGroupByPalette:
       isGroupByConfig(config) && config.groupBy.palette !== undefined
         ? config.groupBy.palette

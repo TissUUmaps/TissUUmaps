@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type {
-  ConstantConfig,
-  GroupByConfig,
-  TableColumnRef,
-} from "../model/configs";
+import type { ConstantConfig, GroupByConfig } from "../model/configs";
 import type { GroupValueMap } from "../model/primitives";
 import { ConfigUtils } from "./ConfigUtils";
 import { HashUtils } from "./HashUtils";
@@ -175,6 +171,17 @@ describe("ConfigUtils", () => {
       });
     });
 
+    it("replaces the table of the group-by specification", () => {
+      const config: GroupByConfig<false> = {
+        groupBy: { table: "genes", column: "gene", map: undefined },
+      };
+
+      expect(
+        ConfigUtils.withGroupByMap(config, { column: "cluster" }, "map1")
+          .groupBy,
+      ).not.toHaveProperty("table", "genes");
+    });
+
     it("carries the unit of the active source over", () => {
       const config: ConstantConfig<number, { unit: "data" }> &
         GroupByConfig<false, { unit: "world" }> = {
@@ -222,7 +229,7 @@ describe("ConfigUtils", () => {
         groupBy: { column: "cluster", map: "map1" },
       };
 
-      expect(ConfigUtils.getGroupByColumn(config)).toEqual({
+      expect(ConfigUtils.getGroupByColumn(config)).toMatchObject({
         column: "cluster",
       });
     });
@@ -255,18 +262,6 @@ describe("ConfigUtils", () => {
       const config: ConstantConfig<number> = { constant: { value: 1 } };
 
       expect(ConfigUtils.getUnit(config)).toBeUndefined();
-    });
-  });
-
-  describe("getTableColumnRef", () => {
-    it("keeps only the table and the column", () => {
-      expect(
-        ConfigUtils.getTableColumnRef({
-          table: "cells",
-          column: "cluster",
-          map: "map1",
-        } as TableColumnRef),
-      ).toEqual({ table: "cells", column: "cluster" });
     });
   });
 
