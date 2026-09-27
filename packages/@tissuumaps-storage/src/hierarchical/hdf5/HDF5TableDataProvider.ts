@@ -2,7 +2,7 @@ import { type IDArray, SourceUtils } from "@tissuumaps/core";
 
 import type { HierarchicalTable } from "../HierarchicalTable";
 import { HierarchicalTableDataProviderBase } from "../HierarchicalTableDataProviderBase";
-import { HierarchicalTableWorkerClient } from "../worker/HierarchicalTableWorkerClient";
+import { HierarchicalTableWorkerClient } from "../workers/HierarchicalTableWorkerClient";
 import { HDF5TableData } from "./HDF5TableData";
 import {
   type HDF5TableDataSource,
