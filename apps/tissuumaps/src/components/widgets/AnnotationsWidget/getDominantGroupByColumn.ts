@@ -19,10 +19,8 @@ export function getDominantGroupByColumn(
   for (const config of configs) {
     const column = ConfigUtils.getGroupByColumn(config);
     if (column !== undefined) {
-      const key = JSON.stringify([
-        column.table ?? defaultTable ?? null,
-        column.column,
-      ]);
+      // table IDs contain no colon
+      const key = `${column.table ?? defaultTable ?? ""}:${column.column}`;
       counts.set(key, { column, count: (counts.get(key)?.count ?? 0) + 1 });
     }
   }

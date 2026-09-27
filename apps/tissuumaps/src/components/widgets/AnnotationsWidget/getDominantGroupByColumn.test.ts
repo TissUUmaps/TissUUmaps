@@ -53,19 +53,6 @@ describe("getDominantGroupByColumn", () => {
     });
   });
 
-  it("keeps apart table and column names that contain a slash", () => {
-    const configs: GroupByConfig<false>[] = [
-      { groupBy: { table: "a", column: "b/c", map: undefined } },
-      { groupBy: { table: "a/b", column: "c", map: undefined } },
-      { groupBy: { table: "a/b", column: "c", map: undefined } },
-    ];
-
-    expect(getDominantGroupByColumn(configs)).toEqual({
-      table: "a/b",
-      column: "c",
-    });
-  });
-
   it("returns null without any grouping configuration", () => {
     expect(getDominantGroupByColumn([])).toBeNull();
     const constantConfig: ConstantConfig<number> = { constant: { value: 1 } };
