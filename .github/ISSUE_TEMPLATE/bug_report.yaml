@@ -11,7 +11,7 @@ body:
     attributes:
       label: Application or package
       description: Please specify the application or package (if any) where you encountered the bug.
-      placeholder: e.g., tissuumaps, docs, @tissuumaps/core, @tissuumaps/viewer, @tissuumaps/react, etc.
+      placeholder: e.g., tissuumaps, docs, @tissuumaps/core, @tissuumaps/viewer, etc.
   - type: textarea
     id: bug-report
     attributes:
