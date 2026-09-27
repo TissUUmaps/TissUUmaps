@@ -302,14 +302,6 @@ export type ProjectStoreActions = {
   moveShapes: (shapesId: string, newIndex: number) => void;
 
   /**
-   * Moves a table of the project to another index
-   *
-   * @param tableId - The ID of the table to move
-   * @param newIndex - The index to move the table to
-   */
-  moveTable: (tableId: string, newIndex: number) => void;
-
-  /**
    * Removes a layer from the project
    *
    * @param layerId - The ID of the layer to remove
