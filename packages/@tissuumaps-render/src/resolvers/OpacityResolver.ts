@@ -34,8 +34,9 @@ export class OpacityResolver {
    * @param config - Opacity configuration specifying the data source
    * @param opacityMaps - Available opacity maps for groupBy lookups
    * @param defaultOpacity - Fallback opacity value (0–1) when no valid config or value is found
-   * @param options - Optional abort signal, buffer alignment, and a getter for
-   * the loader of a table by ID, which returns `undefined` for a missing table
+   * @param options - Optional abort signal, buffer alignment, and a loader for
+   * a table by ID, or the object's own table for `undefined`, which rejects for
+   * a missing table
    * @returns A `Uint8Array` of packed opacity values (0–255), one per ID
    */
   static async resolveOpacities(
@@ -46,14 +47,13 @@ export class OpacityResolver {
     options?: {
       signal?: AbortSignal;
       align?: number;
-      getTableLoader?: (
+      loadTable?: (
         tableId: string | undefined,
-      ) =>
-        | ((options?: { signal?: AbortSignal }) => Promise<TableData>)
-        | undefined;
+        options?: { signal?: AbortSignal },
+      ) => Promise<TableData>;
     },
   ): Promise<Uint8Array> {
-    const { signal, align = 1, getTableLoader } = options ?? {};
+    const { signal, align = 1, loadTable } = options ?? {};
     signal?.throwIfAborted();
     const activeConfigSource = getActiveConfigSource(config);
     if (activeConfigSource === "constant" && isConstantConfig(config)) {
@@ -62,30 +62,32 @@ export class OpacityResolver {
       });
     }
     try {
-      if (activeConfigSource === "from" && isFromConfig(config)) {
-        const loadTable = getTableLoader?.(config.from.table);
-        if (loadTable !== undefined) {
-          return await OpacityResolver.resolveOpacitiesFromTableValues(
-            ids,
-            config,
-            defaultOpacity,
-            loadTable,
-            { signal, align },
-          );
-        }
+      if (
+        activeConfigSource === "from" &&
+        isFromConfig(config) &&
+        loadTable !== undefined
+      ) {
+        return await OpacityResolver.resolveOpacitiesFromTableValues(
+          ids,
+          config,
+          defaultOpacity,
+          loadTable,
+          { signal, align },
+        );
       }
-      if (activeConfigSource === "groupBy" && isGroupByConfig(config)) {
-        const loadTable = getTableLoader?.(config.groupBy.table);
-        if (loadTable !== undefined) {
-          return await OpacityResolver.resolveOpacitiesFromTableGroups(
-            ids,
-            config,
-            opacityMaps,
-            defaultOpacity,
-            loadTable,
-            { signal, align },
-          );
-        }
+      if (
+        activeConfigSource === "groupBy" &&
+        isGroupByConfig(config) &&
+        loadTable !== undefined
+      ) {
+        return await OpacityResolver.resolveOpacitiesFromTableGroups(
+          ids,
+          config,
+          opacityMaps,
+          defaultOpacity,
+          loadTable,
+          { signal, align },
+        );
       }
     } catch (error) {
       signal?.throwIfAborted();
@@ -178,7 +180,7 @@ export class OpacityResolver {
    * @param ids - Ordered list of item IDs
    * @param config - From configuration specifying the source column
    * @param defaultOpacity - Fallback opacity when a value is missing or invalid
-   * @param loadTable - Async function that loads the {@link TableData}
+   * @param loadTable - Async function that loads a {@link TableData} by ID
    * @param options - Optional abort signal and buffer alignment
    * @returns A `Uint8Array` of packed opacity values
    */
@@ -186,12 +188,15 @@ export class OpacityResolver {
     ids: IDArray,
     config: Extract<OpacityConfig, FromConfig>,
     defaultOpacity: number,
-    loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
+    loadTable: (
+      tableId: string | undefined,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint8Array> {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    const data = await loadTable({ signal });
+    const data = await loadTable(config.from.table, { signal });
     const packedOpacities = OpacityResolver.createOpacityBuffer(ids.length, {
       align,
     });
@@ -216,7 +221,7 @@ export class OpacityResolver {
    * @param config - GroupBy configuration specifying the source column and map
    * @param opacityMaps - Available opacity maps for group-to-opacity lookups
    * @param defaultOpacity - Fallback opacity when the map is not found or a group is unmapped
-   * @param loadTable - Async function that loads the {@link TableData}
+   * @param loadTable - Async function that loads a {@link TableData} by ID
    * @param options - Optional abort signal and buffer alignment
    * @returns A `Uint8Array` of packed opacity values
    */
@@ -225,7 +230,10 @@ export class OpacityResolver {
     config: Extract<OpacityConfig, GroupByConfig<true>>,
     opacityMaps: GroupValueMap<number>[],
     defaultOpacity: number,
-    loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
+    loadTable: (
+      tableId: string | undefined,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint8Array> {
     const { signal, align = 1 } = options ?? {};
@@ -241,7 +249,7 @@ export class OpacityResolver {
         { align },
       );
     }
-    const data = await loadTable({ signal });
+    const data = await loadTable(config.groupBy.table, { signal });
     const packedOpacities = OpacityResolver.createOpacityBuffer(ids.length, {
       align,
     });

@@ -128,7 +128,9 @@ describe("SizeResolver", () => {
         { signal: controller.signal },
       );
 
-      expect(loadTable).toHaveBeenCalledWith({ signal: controller.signal });
+      expect(loadTable).toHaveBeenCalledWith(undefined, {
+        signal: controller.signal,
+      });
     });
   });
 
@@ -254,7 +256,7 @@ describe("SizeResolver", () => {
         config,
         [],
         1,
-        { getTableLoader: () => loadTable },
+        { loadTable },
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
@@ -278,7 +280,7 @@ describe("SizeResolver", () => {
         config,
         [sizeMap],
         1,
-        { getTableLoader: () => loadTable },
+        { loadTable },
       );
 
       expect(loadTable).toHaveBeenCalledOnce();

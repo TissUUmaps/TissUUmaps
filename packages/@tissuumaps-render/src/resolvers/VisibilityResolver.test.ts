@@ -145,7 +145,9 @@ describe("VisibilityResolver", () => {
         { signal: controller.signal },
       );
 
-      expect(loadTable).toHaveBeenCalledWith({ signal: controller.signal });
+      expect(loadTable).toHaveBeenCalledWith(undefined, {
+        signal: controller.signal,
+      });
     });
   });
 
@@ -288,7 +290,7 @@ describe("VisibilityResolver", () => {
         config,
         [],
         false,
-        { getTableLoader: () => loadTable },
+        { loadTable },
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
@@ -312,7 +314,7 @@ describe("VisibilityResolver", () => {
         config,
         [visibilityMap],
         false,
-        { getTableLoader: () => loadTable },
+        { loadTable },
       );
 
       expect(loadTable).toHaveBeenCalledOnce();

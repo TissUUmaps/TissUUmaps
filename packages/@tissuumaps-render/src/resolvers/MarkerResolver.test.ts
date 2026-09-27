@@ -142,7 +142,9 @@ describe("MarkerResolver", () => {
         { signal: controller.signal },
       );
 
-      expect(loadTable).toHaveBeenCalledWith({ signal: controller.signal });
+      expect(loadTable).toHaveBeenCalledWith(undefined, {
+        signal: controller.signal,
+      });
     });
   });
 
@@ -308,7 +310,7 @@ describe("MarkerResolver", () => {
         config,
         [],
         Marker.Cross,
-        { getTableLoader: () => loadTable },
+        { loadTable },
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
@@ -332,7 +334,7 @@ describe("MarkerResolver", () => {
         config,
         [markerMap],
         Marker.Cross,
-        { getTableLoader: () => loadTable },
+        { loadTable },
       );
 
       expect(loadTable).toHaveBeenCalledOnce();

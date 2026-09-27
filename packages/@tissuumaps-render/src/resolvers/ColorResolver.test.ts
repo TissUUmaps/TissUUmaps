@@ -283,7 +283,9 @@ describe("ColorResolver", () => {
         { signal: controller.signal },
       );
 
-      expect(loadTable).toHaveBeenCalledWith({ signal: controller.signal });
+      expect(loadTable).toHaveBeenCalledWith(undefined, {
+        signal: controller.signal,
+      });
     });
   });
 
@@ -563,7 +565,7 @@ describe("ColorResolver", () => {
         config,
         [],
         black,
-        { getTableLoader: () => loadTable },
+        { loadTable },
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
@@ -574,18 +576,14 @@ describe("ColorResolver", () => {
     it("loads the table the config names", async () => {
       const palette = colorPalettes[0]!;
       const data = createMockTableData([1], [0], [0, 1]);
-      const getTableLoader = vi
-        .fn()
-        .mockReturnValue(() => Promise.resolve(data));
+      const loadTable = vi.fn().mockResolvedValue(data);
       const config = {
         from: { table: "other", column: "col1", palette: palette.id },
       } satisfies ColorConfig;
 
-      await ColorResolver.resolveColors([1], config, [], black, {
-        getTableLoader,
-      });
+      await ColorResolver.resolveColors([1], config, [], black, { loadTable });
 
-      expect(getTableLoader).toHaveBeenCalledWith("other");
+      expect(loadTable).toHaveBeenCalledWith("other", { signal: undefined });
     });
 
     it("falls back to the default color if the table is not found", async () => {
@@ -598,7 +596,10 @@ describe("ColorResolver", () => {
         config,
         [],
         red,
-        { getTableLoader: () => undefined },
+        {
+          loadTable: () =>
+            Promise.reject(new Error("Table with ID 'gone' not found")),
+        },
       );
 
       expect(packedColors[0]).toBe(ColorResolver.packColor(red));
@@ -615,7 +616,7 @@ describe("ColorResolver", () => {
         [],
         red,
         {
-          getTableLoader: () => () =>
+          loadTable: () =>
             Promise.reject(new Error("No data provider is registered")),
         },
       );
@@ -641,7 +642,7 @@ describe("ColorResolver", () => {
         config,
         [colorMap],
         black,
-        { getTableLoader: () => loadTable },
+        { loadTable },
       );
 
       expect(loadTable).toHaveBeenCalledOnce();

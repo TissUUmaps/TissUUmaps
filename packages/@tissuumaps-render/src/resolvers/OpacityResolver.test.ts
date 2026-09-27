@@ -142,7 +142,9 @@ describe("OpacityResolver", () => {
         { signal: controller.signal },
       );
 
-      expect(loadTable).toHaveBeenCalledWith({ signal: controller.signal });
+      expect(loadTable).toHaveBeenCalledWith(undefined, {
+        signal: controller.signal,
+      });
     });
   });
 
@@ -277,7 +279,7 @@ describe("OpacityResolver", () => {
         config,
         [],
         0,
-        { getTableLoader: () => loadTable },
+        { loadTable },
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
@@ -301,7 +303,7 @@ describe("OpacityResolver", () => {
         config,
         [opacityMap],
         0,
-        { getTableLoader: () => loadTable },
+        { loadTable },
       );
 
       expect(loadTable).toHaveBeenCalledOnce();

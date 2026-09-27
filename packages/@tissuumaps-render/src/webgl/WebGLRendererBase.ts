@@ -924,8 +924,8 @@ export abstract class WebGLRendererBase<
   }
 
   /**
-   * Creates the getter for the loaders of the tables that an object resolves
-   * its properties from
+   * Creates the loader for the tables that an object resolves its properties
+   * from
    *
    * A configuration may name a table other than the object's, in which case its
    * values are resolved by the item IDs of the object's own table.
@@ -933,11 +933,11 @@ export abstract class WebGLRendererBase<
    * @param ref - The object reference
    * @param syncContext - The inputs of the current synchronization: the tables to
    * look the configured table up in, and the loader for table data
-   * @returns The getter, taking the ID of a table, or `undefined` for the
-   * object's own table; it returns `undefined` if the object has no table, or
-   * the table was not found (which is logged)
+   * @returns The loader, taking the ID of a table, or `undefined` for the
+   * object's own table; it rejects if the object has no table, or the table was
+   * not found
    */
-  protected static createTableLoaderGetter(
+  protected static createTableLoader(
     ref: ObjectRef<Points | Shapes, PointsData | ShapesData>,
     syncContext: {
       tables: Table[];
@@ -948,21 +948,20 @@ export abstract class WebGLRendererBase<
     },
   ): (
     tableId: string | undefined,
-  ) =>
-    ((options?: { signal?: AbortSignal }) => Promise<TableData>) | undefined {
-    return (tableId) => {
+    options?: { signal?: AbortSignal },
+  ) => Promise<TableData> {
+    return async (tableId, options) => {
       const configTableId = tableId ?? ref.object.dataSource.table;
       if (configTableId === undefined) {
-        return undefined;
+        throw new Error(`Object with ID '${ref.object.id}' has no table`);
       }
       const table = syncContext.tables.find(
         (table) => table.id === configTableId,
       );
       if (table === undefined) {
-        console.warn(`Table with ID '${configTableId}' not found`);
-        return undefined;
+        throw new Error(`Table with ID '${configTableId}' not found`);
       }
-      return (options) => syncContext.loadTable(table, options);
+      return await syncContext.loadTable(table, options);
     };
   }
 

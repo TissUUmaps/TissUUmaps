@@ -237,19 +237,20 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
             throw new Error("String IDs cannot address label values");
           }
           // values of another table are resolved by the labels' own IDs
-          const getTableLoader = (tableId: string | undefined) => {
+          const loadTable = async (
+            tableId: string | undefined,
+            options?: { signal?: AbortSignal },
+          ) => {
             if (tableId === undefined || tableId === labels.dataSource.table) {
-              return () => Promise.resolve(tableData);
+              return tableData;
             }
             const configTable = context.tables.find(
               (contextTable) => contextTable.id === tableId,
             );
             if (configTable === undefined) {
-              console.warn(`Table with ID '${tableId}' not found`);
-              return undefined;
+              throw new Error(`Table with ID '${tableId}' not found`);
             }
-            return (options?: { signal?: AbortSignal }) =>
-              context.loadTable(configTable, options);
+            return await context.loadTable(configTable, options);
           };
           const [
             packedLabelColors,
@@ -261,21 +262,21 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
               labels.labelColor,
               context.colorMaps,
               defaultLabelColor,
-              { signal, getTableLoader },
+              { signal, loadTable },
             ),
             VisibilityResolver.resolveVisibilities(
               labelIds,
               labels.labelVisibility,
               context.visibilityMaps,
               defaultLabelVisibility,
-              { signal, getTableLoader },
+              { signal, loadTable },
             ),
             OpacityResolver.resolveOpacities(
               labelIds,
               labels.labelOpacity,
               context.opacityMaps,
               defaultLabelOpacity,
-              { signal, getTableLoader },
+              { signal, loadTable },
             ),
           ]);
           await AsyncUtils.forEach(

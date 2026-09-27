@@ -33,8 +33,9 @@ export class SizeResolver {
    * @param config - Size configuration specifying the data source
    * @param sizeMaps - Available size maps for groupBy lookups
    * @param defaultSize - Fallback size when no valid config or value is found
-   * @param options - Optional abort signal, buffer alignment, and a getter for
-   * the loader of a table by ID, which returns `undefined` for a missing table
+   * @param options - Optional abort signal, buffer alignment, and a loader for
+   * a table by ID, or the object's own table for `undefined`, which rejects for
+   * a missing table
    * @returns A `Float32Array` of packed size values, one per ID
    */
   static async resolveSizes(
@@ -45,14 +46,13 @@ export class SizeResolver {
     options?: {
       signal?: AbortSignal;
       align?: number;
-      getTableLoader?: (
+      loadTable?: (
         tableId: string | undefined,
-      ) =>
-        | ((options?: { signal?: AbortSignal }) => Promise<TableData>)
-        | undefined;
+        options?: { signal?: AbortSignal },
+      ) => Promise<TableData>;
     },
   ): Promise<Float32Array> {
-    const { signal, align = 1, getTableLoader } = options ?? {};
+    const { signal, align = 1, loadTable } = options ?? {};
     signal?.throwIfAborted();
     const activeConfigSource = getActiveConfigSource(config);
     if (activeConfigSource === "constant" && isConstantConfig(config)) {
@@ -61,30 +61,32 @@ export class SizeResolver {
       });
     }
     try {
-      if (activeConfigSource === "from" && isFromConfig(config)) {
-        const loadTable = getTableLoader?.(config.from.table);
-        if (loadTable !== undefined) {
-          return await SizeResolver.resolveSizesFromTableValues(
-            ids,
-            config,
-            defaultSize,
-            loadTable,
-            { signal, align },
-          );
-        }
+      if (
+        activeConfigSource === "from" &&
+        isFromConfig(config) &&
+        loadTable !== undefined
+      ) {
+        return await SizeResolver.resolveSizesFromTableValues(
+          ids,
+          config,
+          defaultSize,
+          loadTable,
+          { signal, align },
+        );
       }
-      if (activeConfigSource === "groupBy" && isGroupByConfig(config)) {
-        const loadTable = getTableLoader?.(config.groupBy.table);
-        if (loadTable !== undefined) {
-          return await SizeResolver.resolveSizesFromTableGroups(
-            ids,
-            config,
-            sizeMaps,
-            defaultSize,
-            loadTable,
-            { signal, align },
-          );
-        }
+      if (
+        activeConfigSource === "groupBy" &&
+        isGroupByConfig(config) &&
+        loadTable !== undefined
+      ) {
+        return await SizeResolver.resolveSizesFromTableGroups(
+          ids,
+          config,
+          sizeMaps,
+          defaultSize,
+          loadTable,
+          { signal, align },
+        );
       }
     } catch (error) {
       signal?.throwIfAborted();
@@ -172,7 +174,7 @@ export class SizeResolver {
    * @param ids - Ordered list of item IDs
    * @param config - From configuration specifying the source column
    * @param defaultSize - Fallback size when a value is missing or invalid
-   * @param loadTable - Async function that loads the {@link TableData}
+   * @param loadTable - Async function that loads a {@link TableData} by ID
    * @param options - Optional abort signal and buffer alignment
    * @returns A `Float32Array` of packed size values
    */
@@ -180,12 +182,15 @@ export class SizeResolver {
     ids: IDArray,
     config: Extract<SizeConfig, FromConfig>,
     defaultSize: number,
-    loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
+    loadTable: (
+      tableId: string | undefined,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number },
   ): Promise<Float32Array> {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    const data = await loadTable({ signal });
+    const data = await loadTable(config.from.table, { signal });
     const packedSizes = SizeResolver.createSizeBuffer(ids.length, { align });
     await TableUtils.fillFromTableValues(
       packedSizes,
@@ -208,7 +213,7 @@ export class SizeResolver {
    * @param config - GroupBy configuration specifying the source column and map
    * @param sizeMaps - Available size maps for group-to-size lookups
    * @param defaultSize - Fallback size when the map is not found or a group is unmapped
-   * @param loadTable - Async function that loads the {@link TableData}
+   * @param loadTable - Async function that loads a {@link TableData} by ID
    * @param options - Optional abort signal and buffer alignment
    * @returns A `Float32Array` of packed size values
    */
@@ -217,7 +222,10 @@ export class SizeResolver {
     config: Extract<SizeConfig, GroupByConfig<true>>,
     sizeMaps: GroupValueMap<number>[],
     defaultSize: number,
-    loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
+    loadTable: (
+      tableId: string | undefined,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number },
   ): Promise<Float32Array> {
     const { signal, align = 1 } = options ?? {};
@@ -231,7 +239,7 @@ export class SizeResolver {
         align,
       });
     }
-    const data = await loadTable({ signal });
+    const data = await loadTable(config.groupBy.table, { signal });
     const packedSizes = SizeResolver.createSizeBuffer(ids.length, { align });
     await TableUtils.fillFromTableGroups(
       packedSizes,

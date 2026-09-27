@@ -354,7 +354,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   ): Promise<PreparedPoints> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const getTableLoader = WebGLPointsRenderer.createTableLoaderGetter(
+    const loadTable = WebGLPointsRenderer.createTableLoader(
       newRef,
       syncContext,
     );
@@ -397,7 +397,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           newRef.object.pointMarker,
           syncContext.markerMaps,
           defaultPointMarker,
-          { signal, getTableLoader },
+          { signal, loadTable },
         ))
       : undefined;
     const packedPointSizesPromise = pointSizeBufferChanged
@@ -407,7 +407,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           newRef.object.pointSize,
           syncContext.sizeMaps,
           defaultPointSize,
-          { signal, getTableLoader },
+          { signal, loadTable },
         ))
       : undefined;
     const packedPointColorsPromise = pointColorBufferChanged
@@ -417,7 +417,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           newRef.object.pointColor,
           syncContext.colorMaps,
           defaultPointColor,
-          { signal, getTableLoader },
+          { signal, loadTable },
         ))
       : undefined;
     const packedPointVisibilitiesPromise =
@@ -427,7 +427,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
             newRef.object.pointVisibility,
             syncContext.visibilityMaps,
             defaultPointVisibility,
-            { signal, getTableLoader },
+            { signal, loadTable },
           )
         : undefined;
     const packedPointOpacitiesPromise =
@@ -437,7 +437,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
             newRef.object.pointOpacity,
             syncContext.opacityMaps,
             defaultPointOpacity,
-            { signal, getTableLoader },
+            { signal, loadTable },
           )
         : undefined;
     const [

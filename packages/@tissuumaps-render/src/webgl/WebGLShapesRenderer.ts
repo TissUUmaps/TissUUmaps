@@ -338,7 +338,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   ): Promise<PreparedShapes | null> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const getTableLoader = WebGLShapesRenderer.createTableLoaderGetter(
+    const loadTable = WebGLShapesRenderer.createTableLoader(
       newRef,
       syncContext,
     );
@@ -373,7 +373,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           defaultShapeVisibility,
           {
             signal,
-            getTableLoader,
+            loadTable,
             align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
           },
         )
@@ -386,7 +386,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           defaultShapeOpacity,
           {
             signal,
-            getTableLoader,
+            loadTable,
             align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
           },
         )
@@ -399,7 +399,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           defaultShapeFillColor,
           {
             signal,
-            getTableLoader,
+            loadTable,
             align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
           },
         )
@@ -412,7 +412,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           defaultShapeFillVisibility,
           {
             signal,
-            getTableLoader,
+            loadTable,
             align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
           },
         )
@@ -425,7 +425,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           defaultShapeFillOpacity,
           {
             signal,
-            getTableLoader,
+            loadTable,
             align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
           },
         )
@@ -438,7 +438,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           defaultShapeStrokeColor,
           {
             signal,
-            getTableLoader,
+            loadTable,
             align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
           },
         )
@@ -451,7 +451,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           defaultShapeStrokeVisibility,
           {
             signal,
-            getTableLoader,
+            loadTable,
             align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
           },
         )
@@ -464,7 +464,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           defaultShapeStrokeOpacity,
           {
             signal,
-            getTableLoader,
+            loadTable,
             align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
           },
         )
