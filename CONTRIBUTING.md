@@ -122,6 +122,10 @@ Please refer to the [Documentation](https://tissuumaps.github.io/TissUUmaps4/doc
 
 It is recommended to follow the [Conventional Commits](https://www.conventionalcommits.org/) specification when writing commit messages.
 
+### Changesets
+
+Pull requests that change a published `@tissuumaps/*` package or the TissUUmaps application include a [changeset](https://github.com/changesets/changesets) (`pnpm changeset`) describing the change for the changelog; see the [Documentation](https://tissuumaps.github.io/TissUUmaps4/docs/docs/development/development-workflow#versioning-and-changelogs).
+
 ## Join The Project Team
 
 Please get in touch with any [current member](CONTRIBUTORS.md) of the core team if you would like to join the project team.
