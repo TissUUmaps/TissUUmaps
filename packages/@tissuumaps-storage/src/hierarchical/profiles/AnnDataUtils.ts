@@ -6,7 +6,6 @@ import type {
   HierarchicalStoreArray,
   HierarchicalStoreGroup,
 } from "../HierarchicalStore";
-import { HierarchicalStoreUtils } from "../HierarchicalStoreUtils";
 import type { HierarchicalTableColumn } from "../HierarchicalTable";
 
 /**
@@ -223,7 +222,7 @@ export class AnnDataUtils {
     }
     const indexName = group.attrs["_index"];
     return typeof indexName === "string"
-      ? HierarchicalStoreUtils.joinPath(path, indexName)
+      ? ColumnQueryUtils.joinPath(path, indexName)
       : undefined;
   }
 
@@ -298,7 +297,7 @@ export class AnnDataUtils {
       annDataPath === "" ? path : path.slice(annDataPath.length + 1),
     );
     return match !== null
-      ? HierarchicalStoreUtils.joinPath(annDataPath, `${match[1] ?? ""}var`)
+      ? ColumnQueryUtils.joinPath(annDataPath, `${match[1] ?? ""}var`)
       : undefined;
   }
 
@@ -331,7 +330,7 @@ export class AnnDataUtils {
       }
       const values =
         node.kind === "array"
-          ? HierarchicalStoreUtils.toNumbersIfInt64(await node.read({ signal }))
+          ? await node.read({ signal })
           : await AnnDataUtils.readColumn(store, node, indexPath, undefined, {
               signal,
             });
@@ -380,9 +379,7 @@ export class AnnDataUtils {
     const child = await AnnDataUtils._getChildArray(store, path, name, {
       signal,
     });
-    return HierarchicalStoreUtils.toNumbersIfInt64(
-      await child.read({ signal }),
-    );
+    return await child.read({ signal });
   }
 
   private static async _readCategorical(
@@ -471,22 +468,22 @@ export class AnnDataUtils {
     const indptr = await AnnDataUtils._getChildArray(store, path, "indptr", {
       signal,
     });
-    const bounds = HierarchicalStoreUtils.toNumbersIfInt64(
-      await indptr.slice([[index, index + 2]], { signal }),
-    ) as ArrayLike<number>;
+    const bounds = (await indptr.slice([[index, index + 2]], {
+      signal,
+    })) as ArrayLike<number>;
     const range: [number, number] = [bounds[0]!, bounds[1]!];
     const data = await AnnDataUtils._getChildArray(store, path, "data", {
       signal,
     });
-    const values = HierarchicalStoreUtils.toNumbersIfInt64(
-      await data.slice([range], { signal }),
-    ) as ArrayLike<number | boolean>;
+    const values = (await data.slice([range], { signal })) as ArrayLike<
+      number | boolean
+    >;
     const indices = await AnnDataUtils._getChildArray(store, path, "indices", {
       signal,
     });
-    const rows = HierarchicalStoreUtils.toNumbersIfInt64(
-      await indices.slice([range], { signal }),
-    ) as ArrayLike<number>;
+    const rows = (await indices.slice([range], {
+      signal,
+    })) as ArrayLike<number>;
     const column = new Float64Array(shape[0]!);
     for (let i = 0; i < rows.length; i++) {
       column[rows[i]!] = Number(values[i]);

@@ -4,13 +4,6 @@ import type { TypedArrayOrArray } from "@tissuumaps/core";
 export type HierarchicalStoreDataType =
   "integer" | "float" | "string" | "boolean" | "other";
 
-/**
- * The values of a {@link HierarchicalStoreArray}; 64-bit integers read as
- * `BigInt64Array`/`BigUint64Array`
- */
-export type HierarchicalStoreValues =
-  TypedArrayOrArray<unknown> | BigInt64Array | BigUint64Array;
-
 /** A named container of other nodes */
 export interface HierarchicalStoreGroup {
   readonly kind: "group";
@@ -30,21 +23,23 @@ export interface HierarchicalStoreArray {
 
   /**
    * @param options - Optional abort signal
-   * @returns All values
+   * @returns All values; 64-bit integers as 64-bit floats
+   * @throws Error if a 64-bit integer is outside the safe integer range
    */
-  read(options?: { signal?: AbortSignal }): Promise<HierarchicalStoreValues>;
+  read(options?: { signal?: AbortSignal }): Promise<TypedArrayOrArray<unknown>>;
 
   /**
    * @param ranges - One `[start, end)` range per dimension, or `null` for the
    * whole dimension
    * @param options - Optional abort signal
-   * @returns The values within the ranges; an empty range yields an empty
-   * array of any type
+   * @returns The values within the ranges, 64-bit integers as 64-bit floats;
+   * an empty range yields an empty array of any type
+   * @throws Error if a 64-bit integer is outside the safe integer range
    */
   slice(
     ranges: ([number, number] | null)[],
     options?: { signal?: AbortSignal },
-  ): Promise<HierarchicalStoreValues>;
+  ): Promise<TypedArrayOrArray<unknown>>;
 }
 
 /** A node of a {@link HierarchicalStore} */

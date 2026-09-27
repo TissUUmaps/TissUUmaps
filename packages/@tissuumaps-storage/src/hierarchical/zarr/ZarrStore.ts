@@ -1,12 +1,13 @@
 import * as zarr from "zarrita";
 
+import { ArrayUtils, type TypedArrayOrArray } from "@tissuumaps/core";
+
 import type {
   HierarchicalStore,
   HierarchicalStoreArray,
   HierarchicalStoreDataType,
   HierarchicalStoreGroup,
   HierarchicalStoreNode,
-  HierarchicalStoreValues,
 } from "../HierarchicalStore";
 import { ConsolidatedMetadataUtils } from "./ConsolidatedMetadataUtils";
 
@@ -199,7 +200,7 @@ class ZarrArray implements HierarchicalStoreArray {
 
   async read(options?: {
     signal?: AbortSignal;
-  }): Promise<HierarchicalStoreValues> {
+  }): Promise<TypedArrayOrArray<unknown>> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const chunk = await zarr.get(this._array, null, { signal });
@@ -209,7 +210,7 @@ class ZarrArray implements HierarchicalStoreArray {
   async slice(
     ranges: ([number, number] | null)[],
     options?: { signal?: AbortSignal },
-  ): Promise<HierarchicalStoreValues> {
+  ): Promise<TypedArrayOrArray<unknown>> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     if (ranges.some((range) => range !== null && range[0] >= range[1])) {
@@ -237,14 +238,17 @@ function isFixedWidthStringType(dtype: string): boolean {
  * Converts the array-like views of zarrita into indexable arrays
  *
  * Booleans become the 0/1 bytes they are stored as, which is also how h5py
- * writes them to HDF5.
+ * writes them to HDF5; 64-bit integers become 64-bit floats.
  */
-function toStoreValues(data: unknown): HierarchicalStoreValues {
+function toStoreValues(data: unknown): TypedArrayOrArray<unknown> {
   if (data instanceof zarr.BoolArray) {
     return new Uint8Array(data.buffer, data.byteOffset, data.length);
   }
+  if (data instanceof BigInt64Array || data instanceof BigUint64Array) {
+    return ArrayUtils.parseSafeInts(data);
+  }
   if (Array.isArray(data) || ArrayBuffer.isView(data)) {
-    return data as HierarchicalStoreValues;
+    return data as TypedArrayOrArray<unknown>;
   }
   return Array.from(data as Iterable<unknown>);
 }

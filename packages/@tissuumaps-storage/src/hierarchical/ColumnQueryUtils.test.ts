@@ -24,6 +24,13 @@ describe("ColumnQueryUtils", () => {
     });
   });
 
+  describe("joinPath", () => {
+    it("joins a parent path and a name", () => {
+      expect(ColumnQueryUtils.joinPath("obs", "area")).toBe("obs/area");
+      expect(ColumnQueryUtils.joinPath("", "obs")).toBe("obs");
+    });
+  });
+
   describe("getMatrixSelectors", () => {
     it("uses unique names as selectors", () => {
       expect(ColumnQueryUtils.getMatrixSelectors(genes)).toEqual(genes);

@@ -1,12 +1,13 @@
 import h5wasm, { type Dataset, type Group, type File as H5File } from "h5wasm";
 
+import { ArrayUtils, type TypedArrayOrArray } from "@tissuumaps/core";
+
 import type {
   HierarchicalStore,
   HierarchicalStoreArray,
   HierarchicalStoreDataType,
   HierarchicalStoreGroup,
   HierarchicalStoreNode,
-  HierarchicalStoreValues,
 } from "../HierarchicalStore";
 
 /** HDF5 datatype classes (H5T_class_t); enums read as their integer codes */
@@ -133,26 +134,43 @@ class HDF5Array implements HierarchicalStoreArray {
     this.dataType = dataTypes[metadata.type] ?? "other";
   }
 
-  read(options?: { signal?: AbortSignal }): Promise<HierarchicalStoreValues> {
+  read(options?: {
+    signal?: AbortSignal;
+  }): Promise<TypedArrayOrArray<unknown>> {
     const { signal } = options ?? {};
     if (signal?.aborted) {
       return Promise.reject(signal.reason as Error);
     }
-    return Promise.resolve(this._dataset.value as HierarchicalStoreValues);
+    return new Promise((resolve) => {
+      resolve(toStoreValues(this._dataset.value));
+    });
   }
 
   slice(
     ranges: ([number, number] | null)[],
     options?: { signal?: AbortSignal },
-  ): Promise<HierarchicalStoreValues> {
+  ): Promise<TypedArrayOrArray<unknown>> {
     const { signal } = options ?? {};
     if (signal?.aborted) {
       return Promise.reject(signal.reason as Error);
     }
-    return Promise.resolve(
-      this._dataset.slice(
-        ranges.map((range) => range ?? []),
-      ) as HierarchicalStoreValues,
-    );
+    return new Promise((resolve) => {
+      resolve(
+        toStoreValues(this._dataset.slice(ranges.map((range) => range ?? []))),
+      );
+    });
   }
+}
+
+/**
+ * Converts the values h5wasm reads into the arrays the store contract holds
+ *
+ * 64-bit integers, which h5wasm reads as `BigInt64Array`/`BigUint64Array`,
+ * become 64-bit floats.
+ */
+function toStoreValues(values: unknown): TypedArrayOrArray<unknown> {
+  if (values instanceof BigInt64Array || values instanceof BigUint64Array) {
+    return ArrayUtils.parseSafeInts(values);
+  }
+  return values as TypedArrayOrArray<unknown>;
 }

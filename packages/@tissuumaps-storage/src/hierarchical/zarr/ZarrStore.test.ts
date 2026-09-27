@@ -172,6 +172,13 @@ function writeV2Fixture(
   );
   writeV2Array(
     fixture,
+    `${base}obs/int64big`,
+    "<i8",
+    [1],
+    toBytes(new BigInt64Array([2n ** 60n])),
+  );
+  writeV2Array(
+    fixture,
     `${base}obs/float32`,
     "<f4",
     [3],
@@ -237,6 +244,13 @@ function writeV3Fixture(prefix = ""): Map<string, Uint8Array> {
     "int64",
     [3],
     toBytes(new BigInt64Array([1n, 2n, 3n])),
+  );
+  writeV3Array(
+    fixture,
+    `${base}obs/int64big`,
+    "int64",
+    [1],
+    toBytes(new BigInt64Array([2n ** 60n])),
   );
   writeV3Array(
     fixture,
@@ -384,6 +398,7 @@ describe("ZarrStore", () => {
         expect(obs.keys).toEqual([
           "int32",
           "int64",
+          "int64big",
           "float32",
           "bool",
           "names",
@@ -469,14 +484,22 @@ describe("ZarrStore", () => {
         const read = async (path: string) =>
           (await getArray(store, path)).read();
         expect(await read("obs/int32")).toEqual(new Int32Array([1, 2, 3]));
-        expect(await read("obs/int64")).toEqual(
-          new BigInt64Array([1n, 2n, 3n]),
-        );
+        expect(await read("obs/int64")).toEqual(new Float64Array([1, 2, 3]));
         expect(await read("obs/float32")).toEqual(
           new Float32Array([1.5, 2.5, 3.5]),
         );
         expect(await read("obs/bool")).toEqual(new Uint8Array([1, 0, 1]));
         expect(await read("obs/names")).toEqual(names);
+      },
+    );
+
+    it.each(formats)(
+      "rejects 64-bit integers outside the safe integer range (%s)",
+      async (_, writeFixture) => {
+        const store = await openFixture(writeFixture());
+        await expect(
+          (await getArray(store, "obs/int64big")).read(),
+        ).rejects.toThrow();
       },
     );
 

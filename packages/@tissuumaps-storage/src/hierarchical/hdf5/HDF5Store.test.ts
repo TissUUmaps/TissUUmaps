@@ -18,6 +18,10 @@ function writeStoreFixture(): void {
   group.create_attribute("shape", new Int32Array([3, 2]));
   group.create_dataset({ name: "int32", data: new Int32Array([1, 2, 3]) });
   group.create_dataset({ name: "int64", data: new BigInt64Array([1n, 2n]) });
+  group.create_dataset({
+    name: "int64big",
+    data: new BigInt64Array([2n ** 60n]),
+  });
   group.create_dataset({ name: "float", data: new Float32Array([1.5, 2.5]) });
   group.create_dataset({ name: "strings", data: ["a", "bc"] });
   file.create_dataset({ name: "scalar", data: "sample" });
@@ -106,7 +110,13 @@ describe("HDF5Store", () => {
         "encoding-type": "csc_matrix",
         shape: new Int32Array([3, 2]),
       });
-      expect(group.keys).toEqual(["float", "int32", "int64", "strings"]);
+      expect(group.keys).toEqual([
+        "float",
+        "int32",
+        "int64",
+        "int64big",
+        "strings",
+      ]);
     });
 
     it("returns arrays with their shape and data type", async () => {
@@ -157,8 +167,12 @@ describe("HDF5Store", () => {
         "bc",
       ]);
       expect(await (await getArray("group/int64")).read()).toEqual(
-        new BigInt64Array([1n, 2n]),
+        new Float64Array([1, 2]),
       );
+    });
+
+    it("rejects 64-bit integers outside the safe integer range", async () => {
+      await expect((await getArray("group/int64big")).read()).rejects.toThrow();
     });
 
     it("rejects an aborted signal", async () => {

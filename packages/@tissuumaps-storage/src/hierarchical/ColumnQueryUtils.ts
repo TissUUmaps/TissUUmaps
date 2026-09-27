@@ -43,6 +43,15 @@ export class ColumnQueryUtils {
   }
 
   /**
+   * @param prefix - The path of the parent, empty for the root
+   * @param name - The path below the parent
+   * @returns The joined path
+   */
+  static joinPath(prefix: string, name: string): string {
+    return prefix !== "" ? `${prefix}/${name}` : name;
+  }
+
+  /**
    * Derives the selectors of the columns of a matrix from their names
    *
    * A name is its column's selector if it is unique, non-empty, not a number

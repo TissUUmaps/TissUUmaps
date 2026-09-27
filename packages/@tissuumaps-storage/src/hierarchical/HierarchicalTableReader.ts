@@ -9,7 +9,6 @@ import type {
   HierarchicalStore,
   HierarchicalStoreGroup,
 } from "./HierarchicalStore";
-import { HierarchicalStoreUtils } from "./HierarchicalStoreUtils";
 import type {
   HierarchicalTable,
   HierarchicalTableColumn,
@@ -222,7 +221,7 @@ async function inferNumRows(
   if (annDataPath !== undefined) {
     const indexPath = await AnnDataUtils.getDataFrameIndexPath(
       store,
-      HierarchicalStoreUtils.joinPath(annDataPath, "obs"),
+      ColumnQueryUtils.joinPath(annDataPath, "obs"),
       { signal },
     );
     if (indexPath !== undefined) {
@@ -282,11 +281,9 @@ async function readColumnValues(
     throw new Error(`Column "${path}" does not exist`);
   }
   if (node.kind === "array") {
-    return HierarchicalStoreUtils.toNumbersIfInt64(
-      index === undefined
-        ? await node.read({ signal })
-        : await node.slice([null, [index, index + 1]], { signal }),
-    );
+    return index === undefined
+      ? await node.read({ signal })
+      : await node.slice([null, [index, index + 1]], { signal });
   }
   if (!AnnDataUtils.isColumnGroup(node)) {
     throw new Error(`"${path}" is a group, not a column`);

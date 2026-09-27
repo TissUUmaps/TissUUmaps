@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import type { TypedArrayOrArray } from "@tissuumaps/core";
+
 import type {
   HierarchicalStore,
   HierarchicalStoreDataType,
   HierarchicalStoreNode,
-  HierarchicalStoreValues,
 } from "./HierarchicalStore";
 import { HierarchicalTableReader } from "./HierarchicalTableReader";
 
@@ -16,7 +17,7 @@ type MemoryNode =
     }
   | {
       kind: "array";
-      values: HierarchicalStoreValues;
+      values: TypedArrayOrArray<unknown>;
       shape: number[];
       dataType: HierarchicalStoreDataType;
     };
@@ -29,7 +30,7 @@ function group(
 }
 
 function array(
-  values: HierarchicalStoreValues,
+  values: TypedArrayOrArray<unknown>,
   shape: number[] = [values.length],
   dataType?: HierarchicalStoreDataType,
 ): MemoryNode {
@@ -57,8 +58,8 @@ function dataFrame(
 }
 
 function categorical(
-  codes: HierarchicalStoreValues,
-  categories: HierarchicalStoreValues,
+  codes: TypedArrayOrArray<unknown>,
+  categories: TypedArrayOrArray<unknown>,
 ): MemoryNode {
   return group(
     { codes: array(codes), categories: array(categories) },
@@ -69,9 +70,9 @@ function categorical(
 function sparse(
   encodingType: "csc_matrix" | "csr_matrix",
   shape: [number, number],
-  data: HierarchicalStoreValues,
-  indices: HierarchicalStoreValues,
-  indptr: HierarchicalStoreValues,
+  data: TypedArrayOrArray<unknown>,
+  indices: TypedArrayOrArray<unknown>,
+  indptr: TypedArrayOrArray<unknown>,
 ): MemoryNode {
   return group(
     { data: array(data), indices: array(indices), indptr: array(indptr) },
@@ -143,7 +144,7 @@ function annData(children: Record<string, MemoryNode>): MemoryNode {
       obs: dataFrame("_index", {
         _index: array(["c0", "c1", "c2"]),
         area: array(new Float32Array([1.5, 2.5, 3.5])),
-        ids: array(new BigInt64Array([1n, 2n, 3n])),
+        ids: array(new Float64Array([1, 2, 3])),
         cell_type: categorical(new Int8Array([0, -1, 1]), ["T", "B"]),
         batch: categorical(
           new Int8Array([1, 0, -1]),
@@ -151,7 +152,7 @@ function annData(children: Record<string, MemoryNode>): MemoryNode {
         ),
         cluster: categorical(
           new Int8Array([1, 1, 0]),
-          new BigInt64Array([5n, 7n]),
+          new Float64Array([5, 7]),
         ),
         score: group(
           {
@@ -360,13 +361,6 @@ describe("HierarchicalTableReader", () => {
       );
     });
 
-    it("rejects 64-bit integers outside the safe integer range", async () => {
-      const reader = await openReader(
-        group({ big: array(new BigInt64Array([2n ** 60n])) }),
-      );
-      await expect(reader.readColumn("big")).rejects.toThrow();
-    });
-
     it("reads one column of a 2-D array", async () => {
       const reader = await openReader(annData({}));
       expect(await reader.readColumn("obsm/spatial[1]")).toEqual([1, 3, 5]);
@@ -402,15 +396,15 @@ describe("HierarchicalTableReader", () => {
       expect(await reader.readColumn("X[1]")).toEqual(new Float64Array(3));
     });
 
-    it("reads CSC matrices with 64-bit integer data and indices", async () => {
+    it("reads CSC matrices with 64-bit float data and indices", async () => {
       const reader = await openReader(
         group({
           counts: sparse(
             "csc_matrix",
             [2, 1],
-            new BigInt64Array([4n]),
-            new BigInt64Array([1n]),
-            new BigInt64Array([0n, 1n]),
+            new Float64Array([4]),
+            new Float64Array([1]),
+            new Float64Array([0, 1]),
           ),
         }),
       );

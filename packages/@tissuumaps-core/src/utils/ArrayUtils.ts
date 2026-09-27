@@ -1,4 +1,5 @@
 import type { IDArray, IntOrUintArray } from "../types/arrays";
+import { NumberUtils } from "./NumberUtils";
 
 /**
  * Utility methods for converting arrays to the types the storage API holds
@@ -63,5 +64,16 @@ export class ArrayUtils {
       values instanceof Uint16Array ||
       values instanceof Uint32Array
     );
+  }
+
+  /**
+   * Converts 64-bit integers to 64-bit floats
+   *
+   * @param values - The integers, as read from a file
+   * @returns The integers as floats
+   * @throws Error if an integer is outside the safe integer range
+   */
+  static parseSafeInts(values: BigInt64Array | BigUint64Array): Float64Array {
+    return Float64Array.from(values, (v) => NumberUtils.parseSafeInt(v));
   }
 }
