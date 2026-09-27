@@ -59,6 +59,8 @@ export type CompressedRowVirtualizer<THeader extends HTMLElement> = {
   layoutRowsHeight: number;
   /** How far the rows have run ahead of the layout, in pixels */
   rowShift: number;
+  /** Scrolls the least distance that brings a row fully into view */
+  scrollRowIntoView: (index: number) => void;
 };
 
 /**
@@ -157,6 +159,24 @@ export function useCompressedRowVirtualizer<
   // is the scroll offset less the header
   const rowsScrollOffset = Math.max(0, scrollOffset - headerHeight);
 
+  function scrollRowIntoView(index: number) {
+    const container = containerRef.current;
+    if (container === null) {
+      return;
+    }
+    const rowTop = headerHeight + index * rowHeight;
+    const offset = scrollOffsetRef.current;
+    let newOffset: number;
+    if (rowTop < offset) {
+      newOffset = rowTop;
+    } else if (rowTop + rowHeight > offset + viewportHeight) {
+      newOffset = rowTop + rowHeight - viewportHeight;
+    } else {
+      return;
+    }
+    container.scrollTop = Math.round(newOffset / compressionRef.current);
+  }
+
   return {
     containerRef,
     headerRef,
@@ -170,5 +190,6 @@ export function useCompressedRowVirtualizer<
     ),
     layoutRowsHeight: layoutHeight - headerHeight,
     rowShift: scrollOffset * (1 - 1 / compression),
+    scrollRowIntoView,
   };
 }
