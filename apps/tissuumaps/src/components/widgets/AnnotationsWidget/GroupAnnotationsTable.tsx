@@ -17,7 +17,7 @@ import {
   type GroupColumnPickerProps,
 } from "./GroupColumnPicker";
 import { GroupVisibilityCell } from "./cells/GroupVisibilityCell";
-import { InactiveCell } from "./cells/InactiveCell";
+import { MutedCell } from "./cells/MutedCell";
 import type { GroupVisibility } from "./useGroupVisibility";
 
 export type GroupAnnotationsTableRowData = {
@@ -182,7 +182,7 @@ export function GroupAnnotationsTable({
       size: 36,
       enableResizing: false,
       header: () => (
-        <InactiveCell isInactive={isInactive}>
+        <MutedCell isMuted={isInactive}>
           <span className="flex h-6 w-full items-center px-1">
             <Checkbox
               checked={groups.length > 0 && numVisibleGroups === groups.length}
@@ -196,10 +196,10 @@ export function GroupAnnotationsTable({
               aria-label="Show listed groups"
             />
           </span>
-        </InactiveCell>
+        </MutedCell>
       ),
       cell: ({ row }) => (
-        <InactiveCell isInactive={isInactive}>
+        <MutedCell isMuted={isInactive}>
           <GroupVisibilityCell
             visible={isVisible(row.original.group)}
             onVisibleChange={(visible) => {
@@ -211,7 +211,7 @@ export function GroupAnnotationsTable({
               group: row.original.group,
             }}
           />
-        </InactiveCell>
+        </MutedCell>
       ),
     };
     return [visibleColumnDef, ...sortableColumnDefs];
