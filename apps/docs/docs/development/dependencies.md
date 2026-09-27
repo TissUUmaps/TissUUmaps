@@ -33,6 +33,8 @@ sidebar_position: 5
 ## Data loading
 
 - Hyparquet + hyparquet-compressors (Parquet tables; bundled into the Parquet worker)
+- h5wasm (HDF5 and AnnData tables; bundled into the HDF5 worker)
+- zarrita.js (Zarr and AnnData tables)
 - PapaParse (CSV tables)
 - omezarr-tilesource (OME-Zarr images/labels)
 - geotiff.js + geotiff-tilesource (TIFF images, see below)
@@ -81,5 +83,5 @@ run `pnpm install`.
 ## Web APIs (selection)
 
 - File System (local data access)
-- Web Workers (Parquet/GeoJSON parsing)
+- Web Workers (TIFF decoding, Parquet/GeoJSON/HDF5 parsing)
 - WebGL 2 (points and shapes rendering)

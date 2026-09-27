@@ -13,5 +13,7 @@ The following table lists the capabilities of the built-in data providers:
 | [GeoJSON](./geojson)             |                 |                 |                 | GeoJSON source |                |
 | [Parquet](./parquet)             |                 |                 |                 | Parquet source | Parquet source |
 | [CSV](./csv)                     |                 |                 |                 |                | CSV source     |
+| [HDF5](./hdf5)                   |                 |                 |                 |                | HDF5 source    |
+| [Zarr](./zarr)                   |                 |                 |                 |                | Zarr source    |
 
 Additional data formats may be supported by third-party data providers.

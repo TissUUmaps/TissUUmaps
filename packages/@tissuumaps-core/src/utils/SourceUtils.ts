@@ -79,6 +79,40 @@ export class SourceUtils {
   }
 
   /**
+   * Returns the directory that contains a normalized source
+   *
+   * @param normalizedSource - The normalized source (see
+   *   {@link SourceUtils.normalizeSource})
+   * @returns The normalized parent source and the name of the source within
+   *   it, decoded for URLs; `null` if the source is the root of its URL's path
+   *   or lies directly in the workspace, as the workspace root is no source
+   */
+  static getParentSource(
+    normalizedSource: string,
+  ): { parentSource: string; name: string } | null {
+    if (SourceUtils.isWorkspacePath(normalizedSource)) {
+      const segments = normalizedSource
+        .substring(SourceUtils._workspacePathPrefix.length)
+        .split(SourceUtils._pathSep);
+      const name = segments.pop();
+      if (name === undefined || segments.length === 0) {
+        return null;
+      }
+      return { parentSource: SourceUtils.makeWorkspacePath(segments), name };
+    }
+    const url = new URL(normalizedSource);
+    const segments = url.pathname
+      .split(SourceUtils._pathSep)
+      .filter((segment) => segment !== "");
+    const name = segments.pop();
+    if (name === undefined) {
+      return null;
+    }
+    url.pathname = segments.join(SourceUtils._pathSep);
+    return { parentSource: url.toString(), name: decodeURIComponent(name) };
+  }
+
+  /**
    * Normalizes a source, applying the fallbacks for missing project sources
    * and workspaces
    *

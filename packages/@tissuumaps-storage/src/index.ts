@@ -1,5 +1,7 @@
 export * from "./csv";
 export * from "./geojson";
+export * from "./hierarchical/hdf5";
+export * from "./hierarchical/zarr";
 export * from "./ome-zarr";
 export * from "./openseadragon";
 export * from "./parquet";

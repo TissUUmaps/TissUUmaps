@@ -1,6 +1,7 @@
 import {
   CSVTableDataProvider,
   GeoJSONShapesDataProvider,
+  HDF5TableDataProvider,
   OMEZarrImageDataProvider,
   OMEZarrLabelsDataProvider,
   OpenSeadragonImageDataProvider,
@@ -9,8 +10,10 @@ import {
   TIFFImageDataProvider,
   TIFFLabelsDataProvider,
   TablePointsDataProvider,
+  ZarrTableDataProvider,
   csvTableDataSourceType,
   geoJSONShapesDataSourceType,
+  hdf5TableDataSourceType,
   omeZarrImageDataSourceType,
   omeZarrLabelsDataSourceType,
   openSeadragonImageDataSourceType,
@@ -19,6 +22,7 @@ import {
   tablePointsDataSourceType,
   tiffImageDataSourceType,
   tiffLabelsDataSourceType,
+  zarrTableDataSourceType,
 } from "@tissuumaps/storage";
 
 import { appStore } from "@/stores/app";
@@ -77,5 +81,13 @@ export function enableBuiltInDataProviders(): void {
   appStoreState.registerTableDataProvider(
     parquetTableDataSourceType,
     new ParquetTableDataProvider(),
+  );
+  appStoreState.registerTableDataProvider(
+    hdf5TableDataSourceType,
+    new HDF5TableDataProvider(),
+  );
+  appStoreState.registerTableDataProvider(
+    zarrTableDataSourceType,
+    new ZarrTableDataProvider(),
   );
 }

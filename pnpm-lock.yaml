@@ -285,6 +285,9 @@ importers:
       papaparse:
         specifier: ^5.5.4
         version: 5.6.0
+      zarrita:
+        specifier: ^0.7.5
+        version: 0.7.5
     devDependencies:
       "@tissuumaps/core":
         specifier: workspace:^
@@ -295,6 +298,9 @@ importers:
       "@types/papaparse":
         specifier: ^5.5.2
         version: 5.5.2
+      h5wasm:
+        specifier: ^0.10.3
+        version: 0.10.3
       hyparquet:
         specifier: ^1.26.1
         version: 1.29.1
@@ -7385,6 +7391,12 @@ packages:
         integrity: sha512-ax7ZYomf6jqPTQ4+XCpUGyXKHk5WweS+e05MBO4/y3WJ5RkmPXNKvX+bx1behVILVwr6JSQvZAku021CHPXG3Q==,
       }
     engines: { node: ">=10" }
+
+  h5wasm@0.10.3:
+    resolution:
+      {
+        integrity: sha512-W4Jy5ExtX/VNbyD8GdOBckDuj6AL16TemppVNxZsV3rJZEWCv2sxlCzOttZLer3zkMttbDYsWHl0qt1z3Bln+Q==,
+      }
 
   hachure-fill@0.5.2:
     resolution:
@@ -18291,6 +18303,8 @@ snapshots:
   gzip-size@6.0.0:
     dependencies:
       duplexer: 0.1.2
+
+  h5wasm@0.10.3: {}
 
   hachure-fill@0.5.2: {}
 
