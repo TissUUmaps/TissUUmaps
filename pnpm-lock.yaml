@@ -182,6 +182,12 @@ importers:
       lucide-react:
         specifier: ^1.21.0
         version: 1.33.0(react@19.2.8)
+      ome-zarr.js:
+        specifier: ^0.0.20
+        version: 0.0.20
+      openseadragon:
+        specifier: ^6.1.1
+        version: 6.1.1
       react:
         specifier: ^19.2.7
         version: 19.2.8
@@ -194,6 +200,9 @@ importers:
       tailwind-merge:
         specifier: ^3.6.0
         version: 3.6.0
+      zarrita:
+        specifier: ^0.7.5
+        version: 0.7.5
       zustand:
         specifier: ^5.0.15
         version: 5.0.15(@types/react@19.2.18)(immer@11.1.18)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))
@@ -304,7 +313,7 @@ importers:
         specifier: ^1.1.1
         version: 1.1.1
       ome-zarr.js:
-        specifier: 0.0.20
+        specifier: ^0.0.20
         version: 0.0.20
       openseadragon:
         specifier: ^6.1.1

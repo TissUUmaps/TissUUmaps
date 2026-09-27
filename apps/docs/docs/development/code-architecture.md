@@ -18,13 +18,14 @@ This project is structured as a pnpm monorepo as follows:
   - @tissuumaps-viewer   # The TissUUmaps viewer (React component)
 ```
 
-Each package's `exports` point at its build output in `dist` only, so that
-published packages contain nothing monorepo-specific. During development,
-packages are resolved to their TypeScript sources instead, via a private
-`tissuumaps-development` export condition: `customConditions` in `tsconfig.base.json`
+Each package's `exports` point at its build output in `dist`. During
+development, packages are resolved to their TypeScript sources instead, via a
+private `tissuumaps-development` export condition: `customConditions` in `tsconfig.base.json`
 for TypeScript (and thus for editor navigation), and `resolve.conditions` /
-`ssr.resolve.conditions` in the Vite configs for Vite and Vitest. Because no
-consumer's bundler declares that condition, it is inert in published packages.
+`ssr.resolve.conditions` in the Vite configs for Vite and Vitest. So that
+published packages contain nothing monorepo-specific, `publishConfig.exports`
+replaces `exports` on publishing with a copy that lacks the condition; keep the
+two in sync.
 
 The Vite configs add that condition only when the mode is not `production`, so
 that production builds go through each package's `exports` and `dist` — the very
@@ -59,7 +60,7 @@ flowchart BT
     tissuumaps --> viewer
 ```
 
-Packages declare their `@tissuumaps/*` dependencies as peer dependencies and externalize them in their Vite builds; only the application bundles them.
+Packages declare their `@tissuumaps/*` dependencies as peer dependencies; only the application bundles them. More generally, each package's Vite build externalizes the dependencies and peer dependencies in its `package.json`, including their subpaths, and bundles everything else, such as packages that are only `devDependencies`.
 
 ## @tissuumaps/core
 

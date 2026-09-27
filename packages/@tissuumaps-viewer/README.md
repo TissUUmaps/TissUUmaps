@@ -12,7 +12,8 @@ npm install @tissuumaps/viewer
 
 Its peer dependencies `@tissuumaps/core`, `@tissuumaps/render`, `react` and
 `react-dom`, and `openseadragon` for `@tissuumaps/render`, are installed
-automatically by npm 7+, pnpm and Bun; with Yarn, install them yourself.
+automatically by npm 7+, pnpm and Bun; with Yarn, install them yourself. Its
+peer dependency `@types/react` is optional: install it if you use TypeScript.
 
 Under a Content Security Policy, allow `img-src data:` for the marker atlas of
 `@tissuumaps/render`'s WebGL points renderer.
