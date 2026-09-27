@@ -31,6 +31,7 @@ export default defineConfig(({ mode }) => ({
     }),
   ],
   build: {
+    minify: false,
     lib: {
       entry: {
         index: resolve(import.meta.dirname, "src/index.ts"),
@@ -50,9 +51,6 @@ export default defineConfig(({ mode }) => ({
   },
   test: {
     include: ["./src/**/*.test.js", "./src/**/*.test.ts"],
-    typecheck: {
-      tsconfig: resolve(import.meta.dirname, "tsconfig.test.json"),
-    },
   },
   resolve: {
     conditions:

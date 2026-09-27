@@ -44,8 +44,8 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Build packages
-        run: pnpm run build:packages
+      - name: Type-check
+        run: pnpm run typecheck
       - name: Run linter
         run: pnpm run lint
   test:

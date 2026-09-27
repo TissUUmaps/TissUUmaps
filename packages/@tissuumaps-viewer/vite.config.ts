@@ -33,6 +33,7 @@ export default defineConfig(({ mode }) => ({
     react(),
   ],
   build: {
+    minify: false,
     lib: {
       entry: resolve(import.meta.dirname, "src/index.ts"),
       formats: ["es"],
@@ -55,9 +56,6 @@ export default defineConfig(({ mode }) => ({
       "./src/**/*.test.ts",
       "./src/**/*.test.tsx",
     ],
-    typecheck: {
-      tsconfig: resolve(import.meta.dirname, "tsconfig.test.json"),
-    },
     environment: "jsdom",
   },
   resolve: {

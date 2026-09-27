@@ -7,7 +7,7 @@
     "@eslint/js": "^10.0.1",
     "@microsoft/api-extractor": "^7.58.9",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
-    "@types/node": "^26.0.1",
+    "@types/node": "^22.20.4",
     "@vitejs/plugin-react": "^6.0.3",
     "@vitest/coverage-v8": "^4.1.9",
     "canvas": "^3.2.3",
@@ -31,6 +31,7 @@
     "prepare": "husky",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
+    "typecheck": "tsc -b && tsc -p tsconfig.node.json",
     "fmt": "prettier --write --ignore-unknown .",
     "fmt:check": "prettier --check --ignore-unknown .",
     "test": "vitest run --passWithNoTests --coverage",
@@ -39,7 +40,7 @@
     "build": "pnpm run -r --filter !docs build",
     "build:docs": "pnpm run build:packages && pnpm run --filter docs build",
     "build:packages": "pnpm run -r --filter \"./packages/*\" build",
-    "clean": "pnpm run -r clean && rm -rf node_modules"
+    "clean": "pnpm run -r clean && rm -rf coverage node_modules"
   },
   "lint-staged": {
     "**/*.{js,jsx,ts,tsx}": "eslint --fix",

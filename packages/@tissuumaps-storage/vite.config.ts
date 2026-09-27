@@ -32,15 +32,19 @@ export default defineConfig(({ mode }) => ({
   ],
   worker: {
     format: "es",
-    // geotiff.js's worker imports its decoders dynamically; an inlined worker
-    // cannot fetch chunks, so workers are built as a single file
     rolldownOptions: {
       output: {
+        // geotiff.js's worker imports its decoders dynamically; an inlined worker
+        // cannot fetch chunks, so workers are built as a single file
         codeSplitting: false,
+        // unlike the rest of this package, inline workers are minified: they
+        // end up as string literals, which the consumer's bundler cannot minify
+        minify: true,
       },
     },
   },
   build: {
+    minify: false,
     lib: {
       entry: {
         index: resolve(import.meta.dirname, "src/index.ts"),
@@ -82,9 +86,6 @@ export default defineConfig(({ mode }) => ({
   },
   test: {
     include: ["./src/**/*.test.js", "./src/**/*.test.ts"],
-    typecheck: {
-      tsconfig: resolve(import.meta.dirname, "tsconfig.test.json"),
-    },
   },
   resolve: {
     conditions:
