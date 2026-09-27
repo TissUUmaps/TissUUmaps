@@ -10,8 +10,8 @@ sidebar_position: 5
 - Vite
 - TypeScript
 - ESLint (linting)
-- Prettier + import-sort plugin (formatting)
-- Vitest + jsdom + node-canvas (testing with coverage)
+- Prettier + import-sort (formatting)
+- Vitest + jsdom (testing with coverage)
 - API Extractor + unplugin-dts (type declaration rollups for packages)
 - vite-plugin-singlefile (single-file production build of the application)
 - Docusaurus + TypeDoc + GitHub Pages (documentation)

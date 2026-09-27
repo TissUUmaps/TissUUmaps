@@ -4,7 +4,6 @@ packages:
 
 allowBuilds:
   "@swc/core": true
-  canvas: true
   core-js: true
   omezarr-tilesource: true
 

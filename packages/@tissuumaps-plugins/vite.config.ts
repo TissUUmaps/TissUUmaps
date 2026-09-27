@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import dts from "unplugin-dts/vite";
 import {
@@ -22,12 +23,27 @@ const externalPackages = [
   ...Object.keys(peerDependencies),
 ];
 
+// the entry points besides the root one, which only re-exports them
+const subpathEntries = {
+  spatialdata: resolve(import.meta.dirname, "src/spatialdata/index.ts"),
+};
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [
     dts({
       bundleTypes: true,
       tsconfigPath: resolve(import.meta.dirname, "tsconfig.ts59.json"),
+      // the declarations are bundled per entry point, so the root one would
+      // declare its own copies of the subpath entries' types, incompatible with
+      // theirs (e.g. because of private members); re-export theirs instead
+      afterBuild: () =>
+        writeFile(
+          resolve(import.meta.dirname, "dist/index.d.ts"),
+          Object.keys(subpathEntries)
+            .map((name) => `export * from "./${name}.js";\n`)
+            .join(""),
+        ),
     }),
   ],
   build: {
@@ -35,7 +51,7 @@ export default defineConfig(({ mode }) => ({
     lib: {
       entry: {
         index: resolve(import.meta.dirname, "src/index.ts"),
-        spatialdata: resolve(import.meta.dirname, "src/spatialdata/index.ts"),
+        ...subpathEntries,
       },
       formats: ["es"],
     },

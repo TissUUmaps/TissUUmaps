@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
-import { type Dims, GeometryUtils, type Rect } from "@tissuumaps/core";
+import {
+  AsyncUtils,
+  type Dims,
+  GeometryUtils,
+  type Rect,
+} from "@tissuumaps/core";
 import {
   WebGLContext,
   WebGLPointsRenderer,
@@ -147,7 +152,7 @@ export function useWebGL(adapter: ViewerAdapter) {
         promise: pointsRendererInitPromise,
         resolve: resolvePointsRendererInitPromise,
         reject: rejectPointsRendererInitPromise,
-      } = Promise.withResolvers<void>();
+      } = AsyncUtils.withResolvers<void>();
       pointsRendererInitPromise.catch(() => {}); // prevent unhandled rejections in console
       let pointsRenderer: WebGLPointsRenderer;
       try {

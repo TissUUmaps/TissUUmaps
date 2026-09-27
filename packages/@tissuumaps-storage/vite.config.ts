@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import dts from "unplugin-dts/vite";
 import {
@@ -22,12 +23,35 @@ const externalPackages = [
   ...Object.keys(peerDependencies),
 ];
 
+// the entry points besides the root one, which only re-exports them
+const subpathEntries = {
+  csv: resolve(import.meta.dirname, "src/csv/index.ts"),
+  geojson: resolve(import.meta.dirname, "src/geojson/index.ts"),
+  hdf5: resolve(import.meta.dirname, "src/hierarchical/hdf5/index.ts"),
+  "ome-zarr": resolve(import.meta.dirname, "src/ome-zarr/index.ts"),
+  openseadragon: resolve(import.meta.dirname, "src/openseadragon/index.ts"),
+  parquet: resolve(import.meta.dirname, "src/parquet/index.ts"),
+  table: resolve(import.meta.dirname, "src/table/index.ts"),
+  tiff: resolve(import.meta.dirname, "src/tiff/index.ts"),
+  zarr: resolve(import.meta.dirname, "src/hierarchical/zarr/index.ts"),
+};
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [
     dts({
       bundleTypes: true,
       tsconfigPath: resolve(import.meta.dirname, "tsconfig.ts59.json"),
+      // the declarations are bundled per entry point, so the root one would
+      // declare its own copies of the subpath entries' types, incompatible with
+      // theirs (e.g. because of private members); re-export theirs instead
+      afterBuild: () =>
+        writeFile(
+          resolve(import.meta.dirname, "dist/index.d.ts"),
+          Object.keys(subpathEntries)
+            .map((name) => `export * from "./${name}.js";\n`)
+            .join(""),
+        ),
     }),
   ],
   worker: {
@@ -48,18 +72,7 @@ export default defineConfig(({ mode }) => ({
     lib: {
       entry: {
         index: resolve(import.meta.dirname, "src/index.ts"),
-        csv: resolve(import.meta.dirname, "src/csv/index.ts"),
-        geojson: resolve(import.meta.dirname, "src/geojson/index.ts"),
-        hdf5: resolve(import.meta.dirname, "src/hierarchical/hdf5/index.ts"),
-        "ome-zarr": resolve(import.meta.dirname, "src/ome-zarr/index.ts"),
-        openseadragon: resolve(
-          import.meta.dirname,
-          "src/openseadragon/index.ts",
-        ),
-        parquet: resolve(import.meta.dirname, "src/parquet/index.ts"),
-        table: resolve(import.meta.dirname, "src/table/index.ts"),
-        tiff: resolve(import.meta.dirname, "src/tiff/index.ts"),
-        zarr: resolve(import.meta.dirname, "src/hierarchical/zarr/index.ts"),
+        ...subpathEntries,
       },
       formats: ["es"],
     },

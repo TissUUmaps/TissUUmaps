@@ -145,10 +145,11 @@ export class SourceUtils {
       throw new Error("Empty source");
     }
     if (SourceUtils._urlSchemePattern.test(source)) {
-      if (!URL.canParse(source)) {
-        throw new Error(`Invalid URL: ${source}`);
+      try {
+        return new URL(source).toString();
+      } catch (error) {
+        throw new Error(`Invalid URL: ${source}`, { cause: error });
       }
-      return new URL(source).toString();
     }
     if (source.startsWith(SourceUtils._appPathPrefix)) {
       return SourceUtils._normalizeAppPath(source, options);
@@ -372,10 +373,13 @@ export class SourceUtils {
   ): string {
     if (projectSource !== null) {
       if (SourceUtils._urlSchemePattern.test(projectSource)) {
-        if (!URL.canParse(projectPath, projectSource)) {
-          throw new Error(`Invalid project-relative path: ${projectPath}`);
+        try {
+          return new URL(projectPath, projectSource).toString();
+        } catch (error) {
+          throw new Error(`Invalid project-relative path: ${projectPath}`, {
+            cause: error,
+          });
         }
-        return new URL(projectPath, projectSource).toString();
       }
       const projectDirSegments = SourceUtils._collapseSegments(
         projectSource.substring(SourceUtils._workspacePathPrefix.length),

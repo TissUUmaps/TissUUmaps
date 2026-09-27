@@ -32,27 +32,25 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: latest
+          package_json_file: development/package.json
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version: 24
           cache: pnpm
           cache-dependency-path: |
             production/pnpm-lock.yaml
             development/pnpm-lock.yaml
       - name: Build development
         working-directory: development
-        run: pnpm install --frozen-lockfile && pnpm run build && pnpm run build:docs
+        run: pnpm install --frozen-lockfile && pnpm run build && pnpm run --filter docs build
         env:
-          VITE_BASE_PATH: /${{ github.event.repository.name }}/live-dev/
           VITE_CUSTOM_HTML_FILE: ${{ github.workspace }}/development/.github/pages/custom.html
           DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/docs-dev/
       - name: Build production
         working-directory: production
-        run: pnpm install --frozen-lockfile && pnpm run build
+        run: pnpm install --frozen-lockfile && pnpm run build && pnpm run --filter docs build
         env:
-          VITE_BASE_PATH: /${{ github.event.repository.name }}/live/
           VITE_CUSTOM_HTML_FILE: ${{ github.workspace }}/development/.github/pages/custom.html
           DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/docs/
       - name: Prepare deployment
