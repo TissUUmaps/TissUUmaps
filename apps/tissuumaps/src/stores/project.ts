@@ -133,10 +133,6 @@ export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
         set((draft) => {
           moveCollectionItem(draft.shapes, shapesId, newIndex);
         }),
-      moveTable: (tableId, newIndex) =>
-        set((draft) => {
-          moveCollectionItem(draft.tables, tableId, newIndex);
-        }),
       deleteLayer: (layerId) =>
         set((draft) => {
           deleteCollectionItem(draft.layers, layerId);
