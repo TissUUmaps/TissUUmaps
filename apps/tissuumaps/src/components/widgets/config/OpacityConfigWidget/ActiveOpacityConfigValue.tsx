@@ -4,6 +4,9 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
+import { formatTableColumn } from "@/components/widgets/TableColumnField/formatTableColumn";
+import { useProjectStore } from "@/stores/project";
+
 import type { OpacityConfigWidgetAdapter } from "./adapter";
 
 export type ActiveOpacityConfigValueProps = {
@@ -17,6 +20,8 @@ export function ActiveOpacityConfigValue({
 }: ActiveOpacityConfigValueProps) {
   const { activeSource, opacityConfig, defaultOpacity, tableId } = adapter;
 
+  const tables = useProjectStore((state) => state.tables);
+
   if (activeSource === "constant" && isConstantConfig(opacityConfig)) {
     return (
       <div className={className}>{opacityConfig.constant.value.toFixed(2)}</div>
@@ -28,7 +33,11 @@ export function ActiveOpacityConfigValue({
     isFromConfig(opacityConfig) &&
     tableId !== null
   ) {
-    return <div className={className}>{opacityConfig.from.column}</div>;
+    return (
+      <div className={className}>
+        {formatTableColumn(opacityConfig.from, tables)}
+      </div>
+    );
   }
 
   if (
@@ -36,7 +45,11 @@ export function ActiveOpacityConfigValue({
     isGroupByConfig(opacityConfig) &&
     tableId !== null
   ) {
-    return <div className={className}>{opacityConfig.groupBy.column}</div>;
+    return (
+      <div className={className}>
+        {formatTableColumn(opacityConfig.groupBy, tables)}
+      </div>
+    );
   }
 
   return <div className={className}>{defaultOpacity.toFixed(2)}</div>;

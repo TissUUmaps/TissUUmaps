@@ -1,11 +1,11 @@
 import {
   type Config,
   ConfigUtils,
-  type GroupByConfig,
   getActiveConfigSource,
   isConstantConfig,
 } from "@tissuumaps/core";
 
+import { isGroupedByColumn } from "./isGroupedByColumn";
 import type { GroupProperty } from "./useGroupColumn";
 import type { GroupTableState } from "./useGroupTable";
 
@@ -17,13 +17,6 @@ export type GroupValues<TValue> = {
   /** Whether the values are grayed out, as setting them changes the source */
   isInactive: boolean;
 };
-
-function isGroupedByColumn<TConfig extends Config<string>>(
-  config: TConfig,
-  column: string,
-): config is Extract<TConfig, GroupByConfig<false>> {
-  return ConfigUtils.getGroupByColumn(config) === column;
-}
 
 /**
  * Returns the value of every group of a property, and how to set them
@@ -41,12 +34,12 @@ export function createGroupValues<TValue, TConfig extends Config<string>>(
   groupTable: GroupTableState,
   property: GroupProperty<TValue, TConfig>,
 ): GroupValues<TValue> | undefined {
-  const { objectName, column, groupCounts } = groupTable;
-  if (column === null || groupCounts === null) {
+  const { objectName, groupBy, groupCounts } = groupTable;
+  if (groupBy === null || groupCounts === null) {
     return undefined;
   }
   const { name, config, default: defaultValue, adapter } = property;
-  const isGrouped = isGroupedByColumn(config, column);
+  const isGrouped = isGroupedByColumn(config, groupTable);
   const map = isGrouped
     ? ConfigUtils.findGroupByMap(config, adapter.maps)
     : undefined;
@@ -81,7 +74,7 @@ export function createGroupValues<TValue, TConfig extends Config<string>>(
       mapId = crypto.randomUUID();
       adapter.addMap({
         id: mapId,
-        name: `${objectName} ${column} ${name}`,
+        name: `${objectName} ${groupBy.column} ${name}`,
         values: {
           ...Object.fromEntries(
             Array.from(groupCounts.keys(), (group) => [group, getValue(group)]),
@@ -90,7 +83,7 @@ export function createGroupValues<TValue, TConfig extends Config<string>>(
         },
       });
     }
-    property.onConfigChange(ConfigUtils.withGroupByMap(config, column, mapId));
+    property.onConfigChange(ConfigUtils.withGroupByMap(config, groupBy, mapId));
   };
 
   return { getValue, setValues, isInactive };

@@ -75,6 +75,8 @@ export type Image = { ... };
 export function createImage(rawImage: RawImage): Image { ... }
 ```
 
+IDs must not contain `:`, which joins an ID with a name in keys like `${tableId}:${column}`.
+
 Data sources are carried as authored: the model only guarantees the base `DataSource` shape (`type`, and optionally `source`). Provider-specific defaults are not part of the model; the responsible data provider applies them in `normalize()` (see below).
 
 Most data model properties can be either "simple properties" or of a concrete `Config` type. Concrete `Config` types are union types of one or more of the specific `ConstantConfig` (single uniform value), `FromConfig` (reference to a table column holding values), `GroupByConfig` (reference to a categorical table column holding group names), or `RandomConfig` (pseudo-random value generation, drawn deterministically from the item ID and an optional `seed`) types. The active configuration source can be determined by the shared `source` property of the general `Config` type, or by checking type guards in the order listed here using `getActiveConfigSource`.

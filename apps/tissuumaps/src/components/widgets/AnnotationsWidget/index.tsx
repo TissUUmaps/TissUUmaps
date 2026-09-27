@@ -1,11 +1,15 @@
 import { useMemo, useState } from "react";
 
-import type { HighlightedItemGroup, ItemsData } from "@tissuumaps/core";
+import type {
+  HighlightedItemGroup,
+  ItemsData,
+  TableColumnRef,
+} from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { Input } from "@/components/ui/input";
-import { TableColumnInput } from "@/components/widgets/TableColumnInput";
+import { TableColumnField } from "@/components/widgets/TableColumnField";
 import { cn } from "@/lib/utils";
 
 import {
@@ -55,8 +59,8 @@ export type AnnotationsWidgetProps = {
    */
   annotatedObject: HighlightedItemGroup["annotatedObject"];
 
-  selectedGroupByColumn: string | null;
-  onSelectedGroupByColumnChange: (column: string | null) => void;
+  selectedGroupBy: TableColumnRef | null;
+  onSelectedGroupByChange: (column: TableColumnRef | null) => void;
   groupCounts: Map<string, number> | null;
   groupVisibility?: GroupVisibility;
   groupColumnDefs?: GroupAnnotationsTableColumnDef[];
@@ -68,8 +72,8 @@ export function AnnotationsWidget({
   tableHeight,
   tableId,
   annotatedObject,
-  selectedGroupByColumn,
-  onSelectedGroupByColumnChange,
+  selectedGroupBy,
+  onSelectedGroupByChange,
   groupCounts,
   groupVisibility,
   groupColumnDefs,
@@ -126,22 +130,20 @@ export function AnnotationsWidget({
           </span>
         )}
       </FieldsetLegend>
-      <Field disabled={tableId === null}>
-        <FieldLabel>Group by</FieldLabel>
-        <TableColumnInput
-          tableId={tableId}
-          value={selectedGroupByColumn}
-          onValueChange={onSelectedGroupByColumnChange}
-        />
-      </Field>
-      <Field disabled={selectedGroupByColumn === null || hasTooManyGroups}>
+      <TableColumnField
+        label="Group by column"
+        tableId={tableId}
+        value={selectedGroupBy}
+        onValueChange={onSelectedGroupByChange}
+      />
+      <Field disabled={selectedGroupBy === null || hasTooManyGroups}>
         <FieldLabel>Filter groups</FieldLabel>
         <Input
           value={nameQuery}
           onChange={(event) => setNameQuery(event.target.value)}
         />
       </Field>
-      {tableId !== null && selectedGroupByColumn !== null ? (
+      {tableId !== null && selectedGroupBy !== null ? (
         hasTooManyGroups ? (
           <span className="text-xs text-muted-foreground">
             {groupCounts.size.toLocaleString()} groups: too many to list. Group
@@ -152,7 +154,7 @@ export function AnnotationsWidget({
             height={tableHeight}
             rowHeight={tableRowHeight}
             annotatedObject={annotatedObject}
-            groupByColumn={selectedGroupByColumn}
+            groupBy={selectedGroupBy}
             groupCounts={filteredGroupCounts}
             groupVisibility={groupVisibility}
             groupColumnDefs={groupColumnDefs}

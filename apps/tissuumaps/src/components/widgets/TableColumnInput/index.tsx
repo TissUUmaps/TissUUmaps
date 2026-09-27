@@ -31,7 +31,7 @@ import { useLazyTableData } from "@/hooks/useLazyData";
 export type TableColumnInputProps = {
   tableId: string | null;
   value: string | null;
-  onValueChange: (column: string | null) => void;
+  onValueChange: (value: string | null) => void;
   className?: string;
 };
 
@@ -161,7 +161,9 @@ export function TableColumnInput({
 }: TableColumnInputProps) {
   const loadTableData = useLazyTableData(tableId);
 
-  const [text, setText] = useState(value ?? "");
+  const query = value ?? "";
+
+  const [text, setText] = useState(query);
   const [invalid, setInvalid] = useState(false);
   const [suggestions, setSuggestions] = useState<
     TableColumnQuerySuggestion[] | null
@@ -170,12 +172,18 @@ export function TableColumnInput({
   const [pendingQuery, setPendingQuery] = useState<string | null>(null);
 
   // https://react.dev/reference/react/useState#storing-information-from-previous-renders
-  const [prevValue, setPrevValue] = useState(value);
-  if (value !== prevValue) {
-    setPrevValue(value);
-    setText(value ?? "");
+  const [prevQuery, setPrevQuery] = useState(query);
+  const [prevTableId, setPrevTableId] = useState(tableId);
+  if (query !== prevQuery) {
+    setPrevQuery(query);
+    setPrevTableId(tableId);
+    setText(query);
     setInvalid(false);
     setPendingQuery(null);
+  } else if (tableId !== prevTableId) {
+    // the column is resolved again in the newly chosen table
+    setPrevTableId(tableId);
+    setPendingQuery(text.trim() !== "" ? text : null);
   }
 
   const [isSuggestPending, startSuggestTransition] = useTransition();
@@ -222,11 +230,10 @@ export function TableColumnInput({
     const abortController = new AbortController();
     const { signal } = abortController;
     loadTableData({ signal })
-      .then(
-        (tableData) =>
-          tableData?.resolveColumnQuery(pendingQuery, { signal }) ?? null,
-      )
-      .then((column) => {
+      .then(async (tableData) => {
+        const column =
+          (await tableData?.resolveColumnQuery(pendingQuery, { signal })) ??
+          null;
         if (!signal.aborted) {
           handleCommitResolved(column);
         }
@@ -240,20 +247,20 @@ export function TableColumnInput({
     return () => abortController.abort();
   }, [pendingQuery, loadTableData]);
 
-  function commit(query: string) {
-    if (query === (value ?? "")) {
+  function commit(newQuery: string) {
+    if (newQuery === query && !invalid) {
       setPendingQuery(null);
       setInvalid(false);
       return;
     }
-    if (query.trim() === "") {
+    if (newQuery.trim() === "") {
       setPendingQuery(null);
       setText("");
       setInvalid(false);
       onValueChange(null);
       return;
     }
-    setPendingQuery(query);
+    setPendingQuery(newQuery);
   }
 
   const highlightedSuggestionRef = useRef<

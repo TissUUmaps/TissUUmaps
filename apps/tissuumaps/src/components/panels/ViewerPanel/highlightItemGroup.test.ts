@@ -52,7 +52,7 @@ describe("highlightItemGroup", () => {
   };
   const highlightedShapesGroup: HighlightedItemGroup = {
     annotatedObject: { shapesId: "cells" },
-    column: "cluster",
+    groupBy: { column: "cluster" },
     group: "A",
   };
   const opacityConfig = {

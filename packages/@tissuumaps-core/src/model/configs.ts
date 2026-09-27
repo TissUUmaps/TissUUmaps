@@ -72,13 +72,23 @@ export function isConstantConfig<TValue, TConstantExtra = unknown>(
   return (obj as ConstantConfig<TValue, TConstantExtra>).constant !== undefined;
 }
 
+/** Reference to a table column */
+export type TableColumnRef = {
+  /**
+   * ID of the table holding the column
+   *
+   * If not specified, the table of the data source is used.
+   */
+  table?: string;
+
+  /** Name of the table column */
+  column: string;
+};
+
 /** Configuration to load values from a table column */
 export type FromConfig<TFromExtra = unknown> = Config<"from"> & {
   /** Specification of what table column to load */
-  from: {
-    /** Name of the table column */
-    column: string;
-  } & TFromExtra;
+  from: TableColumnRef & TFromExtra;
 };
 
 /**
@@ -99,10 +109,7 @@ export type GroupByConfig<
   TGroupByExtra = unknown,
 > = Config<"groupBy"> & {
   /** Specification of what categorical table column to load and how to map groups to values */
-  groupBy: {
-    /** Name of the categorical table column */
-    column: string;
-
+  groupBy: TableColumnRef & {
     /** Project-global group-to-value map ID */
     map: TMapRequired extends true ? string : string | undefined;
   } & TGroupByExtra;

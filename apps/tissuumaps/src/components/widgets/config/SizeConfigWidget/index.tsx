@@ -3,7 +3,7 @@ import { type CoordinateSpace, ProjectUtils } from "@tissuumaps/core";
 import { Field, FieldItem, FieldLabel } from "@/components/common/field";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { TableColumnInput } from "@/components/widgets/TableColumnInput";
+import { TableColumnField } from "@/components/widgets/TableColumnField";
 import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
 import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
@@ -105,22 +105,20 @@ function FromSizeConfigWidget({
 }: FromSizeConfigWidgetProps) {
   const {
     tableId,
-    currentFromColumn: column,
+    currentFromTableColumn: from,
     currentFromUnit: unit,
-    setCurrentFromColumn: setColumn,
+    setCurrentFromTableColumn: setFrom,
     setCurrentFromUnit: setUnit,
   } = adapter;
 
   return (
     <div className={className}>
-      <Field disabled={tableId === null}>
-        <FieldLabel>Table column</FieldLabel>
-        <TableColumnInput
-          tableId={tableId}
-          value={column}
-          onValueChange={setColumn}
-        />
-      </Field>
+      <TableColumnField
+        label="Column"
+        tableId={tableId}
+        value={from}
+        onValueChange={setFrom}
+      />
       <Field>
         <FieldLabel>Size unit</FieldLabel>
         <RadioGroup
@@ -157,10 +155,10 @@ function GroupBySizeConfigWidget({
 }: GroupBySizeConfigWidgetProps) {
   const {
     tableId,
-    currentGroupByColumn: column,
+    currentGroupByTableColumn: groupBy,
     currentGroupByMap: map,
     currentGroupByUnit: unit,
-    setCurrentGroupByColumn: setColumn,
+    setCurrentGroupByTableColumn: setGroupBy,
     setCurrentGroupByMap: setMap,
     setCurrentGroupByUnit: setUnit,
   } = adapter;
@@ -173,14 +171,12 @@ function GroupBySizeConfigWidget({
 
   return (
     <div className={className}>
-      <Field disabled={tableId === null}>
-        <FieldLabel>Table column</FieldLabel>
-        <TableColumnInput
-          tableId={tableId}
-          value={column}
-          onValueChange={setColumn}
-        />
-      </Field>
+      <TableColumnField
+        label="Column"
+        tableId={tableId}
+        value={groupBy}
+        onValueChange={setGroupBy}
+      />
       <Field>
         <FieldLabel>Size map</FieldLabel>
         <GroupValueMapSelect

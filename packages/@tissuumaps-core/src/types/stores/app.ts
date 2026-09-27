@@ -1,5 +1,6 @@
 import type { Mutate, StoreApi } from "zustand";
 
+import type { TableColumnRef } from "../../model/configs";
 import type { ImageDataSource } from "../../model/image";
 import type { LabelsDataSource } from "../../model/labels";
 import type { PointsDataSource } from "../../model/points";
@@ -30,8 +31,8 @@ export type HighlightedItemGroup = {
   annotatedObject:
     { labelsId: string } | { pointsId: string } | { shapesId: string };
 
-  /** Name of the categorical column of the object's table */
-  column: string;
+  /** The categorical table column */
+  groupBy: TableColumnRef;
 
   /** The group, i.e. the cell value as a string */
   group: string;

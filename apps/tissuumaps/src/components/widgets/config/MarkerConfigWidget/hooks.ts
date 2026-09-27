@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import {
   type Marker,
   type MarkerConfig,
+  type TableColumnRef,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -15,8 +16,8 @@ import type { MarkerConfigSource, MarkerConfigWidgetAdapter } from "./adapter";
 type MarkerConfigWidgetState = {
   currentSource: MarkerConfigSource;
   currentConstantValue: Marker;
-  currentFromColumn: string | null;
-  currentGroupByColumn: string | null;
+  currentFromTableColumn: TableColumnRef | null;
+  currentGroupByTableColumn: TableColumnRef | null;
   currentGroupByMap: string | null;
 };
 
@@ -36,10 +37,8 @@ function configToState(
     currentConstantValue: isConstantConfig(config)
       ? config.constant.value
       : defaultMarker,
-    currentFromColumn: isFromConfig(config) ? config.from.column : null,
-    currentGroupByColumn: isGroupByConfig(config)
-      ? config.groupBy.column
-      : null,
+    currentFromTableColumn: isFromConfig(config) ? config.from : null,
+    currentGroupByTableColumn: isGroupByConfig(config) ? config.groupBy : null,
     currentGroupByMap:
       isGroupByConfig(config) && config.groupBy.map !== undefined
         ? config.groupBy.map
@@ -67,25 +66,25 @@ function stateToConfig(
         constant: { value: state.currentConstantValue },
       };
     case "from":
-      if (state.currentFromColumn === null) {
+      if (state.currentFromTableColumn === null) {
         return null;
       }
       return {
         ...config,
         source: "from",
         from: {
-          column: state.currentFromColumn,
+          ...state.currentFromTableColumn,
         },
       };
     case "groupBy":
-      if (state.currentGroupByColumn === null) {
+      if (state.currentGroupByTableColumn === null) {
         return null;
       }
       return {
         ...config,
         source: "groupBy",
         groupBy: {
-          column: state.currentGroupByColumn,
+          ...state.currentGroupByTableColumn,
           map: state.currentGroupByMap ?? undefined,
         },
       };
@@ -112,10 +111,12 @@ export function useMarkerConfigWidget(
         setState((state) => ({ ...state, currentSource })),
       setCurrentConstantValue: (currentConstantValue: Marker) =>
         setState((state) => ({ ...state, currentConstantValue })),
-      setCurrentFromColumn: (currentFromColumn: string | null) =>
-        setState((state) => ({ ...state, currentFromColumn })),
-      setCurrentGroupByColumn: (currentGroupByColumn: string | null) =>
-        setState((state) => ({ ...state, currentGroupByColumn })),
+      setCurrentFromTableColumn: (
+        currentFromTableColumn: TableColumnRef | null,
+      ) => setState((state) => ({ ...state, currentFromTableColumn })),
+      setCurrentGroupByTableColumn: (
+        currentGroupByTableColumn: TableColumnRef | null,
+      ) => setState((state) => ({ ...state, currentGroupByTableColumn })),
       setCurrentGroupByMap: (currentGroupByMap: string | null) =>
         setState((state) => ({ ...state, currentGroupByMap })),
     }),

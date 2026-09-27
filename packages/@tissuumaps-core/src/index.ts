@@ -43,6 +43,7 @@ export {
   type OpacityConfig,
   type RandomConfig,
   type SizeConfig,
+  type TableColumnRef,
   type VisibilityConfig,
 } from "./model/configs";
 export {

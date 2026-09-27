@@ -22,6 +22,7 @@ import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { formatTableColumn } from "@/components/widgets/TableColumnField/formatTableColumn";
 import { TransformSettingsWidget } from "@/components/widgets/TransformSettingsWidget";
 import {
   ActiveColorConfigValue,
@@ -264,6 +265,7 @@ function GeneralPointsSettingsWidget({
   className,
 }: GeneralPointsSettingsWidgetProps) {
   const layers = useProjectStore((state) => state.layers);
+  const tables = useProjectStore((state) => state.tables);
   const updatePoints = useProjectStore((state) => state.updatePoints);
 
   return (
@@ -292,7 +294,11 @@ function GeneralPointsSettingsWidget({
             }}
           />
         ) : (
-          <Input disabled value={`column: ${points.layer.column}`} readOnly />
+          <Input
+            disabled
+            value={`column: ${formatTableColumn(points.layer, tables)}`}
+            readOnly
+          />
         )}
       </Field>
       <Field>

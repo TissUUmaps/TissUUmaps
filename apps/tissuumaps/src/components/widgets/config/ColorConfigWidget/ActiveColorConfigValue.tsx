@@ -7,6 +7,9 @@ import {
   isRandomConfig,
 } from "@tissuumaps/core";
 
+import { formatTableColumn } from "@/components/widgets/TableColumnField/formatTableColumn";
+import { useProjectStore } from "@/stores/project";
+
 import type { ColorConfigWidgetAdapter } from "./adapter";
 
 export type ActiveColorConfigValueProps = {
@@ -19,6 +22,8 @@ export function ActiveColorConfigValue({
   className,
 }: ActiveColorConfigValueProps) {
   const { activeSource, colorConfig, defaultColor, tableId } = adapter;
+
+  const tables = useProjectStore((state) => state.tables);
 
   if (activeSource === "constant" && isConstantConfig(colorConfig)) {
     const { r, g, b } = colorConfig.constant.value;
@@ -34,7 +39,11 @@ export function ActiveColorConfigValue({
     isFromConfig(colorConfig) &&
     tableId !== null
   ) {
-    return <div className={className}>{colorConfig.from.column}</div>;
+    return (
+      <div className={className}>
+        {formatTableColumn(colorConfig.from, tables)}
+      </div>
+    );
   }
 
   if (
@@ -42,7 +51,11 @@ export function ActiveColorConfigValue({
     isGroupByConfig(colorConfig) &&
     tableId !== null
   ) {
-    return <div className={className}>{colorConfig.groupBy.column}</div>;
+    return (
+      <div className={className}>
+        {formatTableColumn(colorConfig.groupBy, tables)}
+      </div>
+    );
   }
 
   if (activeSource === "random" && isRandomConfig(colorConfig)) {

@@ -142,7 +142,9 @@ describe("OpacityResolver", () => {
         { signal: controller.signal },
       );
 
-      expect(loadTable).toHaveBeenCalledWith({ signal: controller.signal });
+      expect(loadTable).toHaveBeenCalledWith(undefined, {
+        signal: controller.signal,
+      });
     });
   });
 
@@ -263,11 +265,12 @@ describe("OpacityResolver", () => {
         config,
         [],
         0,
+        vi.fn(),
       );
       expect(Array.from(packedOpacities)).toEqual([255, 255]);
     });
 
-    it("dispatches to from config when loadTable is given", async () => {
+    it("dispatches to from config when its table is found", async () => {
       const data = createMockTableData(new Uint32Array([1]), [0.5]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies OpacityConfig;
@@ -277,14 +280,14 @@ describe("OpacityResolver", () => {
         config,
         [],
         0,
-        { loadTable },
+        loadTable,
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
       expect(packedOpacities[0]).toBe(128);
     });
 
-    it("dispatches to groupBy config when loadTable is given", async () => {
+    it("dispatches to groupBy config when its table is found", async () => {
       const data = createMockTableData(new Uint32Array([1]), ["A"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const opacityMap: GroupValueMap<number> = {
@@ -301,7 +304,7 @@ describe("OpacityResolver", () => {
         config,
         [opacityMap],
         0,
-        { loadTable },
+        loadTable,
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
@@ -315,42 +318,9 @@ describe("OpacityResolver", () => {
         config,
         [],
         1,
+        vi.fn(),
       );
       expect(Array.from(packedOpacities)).toEqual([255, 255]);
-    });
-
-    it("falls back to the default opacity for a from config without loadTable", async () => {
-      const config = { from: { column: "col1" } } satisfies OpacityConfig;
-
-      const packedOpacities = await OpacityResolver.resolveOpacities(
-        new Uint32Array([1]),
-        config,
-        [],
-        1,
-      );
-
-      expect(packedOpacities[0]).toBe(255);
-    });
-
-    it("falls back to the default opacity for a groupBy config without loadTable", async () => {
-      const opacityMap: GroupValueMap<number> = {
-        id: "om1",
-        name: "Opacity Map",
-        values: { A: 0.5 },
-      };
-      const config = {
-        groupBy: { column: "col1", map: "om1" },
-      } satisfies OpacityConfig;
-
-      const packedOpacities = await OpacityResolver.resolveOpacities(
-        new Uint32Array([1]),
-        config,
-        [opacityMap],
-        1,
-        {},
-      );
-
-      expect(packedOpacities[0]).toBe(255);
     });
 
     it("throws when the signal is already aborted", async () => {
@@ -359,9 +329,14 @@ describe("OpacityResolver", () => {
       const config = { constant: { value: 1 } } satisfies OpacityConfig;
 
       await expect(
-        OpacityResolver.resolveOpacities(new Uint32Array([1]), config, [], 0, {
-          signal: controller.signal,
-        }),
+        OpacityResolver.resolveOpacities(
+          new Uint32Array([1]),
+          config,
+          [],
+          0,
+          vi.fn(),
+          { signal: controller.signal },
+        ),
       ).rejects.toThrow();
     });
   });

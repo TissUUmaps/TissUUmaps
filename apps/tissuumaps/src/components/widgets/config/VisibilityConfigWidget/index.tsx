@@ -2,7 +2,7 @@ import { ProjectUtils } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { Switch } from "@/components/ui/switch";
-import { TableColumnInput } from "@/components/widgets/TableColumnInput";
+import { TableColumnField } from "@/components/widgets/TableColumnField";
 import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
 import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
@@ -79,20 +79,18 @@ function FromVisibilityConfigWidget({
 }: FromVisibilityConfigWidgetProps) {
   const {
     tableId,
-    currentFromColumn: column,
-    setCurrentFromColumn: setColumn,
+    currentFromTableColumn: from,
+    setCurrentFromTableColumn: setFrom,
   } = adapter;
 
   return (
     <div className={className}>
-      <Field disabled={tableId === null}>
-        <FieldLabel>Table column</FieldLabel>
-        <TableColumnInput
-          tableId={tableId}
-          value={column}
-          onValueChange={setColumn}
-        />
-      </Field>
+      <TableColumnField
+        label="Column"
+        tableId={tableId}
+        value={from}
+        onValueChange={setFrom}
+      />
     </div>
   );
 }
@@ -108,9 +106,9 @@ function GroupByVisibilityConfigWidget({
 }: GroupByVisibilityConfigWidgetProps) {
   const {
     tableId,
-    currentGroupByColumn: column,
+    currentGroupByTableColumn: groupBy,
     currentGroupByMap: map,
-    setCurrentGroupByColumn: setColumn,
+    setCurrentGroupByTableColumn: setGroupBy,
     setCurrentGroupByMap: setMap,
   } = adapter;
 
@@ -124,14 +122,12 @@ function GroupByVisibilityConfigWidget({
 
   return (
     <div className={className}>
-      <Field disabled={tableId === null}>
-        <FieldLabel>Source column</FieldLabel>
-        <TableColumnInput
-          tableId={tableId}
-          value={column}
-          onValueChange={setColumn}
-        />
-      </Field>
+      <TableColumnField
+        label="Column"
+        tableId={tableId}
+        value={groupBy}
+        onValueChange={setGroupBy}
+      />
       <Field>
         <FieldLabel>Visibility map</FieldLabel>
         <GroupValueMapSelect

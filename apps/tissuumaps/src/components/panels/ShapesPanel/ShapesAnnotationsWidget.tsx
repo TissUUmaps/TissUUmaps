@@ -178,8 +178,8 @@ export function ShapesAnnotationsWidget({
       tableHeight={300}
       tableId={tableId}
       annotatedObject={annotatedObject}
-      selectedGroupByColumn={groupTable.column}
-      onSelectedGroupByColumnChange={groupTable.setColumn}
+      selectedGroupBy={groupTable.groupBy}
+      onSelectedGroupByChange={groupTable.setGroupBy}
       groupCounts={groupTable.groupCounts}
       groupVisibility={groupVisibility}
       groupColumnDefs={groupColumnDefs}

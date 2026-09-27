@@ -1,4 +1,5 @@
 import { Select as SelectPrimitive } from "@base-ui/react/select";
+import { cva } from "class-variance-authority";
 import { CheckIcon, ChevronsUpDownIcon, Trash2Icon } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
 
@@ -17,10 +18,35 @@ export type SimpleSelectProps<
   placeholder?: string;
   onItemDelete?: (item: TItem) => void;
   isItemDeletable?: (item: TItem) => boolean;
+  /** `inline` shows the trigger as text, e.g. within a label */
+  variant?: "default" | "inline";
 } & Omit<
   SelectPrimitive.Root.Props<TValue, TMultiple>,
   "items" | "itemToStringLabel" | "itemToStringValue"
 >;
+
+const triggerVariants = cva(
+  "select-none focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-blue-800 data-disabled:pointer-events-none data-disabled:opacity-50 text-foreground",
+  {
+    variants: {
+      variant: {
+        default:
+          "flex w-full h-10 min-w-40 items-center justify-between gap-3 rounded-md border border-input pr-3 pl-3.5 bg-[canvas] hover:bg-gray-100 data-popup-open:bg-gray-100 dark:bg-input/30",
+        inline:
+          "flex min-w-0 max-w-full rounded-sm underline decoration-muted-foreground decoration-dotted underline-offset-4",
+      },
+    },
+  },
+);
+
+const valueVariants = cva("data-placeholder:opacity-60", {
+  variants: {
+    variant: {
+      default: "flex flex-row items-center gap-2",
+      inline: "truncate",
+    },
+  },
+});
 
 export function SimpleSelect<
   TItem,
@@ -35,6 +61,7 @@ export function SimpleSelect<
   placeholder,
   onItemDelete,
   isItemDeletable,
+  variant = "default",
   ...props
 }: SimpleSelectProps<TItem, TNullable, TValue, TMultiple>) {
   const memoizedItems = useMemo(() => {
@@ -54,11 +81,13 @@ export function SimpleSelect<
   // - set trigger width to w-full
   return (
     <SelectPrimitive.Root items={memoizedItems} {...props}>
-      <SelectPrimitive.Trigger className="flex w-full h-10 min-w-40 items-center justify-between gap-3 rounded-md border border-input pr-3 pl-3.5 bg-[canvas] select-none hover:bg-gray-100 focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-blue-800 data-popup-open:bg-gray-100 data-disabled:pointer-events-none data-disabled:opacity-50 dark:bg-input/30 text-foreground">
-        <SelectPrimitive.Value className="data-placeholder:opacity-60 flex flex-row items-center gap-2" />
-        <SelectPrimitive.Icon className="flex">
-          <ChevronsUpDownIcon />
-        </SelectPrimitive.Icon>
+      <SelectPrimitive.Trigger className={triggerVariants({ variant })}>
+        <SelectPrimitive.Value className={valueVariants({ variant })} />
+        {variant === "default" && (
+          <SelectPrimitive.Icon className="flex">
+            <ChevronsUpDownIcon />
+          </SelectPrimitive.Icon>
+        )}
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal>
         <SelectPrimitive.Positioner

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   type Color,
   type ColorConfig,
+  type TableColumnRef,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -18,11 +19,11 @@ import type { ColorConfigSource, ColorConfigWidgetAdapter } from "./adapter";
 type ColorConfigWidgetState = {
   currentSource: ColorConfigSource;
   currentConstantValue: Color;
-  currentFromColumn: string | null;
+  currentFromTableColumn: TableColumnRef | null;
   currentFromRangeMin: number | null;
   currentFromRangeMax: number | null;
   currentFromPalette: string | null;
-  currentGroupByColumn: string | null;
+  currentGroupByTableColumn: TableColumnRef | null;
   currentGroupByPalette: string | null;
   currentGroupByMap: string | null;
   currentRandomPalette: string | null;
@@ -45,7 +46,7 @@ function configToState(
     currentConstantValue: isConstantConfig(config)
       ? config.constant.value
       : defaultColor,
-    currentFromColumn: isFromConfig(config) ? config.from.column : null,
+    currentFromTableColumn: isFromConfig(config) ? config.from : null,
     currentFromRangeMin:
       isFromConfig(config) && config.from.range !== undefined
         ? config.from.range[0]
@@ -55,9 +56,7 @@ function configToState(
         ? config.from.range[1]
         : null,
     currentFromPalette: isFromConfig(config) ? config.from.palette : null,
-    currentGroupByColumn: isGroupByConfig(config)
-      ? config.groupBy.column
-      : null,
+    currentGroupByTableColumn: isGroupByConfig(config) ? config.groupBy : null,
     currentGroupByPalette:
       isGroupByConfig(config) && config.groupBy.palette !== undefined
         ? config.groupBy.palette
@@ -95,7 +94,7 @@ function stateToConfig(
       };
     case "from":
       if (
-        state.currentFromColumn === null ||
+        state.currentFromTableColumn === null ||
         state.currentFromPalette === null
       ) {
         return null;
@@ -104,7 +103,7 @@ function stateToConfig(
         ...config,
         source: "from",
         from: {
-          column: state.currentFromColumn,
+          ...state.currentFromTableColumn,
           range:
             state.currentFromRangeMin !== null &&
             state.currentFromRangeMax !== null
@@ -115,7 +114,7 @@ function stateToConfig(
       };
     case "groupBy":
       if (
-        state.currentGroupByColumn === null ||
+        state.currentGroupByTableColumn === null ||
         (state.currentGroupByPalette === null &&
           state.currentGroupByMap === null)
       ) {
@@ -125,7 +124,7 @@ function stateToConfig(
         ...config,
         source: "groupBy",
         groupBy: {
-          column: state.currentGroupByColumn,
+          ...state.currentGroupByTableColumn,
           palette: state.currentGroupByPalette ?? undefined,
           map: state.currentGroupByMap ?? undefined,
         },
@@ -159,7 +158,9 @@ export function useColorConfigWidget(
     stateToConfig,
   );
 
-  const tableData = useTableData(tableId);
+  const tableData = useTableData(
+    state.currentFromTableColumn?.table ?? tableId,
+  );
 
   const [fromColumnValueRange, setFromColumnValueRange] = useState<
     [number, number] | null
@@ -172,12 +173,12 @@ export function useColorConfigWidget(
     setFromColumnValueRange(null);
     if (
       state.currentSource === "from" &&
-      state.currentFromColumn !== null &&
+      state.currentFromTableColumn !== null &&
       tableData !== null
     ) {
       const abortController = new AbortController();
       tableData
-        .loadValueRange(state.currentFromColumn, {
+        .loadValueRange(state.currentFromTableColumn.column, {
           signal: abortController.signal,
         })
         .then((valueRange) => {
@@ -192,7 +193,7 @@ export function useColorConfigWidget(
         });
       return () => abortController.abort();
     }
-  }, [tableData, state.currentSource, state.currentFromColumn]);
+  }, [tableData, state.currentSource, state.currentFromTableColumn]);
 
   const setters = useMemo(
     () => ({
@@ -200,16 +201,18 @@ export function useColorConfigWidget(
         setState((state) => ({ ...state, currentSource })),
       setCurrentConstantValue: (currentConstantValue: Color) =>
         setState((state) => ({ ...state, currentConstantValue })),
-      setCurrentFromColumn: (currentFromColumn: string | null) =>
-        setState((state) => ({ ...state, currentFromColumn })),
+      setCurrentFromTableColumn: (
+        currentFromTableColumn: TableColumnRef | null,
+      ) => setState((state) => ({ ...state, currentFromTableColumn })),
       setCurrentFromRangeMin: (currentFromRangeMin: number | null) =>
         setState((state) => ({ ...state, currentFromRangeMin })),
       setCurrentFromRangeMax: (currentFromRangeMax: number | null) =>
         setState((state) => ({ ...state, currentFromRangeMax })),
       setCurrentFromPalette: (currentFromPalette: string | null) =>
         setState((state) => ({ ...state, currentFromPalette })),
-      setCurrentGroupByColumn: (currentGroupByColumn: string | null) =>
-        setState((state) => ({ ...state, currentGroupByColumn })),
+      setCurrentGroupByTableColumn: (
+        currentGroupByTableColumn: TableColumnRef | null,
+      ) => setState((state) => ({ ...state, currentGroupByTableColumn })),
       setCurrentGroupByPalette: (currentGroupByPalette: string | null) =>
         setState((state) => ({ ...state, currentGroupByPalette })),
       setCurrentGroupByMap: (currentGroupByMap: string | null) =>
