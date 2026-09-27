@@ -85,12 +85,11 @@ export class ParquetTableData implements TableData {
         others.push(column);
       }
     }
-    return Promise.resolve([
-      ...[...exactMatches, ...prefixMatches, ...matches].map((query) => ({
-        query,
-      })),
-      ...others.map((query) => ({ query, fallback: true })),
-    ]);
+    return Promise.resolve(
+      [...exactMatches, ...prefixMatches, ...matches, ...others].map(
+        (query) => ({ query }),
+      ),
+    );
   }
 
   resolveColumnQuery(query: string): Promise<string | null> {

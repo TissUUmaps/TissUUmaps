@@ -11,10 +11,6 @@ describe("CSVTableData", () => {
     return queries.map((query) => ({ query }));
   }
 
-  function fallbacks(...queries: string[]) {
-    return queries.map((query) => ({ query, fallback: true }));
-  }
-
   describe("suggestColumnQueries", () => {
     const tableData = createTableData([
       "area",
@@ -31,10 +27,9 @@ describe("CSVTableData", () => {
     });
 
     it("lists case-insensitive matches first", async () => {
-      await expect(tableData.suggestColumnQueries("TYPE")).resolves.toEqual([
-        ...suggestions("cell_type"),
-        ...fallbacks("area", "Area_um2", "x", "y"),
-      ]);
+      await expect(tableData.suggestColumnQueries("TYPE")).resolves.toEqual(
+        suggestions("cell_type", "area", "Area_um2", "x", "y"),
+      );
     });
 
     it("lists prefix matches before other matches", async () => {
@@ -55,7 +50,7 @@ describe("CSVTableData", () => {
 
     it("lists all columns in table order when nothing matches", async () => {
       await expect(tableData.suggestColumnQueries("z")).resolves.toEqual(
-        fallbacks("area", "Area_um2", "cell_type", "x", "y"),
+        suggestions("area", "Area_um2", "cell_type", "x", "y"),
       );
     });
   });

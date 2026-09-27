@@ -314,10 +314,6 @@ export function TableColumnInput({
     if (suggestions.length === 0) {
       return text === "" ? "No columns" : `No matches for "${text}"`;
     }
-    // matching suggestions are listed first, so the first one decides
-    if (suggestions[0]!.fallback) {
-      return `No matches for "${text}", showing all columns`;
-    }
     return null;
   }
 
