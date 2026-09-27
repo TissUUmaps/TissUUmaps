@@ -24,6 +24,7 @@ import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { formatTableColumn } from "@/components/widgets/TableColumnField/formatTableColumn";
 import { TransformSettingsWidget } from "@/components/widgets/TransformSettingsWidget";
 import {
   ActiveColorConfigValue,
@@ -340,6 +341,7 @@ function GeneralShapesSettingsWidget({
   className,
 }: GeneralShapesSettingsWidgetProps) {
   const layers = useProjectStore((state) => state.layers);
+  const tables = useProjectStore((state) => state.tables);
   const updateShapes = useProjectStore((state) => state.updateShapes);
 
   return (
@@ -368,7 +370,11 @@ function GeneralShapesSettingsWidget({
             }}
           />
         ) : (
-          <Input disabled value={`column: ${shapes.layer.column}`} readOnly />
+          <Input
+            disabled
+            value={`column: ${formatTableColumn(shapes.layer, tables)}`}
+            readOnly
+          />
         )}
       </Field>
       <Field>

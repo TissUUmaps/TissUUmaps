@@ -1,3 +1,4 @@
+import type { TableColumnRef } from "./configs";
 import { identityTransform } from "./constants";
 import type { SimilarityTransform } from "./primitives";
 
@@ -229,9 +230,10 @@ export interface RawRenderedItemsDataObject<
    *
    * Can be specified as:
    * - An ID of an existing Layer
-   * - A table column holding the layer ID values for each item
+   * - A table column holding the layer ID values for each item, of the
+   *   object's own table unless it names another
    */
-  layer: string | { column: string };
+  layer: string | TableColumnRef;
 }
 
 /**

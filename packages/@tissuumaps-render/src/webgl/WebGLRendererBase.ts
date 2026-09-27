@@ -378,9 +378,13 @@ export abstract class WebGLRendererBase<
         ) {
           continue;
         }
+        const layerTableId =
+          typeof currentObject.layer !== "string"
+            ? (currentObject.layer.table ?? currentObject.dataSource.table)
+            : undefined;
         if (
           typeof currentObject.layer !== "string" &&
-          currentObject.dataSource.table === undefined
+          layerTableId === undefined
         ) {
           if (!objectIdsWithoutTable.has(currentObject.id)) {
             objectIdsWithoutTable.add(currentObject.id);
@@ -406,40 +410,32 @@ export abstract class WebGLRendererBase<
         let layerItemsInfosPromise;
         if (
           typeof currentObject.layer !== "string" &&
-          currentObject.dataSource.table !== undefined
+          layerTableId !== undefined
         ) {
-          let tableDataPromise = tableDataPromises.get(
-            currentObject.dataSource.table,
-          );
+          let tableDataPromise = tableDataPromises.get(layerTableId);
           if (tableDataPromise === undefined) {
             const table = syncContext.tables.find(
-              (table) => table.id === currentObject.dataSource.table,
+              (table) => table.id === layerTableId,
             );
             if (table !== undefined) {
               tableDataPromise = syncContext.loadTable(table, { signal });
             } else {
               tableDataPromise = Promise.reject(
-                new Error(
-                  `Table with ID '${currentObject.dataSource.table}' not found`,
-                ),
+                new Error(`Table with ID '${layerTableId}' not found`),
               );
             }
             tableDataPromise.catch((error) => {
               if (!signal?.aborted) {
                 console.error(
-                  `Failed to load table with ID '${currentObject.dataSource.table}'`,
+                  `Failed to load table with ID '${layerTableId}'`,
                   error,
                 );
               }
             });
-            tableDataPromises.set(
-              currentObject.dataSource.table,
-              tableDataPromise,
-            );
+            tableDataPromises.set(layerTableId, tableDataPromise);
           }
-          const tableId = currentObject.dataSource.table;
           const tableLayersColumn = currentObject.layer.column;
-          const tableLayersPromiseKey = `${tableId}:${tableLayersColumn}`;
+          const tableLayersPromiseKey = `${layerTableId}:${tableLayersColumn}`;
           let tableLayersPromise = tableLayersPromises.get(
             tableLayersPromiseKey,
           );
@@ -451,7 +447,7 @@ export abstract class WebGLRendererBase<
               );
               if (tableLayers.length !== tableData.getSize()) {
                 throw new Error(
-                  `Table with ID '${currentObject.dataSource.table}' has inconsistent size for column '${tableLayersColumn}'`,
+                  `Table with ID '${layerTableId}' has inconsistent size for column '${tableLayersColumn}'`,
                 );
               }
               return tableLayers;
@@ -459,7 +455,7 @@ export abstract class WebGLRendererBase<
             tableLayersPromise.catch((error) => {
               if (!signal?.aborted) {
                 console.error(
-                  `Failed to load layers from table with ID '${currentObject.dataSource.table}' (column '${tableLayersColumn}')`,
+                  `Failed to load layers from table with ID '${layerTableId}' (column '${tableLayersColumn}')`,
                   error,
                 );
               }
