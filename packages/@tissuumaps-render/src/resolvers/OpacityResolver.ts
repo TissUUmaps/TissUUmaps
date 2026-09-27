@@ -34,9 +34,9 @@ export class OpacityResolver {
    * @param config - Opacity configuration specifying the data source
    * @param opacityMaps - Available opacity maps for groupBy lookups
    * @param defaultOpacity - Fallback opacity value (0–1) when no valid config or value is found
-   * @param options - Optional abort signal, buffer alignment, and a loader for
-   * a table by ID, or the object's own table for `undefined`, which rejects for
-   * a missing table
+   * @param loadTable - Async function that loads a {@link TableData} by ID, or
+   * the object's own table for `undefined`; it rejects for a missing table
+   * @param options - Optional abort signal and buffer alignment
    * @returns A `Uint8Array` of packed opacity values (0–255), one per ID
    */
   static async resolveOpacities(
@@ -44,16 +44,13 @@ export class OpacityResolver {
     config: OpacityConfig,
     opacityMaps: GroupValueMap<number>[],
     defaultOpacity: number,
-    options?: {
-      signal?: AbortSignal;
-      align?: number;
-      loadTable?: (
-        tableId: string | undefined,
-        options?: { signal?: AbortSignal },
-      ) => Promise<TableData>;
-    },
+    loadTable: (
+      tableId: string | undefined,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TableData>,
+    options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint8Array> {
-    const { signal, align = 1, loadTable } = options ?? {};
+    const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
     const activeConfigSource = getActiveConfigSource(config);
     if (activeConfigSource === "constant" && isConstantConfig(config)) {
@@ -62,11 +59,7 @@ export class OpacityResolver {
       });
     }
     try {
-      if (
-        activeConfigSource === "from" &&
-        isFromConfig(config) &&
-        loadTable !== undefined
-      ) {
+      if (activeConfigSource === "from" && isFromConfig(config)) {
         return await OpacityResolver.resolveOpacitiesFromTableValues(
           ids,
           config,
@@ -75,11 +68,7 @@ export class OpacityResolver {
           { signal, align },
         );
       }
-      if (
-        activeConfigSource === "groupBy" &&
-        isGroupByConfig(config) &&
-        loadTable !== undefined
-      ) {
+      if (activeConfigSource === "groupBy" && isGroupByConfig(config)) {
         return await OpacityResolver.resolveOpacitiesFromTableGroups(
           ids,
           config,

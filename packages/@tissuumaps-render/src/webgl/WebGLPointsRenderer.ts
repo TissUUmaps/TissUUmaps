@@ -397,7 +397,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           newRef.object.pointMarker,
           syncContext.markerMaps,
           defaultPointMarker,
-          { signal, loadTable },
+          loadTable,
+          { signal },
         ))
       : undefined;
     const packedPointSizesPromise = pointSizeBufferChanged
@@ -407,7 +408,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           newRef.object.pointSize,
           syncContext.sizeMaps,
           defaultPointSize,
-          { signal, loadTable },
+          loadTable,
+          { signal },
         ))
       : undefined;
     const packedPointColorsPromise = pointColorBufferChanged
@@ -417,7 +419,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           newRef.object.pointColor,
           syncContext.colorMaps,
           defaultPointColor,
-          { signal, loadTable },
+          loadTable,
+          { signal },
         ))
       : undefined;
     const packedPointVisibilitiesPromise =
@@ -427,7 +430,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
             newRef.object.pointVisibility,
             syncContext.visibilityMaps,
             defaultPointVisibility,
-            { signal, loadTable },
+            loadTable,
+            { signal },
           )
         : undefined;
     const packedPointOpacitiesPromise =
@@ -437,7 +441,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
             newRef.object.pointOpacity,
             syncContext.opacityMaps,
             defaultPointOpacity,
-            { signal, loadTable },
+            loadTable,
+            { signal },
           )
         : undefined;
     const [

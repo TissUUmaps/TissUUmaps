@@ -33,9 +33,9 @@ export class SizeResolver {
    * @param config - Size configuration specifying the data source
    * @param sizeMaps - Available size maps for groupBy lookups
    * @param defaultSize - Fallback size when no valid config or value is found
-   * @param options - Optional abort signal, buffer alignment, and a loader for
-   * a table by ID, or the object's own table for `undefined`, which rejects for
-   * a missing table
+   * @param loadTable - Async function that loads a {@link TableData} by ID, or
+   * the object's own table for `undefined`; it rejects for a missing table
+   * @param options - Optional abort signal and buffer alignment
    * @returns A `Float32Array` of packed size values, one per ID
    */
   static async resolveSizes(
@@ -43,16 +43,13 @@ export class SizeResolver {
     config: SizeConfig,
     sizeMaps: GroupValueMap<number>[],
     defaultSize: number,
-    options?: {
-      signal?: AbortSignal;
-      align?: number;
-      loadTable?: (
-        tableId: string | undefined,
-        options?: { signal?: AbortSignal },
-      ) => Promise<TableData>;
-    },
+    loadTable: (
+      tableId: string | undefined,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TableData>,
+    options?: { signal?: AbortSignal; align?: number },
   ): Promise<Float32Array> {
-    const { signal, align = 1, loadTable } = options ?? {};
+    const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
     const activeConfigSource = getActiveConfigSource(config);
     if (activeConfigSource === "constant" && isConstantConfig(config)) {
@@ -61,11 +58,7 @@ export class SizeResolver {
       });
     }
     try {
-      if (
-        activeConfigSource === "from" &&
-        isFromConfig(config) &&
-        loadTable !== undefined
-      ) {
+      if (activeConfigSource === "from" && isFromConfig(config)) {
         return await SizeResolver.resolveSizesFromTableValues(
           ids,
           config,
@@ -74,11 +67,7 @@ export class SizeResolver {
           { signal, align },
         );
       }
-      if (
-        activeConfigSource === "groupBy" &&
-        isGroupByConfig(config) &&
-        loadTable !== undefined
-      ) {
+      if (activeConfigSource === "groupBy" && isGroupByConfig(config)) {
         return await SizeResolver.resolveSizesFromTableGroups(
           ids,
           config,

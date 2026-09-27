@@ -276,6 +276,7 @@ describe("VisibilityResolver", () => {
         config,
         [],
         true,
+        vi.fn(),
       );
       expect(Array.from(packedVisibilities)).toEqual([0, 0]);
     });
@@ -290,7 +291,7 @@ describe("VisibilityResolver", () => {
         config,
         [],
         false,
-        { loadTable },
+        loadTable,
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
@@ -314,7 +315,7 @@ describe("VisibilityResolver", () => {
         config,
         [visibilityMap],
         false,
-        { loadTable },
+        loadTable,
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
@@ -328,42 +329,9 @@ describe("VisibilityResolver", () => {
         config,
         [],
         true,
+        vi.fn(),
       );
       expect(Array.from(packedVisibilities)).toEqual([1, 1]);
-    });
-
-    it("falls back to the default visibility for a from config without a table loader", async () => {
-      const config = { from: { column: "col1" } } satisfies VisibilityConfig;
-
-      const packedVisibilities = await VisibilityResolver.resolveVisibilities(
-        new Uint32Array([1]),
-        config,
-        [],
-        true,
-      );
-
-      expect(packedVisibilities[0]).toBe(1);
-    });
-
-    it("falls back to the default visibility for a groupBy config without a table loader", async () => {
-      const visibilityMap: GroupValueMap<boolean> = {
-        id: "vm1",
-        name: "Visibility Map",
-        values: { A: false },
-      };
-      const config = {
-        groupBy: { column: "col1", map: "vm1" },
-      } satisfies VisibilityConfig;
-
-      const packedVisibilities = await VisibilityResolver.resolveVisibilities(
-        new Uint32Array([1]),
-        config,
-        [visibilityMap],
-        true,
-        {},
-      );
-
-      expect(packedVisibilities[0]).toBe(1);
     });
 
     it("throws when the signal is already aborted", async () => {
@@ -377,9 +345,8 @@ describe("VisibilityResolver", () => {
           config,
           [],
           false,
-          {
-            signal: controller.signal,
-          },
+          vi.fn(),
+          { signal: controller.signal },
         ),
       ).rejects.toThrow();
     });

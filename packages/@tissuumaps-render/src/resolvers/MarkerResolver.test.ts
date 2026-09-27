@@ -296,6 +296,7 @@ describe("MarkerResolver", () => {
         config,
         [],
         Marker.Cross,
+        vi.fn(),
       );
       expect(Array.from(packedMarkers)).toEqual([Marker.Disc, Marker.Disc]);
     });
@@ -310,7 +311,7 @@ describe("MarkerResolver", () => {
         config,
         [],
         Marker.Cross,
-        { loadTable },
+        loadTable,
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
@@ -334,7 +335,7 @@ describe("MarkerResolver", () => {
         config,
         [markerMap],
         Marker.Cross,
-        { loadTable },
+        loadTable,
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
@@ -348,42 +349,9 @@ describe("MarkerResolver", () => {
         config,
         [],
         Marker.Ring,
+        vi.fn(),
       );
       expect(Array.from(packedMarkers)).toEqual([Marker.Ring, Marker.Ring]);
-    });
-
-    it("falls back to the default marker for a from config without a table loader", async () => {
-      const config = { from: { column: "col1" } } satisfies MarkerConfig;
-
-      const packedMarkers = await MarkerResolver.resolveMarkers(
-        new Uint32Array([1]),
-        config,
-        [],
-        Marker.Ring,
-      );
-
-      expect(packedMarkers[0]).toBe(Marker.Ring);
-    });
-
-    it("falls back to the default marker for a groupBy config without a table loader", async () => {
-      const markerMap: GroupValueMap<Marker> = {
-        id: "mm1",
-        name: "Marker Map",
-        values: { A: Marker.Diamond },
-      };
-      const config = {
-        groupBy: { column: "col1", map: "mm1" },
-      } satisfies MarkerConfig;
-
-      const packedMarkers = await MarkerResolver.resolveMarkers(
-        new Uint32Array([1]),
-        config,
-        [markerMap],
-        Marker.Ring,
-        {},
-      );
-
-      expect(packedMarkers[0]).toBe(Marker.Ring);
     });
 
     it("throws when the signal is already aborted", async () => {
@@ -399,9 +367,8 @@ describe("MarkerResolver", () => {
           config,
           [],
           Marker.Cross,
-          {
-            signal: controller.signal,
-          },
+          vi.fn(),
+          { signal: controller.signal },
         ),
       ).rejects.toThrow();
     });

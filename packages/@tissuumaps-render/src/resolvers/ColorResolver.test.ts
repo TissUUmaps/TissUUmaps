@@ -546,6 +546,7 @@ describe("ColorResolver", () => {
         config,
         [],
         black,
+        vi.fn(),
       );
 
       const packedRed = ColorResolver.packColor(red);
@@ -565,7 +566,7 @@ describe("ColorResolver", () => {
         config,
         [],
         black,
-        { loadTable },
+        loadTable,
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
@@ -581,7 +582,7 @@ describe("ColorResolver", () => {
         from: { table: "other", column: "col1", palette: palette.id },
       } satisfies ColorConfig;
 
-      await ColorResolver.resolveColors([1], config, [], black, { loadTable });
+      await ColorResolver.resolveColors([1], config, [], black, loadTable);
 
       expect(loadTable).toHaveBeenCalledWith("other", { signal: undefined });
     });
@@ -596,10 +597,7 @@ describe("ColorResolver", () => {
         config,
         [],
         red,
-        {
-          loadTable: () =>
-            Promise.reject(new Error("Table with ID 'gone' not found")),
-        },
+        () => Promise.reject(new Error("Table with ID 'gone' not found")),
       );
 
       expect(packedColors[0]).toBe(ColorResolver.packColor(red));
@@ -615,10 +613,7 @@ describe("ColorResolver", () => {
         config,
         [],
         red,
-        {
-          loadTable: () =>
-            Promise.reject(new Error("No data provider is registered")),
-        },
+        () => Promise.reject(new Error("No data provider is registered")),
       );
 
       expect(packedColors[0]).toBe(ColorResolver.packColor(red));
@@ -642,7 +637,7 @@ describe("ColorResolver", () => {
         config,
         [colorMap],
         black,
-        { loadTable },
+        loadTable,
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
@@ -662,6 +657,7 @@ describe("ColorResolver", () => {
         config,
         [],
         black,
+        vi.fn(),
       );
 
       expect(packedColors.length).toBe(1);
@@ -678,42 +674,7 @@ describe("ColorResolver", () => {
         config,
         [],
         red,
-      );
-
-      expect(packedColors[0]).toBe(ColorResolver.packColor(red));
-    });
-
-    it("falls back to the default color for a from config without a table loader", async () => {
-      const config = {
-        from: { column: "col1", palette: colorPalettes[0]!.id },
-      } satisfies ColorConfig;
-
-      const packedColors = await ColorResolver.resolveColors(
-        new Uint32Array([1]),
-        config,
-        [],
-        red,
-      );
-
-      expect(packedColors[0]).toBe(ColorResolver.packColor(red));
-    });
-
-    it("falls back to the default color for a groupBy config without a table loader", async () => {
-      const colorMap: GroupValueMap<Color> = {
-        id: "cm1",
-        name: "CM",
-        values: { "cat-a": green },
-      };
-      const config = {
-        groupBy: { column: "col1", map: "cm1" },
-      } satisfies ColorConfig;
-
-      const packedColors = await ColorResolver.resolveColors(
-        new Uint32Array([1]),
-        config,
-        [colorMap],
-        red,
-        {},
+        vi.fn(),
       );
 
       expect(packedColors[0]).toBe(ColorResolver.packColor(red));
@@ -725,9 +686,14 @@ describe("ColorResolver", () => {
       const config = { constant: { value: red } } satisfies ColorConfig;
 
       await expect(
-        ColorResolver.resolveColors(new Uint32Array([1]), config, [], black, {
-          signal: controller.signal,
-        }),
+        ColorResolver.resolveColors(
+          new Uint32Array([1]),
+          config,
+          [],
+          black,
+          vi.fn(),
+          { signal: controller.signal },
+        ),
       ).rejects.toThrow();
     });
   });

@@ -262,21 +262,24 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
               labels.labelColor,
               context.colorMaps,
               defaultLabelColor,
-              { signal, loadTable },
+              loadTable,
+              { signal },
             ),
             VisibilityResolver.resolveVisibilities(
               labelIds,
               labels.labelVisibility,
               context.visibilityMaps,
               defaultLabelVisibility,
-              { signal, loadTable },
+              loadTable,
+              { signal },
             ),
             OpacityResolver.resolveOpacities(
               labelIds,
               labels.labelOpacity,
               context.opacityMaps,
               defaultLabelOpacity,
-              { signal, loadTable },
+              loadTable,
+              { signal },
             ),
           ]);
           await AsyncUtils.forEach(
