@@ -1,5 +1,5 @@
 import { DragDropProvider } from "@dnd-kit/react";
-import { isSortable, useSortable } from "@dnd-kit/react/sortable";
+import { useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 
@@ -23,6 +23,7 @@ import {
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { usePointsData } from "@/hooks/useData";
+import { useTopFirstSortable } from "@/hooks/useTopFirstSortable";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -42,21 +43,13 @@ export function PointsPanel({ className }: PointsPanelProps) {
   const points = useProjectStore((state) => state.points);
   const addPoints = useProjectStore((state) => state.addPoints);
   const movePoints = useProjectStore((state) => state.movePoints);
+  const { topFirstItems, onDragEnd } = useTopFirstSortable(points, movePoints);
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
-      <DragDropProvider
-        onDragEnd={(event) => {
-          const { source, canceled } = event.operation;
-          if (isSortable(source) && !canceled) {
-            // dnd-kit optimistically updates the DOM
-            // https://github.com/clauderic/dnd-kit/issues/1564
-            movePoints(source.id as string, source.index);
-          }
-        }}
-      >
+      <DragDropProvider onDragEnd={onDragEnd}>
         <Accordion multiple className="gap-y-2">
-          {points.map((currentPoints, index) => (
+          {topFirstItems.map((currentPoints, index) => (
             <PointsAccordionItem
               key={currentPoints.id}
               points={currentPoints}

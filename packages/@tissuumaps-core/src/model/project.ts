@@ -79,27 +79,27 @@ export interface RawProject extends RawModel {
   name: string;
 
   /**
-   * Layers
+   * Layers, drawn in order, so the last one is on top
    */
   layers?: RawLayer[];
 
   /**
-   * Images
+   * Images, drawn in order, so the last one is on top
    */
   images?: RawImage[];
 
   /**
-   * Labels
+   * Labels, drawn in order, so the last one is on top
    */
   labels?: RawLabels[];
 
   /**
-   * Points
+   * Points, drawn in order, so the last one is on top
    */
   points?: RawPoints[];
 
   /**
-   * Shapes
+   * Shapes, drawn in order, so the last one is on top
    */
   shapes?: RawShapes[];
 

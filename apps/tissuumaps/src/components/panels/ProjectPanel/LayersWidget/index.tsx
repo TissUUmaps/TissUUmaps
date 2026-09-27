@@ -1,5 +1,5 @@
 import { DragDropProvider } from "@dnd-kit/react";
-import { isSortable, useSortable } from "@dnd-kit/react/sortable";
+import { useSortable } from "@dnd-kit/react/sortable";
 import {
   EyeIcon,
   EyeOffIcon,
@@ -26,6 +26,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { useTopFirstSortable } from "@/hooks/useTopFirstSortable";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
@@ -39,19 +40,13 @@ export function LayersWidget({ className }: LayersWidgetProps) {
   const layers = useProjectStore((state) => state.layers);
   const addLayer = useProjectStore((state) => state.addLayer);
   const moveLayer = useProjectStore((state) => state.moveLayer);
+  const { topFirstItems, onDragEnd } = useTopFirstSortable(layers, moveLayer);
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
-      <DragDropProvider
-        onDragEnd={(event) => {
-          const { source, canceled } = event.operation;
-          if (isSortable(source) && !canceled) {
-            moveLayer(source.id as string, source.index);
-          }
-        }}
-      >
+      <DragDropProvider onDragEnd={onDragEnd}>
         <Accordion multiple className="gap-y-2">
-          {layers.map((layer, index) => (
+          {topFirstItems.map((layer, index) => (
             <LayerAccordionItem key={layer.id} layer={layer} index={index} />
           ))}
         </Accordion>

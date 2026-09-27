@@ -1,5 +1,5 @@
 import { DragDropProvider } from "@dnd-kit/react";
-import { isSortable, useSortable } from "@dnd-kit/react/sortable";
+import { useSortable } from "@dnd-kit/react/sortable";
 import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 
@@ -23,6 +23,7 @@ import {
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { useShapesData } from "@/hooks/useData";
+import { useTopFirstSortable } from "@/hooks/useTopFirstSortable";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -42,21 +43,13 @@ export function ShapesPanel({ className }: ShapesPanelProps) {
   const shapes = useProjectStore((state) => state.shapes);
   const addShapes = useProjectStore((state) => state.addShapes);
   const moveShapes = useProjectStore((state) => state.moveShapes);
+  const { topFirstItems, onDragEnd } = useTopFirstSortable(shapes, moveShapes);
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
-      <DragDropProvider
-        onDragEnd={(event) => {
-          const { source, canceled } = event.operation;
-          if (isSortable(source) && !canceled) {
-            // dnd-kit optimistically updates the DOM
-            // https://github.com/clauderic/dnd-kit/issues/1564
-            moveShapes(source.id as string, source.index);
-          }
-        }}
-      >
+      <DragDropProvider onDragEnd={onDragEnd}>
         <Accordion multiple className="gap-y-2">
-          {shapes.map((currentShapes, index) => (
+          {topFirstItems.map((currentShapes, index) => (
             <ShapesAccordionItem
               key={currentShapes.id}
               shapes={currentShapes}
