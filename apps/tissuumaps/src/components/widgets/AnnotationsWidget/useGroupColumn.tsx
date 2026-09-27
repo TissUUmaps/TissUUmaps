@@ -7,7 +7,8 @@ import { useLatestCallback } from "@/hooks/useLatestCallback";
 import type { GroupAnnotationsTableColumnDef } from "./GroupAnnotationsTable";
 import type { GroupValuesAdapter } from "./adapter";
 import { MutedCell } from "./cells/MutedCell";
-import { createGroupValues, isGroupedByColumn } from "./createGroupValues";
+import { createGroupValues } from "./createGroupValues";
+import { isGroupedByColumn } from "./isGroupedByColumn";
 import type { GroupTableState } from "./useGroupTable";
 
 /** A property of an annotated object that can take a value per group */

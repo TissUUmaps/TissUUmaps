@@ -1,11 +1,11 @@
 import {
   type Config,
   ConfigUtils,
-  type GroupByConfig,
   getActiveConfigSource,
   isConstantConfig,
 } from "@tissuumaps/core";
 
+import { isGroupedByColumn } from "./isGroupedByColumn";
 import type { GroupProperty } from "./useGroupColumn";
 import type { GroupTableState } from "./useGroupTable";
 
@@ -17,29 +17,6 @@ export type GroupValues<TValue> = {
   /** Whether the values are grayed out, as setting them changes the source */
   isInactive: boolean;
 };
-
-/**
- * Determines whether a configuration groups by the column of the group table
- *
- * @param config - The configuration
- * @param groupTable - The state of the group table
- * @returns Whether `groupBy` is the active source and groups by that column
- */
-export function isGroupedByColumn<TConfig extends Config<string>>(
-  config: TConfig,
-  groupTable: GroupTableState,
-): config is Extract<TConfig, GroupByConfig<false>> {
-  const groupByColumn = ConfigUtils.getGroupByColumn(config);
-  return (
-    groupTable.column !== null &&
-    groupByColumn !== undefined &&
-    ConfigUtils.isSameTableColumn(
-      groupByColumn,
-      groupTable.column,
-      groupTable.tableId ?? undefined,
-    )
-  );
-}
 
 /**
  * Returns the value of every group of a property, and how to set them
