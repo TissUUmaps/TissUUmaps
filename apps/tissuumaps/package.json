@@ -2,6 +2,11 @@
   "name": "tissuumaps",
   "private": true,
   "version": "3.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TissUUmaps/TissUUmaps4.git",
+    "directory": "apps/tissuumaps"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

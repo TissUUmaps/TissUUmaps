@@ -67,6 +67,8 @@ jobs:
         run: pnpm run build:packages
       - name: Run tests
         run: pnpm run test
+      - name: Run release script tests
+        run: pnpm run test:scripts
       - name: Upload coverage
         uses: codecov/codecov-action@v5
         with:

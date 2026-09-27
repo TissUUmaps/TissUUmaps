@@ -17,7 +17,9 @@ pnpm run build      # packages and application (excludes the documentation)
 pnpm run build:docs # packages and documentation
 ```
 
-Type checking is part of each package's `build` (`tsc -b`); there is no separate type-check script.
+Building the documentation for deployment takes the environment variables described in [Code architecture](./code-architecture.md#documentation-docs).
+
+Type checking is part of each package's `build` (`tsc -b`); `pnpm run typecheck` type-checks all projects (emitting only the packages' declaration files into `build/`), including the configuration files and the release scripts.
 
 ## Linting
 
@@ -42,7 +44,8 @@ pnpm run fmt:check
 The code can be tested using Vitest:
 
 ```sh
-pnpm run test
+pnpm run test         # packages and application (Vitest)
+pnpm run test:scripts # release scripts (Node test runner)
 ```
 
 This is an academic project. As such, we encourage rigorous testing, but loosely tested code may also be acceptable. Which units are expected to have tests is described in [Coding conventions](./coding-conventions.md#tests).
