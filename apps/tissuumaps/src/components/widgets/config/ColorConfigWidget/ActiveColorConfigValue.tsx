@@ -7,7 +7,7 @@ import {
   isRandomConfig,
 } from "@tissuumaps/core";
 
-import { formatTableColumnQuery } from "@/components/widgets/TableColumnInput/columnQuery";
+import { formatTableColumn } from "@/components/widgets/TableColumnField/formatTableColumn";
 import { useProjectStore } from "@/stores/project";
 
 import type { ColorConfigWidgetAdapter } from "./adapter";
@@ -41,7 +41,7 @@ export function ActiveColorConfigValue({
   ) {
     return (
       <div className={className}>
-        {formatTableColumnQuery(colorConfig.from, tables)}
+        {formatTableColumn(colorConfig.from, tables)}
       </div>
     );
   }
@@ -53,7 +53,7 @@ export function ActiveColorConfigValue({
   ) {
     return (
       <div className={className}>
-        {formatTableColumnQuery(colorConfig.groupBy, tables)}
+        {formatTableColumn(colorConfig.groupBy, tables)}
       </div>
     );
   }

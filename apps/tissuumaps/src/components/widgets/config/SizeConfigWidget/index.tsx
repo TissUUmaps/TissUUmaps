@@ -3,7 +3,7 @@ import { type CoordinateSpace, ProjectUtils } from "@tissuumaps/core";
 import { Field, FieldItem, FieldLabel } from "@/components/common/field";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { TableColumnInput } from "@/components/widgets/TableColumnInput";
+import { TableColumnField } from "@/components/widgets/TableColumnField";
 import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
 import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
@@ -113,14 +113,12 @@ function FromSizeConfigWidget({
 
   return (
     <div className={className}>
-      <Field disabled={tableId === null}>
-        <FieldLabel>Table column</FieldLabel>
-        <TableColumnInput
-          tableId={tableId}
-          value={column}
-          onValueChange={setColumn}
-        />
-      </Field>
+      <TableColumnField
+        label="Column"
+        tableId={tableId}
+        value={column}
+        onValueChange={setColumn}
+      />
       <Field>
         <FieldLabel>Size unit</FieldLabel>
         <RadioGroup
@@ -173,14 +171,12 @@ function GroupBySizeConfigWidget({
 
   return (
     <div className={className}>
-      <Field disabled={tableId === null}>
-        <FieldLabel>Table column</FieldLabel>
-        <TableColumnInput
-          tableId={tableId}
-          value={column}
-          onValueChange={setColumn}
-        />
-      </Field>
+      <TableColumnField
+        label="Column"
+        tableId={tableId}
+        value={column}
+        onValueChange={setColumn}
+      />
       <Field>
         <FieldLabel>Size map</FieldLabel>
         <GroupValueMapSelect

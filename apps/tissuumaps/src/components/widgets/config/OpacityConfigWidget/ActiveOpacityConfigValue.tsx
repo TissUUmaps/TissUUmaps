@@ -4,7 +4,7 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { formatTableColumnQuery } from "@/components/widgets/TableColumnInput/columnQuery";
+import { formatTableColumn } from "@/components/widgets/TableColumnField/formatTableColumn";
 import { useProjectStore } from "@/stores/project";
 
 import type { OpacityConfigWidgetAdapter } from "./adapter";
@@ -35,7 +35,7 @@ export function ActiveOpacityConfigValue({
   ) {
     return (
       <div className={className}>
-        {formatTableColumnQuery(opacityConfig.from, tables)}
+        {formatTableColumn(opacityConfig.from, tables)}
       </div>
     );
   }
@@ -47,7 +47,7 @@ export function ActiveOpacityConfigValue({
   ) {
     return (
       <div className={className}>
-        {formatTableColumnQuery(opacityConfig.groupBy, tables)}
+        {formatTableColumn(opacityConfig.groupBy, tables)}
       </div>
     );
   }

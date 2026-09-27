@@ -9,7 +9,7 @@ import type {
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { Input } from "@/components/ui/input";
-import { TableColumnInput } from "@/components/widgets/TableColumnInput";
+import { TableColumnField } from "@/components/widgets/TableColumnField";
 import { cn } from "@/lib/utils";
 
 import {
@@ -130,14 +130,12 @@ export function AnnotationsWidget({
           </span>
         )}
       </FieldsetLegend>
-      <Field disabled={tableId === null}>
-        <FieldLabel>Group by</FieldLabel>
-        <TableColumnInput
-          tableId={tableId}
-          value={selectedGroupByColumn}
-          onValueChange={onSelectedGroupByColumnChange}
-        />
-      </Field>
+      <TableColumnField
+        label="Group by column"
+        tableId={tableId}
+        value={selectedGroupByColumn}
+        onValueChange={onSelectedGroupByColumnChange}
+      />
       <Field disabled={selectedGroupByColumn === null || hasTooManyGroups}>
         <FieldLabel>Filter groups</FieldLabel>
         <Input

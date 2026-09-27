@@ -4,7 +4,7 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { formatTableColumnQuery } from "@/components/widgets/TableColumnInput/columnQuery";
+import { formatTableColumn } from "@/components/widgets/TableColumnField/formatTableColumn";
 import { useProjectStore } from "@/stores/project";
 
 import type { SizeConfigWidgetAdapter } from "./adapter";
@@ -29,7 +29,7 @@ export function ActiveSizeConfigValue({
   if (activeSource === "from" && isFromConfig(sizeConfig) && tableId !== null) {
     return (
       <div className={className}>
-        {formatTableColumnQuery(sizeConfig.from, tables)}
+        {formatTableColumn(sizeConfig.from, tables)}
       </div>
     );
   }
@@ -41,7 +41,7 @@ export function ActiveSizeConfigValue({
   ) {
     return (
       <div className={className}>
-        {formatTableColumnQuery(sizeConfig.groupBy, tables)}
+        {formatTableColumn(sizeConfig.groupBy, tables)}
       </div>
     );
   }

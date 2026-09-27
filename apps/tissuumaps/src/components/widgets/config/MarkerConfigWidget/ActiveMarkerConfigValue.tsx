@@ -5,7 +5,7 @@ import {
 } from "@tissuumaps/core";
 
 import { markers } from "@/components/markers";
-import { formatTableColumnQuery } from "@/components/widgets/TableColumnInput/columnQuery";
+import { formatTableColumn } from "@/components/widgets/TableColumnField/formatTableColumn";
 import { useProjectStore } from "@/stores/project";
 
 import type { MarkerConfigWidgetAdapter } from "./adapter";
@@ -37,7 +37,7 @@ export function ActiveMarkerConfigValue({
   ) {
     return (
       <div className={className}>
-        {formatTableColumnQuery(markerConfig.from, tables)}
+        {formatTableColumn(markerConfig.from, tables)}
       </div>
     );
   }
@@ -49,7 +49,7 @@ export function ActiveMarkerConfigValue({
   ) {
     return (
       <div className={className}>
-        {formatTableColumnQuery(markerConfig.groupBy, tables)}
+        {formatTableColumn(markerConfig.groupBy, tables)}
       </div>
     );
   }

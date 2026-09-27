@@ -6,7 +6,7 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { formatTableColumnQuery } from "@/components/widgets/TableColumnInput/columnQuery";
+import { formatTableColumn } from "@/components/widgets/TableColumnField/formatTableColumn";
 import { useProjectStore } from "@/stores/project";
 
 import type { VisibilityConfigWidgetAdapter } from "./adapter";
@@ -44,7 +44,7 @@ export function ActiveVisibilityConfigValue({
   ) {
     return (
       <div className={className}>
-        {formatTableColumnQuery(visibilityConfig.from, tables)}
+        {formatTableColumn(visibilityConfig.from, tables)}
       </div>
     );
   }
@@ -56,7 +56,7 @@ export function ActiveVisibilityConfigValue({
   ) {
     return (
       <div className={className}>
-        {formatTableColumnQuery(visibilityConfig.groupBy, tables)}
+        {formatTableColumn(visibilityConfig.groupBy, tables)}
       </div>
     );
   }
