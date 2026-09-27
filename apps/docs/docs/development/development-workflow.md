@@ -59,11 +59,27 @@ Bug reports and feature requests use the issue templates in `.github/ISSUE_TEMPL
 
 ## Version control
 
-This project uses [semantic versioning](https://semver.org).
+This project uses [semantic versioning](https://semver.org); see [Versioning and changelogs](#versioning-and-changelogs) below.
 
 GitHub is used for distributed version control using Git: https://github.com/TissUUmaps/TissUUmaps4
 
 The repository follows a simplified Git Flow-like branching model, with a `main` branch holding the latest stable version and a single `development` branch, into which feature branches are merged. Branch rules protect both the `main` branch and the `development` branch from direct pushes without pull requests. Commit messages follow the [conventional commits](https://www.conventionalcommits.org) specification, with a scope where one applies and `!` marking breaking changes (e.g. `feat(storage)!: resolve relative URLs against the project URL`); branch names and pull requests should loosely follow [conventional branch](https://conventional-branch.github.io) guidelines. Only signed commits can be merged.
+
+## Versioning and changelogs
+
+Versions and changelogs are managed with [changesets](https://github.com/changesets/changesets). The published `@tissuumaps/*` packages are versioned independently of each other; the `tissuumaps` application has its own version (4.x). The documentation is not versioned.
+
+Every pull request that changes a published package or the application adds a changeset describing the change from a user's perspective:
+
+```sh
+pnpm changeset
+```
+
+The command asks which packages are affected and whether the change is a `patch` (bug fix), `minor` (new, backwards-compatible functionality) or `major` (breaking change) bump, and writes a markdown file to `.changeset/`, which is committed along with the change. Pull requests that touch neither a package nor the application (documentation, tooling, tests) need no changeset.
+
+`pnpm changeset version` consumes the pending changesets: it bumps the affected versions, updates the version ranges between the packages, and prepends the entries to each package's `CHANGELOG.md`. The changelogs are generated; do not edit them by hand. `pnpm run release` builds the packages and publishes those whose version is not on npm yet (`changeset publish`).
+
+The project is currently in changesets' pre-release mode (`.changeset/pre.json`, tag `beta`): versions are computed as usual and suffixed with `-beta.N`, so the first releases are `0.1.0-beta.0` for the packages and `4.0.0-beta.0` for the application. `pnpm changeset pre exit` leaves pre-release mode, after which the next version bump produces the stable versions.
 
 ## Pre-commit hooks
 
@@ -97,4 +113,4 @@ Current development version &rarr; `development` branch:
 
 ## Continuous delivery
 
-TODO
+Packages are published to npm from the versions and changelogs produced by changesets (see [Versioning and changelogs](#versioning-and-changelogs)): `pnpm run release` builds the packages and runs `changeset publish`. Publishing is not automated yet.
