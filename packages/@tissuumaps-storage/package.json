@@ -14,7 +14,8 @@
   "sideEffects": false,
   "files": [
     "./dist",
-    "./CHANGELOG.md"
+    "./CHANGELOG.md",
+    "./THIRD_PARTY_LICENSES.txt"
   ],
   "exports": {
     ".": {
