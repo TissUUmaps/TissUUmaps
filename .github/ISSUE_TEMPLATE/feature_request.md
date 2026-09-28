@@ -1,7 +1,7 @@
 ---
 name: Feature Request
 about: Request a feature.
-labels: feature
+labels: enhancement
 ---
 
 ## Feature

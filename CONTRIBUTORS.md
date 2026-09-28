@@ -27,12 +27,4 @@
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
-We would also like to thank the original [TissUUmaps](https://github.com/TissUUmaps/TissUUmaps) team for their contributions.
-
-## How to Contribute
-
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for more information.
-
-## Acknowledgments
-
-This project is made possible by the open source community.
+We would also like to thank the original [TissUUmaps](https://github.com/TissUUmaps/TissUUmaps3) team for their contributions.

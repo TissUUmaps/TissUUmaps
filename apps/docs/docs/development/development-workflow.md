@@ -60,6 +60,8 @@ API documentation for packages can be auto-generated from TSDoc code comments.
 
 Bug reports and feature requests use the issue templates in `.github/ISSUE_TEMPLATE`. Pull requests follow `.github/PULL_REQUEST_TEMPLATE.md`, which includes a declaration of AI use (see [AI policy](./ai-policy.md)).
 
+By submitting a pull request, you confirm that you have authored its content, that you have the necessary rights to it, and that it may be provided under the project's [MIT license](https://github.com/TissUUmaps/TissUUmaps/blob/main/LICENSE).
+
 ## Version control
 
 This project uses [semantic versioning](https://semver.org); see [Versioning and changelogs](#versioning-and-changelogs) below.
@@ -106,7 +108,7 @@ Releases are automated with changesets and GitHub Actions (`.github/workflows/re
 
 1. While changesets are pending, the workflow opens or updates a "Version Packages" pull request that applies them (see [Versioning and changelogs](#versioning-and-changelogs)).
 2. Merging that pull request publishes the bumped packages to npm (`pnpm run release`), tags the releases (`@tissuumaps/core@0.1.0-beta.0`, `tissuumaps@4.0.0-beta.0`, ...) and creates the corresponding GitHub releases with the changelog entries as notes.
-3. If the application was released, the workflow builds its site from the _published_ packages, never from the workspace sources (see [Release scripts](./code-architecture.md#release-scripts-scripts)): the single-file application with its public files, uploaded to the GitHub release as `tissuumaps-<version>.zip`, which can be downloaded and opened locally or hosted anywhere; and its documentation as `tissuumaps-<version>-docs.zip`, built for its deployed path and only used by the deployment.
+3. If the application was released, the workflow builds its site from the _published_ packages, never from the workspace sources (see [Release scripts](./code-architecture.md#release-scripts-scripts)): the single-file application with its public files, uploaded to the GitHub release as `tissuumaps-<version>.zip`, which can be hosted on any web server; and its documentation as `tissuumaps-<version>-docs.zip`, built for its deployed path and only used by the deployment.
 4. The GitHub Pages site is re-assembled and deployed (see below).
 
 Publishing needs the `NPM_TOKEN` repository secret until the packages exist on npm and trusted publishing is configured for them. A manual run of the workflow (`workflow_dispatch`) rebuilds the site asset of the given release tag, or, with the tag left empty, just re-assembles and deploys the site. The "Version Packages" pull request is opened with the workflow's own token, which does not trigger the continuous integration checks; close and reopen it to run them before merging.

@@ -55,7 +55,7 @@ representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behaviour may be
-reported to any [current member](CONTRIBUTORS.md) of the core team.
+reported by email to [biif@scilifelab.se](mailto:biif@scilifelab.se).
 All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the
