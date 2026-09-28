@@ -142,7 +142,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
   # Assembles the site from the release assets and deploys it to GitHub Pages;
-  # while no version is released, the current branch is deployed instead
+  # while no version can be deployed, the current branch is deployed instead
   deploy-pages:
     needs: [release, find-release, build-site]
     if: ${{ !failure() && !cancelled() }}

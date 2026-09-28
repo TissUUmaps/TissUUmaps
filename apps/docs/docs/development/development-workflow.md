@@ -118,6 +118,6 @@ The application and its documentation are deployed to GitHub Pages by version, a
 - https://tissuumaps.github.io/TissUUmaps4/ redirects to the latest version, https://tissuumaps.github.io/TissUUmaps4/docs/ to its documentation.
 - `https://tissuumaps.github.io/TissUUmaps4/<version>/` is the application of a version, with its documentation under `docs/`.
 - Of every MAJOR.MINOR line only the newest version is kept (plus a prerelease above it, if any); every other version redirects to the version that replaces it, keeping the rest of the path (the exact rules are described in [Code architecture](./code-architecture.md#release-scripts-scripts)).
-- While no version has been released, the current `main` is deployed instead: the application at the root and its documentation under `docs/`.
+- While no version can be deployed (none has been released, or no release has its assets yet), the current `main` is deployed instead: the application at the root and its documentation under `docs/`.
 
 The Matomo snippet in `.github/pages/custom.html` is inserted into the application page of every deployed version at deployment; the release assets stay free of it. The site also mirrors the plugin index of TissUUmaps 3 under `plugins/` from the repository named by the `V3_PLUGINS_REPO` repository variable, since TissUUmaps 3 loads its plugins from this location.

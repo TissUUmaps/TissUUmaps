@@ -14,8 +14,9 @@
  *   --out <dir>                output directory (default: `_site`)
  *   --prefix <path>            site path prefix (default: `/<repository name>/`)
  *   --repository <owner/repo>  repository of the releases (default: `$GITHUB_REPOSITORY`)
- *   --custom-html <file>       HTML to insert into the head of every deployed version's
- *                              application page (the release assets stay free of it)
+ *   --custom-html <file>       HTML to insert in place of the `<!-- GHA_CUSTOM_HTML -->`
+ *                              marker of every deployed version's application page (the
+ *                              release assets stay free of it)
  *   --releases <file>          releases as JSON instead of the GitHub API (for testing)
  *   --assets-dir <dir>         directory holding the zips instead of downloading them (for testing)
  */
@@ -42,6 +43,8 @@ const assetsOf = (version: Version) => ({
   app: `tissuumaps-${formatVersion(version)}.zip`,
   docs: `tissuumaps-${formatVersion(version)}-docs.zip`,
 });
+// Marks where the custom HTML goes in the application page (`apps/tissuumaps/index.html`)
+const customHtmlMarker = "<!-- GHA_CUSTOM_HTML -->";
 
 function run(command: string, args: string[]): string {
   return execFileSync(command, args, {
@@ -164,12 +167,12 @@ function deployVersions() {
       if (customHtml) {
         const page = join(versionDir, "index.html");
         const html = readFileSync(page, "utf8");
-        if (!html.includes("</head>")) {
-          throw new Error(`${page} has no </head> for the custom HTML`);
+        if (!html.includes(customHtmlMarker)) {
+          throw new Error(`${page} has no ${customHtmlMarker} marker`);
         }
         writeFileSync(
           page,
-          html.replace("</head>", () => customHtml + "</head>"),
+          html.replace(customHtmlMarker, () => customHtml),
         );
       }
       console.log(`deployed ${formatVersion(version)}`);
