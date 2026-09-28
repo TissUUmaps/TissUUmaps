@@ -2,6 +2,7 @@ import type { CellProps } from "@jsonforms/core";
 import { withJsonFormsCellProps } from "@jsonforms/react";
 import { FolderOpenIcon } from "lucide-react";
 
+import { IconButton } from "@/components/common/icon-button";
 import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
 import {
   InputGroup,
@@ -10,11 +11,9 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { pickWorkspaceDirectory, pickWorkspaceFile } from "@/data/io/workspace";
+  pickWorkspaceDirectoryPath,
+  pickWorkspaceFilePath,
+} from "@/data/io/workspace";
 import { useAppStore } from "@/stores/app";
 
 export const SourceCell = withJsonFormsCellProps((props: CellProps) => {
@@ -46,40 +45,31 @@ export const SourceCell = withJsonFormsCellProps((props: CellProps) => {
       />
       {workspace !== null && (
         <InputGroupAddon align="inline-end">
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <InputGroupButton
-                  size="icon-xs"
-                  aria-label="Choose from the connected folder"
-                  onClick={() => {
-                    (options.directory === true
-                      ? pickWorkspaceDirectory(workspace)
-                      : pickWorkspaceFile(workspace)
-                    )
-                      .then((source) => {
-                        if (source !== null) {
-                          props.handleChange(props.path, source);
-                        }
-                      })
-                      .catch((error: unknown) => {
-                        console.error("Failed to pick a data source", error);
-                        void alert({
-                          title: "Cannot use this source",
-                          body:
-                            error instanceof Error
-                              ? error.message
-                              : String(error),
-                        });
-                      });
-                  }}
-                />
-              }
-            >
-              <FolderOpenIcon />
-            </TooltipTrigger>
-            <TooltipContent>Choose from the connected folder</TooltipContent>
-          </Tooltip>
+          <IconButton
+            label="Choose from the connected folder"
+            render={<InputGroupButton size="icon-xs" />}
+            onClick={() => {
+              (options.directory === true
+                ? pickWorkspaceDirectoryPath(workspace)
+                : pickWorkspaceFilePath(workspace)
+              )
+                .then((source) => {
+                  if (source !== null) {
+                    props.handleChange(props.path, source);
+                  }
+                })
+                .catch((error: unknown) => {
+                  console.error("Failed to pick a data source", error);
+                  void alert({
+                    title: "Cannot use this source",
+                    body:
+                      error instanceof Error ? error.message : String(error),
+                  });
+                });
+            }}
+          >
+            <FolderOpenIcon />
+          </IconButton>
         </InputGroupAddon>
       )}
     </InputGroup>

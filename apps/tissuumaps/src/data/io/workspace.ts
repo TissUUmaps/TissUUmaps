@@ -40,32 +40,12 @@ export function isWorkspaceSupported(): boolean {
  *
  * The directory is opened for reading only.
  *
- * @param options - Optional directory to open the picker in, instead of the
- * one it was last used in
  * @returns The directory handle, or `null` if the user cancelled the picker
  * @throws Error if the browser does not support picking a directory, or if
  * access to the directory was denied
  */
-export async function pickWorkspace(options?: {
-  startIn?: FileSystemDirectoryHandle;
-}): Promise<FileSystemDirectoryHandle | null> {
-  const w = window as FileSystemAccessWindow;
-  if (w.showDirectoryPicker === undefined) {
-    throw new Error("Picking a directory is not supported by this browser");
-  }
-  try {
-    // Called as a method: the picker throws if it loses its receiver
-    return await w.showDirectoryPicker({
-      id: workspacePickerId,
-      mode: "read",
-      startIn: options?.startIn,
-    });
-  } catch (error) {
-    if (isAbortError(error)) {
-      return null;
-    }
-    throw error;
-  }
+export function pickWorkspace(): Promise<FileSystemDirectoryHandle | null> {
+  return openDirectoryPicker({ id: workspacePickerId });
 }
 
 /**
@@ -101,7 +81,7 @@ export function pickProjectFile(options?: {
  * @throws Error if the browser does not support picking a file, if access to
  * the file was denied, or if the file does not lie within the workspace
  */
-export async function pickWorkspaceFile(
+export async function pickWorkspaceFilePath(
   workspace: FileSystemDirectoryHandle,
 ): Promise<string | null> {
   const file = await openFilePicker({ startIn: workspace });
@@ -116,13 +96,14 @@ export async function pickWorkspaceFile(
  * @returns The workspace-relative path of the picked directory (with `/`
  * prefix), or `null` if the user cancelled the picker
  * @throws Error if the browser does not support picking a directory, if access
- * to the directory was denied, or if the directory does not lie within the
- * workspace
+ * to the directory was denied, or if the directory is the workspace itself or
+ * does not lie within it
  */
-export async function pickWorkspaceDirectory(
+export async function pickWorkspaceDirectoryPath(
   workspace: FileSystemDirectoryHandle,
 ): Promise<string | null> {
-  const directory = await pickWorkspace({ startIn: workspace });
+  // No picker id: the workspace picker keeps its own last directory
+  const directory = await openDirectoryPicker({ startIn: workspace });
   return directory !== null
     ? await locateInWorkspace(workspace, directory)
     : null;
@@ -135,7 +116,8 @@ export async function pickWorkspaceDirectory(
  * @param handle - The picked file or directory
  * @returns The workspace-relative path of the file or directory (with `/`
  * prefix)
- * @throws Error if the file or directory does not lie within the workspace
+ * @throws Error if the file or directory does not lie within the workspace, or
+ * is the workspace itself, which is no source
  */
 async function locateInWorkspace(
   workspace: FileSystemDirectoryHandle,
@@ -147,7 +129,44 @@ async function locateInWorkspace(
       `The ${handle.kind === "directory" ? "folder" : "file"} is not in the connected folder`,
     );
   }
+  if (segments.length === 0) {
+    throw new Error(
+      "The connected folder itself cannot be a data source; pick a folder inside it",
+    );
+  }
   return SourceUtils.makeWorkspacePath(segments);
+}
+
+/**
+ * Opens the browser's directory picker, for reading only
+ *
+ * @param options - The picker id, whose last directory the browser reopens,
+ * and the directory to open the picker in instead
+ * @returns The directory handle, or `null` if the user cancelled the picker
+ * @throws Error if the browser does not support picking a directory, or if
+ * access to the directory was denied
+ */
+async function openDirectoryPicker(options: {
+  id?: string;
+  startIn?: FileSystemDirectoryHandle;
+}): Promise<FileSystemDirectoryHandle | null> {
+  const w = window as FileSystemAccessWindow;
+  if (w.showDirectoryPicker === undefined) {
+    throw new Error("Picking a directory is not supported by this browser");
+  }
+  try {
+    // Called as a method: the picker throws if it loses its receiver
+    return await w.showDirectoryPicker({
+      id: options.id,
+      mode: "read",
+      startIn: options.startIn,
+    });
+  } catch (error) {
+    if (isAbortError(error)) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 /**

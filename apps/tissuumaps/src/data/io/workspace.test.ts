@@ -4,8 +4,8 @@ import {
   isWorkspaceSupported,
   pickProjectFile,
   pickWorkspace,
-  pickWorkspaceDirectory,
-  pickWorkspaceFile,
+  pickWorkspaceDirectoryPath,
+  pickWorkspaceFilePath,
 } from "./workspace";
 
 const directory = {
@@ -131,12 +131,12 @@ describe("workspace", () => {
     });
   });
 
-  describe("pickWorkspaceFile", () => {
+  describe("pickWorkspaceFilePath", () => {
     it("returns the workspace path of the picked file", async () => {
       const workspace = makeWorkspace(["data", "cells.csv"]);
       const picker = vi.fn(() => Promise.resolve([projectFile]));
       stubOpenFilePicker(picker);
-      await expect(pickWorkspaceFile(workspace)).resolves.toBe(
+      await expect(pickWorkspaceFilePath(workspace)).resolves.toBe(
         "/data/cells.csv",
       );
       expect(picker).toHaveBeenCalledWith(
@@ -146,7 +146,7 @@ describe("workspace", () => {
 
     it("rejects a file outside the workspace", async () => {
       stubOpenFilePicker(() => Promise.resolve([projectFile]));
-      await expect(pickWorkspaceFile(makeWorkspace(null))).rejects.toThrow(
+      await expect(pickWorkspaceFilePath(makeWorkspace(null))).rejects.toThrow(
         /not in the connected folder/,
       );
     });
@@ -156,29 +156,38 @@ describe("workspace", () => {
         Promise.reject(new DOMException("Aborted", "AbortError")),
       );
       await expect(
-        pickWorkspaceFile(makeWorkspace(["cells.csv"])),
+        pickWorkspaceFilePath(makeWorkspace(["cells.csv"])),
       ).resolves.toBeNull();
     });
   });
 
-  describe("pickWorkspaceDirectory", () => {
+  describe("pickWorkspaceDirectoryPath", () => {
     it("returns the workspace path of the picked directory", async () => {
       const workspace = makeWorkspace(["data", "image.ome.zarr"]);
       const picker = vi.fn(() => Promise.resolve(directory));
       stubDirectoryPicker(picker);
-      await expect(pickWorkspaceDirectory(workspace)).resolves.toBe(
+      await expect(pickWorkspaceDirectoryPath(workspace)).resolves.toBe(
         "/data/image.ome.zarr",
       );
-      expect(picker).toHaveBeenCalledWith(
-        expect.objectContaining({ startIn: workspace }),
-      );
+      expect(picker).toHaveBeenCalledWith({
+        id: undefined,
+        mode: "read",
+        startIn: workspace,
+      });
+    });
+
+    it("rejects the workspace itself", async () => {
+      stubDirectoryPicker(() => Promise.resolve(directory));
+      await expect(
+        pickWorkspaceDirectoryPath(makeWorkspace([])),
+      ).rejects.toThrow(/connected folder itself/);
     });
 
     it("rejects a directory outside the workspace", async () => {
       stubDirectoryPicker(() => Promise.resolve(directory));
-      await expect(pickWorkspaceDirectory(makeWorkspace(null))).rejects.toThrow(
-        /not in the connected folder/,
-      );
+      await expect(
+        pickWorkspaceDirectoryPath(makeWorkspace(null)),
+      ).rejects.toThrow(/not in the connected folder/);
     });
 
     it("returns null when the user cancels", async () => {
@@ -186,7 +195,7 @@ describe("workspace", () => {
         Promise.reject(new DOMException("Aborted", "AbortError")),
       );
       await expect(
-        pickWorkspaceDirectory(makeWorkspace(["image.ome.zarr"])),
+        pickWorkspaceDirectoryPath(makeWorkspace(["image.ome.zarr"])),
       ).resolves.toBeNull();
     });
   });
