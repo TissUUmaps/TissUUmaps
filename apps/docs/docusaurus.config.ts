@@ -4,11 +4,18 @@ import { themes as prismThemes } from "prism-react-renderer";
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
-// The application the "Live" links point at: the deployed version alongside
-// the documentation, or the development server when building locally
-const appUrl = (
-  process.env.TISSUUMAPS_APP_URL || "http://localhost:5173/"
-).replace(/\/?$/, "/");
+// The documentation is deployed under `<application>/docs/`, so the "Live"
+// links point at that application, or at the development server when
+// building locally (absolute, since Docusaurus treats paths as internal links)
+const url = "https://tissuumaps.github.io";
+const baseUrl = process.env.DOCUSAURUS_BASE_URL || "/";
+if (baseUrl !== "/" && !baseUrl.endsWith("/docs/")) {
+  throw new Error(`DOCUSAURUS_BASE_URL must end in "/docs/": ${baseUrl}`);
+}
+const appUrl =
+  baseUrl === "/"
+    ? "http://localhost:5173/"
+    : url + baseUrl.replace(/docs\/$/, "");
 const demoUrl = `${appUrl}?project=https://user.it.uu.se/~chrav452/TissUUmaps4/data/heart_cropped/project.json`;
 
 const config: Config = {
@@ -22,10 +29,10 @@ const config: Config = {
   },
 
   // Set the production url of your site here
-  url: "https://tissuumaps.github.io",
+  url,
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: process.env.DOCUSAURUS_BASE_URL ?? "/",
+  baseUrl,
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
