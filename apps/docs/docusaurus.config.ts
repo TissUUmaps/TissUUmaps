@@ -37,7 +37,7 @@ const config: Config = {
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
   organizationName: "TissUUmaps", // Usually your GitHub org/user name.
-  projectName: "TissUUmaps4", // Usually your repo name.
+  projectName: "TissUUmaps", // Usually your repo name.
 
   onBrokenLinks: "throw",
 
@@ -58,7 +58,7 @@ const config: Config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            "https://github.com/TissUUmaps/TissUUmaps4/tree/main/apps/docs/",
+            "https://github.com/TissUUmaps/TissUUmaps/tree/main/apps/docs/",
         },
         blog: false,
         theme: {
@@ -92,7 +92,7 @@ const config: Config = {
           label: "Packages",
         },
         {
-          href: "https://github.com/TissUUmaps/TissUUmaps4/",
+          href: "https://github.com/TissUUmaps/TissUUmaps/",
           label: "GitHub",
           position: "right",
         },
@@ -138,7 +138,7 @@ const config: Config = {
           items: [
             {
               label: "GitHub",
-              href: "https://github.com/TissUUmaps/TissUUmaps4/",
+              href: "https://github.com/TissUUmaps/TissUUmaps/",
             },
             {
               href: appUrl,

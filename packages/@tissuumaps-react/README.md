@@ -1,6 +1,6 @@
 # @tissuumaps/react
 
-The [TissUUmaps](https://github.com/TissUUmaps/TissUUmaps4) `Viewer` React
+The [TissUUmaps](https://github.com/TissUUmaps/TissUUmaps) `Viewer` React
 component. It renders through `@tissuumaps/render` and is decoupled from
 application state management by the `ViewerAdapter` interface.
 
@@ -20,5 +20,5 @@ Under a Content Security Policy, allow `img-src data:` for the marker atlas of
 
 ## Documentation
 
-- [API reference](https://tissuumaps.github.io/TissUUmaps4/docs/docs/api/@tissuumaps/react/)
-- [Code architecture](https://tissuumaps.github.io/TissUUmaps4/docs/docs/development/code-architecture/)
+- [API reference](https://tissuumaps.github.io/TissUUmaps/docs/docs/api/@tissuumaps/react/)
+- [Code architecture](https://tissuumaps.github.io/TissUUmaps/docs/docs/development/code-architecture/)

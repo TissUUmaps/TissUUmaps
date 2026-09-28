@@ -4,7 +4,7 @@
   "version": "3.0.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TissUUmaps/TissUUmaps4.git",
+    "url": "git+https://github.com/TissUUmaps/TissUUmaps.git",
     "directory": "apps/tissuumaps"
   },
   "type": "module",

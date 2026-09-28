@@ -2,7 +2,7 @@
   "$schema": "https://unpkg.com/@changesets/config@4.0.1/schema.json",
   "changelog": [
     "@changesets/changelog-github",
-    { "repo": "TissUUmaps/TissUUmaps4" }
+    { "repo": "TissUUmaps/TissUUmaps" }
   ],
   "commit": false,
   "fixed": [],

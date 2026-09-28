@@ -2,11 +2,11 @@
   "name": "@tissuumaps/react",
   "version": "0.0.0",
   "description": "React viewer component for TissUUmaps",
-  "homepage": "https://tissuumaps.github.io/TissUUmaps4/",
-  "bugs": "https://github.com/TissUUmaps/TissUUmaps4/issues",
+  "homepage": "https://tissuumaps.github.io/TissUUmaps/",
+  "bugs": "https://github.com/TissUUmaps/TissUUmaps/issues",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TissUUmaps/TissUUmaps4.git",
+    "url": "git+https://github.com/TissUUmaps/TissUUmaps.git",
     "directory": "packages/@tissuumaps-react"
   },
   "license": "MIT",

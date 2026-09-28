@@ -64,7 +64,7 @@ Bug reports and feature requests use the issue templates in `.github/ISSUE_TEMPL
 
 This project uses [semantic versioning](https://semver.org); see [Versioning and changelogs](#versioning-and-changelogs) below.
 
-GitHub is used for distributed version control using Git: https://github.com/TissUUmaps/TissUUmaps4
+GitHub is used for distributed version control using Git: https://github.com/TissUUmaps/TissUUmaps
 
 The repository follows a simplified Git Flow-like branching model, with a `main` branch holding the latest stable version and a single `development` branch, into which feature branches are merged. Branch rules protect both the `main` branch and the `development` branch from direct pushes without pull requests. Commit messages follow the [conventional commits](https://www.conventionalcommits.org) specification, with a scope where one applies and `!` marking breaking changes (e.g. `feat(storage)!: resolve relative URLs against the project URL`); branch names and pull requests should loosely follow [conventional branch](https://conventional-branch.github.io) guidelines. Only signed commits can be merged.
 
@@ -98,7 +98,7 @@ Linting, formatting, type checking and testing (see above) need to pass without 
 
 A review is automatically requested from Copilot and needs to be resolved for every pull request.
 
-Test coverage is [reported to codecov.io](https://app.codecov.io/gh/TissUUmaps/TissUUmaps4) for every push and for every pull request.
+Test coverage is [reported to codecov.io](https://app.codecov.io/gh/TissUUmaps/TissUUmaps) for every push and for every pull request.
 
 ## Continuous delivery
 
@@ -115,8 +115,8 @@ Publishing needs the `NPM_TOKEN` repository secret until the packages exist on n
 
 The application and its documentation are deployed to GitHub Pages by version, assembled from the release assets (see [Release scripts](./code-architecture.md#release-scripts-scripts)):
 
-- https://tissuumaps.github.io/TissUUmaps4/ redirects to the latest version, https://tissuumaps.github.io/TissUUmaps4/docs/ to its documentation.
-- `https://tissuumaps.github.io/TissUUmaps4/<version>/` is the application of a version, with its documentation under `docs/`.
+- https://tissuumaps.github.io/TissUUmaps/ redirects to the latest version, https://tissuumaps.github.io/TissUUmaps/docs/ to its documentation.
+- `https://tissuumaps.github.io/TissUUmaps/<version>/` is the application of a version, with its documentation under `docs/`.
 - Of every MAJOR.MINOR line only the newest version is kept (plus a prerelease above it, if any); every other version redirects to the version that replaces it, keeping the rest of the path (the exact rules are described in [Code architecture](./code-architecture.md#release-scripts-scripts)).
 - While no version can be deployed (none has been released, or no release has its assets yet), the current `main` is deployed instead: the application at the root and its documentation under `docs/`.
 
