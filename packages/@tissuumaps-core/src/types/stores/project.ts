@@ -15,9 +15,9 @@ import type { Table } from "../../model/table";
  * In addition to the project itself, the store keeps track of where the
  * project was loaded from, which is what project-relative paths in its data
  * sources are resolved against, of an ID identifying the open project as such,
- * and of the project as it was last loaded or saved. These describe how the
- * project was opened rather than what it contains, so they are not part of
- * {@link Project} and are not to be saved, serialized or exported with it.
+ * and of the project as it was last loaded or saved. None of these are part of
+ * {@link Project}, and they are not to be saved, serialized or exported with
+ * it.
  */
 export type ProjectStoreState = Project & {
   /**

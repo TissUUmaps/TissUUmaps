@@ -15,11 +15,11 @@ import {
 import "./zustand";
 
 /**
- * The store holding the currently open project, and the URL it was loaded from
+ * The store holding the currently open project, and where it was loaded from
  *
  * Loading a project into this store, and saving it back out, is handled by
- * `@/data/io/project`. The project's URL is only ever set by loading a project,
- * and is never written back out.
+ * `@/data/io/project`. Where the project was loaded from is only ever set by
+ * loading a project or saving it as a new file, and is never written out.
  */
 export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
   devtools(
