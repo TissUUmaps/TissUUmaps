@@ -18,8 +18,9 @@ import {
  * highest prerelease alone while the line has no stable version. A prerelease
  * is only kept while no stable version above it exists at all, so abandoned
  * prerelease lines do not accumulate. Every other version redirects to the
- * lowest kept version at or above it, so that a prerelease never replaces a
- * stable version for its users. The site root goes to the latest stable
+ * lowest kept version at or above it (a stable one for a stable version, so
+ * that a prerelease never replaces a stable version for its users), or to
+ * the latest version when there is none. The site root goes to the latest stable
  * version, or to the latest prerelease while no stable version exists.
  *
  * @param versions - The released versions, in any order

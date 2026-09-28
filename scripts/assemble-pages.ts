@@ -2,24 +2,27 @@
  * Assembles the versioned GitHub Pages site from the release assets
  *
  * Every release of the application (`tissuumaps@<version>`) carries the built
- * site of that version as the asset `tissuumaps-<version>-site.zip`. Only the
- * newest versions are deployed and the others redirect to them (see
+ * application as the asset `tissuumaps-<version>.zip` and its documentation
+ * as `tissuumaps-<version>-docs.zip`. Only the newest versions are deployed
+ * and the others redirect to them (see
  * `lib/retention.ts`); the site root redirects to the latest version and
- * `docs/` to its documentation. While no version is deployed, the site is a
- * copy of the fallback directory instead (the current application at its
- * root and its documentation under `docs/`, built from the default branch).
+ * `docs/` to its documentation. In GitHub Actions, the latest version is
+ * reported as the step output `latest` (empty while no version is deployed,
+ * for the workflow to deploy something else instead).
  *
  * Usage: `node scripts/assemble-pages.ts [options]`
  *   --out <dir>                output directory (default: `_site`)
  *   --prefix <path>            site path prefix (default: `/<repository name>/`)
  *   --repository <owner/repo>  repository of the releases (default: `$GITHUB_REPOSITORY`)
- *   --fallback-dir <dir>       the site to serve while no version is deployed
+ *   --custom-html <file>       HTML to insert in place of the `<!-- GHA_CUSTOM_HTML -->`
+ *                              marker of every deployed version's application page (the
+ *                              release assets stay free of it)
  *   --releases <file>          releases as JSON instead of the GitHub API (for testing)
  *   --assets-dir <dir>         directory holding the zips instead of downloading them (for testing)
  */
 import { execFileSync } from "node:child_process";
 import {
-  cpSync,
+  appendFileSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -36,8 +39,12 @@ import { planRetention } from "./lib/retention.ts";
 import { type Version, formatVersion, parseVersion } from "./lib/semver.ts";
 
 const tagOf = (version: Version) => `tissuumaps@${formatVersion(version)}`;
-const assetOf = (version: Version) =>
-  `tissuumaps-${formatVersion(version)}-site.zip`;
+const assetsOf = (version: Version) => ({
+  app: `tissuumaps-${formatVersion(version)}.zip`,
+  docs: `tissuumaps-${formatVersion(version)}-docs.zip`,
+});
+// Marks where the custom HTML goes in the application page (`apps/tissuumaps/index.html`)
+const customHtmlMarker = "<!-- GHA_CUSTOM_HTML -->";
 
 function run(command: string, args: string[]): string {
   return execFileSync(command, args, {
@@ -51,7 +58,7 @@ const { values: options } = parseArgs({
     out: { type: "string", default: "_site" },
     prefix: { type: "string" },
     repository: { type: "string", default: process.env.GITHUB_REPOSITORY },
-    "fallback-dir": { type: "string" },
+    "custom-html": { type: "string" },
     releases: { type: "string" },
     "assets-dir": { type: "string" },
   },
@@ -66,8 +73,8 @@ if (!prefix.startsWith("/") || !prefix.endsWith("/")) {
 }
 const outDir = options.out;
 
-// The application's releases; one without its site asset (a failed upload)
-// cannot be deployed and only gets a redirect
+// The application's releases; one without its assets (a failed upload) cannot
+// be deployed and only gets a redirect
 type Release = { tag: string; draft: boolean; assets: string[] };
 const releases = options.releases
   ? (JSON.parse(readFileSync(options.releases, "utf8")) as Release[])
@@ -95,8 +102,11 @@ for (const release of releases) {
     continue;
   }
   versions.push(version);
-  if (!release.assets.includes(assetOf(version))) {
-    console.warn(`${release.tag} has no ${assetOf(version)}`);
+  const missing = Object.values(assetsOf(version)).filter(
+    (asset) => !release.assets.includes(asset),
+  );
+  if (missing.length > 0) {
+    console.warn(`${release.tag} has no ${missing.join(", ")}`);
     withoutAsset.add(version);
   }
 }
@@ -108,25 +118,28 @@ const { retained, redirects, latest } = planRetention(
 rmSync(outDir, { recursive: true, force: true });
 mkdirSync(outDir, { recursive: true });
 writeFileSync(join(outDir, ".nojekyll"), "");
-if (latest === null && options["fallback-dir"]) {
-  cpSync(options["fallback-dir"], outDir, { recursive: true });
-  console.log(`no version deployed: serving ${options["fallback-dir"]}`);
-} else {
-  deployVersions();
-  writeRedirectPages();
-  console.log(
-    `latest: ${latest ? formatVersion(latest) : "none"}; redirects: ${Object.keys(redirects).join(", ") || "none"}`,
-  );
+deployVersions();
+writeRedirectPages();
+const latestName = latest ? formatVersion(latest) : "";
+console.log(
+  `latest: ${latestName || "none"}; redirects: ${Object.keys(redirects).join(", ") || "none"}`,
+);
+if (process.env.GITHUB_OUTPUT) {
+  appendFileSync(process.env.GITHUB_OUTPUT, `latest=${latestName}\n`);
 }
 
-/** Unpacks each retained version's site asset into `<out>/<version>/` */
+/** Unpacks each retained version's assets into `<out>/<version>/` and `<out>/<version>/docs/` */
 function deployVersions() {
+  const customHtml = options["custom-html"]
+    ? readFileSync(options["custom-html"], "utf8")
+    : null;
   const downloadDir = options["assets-dir"]
     ? null
     : mkdtempSync(join(tmpdir(), "tissuumaps-site-"));
   const assetsDir = options["assets-dir"] ?? downloadDir!;
   try {
     for (const version of retained) {
+      const assets = assetsOf(version);
       if (downloadDir) {
         run("gh", [
           "release",
@@ -135,14 +148,33 @@ function deployVersions() {
           "--repo",
           repository,
           "--pattern",
-          assetOf(version),
+          assets.app,
+          "--pattern",
+          assets.docs,
           "--dir",
           downloadDir,
         ]);
       }
       const versionDir = join(outDir, formatVersion(version));
       mkdirSync(versionDir);
-      run("unzip", ["-q", join(assetsDir, assetOf(version)), "-d", versionDir]);
+      run("unzip", ["-q", join(assetsDir, assets.app), "-d", versionDir]);
+      run("unzip", [
+        "-q",
+        join(assetsDir, assets.docs),
+        "-d",
+        join(versionDir, "docs"),
+      ]);
+      if (customHtml) {
+        const page = join(versionDir, "index.html");
+        const html = readFileSync(page, "utf8");
+        if (!html.includes(customHtmlMarker)) {
+          throw new Error(`${page} has no ${customHtmlMarker} marker`);
+        }
+        writeFileSync(
+          page,
+          html.replace(customHtmlMarker, () => customHtml),
+        );
+      }
       console.log(`deployed ${formatVersion(version)}`);
     }
   } finally {
@@ -174,10 +206,7 @@ function writeRedirectPages() {
     .replace("__REDIRECT_JS__", () =>
       stripTypeScriptTypes(
         readFileSync(join(import.meta.dirname, "lib", "redirect.ts"), "utf8"),
-      )
-        .replace(/^export /gm, "")
-        .replace(/\/\*\*[\s\S]*?\*\/\n?/g, "")
-        .replace(/^[ \t]*\n/gm, ""),
+      ).replace(/^export /gm, ""),
     )
     .replace(
       "__LINKS__",
