@@ -100,12 +100,12 @@ since `setup` did succeed, its teardown callback _is_ called.
 
 `setup` and `mount` receive the application's four Zustand stores:
 
-| Store           | Contents                                                                                              |
-| --------------- | ----------------------------------------------------------------------------------------------------- |
-| `appStore`      | Application state: workspace, whether a project is open, interaction mode, data providers, plugins    |
-| `dataStore`     | Data references (`DataRef`) for the loaded data of each project object                                |
-| `projectStore`  | The currently loaded project (name, layers, images, labels, points, shapes, tables, maps) and its URL |
-| `settingsStore` | User settings that are persisted across sessions                                                      |
+| Store           | Contents                                                                                                                                           |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `appStore`      | Application state: workspace, whether a project is open, interaction mode, data providers, plugins                                                 |
+| `dataStore`     | Data references (`DataRef`) for the loaded data of each project object                                                                             |
+| `projectStore`  | The currently loaded project (name, layers, images, labels, points, shapes, tables, maps), where it was loaded from, and the project as last saved |
+| `settingsStore` | User settings that are persisted across sessions                                                                                                   |
 
 Each store is a Zustand store API. Using `appStore` as an example, a plugin can
 read the current value of `myProperty` using `appStore.getState().myProperty`,
