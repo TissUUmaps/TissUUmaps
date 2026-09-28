@@ -1,16 +1,18 @@
 import {
   type ArrayControlProps,
+  type ControlElement,
   composePaths,
   createDefaultValue,
   createLabelDescriptionFrom,
   findUISchema,
 } from "@jsonforms/core";
 import {
+  DispatchCell,
   JsonFormsDispatch,
   withJsonFormsArrayControlProps,
 } from "@jsonforms/react";
 import { ArrowDownIcon, ArrowUpIcon, XIcon } from "lucide-react";
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
 
 import {
   Field,
@@ -20,6 +22,9 @@ import {
 } from "@/components/common/field";
 import { IconButton } from "@/components/common/icon-button";
 import { Button } from "@/components/ui/button";
+
+/** The control of a primitive array item, for rendering it as a cell */
+const itemControl: ControlElement = { type: "Control", scope: "#" };
 
 export const ArrayControl = withJsonFormsArrayControlProps(
   (props: ArrayControlProps) => {
@@ -48,6 +53,32 @@ export const ArrayControl = withJsonFormsArrayControlProps(
       props.schema,
     );
 
+    // readonly mode
+    if (!props.enabled) {
+      const length = Array.isArray(props.data) ? props.data.length : 0;
+      if (length === 0) {
+        return null;
+      }
+      return (
+        <div className="contents">
+          <dt className="text-muted-foreground">{description.text}</dt>
+          <dd className="wrap-anywhere">
+            {Array.from({ length }, (_, index) => (
+              <Fragment key={index}>
+                {index > 0 && ", "}
+                <DispatchCell
+                  schema={props.schema}
+                  uischema={itemControl}
+                  path={composePaths(props.path, `${index}`)}
+                  enabled={false}
+                />
+              </Fragment>
+            ))}
+          </dd>
+        </div>
+      );
+    }
+
     return (
       <Field>
         {description.show && <FieldLabel>{description.text}</FieldLabel>}
@@ -68,7 +99,6 @@ export const ArrayControl = withJsonFormsArrayControlProps(
                   <IconButton
                     label="Move up"
                     size="icon"
-                    disabled={!props.enabled}
                     onClick={() => props.moveUp?.(props.path, index)()}
                   >
                     <ArrowUpIcon />
@@ -76,7 +106,6 @@ export const ArrayControl = withJsonFormsArrayControlProps(
                   <IconButton
                     label="Move down"
                     size="icon"
-                    disabled={!props.enabled}
                     onClick={() => props.moveDown?.(props.path, index)()}
                   >
                     <ArrowDownIcon />
@@ -84,7 +113,6 @@ export const ArrayControl = withJsonFormsArrayControlProps(
                   <IconButton
                     label="Remove"
                     size="icon"
-                    disabled={!props.enabled}
                     onClick={() => props.removeItems?.(props.path, [index])()}
                   >
                     <XIcon />
@@ -96,7 +124,6 @@ export const ArrayControl = withJsonFormsArrayControlProps(
         </div>
         <Button
           className="w-full"
-          disabled={!props.enabled}
           onClick={() =>
             props.addItem?.(
               props.path,

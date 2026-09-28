@@ -18,20 +18,23 @@ export const InputControl = withJsonFormsControlProps((props: ControlProps) => {
 
   // readonly mode
   if (!props.enabled) {
+    if (props.data === undefined || props.data === null || props.data === "") {
+      return null;
+    }
     return (
-      <Field className="contents">
-        <FieldLabel>
-          {computeLabel(props.label, props.required ?? false, true)}:
-        </FieldLabel>
-        <span className="truncate">
+      <div className="contents">
+        <dt className="text-muted-foreground">
+          {computeLabel(props.label, props.required ?? false, true)}
+        </dt>
+        <dd className="wrap-anywhere">
           <DispatchCell
             uischema={props.uischema}
             schema={props.schema}
             path={props.path}
             enabled={props.enabled}
           />
-        </span>
-      </Field>
+        </dd>
+      </div>
     );
   }
 

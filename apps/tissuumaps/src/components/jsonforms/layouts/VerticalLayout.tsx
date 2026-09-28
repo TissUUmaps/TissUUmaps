@@ -9,32 +9,15 @@ import {
 } from "@jsonforms/react";
 import { memo } from "react";
 
+import { ReadOnlyLayoutElements } from "./ReadOnlyLayoutElements";
+
 // eslint-disable-next-line react-refresh/only-export-components
 const MemoizedVerticalLayout = memo((props: Omit<LayoutProps, "data">) => {
   const layout = props.uischema as VerticalLayoutSchema;
   const { renderers, cells } = useJsonForms();
 
-  // readonly mode
   if (!props.enabled) {
-    return (
-      <div
-        hidden={!props.visible}
-        className="grid grid-cols-[auto_1fr] gap-x-2 items-baseline"
-      >
-        {layout.elements.map((element, i) => (
-          <div key={`${props.path}-${i}`} className="contents">
-            <JsonFormsDispatch
-              renderers={renderers}
-              cells={cells}
-              uischema={element}
-              schema={props.schema}
-              path={props.path}
-              enabled={props.enabled}
-            />
-          </div>
-        ))}
-      </div>
-    );
+    return <ReadOnlyLayoutElements {...props} />;
   }
 
   return (

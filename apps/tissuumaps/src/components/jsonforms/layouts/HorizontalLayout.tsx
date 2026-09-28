@@ -9,10 +9,17 @@ import {
 } from "@jsonforms/react";
 import { memo } from "react";
 
+import { ReadOnlyLayoutElements } from "./ReadOnlyLayoutElements";
+
 // eslint-disable-next-line react-refresh/only-export-components
 const MemoizedHorizontalLayout = memo((props: Omit<LayoutProps, "data">) => {
   const layout = props.uischema as HorizontalLayoutSchema;
   const { renderers, cells } = useJsonForms();
+
+  if (!props.enabled) {
+    return <ReadOnlyLayoutElements {...props} />;
+  }
+
   return (
     <div hidden={!props.visible} className="grid grid-flow-col">
       {layout.elements.map((element, i) => (
