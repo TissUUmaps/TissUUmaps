@@ -15,22 +15,23 @@ import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 
 import {
-  useProjectActions,
+  useOpenProjectFile,
+  useOpenProjectFromURL,
+  useOpenWorkspace,
+  useStartEmptyProject,
   workspaceUnsupportedMessage,
-} from "./useProjectActions";
+} from "./hooks";
 
-export type ProjectStartPageProps = {
+export type ProjectWelcomeViewProps = {
   className?: string;
 };
 
-export function ProjectStartPage({ className }: ProjectStartPageProps) {
+export function ProjectWelcomeView({ className }: ProjectWelcomeViewProps) {
   const workspaceName = useAppStore((state) => state.workspace?.name ?? null);
-  const {
-    openProjectFile,
-    openProjectFromURL,
-    startEmptyProject,
-    openWorkspace,
-  } = useProjectActions();
+  const openProjectFile = useOpenProjectFile();
+  const openProjectFromURL = useOpenProjectFromURL();
+  const startEmptyProject = useStartEmptyProject();
+  const openWorkspace = useOpenWorkspace();
   const workspaceSupported = isWorkspaceSupported();
 
   return (

@@ -12,7 +12,7 @@ import { isWorkspaceSupported } from "@/data/io/workspace";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 
-import { useProjectActions } from "./useProjectActions";
+import { useCloseWorkspace, useOpenWorkspace } from "./hooks";
 
 export type WorkspaceWidgetProps = {
   className?: string;
@@ -20,7 +20,8 @@ export type WorkspaceWidgetProps = {
 
 export function WorkspaceWidget({ className }: WorkspaceWidgetProps) {
   const workspace = useAppStore((state) => state.workspace);
-  const { openWorkspace, closeWorkspace } = useProjectActions();
+  const openWorkspace = useOpenWorkspace();
+  const closeWorkspace = useCloseWorkspace();
 
   if (!isWorkspaceSupported()) {
     return null;

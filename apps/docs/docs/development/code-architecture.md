@@ -33,7 +33,7 @@ graph that is published — instead of silently bypassing it. Production builds 
 the application therefore require the packages to be built first, which the
 topologically ordered `pnpm run build` takes care of.
 
-The application is built into a single HTML file with relative URLs (`vite-plugin-singlefile` sets a relative base), so that the same build runs under any path: a versioned subpath on GitHub Pages, or a downloaded release opened from anywhere. Its version, repository URL and the URL of its versioned documentation are injected at build time from `apps/tissuumaps/package.json` (`__APP_VERSION__`, `__APP_REPOSITORY_URL__` and `__APP_DOCS_URL__`, declared in `src/vite-env.d.ts`) for use by the user interface.
+The application is built into a single HTML file with relative URLs (`vite-plugin-singlefile` sets a relative base), so that the same build runs under any path: a versioned subpath on GitHub Pages, or a downloaded release opened from anywhere. Its version and repository URL are injected at build time from `apps/tissuumaps/package.json` (`__APP_VERSION__` and `__APP_REPOSITORY_URL__`, declared in `src/vite-env.d.ts`) for use by the user interface.
 
 The following diagram outlines the dependency structure among packages and the TissUUmaps application:
 
@@ -158,7 +158,7 @@ In the TissUUmaps React app, absolute (`@/`) imports are used for imports across
 
 ### App
 
-`bootstrap` starts up the parts of the application that live outside of React, in this order: the built-in data providers are registered (`data/providers.ts`), the data caches are started, the plugin registry is started and exposed as `window.tissuumaps` (`plugins.ts`), the start page is set to be dismissed the first time the project has a source or data, loading of the project is _started_ — from the URL given in the `project` GET parameter, or from `project.json` if that parameter is absent or empty — and finally a `tissuumaps-loaded` event is dispatched on `window` (`events.ts`), after which plugins register themselves (see [Plugins](./plugins.md)); there are no plugins known to the application ahead of time. `bootstrap` returns a teardown function that cancels the project load, stops watching the project for the start page, and stops the registry and the caches, in that order; it is invoked on hot module replacement.
+`bootstrap` starts up the parts of the application that live outside of React, in this order: the built-in data providers are registered (`data/providers.ts`), the data caches are started, the plugin registry is started and exposed as `window.tissuumaps` (`plugins.ts`), the project is set to be marked open as soon as it has a source or data, loading of the project is _started_ — from the URL given in the `project` GET parameter, or from `project.json` if that parameter is absent or empty — and finally a `tissuumaps-loaded` event is dispatched on `window` (`events.ts`), after which plugins register themselves (see [Plugins](./plugins.md)); there are no plugins known to the application ahead of time. `bootstrap` returns a teardown function that cancels the project load, stops watching whether the project is open, and stops the registry and the caches, in that order; it is invoked on hot module replacement.
 
 `App` lays out the built-in panels and the plugin panels (`usePluginPanels`) with Dockview, wrapped in the `DialogProvider`.
 
@@ -194,7 +194,7 @@ A React context is split into two files: `context.ts` holds the context object a
 
 Four separate Zustand vanilla stores are used, one per file in `src/stores`, all typed in `@tissuumaps/core` (`types/stores`) so that plugins can consume them:
 
-- `appStore` - transient application state: workspace, start page dismissal, interaction mode, registered data providers and plugins
+- `appStore` - transient application state: workspace, whether a project is open, interaction mode, registered data providers and plugins
 - `dataStore` - derived state: a data reference (`DataRef`) per project object, reconciled by the data caches (see below); treat as read-only
 - `projectStore` - the loaded project (layers, images, labels, points, shapes, tables, maps, render options)
 - `settingsStore` - user settings, persisted across sessions

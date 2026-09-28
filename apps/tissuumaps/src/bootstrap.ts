@@ -1,4 +1,4 @@
-import type { ProjectStoreState } from "@tissuumaps/core";
+import { ProjectUtils } from "@tissuumaps/core";
 
 import { startDataCaches } from "./data/cache";
 import { loadProjectFromURL, projectURLParam } from "./data/io/project";
@@ -15,62 +15,45 @@ const fallbackProjectUrl = "project.json";
  * Starts up the parts of the application that live outside of React
  *
  * Registers the built-in data providers, starts the data caches and the plugin
- * registry, dismisses the start page once the project has a source or data,
+ * registry, marks the project open once it has a source or data,
  * starts loading the initial project, and finally announces that the
  * application has loaded.
  * The project is only loading, not loaded, by the time this returns.
  *
  * @returns A callback that cancels the initial project loading, stops watching
- * the project for the start page, and stops the plugin registry and the data
+ * whether the project is open, and stops the plugin registry and the data
  * caches, invoked on hot module replacement
  */
 export function bootstrap(): () => void {
   enableBuiltInDataProviders();
   const stopDataCaches = startDataCaches();
   const stopPluginRegistry = startPluginRegistry();
-  const stopStartPageDismissal = startStartPageDismissal();
+  const stopProjectOpenTracking = startProjectOpenTracking();
   const cancelInitialProjectLoading = loadInitialProject();
   notifyTissUUmapsLoaded();
   return () => {
     cancelInitialProjectLoading();
-    stopStartPageDismissal();
+    stopProjectOpenTracking();
     stopPluginRegistry();
     stopDataCaches();
   };
 }
 
 /**
- * Dismisses the start page the first time the project has a source or data,
- * however it got them
+ * Marks the project open as soon as it has a source or data, however it got
+ * them
  *
  * @returns A callback that stops watching the project
  */
-function startStartPageDismissal(): () => void {
+function startProjectOpenTracking(): () => void {
   return projectStore.subscribe((projectState) => {
     if (
-      !appStore.getState().startPageDismissed &&
-      !isProjectEmpty(projectState)
+      !appStore.getState().projectOpen &&
+      (projectState.source !== null || ProjectUtils.hasData(projectState))
     ) {
-      appStore.getState().setStartPageDismissed(true);
+      appStore.getState().setProjectOpen(true);
     }
   });
-}
-
-/**
- * Tells whether a project has neither a source nor data
- *
- * @param projectState - The state of the project store
- * @returns Whether the project is empty
- */
-function isProjectEmpty(projectState: ProjectStoreState): boolean {
-  return (
-    projectState.source === null &&
-    projectState.images.length === 0 &&
-    projectState.labels.length === 0 &&
-    projectState.points.length === 0 &&
-    projectState.shapes.length === 0 &&
-    projectState.tables.length === 0
-  );
 }
 
 /**

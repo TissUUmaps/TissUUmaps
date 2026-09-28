@@ -45,8 +45,11 @@ export type AppStoreState = {
   /** The directory handle of the open workspace, if any */
   workspace: FileSystemDirectoryHandle | null;
 
-  /** Whether the start page has been dismissed */
-  startPageDismissed: boolean;
+  /**
+   * Whether a project is open, possibly an empty one; the Project tab shows
+   * its welcome view otherwise
+   */
+  projectOpen: boolean;
 
   /** How mouse events in the viewer are currently interpreted */
   interactionMode: InteractionMode;
@@ -135,11 +138,11 @@ export type AppStoreActions = {
   ) => void;
 
   /**
-   * Dismisses the start page, or shows it again
+   * Marks a project as open, or as closed
    *
-   * @param startPageDismissed - Whether the start page has been dismissed
+   * @param projectOpen - Whether a project is open
    */
-  setStartPageDismissed: (startPageDismissed: boolean) => void;
+  setProjectOpen: (projectOpen: boolean) => void;
 
   /**
    * Highlights a group of an object in the viewer

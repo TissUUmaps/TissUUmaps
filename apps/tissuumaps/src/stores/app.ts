@@ -9,7 +9,7 @@ import "./zustand";
 /**
  * The store holding application state that is not part of the project
  *
- * This comprises the open workspace, whether the start page has been dismissed,
+ * This comprises the open workspace, whether a project is open,
  * the current interaction mode, the hovered channel preview, the registered
  * data providers, and the registered plugins.
  * The plugins are written by the plugin registry, which owns their lifecycle,
@@ -23,8 +23,7 @@ export const appStore: AppStoreApi = createStore<AppStore>()(
       setInteractionMode: (interactionMode) => set({ interactionMode }),
       setImageChannelPreview: (imageChannelPreview) =>
         set({ imageChannelPreview }),
-      setStartPageDismissed: (startPageDismissed) =>
-        set({ startPageDismissed }),
+      setProjectOpen: (projectOpen) => set({ projectOpen }),
       setHighlightedItemGroup: (highlightedItemGroup) =>
         set({ highlightedItemGroup }),
       registerImageDataProvider: (type, dataProvider) =>
@@ -64,12 +63,12 @@ export function useAppStore<T>(selector: (state: AppStore) => T): T {
 
 /**
  * Creates the initial {@link appStore} state, with nothing registered, no
- * workspace open and the start page not dismissed
+ * workspace open and no project open
  */
 function createInitialAppStoreState(): AppStoreState {
   return {
     workspace: null,
-    startPageDismissed: false,
+    projectOpen: false,
     interactionMode: "pan",
     imageChannelPreview: null,
     highlightedItemGroup: null,

@@ -102,7 +102,7 @@ since `setup` did succeed, its teardown callback _is_ called.
 
 | Store           | Contents                                                                                              |
 | --------------- | ----------------------------------------------------------------------------------------------------- |
-| `appStore`      | Application state: workspace, start page, interaction mode, data providers, plugins                   |
+| `appStore`      | Application state: workspace, whether a project is open, interaction mode, data providers, plugins    |
 | `dataStore`     | Data references (`DataRef`) for the loaded data of each project object                                |
 | `projectStore`  | The currently loaded project (name, layers, images, labels, points, shapes, tables, maps) and its URL |
 | `settingsStore` | User settings that are persisted across sessions                                                      |

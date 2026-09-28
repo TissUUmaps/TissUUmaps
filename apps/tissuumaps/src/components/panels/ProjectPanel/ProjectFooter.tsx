@@ -18,7 +18,7 @@ export function ProjectFooter({ className }: ProjectFooterProps) {
       <span>{__APP_VERSION__}</span>
       <nav className="ml-auto flex gap-3">
         <a
-          href={__APP_DOCS_URL__}
+          href={`${__APP_REPOSITORY_URL__}/tree/tissuumaps@${__APP_VERSION__}/apps/docs/docs`}
           target="_blank"
           rel="noreferrer"
           className="hover:text-foreground"

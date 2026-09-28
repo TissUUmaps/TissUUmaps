@@ -19,13 +19,11 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
-export type DisplaySettingsWidgetProps = {
+export type RenderSettingsWidgetProps = {
   className?: string;
 };
 
-export function DisplaySettingsWidget({
-  className,
-}: DisplaySettingsWidgetProps) {
+export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
   const glOptions = useProjectStore((state) => state.glOptions);
   const setGLOptions = useProjectStore((state) => state.setGLOptions);
 
