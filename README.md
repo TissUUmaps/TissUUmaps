@@ -15,7 +15,7 @@
 
 TissUUmaps is a GPU-accelerated web application for visualizing, annotating and sharing spatial biology data.
 
-Try [TissUUmaps live](https://tissuumaps.github.io/TissUUmaps/) ([demo](https://tissuumaps.github.io/TissUUmaps/?project=https://user.it.uu.se/~chrav452/TissUUmaps4/data/heart_cropped/project.json)) in a modern web browser with [WebGL 2](https://get.webgl.org/webgl2/) and File System API support, or read the [documentation](https://tissuumaps.github.io/TissUUmaps/docs/) to get started.
+Open [TissUUmaps](https://tissuumaps.github.io/TissUUmaps/) in a modern web browser with WebGL 2 support, or read the [documentation](https://tissuumaps.github.io/TissUUmaps/docs/) to get started.
 
 Contributions are always welcome! See [Contributing](CONTRIBUTING.md) for ways to get started and please adhere to this project's [Code of Conduct](CODE_OF_CONDUCT.md). Thanks to all [contributors](CONTRIBUTORS.md)!
 
