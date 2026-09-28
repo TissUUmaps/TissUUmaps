@@ -4,6 +4,7 @@ import { MathUtils } from "@tissuumaps/core";
 
 import { InputGroup, InputGroupAddon } from "@/components/ui/input-group";
 import { Slider } from "@/components/ui/slider";
+import { percentFormat } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
@@ -50,11 +51,6 @@ function pointSizeFactorToSliderPosition(pointSizeFactor: number): number {
     : MathUtils.remap(decades, upperDecades, upperPositions);
 }
 
-const pointSizeFormat = new Intl.NumberFormat(undefined, {
-  style: "percent",
-  maximumFractionDigits: 0,
-});
-
 export type PointSizeViewerControlProps = { className?: string };
 
 export function PointSizeViewerControl({
@@ -96,7 +92,7 @@ export function PointSizeViewerControl({
         align="inline-end"
         className="w-11 cursor-default justify-end text-xs tabular-nums"
       >
-        {pointSizeFormat.format(globalPointSizeFactor)}
+        {percentFormat.format(globalPointSizeFactor)}
       </InputGroupAddon>
     </InputGroup>
   );

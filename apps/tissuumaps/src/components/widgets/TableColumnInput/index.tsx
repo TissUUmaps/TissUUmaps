@@ -361,7 +361,7 @@ export function TableColumnInput({
         />
         <InputGroupAddon align="inline-end">
           <AutocompleteClear />
-          <AutocompleteTrigger aria-label="Show columns" title="Show columns" />
+          <AutocompleteTrigger label="Show columns" />
         </InputGroupAddon>
       </AutocompleteInputGroup>
       <AutocompletePopup className="flex flex-col overflow-hidden">

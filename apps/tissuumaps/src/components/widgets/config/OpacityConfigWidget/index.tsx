@@ -1,7 +1,7 @@
-import { MathUtils, ProjectUtils } from "@tissuumaps/core";
+import { ProjectUtils } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
-import { Input } from "@/components/ui/input";
+import { OpacityControl } from "@/components/common/opacity-control";
 import { TableColumnField } from "@/components/widgets/TableColumnField";
 import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
 import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
@@ -53,19 +53,10 @@ function ConstantOpacityConfigWidget({
     <div className={className}>
       <Field>
         <FieldLabel>Opacity</FieldLabel>
-        <Input
-          type="number"
-          inputMode="decimal"
-          step={0.05}
-          min={0}
-          max={1}
-          value={value}
-          onChange={(event) => {
-            const newValue = event.target.valueAsNumber;
-            if (!isNaN(newValue)) {
-              setValue(MathUtils.clamp(newValue, 0, 1));
-            }
-          }}
+        <OpacityControl
+          opacity={value}
+          onOpacityCommit={setValue}
+          className="self-start"
         />
       </Field>
     </div>

@@ -10,6 +10,7 @@ import {
 } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
+import { IconButton } from "@/components/common/icon-button";
 import { SimpleColorPicker } from "@/components/common/simple-color-picker";
 import { Input } from "@/components/ui/input";
 import {
@@ -328,14 +329,13 @@ function RandomColorConfigWidget({
             }}
           />
           <InputGroupAddon align="inline-end">
-            <InputGroupButton
-              size="icon-xs"
-              aria-label="Shuffle seed"
-              title="Shuffle seed"
+            <IconButton
+              label="Shuffle seed"
+              render={<InputGroupButton size="icon-xs" />}
               onClick={() => setSeed(RandomUtils.seed())}
             >
               <RefreshCwIcon />
-            </InputGroupButton>
+            </IconButton>
           </InputGroupAddon>
         </InputGroup>
       </Field>

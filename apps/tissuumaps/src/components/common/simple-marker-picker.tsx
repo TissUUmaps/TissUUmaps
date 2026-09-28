@@ -1,7 +1,7 @@
 import type { Marker } from "@tissuumaps/core";
 
+import { IconButton } from "@/components/common/icon-button";
 import { markers } from "@/components/markers";
-import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
@@ -25,22 +25,20 @@ export function SimpleMarkerPicker({
     <Popover>
       <PopoverTrigger
         className={className}
-        render={<Button variant="ghost" size="icon-sm" />}
+        render={<IconButton label="Marker" />}
       >
         {children}
       </PopoverTrigger>
       <PopoverContent className="grid grid-cols-4 gap-1">
         {markers.map((m) => (
-          <Button
+          <IconButton
             key={m.value}
+            label={m.label}
             variant={m.value === marker ? "secondary" : "ghost"}
-            size="icon-sm"
-            title={m.label}
-            aria-label={m.label}
             onClick={() => onMarkerChange(m.value)}
           >
             {m.icon}
-          </Button>
+          </IconButton>
         ))}
       </PopoverContent>
     </Popover>

@@ -1,4 +1,4 @@
-import { type Image, MathUtils } from "@tissuumaps/core";
+import type { Image } from "@tissuumaps/core";
 
 import {
   Accordion,
@@ -11,8 +11,6 @@ import {
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { SimpleSelect } from "@/components/common/simple-select";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { TransformSettingsWidget } from "@/components/widgets/TransformSettingsWidget";
 import { useControlled } from "@/hooks/useControlled";
 import { cn } from "@/lib/utils";
@@ -101,15 +99,6 @@ function GeneralImageSettingsWidget({
   return (
     <div className={className}>
       <Field>
-        <FieldLabel>Name</FieldLabel>
-        <Input
-          value={image.name}
-          onChange={(event) =>
-            updateImage(image.id, { name: event.target.value })
-          }
-        />
-      </Field>
-      <Field>
         <FieldLabel>Layer</FieldLabel>
         <SimpleSelect
           items={layers}
@@ -119,37 +108,6 @@ function GeneralImageSettingsWidget({
           onValueChange={(value) => {
             if (value !== null) {
               updateImage(image.id, { layer: value });
-            }
-          }}
-        />
-      </Field>
-      <Field>
-        <FieldLabel>Visibility</FieldLabel>
-        <div className="flex flex-row items-center gap-x-2">
-          <Switch
-            checked={image.visibility}
-            onCheckedChange={(checked) =>
-              updateImage(image.id, { visibility: checked })
-            }
-          />
-          {image.visibility ? "Visible" : "Hidden"}
-        </div>
-      </Field>
-      <Field>
-        <FieldLabel>Opacity</FieldLabel>
-        <Input
-          type="number"
-          inputMode="decimal"
-          step={0.05}
-          min={0}
-          max={1}
-          value={image.opacity}
-          onChange={(event) => {
-            const newValue = event.target.valueAsNumber;
-            if (!isNaN(newValue)) {
-              updateImage(image.id, {
-                opacity: MathUtils.clamp(newValue, 0, 1),
-              });
             }
           }}
         />

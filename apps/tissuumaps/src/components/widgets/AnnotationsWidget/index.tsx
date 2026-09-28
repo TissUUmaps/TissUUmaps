@@ -119,7 +119,7 @@ export function AnnotationsWidget({
       className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
     >
       <FieldsetLegend className="font-medium text-foreground">
-        Annotations
+        Items
         {itemCounts !== null && (
           <span
             className="ml-1 text-xs font-normal text-muted-foreground"

@@ -3,7 +3,7 @@ import { cva } from "class-variance-authority";
 import { CheckIcon, ChevronsUpDownIcon, Trash2Icon } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
 
-import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/common/icon-button";
 
 export type SimpleSelectProps<
   TItem,
@@ -135,12 +135,10 @@ function ItemDeleteButton({ isDeletable, onDelete }: ItemDeleteButtonProps) {
   // the item selects itself on a click, or on a mouse up after dragging from
   // the trigger; a disabled button would pass neither event on to be stopped
   return (
-    <Button
-      variant="ghost"
+    <IconButton
+      label={isDeletable ? "Delete" : "In use"}
       size="icon-xs"
       className="col-start-3 size-5 aria-disabled:opacity-30 aria-disabled:hover:bg-transparent"
-      title={isDeletable ? "Delete" : "In use"}
-      aria-label={isDeletable ? "Delete" : "In use"}
       aria-disabled={!isDeletable}
       tabIndex={-1}
       onPointerDown={(event) => event.stopPropagation()}
@@ -153,6 +151,6 @@ function ItemDeleteButton({ isDeletable, onDelete }: ItemDeleteButtonProps) {
       }}
     >
       <Trash2Icon />
-    </Button>
+    </IconButton>
   );
 }

@@ -1,5 +1,4 @@
 import {
-  MathUtils,
   type Points,
   defaultPointColor,
   defaultPointMarker,
@@ -21,7 +20,6 @@ import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { formatTableColumn } from "@/components/widgets/TableColumnField/formatTableColumn";
 import { TransformSettingsWidget } from "@/components/widgets/TransformSettingsWidget";
 import {
@@ -271,15 +269,6 @@ function GeneralPointsSettingsWidget({
   return (
     <div className={className}>
       <Field>
-        <FieldLabel>Name</FieldLabel>
-        <Input
-          value={points.name}
-          onChange={(event) =>
-            updatePoints(points.id, { name: event.target.value })
-          }
-        />
-      </Field>
-      <Field>
         <FieldLabel>Layer</FieldLabel>
         {typeof points.layer === "string" ? (
           <SimpleSelect
@@ -300,37 +289,6 @@ function GeneralPointsSettingsWidget({
             readOnly
           />
         )}
-      </Field>
-      <Field>
-        <FieldLabel>Visibility</FieldLabel>
-        <div className="flex flex-row items-center gap-x-2">
-          <Switch
-            checked={points.visibility}
-            onCheckedChange={(checked) =>
-              updatePoints(points.id, { visibility: checked })
-            }
-          />
-          {points.visibility ? "Visible" : "Hidden"}
-        </div>
-      </Field>
-      <Field>
-        <FieldLabel>Opacity</FieldLabel>
-        <Input
-          type="number"
-          inputMode="decimal"
-          step={0.05}
-          min={0}
-          max={1}
-          value={points.opacity}
-          onChange={(event) => {
-            const newValue = event.target.valueAsNumber;
-            if (!isNaN(newValue)) {
-              updatePoints(points.id, {
-                opacity: MathUtils.clamp(newValue, 0, 1),
-              });
-            }
-          }}
-        />
       </Field>
       <Field>
         <FieldLabel>Point size factor</FieldLabel>

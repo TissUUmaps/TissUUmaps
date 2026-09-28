@@ -1,6 +1,6 @@
 import { Columns3Icon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/common/icon-button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
@@ -20,16 +20,7 @@ export function GroupColumnPicker({
 }: GroupColumnPickerProps) {
   return (
     <Popover>
-      <PopoverTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            title="Show columns"
-            aria-label="Show columns"
-          />
-        }
-      >
+      <PopoverTrigger render={<IconButton label="Show columns" />}>
         <Columns3Icon />
       </PopoverTrigger>
       <PopoverContent align="end" className="w-48 gap-2 p-2">
