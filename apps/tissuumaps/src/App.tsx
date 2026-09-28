@@ -24,6 +24,7 @@ import { ProjectPanel } from "./components/panels/ProjectPanel";
 import { ShapesPanel } from "./components/panels/ShapesPanel";
 import { TablesPanel } from "./components/panels/TablesPanel";
 import { ViewerPanel } from "./components/panels/ViewerPanel";
+import { panelIds } from "./components/panels/panelIds";
 import { NotificationCenter } from "./components/widgets/NotificationCenter";
 import { pluginRegistry } from "./plugins";
 import { useSettingsStore } from "./stores/settings";
@@ -33,12 +34,6 @@ const dockviewTheme: DockviewTheme = {
   name: "tailwindcss",
   className: "dockview-theme-tailwindcss",
 };
-
-/**
- * The ID of the project panel, into whose group the panels contributed by
- * plugins are added
- */
-const projectPanelId = "projectPanel";
 
 /**
  * Scrolls a panel's content within the panel, rather than letting it overflow
@@ -59,9 +54,13 @@ function ScrollablePanelContent({ children }: { children: ReactNode }) {
 /** The panels that can be shown in the dockview layout, by component name */
 const dockviewComponents = {
   ViewerPanel: () => <ViewerPanel className="size-full" />,
-  ProjectPanel: () => (
+  ProjectPanel: (props: IDockviewPanelProps) => (
     <ScrollablePanelContent>
-      <ProjectPanel />
+      <ProjectPanel
+        onShowPanel={(panelId) =>
+          props.containerApi.getPanel(panelId)?.api.setActive()
+        }
+      />
     </ScrollablePanelContent>
   ),
   ImagesPanel: () => (
@@ -152,14 +151,14 @@ function DockviewRightHeaderActionsComponent() {
  */
 const onDockviewReady = (event: DockviewReadyEvent) => {
   const viewerPanel = event.api.addPanel({
-    id: "viewerPanel",
+    id: panelIds.viewer,
     title: "Viewer",
     component: "ViewerPanel",
   });
   viewerPanel.group.header.hidden = true;
   viewerPanel.group.locked = true;
   const projectPanel = event.api.addPanel({
-    id: projectPanelId,
+    id: panelIds.project,
     title: "Project",
     component: "ProjectPanel",
     tabComponent: "PersistentPanelHeader",
@@ -170,35 +169,35 @@ const onDockviewReady = (event: DockviewReadyEvent) => {
     },
   });
   event.api.addPanel({
-    id: "imagesPanel",
+    id: panelIds.images,
     title: "Images",
     component: "ImagesPanel",
     tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: "labelsPanel",
+    id: panelIds.labels,
     title: "Labels",
     component: "LabelsPanel",
     tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: "pointsPanel",
+    id: panelIds.points,
     title: "Points",
     component: "PointsPanel",
     tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: "shapesPanel",
+    id: panelIds.shapes,
     title: "Shapes",
     component: "ShapesPanel",
     tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: "tablesPanel",
+    id: panelIds.tables,
     title: "Tables",
     component: "TablesPanel",
     tabComponent: "PersistentPanelHeader",
@@ -219,7 +218,8 @@ export function App() {
   const dark = useSettingsStore((state) => state.dark);
   const [dockviewApi, setDockviewApi] = useState<DockviewApi | null>(null);
 
-  usePluginPanels(dockviewApi, projectPanelId);
+  // The panels contributed by plugins join the group of the project panel
+  usePluginPanels(dockviewApi, panelIds.project);
 
   // Before paint, so that React never renders a light frame in dark mode
   // https://tailwindcss.com/docs/dark-mode

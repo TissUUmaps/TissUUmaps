@@ -45,6 +45,9 @@ export type AppStoreState = {
   /** The directory handle of the open workspace, if any */
   workspace: FileSystemDirectoryHandle | null;
 
+  /** Whether the start page has been dismissed */
+  startPageDismissed: boolean;
+
   /** How mouse events in the viewer are currently interpreted */
   interactionMode: InteractionMode;
 
@@ -130,6 +133,13 @@ export type AppStoreActions = {
   setImageChannelPreview: (
     imageChannelPreview: ImageChannelPreview | null,
   ) => void;
+
+  /**
+   * Dismisses the start page, or shows it again
+   *
+   * @param startPageDismissed - Whether the start page has been dismissed
+   */
+  setStartPageDismissed: (startPageDismissed: boolean) => void;
 
   /**
    * Highlights a group of an object in the viewer

@@ -12,8 +12,8 @@ The TissUUmaps project file and corresponding data may be stored locally (client
 
 ## Workspaces
 
-In Chromium-based browsers (e.g. Chrome), a workspace can be opened alongside a project. A workspace is a local folder that TissUUmaps gets read access to, so that file paths within it can be resolved. Other browsers (e.g. Firefox, Safari) do not support workspaces.
-Open a workspace with "Open workspace", then a project with "Load project from file".
+In Chromium-based browsers (e.g. Chrome), a workspace can be opened alongside a project. A workspace is a local folder that TissUUmaps gets read access to, so that file paths within it can be resolved. Other browsers (e.g. Firefox, Safari) do not support workspaces. The user interface calls the workspace a **folder**.
+Open a workspace with "Open folder…" on the start page or in the Project panel's menu, then a project with "Open project from this folder…" on the start page, or "Open project file…" in the menu. The connected folder is shown at the bottom of the Project panel.
 
 ## Referencing data
 
