@@ -3,11 +3,9 @@ on:
   push:
     branches:
       - main
-      - development
   pull_request:
     branches:
       - main
-      - development
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
