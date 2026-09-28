@@ -30,76 +30,6 @@ export const workspaceUnsupportedMessage =
   "Opening a folder needs a Chromium-based browser, such as Chrome or Edge.";
 
 /**
- * Returns a callback that lets the user pick a project file, within the
- * workspace if one is open, and loads it
- *
- * Failures are logged, as the callback is called from event handlers.
- *
- * @returns The callback
- */
-export function useOpenProjectFile(): () => void {
-  const workspace = useAppStore((state) => state.workspace);
-  const setProjectOpen = useAppStore((state) => state.setProjectOpen);
-
-  // Only a file handle can be located within the workspace
-  return useCallback(() => {
-    const onLoaded = () => {
-      clearProjectURLParam();
-      setProjectOpen(true);
-    };
-    if (workspace === null) {
-      void pickProjectFileFromInput()
-        .then(async (file) => {
-          if (file !== null) {
-            await loadProjectFromFile(file);
-            onLoaded();
-          }
-        })
-        .catch((error) => {
-          console.error("Failed to load project from file", error);
-        });
-      return;
-    }
-    void pickProjectFile({ startIn: workspace })
-      .then(async (projectFile) => {
-        if (projectFile !== null) {
-          await loadProjectFromFileHandle(projectFile, workspace);
-          onLoaded();
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to load project from file", error);
-      });
-  }, [workspace, setProjectOpen]);
-}
-
-/**
- * Returns a callback that asks the user for a project URL, and loads the
- * project from it
- *
- * Failures are logged, as the callback is called from event handlers.
- *
- * @returns The callback
- */
-export function useOpenProjectFromURL(): () => void {
-  const prompt = usePromptDialog();
-
-  return useCallback(() => {
-    void prompt({ title: "Enter project URL to load" })
-      .then(async (value) => {
-        const projectUrl = value?.trim();
-        if (projectUrl) {
-          await loadProjectFromURL(projectUrl);
-          setProjectURLParam(projectUrl);
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to load project from URL", error);
-      });
-  }, [prompt]);
-}
-
-/**
  * Returns a callback that asks the user to confirm discarding the open
  * project's unsaved changes
  *
@@ -122,6 +52,26 @@ function useConfirmDiscard(): (
 }
 
 /**
+ * Returns a callback that asks the user to confirm opening another project
+ * over the open project's unsaved changes
+ *
+ * @returns The callback, which resolves to `true` right away when there is
+ * nothing unsaved to lose
+ */
+function useConfirmOpen(): () => Promise<boolean> {
+  const confirmDiscard = useConfirmDiscard();
+
+  return useCallback(
+    () =>
+      confirmDiscard(
+        "Open project",
+        "Are you sure you want to open another project? All unsaved changes will be lost.",
+      ),
+    [confirmDiscard],
+  );
+}
+
+/**
  * Returns a callback that logs a failed save and reports it in an alert dialog
  *
  * @returns The callback
@@ -139,6 +89,79 @@ function useReportSaveError(): (error: unknown) => void {
     },
     [alert],
   );
+}
+
+/**
+ * Returns a callback that lets the user pick a project file, within the
+ * workspace if one is open, and loads it, after confirmation if the open
+ * project has unsaved changes
+ *
+ * Failures are logged, as the callback is called from event handlers.
+ *
+ * @returns The callback
+ */
+export function useOpenProjectFile(): () => void {
+  const workspace = useAppStore((state) => state.workspace);
+  const setProjectOpen = useAppStore((state) => state.setProjectOpen);
+  const confirmOpen = useConfirmOpen();
+
+  // Only a file handle can be located within the workspace
+  return useCallback(() => {
+    const onLoaded = () => {
+      clearProjectURLParam();
+      setProjectOpen(true);
+    };
+    if (workspace === null) {
+      void pickProjectFileFromInput()
+        .then(async (file) => {
+          if (file !== null && (await confirmOpen())) {
+            await loadProjectFromFile(file);
+            onLoaded();
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to load project from file", error);
+        });
+      return;
+    }
+    void pickProjectFile({ startIn: workspace })
+      .then(async (projectFile) => {
+        if (projectFile !== null && (await confirmOpen())) {
+          await loadProjectFromFileHandle(projectFile, workspace);
+          onLoaded();
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load project from file", error);
+      });
+  }, [workspace, setProjectOpen, confirmOpen]);
+}
+
+/**
+ * Returns a callback that asks the user for a project URL, and loads the
+ * project from it, after confirmation if the open project has unsaved changes
+ *
+ * Failures are logged, as the callback is called from event handlers.
+ *
+ * @returns The callback
+ */
+export function useOpenProjectFromURL(): () => void {
+  const prompt = usePromptDialog();
+  const confirmOpen = useConfirmOpen();
+
+  return useCallback(() => {
+    void prompt({ title: "Enter project URL to load" })
+      .then(async (value) => {
+        const projectUrl = value?.trim();
+        if (projectUrl && (await confirmOpen())) {
+          await loadProjectFromURL(projectUrl);
+          setProjectURLParam(projectUrl);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load project from URL", error);
+      });
+  }, [prompt, confirmOpen]);
 }
 
 /**
@@ -232,7 +255,8 @@ export function useCloseProject(): () => void {
 }
 
 /**
- * Returns a callback that lets the user pick the workspace
+ * Returns a callback that lets the user pick the workspace, forgetting the file
+ * the open project was loaded from within the previous one
  *
  * Failures are logged, as the callback is called from event handlers.
  *
@@ -256,7 +280,8 @@ export function useOpenWorkspace(): () => void {
 }
 
 /**
- * Returns a callback that closes the workspace, after confirmation
+ * Returns a callback that closes the workspace, after confirmation, and
+ * forgets the file the open project was loaded from within it
  *
  * @returns The callback
  */
