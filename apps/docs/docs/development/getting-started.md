@@ -7,13 +7,13 @@ sidebar_position: 1
 Clone the repository:
 
 ```sh
-git clone https://github.com/TissUUmaps/TissUUmaps4
+git clone https://github.com/TissUUmaps/TissUUmaps
 ```
 
 Change directory and install the dependencies:
 
 ```sh
-cd TissUUmaps4
+cd TissUUmaps
 pnpm install
 ```
 

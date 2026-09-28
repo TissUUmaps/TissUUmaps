@@ -1,17 +1,17 @@
 # TissUUmaps
 
-[![Release](https://img.shields.io/github/v/release/TissUUmaps/TissUUmaps4?filter=tissuumaps%40*&include_prereleases&label=release)](https://github.com/TissUUmaps/TissUUmaps4/releases?q=tissuumaps%40)
-[![Issues](https://img.shields.io/github/issues/TissUUmaps/TissUUmaps4?label=issues)](https://github.com/TissUUmaps/TissUUmaps4/issues)
-[![Pull requests](https://img.shields.io/github/issues-pr/TissUUmaps/TissUUmaps4?label=pr)](https://github.com/TissUUmaps/TissUUmaps4/pulls)
-[![Continuous integration](https://img.shields.io/github/actions/workflow/status/TissUUmaps/TissUUmaps4/ci.yaml?label=ci)](https://github.com/TissUUmaps/TissUUmaps4/actions/workflows/ci.yaml)
-[![Release workflow](https://img.shields.io/github/actions/workflow/status/TissUUmaps/TissUUmaps4/release.yaml?label=release%20%26%20deploy)](https://github.com/TissUUmaps/TissUUmaps4/actions/workflows/release.yaml)
-[![Coverage](https://img.shields.io/codecov/c/github/TissUUmaps/TissUUmaps4?label=coverage)](https://app.codecov.io/gh/TissUUmaps/TissUUmaps4)
-[![Deployment](https://img.shields.io/github/deployments/TissUUmaps/TissUUmaps4/github-pages?label=deployment)](https://tissuumaps.github.io/TissUUmaps4/docs/)
-[![Contributors](https://img.shields.io/github/all-contributors/TissUUmaps/TissUUmaps4?label=contributors)](CONTRIBUTORS.md)
-[![License](https://img.shields.io/github/license/TissUUmaps/TissUUmaps4?label=license)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/TissUUmaps/TissUUmaps?filter=tissuumaps%40*&include_prereleases&label=release)](https://github.com/TissUUmaps/TissUUmaps/releases?q=tissuumaps%40)
+[![Issues](https://img.shields.io/github/issues/TissUUmaps/TissUUmaps?label=issues)](https://github.com/TissUUmaps/TissUUmaps/issues)
+[![Pull requests](https://img.shields.io/github/issues-pr/TissUUmaps/TissUUmaps?label=pr)](https://github.com/TissUUmaps/TissUUmaps/pulls)
+[![Continuous integration](https://img.shields.io/github/actions/workflow/status/TissUUmaps/TissUUmaps/ci.yaml?label=ci)](https://github.com/TissUUmaps/TissUUmaps/actions/workflows/ci.yaml)
+[![Release workflow](https://img.shields.io/github/actions/workflow/status/TissUUmaps/TissUUmaps/release.yaml?label=release%20%26%20deploy)](https://github.com/TissUUmaps/TissUUmaps/actions/workflows/release.yaml)
+[![Coverage](https://img.shields.io/codecov/c/github/TissUUmaps/TissUUmaps?label=coverage)](https://app.codecov.io/gh/TissUUmaps/TissUUmaps)
+[![Deployment](https://img.shields.io/github/deployments/TissUUmaps/TissUUmaps/github-pages?label=deployment)](https://tissuumaps.github.io/TissUUmaps/docs/)
+[![Contributors](https://img.shields.io/github/all-contributors/TissUUmaps/TissUUmaps?label=contributors)](CONTRIBUTORS.md)
+[![License](https://img.shields.io/github/license/TissUUmaps/TissUUmaps?label=license)](LICENSE)
 
 > [!NOTE]  
-> TissUUmaps 4.0 is under active development. The current stable release of TissUUmaps 3 can be found [here](https://github.com/TissUUmaps/TissUUmaps).
+> TissUUmaps 4 is under active development. Looking for TissUUmaps 3? It lives at [TissUUmaps/TissUUmaps3](https://github.com/TissUUmaps/TissUUmaps3).
 
 TissUUmaps is a GPU-accelerated web application for visualizing, annotating and sharing spatial biology data.
 
@@ -23,19 +23,19 @@ A modern web browser with WebGL 2 and File System API support is required.
 
 ## Installation
 
-Download the `tissuumaps-<version>.zip` of the [latest application release](https://github.com/TissUUmaps/TissUUmaps4/releases?q=tissuumaps%40) and open its `index.html`.
+Download the `tissuumaps-<version>.zip` of the [latest application release](https://github.com/TissUUmaps/TissUUmaps/releases?q=tissuumaps%40) and open its `index.html`.
 
-Alternatively, use [TissUUmaps live](https://tissuumaps.github.io/TissUUmaps4/) ([demo](https://tissuumaps.github.io/TissUUmaps4/?project=https://user.it.uu.se/~chrav452/TissUUmaps4/data/heart_cropped/project.json)).
+Alternatively, use [TissUUmaps live](https://tissuumaps.github.io/TissUUmaps/) ([demo](https://tissuumaps.github.io/TissUUmaps/?project=https://user.it.uu.se/~chrav452/TissUUmaps4/data/heart_cropped/project.json)).
 
 ## Usage
 
 Simply open the downloaded `index.html` file in your favorite browser.
 
-Alternatively, open [TissUUmaps live](https://tissuumaps.github.io/TissUUmaps4/) ([demo](https://tissuumaps.github.io/TissUUmaps4/?project=https://user.it.uu.se/~chrav452/TissUUmaps4/data/heart_cropped/project.json)).
+Alternatively, open [TissUUmaps live](https://tissuumaps.github.io/TissUUmaps/) ([demo](https://tissuumaps.github.io/TissUUmaps/?project=https://user.it.uu.se/~chrav452/TissUUmaps4/data/heart_cropped/project.json)).
 
 ## Documentation
 
-[Documentation](https://tissuumaps.github.io/TissUUmaps4/docs/)
+[Documentation](https://tissuumaps.github.io/TissUUmaps/docs/)
 
 ## Contributors
 
