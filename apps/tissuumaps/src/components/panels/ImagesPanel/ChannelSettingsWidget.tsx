@@ -198,11 +198,9 @@ function ChannelSettingsRow({
           <SimpleColorPicker
             color={color}
             onColorChange={(newColor) => updateChannel({ color: newColor })}
-            // positions the sr-only label, which would otherwise overflow the
-            // panel's scroll container
-            className="relative size-4 p-0 border-input shadow-xs"
+            label="Channel color"
+            className="size-4 p-0 border-input shadow-xs"
           >
-            <span className="sr-only">Channel color</span>
             <span
               className="block size-full rounded-sm"
               style={{ backgroundColor: ColorUtils.toHex(color) }}
