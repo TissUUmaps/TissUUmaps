@@ -1,4 +1,5 @@
-import type { ComponentProps, ReactElement } from "react";
+import { mergeProps } from "@base-ui/react/merge-props";
+import { type ComponentProps, type ReactElement, cloneElement } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,9 +17,9 @@ export type IconButtonProps = Omit<
 
   /**
    * The element to render instead of the button, such as an input group
-   * button; it takes its own props, and only gets the label and the children
+   * button; the other props are merged into it, but not the variant and size
    */
-  render?: ReactElement;
+  render?: ReactElement<ComponentProps<"button">>;
 };
 
 // Focusable when disabled, so that its tooltip still shows
@@ -36,7 +37,12 @@ export function IconButton({
       <TooltipTrigger
         aria-label={label}
         render={
-          render ?? (
+          render ? (
+            cloneElement(
+              render,
+              mergeProps(render.props, { className, ...props }),
+            )
+          ) : (
             <Button
               variant={variant}
               size={size}

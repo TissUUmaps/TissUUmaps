@@ -221,7 +221,7 @@ export function App() {
 
   usePluginPanels(dockviewApi, projectPanelId);
 
-  // Before paint, so that a reload in dark mode shows no light frame
+  // Before paint, so that React never renders a light frame in dark mode
   // https://tailwindcss.com/docs/dark-mode
   useLayoutEffect(() => {
     document.documentElement.classList.toggle("dark", dark);

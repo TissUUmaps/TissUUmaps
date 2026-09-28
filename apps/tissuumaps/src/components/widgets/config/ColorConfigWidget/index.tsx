@@ -331,12 +331,8 @@ function RandomColorConfigWidget({
           <InputGroupAddon align="inline-end">
             <IconButton
               label="Shuffle seed"
-              render={
-                <InputGroupButton
-                  size="icon-xs"
-                  onClick={() => setSeed(RandomUtils.seed())}
-                />
-              }
+              render={<InputGroupButton size="icon-xs" />}
+              onClick={() => setSeed(RandomUtils.seed())}
             >
               <RefreshCwIcon />
             </IconButton>

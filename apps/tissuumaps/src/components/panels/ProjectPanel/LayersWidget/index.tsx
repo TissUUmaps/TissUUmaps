@@ -3,12 +3,12 @@ import { useMemo } from "react";
 
 import { type Layer, type TableColumnRef, createLayer } from "@tissuumaps/core";
 
+import { OpacityControl } from "@/components/common/opacity-control";
+import { VisibilityButton } from "@/components/common/visibility-button";
 import {
   type ObjectKind,
   objectKindIcons,
-} from "@/components/common/object-kind-icons";
-import { OpacityControl } from "@/components/common/opacity-control";
-import { VisibilityButton } from "@/components/common/visibility-button";
+} from "@/components/object-kind-icons";
 import { Button } from "@/components/ui/button";
 import {
   SortableObjectItem,

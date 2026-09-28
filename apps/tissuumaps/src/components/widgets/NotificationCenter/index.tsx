@@ -15,7 +15,7 @@ import { IconButton } from "@/components/common/icon-button";
 import {
   type ObjectKind,
   objectKindIcons,
-} from "@/components/common/object-kind-icons";
+} from "@/components/object-kind-icons";
 import { percentFormat } from "@/lib/format";
 import { useDataStore } from "@/stores/data";
 import { useProjectStore } from "@/stores/project";

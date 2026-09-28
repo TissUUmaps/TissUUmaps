@@ -67,7 +67,6 @@ export const ArrayControl = withJsonFormsArrayControlProps(
                   />
                   <IconButton
                     label="Move up"
-                    variant="default"
                     size="icon"
                     disabled={!props.enabled}
                     onClick={() => props.moveUp?.(props.path, index)()}
@@ -76,7 +75,6 @@ export const ArrayControl = withJsonFormsArrayControlProps(
                   </IconButton>
                   <IconButton
                     label="Move down"
-                    variant="default"
                     size="icon"
                     disabled={!props.enabled}
                     onClick={() => props.moveDown?.(props.path, index)()}
@@ -85,7 +83,6 @@ export const ArrayControl = withJsonFormsArrayControlProps(
                   </IconButton>
                   <IconButton
                     label="Remove"
-                    variant="default"
                     size="icon"
                     disabled={!props.enabled}
                     onClick={() => props.removeItems?.(props.path, [index])()}
