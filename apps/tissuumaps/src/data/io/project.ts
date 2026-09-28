@@ -39,6 +39,7 @@ function cleanProject(project: Project): Project {
     opacityMaps: structuredClone(project.opacityMaps),
     osOptions: structuredClone(project.osOptions),
     glOptions: structuredClone(project.glOptions),
+    backgroundColor: structuredClone(project.backgroundColor),
   };
 }
 

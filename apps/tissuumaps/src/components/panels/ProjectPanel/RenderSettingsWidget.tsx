@@ -1,6 +1,6 @@
-import { RotateCcwIcon } from "lucide-react";
+import { RotateCcwIcon, SquareIcon } from "lucide-react";
 
-import { projectDefaults } from "@tissuumaps/core";
+import { ColorUtils, projectDefaults } from "@tissuumaps/core";
 
 import {
   Collapsible,
@@ -14,6 +14,7 @@ import {
   FieldDescription,
   FieldLabel,
 } from "@/components/common/field";
+import { SimpleColorPicker } from "@/components/common/simple-color-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -26,11 +27,27 @@ export type RenderSettingsWidgetProps = {
 export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
   const glOptions = useProjectStore((state) => state.glOptions);
   const setGLOptions = useProjectStore((state) => state.setGLOptions);
+  const backgroundColor = useProjectStore((state) => state.backgroundColor);
+  const setBackgroundColor = useProjectStore(
+    (state) => state.setBackgroundColor,
+  );
 
   const { globalPointSizeFactor } = glOptions.pointsRenderOptions;
 
   return (
     <div className={cn("flex flex-col gap-2 pl-6", className)}>
+      <Field className="flex flex-col items-start">
+        <FieldLabel>Background color</FieldLabel>
+        <SimpleColorPicker
+          color={backgroundColor}
+          onColorChange={setBackgroundColor}
+        >
+          <SquareIcon
+            fill={`rgb(${backgroundColor.r}, ${backgroundColor.g}, ${backgroundColor.b})`}
+          />
+          {ColorUtils.toHex(backgroundColor)}
+        </SimpleColorPicker>
+      </Field>
       <Field>
         <FieldLabel>Point size factor</FieldLabel>
         <FieldControl

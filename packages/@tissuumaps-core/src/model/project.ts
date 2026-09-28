@@ -63,6 +63,7 @@ export const projectDefaults = {
       shapePadding: 0.2,
     },
   },
+  backgroundColor: { r: 0, g: 0, b: 0 },
 } as const satisfies Partial<RawProject>;
 
 /**
@@ -167,6 +168,13 @@ export interface RawProject extends RawModel {
    * @defaultValue {@link projectDefaults.glOptions}
    */
   glOptions?: WebGLOptions;
+
+  /**
+   * Color of the viewer background, behind all rendered content
+   *
+   * @defaultValue {@link projectDefaults.backgroundColor}
+   */
+  backgroundColor?: Color;
 }
 
 /**

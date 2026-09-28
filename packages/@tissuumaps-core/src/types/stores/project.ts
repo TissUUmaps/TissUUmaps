@@ -448,6 +448,13 @@ export type ProjectStoreActions = {
   setGLOptions: (glOptions: Project["glOptions"]) => void;
 
   /**
+   * Sets the color of the viewer background
+   *
+   * @param backgroundColor - The new background color
+   */
+  setBackgroundColor: (backgroundColor: Project["backgroundColor"]) => void;
+
+  /**
    * Replaces the project with a new, empty one
    */
   clear: () => void;
