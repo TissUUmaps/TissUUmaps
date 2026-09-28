@@ -7,6 +7,7 @@ import {
   AccordionTrigger,
   AccordionTriggerRightDownIcon,
 } from "@/components/common/accordion";
+import { IconButton } from "@/components/common/icon-button";
 import { cn } from "@/lib/utils";
 
 import { ObjectMenu } from "./ObjectMenu";
@@ -70,7 +71,12 @@ export function ObjectItem({
             deleteDisabledReason={deleteDisabledReason}
             onDelete={onDelete}
           />
-          <AccordionTriggerRightDownIcon className="text-muted-foreground hover:bg-muted hover:text-foreground flex size-8 shrink-0 items-center justify-center rounded-md" />
+          <IconButton
+            label="Expand/collapse"
+            render={
+              <AccordionTriggerRightDownIcon className="text-muted-foreground hover:bg-muted hover:text-foreground flex size-8 shrink-0 items-center justify-center rounded-md" />
+            }
+          />
         </AccordionHeader>
         <AccordionPanel className="flex flex-col gap-y-2 px-2 pt-1 pb-2 text-sm">
           {children}
