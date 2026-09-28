@@ -1,3 +1,5 @@
+import { SourceUtils } from "@tissuumaps/core";
+
 /** The picker APIs missing from `lib.dom.d.ts` */
 type FileSystemAccessWindow = Window & {
   showDirectoryPicker?: (options?: {
@@ -66,8 +68,71 @@ export async function pickWorkspace(): Promise<FileSystemDirectoryHandle | null>
  * @throws Error if the browser does not support picking a file, or if access
  * to the file was denied
  */
-export async function pickProjectFile(options?: {
+export function pickProjectFile(options?: {
   startIn?: FileSystemDirectoryHandle;
+}): Promise<FileSystemFileHandle | null> {
+  return openFilePicker({
+    startIn: options?.startIn,
+    types: [
+      {
+        description: "TissUUmaps project",
+        accept: { "application/json": projectFileExtensions },
+      },
+    ],
+  });
+}
+
+/**
+ * Lets the user pick a file within the workspace
+ *
+ * @param workspace - The directory handle of the open workspace, which the
+ * picker opens in
+ * @returns The workspace-relative path of the picked file (with `/` prefix),
+ * or `null` if the user cancelled the picker
+ * @throws Error if the browser does not support picking a file, if access to
+ * the file was denied, or if the file does not lie within the workspace
+ */
+export async function pickWorkspaceFile(
+  workspace: FileSystemDirectoryHandle,
+): Promise<string | null> {
+  const file = await openFilePicker({ startIn: workspace });
+  return file !== null ? await locateInWorkspace(workspace, file) : null;
+}
+
+/**
+ * Locates a picked file or directory within the workspace
+ *
+ * @param workspace - The directory handle of the open workspace
+ * @param handle - The picked file or directory
+ * @returns The workspace-relative path of the file or directory (with `/`
+ * prefix)
+ * @throws Error if the file or directory does not lie within the workspace
+ */
+async function locateInWorkspace(
+  workspace: FileSystemDirectoryHandle,
+  handle: FileSystemHandle,
+): Promise<string> {
+  const segments = await workspace.resolve(handle);
+  if (segments === null) {
+    throw new Error(
+      `The ${handle.kind === "directory" ? "folder" : "file"} is not in the connected folder`,
+    );
+  }
+  return SourceUtils.makeWorkspacePath(segments);
+}
+
+/**
+ * Opens the browser's file picker for a single file
+ *
+ * @param options - The directory to open the picker in, and the file types to
+ * offer, defaulting to all
+ * @returns The file handle, or `null` if the user cancelled the picker
+ * @throws Error if the browser does not support picking a file, or if access
+ * to the file was denied
+ */
+async function openFilePicker(options: {
+  startIn?: FileSystemDirectoryHandle;
+  types?: { description?: string; accept: Record<string, string[]> }[];
 }): Promise<FileSystemFileHandle | null> {
   const w = window as FileSystemAccessWindow;
   if (w.showOpenFilePicker === undefined) {
@@ -75,18 +140,13 @@ export async function pickProjectFile(options?: {
   }
   try {
     // Called as a method: the picker throws if it loses its receiver
-    const projectFiles = await w.showOpenFilePicker({
+    const files = await w.showOpenFilePicker({
       id: workspacePickerId,
-      startIn: options?.startIn,
+      startIn: options.startIn,
       multiple: false,
-      types: [
-        {
-          description: "TissUUmaps project",
-          accept: { "application/json": projectFileExtensions },
-        },
-      ],
+      types: options.types,
     });
-    return projectFiles[0] ?? null;
+    return files[0] ?? null;
   } catch (error) {
     if (isAbortError(error)) {
       return null;

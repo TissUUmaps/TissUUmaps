@@ -4,6 +4,7 @@ import {
   isWorkspaceSupported,
   pickProjectFile,
   pickWorkspace,
+  pickWorkspaceFile,
 } from "./workspace";
 
 const directory = {
@@ -14,6 +15,18 @@ const projectFile = {
   kind: "file",
   name: "project.tm4",
 } as FileSystemFileHandle;
+
+/**
+ * Creates a workspace whose `resolve` returns the given segments, standing in
+ * for a directory tree that does or does not contain the picked entry
+ */
+function makeWorkspace(segments: string[] | null) {
+  return {
+    kind: "directory",
+    name: "workspace",
+    resolve: vi.fn(() => Promise.resolve(segments)),
+  } as unknown as FileSystemDirectoryHandle;
+}
 
 function stubDirectoryPicker(
   picker: ((options?: unknown) => Promise<FileSystemDirectoryHandle>) | null,
@@ -114,6 +127,36 @@ describe("workspace", () => {
     it("rejects without the picker", async () => {
       stubOpenFilePicker(null);
       await expect(pickProjectFile()).rejects.toThrow(/not supported/);
+    });
+  });
+
+  describe("pickWorkspaceFile", () => {
+    it("returns the workspace path of the picked file", async () => {
+      const workspace = makeWorkspace(["data", "cells.csv"]);
+      const picker = vi.fn(() => Promise.resolve([projectFile]));
+      stubOpenFilePicker(picker);
+      await expect(pickWorkspaceFile(workspace)).resolves.toBe(
+        "/data/cells.csv",
+      );
+      expect(picker).toHaveBeenCalledWith(
+        expect.objectContaining({ startIn: workspace }),
+      );
+    });
+
+    it("rejects a file outside the workspace", async () => {
+      stubOpenFilePicker(() => Promise.resolve([projectFile]));
+      await expect(pickWorkspaceFile(makeWorkspace(null))).rejects.toThrow(
+        /not in the connected folder/,
+      );
+    });
+
+    it("returns null when the user cancels", async () => {
+      stubOpenFilePicker(() =>
+        Promise.reject(new DOMException("Aborted", "AbortError")),
+      );
+      await expect(
+        pickWorkspaceFile(makeWorkspace(["cells.csv"])),
+      ).resolves.toBeNull();
     });
   });
 });
