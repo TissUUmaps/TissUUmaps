@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
-import type { PanelId } from "../panelIds";
+import type { PanelId } from "../panelId";
 import { DisplaySettingsWidget } from "./DisplaySettingsWidget";
 import { LayersWidget } from "./LayersWidget";
 import { ProjectFooter } from "./ProjectFooter";

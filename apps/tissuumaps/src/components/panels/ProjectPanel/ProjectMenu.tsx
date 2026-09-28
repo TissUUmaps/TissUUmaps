@@ -2,7 +2,6 @@ import {
   DownloadIcon,
   EllipsisIcon,
   FileIcon,
-  FilePlusIcon,
   FolderIcon,
   LinkIcon,
   XIcon,
@@ -33,7 +32,6 @@ export function ProjectMenu({ className }: ProjectMenuProps) {
     openProjectFile,
     openProjectFromURL,
     downloadProject,
-    newProject,
     closeProject,
     openWorkspace,
   } = useProjectActions();
@@ -73,10 +71,6 @@ export function ProjectMenu({ className }: ProjectMenuProps) {
           Download project
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={newProject}>
-          <FilePlusIcon />
-          New project…
-        </DropdownMenuItem>
         <DropdownMenuItem variant="destructive" onClick={closeProject}>
           <XIcon />
           Close project…

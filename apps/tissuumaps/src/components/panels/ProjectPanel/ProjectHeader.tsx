@@ -15,8 +15,9 @@ import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
-import { type PanelId, panelIds } from "../panelIds";
+import { PanelId } from "../panelId";
 import { ProjectMenu } from "./ProjectMenu";
+import { formatProjectSource } from "./formatProjectSource";
 import { useProjectActions } from "./useProjectActions";
 
 export type ProjectHeaderProps = {
@@ -38,35 +39,35 @@ export function ProjectHeader({ onShowPanel, className }: ProjectHeaderProps) {
 
   const dataCounts: DataCount[] = [
     {
-      panelId: panelIds.images,
+      panelId: PanelId.images,
       icon: objectKindIcons.image,
       count: imageCount,
       singularLabel: "image",
       pluralLabel: "images",
     },
     {
-      panelId: panelIds.labels,
+      panelId: PanelId.labels,
       icon: objectKindIcons.labels,
       count: labelsCount,
       singularLabel: "labels",
       pluralLabel: "labels",
     },
     {
-      panelId: panelIds.points,
+      panelId: PanelId.points,
       icon: objectKindIcons.points,
       count: pointsCount,
       singularLabel: "point cloud",
       pluralLabel: "point clouds",
     },
     {
-      panelId: panelIds.shapes,
+      panelId: PanelId.shapes,
       icon: objectKindIcons.shapes,
       count: shapesCount,
       singularLabel: "shape cloud",
       pluralLabel: "shape clouds",
     },
     {
-      panelId: panelIds.tables,
+      panelId: PanelId.tables,
       icon: objectKindIcons.table,
       count: tableCount,
       singularLabel: "table",
@@ -75,7 +76,9 @@ export function ProjectHeader({ onShowPanel, className }: ProjectHeaderProps) {
   ].filter((dataCount) => dataCount.count > 0);
 
   const sourceLabel =
-    source !== null ? formatProjectSource(source, workspaceName) : null;
+    source !== null
+      ? formatProjectSource(source, workspaceName, document.baseURI)
+      : null;
   const SourceIcon =
     source !== null && SourceUtils.isWorkspacePath(source)
       ? FolderIcon
@@ -137,23 +140,3 @@ type DataCount = {
   singularLabel: string;
   pluralLabel: string;
 };
-
-// Shows workspace files relative to the folder, and URLs on this server
-// relative to the app
-function formatProjectSource(
-  source: string,
-  workspaceName: string | null,
-): string {
-  if (SourceUtils.isWorkspacePath(source)) {
-    return `${workspaceName ?? "Folder"} › ${source.slice(1)}`;
-  }
-  if (!URL.canParse(source)) {
-    return source;
-  }
-  const url = new URL(source);
-  const appUrl = new URL(".", document.baseURI);
-  return url.origin === appUrl.origin &&
-    url.pathname.startsWith(appUrl.pathname)
-    ? url.pathname.slice(appUrl.pathname.length)
-    : `${url.host}${url.pathname}`;
-}

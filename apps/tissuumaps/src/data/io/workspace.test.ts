@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  chooseProjectFile,
   isWorkspaceSupported,
   pickProjectFile,
+  pickProjectFileFromInput,
   pickWorkspace,
 } from "./workspace";
 
@@ -127,14 +127,14 @@ describe("workspace", () => {
     });
   });
 
-  describe("chooseProjectFile", () => {
+  describe("pickProjectFileFromInput", () => {
     it("returns the chosen file", async () => {
       const file = new File(["{}"], "project.tmap");
       stubFileInputClick((input) => {
         Object.defineProperty(input, "files", { value: [file] });
         input.dispatchEvent(new Event("change"));
       });
-      await expect(chooseProjectFile()).resolves.toBe(file);
+      await expect(pickProjectFileFromInput()).resolves.toBe(file);
     });
 
     it("offers project files", async () => {
@@ -143,7 +143,7 @@ describe("workspace", () => {
         accept = input.accept;
         input.dispatchEvent(new Event("cancel"));
       });
-      await chooseProjectFile();
+      await pickProjectFileFromInput();
       expect(accept).toBe(".tmap,.json");
     });
 
@@ -151,7 +151,7 @@ describe("workspace", () => {
       stubFileInputClick((input) => {
         input.dispatchEvent(new Event("cancel"));
       });
-      await expect(chooseProjectFile()).resolves.toBeNull();
+      await expect(pickProjectFileFromInput()).resolves.toBeNull();
     });
   });
 });

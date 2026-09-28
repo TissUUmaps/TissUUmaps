@@ -194,7 +194,7 @@ A React context is split into two files: `context.ts` holds the context object a
 
 Four separate Zustand vanilla stores are used, one per file in `src/stores`, all typed in `@tissuumaps/core` (`types/stores`) so that plugins can consume them:
 
-- `appStore` - transient application state: workspace, interaction mode, registered data providers and plugins
+- `appStore` - transient application state: workspace, start page dismissal, interaction mode, registered data providers and plugins
 - `dataStore` - derived state: a data reference (`DataRef`) per project object, reconciled by the data caches (see below); treat as read-only
 - `projectStore` - the loaded project (layers, images, labels, points, shapes, tables, maps, render options)
 - `settingsStore` - user settings, persisted across sessions

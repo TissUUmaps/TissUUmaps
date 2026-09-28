@@ -11,8 +11,8 @@ import {
   setProjectURLParam,
 } from "@/data/io/project";
 import {
-  chooseProjectFile,
   pickProjectFile,
+  pickProjectFileFromInput,
   pickWorkspace,
 } from "@/data/io/workspace";
 import { useAppStore } from "@/stores/app";
@@ -33,8 +33,6 @@ export type ProjectActions = {
   openProjectFromURL: () => void;
   /** Downloads the open project as a `.tmap` file */
   downloadProject: () => void;
-  /** Replaces the open project with an empty one, after confirmation */
-  newProject: () => void;
   /** Closes the open project and shows the start page, after confirmation */
   closeProject: () => void;
   /** Replaces the open project with an empty one, without confirmation */
@@ -69,7 +67,7 @@ export function useProjectActions(): ProjectActions {
       setStartPageDismissed(true);
     };
     if (workspace === null) {
-      void chooseProjectFile()
+      void pickProjectFileFromInput()
         .then(async (file) => {
           if (file !== null) {
             await loadProjectFromFile(file);
@@ -100,13 +98,12 @@ export function useProjectActions(): ProjectActions {
         if (projectUrl) {
           await loadProjectFromURL(projectUrl);
           setProjectURLParam(projectUrl);
-          setStartPageDismissed(true);
         }
       })
       .catch((error) => {
         console.error("Failed to load project from URL", error);
       });
-  }, [prompt, setStartPageDismissed]);
+  }, [prompt]);
 
   const downloadProject = useCallback(() => {
     saveAndDownloadProjectToJSON();
@@ -130,17 +127,6 @@ export function useProjectActions(): ProjectActions {
       }
     });
   }, [clearProject, confirm, setStartPageDismissed]);
-
-  const newProject = useCallback(() => {
-    void confirm({
-      title: "New project",
-      body: "Are you sure you want to start a new project? All unsaved changes will be lost.",
-    }).then((confirmed) => {
-      if (confirmed) {
-        startEmptyProject();
-      }
-    });
-  }, [confirm, startEmptyProject]);
 
   const openWorkspace = useCallback(() => {
     void pickWorkspace()
@@ -169,7 +155,6 @@ export function useProjectActions(): ProjectActions {
     openProjectFile,
     openProjectFromURL,
     downloadProject,
-    newProject,
     closeProject,
     startEmptyProject,
     openWorkspace,

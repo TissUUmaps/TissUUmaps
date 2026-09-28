@@ -60,7 +60,7 @@ export default defineConfig(({ mode }) => ({
       packageJson.repository.url.replace(/^git\+/, "").replace(/\.git$/, ""),
     ),
     __APP_DOCS_URL__: JSON.stringify(
-      `https://tissuumaps.github.io/TissUUmaps4/${packageJson.version}/docs/`,
+      `https://tissuumaps.github.io/TissUUmaps/${packageJson.version}/docs/`,
     ),
     "import.meta.env.VITE_CUSTOM_HTML": JSON.stringify(
       process.env.VITE_CUSTOM_HTML_FILE

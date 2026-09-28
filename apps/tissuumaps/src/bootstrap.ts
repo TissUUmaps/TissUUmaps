@@ -15,8 +15,9 @@ const fallbackProjectUrl = "project.json";
  * Starts up the parts of the application that live outside of React
  *
  * Registers the built-in data providers, starts the data caches and the plugin
- * registry, dismisses the start page once the project has data, starts loading
- * the initial project, and finally announces that the application has loaded.
+ * registry, dismisses the start page once the project has a source or data,
+ * starts loading the initial project, and finally announces that the
+ * application has loaded.
  * The project is only loading, not loaded, by the time this returns.
  *
  * @returns A callback that cancels the initial project loading, stops watching

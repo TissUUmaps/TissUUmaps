@@ -24,7 +24,7 @@ import { ProjectPanel } from "./components/panels/ProjectPanel";
 import { ShapesPanel } from "./components/panels/ShapesPanel";
 import { TablesPanel } from "./components/panels/TablesPanel";
 import { ViewerPanel } from "./components/panels/ViewerPanel";
-import { panelIds } from "./components/panels/panelIds";
+import { PanelId } from "./components/panels/panelId";
 import { NotificationCenter } from "./components/widgets/NotificationCenter";
 import { pluginRegistry } from "./plugins";
 import { useSettingsStore } from "./stores/settings";
@@ -151,14 +151,14 @@ function DockviewRightHeaderActionsComponent() {
  */
 const onDockviewReady = (event: DockviewReadyEvent) => {
   const viewerPanel = event.api.addPanel({
-    id: panelIds.viewer,
+    id: PanelId.viewer,
     title: "Viewer",
     component: "ViewerPanel",
   });
   viewerPanel.group.header.hidden = true;
   viewerPanel.group.locked = true;
   const projectPanel = event.api.addPanel({
-    id: panelIds.project,
+    id: PanelId.project,
     title: "Project",
     component: "ProjectPanel",
     tabComponent: "PersistentPanelHeader",
@@ -169,35 +169,35 @@ const onDockviewReady = (event: DockviewReadyEvent) => {
     },
   });
   event.api.addPanel({
-    id: panelIds.images,
+    id: PanelId.images,
     title: "Images",
     component: "ImagesPanel",
     tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: panelIds.labels,
+    id: PanelId.labels,
     title: "Labels",
     component: "LabelsPanel",
     tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: panelIds.points,
+    id: PanelId.points,
     title: "Points",
     component: "PointsPanel",
     tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: panelIds.shapes,
+    id: PanelId.shapes,
     title: "Shapes",
     component: "ShapesPanel",
     tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: panelIds.tables,
+    id: PanelId.tables,
     title: "Tables",
     component: "TablesPanel",
     tabComponent: "PersistentPanelHeader",
@@ -219,7 +219,7 @@ export function App() {
   const [dockviewApi, setDockviewApi] = useState<DockviewApi | null>(null);
 
   // The panels contributed by plugins join the group of the project panel
-  usePluginPanels(dockviewApi, panelIds.project);
+  usePluginPanels(dockviewApi, PanelId.project);
 
   // Before paint, so that React never renders a light frame in dark mode
   // https://tailwindcss.com/docs/dark-mode

@@ -1,5 +1,5 @@
 /** The IDs of the application's dockview panels */
-export const panelIds = {
+export const PanelId = {
   viewer: "viewerPanel",
   project: "projectPanel",
   images: "imagesPanel",
@@ -9,4 +9,4 @@ export const panelIds = {
   tables: "tablesPanel",
 } as const;
 
-export type PanelId = (typeof panelIds)[keyof typeof panelIds];
+export type PanelId = (typeof PanelId)[keyof typeof PanelId];
