@@ -450,9 +450,11 @@ export type ProjectStoreActions = {
   /**
    * Sets the project's viewer background color
    *
-   * @param backgroundColor - The background color to apply
+   * @param viewerBackgroundColor - The viewer background color to apply
    */
-  setBackgroundColor: (backgroundColor: Project["backgroundColor"]) => void;
+  setViewerBackgroundColor: (
+    viewerBackgroundColor: Project["viewerBackgroundColor"],
+  ) => void;
 
   /**
    * Replaces the project with a new, empty one

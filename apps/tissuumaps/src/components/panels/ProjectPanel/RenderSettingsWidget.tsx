@@ -27,25 +27,27 @@ export type RenderSettingsWidgetProps = {
 export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
   const glOptions = useProjectStore((state) => state.glOptions);
   const setGLOptions = useProjectStore((state) => state.setGLOptions);
-  const backgroundColor = useProjectStore((state) => state.backgroundColor);
-  const setBackgroundColor = useProjectStore(
-    (state) => state.setBackgroundColor,
+  const viewerBackgroundColor = useProjectStore(
+    (state) => state.viewerBackgroundColor,
+  );
+  const setViewerBackgroundColor = useProjectStore(
+    (state) => state.setViewerBackgroundColor,
   );
 
   const { globalPointSizeFactor } = glOptions.pointsRenderOptions;
-  const backgroundColorHex = ColorUtils.toHex(backgroundColor);
+  const viewerBackgroundColorHex = ColorUtils.toHex(viewerBackgroundColor);
 
   return (
     <div className={cn("flex flex-col gap-2 pl-6", className)}>
       <Field className="flex flex-col items-start">
-        <FieldLabel>Background color</FieldLabel>
+        <FieldLabel>Viewer background color</FieldLabel>
         <SimpleColorPicker
-          color={backgroundColor}
-          onColorChange={setBackgroundColor}
+          color={viewerBackgroundColor}
+          onColorChange={setViewerBackgroundColor}
         >
-          <span className="sr-only">Background color</span>
-          <SquareIcon fill={backgroundColorHex} />
-          {backgroundColorHex}
+          <span className="sr-only">Viewer background color</span>
+          <SquareIcon fill={viewerBackgroundColorHex} />
+          {viewerBackgroundColorHex}
         </SimpleColorPicker>
       </Field>
       <Field>

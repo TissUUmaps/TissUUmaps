@@ -30,7 +30,9 @@ export type ViewerPanelProps = {
 export function ViewerPanel({ className }: ViewerPanelProps) {
   const interactionMode = useAppStore((state) => state.interactionMode);
   const imageChannelPreview = useAppStore((state) => state.imageChannelPreview);
-  const backgroundColor = useProjectStore((state) => state.backgroundColor);
+  const viewerBackgroundColor = useProjectStore(
+    (state) => state.viewerBackgroundColor,
+  );
 
   const images = useProjectStore((state) => state.images);
   const previewedImages = useMemo(
@@ -118,7 +120,7 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
   return (
     <Viewer
       adapter={viewerAdapter}
-      backgroundColor={backgroundColor}
+      backgroundColor={viewerBackgroundColor}
       className={className}
     >
       <ViewerControl anchor={ViewerControlAnchor.TOP_LEFT}>
