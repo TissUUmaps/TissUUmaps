@@ -8,6 +8,7 @@ import {
   hasUnsavedChanges,
   loadProject,
   makeProjectFileName,
+  makeProjectLink,
   rebaseProjectSources,
   resolveProjectSource,
   saveProjectAs,
@@ -204,11 +205,7 @@ describe("saveProjectToSourceFile", () => {
   it("does not mark the project saved once it belongs to another file", async () => {
     const writable = makeWritable();
     const { sourceFile } = makeSourceFile(writable);
-    loadProject(
-      createProject({ name: "Project" }),
-      "/project.tmap",
-      sourceFile,
-    );
+    loadProject(createProject({ name: "Project" }), "/project.tm4", sourceFile);
     projectStore.getState().setName("Renamed");
     writable.write.mockImplementation(() => {
       projectStore.setState({ sourceFile: { ...projectFile } });
@@ -301,7 +298,7 @@ describe("rebaseProjectSources", () => {
       project,
       workspace,
       null,
-      "/study.tmap",
+      "/study.tm4",
     );
     expect(rebased.images[0]).toBe(project.images[0]);
   });
@@ -314,6 +311,20 @@ describe("makeProjectFileName", () => {
 
   it("falls back to Untitled", () => {
     expect(makeProjectFileName("!!!")).toBe("Untitled.tm4");
+  });
+});
+
+describe("makeProjectLink", () => {
+  it("adds the project URL to the app URL, keeping its other parameters", () => {
+    window.history.replaceState({}, "", "/app/?theme=dark");
+    const link = new URL(
+      makeProjectLink("https://example.com/data/project.tm4"),
+    );
+    expect(link.pathname).toBe("/app/");
+    expect(link.searchParams.get("theme")).toBe("dark");
+    expect(link.searchParams.get("project")).toBe(
+      "https://example.com/data/project.tm4",
+    );
   });
 });
 
@@ -340,10 +351,10 @@ describe("saveProjectAs", () => {
       projectStore.getState().setName("Edited");
       return Promise.resolve();
     });
-    await saveProjectAs(sourceFile, "/data/study.tmap", workspace);
+    await saveProjectAs(sourceFile, "/data/study.tm4", workspace);
     const state = projectStore.getState();
     expect(state.name).toBe("Edited");
-    expect(state.source).toBe("/data/study.tmap");
+    expect(state.source).toBe("/data/study.tm4");
     expect(state.images[0]?.dataSource.source).toBe("a.tif");
     expect(hasUnsavedChanges(state)).toBe(true);
   });

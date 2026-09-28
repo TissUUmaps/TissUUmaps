@@ -1,5 +1,7 @@
 import { useCallback } from "react";
 
+import { SourceUtils } from "@tissuumaps/core";
+
 import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { usePromptDialog } from "@/components/dialogs/PromptDialog/hooks";
@@ -11,6 +13,7 @@ import {
   loadProjectFromFileHandle,
   loadProjectFromURL,
   makeProjectFileName,
+  makeProjectLink,
   saveProjectAs,
   saveProjectToSourceFile,
   setProjectURLParam,
@@ -210,6 +213,46 @@ export function useSaveProjectToFolderAs(): (() => void) | null {
       .catch(reportSaveError);
   }, [workspace, reportSaveError]);
   return workspace !== null ? saveProjectToFolderAs : null;
+}
+
+/**
+ * Returns a callback that copies a link that opens the project, and shows it
+ *
+ * @returns The callback, and why no link to the open project can be copied, or
+ * `null` if it can
+ */
+export function useCopyProjectLink(): {
+  copyProjectLink: () => void;
+  unavailableReason: string | null;
+} {
+  const source = useProjectStore((state) => state.source);
+  const alert = useAlertDialog();
+
+  // Only a project loaded from a URL can be opened by a link
+  const shareableProjectUrl =
+    source !== null && !SourceUtils.isWorkspacePath(source) ? source : null;
+
+  const copyProjectLink = useCallback(() => {
+    if (shareableProjectUrl === null) {
+      return;
+    }
+    const link = makeProjectLink(shareableProjectUrl);
+    navigator.clipboard
+      .writeText(link)
+      .then(() => alert({ title: "Link copied", body: link }))
+      .catch((error) => {
+        console.error("Failed to copy project link", error);
+        void alert({ title: "Cannot copy the link", body: link });
+      });
+  }, [shareableProjectUrl, alert]);
+
+  const unavailableReason =
+    shareableProjectUrl === null
+      ? "Only for projects opened from a URL"
+      : !window.isSecureContext
+        ? "Copying needs a secure (https) connection"
+        : null;
+  return { copyProjectLink, unavailableReason };
 }
 
 /**

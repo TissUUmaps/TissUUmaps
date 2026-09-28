@@ -557,9 +557,19 @@ export function forgetSourceFile(): void {
  * @param projectUrl - The URL the project was loaded from
  */
 export function setProjectURLParam(projectUrl: string): void {
+  window.history.replaceState({}, "", makeProjectLink(projectUrl));
+}
+
+/**
+ * Makes a link to the app that opens a project
+ *
+ * @param projectUrl - The URL of the project
+ * @returns The current app URL with the project URL as its GET parameter
+ */
+export function makeProjectLink(projectUrl: string): string {
   const url = new URL(window.location.href);
   url.searchParams.set(projectURLParam, projectUrl);
-  window.history.replaceState({}, "", url);
+  return url.href;
 }
 
 /**

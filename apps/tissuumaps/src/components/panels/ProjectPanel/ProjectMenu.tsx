@@ -1,4 +1,5 @@
 import {
+  CopyIcon,
   DownloadIcon,
   EllipsisIcon,
   FileIcon,
@@ -23,6 +24,7 @@ import { isWorkspaceSupported } from "@/data/io/workspace";
 
 import {
   useCloseProject,
+  useCopyProjectLink,
   useOpenProjectFile,
   useOpenProjectFromURL,
   useOpenWorkspace,
@@ -40,6 +42,8 @@ export function ProjectMenu({ className }: ProjectMenuProps) {
   const openProjectFromURL = useOpenProjectFromURL();
   const saveProjectToFolder = useSaveProjectToFolder();
   const saveProjectToFolderAs = useSaveProjectToFolderAs();
+  const { copyProjectLink, unavailableReason: copyLinkUnavailableReason } =
+    useCopyProjectLink();
   const closeProject = useCloseProject();
   const openWorkspace = useOpenWorkspace();
   const workspaceSupported = isWorkspaceSupported();
@@ -100,6 +104,18 @@ export function ProjectMenu({ className }: ProjectMenuProps) {
         <DropdownMenuItem onClick={() => saveAndDownloadProjectToJSON()}>
           <DownloadIcon />
           Download project
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={copyLinkUnavailableReason !== null}
+          onClick={copyProjectLink}
+        >
+          <CopyIcon />
+          Copy share link
+          {copyLinkUnavailableReason !== null && (
+            <DropdownMenuItemDescription>
+              {copyLinkUnavailableReason}
+            </DropdownMenuItemDescription>
+          )}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={closeProject}>
