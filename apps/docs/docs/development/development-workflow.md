@@ -66,7 +66,7 @@ This project uses [semantic versioning](https://semver.org); see [Versioning and
 
 GitHub is used for distributed version control using Git: https://github.com/TissUUmaps/TissUUmaps
 
-The repository follows a simplified Git Flow-like branching model, with a `main` branch holding the latest stable version and a single `development` branch, into which feature branches are merged. Branch rules protect both the `main` branch and the `development` branch from direct pushes without pull requests. Commit messages follow the [conventional commits](https://www.conventionalcommits.org) specification, with a scope where one applies and `!` marking breaking changes (e.g. `feat(storage)!: resolve relative URLs against the project URL`); branch names and pull requests should loosely follow [conventional branch](https://conventional-branch.github.io) guidelines. Only signed commits can be merged.
+The repository has a single `main` branch, into which feature branches are merged through pull requests; releases are cut from it with changesets (see [Continuous delivery](#continuous-delivery)). Branch rules protect `main` from direct pushes. Commit messages follow the [conventional commits](https://www.conventionalcommits.org) specification, with a scope where one applies and `!` marking breaking changes (e.g. `feat(storage)!: resolve relative URLs against the project URL`); branch names and pull requests should loosely follow [conventional branch](https://conventional-branch.github.io) guidelines. Only signed commits can be merged.
 
 ## Versioning and changelogs
 
@@ -92,7 +92,7 @@ Pre-commit hooks are automatically installed during `pnpm install` using the `pr
 
 ## Continuous integration
 
-Continuous integration is powered by GitHub Actions. Only the `main` and `development` branches are considered.
+Continuous integration is powered by GitHub Actions, for pushes to `main` and for pull requests into it.
 
 Linting, formatting, type checking and testing (see above) need to pass without errors before merging a pull request. Formatting, linting and type checking are checked on pull requests only; the tests, including those of the release scripts, run on every push and pull request.
 
