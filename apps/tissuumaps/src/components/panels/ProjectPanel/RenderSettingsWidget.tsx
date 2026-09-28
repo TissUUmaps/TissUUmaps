@@ -33,6 +33,7 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
   );
 
   const { globalPointSizeFactor } = glOptions.pointsRenderOptions;
+  const backgroundColorHex = ColorUtils.toHex(backgroundColor);
 
   return (
     <div className={cn("flex flex-col gap-2 pl-6", className)}>
@@ -42,10 +43,9 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
           color={backgroundColor}
           onColorChange={setBackgroundColor}
         >
-          <SquareIcon
-            fill={`rgb(${backgroundColor.r}, ${backgroundColor.g}, ${backgroundColor.b})`}
-          />
-          {ColorUtils.toHex(backgroundColor)}
+          <span className="sr-only">Background color</span>
+          <SquareIcon fill={backgroundColorHex} />
+          {backgroundColorHex}
         </SimpleColorPicker>
       </Field>
       <Field>

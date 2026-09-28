@@ -29,8 +29,8 @@ export type ViewerPanelProps = {
 
 export function ViewerPanel({ className }: ViewerPanelProps) {
   const interactionMode = useAppStore((state) => state.interactionMode);
-  const backgroundColor = useProjectStore((state) => state.backgroundColor);
   const imageChannelPreview = useAppStore((state) => state.imageChannelPreview);
+  const backgroundColor = useProjectStore((state) => state.backgroundColor);
 
   const images = useProjectStore((state) => state.images);
   const previewedImages = useMemo(
