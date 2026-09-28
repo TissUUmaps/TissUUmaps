@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export type ObjectMenuProps = {
+export type ObjectListItemMenuProps = {
   name: string;
   objectLabel: string;
   onRename: (name: string) => void;
@@ -21,14 +21,14 @@ export type ObjectMenuProps = {
   className?: string;
 };
 
-export function ObjectMenu({
+export function ObjectListItemMenu({
   name,
   objectLabel,
   onRename,
   deleteDisabledReason,
   onDelete,
   className,
-}: ObjectMenuProps) {
+}: ObjectListItemMenuProps) {
   const confirm = useConfirmDialog();
   const prompt = usePromptDialog();
 

@@ -1,3 +1,5 @@
+import { useSortable } from "@dnd-kit/react/sortable";
+import { GripVertical } from "lucide-react";
 import type { ReactNode, Ref } from "react";
 
 import {
@@ -10,9 +12,9 @@ import {
 import { IconButton } from "@/components/common/icon-button";
 import { cn } from "@/lib/utils";
 
-import { ObjectMenu } from "./ObjectMenu";
+import { ObjectListItemMenu } from "./ObjectListItemMenu";
 
-export type ObjectItemProps = {
+export type ObjectListItemProps = {
   id: string;
   name: string;
   objectLabel: string;
@@ -28,7 +30,7 @@ export type ObjectItemProps = {
   className?: string;
 };
 
-export function ObjectItem({
+export function ObjectListItem({
   id,
   name,
   objectLabel,
@@ -42,7 +44,7 @@ export function ObjectItem({
   children,
   ref,
   className,
-}: ObjectItemProps) {
+}: ObjectListItemProps) {
   return (
     <div ref={ref}>
       <AccordionItem
@@ -64,7 +66,7 @@ export function ObjectItem({
             <span className="truncate">{name || "Untitled"}</span>
           </AccordionTrigger>
           {trailingControls}
-          <ObjectMenu
+          <ObjectListItemMenu
             name={name}
             objectLabel={objectLabel}
             onRename={onRename}
@@ -83,5 +85,36 @@ export function ObjectItem({
         </AccordionPanel>
       </AccordionItem>
     </div>
+  );
+}
+
+export type SortableObjectListItemProps = Omit<
+  ObjectListItemProps,
+  "handle" | "ref"
+> & {
+  index: number;
+};
+
+export function SortableObjectListItem({
+  index,
+  ...props
+}: SortableObjectListItemProps) {
+  const { ref, handleRef } = useSortable({ id: props.id, index });
+
+  return (
+    <ObjectListItem
+      ref={ref}
+      handle={
+        <button
+          ref={handleRef}
+          type="button"
+          aria-label={`Reorder ${props.name || "Untitled"}`}
+          className="text-muted-foreground/60 focus-visible:ring-ring/50 flex shrink-0 cursor-grab rounded-sm outline-none focus-visible:ring-[3px]"
+        >
+          <GripVertical className="size-4" />
+        </button>
+      }
+      {...props}
+    />
   );
 }

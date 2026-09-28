@@ -7,8 +7,8 @@ import { VisibilityButton } from "@/components/common/visibility-button";
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import {
-  SortableObjectItem,
   SortableObjectList,
+  SortableObjectListItem,
 } from "@/components/widgets/ObjectList";
 import { useShapesData } from "@/hooks/useData";
 import { cn } from "@/lib/utils";
@@ -78,7 +78,7 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
     useState<ShapesSettingsCategory | null>(null);
 
   return (
-    <SortableObjectItem
+    <SortableObjectListItem
       id={shapes.id}
       index={index}
       name={shapes.name}
@@ -126,6 +126,6 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
           className="bg-card"
         />
       )}
-    </SortableObjectItem>
+    </SortableObjectListItem>
   );
 }

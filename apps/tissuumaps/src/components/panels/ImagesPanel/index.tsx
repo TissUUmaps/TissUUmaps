@@ -5,8 +5,8 @@ import { VisibilityButton } from "@/components/common/visibility-button";
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import {
-  SortableObjectItem,
   SortableObjectList,
+  SortableObjectListItem,
 } from "@/components/widgets/ObjectList";
 import { useImageData } from "@/hooks/useData";
 import { cn } from "@/lib/utils";
@@ -69,7 +69,7 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
   const sizeC = imageData?.getSizeC();
 
   return (
-    <SortableObjectItem
+    <SortableObjectListItem
       id={image.id}
       index={index}
       name={image.name}
@@ -112,6 +112,6 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
           className="bg-card"
         />
       )}
-    </SortableObjectItem>
+    </SortableObjectListItem>
   );
 }

@@ -7,8 +7,8 @@ import { VisibilityButton } from "@/components/common/visibility-button";
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import {
-  SortableObjectItem,
   SortableObjectList,
+  SortableObjectListItem,
 } from "@/components/widgets/ObjectList";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
@@ -75,7 +75,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
     useState<LabelsSettingsCategory | null>(null);
 
   return (
-    <SortableObjectItem
+    <SortableObjectListItem
       id={labels.id}
       index={index}
       name={labels.name}
@@ -122,6 +122,6 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
           className="bg-card"
         />
       )}
-    </SortableObjectItem>
+    </SortableObjectListItem>
   );
 }

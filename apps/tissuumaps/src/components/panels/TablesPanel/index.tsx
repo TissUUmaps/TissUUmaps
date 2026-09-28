@@ -2,7 +2,7 @@ import { type Table, createTable } from "@tissuumaps/core";
 
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
-import { ObjectItem, ObjectList } from "@/components/widgets/ObjectList";
+import { ObjectList, ObjectListItem } from "@/components/widgets/ObjectList";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -51,7 +51,7 @@ function TableAccordionItem({ table }: TableAccordionItemProps) {
   const deleteTable = useProjectStore((state) => state.deleteTable);
 
   return (
-    <ObjectItem
+    <ObjectListItem
       id={table.id}
       name={table.name}
       objectLabel="table"
@@ -66,6 +66,6 @@ function TableAccordionItem({ table }: TableAccordionItemProps) {
         }}
         className="bg-card"
       />
-    </ObjectItem>
+    </ObjectListItem>
   );
 }

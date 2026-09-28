@@ -5,14 +5,11 @@ import { type Layer, type TableColumnRef, createLayer } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
-import {
-  type ObjectKind,
-  objectKindIcons,
-} from "@/components/object-kind-icons";
+import { ObjectKind, objectKindIcons } from "@/components/object-kind-icons";
 import { Button } from "@/components/ui/button";
 import {
-  SortableObjectItem,
   SortableObjectList,
+  SortableObjectListItem,
 } from "@/components/widgets/ObjectList";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
@@ -85,16 +82,20 @@ function useObjectsByLayer(): Map<string, LayerObject[]> {
       }
     };
     for (const image of images) {
-      add(image.layer, { id: image.id, name: image.name, kind: "image" });
+      add(image.layer, {
+        id: image.id,
+        name: image.name,
+        kind: ObjectKind.image,
+      });
     }
     for (const l of labels) {
-      add(l.layer, { id: l.id, name: l.name, kind: "labels" });
+      add(l.layer, { id: l.id, name: l.name, kind: ObjectKind.labels });
     }
     for (const p of points) {
-      add(p.layer, { id: p.id, name: p.name, kind: "points" });
+      add(p.layer, { id: p.id, name: p.name, kind: ObjectKind.points });
     }
     for (const s of shapes) {
-      add(s.layer, { id: s.id, name: s.name, kind: "shapes" });
+      add(s.layer, { id: s.id, name: s.name, kind: ObjectKind.shapes });
     }
     return objectsByLayer;
   }, [images, labels, points, shapes]);
@@ -115,7 +116,7 @@ function LayerAccordionItem({
   const deleteLayer = useProjectStore((state) => state.deleteLayer);
 
   return (
-    <SortableObjectItem
+    <SortableObjectListItem
       id={layer.id}
       index={index}
       name={layer.name}
@@ -170,6 +171,6 @@ function LayerAccordionItem({
         </div>
       )}
       <LayerSettingsWidget layer={layer} />
-    </SortableObjectItem>
+    </SortableObjectListItem>
   );
 }

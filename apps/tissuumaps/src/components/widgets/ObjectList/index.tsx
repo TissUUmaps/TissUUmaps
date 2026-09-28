@@ -5,8 +5,7 @@ import { Accordion } from "@/components/common/accordion";
 import { useTopFirstSortable } from "@/hooks/useTopFirstSortable";
 import { cn } from "@/lib/utils";
 
-export { ObjectItem } from "./ObjectItem";
-export { SortableObjectItem } from "./SortableObjectItem";
+export { ObjectListItem, SortableObjectListItem } from "./ObjectListItem";
 
 export type ObjectListProps = {
   children: ReactNode;

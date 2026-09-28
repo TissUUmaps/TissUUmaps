@@ -12,10 +12,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Data, DataRef } from "@tissuumaps/core";
 
 import { IconButton } from "@/components/common/icon-button";
-import {
-  type ObjectKind,
-  objectKindIcons,
-} from "@/components/object-kind-icons";
+import { ObjectKind, objectKindIcons } from "@/components/object-kind-icons";
 import { percentFormat } from "@/lib/format";
 import { useDataStore } from "@/stores/data";
 import { useProjectStore } from "@/stores/project";
@@ -53,35 +50,35 @@ export function NotificationCenter() {
   const kinds = useMemo<DataObjectKind[]>(
     () => [
       {
-        kind: "image",
+        kind: ObjectKind.image,
         label: "Image",
         icon: objectKindIcons.image,
         dataRefs: imageDataRefs,
         objects: images,
       },
       {
-        kind: "labels",
+        kind: ObjectKind.labels,
         label: "Labels",
         icon: objectKindIcons.labels,
         dataRefs: labelsDataRefs,
         objects: labels,
       },
       {
-        kind: "points",
+        kind: ObjectKind.points,
         label: "Points",
         icon: objectKindIcons.points,
         dataRefs: pointsDataRefs,
         objects: points,
       },
       {
-        kind: "shapes",
+        kind: ObjectKind.shapes,
         label: "Shapes",
         icon: objectKindIcons.shapes,
         dataRefs: shapesDataRefs,
         objects: shapes,
       },
       {
-        kind: "table",
+        kind: ObjectKind.table,
         label: "Table",
         icon: objectKindIcons.table,
         dataRefs: tableDataRefs,

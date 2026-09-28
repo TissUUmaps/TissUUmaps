@@ -7,8 +7,8 @@ import { VisibilityButton } from "@/components/common/visibility-button";
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import {
-  SortableObjectItem,
   SortableObjectList,
+  SortableObjectListItem,
 } from "@/components/widgets/ObjectList";
 import { usePointsData } from "@/hooks/useData";
 import { cn } from "@/lib/utils";
@@ -78,7 +78,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
     useState<PointsSettingsCategory | null>(null);
 
   return (
-    <SortableObjectItem
+    <SortableObjectListItem
       id={points.id}
       index={index}
       name={points.name}
@@ -126,6 +126,6 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
           className="bg-card"
         />
       )}
-    </SortableObjectItem>
+    </SortableObjectListItem>
   );
 }
