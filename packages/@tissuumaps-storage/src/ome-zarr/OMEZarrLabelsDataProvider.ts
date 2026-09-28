@@ -56,6 +56,7 @@ export class OMEZarrLabelsDataProvider implements LabelsDataProvider<
         type: "Control",
         scope: "#/properties/source",
         label: "Source",
+        options: { directory: true },
       },
       {
         type: "HorizontalLayout",

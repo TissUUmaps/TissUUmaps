@@ -14,7 +14,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { pickWorkspaceFile } from "@/data/io/workspace";
+import { pickWorkspaceDirectory, pickWorkspaceFile } from "@/data/io/workspace";
 import { useAppStore } from "@/stores/app";
 
 export const SourceCell = withJsonFormsCellProps((props: CellProps) => {
@@ -51,9 +51,12 @@ export const SourceCell = withJsonFormsCellProps((props: CellProps) => {
               render={
                 <InputGroupButton
                   size="icon-xs"
-                  aria-label="Choose a file in the connected folder"
+                  aria-label="Choose from the connected folder"
                   onClick={() => {
-                    pickWorkspaceFile(workspace)
+                    (options.directory === true
+                      ? pickWorkspaceDirectory(workspace)
+                      : pickWorkspaceFile(workspace)
+                    )
                       .then((source) => {
                         if (source !== null) {
                           props.handleChange(props.path, source);
@@ -62,7 +65,7 @@ export const SourceCell = withJsonFormsCellProps((props: CellProps) => {
                       .catch((error: unknown) => {
                         console.error("Failed to pick a data source", error);
                         void alert({
-                          title: "Cannot use this file",
+                          title: "Cannot use this source",
                           body:
                             error instanceof Error
                               ? error.message
@@ -75,9 +78,7 @@ export const SourceCell = withJsonFormsCellProps((props: CellProps) => {
             >
               <FolderOpenIcon />
             </TooltipTrigger>
-            <TooltipContent>
-              Choose a file in the connected folder
-            </TooltipContent>
+            <TooltipContent>Choose from the connected folder</TooltipContent>
           </Tooltip>
         </InputGroupAddon>
       )}

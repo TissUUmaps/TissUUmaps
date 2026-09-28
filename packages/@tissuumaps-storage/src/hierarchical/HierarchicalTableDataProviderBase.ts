@@ -47,26 +47,38 @@ export abstract class HierarchicalTableDataProviderBase<
     required: ["source"],
   };
 
-  readonly uischema = {
-    type: "VerticalLayout",
-    elements: [
-      {
-        type: "Control",
-        scope: "#/properties/source",
-        label: "Source",
-      },
-      {
-        type: "Control",
-        scope: "#/properties/idColumn",
-        label: "ID Column",
-      },
-      {
-        type: "Control",
-        scope: "#/properties/nameColumn",
-        label: "Name Column",
-      },
-    ],
-  };
+  readonly uischema = HierarchicalTableDataProviderBase.createUISchema(false);
+
+  /**
+   * Creates the UI schema of the data source form
+   *
+   * @param sourceIsDirectory - Whether the source is a directory, such as a
+   * Zarr store, rather than a file
+   * @returns The UI schema
+   */
+  protected static createUISchema(sourceIsDirectory: boolean) {
+    return {
+      type: "VerticalLayout",
+      elements: [
+        {
+          type: "Control",
+          scope: "#/properties/source",
+          label: "Source",
+          ...(sourceIsDirectory && { options: { directory: true } }),
+        },
+        {
+          type: "Control",
+          scope: "#/properties/idColumn",
+          label: "ID Column",
+        },
+        {
+          type: "Control",
+          scope: "#/properties/nameColumn",
+          label: "Name Column",
+        },
+      ],
+    };
+  }
 
   abstract normalize(
     dataSource: TDataSource,

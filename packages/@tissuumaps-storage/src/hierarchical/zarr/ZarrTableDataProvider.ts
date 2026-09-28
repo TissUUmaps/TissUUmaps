@@ -24,6 +24,8 @@ export class ZarrTableDataProvider extends HierarchicalTableDataProviderBase<
 > {
   readonly name = "Zarr";
 
+  override readonly uischema = ZarrTableDataProvider.createUISchema(true);
+
   override normalize(
     dataSource: ZarrTableDataSource,
     workspace: FileSystemDirectoryHandle | null,

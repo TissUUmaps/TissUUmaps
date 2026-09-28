@@ -4,6 +4,7 @@ import {
   isWorkspaceSupported,
   pickProjectFile,
   pickWorkspace,
+  pickWorkspaceDirectory,
   pickWorkspaceFile,
 } from "./workspace";
 
@@ -156,6 +157,36 @@ describe("workspace", () => {
       );
       await expect(
         pickWorkspaceFile(makeWorkspace(["cells.csv"])),
+      ).resolves.toBeNull();
+    });
+  });
+
+  describe("pickWorkspaceDirectory", () => {
+    it("returns the workspace path of the picked directory", async () => {
+      const workspace = makeWorkspace(["data", "image.ome.zarr"]);
+      const picker = vi.fn(() => Promise.resolve(directory));
+      stubDirectoryPicker(picker);
+      await expect(pickWorkspaceDirectory(workspace)).resolves.toBe(
+        "/data/image.ome.zarr",
+      );
+      expect(picker).toHaveBeenCalledWith(
+        expect.objectContaining({ startIn: workspace }),
+      );
+    });
+
+    it("rejects a directory outside the workspace", async () => {
+      stubDirectoryPicker(() => Promise.resolve(directory));
+      await expect(pickWorkspaceDirectory(makeWorkspace(null))).rejects.toThrow(
+        /not in the connected folder/,
+      );
+    });
+
+    it("returns null when the user cancels", async () => {
+      stubDirectoryPicker(() =>
+        Promise.reject(new DOMException("Aborted", "AbortError")),
+      );
+      await expect(
+        pickWorkspaceDirectory(makeWorkspace(["image.ome.zarr"])),
       ).resolves.toBeNull();
     });
   });

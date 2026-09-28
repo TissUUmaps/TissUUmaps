@@ -64,6 +64,7 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
         type: "Control",
         scope: "#/properties/source",
         label: "Source",
+        options: { directory: true },
       },
       {
         type: "HorizontalLayout",

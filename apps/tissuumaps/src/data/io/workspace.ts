@@ -5,6 +5,7 @@ type FileSystemAccessWindow = Window & {
   showDirectoryPicker?: (options?: {
     id?: string;
     mode?: "read" | "readwrite";
+    startIn?: FileSystemHandle;
   }) => Promise<FileSystemDirectoryHandle>;
   showOpenFilePicker?: (options?: {
     id?: string;
@@ -39,18 +40,26 @@ export function isWorkspaceSupported(): boolean {
  *
  * The directory is opened for reading only.
  *
+ * @param options - Optional directory to open the picker in, instead of the
+ * one it was last used in
  * @returns The directory handle, or `null` if the user cancelled the picker
  * @throws Error if the browser does not support picking a directory, or if
  * access to the directory was denied
  */
-export async function pickWorkspace(): Promise<FileSystemDirectoryHandle | null> {
+export async function pickWorkspace(options?: {
+  startIn?: FileSystemDirectoryHandle;
+}): Promise<FileSystemDirectoryHandle | null> {
   const w = window as FileSystemAccessWindow;
   if (w.showDirectoryPicker === undefined) {
     throw new Error("Picking a directory is not supported by this browser");
   }
   try {
     // Called as a method: the picker throws if it loses its receiver
-    return await w.showDirectoryPicker({ id: workspacePickerId, mode: "read" });
+    return await w.showDirectoryPicker({
+      id: workspacePickerId,
+      mode: "read",
+      startIn: options?.startIn,
+    });
   } catch (error) {
     if (isAbortError(error)) {
       return null;
@@ -97,6 +106,26 @@ export async function pickWorkspaceFile(
 ): Promise<string | null> {
   const file = await openFilePicker({ startIn: workspace });
   return file !== null ? await locateInWorkspace(workspace, file) : null;
+}
+
+/**
+ * Lets the user pick a directory within the workspace
+ *
+ * @param workspace - The directory handle of the open workspace, which the
+ * picker opens in
+ * @returns The workspace-relative path of the picked directory (with `/`
+ * prefix), or `null` if the user cancelled the picker
+ * @throws Error if the browser does not support picking a directory, if access
+ * to the directory was denied, or if the directory does not lie within the
+ * workspace
+ */
+export async function pickWorkspaceDirectory(
+  workspace: FileSystemDirectoryHandle,
+): Promise<string | null> {
+  const directory = await pickWorkspace({ startIn: workspace });
+  return directory !== null
+    ? await locateInWorkspace(workspace, directory)
+    : null;
 }
 
 /**
