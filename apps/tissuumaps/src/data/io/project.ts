@@ -3,6 +3,7 @@ import { freeze } from "immer";
 import {
   JSONUtils,
   type Project,
+  type ProjectStoreState,
   type RawProject,
   SourceUtils,
   createProject,
@@ -14,33 +15,62 @@ import { projectStore } from "@/stores/project";
 export const projectURLParam = "project";
 
 /**
+ * Picks the project's own properties, without copying them
+ *
+ * This drops the store's actions as well as any other state that is not part
+ * of the project itself, such as where the project was loaded from.
+ *
+ * @param project - The project to pick from
+ * @returns The project's own properties, shared with `project`
+ */
+function pickProject(project: Project): Project {
+  return {
+    name: project.name,
+    layers: project.layers,
+    images: project.images,
+    labels: project.labels,
+    points: project.points,
+    shapes: project.shapes,
+    tables: project.tables,
+    markerMaps: project.markerMaps,
+    sizeMaps: project.sizeMaps,
+    colorMaps: project.colorMaps,
+    visibilityMaps: project.visibilityMaps,
+    opacityMaps: project.opacityMaps,
+    osOptions: project.osOptions,
+    glOptions: project.glOptions,
+    viewerBackgroundColor: project.viewerBackgroundColor,
+  };
+}
+
+/**
  * Creates a deep copy of a project, keeping only the project's own properties
  *
- * This detaches the copy from the project store, and drops the store's actions
- * as well as any other state that is not part of the project itself, such as
- * where the project was loaded from.
+ * This detaches the copy from the project store (see {@link pickProject}).
  *
  * @param project - The project to copy
  * @returns The copied project
  */
 function cleanProject(project: Project): Project {
-  return {
-    name: project.name,
-    layers: structuredClone(project.layers),
-    images: structuredClone(project.images),
-    labels: structuredClone(project.labels),
-    points: structuredClone(project.points),
-    shapes: structuredClone(project.shapes),
-    tables: structuredClone(project.tables),
-    markerMaps: structuredClone(project.markerMaps),
-    sizeMaps: structuredClone(project.sizeMaps),
-    colorMaps: structuredClone(project.colorMaps),
-    visibilityMaps: structuredClone(project.visibilityMaps),
-    opacityMaps: structuredClone(project.opacityMaps),
-    osOptions: structuredClone(project.osOptions),
-    glOptions: structuredClone(project.glOptions),
-    viewerBackgroundColor: structuredClone(project.viewerBackgroundColor),
-  };
+  return structuredClone(pickProject(project));
+}
+
+/**
+ * Returns whether the open project has changed since it was last loaded or
+ * saved
+ *
+ * Every change goes through the project store's actions, which replace the
+ * changed parts of the project, so comparing the parts by reference suffices.
+ *
+ * @param state - The project store state
+ * @returns `true` if any part of the project differs from the saved project
+ */
+export function hasUnsavedChanges(state: ProjectStoreState): boolean {
+  const project = pickProject(state);
+  const savedProject = pickProject(state.savedProject);
+  return (Object.keys(project) as (keyof Project)[]).some(
+    (key) => project[key] !== savedProject[key],
+  );
 }
 
 /**
@@ -57,17 +87,23 @@ function cleanProject(project: Project): Project {
  * @param projectSource - Where the project was loaded from: its absolute URL,
  * the workspace-relative path of the project file (with `/` prefix), or `null`
  * if it was loaded from neither
+ * @param projectFile - The project file within the workspace that the project
+ * was loaded from, for saving it back, if any
  */
 export function loadProject(
   project: Project,
   projectSource: string | null,
+  projectFile: FileSystemFileHandle | null = null,
 ): void {
+  const cleanedProject = cleanProject(project);
   projectStore.setState(
     freeze(
       {
-        ...cleanProject(project),
+        ...cleanedProject,
         source: projectSource,
+        sourceFile: projectFile,
         instanceId: crypto.randomUUID(),
+        savedProject: cleanedProject,
       },
       true,
     ),
@@ -151,7 +187,8 @@ export async function resolveProjectSource(
  * project-relative data sources are resolved within the file's directory.
  * Otherwise it is loaded without a source, like an uploaded file, and its
  * project-relative data sources fall back to being workspace-relative and then
- * app-relative (see `SourceUtils`).
+ * app-relative (see `SourceUtils`). Only a file within the workspace is kept
+ * for saving the project back to it.
  *
  * @param projectFile - The handle of the file to read the project from
  * @param workspace - The directory handle of the open workspace, if any
@@ -171,7 +208,11 @@ export async function loadProjectFromFileHandle(
   );
   const file = await projectFile.getFile();
   signal?.throwIfAborted(); // getFile() does not throw on abort
-  loadProject(await readProjectFile(file, options), projectSource);
+  loadProject(
+    await readProjectFile(file, options),
+    projectSource,
+    projectSource !== null ? projectFile : null,
+  );
 }
 
 /**
@@ -281,6 +322,49 @@ export function saveAndDownloadProjectToJSON(project?: Project): void {
   projectLink.href = projectUrl;
   projectLink.click();
   setTimeout(() => URL.revokeObjectURL(projectUrl), 60_000);
+}
+
+/**
+ * Saves the currently open project back to the workspace file it was loaded
+ * from, and marks it as saved (see {@link hasUnsavedChanges})
+ *
+ * The project is written to the file handle it was loaded from, so connecting
+ * another workspace in the meantime cannot redirect the save. The browser asks
+ * for permission to write the file, as the workspace is opened for reading
+ * only. The project is only marked as saved if it is still open once written,
+ * and changes made while it is being written are not.
+ *
+ * @param options - Optional abort signal
+ * @throws Error if the open project was not loaded from a file within the
+ * workspace
+ * @throws DOMException if the file cannot be written, e.g. because the
+ * permission to write it was denied (`NotAllowedError`)
+ */
+export async function saveProjectToSourceFile(options?: {
+  signal?: AbortSignal;
+}): Promise<void> {
+  const { signal } = options ?? {};
+  signal?.throwIfAborted();
+  const state = projectStore.getState();
+  if (state.sourceFile === null) {
+    throw new Error("The open project was not loaded from the workspace");
+  }
+  const { instanceId } = state;
+  const project = pickProject(state);
+  const writable = await state.sourceFile.createWritable();
+  try {
+    signal?.throwIfAborted(); // createWritable() does not throw on abort
+    await writable.write(saveProjectToJSON(project));
+    await writable.close();
+  } catch (error) {
+    // The write error is the one to report, not a failure to discard the
+    // partly written file
+    await writable.abort().catch(() => undefined);
+    throw error;
+  }
+  if (projectStore.getState().instanceId === instanceId) {
+    projectStore.setState({ savedProject: project });
+  }
 }
 
 /**
