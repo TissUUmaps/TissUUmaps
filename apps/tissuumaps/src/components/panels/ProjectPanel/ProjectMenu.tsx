@@ -4,6 +4,7 @@ import {
   FileIcon,
   FolderIcon,
   LinkIcon,
+  SaveIcon,
   XIcon,
 } from "lucide-react";
 
@@ -24,6 +25,7 @@ import {
   useOpenProjectFile,
   useOpenProjectFromURL,
   useOpenWorkspace,
+  useSaveProjectToFolder,
   workspaceUnsupportedMessage,
 } from "./hooks";
 
@@ -34,6 +36,7 @@ export type ProjectMenuProps = {
 export function ProjectMenu({ className }: ProjectMenuProps) {
   const openProjectFile = useOpenProjectFile();
   const openProjectFromURL = useOpenProjectFromURL();
+  const saveProjectToFolder = useSaveProjectToFolder();
   const closeProject = useCloseProject();
   const openWorkspace = useOpenWorkspace();
   const workspaceSupported = isWorkspaceSupported();
@@ -67,6 +70,18 @@ export function ProjectMenu({ className }: ProjectMenuProps) {
           )}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
+        <DropdownMenuItem
+          disabled={saveProjectToFolder === null}
+          onClick={saveProjectToFolder ?? undefined}
+        >
+          <SaveIcon />
+          Save project
+          {saveProjectToFolder === null && (
+            <DropdownMenuItemDescription>
+              Only for projects opened from the connected folder
+            </DropdownMenuItemDescription>
+          )}
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => saveAndDownloadProjectToJSON()}>
           <DownloadIcon />
           Download project

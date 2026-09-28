@@ -7,6 +7,7 @@ import {
   loadProjectFromFile,
   loadProjectFromFileHandle,
   loadProjectFromURL,
+  saveProjectToSourceFile,
   setProjectURLParam,
 } from "@/data/io/project";
 import { pickProjectFile, pickWorkspace } from "@/data/io/workspace";
@@ -87,6 +88,26 @@ export function useOpenProjectFromURL(): () => void {
         console.error("Failed to load project from URL", error);
       });
   }, [prompt]);
+}
+
+/**
+ * Returns a callback that saves the open project back to its file in the
+ * workspace
+ *
+ * Failures are logged, as the callback is called from event handlers.
+ *
+ * @returns The callback, or `null` if the open project was not loaded from a
+ * file in the workspace
+ */
+export function useSaveProjectToFolder(): (() => void) | null {
+  const canSave = useProjectStore((state) => state.sourceFile !== null);
+
+  const saveProjectToFolder = useCallback(() => {
+    saveProjectToSourceFile().catch((error) => {
+      console.error("Failed to save project", error);
+    });
+  }, []);
+  return canSave ? saveProjectToFolder : null;
 }
 
 /**

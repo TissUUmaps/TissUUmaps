@@ -4,6 +4,7 @@ import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 
 import {
+  type Project,
   type ProjectStore,
   type ProjectStoreApi,
   type ProjectStoreState,
@@ -210,10 +211,10 @@ export function useProjectStore<T>(selector: (state: ProjectStore) => T): T {
 
 /**
  * Creates the state of a new, empty project with a single default layer, which
- * was not loaded from a URL
+ * was not loaded from a URL and has no unsaved changes
  */
 function createInitialProjectStoreState(): ProjectStoreState {
-  return {
+  const project: Project = {
     ...structuredClone(projectDefaults),
     name: "New project",
     layers: [createLayer({ id: crypto.randomUUID(), name: "Default" })],
@@ -222,8 +223,13 @@ function createInitialProjectStoreState(): ProjectStoreState {
     points: [],
     shapes: [],
     tables: [],
+  };
+  return {
+    ...project,
     source: null,
+    sourceFile: null,
     instanceId: crypto.randomUUID(),
+    savedProject: project,
   };
 }
 

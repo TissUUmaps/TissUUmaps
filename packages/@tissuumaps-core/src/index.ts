@@ -1,3 +1,6 @@
+// Declares the "zustand/immer" mutator of the store API types, which would
+// otherwise only resolve in programs that import the middleware
+/// <reference types="zustand/middleware/immer" preserve="true" />
 export {
   annotatedDataSourceDefaults,
   createAnnotatedDataSource,
