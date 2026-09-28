@@ -200,6 +200,23 @@ describe("saveProjectToSourceFile", () => {
     await saveProjectToSourceFile();
     expect(hasUnsavedChanges(projectStore.getState())).toBe(true);
   });
+
+  it("does not mark the project saved once it belongs to another file", async () => {
+    const writable = makeWritable();
+    const { sourceFile } = makeSourceFile(writable);
+    loadProject(
+      createProject({ name: "Project" }),
+      "/project.tmap",
+      sourceFile,
+    );
+    projectStore.getState().setName("Renamed");
+    writable.write.mockImplementation(() => {
+      projectStore.setState({ sourceFile: { ...projectFile } });
+      return Promise.resolve();
+    });
+    await saveProjectToSourceFile();
+    expect(hasUnsavedChanges(projectStore.getState())).toBe(true);
+  });
 });
 
 const workspace = {
@@ -277,6 +294,17 @@ describe("rebaseProjectSources", () => {
       "https://example.com/study/images/a.tif",
     );
   });
+
+  it("keeps the objects whose source does not change", () => {
+    const project = makeProjectWithSources(["https://example.com/a.tif"]);
+    const rebased = rebaseProjectSources(
+      project,
+      workspace,
+      null,
+      "/study.tmap",
+    );
+    expect(rebased.images[0]).toBe(project.images[0]);
+  });
 });
 
 describe("makeProjectFileName", () => {
@@ -302,5 +330,21 @@ describe("saveProjectAs", () => {
     expect(state.sourceFile).toBe(sourceFile);
     expect(state.images[0]?.dataSource.source).toBe("a.tif");
     expect(hasUnsavedChanges(state)).toBe(false);
+  });
+
+  it("keeps changes made during the write, unsaved", async () => {
+    const writable = makeWritable();
+    const { sourceFile } = makeSourceFile(writable);
+    loadProject(makeProjectWithSources(["/data/a.tif"]), null, null);
+    writable.write.mockImplementation(() => {
+      projectStore.getState().setName("Edited");
+      return Promise.resolve();
+    });
+    await saveProjectAs(sourceFile, "/data/study.tmap", workspace);
+    const state = projectStore.getState();
+    expect(state.name).toBe("Edited");
+    expect(state.source).toBe("/data/study.tmap");
+    expect(state.images[0]?.dataSource.source).toBe("a.tif");
+    expect(hasUnsavedChanges(state)).toBe(true);
   });
 });

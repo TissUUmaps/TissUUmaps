@@ -58,20 +58,32 @@ function cleanProject(project: Project): Project {
 }
 
 /**
+ * Returns whether any part of a project differs by reference from another
+ *
+ * @param project - The project to compare
+ * @param otherProject - The project to compare it with
+ * @returns `true` if any part of `project` is not the one of `otherProject`
+ */
+function hasChangedParts(project: Project, otherProject: Project): boolean {
+  const parts = pickProject(project);
+  return (Object.keys(parts) as (keyof Project)[]).some(
+    (key) => parts[key] !== otherProject[key],
+  );
+}
+
+/**
  * Returns whether the open project has changed since it was last loaded or
  * saved
  *
  * Every change goes through the project store's actions, which replace the
- * changed parts of the project, so comparing the parts by reference suffices.
+ * changed parts of the project. A replaced part counts as changed, even if it
+ * is equal to the saved one.
  *
  * @param state - The project store state
  * @returns `true` if any part of the project differs from the saved project
  */
 export function hasUnsavedChanges(state: ProjectStoreState): boolean {
-  const project = pickProject(state);
-  return (Object.keys(project) as (keyof Project)[]).some(
-    (key) => project[key] !== state.savedProject[key],
-  );
+  return hasChangedParts(state, state.savedProject);
 }
 
 /**
@@ -344,8 +356,9 @@ export function saveAndDownloadProjectToJSON(project?: Project): void {
  * The project is written to the file handle it was loaded from, so connecting
  * another workspace in the meantime cannot redirect the save. The browser asks
  * for permission to write the file, as the workspace is opened for reading
- * only. The project is only marked as saved if it is still open once written,
- * and changes made while it is being written are not.
+ * only. The project is only marked as saved if it is still open and still
+ * belongs to that file once written, and changes made while it is being
+ * written are not.
  *
  * @param options - Optional abort signal
  * @throws Error if the open project was not loaded from a file within the
@@ -365,7 +378,11 @@ export async function saveProjectToSourceFile(options?: {
   const { instanceId } = state;
   const project = pickProject(state);
   await writeProjectFile(state.sourceFile, project, options);
-  if (projectStore.getState().instanceId === instanceId) {
+  const currentState = projectStore.getState();
+  if (
+    currentState.instanceId === instanceId &&
+    currentState.sourceFile === state.sourceFile
+  ) {
     projectStore.setState({ savedProject: project });
   }
 }
@@ -377,7 +394,8 @@ export async function saveProjectToSourceFile(options?: {
  * The sources of the project's data objects are rewritten for the new file
  * (see {@link rebaseProjectSources}), and the open project takes them over, so
  * that saving it again writes to the new file. The project is only switched
- * over if it is still open once written.
+ * over if it is still open once written, and changes made while it is being
+ * written are kept, but not marked as saved.
  *
  * @param projectFile - The handle of the new file
  * @param projectSource - The workspace-relative path of the new file (with `/`
@@ -405,19 +423,29 @@ export async function saveProjectAs(
     projectSource,
   );
   await writeProjectFile(projectFile, project, options);
-  if (projectStore.getState().instanceId === instanceId) {
-    projectStore.setState(
-      freeze(
-        {
-          ...project,
-          source: projectSource,
-          sourceFile: projectFile,
-          savedProject: project,
-        },
-        true,
-      ),
-    );
+  const currentState = projectStore.getState();
+  if (currentState.instanceId !== instanceId) {
+    return;
   }
+  const currentProject = hasChangedParts(currentState, state)
+    ? rebaseProjectSources(
+        pickProject(currentState),
+        workspace,
+        currentState.source,
+        projectSource,
+      )
+    : project;
+  projectStore.setState(
+    freeze(
+      {
+        ...currentProject,
+        source: projectSource,
+        sourceFile: projectFile,
+        savedProject: project,
+      },
+      true,
+    ),
+  );
 }
 
 /**
@@ -450,9 +478,7 @@ export function rebaseProjectSources(
     if (source === undefined || source === "") {
       return source;
     }
-    const isAppPath =
-      source.startsWith("/") && !SourceUtils.isWorkspacePath(source);
-    if (isAppPath) {
+    if (SourceUtils.isAppPath(source)) {
       return source;
     }
     const normalizedSource = SourceUtils.normalizeSource(
@@ -466,13 +492,12 @@ export function rebaseProjectSources(
   };
   const rebase = <TObject extends { dataSource: { source?: string } }>(
     object: TObject,
-  ): TObject => ({
-    ...object,
-    dataSource: {
-      ...object.dataSource,
-      source: rebaseSource(object.dataSource.source),
-    },
-  });
+  ): TObject => {
+    const source = rebaseSource(object.dataSource.source);
+    return source !== object.dataSource.source
+      ? { ...object, dataSource: { ...object.dataSource, source } }
+      : object;
+  };
   return {
     ...project,
     images: project.images.map(rebase),

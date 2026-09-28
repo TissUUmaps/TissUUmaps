@@ -60,8 +60,19 @@ export class SourceUtils {
   static isWorkspacePath(normalizedSource: string): boolean {
     return (
       normalizedSource.startsWith(SourceUtils._workspacePathPrefix) &&
-      !normalizedSource.startsWith(SourceUtils._appPathPrefix)
+      !SourceUtils.isAppPath(normalizedSource)
     );
+  }
+
+  /**
+   * Returns whether a source is an app-relative path (with `//` prefix), which
+   * {@link SourceUtils.normalizeSource} turns into an absolute URL
+   *
+   * @param source - The source, as authored
+   * @returns `true` for app-relative paths
+   */
+  static isAppPath(source: string): boolean {
+    return source.startsWith(SourceUtils._appPathPrefix);
   }
 
   /**
