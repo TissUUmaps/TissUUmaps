@@ -1,22 +1,22 @@
 import {
-  ChartScatterIcon,
   ChevronDownIcon,
   ChevronUpIcon,
   CircleAlertIcon,
   CircleCheckIcon,
-  ImageIcon,
   LoaderCircleIcon,
   type LucideIcon,
-  ShapesIcon,
-  TableIcon,
-  TagsIcon,
   XIcon,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import type { Data, DataRef } from "@tissuumaps/core";
 
-import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/common/icon-button";
+import {
+  type ObjectKind,
+  objectKindIcons,
+} from "@/components/common/object-kind-icons";
+import { percentFormat } from "@/lib/format";
 import { useDataStore } from "@/stores/data";
 import { useProjectStore } from "@/stores/project";
 
@@ -24,7 +24,7 @@ import { useProjectStore } from "@/stores/project";
 const doneLingerMs = 1500;
 
 type DataObjectKind = {
-  kind: string;
+  kind: ObjectKind;
   label: string;
   icon: LucideIcon;
   dataRefs: Map<string, DataRef<Data>>;
@@ -55,35 +55,35 @@ export function NotificationCenter() {
       {
         kind: "image",
         label: "Image",
-        icon: ImageIcon,
+        icon: objectKindIcons.image,
         dataRefs: imageDataRefs,
         objects: images,
       },
       {
         kind: "labels",
         label: "Labels",
-        icon: TagsIcon,
+        icon: objectKindIcons.labels,
         dataRefs: labelsDataRefs,
         objects: labels,
       },
       {
         kind: "points",
         label: "Points",
-        icon: ChartScatterIcon,
+        icon: objectKindIcons.points,
         dataRefs: pointsDataRefs,
         objects: points,
       },
       {
         kind: "shapes",
         label: "Shapes",
-        icon: ShapesIcon,
+        icon: objectKindIcons.shapes,
         dataRefs: shapesDataRefs,
         objects: shapes,
       },
       {
         kind: "table",
         label: "Table",
-        icon: TableIcon,
+        icon: objectKindIcons.table,
         dataRefs: tableDataRefs,
         objects: tables,
       },
@@ -221,7 +221,7 @@ function NotificationCard({
   return (
     <div
       className="pointer-events-auto relative overflow-hidden rounded-md border bg-card px-2 py-1 text-xs text-card-foreground shadow"
-      title={error !== undefined ? `Failed: ${error}` : `${label}: ${name}`}
+      title={error === undefined ? `${label}: ${name}` : undefined}
     >
       <div className="flex items-center gap-x-1.5">
         <Icon className="size-3.5 shrink-0 text-muted-foreground" />
@@ -238,33 +238,31 @@ function NotificationCard({
                 {error}
               </span>
             )}
-            <Button
-              variant="ghost"
+            <IconButton
+              label={expanded ? "Hide the error" : "Show the whole error"}
               size="icon-xs"
               className="size-5"
               onClick={() => setExpanded((prev) => !prev)}
-              title={expanded ? "Hide the error" : "Show the whole error"}
             >
               {expanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
-            </Button>
+            </IconButton>
           </>
         ) : fraction !== undefined ? (
           <span className="tabular-nums text-muted-foreground">
-            {Math.round(fraction * 100)}%
+            {percentFormat.format(fraction)}
           </span>
         ) : (
           <LoaderCircleIcon className="size-3.5 shrink-0 animate-spin text-muted-foreground" />
         )}
         {error !== undefined && (
-          <Button
-            variant="ghost"
+          <IconButton
+            label="Dismiss"
             size="icon-xs"
             className="-mr-1 size-5"
             onClick={onDismiss}
-            title="Dismiss"
           >
             <XIcon />
-          </Button>
+          </IconButton>
         )}
       </div>
       {expanded && error !== undefined && (

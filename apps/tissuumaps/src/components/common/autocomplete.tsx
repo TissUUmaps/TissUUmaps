@@ -1,6 +1,7 @@
 import { Autocomplete as AutocompletePrimitive } from "@base-ui/react/autocomplete";
 import { ChevronDownIcon, XIcon } from "lucide-react";
 
+import { IconButton } from "@/components/common/icon-button";
 import {
   InputGroup,
   InputGroupButton,
@@ -30,33 +31,45 @@ export function AutocompleteInput(props: AutocompletePrimitive.Input.Props) {
   );
 }
 
-export function AutocompleteClear(
-  props: Omit<AutocompletePrimitive.Clear.Props, "children">,
-) {
+export function AutocompleteClear({
+  label = "Clear",
+  ...props
+}: Omit<AutocompletePrimitive.Clear.Props, "children" | "aria-label"> & {
+  label?: string;
+}) {
   return (
-    <AutocompletePrimitive.Clear
-      render={<InputGroupButton size="icon-xs" />}
-      aria-label="Clear"
-      title="Clear"
-      {...props}
+    <IconButton
+      label={label}
+      render={
+        <AutocompletePrimitive.Clear
+          render={<InputGroupButton size="icon-xs" />}
+          {...props}
+        />
+      }
     >
       <XIcon />
-    </AutocompletePrimitive.Clear>
+    </IconButton>
   );
 }
 
-export function AutocompleteTrigger(
-  props: Omit<AutocompletePrimitive.Trigger.Props, "children">,
-) {
+export function AutocompleteTrigger({
+  label = "Show suggestions",
+  ...props
+}: Omit<AutocompletePrimitive.Trigger.Props, "children" | "aria-label"> & {
+  label?: string;
+}) {
   return (
-    <AutocompletePrimitive.Trigger
-      render={<InputGroupButton size="icon-xs" />}
-      aria-label="Show suggestions"
-      title="Show suggestions"
-      {...props}
+    <IconButton
+      label={label}
+      render={
+        <AutocompletePrimitive.Trigger
+          render={<InputGroupButton size="icon-xs" />}
+          {...props}
+        />
+      }
     >
       <ChevronDownIcon />
-    </AutocompletePrimitive.Trigger>
+    </IconButton>
   );
 }
 

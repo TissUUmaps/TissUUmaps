@@ -7,8 +7,8 @@ import type { Data, DataProvider, DataSource } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
+import { IconButton } from "@/components/common/icon-button";
 import { SimpleSelect } from "@/components/common/simple-select";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import { cells } from "./cells";
@@ -80,18 +80,14 @@ export function DataSourceWidget<TDataSource extends DataSource>({
         )}
         {isEditing ? (
           <span className="ml-auto flex flex-row">
-            <Button
-              variant="ghost"
-              aria-label="Reset"
-              title="Reset"
+            <IconButton
+              label="Reset"
               onClick={() => setDataSourceDraft(structuredClone(dataSource))}
             >
               <RotateCcwIcon className="size-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              title="Save"
-              aria-label="Save"
+            </IconButton>
+            <IconButton
+              label="Save"
               disabled={hasErrors}
               onClick={() => {
                 const knownKeys = new Set([
@@ -108,19 +104,18 @@ export function DataSourceWidget<TDataSource extends DataSource>({
               }}
             >
               <SaveIcon className="size-4" />
-            </Button>
+            </IconButton>
           </span>
         ) : (
-          <Button
-            variant="ghost"
-            aria-label="Edit"
+          <IconButton
+            label="Edit"
             className="ml-auto"
             onClick={() => {
               setDataSourceDraft(structuredClone(dataSource));
             }}
           >
             <EditIcon className="size-4" />
-          </Button>
+          </IconButton>
         )}
       </FieldsetLegend>
       {dataProvider !== undefined ? (

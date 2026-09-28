@@ -1,9 +1,8 @@
-import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import type { HighlightedItemGroup } from "@tissuumaps/core";
 
-import { Button } from "@/components/ui/button";
+import { VisibilityButton } from "@/components/common/visibility-button";
 import { useAppStore } from "@/stores/app";
 
 export type GroupVisibilityCellProps = {
@@ -58,23 +57,20 @@ export function GroupVisibilityCell({
   ]);
 
   return (
-    <Button
-      variant="ghost"
-      size="icon-xs"
-      title="Toggle group visibility"
-      aria-label={visible ? "Hide group" : "Show group"}
-      onClick={() => {
+    <VisibilityButton
+      visible={visible}
+      onVisibleChange={(newVisible) => {
         setHovered(false);
-        onVisibleChange(!visible);
+        onVisibleChange(newVisible);
       }}
+      objectLabel="group"
+      size="icon-xs"
       onPointerEnter={() => {
         setHovered(true);
       }}
       onPointerLeave={() => {
         setHovered(false);
       }}
-    >
-      {visible ? <EyeIcon /> : <EyeOffIcon />}
-    </Button>
+    />
   );
 }

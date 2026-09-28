@@ -18,6 +18,7 @@ import {
   FieldItem,
   FieldLabel,
 } from "@/components/common/field";
+import { IconButton } from "@/components/common/icon-button";
 import { Button } from "@/components/ui/button";
 
 export const ArrayControl = withJsonFormsArrayControlProps(
@@ -64,27 +65,33 @@ export const ArrayControl = withJsonFormsArrayControlProps(
                     key={childPath}
                     renderers={props.renderers}
                   />
-                  <Button
+                  <IconButton
+                    label="Move up"
+                    variant="default"
+                    size="icon"
                     disabled={!props.enabled}
-                    aria-label="Move up"
                     onClick={() => props.moveUp?.(props.path, index)()}
                   >
                     <ArrowUpIcon />
-                  </Button>
-                  <Button
+                  </IconButton>
+                  <IconButton
+                    label="Move down"
+                    variant="default"
+                    size="icon"
                     disabled={!props.enabled}
-                    aria-label="Move down"
                     onClick={() => props.moveDown?.(props.path, index)()}
                   >
                     <ArrowDownIcon />
-                  </Button>
-                  <Button
+                  </IconButton>
+                  <IconButton
+                    label="Remove"
+                    variant="default"
+                    size="icon"
                     disabled={!props.enabled}
-                    aria-label="Remove"
                     onClick={() => props.removeItems?.(props.path, [index])()}
                   >
                     <XIcon />
-                  </Button>
+                  </IconButton>
                 </FieldItem>
               );
             },

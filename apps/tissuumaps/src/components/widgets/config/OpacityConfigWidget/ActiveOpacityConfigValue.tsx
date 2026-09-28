@@ -5,6 +5,7 @@ import {
 } from "@tissuumaps/core";
 
 import { formatTableColumn } from "@/components/widgets/TableColumnField/formatTableColumn";
+import { percentFormat } from "@/lib/format";
 import { useProjectStore } from "@/stores/project";
 
 import type { OpacityConfigWidgetAdapter } from "./adapter";
@@ -24,7 +25,9 @@ export function ActiveOpacityConfigValue({
 
   if (activeSource === "constant" && isConstantConfig(opacityConfig)) {
     return (
-      <div className={className}>{opacityConfig.constant.value.toFixed(2)}</div>
+      <div className={className}>
+        {percentFormat.format(opacityConfig.constant.value)}
+      </div>
     );
   }
 
@@ -52,5 +55,7 @@ export function ActiveOpacityConfigValue({
     );
   }
 
-  return <div className={className}>{defaultOpacity.toFixed(2)}</div>;
+  return (
+    <div className={className}>{percentFormat.format(defaultOpacity)}</div>
+  );
 }

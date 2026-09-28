@@ -8,9 +8,10 @@ import {
   type IDockviewPanelProps,
 } from "dockview-react";
 import { Moon, Sun } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useLayoutEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/common/icon-button";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { usePluginPanels } from "@/hooks/usePluginPanels";
 
 import "./App.css";
@@ -129,9 +130,14 @@ function DockviewRightHeaderActionsComponent() {
   const dark = useSettingsStore((state) => state.dark);
   const setDark = useSettingsStore((state) => state.setDark);
   return (
-    <Button aria-label="Dark mode toggle" onClick={() => setDark(!dark)}>
+    <IconButton
+      label={dark ? "Light mode" : "Dark mode"}
+      variant="default"
+      size="icon"
+      onClick={() => setDark(!dark)}
+    >
       {dark ? <Sun /> : <Moon />}
-    </Button>
+    </IconButton>
   );
 }
 
@@ -205,7 +211,9 @@ const onDockviewReady = (event: DockviewReadyEvent) => {
  * The application's root component
  *
  * Renders the dockview layout within the app-level providers, and applies
- * Tailwind CSS's `dark` class according to the settings store.
+ * Tailwind CSS's `dark` class to the document element according to the
+ * settings store, so that inherited text colors and the popups portalled into
+ * the body follow it too.
  */
 export function App() {
   const dark = useSettingsStore((state) => state.dark);
@@ -213,24 +221,29 @@ export function App() {
 
   usePluginPanels(dockviewApi, projectPanelId);
 
+  // Before paint, so that a reload in dark mode shows no light frame
+  // https://tailwindcss.com/docs/dark-mode
+  useLayoutEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+  }, [dark]);
+
   return (
-    <DialogProvider>
-      {/* https://tailwindcss.com/docs/dark-mode */}
-      <div
-        className={`w-screen h-screen overflow-hidden ${dark ? "dark" : ""}`}
-      >
-        <DockviewReact
-          theme={dockviewTheme}
-          components={dockviewComponents}
-          tabComponents={dockviewTabComponents}
-          rightHeaderActionsComponent={DockviewRightHeaderActionsComponent}
-          onReady={(event) => {
-            onDockviewReady(event);
-            setDockviewApi(event.api);
-          }}
-        />
-        <NotificationCenter />
-      </div>
-    </DialogProvider>
+    <TooltipProvider delay={300}>
+      <DialogProvider>
+        <div className="w-screen h-screen overflow-hidden">
+          <DockviewReact
+            theme={dockviewTheme}
+            components={dockviewComponents}
+            tabComponents={dockviewTabComponents}
+            rightHeaderActionsComponent={DockviewRightHeaderActionsComponent}
+            onReady={(event) => {
+              onDockviewReady(event);
+              setDockviewApi(event.api);
+            }}
+          />
+          <NotificationCenter />
+        </div>
+      </DialogProvider>
+    </TooltipProvider>
   );
 }

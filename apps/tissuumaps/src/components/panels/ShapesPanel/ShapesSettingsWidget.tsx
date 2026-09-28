@@ -1,5 +1,4 @@
 import {
-  MathUtils,
   type Shapes,
   defaultShapeFillColor,
   defaultShapeFillOpacity,
@@ -23,7 +22,6 @@ import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { formatTableColumn } from "@/components/widgets/TableColumnField/formatTableColumn";
 import { TransformSettingsWidget } from "@/components/widgets/TransformSettingsWidget";
 import {
@@ -347,15 +345,6 @@ function GeneralShapesSettingsWidget({
   return (
     <div className={className}>
       <Field>
-        <FieldLabel>Name</FieldLabel>
-        <Input
-          value={shapes.name}
-          onChange={(event) =>
-            updateShapes(shapes.id, { name: event.target.value })
-          }
-        />
-      </Field>
-      <Field>
         <FieldLabel>Layer</FieldLabel>
         {typeof shapes.layer === "string" ? (
           <SimpleSelect
@@ -376,37 +365,6 @@ function GeneralShapesSettingsWidget({
             readOnly
           />
         )}
-      </Field>
-      <Field>
-        <FieldLabel>Visibility</FieldLabel>
-        <div className="flex flex-row items-center gap-x-2">
-          <Switch
-            checked={shapes.visibility}
-            onCheckedChange={(checked) =>
-              updateShapes(shapes.id, { visibility: checked })
-            }
-          />
-          {shapes.visibility ? "Visible" : "Hidden"}
-        </div>
-      </Field>
-      <Field>
-        <FieldLabel>Opacity</FieldLabel>
-        <Input
-          type="number"
-          inputMode="decimal"
-          step={0.05}
-          min={0}
-          max={1}
-          value={shapes.opacity}
-          onChange={(event) => {
-            const newValue = event.target.valueAsNumber;
-            if (!isNaN(newValue)) {
-              updateShapes(shapes.id, {
-                opacity: MathUtils.clamp(newValue, 0, 1),
-              });
-            }
-          }}
-        />
       </Field>
     </div>
   );

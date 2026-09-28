@@ -1,32 +1,19 @@
-import { DragDropProvider } from "@dnd-kit/react";
-import { useSortable } from "@dnd-kit/react/sortable";
-import {
-  EyeIcon,
-  EyeOffIcon,
-  GripVertical,
-  PlusIcon,
-  Trash2Icon,
-} from "lucide-react";
+import { PlusIcon } from "lucide-react";
 import { useMemo } from "react";
 
-import { type Layer, MathUtils, createLayer } from "@tissuumaps/core";
+import { type Layer, type TableColumnRef, createLayer } from "@tissuumaps/core";
 
 import {
-  Accordion,
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  AccordionTrigger,
-  AccordionTriggerDownUpIcon,
-} from "@/components/common/accordion";
-import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
+  type ObjectKind,
+  objectKindIcons,
+} from "@/components/common/object-kind-icons";
+import { OpacityControl } from "@/components/common/opacity-control";
+import { VisibilityButton } from "@/components/common/visibility-button";
 import { Button } from "@/components/ui/button";
 import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
-import { useTopFirstSortable } from "@/hooks/useTopFirstSortable";
+  SortableObjectItem,
+  SortableObjectList,
+} from "@/components/widgets/ObjectList";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
@@ -40,17 +27,21 @@ export function LayersWidget({ className }: LayersWidgetProps) {
   const layers = useProjectStore((state) => state.layers);
   const addLayer = useProjectStore((state) => state.addLayer);
   const moveLayer = useProjectStore((state) => state.moveLayer);
-  const { topFirstItems, onDragEnd } = useTopFirstSortable(layers, moveLayer);
+
+  const objectsByLayer = useObjectsByLayer();
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
-      <DragDropProvider onDragEnd={onDragEnd}>
-        <Accordion multiple className="gap-y-2">
-          {topFirstItems.map((layer, index) => (
-            <LayerAccordionItem key={layer.id} layer={layer} index={index} />
-          ))}
-        </Accordion>
-      </DragDropProvider>
+      <SortableObjectList objects={layers} onMove={moveLayer}>
+        {(layer, index) => (
+          <LayerAccordionItem
+            key={layer.id}
+            layer={layer}
+            index={index}
+            objects={objectsByLayer.get(layer.id) ?? []}
+          />
+        )}
+      </SortableObjectList>
       <Button
         variant="outline"
         className="w-full"
@@ -69,127 +60,116 @@ export function LayersWidget({ className }: LayersWidgetProps) {
   );
 }
 
-function useLayerObjects(layerId: string) {
+type LayerObject = {
+  id: string;
+  name: string;
+  kind: ObjectKind;
+};
+
+function useObjectsByLayer(): Map<string, LayerObject[]> {
   const images = useProjectStore((state) => state.images);
   const labels = useProjectStore((state) => state.labels);
   const points = useProjectStore((state) => state.points);
   const shapes = useProjectStore((state) => state.shapes);
 
   return useMemo(() => {
-    const names: string[] = [];
+    const objectsByLayer = new Map<string, LayerObject[]>();
+    const add = (layer: string | TableColumnRef, object: LayerObject) => {
+      if (typeof layer === "string") {
+        const objects = objectsByLayer.get(layer);
+        if (objects === undefined) {
+          objectsByLayer.set(layer, [object]);
+        } else {
+          objects.push(object);
+        }
+      }
+    };
     for (const image of images) {
-      if (image.layer === layerId) names.push(image.name);
+      add(image.layer, { id: image.id, name: image.name, kind: "image" });
     }
     for (const l of labels) {
-      if (l.layer === layerId) names.push(l.name);
+      add(l.layer, { id: l.id, name: l.name, kind: "labels" });
     }
     for (const p of points) {
-      if (p.layer === layerId) names.push(p.name);
+      add(p.layer, { id: p.id, name: p.name, kind: "points" });
     }
     for (const s of shapes) {
-      if (s.layer === layerId) names.push(s.name);
+      add(s.layer, { id: s.id, name: s.name, kind: "shapes" });
     }
-    return names;
-  }, [layerId, images, labels, points, shapes]);
+    return objectsByLayer;
+  }, [images, labels, points, shapes]);
 }
 
 type LayerAccordionItemProps = {
   layer: Layer;
   index: number;
+  objects: LayerObject[];
 };
 
-function LayerAccordionItem({ layer, index }: LayerAccordionItemProps) {
+function LayerAccordionItem({
+  layer,
+  index,
+  objects,
+}: LayerAccordionItemProps) {
   const updateLayer = useProjectStore((state) => state.updateLayer);
   const deleteLayer = useProjectStore((state) => state.deleteLayer);
-  const confirm = useConfirmDialog();
-
-  const objectNames = useLayerObjects(layer.id);
-  const hasObjects = objectNames.length > 0;
-
-  const { ref, handleRef } = useSortable({ id: layer.id, index });
 
   return (
-    <div ref={ref}>
-      <AccordionItem
-        value={layer.id}
-        className="border rounded-md bg-sidebar p-2"
-      >
-        <AccordionHeader>
-          <GripVertical ref={handleRef} />
-          <div className="flex-1 w-full">
-            <AccordionTrigger className="w-full cursor-pointer">
-              {layer.name}
-              {hasObjects && (
-                <span className="ml-1 text-xs text-muted-foreground">
-                  ({objectNames.length})
-                </span>
-              )}
-            </AccordionTrigger>
-          </div>
-          <div className="ml-auto flex flex-row items-center gap-x-2">
-            <InputGroup className="w-20">
-              <InputGroupAddon>&alpha;</InputGroupAddon>
-              <InputGroupInput
-                type="number"
-                aria-label="Opacity"
-                inputMode="decimal"
-                step={0.05}
-                min={0}
-                max={1}
-                value={layer.opacity}
-                onChange={(event) => {
-                  const newValue = event.target.valueAsNumber;
-                  if (!isNaN(newValue)) {
-                    updateLayer(layer.id, {
-                      opacity: MathUtils.clamp(newValue, 0, 1),
-                    });
-                  }
-                }}
-              />
-            </InputGroup>
-            <Button
-              variant="ghost"
-              aria-label={layer.visibility ? "Hide layer" : "Show layer"}
-              onClick={() =>
-                updateLayer(layer.id, { visibility: !layer.visibility })
-              }
-            >
-              {layer.visibility ? <EyeIcon /> : <EyeOffIcon />}
-            </Button>
-            <Button
-              variant="ghost"
-              disabled={hasObjects}
-              aria-label="Delete layer"
-              onClick={() => {
-                void confirm({
-                  title: "Delete layer",
-                  body: "Are you sure you want to delete this layer? This action cannot be undone.",
-                }).then((confirmed) => {
-                  if (confirmed) {
-                    deleteLayer(layer.id);
-                  }
-                });
-              }}
-              title={
-                hasObjects
-                  ? "Cannot delete a layer that contains objects"
-                  : "Delete layer"
-              }
-            >
-              <Trash2Icon />
-            </Button>
-          </div>
-          <AccordionTriggerDownUpIcon />
-        </AccordionHeader>
-        <AccordionPanel className="pt-2 flex flex-col gap-y-2">
-          {hasObjects && (
-            <div className="text-xs text-muted-foreground px-1">
-              {objectNames.join(", ")}
-            </div>
+    <SortableObjectItem
+      id={layer.id}
+      index={index}
+      name={layer.name}
+      objectLabel="layer"
+      onRename={(name) => updateLayer(layer.id, { name })}
+      dimmed={!layer.visibility}
+      leadingControls={
+        <VisibilityButton
+          visible={layer.visibility}
+          onVisibleChange={(visibility) =>
+            updateLayer(layer.id, { visibility })
+          }
+          objectLabel="layer"
+          name={layer.name}
+        />
+      }
+      trailingControls={
+        <>
+          {objects.length > 0 && (
+            <span className="bg-muted text-muted-foreground mr-1 rounded-full px-1.5 text-xs tabular-nums">
+              {objects.length}
+            </span>
           )}
-          <LayerSettingsWidget layer={layer} className="bg-card" />
-        </AccordionPanel>
-      </AccordionItem>
-    </div>
+          <OpacityControl
+            opacity={layer.opacity}
+            name={layer.name}
+            onOpacityChange={(opacity) => updateLayer(layer.id, { opacity })}
+          />
+        </>
+      }
+      deleteDisabledReason={
+        objects.length > 0
+          ? "Cannot delete a layer that contains objects"
+          : undefined
+      }
+      onDelete={() => deleteLayer(layer.id)}
+    >
+      {objects.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {objects.map((object) => {
+            const Icon = objectKindIcons[object.kind];
+            return (
+              <span
+                key={object.id}
+                className="bg-background inline-flex h-6 max-w-full items-center gap-1 rounded-full border px-2 text-xs"
+              >
+                <Icon className="text-muted-foreground size-3.5 shrink-0" />
+                <span className="truncate">{object.name}</span>
+              </span>
+            );
+          })}
+        </div>
+      )}
+      <LayerSettingsWidget layer={layer} />
+    </SortableObjectItem>
   );
 }

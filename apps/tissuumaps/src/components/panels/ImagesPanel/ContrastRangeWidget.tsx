@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 
 import { type ImageChannelHistogram, MathUtils } from "@tissuumaps/core";
 
-import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/common/icon-button";
 import {
   InputGroup,
   InputGroupAddon,
@@ -137,17 +137,15 @@ export function ContrastRangeWidget({
             }
           }}
         />
-        <Button
-          variant="ghost"
+        <IconButton
+          label={widenLabel}
           size="icon-xs"
           className="col-start-2"
-          aria-label={widenLabel}
-          title={widenLabel}
           disabled={!canWiden}
           onClick={() => setWidenRequested(!widened)}
         >
           {widened ? <ChevronsRightLeftIcon /> : <ChevronsLeftRightIcon />}
-        </Button>
+        </IconButton>
         <div className="text-muted-foreground col-start-1 flex flex-row justify-between text-[10px] leading-3">
           <span>{round(sliderMin)}</span>
           <span>{round(sliderMax)}</span>
@@ -164,17 +162,15 @@ export function ContrastRangeWidget({
           value={round(max)}
           onValueChange={(newMax) => commitContrastLimits(min, newMax)}
         />
-        <Button
-          variant="ghost"
+        <IconButton
+          label="Reset to the limits estimated from the file"
           size="icon-xs"
           className="ml-auto"
-          aria-label="Reset to the limits estimated from the file"
-          title="Reset to the limits estimated from the file"
           disabled={onReset === undefined}
           onClick={onReset}
         >
           <RotateCcwIcon />
-        </Button>
+        </IconButton>
       </div>
     </div>
   );

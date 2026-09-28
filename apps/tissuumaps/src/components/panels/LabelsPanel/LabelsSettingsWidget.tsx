@@ -1,6 +1,5 @@
 import {
   type Labels,
-  MathUtils,
   defaultLabelColor,
   defaultLabelOpacity,
   defaultLabelVisibility,
@@ -17,8 +16,6 @@ import {
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { SimpleSelect } from "@/components/common/simple-select";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { TransformSettingsWidget } from "@/components/widgets/TransformSettingsWidget";
 import {
   ActiveColorConfigValue,
@@ -204,15 +201,6 @@ function GeneralLabelsSettingsWidget({
   return (
     <div className={className}>
       <Field>
-        <FieldLabel>Name</FieldLabel>
-        <Input
-          value={labels.name}
-          onChange={(event) =>
-            updateLabels(labels.id, { name: event.target.value })
-          }
-        />
-      </Field>
-      <Field>
         <FieldLabel>Layer</FieldLabel>
         <SimpleSelect
           items={layers}
@@ -222,37 +210,6 @@ function GeneralLabelsSettingsWidget({
           onValueChange={(value) => {
             if (value !== null) {
               updateLabels(labels.id, { layer: value });
-            }
-          }}
-        />
-      </Field>
-      <Field>
-        <FieldLabel>Visibility</FieldLabel>
-        <div className="flex flex-row items-center gap-x-2">
-          <Switch
-            checked={labels.visibility}
-            onCheckedChange={(checked) =>
-              updateLabels(labels.id, { visibility: checked })
-            }
-          />
-          {labels.visibility ? "Visible" : "Hidden"}
-        </div>
-      </Field>
-      <Field>
-        <FieldLabel>Opacity</FieldLabel>
-        <Input
-          type="number"
-          inputMode="decimal"
-          step={0.05}
-          min={0}
-          max={1}
-          value={labels.opacity}
-          onChange={(event) => {
-            const newValue = event.target.valueAsNumber;
-            if (!isNaN(newValue)) {
-              updateLabels(labels.id, {
-                opacity: MathUtils.clamp(newValue, 0, 1),
-              });
             }
           }}
         />

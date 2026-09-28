@@ -1,28 +1,14 @@
-import { DragDropProvider } from "@dnd-kit/react";
-import { useSortable } from "@dnd-kit/react/sortable";
-import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
+import { type Image, createImage } from "@tissuumaps/core";
 
-import { type Image, MathUtils, createImage } from "@tissuumaps/core";
-
-import {
-  Accordion,
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  AccordionTrigger,
-  AccordionTriggerDownUpIcon,
-} from "@/components/common/accordion";
-import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
-import { Button } from "@/components/ui/button";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
+import { OpacityControl } from "@/components/common/opacity-control";
+import { VisibilityButton } from "@/components/common/visibility-button";
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import {
+  SortableObjectItem,
+  SortableObjectList,
+} from "@/components/widgets/ObjectList";
 import { useImageData } from "@/hooks/useData";
-import { useTopFirstSortable } from "@/hooks/useTopFirstSortable";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -41,17 +27,14 @@ export function ImagesPanel({ className }: ImagesPanelProps) {
   const images = useProjectStore((state) => state.images);
   const addImage = useProjectStore((state) => state.addImage);
   const moveImage = useProjectStore((state) => state.moveImage);
-  const { topFirstItems, onDragEnd } = useTopFirstSortable(images, moveImage);
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
-      <DragDropProvider onDragEnd={onDragEnd}>
-        <Accordion multiple className="gap-y-2">
-          {topFirstItems.map((image, index) => (
-            <ImageAccordionItem key={image.id} image={image} index={index} />
-          ))}
-        </Accordion>
-      </DragDropProvider>
+      <SortableObjectList objects={images} onMove={moveImage}>
+        {(image, index) => (
+          <ImageAccordionItem key={image.id} image={image} index={index} />
+        )}
+      </SortableObjectList>
       <AddDataObjectDialog
         title="Add image"
         layers={layers}
@@ -81,93 +64,54 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
 
   const updateImage = useProjectStore((state) => state.updateImage);
   const deleteImage = useProjectStore((state) => state.deleteImage);
-  const confirm = useConfirmDialog();
 
   const imageData = useImageData(image.id);
   const sizeC = imageData?.getSizeC();
 
-  const { ref, handleRef } = useSortable({ id: image.id, index });
-
   return (
-    <div ref={ref}>
-      <AccordionItem className="border rounded-md bg-sidebar p-2">
-        <AccordionHeader>
-          <GripVertical ref={handleRef} />
-          <div className="flex-1 w-full">
-            <AccordionTrigger className="w-full cursor-pointer">
-              {image.name}
-            </AccordionTrigger>
-          </div>
-          <div className="ml-auto flex flex-row items-center gap-x-2">
-            <InputGroup className="w-20">
-              <InputGroupAddon>&alpha;</InputGroupAddon>
-              <InputGroupInput
-                type="number"
-                aria-label="Opacity"
-                inputMode="decimal"
-                step={0.05}
-                min={0}
-                max={1}
-                value={image.opacity}
-                onChange={(event) => {
-                  const newValue = event.target.valueAsNumber;
-                  if (!isNaN(newValue)) {
-                    updateImage(image.id, {
-                      opacity: MathUtils.clamp(newValue, 0, 1),
-                    });
-                  }
-                }}
-              />
-            </InputGroup>
-            <Button
-              variant="ghost"
-              aria-label={image.visibility ? "Hide image" : "Show image"}
-              onClick={() =>
-                updateImage(image.id, { visibility: !image.visibility })
-              }
-            >
-              {image.visibility ? <EyeIcon /> : <EyeOffIcon />}
-            </Button>
-            <Button
-              variant="ghost"
-              aria-label="Delete image"
-              onClick={() => {
-                void confirm({
-                  title: "Delete image",
-                  body: "Are you sure you want to delete this image? This action cannot be undone.",
-                }).then((confirmed) => {
-                  if (confirmed) {
-                    deleteImage(image.id);
-                  }
-                });
-              }}
-              title="Delete image"
-            >
-              <Trash2Icon />
-            </Button>
-          </div>
-          <AccordionTriggerDownUpIcon />
-        </AccordionHeader>
-        <AccordionPanel className="pt-2 flex flex-col gap-y-2">
-          <DataSourceWidget
-            dataSource={image.dataSource}
-            dataProviders={imageDataProviders}
-            onDataSourceChange={(newDataSource) => {
-              updateImage(image.id, { dataSource: newDataSource });
-            }}
-            className="bg-card"
-          />
-          <ImageSettingsWidget image={image} className="bg-card" />
-          {imageData !== null && sizeC !== undefined && (
-            <ChannelSettingsWidget
-              image={image}
-              data={imageData}
-              sizeC={sizeC}
-              className="bg-card"
-            />
-          )}
-        </AccordionPanel>
-      </AccordionItem>
-    </div>
+    <SortableObjectItem
+      id={image.id}
+      index={index}
+      name={image.name}
+      objectLabel="image"
+      onRename={(name) => updateImage(image.id, { name })}
+      dimmed={!image.visibility}
+      leadingControls={
+        <VisibilityButton
+          visible={image.visibility}
+          onVisibleChange={(visibility) =>
+            updateImage(image.id, { visibility })
+          }
+          objectLabel="image"
+          name={image.name}
+        />
+      }
+      trailingControls={
+        <OpacityControl
+          opacity={image.opacity}
+          name={image.name}
+          onOpacityChange={(opacity) => updateImage(image.id, { opacity })}
+        />
+      }
+      onDelete={() => deleteImage(image.id)}
+    >
+      <DataSourceWidget
+        dataSource={image.dataSource}
+        dataProviders={imageDataProviders}
+        onDataSourceChange={(newDataSource) => {
+          updateImage(image.id, { dataSource: newDataSource });
+        }}
+        className="bg-card"
+      />
+      <ImageSettingsWidget image={image} className="bg-card" />
+      {imageData !== null && sizeC !== undefined && (
+        <ChannelSettingsWidget
+          image={image}
+          data={imageData}
+          sizeC={sizeC}
+          className="bg-card"
+        />
+      )}
+    </SortableObjectItem>
   );
 }
