@@ -19,7 +19,8 @@ import {
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
-import { InteractionModeViewerControls } from "./InteractionModeViewerControls";
+// TODO: restore once shape drawing is linked with actions
+// import { InteractionModeViewerControls } from "./InteractionModeViewerControls";
 import { PointSizeViewerControl } from "./PointSizeViewerControl";
 import { highlightItemGroup } from "./highlightItemGroup";
 
@@ -123,9 +124,11 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
       backgroundColor={viewerBackgroundColor}
       className={className}
     >
+      {/* TODO: restore once shape drawing is linked with actions
       <ViewerControl anchor={ViewerControlAnchor.TOP_LEFT}>
         <InteractionModeViewerControls />
       </ViewerControl>
+      */}
       {projectState.points.length > 0 && (
         <ViewerControl anchor={ViewerControlAnchor.TOP_RIGHT}>
           <PointSizeViewerControl />
