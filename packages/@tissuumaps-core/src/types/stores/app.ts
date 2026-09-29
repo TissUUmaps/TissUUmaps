@@ -94,14 +94,18 @@ export type AppStoreState = {
   >;
 
   /**
-   * The registered plugins, by plugin ID, each as its human-readable name
-   * together with the element its user interface is mounted into, if it has one
+   * The registered plugins, by plugin ID, each as its human-readable name,
+   * whether it has a user interface that can be mounted, and the element its
+   * user interface is mounted into while it is mounted
    *
    * Written by the plugin registry, which owns the plugin lifecycle and keeps
    * the plugin objects themselves to itself, so that nothing a plugin owns ends
    * up frozen in the store.
    */
-  plugins: Map<string, { name: string; container?: HTMLElement }>;
+  plugins: Map<
+    string,
+    { name: string; mountable: boolean; container?: HTMLElement }
+  >;
 };
 
 /**

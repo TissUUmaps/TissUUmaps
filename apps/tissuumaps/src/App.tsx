@@ -98,7 +98,7 @@ const dockviewComponents = {
 /**
  * The tab headers available to panels, by component name: one that lets the
  * user close the panel, one for panels that are always shown, and one for the
- * panels contributed by plugins, whose close button unregisters the plugin
+ * panels contributed by plugins, whose close button unmounts the plugin
  */
 const dockviewTabComponents = {
   ClosablePanelHeader: (props: IDockviewPanelHeaderProps) => {
@@ -115,7 +115,7 @@ const dockviewTabComponents = {
         {...props}
         hideClose={false}
         closeActionOverride={() =>
-          pluginRegistry.unregisterPlugin(props.params.pluginId)
+          pluginRegistry.unmountPlugin(props.params.pluginId)
         }
       />
     );
