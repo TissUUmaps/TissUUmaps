@@ -4,7 +4,7 @@ import { startDataCaches } from "./data/cache";
 import { loadProjectFromURL, projectURLParam } from "./data/io/project";
 import { enableBuiltInDataProviders } from "./data/providers";
 import { notifyTissUUmapsLoaded } from "./events";
-import { startPluginRegistry } from "./plugins";
+import { enableBuiltInPlugins, startPluginRegistry } from "./plugins";
 import { appStore } from "./stores/app";
 import { projectStore } from "./stores/project";
 
@@ -15,7 +15,8 @@ const fallbackProjectUrl = "project.tm4";
  * Starts up the parts of the application that live outside of React
  *
  * Registers the built-in data providers, starts the data caches and the plugin
- * registry, marks the project open once it has a source or data,
+ * registry, registers the built-in plugins, marks the project open once it has
+ * a source or data,
  * starts loading the initial project, and finally announces that the
  * application has loaded.
  * The project is only loading, not loaded, by the time this returns.
@@ -28,6 +29,7 @@ export function bootstrap(): () => void {
   enableBuiltInDataProviders();
   const stopDataCaches = startDataCaches();
   const stopPluginRegistry = startPluginRegistry();
+  enableBuiltInPlugins();
   const stopProjectOpenTracking = startProjectOpenTracking();
   const cancelInitialProjectLoading = loadInitialProject();
   notifyTissUUmapsLoaded();

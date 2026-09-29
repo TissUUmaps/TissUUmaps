@@ -159,6 +159,24 @@ export const pluginRegistry: PluginRegistry = {
 };
 
 /**
+ * The plugins shipped with TissUUmaps in `@tissuumaps/plugins`, registered by
+ * {@link enableBuiltInPlugins}
+ */
+const builtInPlugins: Plugin[] = [];
+
+/**
+ * Registers the plugins shipped with TissUUmaps with the {@link pluginRegistry}
+ *
+ * Called once during application startup, after the plugin registry has been
+ * started. The plugins are set up, but not mounted.
+ */
+export function enableBuiltInPlugins(): void {
+  for (const plugin of builtInPlugins) {
+    pluginRegistry.registerPlugin(plugin);
+  }
+}
+
+/**
  * Exposes the {@link pluginRegistry} to plugins as `window.tissuumaps`
  *
  * @returns A callback that removes the registry from `window` again, unless it
