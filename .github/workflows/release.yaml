@@ -166,9 +166,10 @@ jobs:
           node-version: 24
       - name: Assemble the site from the release assets
         id: assemble
-        run: node scripts/assemble-pages.ts --out _site --custom-html .github/pages/custom.html
+        run: node scripts/assemble-pages.ts --out _site --custom-html .github/pages/custom.html ${GALLERY_URL:+--gallery-url "$GALLERY_URL"}
         env:
           GH_TOKEN: ${{ github.token }}
+          GALLERY_URL: ${{ vars.GALLERY_URL }}
       - name: Install pnpm
         if: steps.assemble.outputs.latest == ''
         uses: pnpm/action-setup@v4
@@ -180,7 +181,11 @@ jobs:
           pnpm run --filter tissuumaps build
           cp -r apps/tissuumaps/dist/. _site/
           cp -r apps/docs/build/. _site/docs/
+          if [ -n "$GALLERY_URL" ]; then
+            curl -fsSL "$GALLERY_URL" -o _site/gallery.html
+          fi
         env:
+          GALLERY_URL: ${{ vars.GALLERY_URL }}
           VITE_CUSTOM_HTML_FILE: ${{ github.workspace }}/.github/pages/custom.html
           DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/docs/
       - name: Mirror the TissUUmaps 3 plugin index

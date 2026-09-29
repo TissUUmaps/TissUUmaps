@@ -17,6 +17,9 @@
  *   --custom-html <file>       HTML to insert in place of the `<!-- GHA_CUSTOM_HTML -->`
  *                              marker of every deployed version's application page (the
  *                              release assets stay free of it)
+ *   --gallery-url <url>        URL of a gallery page, fetched once and deployed as
+ *                              `gallery.html` next to every deployed version's
+ *                              application page
  *   --releases <file>          releases as JSON instead of the GitHub API (for testing)
  *   --assets-dir <dir>         directory holding the zips instead of downloading them (for testing)
  */
@@ -59,6 +62,7 @@ const { values: options } = parseArgs({
     prefix: { type: "string" },
     repository: { type: "string", default: process.env.GITHUB_REPOSITORY },
     "custom-html": { type: "string" },
+    "gallery-url": { type: "string" },
     releases: { type: "string" },
     "assets-dir": { type: "string" },
   },
@@ -115,6 +119,10 @@ const { retained, redirects, latest } = planRetention(
   (version) => !withoutAsset.has(version),
 );
 
+const gallery = options["gallery-url"]
+  ? await fetchGallery(options["gallery-url"])
+  : null;
+
 rmSync(outDir, { recursive: true, force: true });
 mkdirSync(outDir, { recursive: true });
 writeFileSync(join(outDir, ".nojekyll"), "");
@@ -126,6 +134,17 @@ console.log(
 );
 if (process.env.GITHUB_OUTPUT) {
   appendFileSync(process.env.GITHUB_OUTPUT, `latest=${latestName}\n`);
+}
+
+/** Fetches the gallery page, failing unless it is served successfully */
+async function fetchGallery(url: string): Promise<string> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(
+      `${url}: ${response.status} ${response.statusText}`.trimEnd(),
+    );
+  }
+  return response.text();
 }
 
 /** Unpacks each retained version's assets into `<out>/<version>/` and `<out>/<version>/docs/` */
@@ -174,6 +193,9 @@ function deployVersions() {
           page,
           html.replace(customHtmlMarker, () => customHtml),
         );
+      }
+      if (gallery !== null) {
+        writeFileSync(join(versionDir, "gallery.html"), gallery);
       }
       console.log(`deployed ${formatVersion(version)}`);
     }
