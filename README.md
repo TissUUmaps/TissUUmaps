@@ -15,9 +15,9 @@
 
 TissUUmaps is a GPU-accelerated web application for visualizing, annotating and sharing spatial biology data.
 
-Open [TissUUmaps](https://tissuumaps.github.io/TissUUmaps/) in a modern web browser with WebGL 2 support, or read the [documentation](https://tissuumaps.github.io/TissUUmaps/docs/) to get started.
+Open TissUUmaps at https://tissuumaps.github.io/TissUUmaps/ in a modern web browser with WebGL 2 support, or read the documentation at https://tissuumaps.github.io/TissUUmaps/docs/ to get started.
 
-During the beta phase, an [example gallery](https://tissuumaps4.serve.scilifelab.se) is available. It is primarily used for testing, so the linked examples are not guaranteed to work.
+During the beta phase, an example gallery is available at https://tissuumaps4.serve.scilifelab.se. It is primarily used for testing, so the linked examples are not guaranteed to work.
 
 Contributions are always welcome! See [Contributing](CONTRIBUTING.md) for ways to get started and please adhere to this project's [Code of Conduct](CODE_OF_CONDUCT.md). Thanks to all [contributors](CONTRIBUTORS.md)!
 
