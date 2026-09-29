@@ -26,6 +26,24 @@ describe("ProjectUtils", () => {
   });
   const project = { labels: [labels], points: [points], shapes: [shapes] };
 
+  describe("hasData", () => {
+    const empty = {
+      images: [],
+      labels: [],
+      points: [],
+      shapes: [],
+      tables: [],
+    };
+
+    it("returns false without data objects", () => {
+      expect(ProjectUtils.hasData(empty)).toBe(false);
+    });
+
+    it("returns true with a data object", () => {
+      expect(ProjectUtils.hasData({ ...empty, points: [points] })).toBe(true);
+    });
+  });
+
   describe("getMarkerConfigs", () => {
     it("returns the marker configurations of the points", () => {
       expect(ProjectUtils.getMarkerConfigs(project)).toStrictEqual([

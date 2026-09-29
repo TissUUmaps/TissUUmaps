@@ -6,6 +6,7 @@ type FileSystemAccessWindow = Window & {
   }) => Promise<FileSystemDirectoryHandle>;
   showOpenFilePicker?: (options?: {
     id?: string;
+    startIn?: FileSystemHandle;
     multiple?: boolean;
     types?: { description?: string; accept: Record<string, string[]> }[];
   }) => Promise<FileSystemFileHandle[]>;
@@ -16,6 +17,9 @@ type FileSystemAccessWindow = Window & {
  * was last used in
  */
 const workspacePickerId = "tissuumaps-workspace";
+
+/** The file extensions of project files */
+export const projectFileExtensions = [".tmap", ".json"];
 
 /**
  * Returns whether the browser can pick a workspace directory
@@ -56,11 +60,15 @@ export async function pickWorkspace(): Promise<FileSystemDirectoryHandle | null>
 /**
  * Lets the user pick a project file
  *
+ * @param options - Optional directory to open the picker in, instead of the
+ * one it was last used in
  * @returns The file handle, or `null` if the user cancelled the picker
  * @throws Error if the browser does not support picking a file, or if access
  * to the file was denied
  */
-export async function pickProjectFile(): Promise<FileSystemFileHandle | null> {
+export async function pickProjectFile(options?: {
+  startIn?: FileSystemDirectoryHandle;
+}): Promise<FileSystemFileHandle | null> {
   const w = window as FileSystemAccessWindow;
   if (w.showOpenFilePicker === undefined) {
     throw new Error("Picking a file is not supported by this browser");
@@ -69,11 +77,12 @@ export async function pickProjectFile(): Promise<FileSystemFileHandle | null> {
     // Called as a method: the picker throws if it loses its receiver
     const projectFiles = await w.showOpenFilePicker({
       id: workspacePickerId,
+      startIn: options?.startIn,
       multiple: false,
       types: [
         {
           description: "TissUUmaps project",
-          accept: { "application/json": [".tmap", ".json"] },
+          accept: { "application/json": projectFileExtensions },
         },
       ],
     });
