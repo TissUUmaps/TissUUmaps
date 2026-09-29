@@ -283,6 +283,12 @@ export class ColorResolver {
       });
     }
     const data = await loadTable(config.groupBy.table, { signal });
+    const groupCounts =
+      colorMap === undefined
+        ? await TableUtils.loadGroupCounts(data, config.groupBy.column, {
+            signal,
+          })
+        : undefined;
     const packedColors = ColorResolver.createColorBuffer(ids.length, {
       align,
     });
@@ -297,6 +303,7 @@ export class ColorResolver {
         colorMap,
         defaultColor,
         colorPalette?.colors,
+        groupCounts?.keys(),
       ),
       (color) => ColorResolver.packColor(color),
       { signal },

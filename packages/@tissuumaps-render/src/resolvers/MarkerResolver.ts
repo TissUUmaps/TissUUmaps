@@ -233,6 +233,12 @@ export class MarkerResolver {
       });
     }
     const data = await loadTable(config.groupBy.table, { signal });
+    const groupCounts =
+      markerMap === undefined
+        ? await TableUtils.loadGroupCounts(data, config.groupBy.column, {
+            signal,
+          })
+        : undefined;
     const packedMarkers = MarkerResolver.createMarkerBuffer(ids.length, {
       align,
     });
@@ -247,6 +253,7 @@ export class MarkerResolver {
         markerMap,
         defaultMarker,
         markerPalette,
+        groupCounts?.keys(),
       ),
       (marker) => MarkerResolver.packMarker(marker),
       { signal },

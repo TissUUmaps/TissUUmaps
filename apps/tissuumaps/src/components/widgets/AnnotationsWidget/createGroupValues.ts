@@ -52,6 +52,7 @@ export function createGroupValues<TValue, TConfig extends Config<string>>(
       map,
       defaultValue,
       adapter.getPalette?.(config),
+      groupCounts.keys(),
     );
   } else if (
     getActiveConfigSource(config) === "constant" &&

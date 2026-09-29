@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import type { TableData } from "@tissuumaps/core";
+import { type TableData, TableUtils } from "@tissuumaps/core";
 
 import { useTableData } from "./useData";
 
@@ -13,8 +13,7 @@ type LoadedGroupCounts = {
 /**
  * Loads how many rows of a table each group of a categorical column holds
  *
- * Groups are the cell values as strings, as group-to-value maps key them, so
- * values with the same string (e.g. `null` and `"null"`) form one group.
+ * Groups are the cell values as strings (see `TableUtils.loadGroupCounts`).
  *
  * @param tableId - The ID of the table, if any
  * @param column - The name of the categorical table column, if any
@@ -37,17 +36,11 @@ export function useItemGroupCounts(
       return;
     }
     const abortController = new AbortController();
-    tableData
-      .loadUniqueValueCounts<unknown>(column, {
-        signal: abortController.signal,
-      })
-      .then((uniqueValueCounts) => {
+    TableUtils.loadGroupCounts(tableData, column, {
+      signal: abortController.signal,
+    })
+      .then((groupCounts) => {
         if (!abortController.signal.aborted) {
-          const groupCounts = new Map<string, number>();
-          for (const [value, count] of uniqueValueCounts) {
-            const group = String(value);
-            groupCounts.set(group, (groupCounts.get(group) ?? 0) + count);
-          }
           setLoadedGroupCounts({ tableData, column, groupCounts });
         }
       })

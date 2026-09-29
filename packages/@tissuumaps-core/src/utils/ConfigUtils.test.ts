@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import type { ConstantConfig, GroupByConfig } from "../model/configs";
 import type { GroupValueMap } from "../model/primitives";
 import { ConfigUtils } from "./ConfigUtils";
-import { HashUtils } from "./HashUtils";
 
 describe("ConfigUtils", () => {
   describe("findGroupByMap", () => {
@@ -123,15 +122,28 @@ describe("ConfigUtils", () => {
       expect(getValue("A")).toBe(0);
     });
 
-    it("picks a palette value by hash without a map", () => {
+    it("assigns the palette values by group position without a map", () => {
       const getValue = ConfigUtils.createGroupValueGetter(
         { groupBy: { column: "cluster", map: undefined } },
         undefined,
         0,
         palette,
+        ["B", "A", "D", "C"],
       );
 
-      expect(getValue("A")).toBe(palette[HashUtils.hash("A") % palette.length]);
+      expect(["A", "B", "C", "D"].map(getValue)).toEqual([20, 10, 10, 30]);
+    });
+
+    it("gives a group missing from the groups the default value", () => {
+      const getValue = ConfigUtils.createGroupValueGetter(
+        { groupBy: { column: "cluster", map: undefined } },
+        undefined,
+        0,
+        palette,
+        ["A"],
+      );
+
+      expect(getValue("B")).toBe(0);
     });
 
     it("gives every group the default value without a map or palette", () => {
