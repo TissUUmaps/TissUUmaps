@@ -58,6 +58,47 @@ For TypeScript, the `Plugin`, `PluginRegistry` and `PluginStores` types are
 exported from `@tissuumaps/core`, and `window.tissuumaps` is typed as
 `PluginRegistry | undefined`.
 
+## Loading third-party plugins
+
+Instead of registering itself, a plugin can be loaded by the user, through the
+plugins menu in the tab bar: _Load plugin from file…_ picks a local file, and
+_Load plugin from URL…_ asks for a URL. Such a plugin is an ES module whose
+default export is the plugin:
+
+```javascript
+export default {
+  id: "my-plugin",
+  name: "My plugin",
+  mount: (container, { projectStore }) => {
+    container.textContent = `${projectStore.getState().images.length} images`;
+  },
+};
+```
+
+TissUUmaps registers the default export, which sets the plugin up, and opens the
+plugin's panel right away if it has a `mount`. A module without a default export
+is only run, so a script that registers itself through `window.tissuumaps`, as
+shown above, can be loaded the same way.
+
+- A module loaded from a URL on another origin has to be served with
+  [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS) headers,
+  as common public hosts such as GitHub, jsDelivr or unpkg do.
+- A module loaded from a local file has to be a single file, bundled if need be:
+  its relative imports cannot be resolved, and neither can paths relative to
+  `import.meta.url`. Imports of absolute URLs work.
+- Loading the same URL again does not run the module again, since the browser
+  caches modules by URL, but registers its default export again.
+- Loaded plugins are not remembered: after reloading the page, they have to be
+  loaded again.
+
+:::warning
+
+A plugin runs with full access to TissUUmaps and the data it has opened.
+TissUUmaps asks for confirmation before loading one, but cannot check what it
+does: only load plugins from sources you trust.
+
+:::
+
 ## Plugin properties
 
 - `id` (required): a unique identifier for the plugin. Registering a plugin whose

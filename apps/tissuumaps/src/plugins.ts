@@ -165,18 +165,6 @@ export const pluginRegistry: PluginRegistry = {
 const builtInPlugins: Plugin[] = [];
 
 /**
- * Registers the plugins shipped with TissUUmaps with the {@link pluginRegistry}
- *
- * Called once during application startup, after the plugin registry has been
- * started. The plugins are set up, but not mounted.
- */
-export function enableBuiltInPlugins(): void {
-  for (const plugin of builtInPlugins) {
-    pluginRegistry.registerPlugin(plugin);
-  }
-}
-
-/**
  * Exposes the {@link pluginRegistry} to plugins as `window.tissuumaps`
  *
  * @returns A callback that removes the registry from `window` again, unless it
@@ -193,4 +181,103 @@ export function startPluginRegistry(): () => void {
       pluginRegistry.unregisterPlugin(pluginId);
     }
   };
+}
+
+/**
+ * Registers the plugins shipped with TissUUmaps with the {@link pluginRegistry}
+ *
+ * Called once during application startup, after the plugin registry has been
+ * started. The plugins are set up, but not mounted.
+ */
+export function enableBuiltInPlugins(): void {
+  for (const plugin of builtInPlugins) {
+    pluginRegistry.registerPlugin(plugin);
+  }
+}
+
+/**
+ * Loads a third-party plugin from a local ES module file, and registers it
+ * with the {@link pluginRegistry}, see {@link loadPluginFromURL}
+ *
+ * The module is loaded from a `blob:` URL, so it has to be a single file: its
+ * relative imports cannot be resolved.
+ *
+ * @param file - The module file
+ * @returns The ID of the registered plugin, or `null` for a module without a
+ * default export
+ * @throws If the module cannot be loaded or run, if its default export is not a
+ * plugin, or if the plugin's `setup` throws
+ */
+export async function loadPluginFromFile(file: File): Promise<string | null> {
+  // a module is only run with a JavaScript MIME type, which a file may lack
+  const blob = new Blob([await file.text()], { type: "text/javascript" });
+  const url = URL.createObjectURL(blob);
+  try {
+    return await loadPluginFromURL(url);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/**
+ * Loads a third-party plugin from an ES module, and registers it with the
+ * {@link pluginRegistry}
+ *
+ * If the module's default export is a plugin, the plugin is registered, and
+ * thereby set up, but not mounted. A module without a default export is only
+ * run, so that it can register itself through `window.tissuumaps`.
+ *
+ * A module on another origin has to be served with CORS. Modules are cached by
+ * URL: loading the same URL again does not run the module again, but registers
+ * its default export again.
+ *
+ * @param url - The URL of the module
+ * @returns The ID of the registered plugin, or `null` for a module without a
+ * default export
+ * @throws If the module cannot be loaded or run, if its default export is not a
+ * plugin, or if the plugin's `setup` throws
+ */
+export async function loadPluginFromURL(url: string): Promise<string | null> {
+  const exports: unknown = await import(/* @vite-ignore */ url);
+  const plugin =
+    typeof exports === "object" && exports !== null && "default" in exports
+      ? exports.default
+      : undefined;
+  if (plugin === undefined) {
+    return null;
+  }
+  if (!isPlugin(plugin)) {
+    throw new Error(`The default export of ${url} is not a plugin`);
+  }
+  pluginRegistry.registerPlugin(plugin);
+  if (!appStore.getState().plugins.has(plugin.id)) {
+    throw new Error(`Error during setup of plugin ${plugin.id}`);
+  }
+  return plugin.id;
+}
+
+/**
+ * Checks whether a value has the shape of a plugin
+ *
+ * Only the types of the properties are checked, not the signatures of the
+ * functions, which cannot be inspected at runtime.
+ *
+ * @param value - The value to check, such as a module's default export
+ * @returns Whether the value is a plugin
+ */
+function isPlugin(value: unknown): value is Plugin {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "id" in value &&
+    typeof value.id === "string" &&
+    "name" in value &&
+    typeof value.name === "string" &&
+    (!("setup" in value) ||
+      value.setup === undefined ||
+      typeof value.setup === "function") &&
+    (!("mount" in value) ||
+      value.mount === undefined ||
+      typeof value.mount === "function")
+  );
 }

@@ -168,7 +168,7 @@ In the TissUUmaps React app, absolute (`@/`) imports are used for imports across
 
 ### Plugin registry
 
-`plugins.ts` owns the plugin lifecycle described on the [Plugins](./plugins.md) page: registering sets a plugin up, mounting and unmounting (on request, through the plugins menu and the panel's close button) show and hide its user interface, and unregistering tears it down. It is the only writer of the app store's `plugins`, where it keeps just each plugin's name, whether it can be mounted, and the container element of its user interface while it is mounted, so that Immer never freezes anything the plugin owns; the plugin objects and their unmount and teardown callbacks are kept in a module-level map. `startPluginRegistry()` returns a teardown that unregisters all plugins.
+`plugins.ts` owns the plugin lifecycle described on the [Plugins](./plugins.md) page: registering sets a plugin up, mounting and unmounting (on request, through the plugins menu and the panel's close button) show and hide its user interface, and unregistering tears it down. It is the only writer of the app store's `plugins`, where it keeps just each plugin's name, whether it can be mounted, and the container element of its user interface while it is mounted, so that Immer never freezes anything the plugin owns; the plugin objects and their unmount and teardown callbacks are kept in a module-level map. `loadPluginFromURL` and `loadPluginFromFile` load third-party plugins as ES modules with `import()`, a local file through a `blob:` URL, and register their default export. `startPluginRegistry()` returns a teardown that unregisters all plugins.
 
 ### Hooks
 
