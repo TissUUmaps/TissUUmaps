@@ -12,9 +12,15 @@ function createMockTableData(
   ids: IDArray,
   values: unknown[] = [],
   valueRange?: [number, number],
-): { data: TableData; loadValues: Mock; loadValueRange: Mock } {
+): {
+  data: TableData;
+  loadValues: Mock;
+  loadValueRange: Mock;
+  loadUniqueValueCounts: Mock;
+} {
   const loadValues = vi.fn().mockResolvedValue(values);
   const loadValueRange = vi.fn().mockResolvedValue(valueRange);
+  const loadUniqueValueCounts = vi.fn();
   return {
     data: {
       getIds: () => ids,
@@ -23,12 +29,13 @@ function createMockTableData(
       close: vi.fn(),
       loadValues,
       loadValueRange,
-      loadUniqueValueCounts: vi.fn(),
+      loadUniqueValueCounts,
       suggestColumnQueries: vi.fn(),
       resolveColumnQuery: vi.fn(),
     },
     loadValues,
     loadValueRange,
+    loadUniqueValueCounts,
   };
 }
 
@@ -358,6 +365,32 @@ describe("TableUtils", () => {
         ),
       ).rejects.toThrow();
       expect(loadValues).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("loadGroupCounts", () => {
+    it("merges values with the same string, in order of first appearance", async () => {
+      const { data, loadUniqueValueCounts } = createMockTableData(
+        new Uint32Array([1, 2, 3, 4]),
+      );
+      loadUniqueValueCounts.mockResolvedValue(
+        new Map<unknown, number>([
+          [2, 1],
+          [null, 2],
+          ["2", 3],
+          ["null", 4],
+        ]),
+      );
+
+      await expect(TableUtils.loadGroupCounts(data, "col1")).resolves.toEqual(
+        new Map([
+          ["2", 4],
+          ["null", 6],
+        ]),
+      );
+      expect(loadUniqueValueCounts).toHaveBeenCalledWith("col1", {
+        signal: undefined,
+      });
     });
   });
 

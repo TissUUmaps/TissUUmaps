@@ -219,7 +219,8 @@ export type ColorConfig =
       false,
       {
         /**
-         * ID of the color palette for mapping hashed group names to colors
+         * ID of the color palette whose colors are assigned to the groups in the
+         * order they first appear in the table column
          *
          * Only used when no project-global colormap is specified
          */

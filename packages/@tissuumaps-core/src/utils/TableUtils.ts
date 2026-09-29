@@ -27,7 +27,8 @@ import { AsyncUtils } from "./AsyncUtils";
  * {@link fillFromTableGroups} fill a typed array with one packed value per
  * item from a table column, one by parsing the cell values and one by mapping
  * their distinct values as groups. IDs that the table does not contain fall
- * back to a default value, with a warning.
+ * back to a default value, with a warning. {@link loadGroupCounts} lists the
+ * groups of a column, for all rows rather than per item.
  */
 export class TableUtils {
   /**
@@ -166,6 +167,38 @@ export class TableUtils {
         `${numMissingIds} IDs missing in column ${column}, using default value`,
       );
     }
+  }
+
+  /**
+   * Loads how many rows of a table each group of a column holds
+   *
+   * Groups are the cell values as strings, as {@link fillFromTableGroups} and
+   * group-to-value maps key them, so values with the same string (e.g. `null`
+   * and `"null"`) form one group.
+   *
+   * @param tableData - The table to load the groups of
+   * @param column - Name of the table column to group by
+   * @param options - Optional abort signal
+   * @returns The row count of every group, in the order the groups first
+   * appear in the column
+   */
+  static async loadGroupCounts(
+    tableData: TableData,
+    column: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<Map<string, number>> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    const uniqueValueCounts = await tableData.loadUniqueValueCounts<unknown>(
+      column,
+      { signal },
+    );
+    const groupCounts = new Map<string, number>();
+    for (const [value, count] of uniqueValueCounts) {
+      const group = String(value);
+      groupCounts.set(group, (groupCounts.get(group) ?? 0) + count);
+    }
+    return groupCounts;
   }
 
   /**
