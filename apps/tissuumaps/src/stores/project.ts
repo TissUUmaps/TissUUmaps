@@ -190,6 +190,8 @@ export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
       clearOpacityMaps: () => set({ opacityMaps: [] }),
       setOSOptions: (osOptions) => set({ osOptions }),
       setGLOptions: (glOptions) => set({ glOptions }),
+      setViewerBackgroundColor: (viewerBackgroundColor) =>
+        set({ viewerBackgroundColor }),
       clear: () => set(createInitialProjectStoreState()),
     })),
     { name: "project", enabled: import.meta.env.DEV },

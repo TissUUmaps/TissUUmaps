@@ -22,6 +22,7 @@ classDiagram
     Project : name
     Project : marker/size/color/visibility/opacity maps
     Project : OpenSeadragon viewer options, WebGL render options
+    Project : viewer background color
     Project "1" *--> "0..*" Layer : layers
     Project "1" *--> "0..*" Image : images
     Project "1" *--> "0..*" Labels : labels

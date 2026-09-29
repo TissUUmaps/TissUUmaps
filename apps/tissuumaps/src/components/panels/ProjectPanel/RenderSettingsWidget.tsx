@@ -1,6 +1,6 @@
-import { RotateCcwIcon } from "lucide-react";
+import { RotateCcwIcon, SquareIcon } from "lucide-react";
 
-import { projectDefaults } from "@tissuumaps/core";
+import { ColorUtils, projectDefaults } from "@tissuumaps/core";
 
 import {
   Collapsible,
@@ -14,6 +14,7 @@ import {
   FieldDescription,
   FieldLabel,
 } from "@/components/common/field";
+import { SimpleColorPicker } from "@/components/common/simple-color-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -26,11 +27,29 @@ export type RenderSettingsWidgetProps = {
 export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
   const glOptions = useProjectStore((state) => state.glOptions);
   const setGLOptions = useProjectStore((state) => state.setGLOptions);
+  const viewerBackgroundColor = useProjectStore(
+    (state) => state.viewerBackgroundColor,
+  );
+  const setViewerBackgroundColor = useProjectStore(
+    (state) => state.setViewerBackgroundColor,
+  );
 
   const { globalPointSizeFactor } = glOptions.pointsRenderOptions;
+  const viewerBackgroundColorHex = ColorUtils.toHex(viewerBackgroundColor);
 
   return (
     <div className={cn("flex flex-col gap-2 pl-6", className)}>
+      <Field className="flex flex-col items-start">
+        <FieldLabel>Viewer background color</FieldLabel>
+        <SimpleColorPicker
+          color={viewerBackgroundColor}
+          onColorChange={setViewerBackgroundColor}
+        >
+          <span className="sr-only">Viewer background color</span>
+          <SquareIcon fill={viewerBackgroundColorHex} />
+          {viewerBackgroundColorHex}
+        </SimpleColorPicker>
+      </Field>
       <Field>
         <FieldLabel>Point size factor</FieldLabel>
         <FieldControl
