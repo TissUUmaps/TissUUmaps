@@ -16,7 +16,6 @@ const appUrl =
   baseUrl === "/"
     ? "http://localhost:5173/"
     : url + baseUrl.replace(/docs\/$/, "");
-const demoUrl = `${appUrl}?project=https://user.it.uu.se/~chrav452/TissUUmaps4/data/heart_cropped/project.json`;
 
 const config: Config = {
   title: "TissUUmaps",
@@ -101,11 +100,6 @@ const config: Config = {
           label: "Live",
           position: "right",
         },
-        {
-          href: demoUrl,
-          label: "Live (demo)",
-          position: "right",
-        },
       ],
     },
     footer: {
@@ -143,10 +137,6 @@ const config: Config = {
             {
               href: appUrl,
               label: "Live",
-            },
-            {
-              href: demoUrl,
-              label: "Live (demo)",
             },
           ],
         },
