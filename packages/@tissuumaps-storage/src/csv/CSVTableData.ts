@@ -1,9 +1,8 @@
-import {
-  type IDArray,
-  MathUtils,
-  type TableColumnQuerySuggestion,
-  type TableData,
-  type TypedArrayOrArray,
+import type {
+  IDArray,
+  TableColumnQuerySuggestion,
+  TableData,
+  TypedArrayOrArray,
 } from "@tissuumaps/core";
 
 export class CSVTableData implements TableData {
@@ -92,34 +91,6 @@ export class CSVTableData implements TableData {
       );
     }
     return Promise.resolve(columnValues as TypedArrayOrArray<T>);
-  }
-
-  async loadUniqueValueCounts<T>(
-    column: string,
-    options?: { signal?: AbortSignal },
-  ): Promise<Map<T, number>> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    const values = await this.loadValues<T>(column);
-    signal?.throwIfAborted(); // loadValues() does not throw on abort
-    return await MathUtils.computeUniqueValueCounts(values, { signal });
-  }
-
-  async loadValueRange(
-    column: string,
-    options?: { signal?: AbortSignal },
-  ): Promise<[number, number] | undefined> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    const values = await this.loadValues(column);
-    signal?.throwIfAborted(); // loadValues() does not throw on abort
-    if (ArrayBuffer.isView(values)) {
-      const [vmin, vmax] = await MathUtils.computeRange(values, { signal });
-      if (vmin < vmax) {
-        return [vmin, vmax];
-      }
-    }
-    return undefined;
   }
 
   close(): void {}

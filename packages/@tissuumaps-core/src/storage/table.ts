@@ -75,13 +75,17 @@ export interface TableData extends ItemsData {
   /**
    * Loads the number of rows per unique value of a column
    *
+   * Only implemented by table data that can count the values more cheaply
+   * than by loading the column (e.g. from file metadata); otherwise, callers
+   * count the values loaded by {@link loadValues}.
+   *
    * @typeParam T - Element type of the column
    * @param column - The column name
    * @param options - Optional abort signal and progress callback
    * @returns The row count of every unique column value, keyed by value, in the
    * order the values first appear
    */
-  loadUniqueValueCounts<T>(
+  loadUniqueValueCounts?<T>(
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
   ): Promise<Map<T, number>>;
@@ -89,11 +93,15 @@ export interface TableData extends ItemsData {
   /**
    * Loads a column's minimum and maximum values
    *
+   * Only implemented by table data that can determine the range more cheaply
+   * than by loading the column (e.g. from file metadata); otherwise, callers
+   * compute the range of the values loaded by {@link loadValues}.
+   *
    * @param column - The column name
    * @param options - Optional abort signal and progress callback
    * @returns The numeric [min, max] value range of the column, or `undefined` if not numeric
    */
-  loadValueRange(
+  loadValueRange?(
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
   ): Promise<[number, number] | undefined>;

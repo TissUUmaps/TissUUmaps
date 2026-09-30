@@ -8,6 +8,7 @@ import {
   type GroupValueMap,
   HashUtils,
   type IDArray,
+  MathUtils,
   type TableData,
   colorPalettes,
   defaultRandomSeed,
@@ -27,7 +28,9 @@ function createMockTableData(
     close: vi.fn(),
     loadValues: vi.fn().mockResolvedValue(values),
     loadValueRange: vi.fn().mockResolvedValue(valueRange),
-    loadUniqueValueCounts: vi.fn(),
+    loadUniqueValueCounts: vi
+      .fn()
+      .mockImplementation(() => MathUtils.computeUniqueValueCounts(values)),
     suggestColumnQueries: vi.fn(),
     resolveColumnQuery: vi.fn(),
   };
@@ -361,12 +364,12 @@ describe("ColorResolver", () => {
       expect(loadTable).not.toHaveBeenCalled();
     });
 
-    it("hashes group names through the palette when only a palette is given", async () => {
+    it("assigns the palette colors by group position when only a palette is given", async () => {
       // resolveColorsFromTableGroups looks palettes up in the built-in
       // colorPalettes, rather than in a parameter
       const builtInPalette = colorPalettes[0]!;
-      const ids = new Uint32Array([1, 2]);
-      const data = createMockTableData(ids, ["groupA", "groupB"]);
+      const ids = new Uint32Array([1, 2, 3]);
+      const data = createMockTableData(ids, ["groupB", "groupA", "groupB"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = {
         groupBy: { column: "col1", map: undefined, palette: builtInPalette.id },
@@ -380,21 +383,15 @@ describe("ColorResolver", () => {
         loadTable,
       );
 
-      // Colors are deterministically hash-picked from the palette
-      expect(packedColors[0]).toBe(
-        ColorResolver.packColor(
-          builtInPalette.colors[
-            HashUtils.hash("groupA") % builtInPalette.colors.length
-          ]!,
-        ),
+      // the groups take the palette colors in the order they first appear
+      const [firstColor, secondColor] = builtInPalette.colors.map((color) =>
+        ColorResolver.packColor(color),
       );
-      expect(packedColors[1]).toBe(
-        ColorResolver.packColor(
-          builtInPalette.colors[
-            HashUtils.hash("groupB") % builtInPalette.colors.length
-          ]!,
-        ),
-      );
+      expect(Array.from(packedColors)).toEqual([
+        firstColor,
+        secondColor,
+        firstColor,
+      ]);
     });
 
     it("returns uniform default color when a palette is specified but not found", async () => {

@@ -1,10 +1,9 @@
-import {
-  type IDArray,
-  MathUtils,
-  type ProgressCallback,
-  type TableColumnQuerySuggestion,
-  type TableData,
-  type TypedArrayOrArray,
+import type {
+  IDArray,
+  ProgressCallback,
+  TableColumnQuerySuggestion,
+  TableData,
+  TypedArrayOrArray,
 } from "@tissuumaps/core";
 
 import { ColumnQueryUtils } from "./ColumnQueryUtils";
@@ -88,16 +87,6 @@ export abstract class HierarchicalTableDataBase implements TableData {
       signal,
     });
     return data as TypedArrayOrArray<T>;
-  }
-
-  async loadUniqueValueCounts<T>(
-    column: string,
-    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<Map<T, number>> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    const values = await this.loadValues<T>(column, { signal });
-    return await MathUtils.computeUniqueValueCounts(values, { signal });
   }
 
   loadValueRange(

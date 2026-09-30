@@ -1,7 +1,6 @@
 import {
   AsyncUtils,
   type IDArray,
-  MathUtils,
   type ProgressCallback,
   type TableColumnQuerySuggestion,
   type TableData,
@@ -142,16 +141,6 @@ export class ParquetTableData implements TableData {
       this._coordinates.set(geometryColumn, coordinates);
     }
     return coordinates;
-  }
-
-  async loadUniqueValueCounts<T>(
-    column: string,
-    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<Map<T, number>> {
-    const { signal, onProgress } = options ?? {};
-    signal?.throwIfAborted();
-    const values = await this.loadValues<T>(column, { signal, onProgress });
-    return await MathUtils.computeUniqueValueCounts(values, { signal });
   }
 
   async loadValueRange(

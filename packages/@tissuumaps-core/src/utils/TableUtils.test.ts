@@ -10,11 +10,17 @@ import { TableUtils } from "./TableUtils";
  */
 function createMockTableData(
   ids: IDArray,
-  values: unknown[] = [],
+  values: unknown[] | Float32Array = [],
   valueRange?: [number, number],
-): { data: TableData; loadValues: Mock; loadValueRange: Mock } {
+): {
+  data: TableData;
+  loadValues: Mock;
+  loadValueRange: Mock;
+  loadUniqueValueCounts: Mock;
+} {
   const loadValues = vi.fn().mockResolvedValue(values);
   const loadValueRange = vi.fn().mockResolvedValue(valueRange);
+  const loadUniqueValueCounts = vi.fn();
   return {
     data: {
       getIds: () => ids,
@@ -23,12 +29,13 @@ function createMockTableData(
       close: vi.fn(),
       loadValues,
       loadValueRange,
-      loadUniqueValueCounts: vi.fn(),
+      loadUniqueValueCounts,
       suggestColumnQueries: vi.fn(),
       resolveColumnQuery: vi.fn(),
     },
     loadValues,
     loadValueRange,
+    loadUniqueValueCounts,
   };
 }
 
@@ -358,6 +365,105 @@ describe("TableUtils", () => {
         ),
       ).rejects.toThrow();
       expect(loadValues).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("loadGroupCounts", () => {
+    it("merges values with the same string, in order of first appearance", async () => {
+      const { data, loadUniqueValueCounts } = createMockTableData(
+        new Uint32Array([1, 2, 3, 4]),
+      );
+      loadUniqueValueCounts.mockResolvedValue(
+        new Map<unknown, number>([
+          [2, 1],
+          [null, 2],
+          ["2", 3],
+          ["null", 4],
+        ]),
+      );
+
+      await expect(TableUtils.loadGroupCounts(data, "col1")).resolves.toEqual(
+        new Map([
+          ["2", 4],
+          ["null", 6],
+        ]),
+      );
+      expect(loadUniqueValueCounts).toHaveBeenCalledWith("col1", {
+        signal: undefined,
+      });
+    });
+  });
+
+  describe("loadUniqueValueCounts", () => {
+    it("uses the table's counts if it provides them", async () => {
+      const { data, loadValues, loadUniqueValueCounts } = createMockTableData(
+        new Uint32Array([1, 2]),
+      );
+      const counts = new Map([["a", 2]]);
+      loadUniqueValueCounts.mockResolvedValue(counts);
+
+      await expect(
+        TableUtils.loadUniqueValueCounts(data, "col1"),
+      ).resolves.toBe(counts);
+      expect(loadUniqueValueCounts).toHaveBeenCalledWith("col1", undefined);
+      expect(loadValues).not.toHaveBeenCalled();
+    });
+
+    it("counts the loaded values otherwise", async () => {
+      const { data, loadValues } = createMockTableData(
+        new Uint32Array([1, 2, 3]),
+        ["b", "a", "b"],
+      );
+      delete data.loadUniqueValueCounts;
+
+      await expect(
+        TableUtils.loadUniqueValueCounts(data, "col1"),
+      ).resolves.toEqual(
+        new Map([
+          ["b", 2],
+          ["a", 1],
+        ]),
+      );
+      expect(loadValues).toHaveBeenCalledWith("col1", undefined);
+    });
+  });
+
+  describe("loadValueRange", () => {
+    it("uses the table's value range if it provides one", async () => {
+      const { data, loadValues, loadValueRange } = createMockTableData(
+        new Uint32Array([1, 2]),
+        new Float32Array([0, 1]),
+        [-5, 5],
+      );
+
+      await expect(TableUtils.loadValueRange(data, "col1")).resolves.toEqual([
+        -5, 5,
+      ]);
+      expect(loadValueRange).toHaveBeenCalledWith("col1", undefined);
+      expect(loadValues).not.toHaveBeenCalled();
+    });
+
+    it("computes the range of the loaded values otherwise", async () => {
+      const { data, loadValues } = createMockTableData(
+        new Uint32Array([1, 2, 3]),
+        new Float32Array([2, -1, 3]),
+      );
+      delete data.loadValueRange;
+
+      await expect(TableUtils.loadValueRange(data, "col1")).resolves.toEqual([
+        -1, 3,
+      ]);
+      expect(loadValues).toHaveBeenCalledWith("col1", undefined);
+    });
+  });
+  describe("computeValueRange", () => {
+    it("returns undefined for non-numeric and constant values", async () => {
+      await expect(
+        TableUtils.computeValueRange(["a", "b"]),
+      ).resolves.toBeUndefined();
+      await expect(
+        TableUtils.computeValueRange(new Float32Array([1, 1])),
+      ).resolves.toBeUndefined();
     });
   });
 

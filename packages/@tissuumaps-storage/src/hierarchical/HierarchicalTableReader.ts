@@ -1,8 +1,4 @@
-import {
-  MathUtils,
-  type TypedArray,
-  type TypedArrayOrArray,
-} from "@tissuumaps/core";
+import { TableUtils, type TypedArrayOrArray } from "@tissuumaps/core";
 
 import { ColumnQueryUtils } from "./ColumnQueryUtils";
 import type {
@@ -144,13 +140,7 @@ export class HierarchicalTableReader implements HierarchicalTable {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const values = await this.readColumn(query, options);
-    if (typeof values[0] !== "number") {
-      return undefined;
-    }
-    const [vmin, vmax] = await MathUtils.computeRange(values as TypedArray, {
-      signal,
-    });
-    return vmin < vmax ? [vmin, vmax] : undefined;
+    return await TableUtils.computeValueRange(values, { signal });
   }
 
   /** Closes the store */

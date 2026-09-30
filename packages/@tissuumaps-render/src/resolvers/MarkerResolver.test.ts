@@ -2,10 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   type GroupValueMap,
-  HashUtils,
   type IDArray,
   Marker,
   type MarkerConfig,
+  MathUtils,
   type TableData,
   markerPalette,
 } from "@tissuumaps/core";
@@ -20,7 +20,9 @@ function createMockTableData(ids: IDArray, values: unknown[]): TableData {
     close: vi.fn(),
     loadValues: vi.fn().mockResolvedValue(values),
     loadValueRange: vi.fn().mockResolvedValue(undefined),
-    loadUniqueValueCounts: vi.fn(),
+    loadUniqueValueCounts: vi
+      .fn()
+      .mockImplementation(() => MathUtils.computeUniqueValueCounts(values)),
     suggestColumnQueries: vi.fn(),
     resolveColumnQuery: vi.fn(),
   };
@@ -219,9 +221,9 @@ describe("MarkerResolver", () => {
       expect(loadTable).not.toHaveBeenCalled();
     });
 
-    it("hashes group names through the marker palette when no map is given", async () => {
-      const ids = new Uint32Array([1, 2]);
-      const data = createMockTableData(ids, ["groupA", "groupB"]);
+    it("assigns the marker palette by group position when no map is given", async () => {
+      const ids = new Uint32Array([1, 2, 3]);
+      const data = createMockTableData(ids, ["groupB", "groupA", "groupB"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = {
         groupBy: { column: "col1", map: undefined },
@@ -235,12 +237,12 @@ describe("MarkerResolver", () => {
         loadTable,
       );
 
-      expect(packedMarkers[0]).toBe(
-        markerPalette[HashUtils.hash("groupA") % markerPalette.length],
-      );
-      expect(packedMarkers[1]).toBe(
-        markerPalette[HashUtils.hash("groupB") % markerPalette.length],
-      );
+      // the groups take the palette markers in the order they first appear
+      expect(Array.from(packedMarkers)).toEqual([
+        markerPalette[0],
+        markerPalette[1],
+        markerPalette[0],
+      ]);
     });
   });
 

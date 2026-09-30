@@ -8,7 +8,6 @@ import {
   isGroupByConfig,
 } from "../model/configs";
 import type { CoordinateSpace, GroupValueMap } from "../model/primitives";
-import { HashUtils } from "./HashUtils";
 
 /** Utility methods for property configurations */
 export class ConfigUtils {
@@ -65,15 +64,19 @@ export class ConfigUtils {
    *
    * With a map, a group takes its value in the map, else the map's default,
    * else `defaultValue`; a map that does not exist gives every group
-   * `defaultValue`. Without a map, a group takes the palette value its name
-   * hashes to, or `defaultValue` if there is no palette.
+   * `defaultValue`. Without a map, the groups take the palette values in
+   * order, cycling through the palette if there are more groups than values;
+   * a group that is not listed, or every group if there is no palette, takes
+   * `defaultValue`.
    *
    * @param config - The group-by configuration
    * @param map - The map the configuration refers to (see
    * {@link findGroupByMap}), or `undefined` if it refers to none or the map
    * does not exist
    * @param defaultValue - The value of a group that nothing assigns one to
-   * @param palette - The values to pick from by hash if there is no map
+   * @param palette - The values to assign to the groups if there is no map
+   * @param groups - All groups of the column the configuration groups by, in
+   * the order they take the palette values (see `TableUtils.loadGroupCounts`)
    * @returns The value of a group, by group name (the cell value as a string)
    */
   static createGroupValueGetter<TValue>(
@@ -81,6 +84,7 @@ export class ConfigUtils {
     map: GroupValueMap<TValue> | undefined,
     defaultValue: TValue,
     palette?: readonly TValue[],
+    groups?: Iterable<string>,
   ): (group: string) => TValue {
     if (config.groupBy.map !== undefined) {
       if (map === undefined) {
@@ -90,10 +94,16 @@ export class ConfigUtils {
       const mapDefault = map.default ?? defaultValue;
       return (group) => values.get(group) ?? mapDefault;
     }
-    if (palette === undefined || palette.length === 0) {
+    if (palette === undefined || palette.length === 0 || groups === undefined) {
       return () => defaultValue;
     }
-    return (group) => palette[HashUtils.hash(group) % palette.length]!;
+    const paletteValues = new Map<string, TValue>();
+    for (const group of groups) {
+      if (!paletteValues.has(group)) {
+        paletteValues.set(group, palette[paletteValues.size % palette.length]!);
+      }
+    }
+    return (group) => paletteValues.get(group) ?? defaultValue;
   }
 
   /**

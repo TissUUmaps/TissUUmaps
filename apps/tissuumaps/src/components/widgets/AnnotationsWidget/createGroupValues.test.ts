@@ -97,6 +97,17 @@ describe("createGroupValues", () => {
     });
   });
 
+  it("assigns the palette by group position without a map", () => {
+    const property = createProperty({
+      groupBy: { column: "cluster", map: undefined },
+    });
+
+    const groupValues = createGroupValues(groupTable, property)!;
+
+    expect(groupValues.getValue("A")).toBe(10);
+    expect(groupValues.getValue("B")).toBe(20);
+  });
+
   it("shows the value of a constant property for every group", () => {
     const property = createProperty({ constant: { value: 5 } });
 
