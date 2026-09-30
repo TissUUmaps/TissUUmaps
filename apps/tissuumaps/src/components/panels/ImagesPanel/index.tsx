@@ -9,7 +9,7 @@ import {
   SortableObjectListItem,
 } from "@/components/widgets/ObjectList";
 import { useImageData } from "@/hooks/useData";
-import { useExpandedObjectIds } from "@/hooks/useExpandedObjectIds";
+import { useExpandedImageIds } from "@/hooks/useExpandedIds";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -18,11 +18,13 @@ import { ChannelSettingsWidget } from "./ChannelSettingsWidget";
 import { ImageSettingsWidget } from "./ImageSettingsWidget";
 
 export type ImagesPanelProps = {
+  /** Brings the panel to the front */
+  onShow: () => void;
   className?: string;
 };
 
-export function ImagesPanel({ className }: ImagesPanelProps) {
-  const [expandedIds, setExpandedIds] = useExpandedObjectIds("images");
+export function ImagesPanel({ onShow, className }: ImagesPanelProps) {
+  const [expandedIds, setExpandedIds] = useExpandedImageIds(onShow);
   const imageDataProviders = useAppStore((state) => state.imageDataProviders);
 
   const layers = useProjectStore((state) => state.layers);

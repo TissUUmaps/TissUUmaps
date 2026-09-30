@@ -3,4 +3,4 @@
 "tissuumaps": minor
 ---
 
-Plugins can show the settings of a project object: `appStore.getState().focusObject({ kind, id })` brings the panel of the object's collection to the front and expands the object's settings. Adds `AppStoreActions.focusObject`, `AppStoreState.focusedObject` and the `FocusedObject` type.
+Plugins can show the settings of an image, labels, points or shapes: `appStore.getState().showImageSettings(imageId)` brings the Images panel to the front and expands the image's settings, and `showLabelsSettings`, `showPointsSettings` and `showShapesSettings` do the same for the other panels. Adds these actions and the `imageSettingsRequest`, `labelsSettingsRequest`, `pointsSettingsRequest` and `shapesSettingsRequest` app store state.

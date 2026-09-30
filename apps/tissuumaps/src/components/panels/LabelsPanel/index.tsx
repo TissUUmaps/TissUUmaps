@@ -10,7 +10,7 @@ import {
   SortableObjectList,
   SortableObjectListItem,
 } from "@/components/widgets/ObjectList";
-import { useExpandedObjectIds } from "@/hooks/useExpandedObjectIds";
+import { useExpandedLabelsIds } from "@/hooks/useExpandedIds";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -20,11 +20,13 @@ import { LabelsSettingsWidget } from "./LabelsSettingsWidget";
 import type { LabelsSettingsCategory } from "./category";
 
 export type LabelsPanelProps = {
+  /** Brings the panel to the front */
+  onShow: () => void;
   className?: string;
 };
 
-export function LabelsPanel({ className }: LabelsPanelProps) {
-  const [expandedIds, setExpandedIds] = useExpandedObjectIds("labels");
+export function LabelsPanel({ onShow, className }: LabelsPanelProps) {
+  const [expandedIds, setExpandedIds] = useExpandedLabelsIds(onShow);
   const labelsDataProviders = useAppStore((state) => state.labelsDataProviders);
 
   const layers = useProjectStore((state) => state.layers);

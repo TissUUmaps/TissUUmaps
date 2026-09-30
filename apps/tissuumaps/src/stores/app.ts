@@ -26,7 +26,14 @@ export const appStore: AppStoreApi = createStore<AppStore>()(
       setProjectOpen: (projectOpen) => set({ projectOpen }),
       setHighlightedItemGroup: (highlightedItemGroup) =>
         set({ highlightedItemGroup }),
-      focusObject: (focusedObject) => set({ focusedObject }),
+      showImageSettings: (imageId) =>
+        set({ imageSettingsRequest: { imageId } }),
+      showLabelsSettings: (labelsId) =>
+        set({ labelsSettingsRequest: { labelsId } }),
+      showPointsSettings: (pointsId) =>
+        set({ pointsSettingsRequest: { pointsId } }),
+      showShapesSettings: (shapesId) =>
+        set({ shapesSettingsRequest: { shapesId } }),
       registerImageDataProvider: (type, dataProvider) =>
         set((draft) => {
           draft.imageDataProviders.set(type, dataProvider);
@@ -79,6 +86,9 @@ function createInitialAppStoreState(): AppStoreState {
     shapesDataProviders: new Map(),
     tableDataProviders: new Map(),
     plugins: new Map(),
-    focusedObject: null,
+    imageSettingsRequest: null,
+    labelsSettingsRequest: null,
+    pointsSettingsRequest: null,
+    shapesSettingsRequest: null,
   };
 }

@@ -38,15 +38,6 @@ export type HighlightedItemGroup = {
   group: string;
 };
 
-/** A project object, by the collection it belongs to and its ID */
-export type FocusedObject = {
-  /** The collection of the object */
-  kind: "images" | "labels" | "points" | "shapes";
-
-  /** ID of the object */
-  id: string;
-};
-
 /**
  * The state of the app store, holding what is not part of the project
  */
@@ -117,13 +108,40 @@ export type AppStoreState = {
   >;
 
   /**
-   * The project object whose settings are to be brought to the front, or
-   * `null` if none is pending
+   * The latest request to show the settings of an image, or `null` if there has
+   * been none
    *
-   * Set by {@link AppStoreActions.focusObject}, and cleared by the application
-   * once the object's settings have been brought to the front.
+   * Set by {@link AppStoreActions.showImageSettings} to a new object on every call, so
+   * that a repeated request for the same image is a change too.
    */
-  focusedObject: FocusedObject | null;
+  imageSettingsRequest: { imageId: string } | null;
+
+  /**
+   * The latest request to show the settings of labels, or `null` if there has
+   * been none
+   *
+   * Set by {@link AppStoreActions.showLabelsSettings} to a new object on every call, so
+   * that a repeated request for the same labels is a change too.
+   */
+  labelsSettingsRequest: { labelsId: string } | null;
+
+  /**
+   * The latest request to show the settings of points, or `null` if there has
+   * been none
+   *
+   * Set by {@link AppStoreActions.showPointsSettings} to a new object on every call, so
+   * that a repeated request for the same points is a change too.
+   */
+  pointsSettingsRequest: { pointsId: string } | null;
+
+  /**
+   * The latest request to show the settings of shapes, or `null` if there has
+   * been none
+   *
+   * Set by {@link AppStoreActions.showShapesSettings} to a new object on every call, so
+   * that a repeated request for the same shapes is a change too.
+   */
+  shapesSettingsRequest: { shapesId: string } | null;
 };
 
 /**
@@ -177,12 +195,36 @@ export type AppStoreActions = {
   ) => void;
 
   /**
-   * Brings the settings of a project object to the front: the panel of its
-   * collection is activated and the object's settings are expanded
+   * Shows the settings of an image: the Images panel is brought to the front
+   * and the settings are expanded
    *
-   * @param focusedObject - The object whose settings to show
+   * @param imageId - ID of the image whose settings to show
    */
-  focusObject: (focusedObject: FocusedObject) => void;
+  showImageSettings: (imageId: string) => void;
+
+  /**
+   * Shows the settings of labels: the Labels panel is brought to the front
+   * and the settings are expanded
+   *
+   * @param labelsId - ID of the labels whose settings to show
+   */
+  showLabelsSettings: (labelsId: string) => void;
+
+  /**
+   * Shows the settings of points: the Points panel is brought to the front
+   * and the settings are expanded
+   *
+   * @param pointsId - ID of the points whose settings to show
+   */
+  showPointsSettings: (pointsId: string) => void;
+
+  /**
+   * Shows the settings of shapes: the Shapes panel is brought to the front
+   * and the settings are expanded
+   *
+   * @param shapesId - ID of the shapes whose settings to show
+   */
+  showShapesSettings: (shapesId: string) => void;
 
   /**
    * Registers an image data provider

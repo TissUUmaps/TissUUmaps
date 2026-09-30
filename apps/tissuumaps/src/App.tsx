@@ -1,6 +1,7 @@
 import {
   type DockviewApi,
   DockviewDefaultTab,
+  type DockviewPanelApi,
   DockviewReact,
   type DockviewReadyEvent,
   type DockviewTheme,
@@ -13,7 +14,6 @@ import { type ReactNode, useLayoutEffect, useState } from "react";
 
 import { IconButton } from "@/components/common/icon-button";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useFocusedObjectPanel } from "@/hooks/useFocusedObjectPanel";
 import { getPluginPanelId, usePluginPanels } from "@/hooks/usePluginPanels";
 
 import "./App.css";
@@ -54,6 +54,15 @@ function ScrollablePanelContent({ children }: { children: ReactNode }) {
   );
 }
 
+/** Brings a dockview panel to the front */
+function showPanel(api: DockviewPanelApi): void {
+  // dockview re-opens a panel that is activated while already active, which
+  // re-attaches its content and resets the scroll positions within
+  if (!api.isActive) {
+    api.setActive();
+  }
+}
+
 /** The panels that can be shown in the dockview layout, by component name */
 const dockviewComponents = {
   ViewerPanel: () => <ViewerPanel className="size-full" />,
@@ -66,24 +75,24 @@ const dockviewComponents = {
       />
     </ScrollablePanelContent>
   ),
-  ImagesPanel: () => (
+  ImagesPanel: (props: IDockviewPanelProps) => (
     <ScrollablePanelContent>
-      <ImagesPanel />
+      <ImagesPanel onShow={() => showPanel(props.api)} />
     </ScrollablePanelContent>
   ),
-  LabelsPanel: () => (
+  LabelsPanel: (props: IDockviewPanelProps) => (
     <ScrollablePanelContent>
-      <LabelsPanel />
+      <LabelsPanel onShow={() => showPanel(props.api)} />
     </ScrollablePanelContent>
   ),
-  PointsPanel: () => (
+  PointsPanel: (props: IDockviewPanelProps) => (
     <ScrollablePanelContent>
-      <PointsPanel />
+      <PointsPanel onShow={() => showPanel(props.api)} />
     </ScrollablePanelContent>
   ),
-  ShapesPanel: () => (
+  ShapesPanel: (props: IDockviewPanelProps) => (
     <ScrollablePanelContent>
-      <ShapesPanel />
+      <ShapesPanel onShow={() => showPanel(props.api)} />
     </ScrollablePanelContent>
   ),
   TablesPanel: () => (
@@ -235,7 +244,6 @@ export function App() {
 
   // The panels contributed by plugins join the group of the project panel
   usePluginPanels(dockviewApi, PanelId.project);
-  useFocusedObjectPanel(dockviewApi);
 
   // Before paint, so that React never renders a light frame in dark mode
   // https://tailwindcss.com/docs/dark-mode
