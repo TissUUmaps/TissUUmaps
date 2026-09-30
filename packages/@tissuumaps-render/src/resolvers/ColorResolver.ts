@@ -222,7 +222,7 @@ export class ColorResolver {
     const data = await loadTable(config.from.table, { signal });
     const valueRange =
       config.from.range ??
-      (await data.loadValueRange(config.from.column, { signal }));
+      (await TableUtils.loadValueRange(data, config.from.column, { signal }));
     const packedColors = ColorResolver.createColorBuffer(ids.length, { align });
     await TableUtils.fillFromTableValues(
       packedColors,

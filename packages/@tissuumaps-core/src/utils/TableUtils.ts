@@ -1,6 +1,8 @@
 import type { TableData } from "../storage/table";
-import type { IDArray, TypedArray } from "../types/arrays";
+import type { IDArray, TypedArray, TypedArrayOrArray } from "../types/arrays";
+import type { ProgressCallback } from "../types/callbacks";
 import { AsyncUtils } from "./AsyncUtils";
+import { MathUtils } from "./MathUtils";
 
 /**
  * Lookups into tabular data (`TableData`) by item ID
@@ -170,6 +172,52 @@ export class TableUtils {
   }
 
   /**
+   * Loads the range of a table column's numeric values
+   *
+   * Uses the table's own value range if it provides one, and otherwise
+   * computes the range of the loaded column values (see
+   * {@link computeValueRange}).
+   *
+   * @param tableData - The table to load the value range of
+   * @param column - Name of the table column
+   * @param options - Optional abort signal and progress callback
+   * @returns The column's minimum and maximum value, or `undefined` if the
+   * column is not numeric
+   */
+  static async loadValueRange(
+    tableData: TableData,
+    column: string,
+    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
+  ): Promise<[number, number] | undefined> {
+    if (tableData.loadValueRange !== undefined) {
+      return await tableData.loadValueRange(column, options);
+    }
+    const values = await tableData.loadValues<unknown>(column, options);
+    return await TableUtils.computeValueRange(values, options);
+  }
+
+  /**
+   * Computes the range of loaded table column values
+   *
+   * @param values - The column values
+   * @param options - Optional abort signal
+   * @returns The minimum and maximum value, or `undefined` if the values are
+   * not numeric or hold no two distinct finite values
+   */
+  static async computeValueRange(
+    values: TypedArrayOrArray<unknown>,
+    options?: { signal?: AbortSignal },
+  ): Promise<[number, number] | undefined> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    if (!ArrayBuffer.isView(values)) {
+      return undefined;
+    }
+    const [vmin, vmax] = await MathUtils.computeRange(values, { signal });
+    return vmin < vmax ? [vmin, vmax] : undefined;
+  }
+
+  /**
    * Loads how many rows of a table each group of a column holds
    *
    * Groups are the cell values as strings, as {@link fillFromTableGroups} and
@@ -189,7 +237,8 @@ export class TableUtils {
   ): Promise<Map<string, number>> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const uniqueValueCounts = await tableData.loadUniqueValueCounts<unknown>(
+    const uniqueValueCounts = await TableUtils.loadUniqueValueCounts<unknown>(
+      tableData,
       column,
       { signal },
     );
@@ -199,6 +248,31 @@ export class TableUtils {
       groupCounts.set(group, (groupCounts.get(group) ?? 0) + count);
     }
     return groupCounts;
+  }
+
+  /**
+   * Loads the number of rows per unique value of a table column
+   *
+   * Uses the table's own counts if it provides them, and otherwise counts the
+   * loaded column values (see `MathUtils.computeUniqueValueCounts`).
+   *
+   * @typeParam T - Element type of the column
+   * @param tableData - The table to load the unique value counts of
+   * @param column - Name of the table column
+   * @param options - Optional abort signal and progress callback
+   * @returns The row count of every unique column value, keyed by value, in the
+   * order the values first appear
+   */
+  static async loadUniqueValueCounts<T>(
+    tableData: TableData,
+    column: string,
+    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
+  ): Promise<Map<T, number>> {
+    if (tableData.loadUniqueValueCounts !== undefined) {
+      return await tableData.loadUniqueValueCounts<T>(column, options);
+    }
+    const values = await tableData.loadValues<T>(column, options);
+    return await MathUtils.computeUniqueValueCounts(values, options);
   }
 
   /**

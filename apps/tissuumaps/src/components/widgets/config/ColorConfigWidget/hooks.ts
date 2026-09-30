@@ -4,6 +4,7 @@ import {
   type Color,
   type ColorConfig,
   type TableColumnRef,
+  TableUtils,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -177,10 +178,11 @@ export function useColorConfigWidget(
       tableData !== null
     ) {
       const abortController = new AbortController();
-      tableData
-        .loadValueRange(state.currentFromTableColumn.column, {
-          signal: abortController.signal,
-        })
+      TableUtils.loadValueRange(
+        tableData,
+        state.currentFromTableColumn.column,
+        { signal: abortController.signal },
+      )
         .then((valueRange) => {
           if (!abortController.signal.aborted) {
             setFromColumnValueRange(valueRange ?? null);
