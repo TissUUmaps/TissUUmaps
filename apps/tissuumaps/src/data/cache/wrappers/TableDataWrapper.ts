@@ -1,10 +1,9 @@
-import {
-  type IDArray,
-  MathUtils,
-  type ProgressCallback,
-  type TableColumnQuerySuggestion,
-  type TableData,
-  type TypedArrayOrArray,
+import type {
+  IDArray,
+  ProgressCallback,
+  TableColumnQuerySuggestion,
+  TableData,
+  TypedArrayOrArray,
 } from "@tissuumaps/core";
 
 import { SharedOperation } from "../SharedOperation";
@@ -106,9 +105,6 @@ export class TableDataWrapper
    * Loads a column's unique value counts, sharing one load operation per
    * column between all callers
    *
-   * The counts are computed from the shared column values (see
-   * {@link loadValues}), so the column is only loaded once.
-   *
    * @param column - The name of the column to load the unique value counts of
    * @param options - Optional abort signal and progress callback
    * @returns A promise that resolves to the row count of every unique value of
@@ -123,11 +119,8 @@ export class TableDataWrapper
     }
     let op = this._loadUniqueValueCountsOps.get(column);
     if (op === undefined || op.failed) {
-      const newOp = new SharedOperation(async (opts) =>
-        MathUtils.computeUniqueValueCounts(
-          await this.loadValues(column, opts),
-          opts,
-        ),
+      const newOp = new SharedOperation((opts) =>
+        this.data.loadUniqueValueCounts(column, opts),
       );
       newOp.signal.addEventListener(
         "abort",
