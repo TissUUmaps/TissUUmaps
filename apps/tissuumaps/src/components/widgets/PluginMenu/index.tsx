@@ -14,7 +14,7 @@ import { useAppStore } from "@/stores/app";
 import { useLoadPluginFromFile, useLoadPluginFromURL } from "./hooks";
 
 export type PluginMenuProps = {
-  onShowPlugin?: (pluginId: string) => void;
+  onShowPlugin: (pluginId: string) => void;
   className?: string;
 };
 
@@ -23,7 +23,7 @@ export type PluginMenuProps = {
  * followed by the options for loading a third-party plugin
  *
  * Picking a plugin mounts it, which shows its panel; picking one that is
- * already mounted calls `onShowPlugin` instead, if given, to show its panel.
+ * already mounted calls `onShowPlugin` instead, to show its panel.
  */
 export function PluginMenu({ onShowPlugin, className }: PluginMenuProps) {
   const plugins = useAppStore((state) => state.plugins);
@@ -52,7 +52,7 @@ export function PluginMenu({ onShowPlugin, className }: PluginMenuProps) {
               key={pluginId}
               onClick={() => {
                 if (plugin.container !== undefined) {
-                  onShowPlugin?.(pluginId);
+                  onShowPlugin(pluginId);
                 } else {
                   pluginRegistry.mountPlugin(pluginId);
                 }

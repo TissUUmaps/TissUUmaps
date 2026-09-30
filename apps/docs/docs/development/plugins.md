@@ -62,8 +62,8 @@ exported from `@tissuumaps/core`, and `window.tissuumaps` is typed as
 
 Instead of registering itself, a plugin can be loaded by the user, through the
 plugins menu in the tab bar: _Load plugin from file…_ picks a local file, and
-_Load plugin from URL…_ asks for a URL. Such a plugin is an ES module whose
-default export is the plugin:
+_Load plugin from URL…_ asks for a URL, absolute or relative to the page. Such a
+plugin is an ES module whose default export is the plugin:
 
 ```javascript
 export default {
@@ -76,9 +76,12 @@ export default {
 ```
 
 TissUUmaps registers the default export, which sets the plugin up, and opens the
-plugin's panel right away if it has a `mount`. A module without a default export
-is only run, so a script that registers itself through `window.tissuumaps`, as
-shown above, can be loaded the same way.
+plugin's panel right away if it has a `mount`. The default export is required:
+loading a module without one fails, even if the module registers a plugin
+through `window.tissuumaps` when it runs — that plugin then stays registered,
+but is not opened. Self-registration, as shown above, is meant for scripts
+included in the page, such as a `<script>` added to `index.html`; a module that
+is to be loaded through the plugins menu exports its plugin instead.
 
 - A module loaded from a URL on another origin has to be served with
   [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS) headers,

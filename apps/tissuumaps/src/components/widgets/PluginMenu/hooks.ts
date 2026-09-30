@@ -43,9 +43,7 @@ export function useLoadPluginFromFile(): () => void {
       }
       try {
         const pluginId = await loadPluginFromFile(file);
-        if (pluginId !== null) {
-          pluginRegistry.mountPlugin(pluginId);
-        }
+        pluginRegistry.mountPlugin(pluginId);
       } catch (error) {
         console.error(`Failed to load plugin from ${file.name}`, error);
         await alert({
@@ -75,7 +73,7 @@ export function useLoadPluginFromURL(): () => void {
       title: "Load plugin from URL",
       body: pluginTrustWarning,
       actionLabel: "Load",
-      inputProps: { type: "url", required: true },
+      inputProps: { required: true },
     }).then(async (value) => {
       const pluginUrl = value?.trim();
       if (!pluginUrl) {
@@ -83,9 +81,7 @@ export function useLoadPluginFromURL(): () => void {
       }
       try {
         const pluginId = await loadPluginFromURL(pluginUrl);
-        if (pluginId !== null) {
-          pluginRegistry.mountPlugin(pluginId);
-        }
+        pluginRegistry.mountPlugin(pluginId);
       } catch (error) {
         console.error(`Failed to load plugin from ${pluginUrl}`, error);
         await alert({

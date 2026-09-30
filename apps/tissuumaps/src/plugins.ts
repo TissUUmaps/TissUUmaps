@@ -203,14 +203,14 @@ export function enableBuiltInPlugins(): void {
  * relative imports cannot be resolved.
  *
  * @param file - The module file
- * @returns The ID of the registered plugin, or `null` for a module without a
- * default export
- * @throws If the module cannot be loaded or run, if its default export is not a
- * plugin, or if the plugin's `setup` throws
+ * @returns The ID of the registered plugin
+ * @throws Error if the module cannot be loaded or run, if it has no default
+ * export or its default export is not a plugin, or if the plugin's `setup`
+ * throws
  */
-export async function loadPluginFromFile(file: File): Promise<string | null> {
+export async function loadPluginFromFile(file: File): Promise<string> {
   // a module is only run with a JavaScript MIME type, which a file may lack
-  const blob = new Blob([await file.text()], { type: "text/javascript" });
+  const blob = new Blob([file], { type: "text/javascript" });
   const url = URL.createObjectURL(blob);
   try {
     return await loadPluginFromURL(url);
@@ -223,35 +223,40 @@ export async function loadPluginFromFile(file: File): Promise<string | null> {
  * Loads a third-party plugin from an ES module, and registers it with the
  * {@link pluginRegistry}
  *
- * If the module's default export is a plugin, the plugin is registered, and
- * thereby set up, but not mounted. A module without a default export is only
- * run, so that it can register itself through `window.tissuumaps`.
+ * The module's default export has to be a plugin, which is registered, and
+ * thereby set up, but not mounted.
  *
  * A module on another origin has to be served with CORS. Modules are cached by
  * URL: loading the same URL again does not run the module again, but registers
  * its default export again.
  *
- * @param url - The URL of the module
- * @returns The ID of the registered plugin, or `null` for a module without a
- * default export
- * @throws If the module cannot be loaded or run, if its default export is not a
+ * @param pluginUrl - The URL of the module, absolute or relative to the
+ * document base URL
+ * @returns The ID of the registered plugin
+ * @throws Error if `pluginUrl` is not a valid URL, if the module cannot be
+ * loaded or run, if it has no default export or its default export is not a
  * plugin, or if the plugin's `setup` throws
  */
-export async function loadPluginFromURL(url: string): Promise<string | null> {
-  const exports: unknown = await import(/* @vite-ignore */ url);
-  const plugin =
-    typeof exports === "object" && exports !== null && "default" in exports
-      ? exports.default
-      : undefined;
-  if (plugin === undefined) {
-    return null;
+export async function loadPluginFromURL(pluginUrl: string): Promise<string> {
+  // import() resolves relative URLs against the importing module, not the page
+  const absolutePluginUrl = new URL(pluginUrl, document.baseURI).href;
+  const exports: unknown = await import(/* @vite-ignore */ absolutePluginUrl);
+  if (
+    exports === null ||
+    typeof exports !== "object" ||
+    !("default" in exports)
+  ) {
+    throw new Error(`${pluginUrl} has no default export`);
   }
+  const plugin = exports.default;
   if (!isPlugin(plugin)) {
-    throw new Error(`The default export of ${url} is not a plugin`);
+    throw new Error(`The default export of ${pluginUrl} is not a plugin`);
   }
   pluginRegistry.registerPlugin(plugin);
-  if (!appStore.getState().plugins.has(plugin.id)) {
-    throw new Error(`Error during setup of plugin ${plugin.id}`);
+  if (!pluginRegistrations.has(plugin.id)) {
+    throw new Error(
+      `Error during setup of plugin ${plugin.id}, see the browser console for details`,
+    );
   }
   return plugin.id;
 }
