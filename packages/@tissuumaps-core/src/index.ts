@@ -43,6 +43,7 @@ export {
   type OpacityConfig,
   type RandomConfig,
   type SizeConfig,
+  type TableColumnRef,
   type VisibilityConfig,
 } from "./model/configs";
 export {
@@ -212,6 +213,7 @@ export {
   type AppStoreActions,
   type AppStore,
   type AppStoreApi,
+  type HighlightedItemGroup,
 } from "./types/stores/app";
 export {
   type DataRef,

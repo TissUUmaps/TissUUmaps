@@ -128,7 +128,9 @@ describe("SizeResolver", () => {
         { signal: controller.signal },
       );
 
-      expect(loadTable).toHaveBeenCalledWith({ signal: controller.signal });
+      expect(loadTable).toHaveBeenCalledWith(undefined, {
+        signal: controller.signal,
+      });
     });
   });
 
@@ -240,11 +242,12 @@ describe("SizeResolver", () => {
         config,
         [],
         1,
+        vi.fn(),
       );
       expect(Array.from(packedSizes)).toEqual([8, 8]);
     });
 
-    it("dispatches to from config when loadTable is given", async () => {
+    it("dispatches to from config when its table is found", async () => {
       const data = createMockTableData(new Uint32Array([1]), [3]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies SizeConfig;
@@ -254,16 +257,14 @@ describe("SizeResolver", () => {
         config,
         [],
         1,
-        {
-          loadTable,
-        },
+        loadTable,
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
       expect(packedSizes[0]).toBe(3);
     });
 
-    it("dispatches to groupBy config when loadTable is given", async () => {
+    it("dispatches to groupBy config when its table is found", async () => {
       const data = createMockTableData(new Uint32Array([1]), ["A"]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const sizeMap: GroupValueMap<number> = {
@@ -280,7 +281,7 @@ describe("SizeResolver", () => {
         config,
         [sizeMap],
         1,
-        { loadTable },
+        loadTable,
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
@@ -294,42 +295,9 @@ describe("SizeResolver", () => {
         config,
         [],
         3,
+        vi.fn(),
       );
       expect(Array.from(packedSizes)).toEqual([3, 3]);
-    });
-
-    it("falls back to the default size for a from config without loadTable", async () => {
-      const config = { from: { column: "col1" } } satisfies SizeConfig;
-
-      const packedSizes = await SizeResolver.resolveSizes(
-        new Uint32Array([1]),
-        config,
-        [],
-        3,
-      );
-
-      expect(packedSizes[0]).toBe(3);
-    });
-
-    it("falls back to the default size for a groupBy config without loadTable", async () => {
-      const sizeMap: GroupValueMap<number> = {
-        id: "sm1",
-        name: "Size Map",
-        values: { A: 5 },
-      };
-      const config = {
-        groupBy: { column: "col1", map: "sm1" },
-      } satisfies SizeConfig;
-
-      const packedSizes = await SizeResolver.resolveSizes(
-        new Uint32Array([1]),
-        config,
-        [sizeMap],
-        3,
-        {},
-      );
-
-      expect(packedSizes[0]).toBe(3);
     });
 
     it("throws when the signal is already aborted", async () => {
@@ -338,9 +306,14 @@ describe("SizeResolver", () => {
       const config = { constant: { value: 8 } } satisfies SizeConfig;
 
       await expect(
-        SizeResolver.resolveSizes(new Uint32Array([1]), config, [], 1, {
-          signal: controller.signal,
-        }),
+        SizeResolver.resolveSizes(
+          new Uint32Array([1]),
+          config,
+          [],
+          1,
+          vi.fn(),
+          { signal: controller.signal },
+        ),
       ).rejects.toThrow();
     });
   });

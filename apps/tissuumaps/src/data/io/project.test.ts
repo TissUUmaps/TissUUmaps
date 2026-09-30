@@ -4,7 +4,7 @@ import { resolveProjectSource } from "./project";
 
 const projectFile = {
   kind: "file",
-  name: "project.tmap",
+  name: "project.tm4",
 } as FileSystemFileHandle;
 
 /**
@@ -22,17 +22,17 @@ function makeWorkspace(segments: string[] | null) {
 
 describe("resolveProjectSource", () => {
   it("returns the workspace-relative path of a file in the workspace", async () => {
-    const { workspace, resolve } = makeWorkspace(["study", "project.tmap"]);
+    const { workspace, resolve } = makeWorkspace(["study", "project.tm4"]);
     await expect(resolveProjectSource(projectFile, workspace)).resolves.toBe(
-      "/study/project.tmap",
+      "/study/project.tm4",
     );
     expect(resolve).toHaveBeenCalledWith(projectFile);
   });
 
   it("returns the path of a file in the workspace root", async () => {
-    const { workspace } = makeWorkspace(["project.tmap"]);
+    const { workspace } = makeWorkspace(["project.tm4"]);
     await expect(resolveProjectSource(projectFile, workspace)).resolves.toBe(
-      "/project.tmap",
+      "/project.tm4",
     );
   });
 
@@ -44,13 +44,13 @@ describe("resolveProjectSource", () => {
   });
 
   it("returns null without an open workspace, without resolving", async () => {
-    const { resolve } = makeWorkspace(["project.tmap"]);
+    const { resolve } = makeWorkspace(["project.tm4"]);
     await expect(resolveProjectSource(projectFile, null)).resolves.toBeNull();
     expect(resolve).not.toHaveBeenCalled();
   });
 
   it("throws if aborted before resolving", async () => {
-    const { workspace, resolve } = makeWorkspace(["project.tmap"]);
+    const { workspace, resolve } = makeWorkspace(["project.tm4"]);
     await expect(
       resolveProjectSource(projectFile, workspace, {
         signal: AbortSignal.abort(),
@@ -63,7 +63,7 @@ describe("resolveProjectSource", () => {
     const abortController = new AbortController();
     const resolve = vi.fn(() => {
       abortController.abort();
-      return Promise.resolve(["project.tmap"]);
+      return Promise.resolve(["project.tm4"]);
     });
     const workspace = {
       kind: "directory",

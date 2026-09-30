@@ -6,6 +6,9 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
+import { formatTableColumn } from "@/components/widgets/TableColumnField/formatTableColumn";
+import { useProjectStore } from "@/stores/project";
+
 import type { VisibilityConfigWidgetAdapter } from "./adapter";
 
 export type ActiveVisibilityConfigValueProps = {
@@ -19,6 +22,8 @@ export function ActiveVisibilityConfigValue({
 }: ActiveVisibilityConfigValueProps) {
   const { activeSource, visibilityConfig, defaultVisibility, tableId } =
     adapter;
+
+  const tables = useProjectStore((state) => state.tables);
 
   if (activeSource === "constant" && isConstantConfig(visibilityConfig)) {
     return (
@@ -37,7 +42,11 @@ export function ActiveVisibilityConfigValue({
     isFromConfig(visibilityConfig) &&
     tableId !== null
   ) {
-    return <div className={className}>{visibilityConfig.from.column}</div>;
+    return (
+      <div className={className}>
+        {formatTableColumn(visibilityConfig.from, tables)}
+      </div>
+    );
   }
 
   if (
@@ -45,7 +54,11 @@ export function ActiveVisibilityConfigValue({
     isGroupByConfig(visibilityConfig) &&
     tableId !== null
   ) {
-    return <div className={className}>{visibilityConfig.groupBy.column}</div>;
+    return (
+      <div className={className}>
+        {formatTableColumn(visibilityConfig.groupBy, tables)}
+      </div>
+    );
   }
 
   return (

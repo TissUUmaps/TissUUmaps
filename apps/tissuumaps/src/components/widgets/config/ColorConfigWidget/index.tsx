@@ -10,6 +10,7 @@ import {
 } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
+import { IconButton } from "@/components/common/icon-button";
 import { SimpleColorPicker } from "@/components/common/simple-color-picker";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,7 +19,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { TableColumnInput } from "@/components/widgets/TableColumnInput";
+import { TableColumnField } from "@/components/widgets/TableColumnField";
 import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
 import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
@@ -149,11 +150,11 @@ function FromColorConfigWidget({
   const {
     tableId,
     fromColumnValueRange: columnValueRange,
-    currentFromColumn: column,
+    currentFromTableColumn: from,
     currentFromRangeMin: rangeMin,
     currentFromRangeMax: rangeMax,
     currentFromPalette: palette,
-    setCurrentFromColumn: setColumn,
+    setCurrentFromTableColumn: setFrom,
     setCurrentFromRangeMin: setRangeMin,
     setCurrentFromRangeMax: setRangeMax,
     setCurrentFromPalette: setPalette,
@@ -161,14 +162,12 @@ function FromColorConfigWidget({
 
   return (
     <div className={className}>
-      <Field disabled={tableId === null}>
-        <FieldLabel>Table column</FieldLabel>
-        <TableColumnInput
-          tableId={tableId}
-          value={column}
-          onValueChange={setColumn}
-        />
-      </Field>
+      <TableColumnField
+        label="Column"
+        tableId={tableId}
+        value={from}
+        onValueChange={setFrom}
+      />
       <Field>
         <FieldLabel>Color palette</FieldLabel>
         <ColorPaletteSelect
@@ -240,10 +239,10 @@ function GroupByColorConfigWidget({
 }: GroupByColorConfigWidgetProps) {
   const {
     tableId,
-    currentGroupByColumn: column,
+    currentGroupByTableColumn: groupBy,
     currentGroupByPalette: palette,
     currentGroupByMap: map,
-    setCurrentGroupByColumn: setColumn,
+    setCurrentGroupByTableColumn: setGroupBy,
     setCurrentGroupByPalette: setPalette,
     setCurrentGroupByMap: setMap,
   } = adapter;
@@ -256,14 +255,12 @@ function GroupByColorConfigWidget({
 
   return (
     <div className={className}>
-      <Field disabled={tableId === null}>
-        <FieldLabel>Table column</FieldLabel>
-        <TableColumnInput
-          tableId={tableId}
-          value={column}
-          onValueChange={setColumn}
-        />
-      </Field>
+      <TableColumnField
+        label="Column"
+        tableId={tableId}
+        value={groupBy}
+        onValueChange={setGroupBy}
+      />
       <Field disabled={map !== null}>
         <FieldLabel>Color palette</FieldLabel>
         <ColorPaletteSelect
@@ -332,14 +329,13 @@ function RandomColorConfigWidget({
             }}
           />
           <InputGroupAddon align="inline-end">
-            <InputGroupButton
-              size="icon-xs"
-              aria-label="Shuffle seed"
-              title="Shuffle seed"
+            <IconButton
+              label="Shuffle seed"
+              render={<InputGroupButton size="icon-xs" />}
               onClick={() => setSeed(RandomUtils.seed())}
             >
               <RefreshCwIcon />
-            </InputGroupButton>
+            </IconButton>
           </InputGroupAddon>
         </InputGroup>
       </Field>

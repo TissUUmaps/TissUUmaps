@@ -338,7 +338,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   ): Promise<PreparedShapes | null> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const loadTable = WebGLShapesRenderer.createObjectTableLoader(
+    const loadTable = WebGLShapesRenderer.createTableLoader(
       newRef,
       syncContext,
     );
@@ -371,9 +371,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           newRef.object.shapeVisibility,
           syncContext.visibilityMaps,
           defaultShapeVisibility,
+          loadTable,
           {
             signal,
-            loadTable,
             align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
           },
         )
@@ -384,9 +384,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           newRef.object.shapeOpacity,
           syncContext.opacityMaps,
           defaultShapeOpacity,
+          loadTable,
           {
             signal,
-            loadTable,
             align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
           },
         )
@@ -397,9 +397,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           newRef.object.shapeFillColor,
           syncContext.colorMaps,
           defaultShapeFillColor,
+          loadTable,
           {
             signal,
-            loadTable,
             align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
           },
         )
@@ -410,9 +410,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           newRef.object.shapeFillVisibility,
           syncContext.visibilityMaps,
           defaultShapeFillVisibility,
+          loadTable,
           {
             signal,
-            loadTable,
             align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
           },
         )
@@ -423,9 +423,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           newRef.object.shapeFillOpacity,
           syncContext.opacityMaps,
           defaultShapeFillOpacity,
+          loadTable,
           {
             signal,
-            loadTable,
             align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
           },
         )
@@ -436,9 +436,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           newRef.object.shapeStrokeColor,
           syncContext.colorMaps,
           defaultShapeStrokeColor,
+          loadTable,
           {
             signal,
-            loadTable,
             align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
           },
         )
@@ -449,9 +449,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           newRef.object.shapeStrokeVisibility,
           syncContext.visibilityMaps,
           defaultShapeStrokeVisibility,
+          loadTable,
           {
             signal,
-            loadTable,
             align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
           },
         )
@@ -462,9 +462,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           newRef.object.shapeStrokeOpacity,
           syncContext.opacityMaps,
           defaultShapeStrokeOpacity,
+          loadTable,
           {
             signal,
-            loadTable,
             align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
           },
         )

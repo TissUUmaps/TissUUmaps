@@ -378,9 +378,13 @@ export abstract class WebGLRendererBase<
         ) {
           continue;
         }
+        const layerTableId =
+          typeof currentObject.layer !== "string"
+            ? (currentObject.layer.table ?? currentObject.dataSource.table)
+            : undefined;
         if (
           typeof currentObject.layer !== "string" &&
-          currentObject.dataSource.table === undefined
+          layerTableId === undefined
         ) {
           if (!objectIdsWithoutTable.has(currentObject.id)) {
             objectIdsWithoutTable.add(currentObject.id);
@@ -406,40 +410,32 @@ export abstract class WebGLRendererBase<
         let layerItemsInfosPromise;
         if (
           typeof currentObject.layer !== "string" &&
-          currentObject.dataSource.table !== undefined
+          layerTableId !== undefined
         ) {
-          let tableDataPromise = tableDataPromises.get(
-            currentObject.dataSource.table,
-          );
+          let tableDataPromise = tableDataPromises.get(layerTableId);
           if (tableDataPromise === undefined) {
             const table = syncContext.tables.find(
-              (table) => table.id === currentObject.dataSource.table,
+              (table) => table.id === layerTableId,
             );
             if (table !== undefined) {
               tableDataPromise = syncContext.loadTable(table, { signal });
             } else {
               tableDataPromise = Promise.reject(
-                new Error(
-                  `Table with ID '${currentObject.dataSource.table}' not found`,
-                ),
+                new Error(`Table with ID '${layerTableId}' not found`),
               );
             }
             tableDataPromise.catch((error) => {
               if (!signal?.aborted) {
                 console.error(
-                  `Failed to load table with ID '${currentObject.dataSource.table}'`,
+                  `Failed to load table with ID '${layerTableId}'`,
                   error,
                 );
               }
             });
-            tableDataPromises.set(
-              currentObject.dataSource.table,
-              tableDataPromise,
-            );
+            tableDataPromises.set(layerTableId, tableDataPromise);
           }
-          const tableId = currentObject.dataSource.table;
           const tableLayersColumn = currentObject.layer.column;
-          const tableLayersPromiseKey = `${tableId}:${tableLayersColumn}`;
+          const tableLayersPromiseKey = `${layerTableId}:${tableLayersColumn}`;
           let tableLayersPromise = tableLayersPromises.get(
             tableLayersPromiseKey,
           );
@@ -451,7 +447,7 @@ export abstract class WebGLRendererBase<
               );
               if (tableLayers.length !== tableData.getSize()) {
                 throw new Error(
-                  `Table with ID '${currentObject.dataSource.table}' has inconsistent size for column '${tableLayersColumn}'`,
+                  `Table with ID '${layerTableId}' has inconsistent size for column '${tableLayersColumn}'`,
                 );
               }
               return tableLayers;
@@ -459,7 +455,7 @@ export abstract class WebGLRendererBase<
             tableLayersPromise.catch((error) => {
               if (!signal?.aborted) {
                 console.error(
-                  `Failed to load layers from table with ID '${currentObject.dataSource.table}' (column '${tableLayersColumn}')`,
+                  `Failed to load layers from table with ID '${layerTableId}' (column '${tableLayersColumn}')`,
                   error,
                 );
               }
@@ -924,16 +920,20 @@ export abstract class WebGLRendererBase<
   }
 
   /**
-   * Creates the loader for the table that an object resolves its properties
+   * Creates the loader for the tables that an object resolves its properties
    * from
+   *
+   * A configuration may name a table other than the object's, in which case its
+   * values are resolved by the item IDs of the object's own table.
    *
    * @param ref - The object reference
    * @param syncContext - The inputs of the current synchronization: the tables to
-   * look the object's table up in, and the loader for table data
-   * @returns The loader, or `undefined` if the object has no table, or its
-   * table was not found (which is logged)
+   * look the configured table up in, and the loader for table data
+   * @returns The loader, taking the ID of a table, or `undefined` for the
+   * object's own table; it rejects if the object has no table, or the table was
+   * not found
    */
-  protected static createObjectTableLoader(
+  protected static createTableLoader(
     ref: ObjectRef<Points | Shapes, PointsData | ShapesData>,
     syncContext: {
       tables: Table[];
@@ -942,19 +942,23 @@ export abstract class WebGLRendererBase<
         options?: { signal?: AbortSignal },
       ) => Promise<TableData>;
     },
-  ): ((options?: { signal?: AbortSignal }) => Promise<TableData>) | undefined {
-    if (ref.object.dataSource.table === undefined) {
-      return undefined;
-    }
-    const table = syncContext.tables.find(
-      (table) => table.id === ref.object.dataSource.table,
-    );
-    if (table === undefined) {
-      console.warn(`Table with ID '${ref.object.dataSource.table}' not found`);
-      return undefined;
-    }
-    return (options?: { signal?: AbortSignal }) =>
-      syncContext.loadTable(table, options);
+  ): (
+    tableId: string | undefined,
+    options?: { signal?: AbortSignal },
+  ) => Promise<TableData> {
+    return async (tableId, options) => {
+      const configTableId = tableId ?? ref.object.dataSource.table;
+      if (configTableId === undefined) {
+        throw new Error(`Object with ID '${ref.object.id}' has no table`);
+      }
+      const table = syncContext.tables.find(
+        (table) => table.id === configTableId,
+      );
+      if (table === undefined) {
+        throw new Error(`Table with ID '${configTableId}' not found`);
+      }
+      return await syncContext.loadTable(table, options);
+    };
   }
 
   /**

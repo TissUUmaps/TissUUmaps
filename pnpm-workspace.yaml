@@ -4,15 +4,15 @@ packages:
 
 allowBuilds:
   "@swc/core": true
-  canvas: true
   core-js: true
   omezarr-tilesource: true
 
 minimumReleaseAge: 1440
 
+# Lets the release build install our just-published packages; a no-op in the
+# workspace, where they are linked (see scripts/prepare-registry-build.ts).
 minimumReleaseAgeExclude:
-  - omezarr-tilesource@0.8.0
+  - "@tissuumaps/*"
 
 patchedDependencies:
   geotiff@3.0.5: patches/geotiff@3.0.5.patch
-  openseadragon@6.1.1: patches/openseadragon@6.1.1.patch

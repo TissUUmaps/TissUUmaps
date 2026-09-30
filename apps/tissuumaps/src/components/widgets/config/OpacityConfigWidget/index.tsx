@@ -1,8 +1,8 @@
-import { MathUtils, ProjectUtils } from "@tissuumaps/core";
+import { ProjectUtils } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
-import { Input } from "@/components/ui/input";
-import { TableColumnInput } from "@/components/widgets/TableColumnInput";
+import { OpacityControl } from "@/components/common/opacity-control";
+import { TableColumnField } from "@/components/widgets/TableColumnField";
 import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
 import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
@@ -53,19 +53,10 @@ function ConstantOpacityConfigWidget({
     <div className={className}>
       <Field>
         <FieldLabel>Opacity</FieldLabel>
-        <Input
-          type="number"
-          inputMode="decimal"
-          step={0.05}
-          min={0}
-          max={1}
-          value={value}
-          onChange={(event) => {
-            const newValue = event.target.valueAsNumber;
-            if (!isNaN(newValue)) {
-              setValue(MathUtils.clamp(newValue, 0, 1));
-            }
-          }}
+        <OpacityControl
+          opacity={value}
+          onOpacityCommit={setValue}
+          className="self-start"
         />
       </Field>
     </div>
@@ -83,20 +74,18 @@ function FromOpacityConfigWidget({
 }: FromOpacityConfigWidgetProps) {
   const {
     tableId,
-    currentFromColumn: column,
-    setCurrentFromColumn: setColumn,
+    currentFromTableColumn: from,
+    setCurrentFromTableColumn: setFrom,
   } = adapter;
 
   return (
     <div className={className}>
-      <Field disabled={tableId === null}>
-        <FieldLabel>Table column</FieldLabel>
-        <TableColumnInput
-          tableId={tableId}
-          value={column}
-          onValueChange={setColumn}
-        />
-      </Field>
+      <TableColumnField
+        label="Column"
+        tableId={tableId}
+        value={from}
+        onValueChange={setFrom}
+      />
     </div>
   );
 }
@@ -112,9 +101,9 @@ function GroupByOpacityConfigWidget({
 }: GroupByOpacityConfigWidgetProps) {
   const {
     tableId,
-    currentGroupByColumn: column,
+    currentGroupByTableColumn: groupBy,
     currentGroupByMap: map,
-    setCurrentGroupByColumn: setColumn,
+    setCurrentGroupByTableColumn: setGroupBy,
     setCurrentGroupByMap: setMap,
   } = adapter;
 
@@ -126,14 +115,12 @@ function GroupByOpacityConfigWidget({
 
   return (
     <div className={className}>
-      <Field disabled={tableId === null}>
-        <FieldLabel>Table column</FieldLabel>
-        <TableColumnInput
-          tableId={tableId}
-          value={column}
-          onValueChange={setColumn}
-        />
-      </Field>
+      <TableColumnField
+        label="Column"
+        tableId={tableId}
+        value={groupBy}
+        onValueChange={setGroupBy}
+      />
       <Field>
         <FieldLabel>Opacity map</FieldLabel>
         <GroupValueMapSelect

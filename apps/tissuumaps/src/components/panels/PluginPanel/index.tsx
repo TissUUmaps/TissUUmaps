@@ -8,15 +8,13 @@ export type PluginPanelProps = {
 };
 
 /**
- * The panel of a registered plugin
+ * The panel of a mounted plugin
  *
  * Shows the element into which the plugin registry mounted the plugin's user
- * interface when the plugin was registered, as held by the app store. The panel
- * only attaches that element; mounting and unmounting are the registry's
- * business, so that the user interface is unmounted before the plugin is torn
- * down, and so that it survives the panel being hidden, moved or remounted.
- *
- * Re-registering the plugin swaps in the new element.
+ * interface, as held by the app store. The panel only attaches that element;
+ * mounting and unmounting are the registry's business, so that the user
+ * interface is unmounted before the plugin is torn down, and so that it
+ * survives the panel being hidden, moved or remounted.
  */
 export function PluginPanel({ pluginId, className }: PluginPanelProps) {
   const ref = useRef<HTMLDivElement>(null);

@@ -1,4 +1,3 @@
-import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import {
@@ -17,10 +16,10 @@ import {
   CollapsibleTriggerRightDownIcon,
 } from "@/components/common/collapsible";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
+import { OpacityControl } from "@/components/common/opacity-control";
 import { SimpleColorPicker } from "@/components/common/simple-color-picker";
-import { Button } from "@/components/ui/button";
+import { VisibilityButton } from "@/components/common/visibility-button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
@@ -177,61 +176,47 @@ function ChannelSettingsRow({
       className={className}
     >
       <div className="flex flex-row items-center gap-x-1.5">
-        <CollapsibleTriggerRightDownIcon className="[&_svg]:size-4" />
+        <CollapsibleTriggerRightDownIcon />
         {image.channelViewMode !== ImageChannelViewMode.composite ? (
           <RadioGroupItem value={String(c)} aria-label={name} />
         ) : (
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            aria-label={visible ? "Hide channel" : "Show channel"}
-            onClick={() => {
-              updateChannel({ visibility: !visible });
+          <VisibilityButton
+            visible={visible}
+            onVisibleChange={(visibility) => {
+              updateChannel({ visibility });
               setImageChannelPreview(null);
             }}
+            objectLabel="channel"
+            size="icon-xs"
             onPointerEnter={() =>
               setImageChannelPreview({ imageId: image.id, channelIndex: c })
             }
             onPointerLeave={() => setImageChannelPreview(null)}
-          >
-            {visible ? <EyeIcon /> : <EyeOffIcon />}
-          </Button>
+          />
         )}
         {image.channelViewMode !== ImageChannelViewMode.grayscale ? (
           <SimpleColorPicker
             color={color}
             onColorChange={(newColor) => updateChannel({ color: newColor })}
-            // positions the sr-only label, which would otherwise overflow the
-            // panel's scroll container
-            className="relative size-4 p-0 border-input shadow-xs"
+            label="Channel color"
+            className="size-4 p-0 border-input shadow-xs"
           >
-            <span className="sr-only">Channel color</span>
             <span
               className="block size-full rounded-sm"
               style={{ backgroundColor: ColorUtils.toHex(color) }}
             />
           </SimpleColorPicker>
         ) : null}
-        <CollapsibleTrigger className="flex-1 min-w-0 cursor-pointer">
+        <CollapsibleTrigger className="flex-1 min-w-0">
           <span className="truncate" title={name}>
             {name}
           </span>
         </CollapsibleTrigger>
-        <span className="flex flex-row items-center gap-x-1">
-          <span className="text-muted-foreground text-xs" aria-hidden>
-            &alpha;
-          </span>
-          <Slider
-            className="w-14"
-            thumbAlignment="edge"
-            thumbLabels={["Channel opacity"]}
-            min={0}
-            max={1}
-            step={0.01}
-            value={opacity}
-            onValueChange={(value) => updateChannel({ opacity: value })}
-          />
-        </span>
+        <OpacityControl
+          label="Channel opacity"
+          opacity={opacity}
+          onOpacityChange={(value) => updateChannel({ opacity: value })}
+        />
       </div>
       {contrastLimits !== undefined ? (
         <CollapsiblePanel className="pt-1 pl-5">

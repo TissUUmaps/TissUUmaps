@@ -2,6 +2,7 @@ import { deepEqual } from "fast-equals";
 import type OpenSeadragon from "openseadragon";
 
 import {
+  AsyncUtils,
   type CustomTileSource,
   GeometryUtils,
   type Image,
@@ -813,7 +814,7 @@ export abstract class OpenSeadragonRendererBase<
       promise: tiledImagesPromise,
       resolve: resolveTiledImagesPromise,
       reject: rejectTiledImagesPromise,
-    } = Promise.withResolvers<OpenSeadragon.TiledImage[]>();
+    } = AsyncUtils.withResolvers<OpenSeadragon.TiledImage[]>();
     tiledImagesPromise.catch(() => {}); // prevent unhandled rejections in console
     const newRenderedObject: RenderedObject<TObject, TObjectData> = {
       ref: newRef,

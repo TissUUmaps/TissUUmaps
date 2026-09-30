@@ -1,5 +1,5 @@
 import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
-import { ChevronDownIcon, ChevronRightIcon, ChevronUpIcon } from "lucide-react";
+import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -42,7 +42,7 @@ export function AccordionTrigger({
   return (
     <AccordionPrimitive.Trigger
       className={cn(
-        "flex flex-row items-center group/accordion-trigger data-disabled:pointer-events-none data-disabled:opacity-50",
+        "flex flex-row items-center group/accordion-trigger cursor-pointer data-disabled:pointer-events-none data-disabled:opacity-50",
         className,
       )}
       {...props}
@@ -59,7 +59,7 @@ export function AccordionTriggerRightDownIcon({
   return (
     <AccordionPrimitive.Trigger
       className={cn(
-        "group/accordion-trigger data-disabled:pointer-events-none data-disabled:opacity-50",
+        "group/accordion-trigger cursor-pointer data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:size-4",
         className,
       )}
       aria-label="Expand/collapse"
@@ -67,25 +67,6 @@ export function AccordionTriggerRightDownIcon({
     >
       <ChevronRightIcon className="group-aria-expanded/accordion-trigger:hidden" />
       <ChevronDownIcon className="hidden group-aria-expanded/accordion-trigger:inline" />
-    </AccordionPrimitive.Trigger>
-  );
-}
-
-export function AccordionTriggerDownUpIcon({
-  className,
-  ...props
-}: Omit<AccordionPrimitive.Trigger.Props, "children">) {
-  return (
-    <AccordionPrimitive.Trigger
-      className={cn(
-        "group/accordion-trigger data-disabled:pointer-events-none data-disabled:opacity-50",
-        className,
-      )}
-      aria-label="Expand/collapse"
-      {...props}
-    >
-      <ChevronDownIcon className="group-aria-expanded/accordion-trigger:hidden" />
-      <ChevronUpIcon className="hidden group-aria-expanded/accordion-trigger:inline" />
     </AccordionPrimitive.Trigger>
   );
 }

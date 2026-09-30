@@ -5,6 +5,8 @@ import {
 } from "@tissuumaps/core";
 
 import { markers } from "@/components/markers";
+import { formatTableColumn } from "@/components/widgets/TableColumnField/formatTableColumn";
+import { useProjectStore } from "@/stores/project";
 
 import type { MarkerConfigWidgetAdapter } from "./adapter";
 
@@ -19,6 +21,8 @@ export function ActiveMarkerConfigValue({
 }: ActiveMarkerConfigValueProps) {
   const { activeSource, markerConfig, defaultMarker, tableId } = adapter;
 
+  const tables = useProjectStore((state) => state.tables);
+
   if (activeSource === "constant" && isConstantConfig(markerConfig)) {
     const marker =
       markers.find((marker) => marker.value === markerConfig.constant.value) ??
@@ -31,7 +35,11 @@ export function ActiveMarkerConfigValue({
     isFromConfig(markerConfig) &&
     tableId !== null
   ) {
-    return <div className={className}>{markerConfig.from.column}</div>;
+    return (
+      <div className={className}>
+        {formatTableColumn(markerConfig.from, tables)}
+      </div>
+    );
   }
 
   if (
@@ -39,7 +47,11 @@ export function ActiveMarkerConfigValue({
     isGroupByConfig(markerConfig) &&
     tableId !== null
   ) {
-    return <div className={className}>{markerConfig.groupBy.column}</div>;
+    return (
+      <div className={className}>
+        {formatTableColumn(markerConfig.groupBy, tables)}
+      </div>
+    );
   }
 
   const marker = markers.find((marker) => marker.value === defaultMarker)!;

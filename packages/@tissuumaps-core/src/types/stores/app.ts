@@ -1,5 +1,6 @@
 import type { Mutate, StoreApi } from "zustand";
 
+import type { TableColumnRef } from "../../model/configs";
 import type { ImageDataSource } from "../../model/image";
 import type { LabelsDataSource } from "../../model/labels";
 import type { PointsDataSource } from "../../model/points";
@@ -21,6 +22,22 @@ export type ImageChannelPreview = {
   channelIndex: number;
 };
 
+/** The items of one group of a labels, points or shapes object, highlighted in the viewer */
+export type HighlightedItemGroup = {
+  /**
+   * The object whose items are grouped, by the ID of its labels, points or
+   * shapes; IDs are only unique within each of these lists
+   */
+  annotatedObject:
+    { labelsId: string } | { pointsId: string } | { shapesId: string };
+
+  /** The categorical table column */
+  groupBy: TableColumnRef;
+
+  /** The group, i.e. the cell value as a string */
+  group: string;
+};
+
 /**
  * The state of the app store, holding what is not part of the project
  */
@@ -28,11 +45,23 @@ export type AppStoreState = {
   /** The directory handle of the open workspace, if any */
   workspace: FileSystemDirectoryHandle | null;
 
+  /**
+   * Whether a project is open, possibly an empty one; the Project tab shows
+   * its welcome view otherwise
+   */
+  projectOpen: boolean;
+
   /** How mouse events in the viewer are currently interpreted */
   interactionMode: InteractionMode;
 
   /** The channel previewed on its own while it is hovered, if any */
   imageChannelPreview: ImageChannelPreview | null;
+
+  /**
+   * The group shown alone in the viewer, hiding every other item of its
+   * object, or `null` for none
+   */
+  highlightedItemGroup: HighlightedItemGroup | null;
 
   /** The registered image data providers, by data source type */
   imageDataProviders: Map<
@@ -65,14 +94,18 @@ export type AppStoreState = {
   >;
 
   /**
-   * The registered plugins, by plugin ID, each as its human-readable name
-   * together with the element its user interface is mounted into, if it has one
+   * The registered plugins, by plugin ID, each as its human-readable name,
+   * whether it has a user interface that can be mounted, and the element its
+   * user interface is mounted into while it is mounted
    *
    * Written by the plugin registry, which owns the plugin lifecycle and keeps
    * the plugin objects themselves to itself, so that nothing a plugin owns ends
    * up frozen in the store.
    */
-  plugins: Map<string, { name: string; container?: HTMLElement }>;
+  plugins: Map<
+    string,
+    { name: string; mountable: boolean; container?: HTMLElement }
+  >;
 };
 
 /**
@@ -106,6 +139,23 @@ export type AppStoreActions = {
    */
   setImageChannelPreview: (
     imageChannelPreview: ImageChannelPreview | null,
+  ) => void;
+
+  /**
+   * Marks a project as open, or as closed
+   *
+   * @param projectOpen - Whether a project is open
+   */
+  setProjectOpen: (projectOpen: boolean) => void;
+
+  /**
+   * Highlights a group of an object in the viewer
+   *
+   * @param highlightedItemGroup - The group to highlight, or `null` to highlight
+   * none
+   */
+  setHighlightedItemGroup: (
+    highlightedItemGroup: HighlightedItemGroup | null,
   ) => void;
 
   /**

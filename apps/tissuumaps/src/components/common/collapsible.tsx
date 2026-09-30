@@ -15,7 +15,7 @@ export function CollapsibleTrigger({
   return (
     <CollapsiblePrimitive.Trigger
       className={cn(
-        "flex flex-row items-center data-disabled:pointer-events-none data-disabled:opacity-50",
+        "flex flex-row items-center cursor-pointer data-disabled:pointer-events-none data-disabled:opacity-50",
         className,
       )}
       {...props}
@@ -32,7 +32,7 @@ export function CollapsibleTriggerRightDownIcon({
   return (
     <CollapsiblePrimitive.Trigger
       className={cn(
-        "group/collapsible-trigger data-disabled:pointer-events-none data-disabled:opacity-50",
+        "group/collapsible-trigger cursor-pointer data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:size-4",
         className,
       )}
       aria-label="Expand/collapse"

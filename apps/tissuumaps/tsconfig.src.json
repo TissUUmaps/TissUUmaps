@@ -20,7 +20,7 @@
     { "path": "../../packages/@tissuumaps-render/tsconfig.src.json" },
     { "path": "../../packages/@tissuumaps-storage/tsconfig.src.json" },
     { "path": "../../packages/@tissuumaps-plugins/tsconfig.src.json" },
-    { "path": "../../packages/@tissuumaps-viewer/tsconfig.src.json" }
+    { "path": "../../packages/@tissuumaps-react/tsconfig.src.json" }
   ],
   "include": ["./src"],
   "exclude": [

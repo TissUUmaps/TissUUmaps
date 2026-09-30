@@ -27,11 +27,16 @@ export class VisibilityResolver {
    * Dispatches to the appropriate loader (constant, from, or groupBy) depending on which
    * configuration source is active.
    *
+   * If the table cannot be loaded, or the configuration cannot be resolved
+   * from it, the failure is logged and the default is used for every item.
+   *
    * @param ids - Ordered list of item IDs
    * @param config - Visibility configuration specifying the data source
    * @param visibilityMaps - Available visibility maps for groupBy lookups
    * @param defaultVisibility - Fallback visibility when no valid config or value is found
-   * @param options - Optional abort signal, buffer alignment, and table loader
+   * @param loadTable - Async function that loads a {@link TableData} by ID, or
+   * the object's own table for `undefined`; it rejects for a missing table
+   * @param options - Optional abort signal and buffer alignment
    * @returns A `Uint8Array` of packed visibility values (0 or 1), one per ID
    */
   static async resolveVisibilities(
@@ -39,13 +44,13 @@ export class VisibilityResolver {
     config: VisibilityConfig,
     visibilityMaps: GroupValueMap<boolean>[],
     defaultVisibility: boolean,
-    options?: {
-      signal?: AbortSignal;
-      align?: number;
-      loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;
-    },
+    loadTable: (
+      tableId: string | undefined,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TableData>,
+    options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint8Array> {
-    const { signal, align = 1, loadTable } = options ?? {};
+    const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
     const activeConfigSource = getActiveConfigSource(config);
     if (activeConfigSource === "constant" && isConstantConfig(config)) {
@@ -53,31 +58,36 @@ export class VisibilityResolver {
         align,
       });
     }
-    if (
-      activeConfigSource === "from" &&
-      isFromConfig(config) &&
-      loadTable !== undefined
-    ) {
-      return VisibilityResolver.resolveVisibilitiesFromTableValues(
-        ids,
-        config,
-        defaultVisibility,
-        loadTable,
-        { signal, align },
+    try {
+      if (activeConfigSource === "from" && isFromConfig(config)) {
+        return await VisibilityResolver.resolveVisibilitiesFromTableValues(
+          ids,
+          config,
+          defaultVisibility,
+          loadTable,
+          { signal, align },
+        );
+      }
+      if (activeConfigSource === "groupBy" && isGroupByConfig(config)) {
+        return await VisibilityResolver.resolveVisibilitiesFromTableGroups(
+          ids,
+          config,
+          visibilityMaps,
+          defaultVisibility,
+          loadTable,
+          { signal, align },
+        );
+      }
+    } catch (error) {
+      signal?.throwIfAborted();
+      console.warn(
+        "Failed to resolve visibilities from the table, using default visibility",
+        error,
       );
-    }
-    if (
-      activeConfigSource === "groupBy" &&
-      isGroupByConfig(config) &&
-      loadTable !== undefined
-    ) {
-      return VisibilityResolver.resolveVisibilitiesFromTableGroups(
-        ids,
-        config,
-        visibilityMaps,
+      return VisibilityResolver.createUniformVisibilities(
+        ids.length,
         defaultVisibility,
-        loadTable,
-        { signal, align },
+        { align },
       );
     }
     console.warn("No valid visibility config found, using default visibility");
@@ -161,7 +171,7 @@ export class VisibilityResolver {
    * @param ids - Ordered list of item IDs
    * @param config - From configuration specifying the source column
    * @param defaultVisibility - Fallback visibility when a value is missing or invalid
-   * @param loadTable - Async function that loads the {@link TableData}
+   * @param loadTable - Async function that loads a {@link TableData} by ID
    * @param options - Optional abort signal and buffer alignment
    * @returns A `Uint8Array` of packed visibility values
    */
@@ -169,12 +179,15 @@ export class VisibilityResolver {
     ids: IDArray,
     config: Extract<VisibilityConfig, FromConfig>,
     defaultVisibility: boolean,
-    loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
+    loadTable: (
+      tableId: string | undefined,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint8Array> {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    const data = await loadTable({ signal });
+    const data = await loadTable(config.from.table, { signal });
     const packedVisibilities = VisibilityResolver.createVisibilityBuffer(
       ids.length,
       { align },
@@ -200,7 +213,7 @@ export class VisibilityResolver {
    * @param config - GroupBy configuration specifying the source column and map
    * @param visibilityMaps - Available visibility maps for group-to-boolean lookups
    * @param defaultVisibility - Fallback visibility when the map is not found or a group is unmapped
-   * @param loadTable - Async function that loads the {@link TableData}
+   * @param loadTable - Async function that loads a {@link TableData} by ID
    * @param options - Optional abort signal and buffer alignment
    * @returns A `Uint8Array` of packed visibility values
    */
@@ -209,7 +222,10 @@ export class VisibilityResolver {
     config: Extract<VisibilityConfig, GroupByConfig<true>>,
     visibilityMaps: GroupValueMap<boolean>[],
     defaultVisibility: boolean,
-    loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
+    loadTable: (
+      tableId: string | undefined,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint8Array> {
     const { signal, align = 1 } = options ?? {};
@@ -225,7 +241,7 @@ export class VisibilityResolver {
         { align },
       );
     }
-    const data = await loadTable({ signal });
+    const data = await loadTable(config.groupBy.table, { signal });
     const packedVisibilities = VisibilityResolver.createVisibilityBuffer(
       ids.length,
       { align },

@@ -1,4 +1,4 @@
-import type { OpacityConfig } from "@tissuumaps/core";
+import type { OpacityConfig, TableColumnRef } from "@tissuumaps/core";
 
 export type OpacityConfigSource = Exclude<OpacityConfig["source"], undefined>;
 
@@ -9,12 +9,16 @@ export type OpacityConfigWidgetAdapter = {
   activeSource: OpacityConfigSource;
   currentSource: OpacityConfigSource;
   currentConstantValue: number;
-  currentFromColumn: string | null;
-  currentGroupByColumn: string | null;
+  currentFromTableColumn: TableColumnRef | null;
+  currentGroupByTableColumn: TableColumnRef | null;
   currentGroupByMap: string | null;
   setCurrentSource: (newCurrentSource: OpacityConfigSource) => void;
   setCurrentConstantValue: (newCurrentConstantValue: number) => void;
-  setCurrentFromColumn: (newCurrentFromColumn: string | null) => void;
-  setCurrentGroupByColumn: (newCurrentGroupByColumn: string | null) => void;
+  setCurrentFromTableColumn: (
+    newCurrentFromTableColumn: TableColumnRef | null,
+  ) => void;
+  setCurrentGroupByTableColumn: (
+    newCurrentGroupByTableColumn: TableColumnRef | null,
+  ) => void;
   setCurrentGroupByMap: (newCurrentGroupByMap: string | null) => void;
 };

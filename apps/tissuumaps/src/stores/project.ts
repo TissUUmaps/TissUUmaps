@@ -133,10 +133,6 @@ export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
         set((draft) => {
           moveCollectionItem(draft.shapes, shapesId, newIndex);
         }),
-      moveTable: (tableId, newIndex) =>
-        set((draft) => {
-          moveCollectionItem(draft.tables, tableId, newIndex);
-        }),
       deleteLayer: (layerId) =>
         set((draft) => {
           deleteCollectionItem(draft.layers, layerId);
@@ -194,6 +190,8 @@ export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
       clearOpacityMaps: () => set({ opacityMaps: [] }),
       setOSOptions: (osOptions) => set({ osOptions }),
       setGLOptions: (glOptions) => set({ glOptions }),
+      setViewerBackgroundColor: (viewerBackgroundColor) =>
+        set({ viewerBackgroundColor }),
       clear: () => set(createInitialProjectStoreState()),
     })),
     { name: "project", enabled: import.meta.env.DEV },

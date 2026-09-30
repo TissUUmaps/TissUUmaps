@@ -1,35 +1,23 @@
-import { DragDropProvider } from "@dnd-kit/react";
-import { isSortable, useSortable } from "@dnd-kit/react/sortable";
-import { EyeIcon, EyeOffIcon, GripVertical, Trash2Icon } from "lucide-react";
+import { useState } from "react";
 
-import { MathUtils, type Points, createPoints } from "@tissuumaps/core";
+import { type Points, createPoints } from "@tissuumaps/core";
 
-import {
-  Accordion,
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  AccordionTrigger,
-  AccordionTriggerDownUpIcon,
-} from "@/components/common/accordion";
-import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
-import { Button } from "@/components/ui/button";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
+import { OpacityControl } from "@/components/common/opacity-control";
+import { VisibilityButton } from "@/components/common/visibility-button";
 import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
-import { AnnotationsWidget } from "@/components/widgets/AnnotationsWidget";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import {
+  SortableObjectList,
+  SortableObjectListItem,
+} from "@/components/widgets/ObjectList";
 import { usePointsData } from "@/hooks/useData";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
+import { PointsAnnotationsWidget } from "./PointsAnnotationsWidget";
 import { PointsSettingsWidget } from "./PointsSettingsWidget";
-import { usePointsAnnotationsColumns } from "./usePointsAnnotationsColumns";
-import { usePointsAnnotationsWidget } from "./usePointsAnnotationsWidget";
+import type { PointsSettingsCategory } from "./category";
 
 export type PointsPanelProps = {
   className?: string;
@@ -45,26 +33,15 @@ export function PointsPanel({ className }: PointsPanelProps) {
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
-      <DragDropProvider
-        onDragEnd={(event) => {
-          const { source, canceled } = event.operation;
-          if (isSortable(source) && !canceled) {
-            // dnd-kit optimistically updates the DOM
-            // https://github.com/clauderic/dnd-kit/issues/1564
-            movePoints(source.id as string, source.index);
-          }
-        }}
-      >
-        <Accordion multiple className="gap-y-2">
-          {points.map((currentPoints, index) => (
-            <PointsAccordionItem
-              key={currentPoints.id}
-              points={currentPoints}
-              index={index}
-            />
-          ))}
-        </Accordion>
-      </DragDropProvider>
+      <SortableObjectList objects={points} onMove={movePoints}>
+        {(currentPoints, index) => (
+          <PointsAccordionItem
+            key={currentPoints.id}
+            points={currentPoints}
+            index={index}
+          />
+        )}
+      </SortableObjectList>
       <AddDataObjectDialog
         title="Add points"
         layers={layers}
@@ -90,135 +67,65 @@ type PointsAccordionItemProps = {
 };
 
 function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
-  const {
-    activeSettingsCategory,
-    setActiveSettingsCategory,
-    selectedGroupByColumn,
-    setSelectedGroupByColumn,
-  } = usePointsAnnotationsWidget(points);
-
   const pointsDataProviders = useAppStore((state) => state.pointsDataProviders);
 
   const updatePoints = useProjectStore((state) => state.updatePoints);
   const deletePoints = useProjectStore((state) => state.deletePoints);
-  const confirm = useConfirmDialog();
 
   const pointsData = usePointsData(points.id);
 
-  const { extraGroupColumnDefs } = usePointsAnnotationsColumns(
-    points,
-    selectedGroupByColumn,
-  );
-
-  const { ref, handleRef } = useSortable({ id: points.id, index });
+  const [activeSettingsCategory, setActiveSettingsCategory] =
+    useState<PointsSettingsCategory | null>(null);
 
   return (
-    <div ref={ref}>
-      <AccordionItem className="border rounded-md bg-sidebar p-2">
-        <AccordionHeader>
-          <GripVertical ref={handleRef} />
-          <div className="flex-1 w-full">
-            <AccordionTrigger className="w-full cursor-pointer">
-              {points.name}
-            </AccordionTrigger>
-          </div>
-          <div className="ml-auto flex flex-row items-center gap-x-2">
-            <InputGroup className="w-20">
-              <InputGroupAddon>s</InputGroupAddon>
-              <InputGroupInput
-                type="number"
-                aria-label="Point size"
-                inputMode="decimal"
-                step={0.1}
-                min={0}
-                value={points.pointSizeFactor}
-                onChange={(event) => {
-                  const newValue = event.target.valueAsNumber;
-                  if (!isNaN(newValue)) {
-                    updatePoints(points.id, {
-                      pointSizeFactor: Math.max(0, newValue),
-                    });
-                  }
-                }}
-              />
-            </InputGroup>
-            <InputGroup className="w-20">
-              <InputGroupAddon>&alpha;</InputGroupAddon>
-              <InputGroupInput
-                type="number"
-                aria-label="Opacity"
-                inputMode="decimal"
-                step={0.05}
-                min={0}
-                max={1}
-                value={points.opacity}
-                onChange={(event) => {
-                  const newValue = event.target.valueAsNumber;
-                  if (!isNaN(newValue)) {
-                    updatePoints(points.id, {
-                      opacity: MathUtils.clamp(newValue, 0, 1),
-                    });
-                  }
-                }}
-              />
-            </InputGroup>
-            <Button
-              variant="ghost"
-              aria-label={points.visibility ? "Hide points" : "Show points"}
-              onClick={() =>
-                updatePoints(points.id, { visibility: !points.visibility })
-              }
-            >
-              {points.visibility ? <EyeIcon /> : <EyeOffIcon />}
-            </Button>
-            <Button
-              variant="ghost"
-              aria-label="Delete point cloud"
-              onClick={() => {
-                void confirm({
-                  title: "Delete point cloud",
-                  body: "Are you sure you want to delete this point cloud? This action cannot be undone.",
-                }).then((confirmed) => {
-                  if (confirmed) {
-                    deletePoints(points.id);
-                  }
-                });
-              }}
-              title="Delete point cloud"
-            >
-              <Trash2Icon />
-            </Button>
-          </div>
-          <AccordionTriggerDownUpIcon />
-        </AccordionHeader>
-        <AccordionPanel className="pt-2 flex flex-col gap-y-2">
-          <DataSourceWidget
-            dataSource={points.dataSource}
-            dataProviders={pointsDataProviders}
-            onDataSourceChange={(newDataSource) => {
-              updatePoints(points.id, { dataSource: newDataSource });
-            }}
-            className="bg-card"
-          />
-          <PointsSettingsWidget
-            points={points}
-            activeCategory={activeSettingsCategory}
-            onActiveCategoryChange={setActiveSettingsCategory}
-            className="bg-card"
-          />
-          {pointsData !== null && (
-            <AnnotationsWidget
-              data={pointsData}
-              tableHeight={200}
-              table={points.dataSource.table ?? null}
-              selectedGroupByColumn={selectedGroupByColumn}
-              onSelectedGroupByColumnChange={setSelectedGroupByColumn}
-              extraGroupColumnDefs={extraGroupColumnDefs}
-              className="bg-card"
-            />
-          )}
-        </AccordionPanel>
-      </AccordionItem>
-    </div>
+    <SortableObjectListItem
+      id={points.id}
+      index={index}
+      name={points.name}
+      objectLabel="point cloud"
+      onRename={(name) => updatePoints(points.id, { name })}
+      dimmed={!points.visibility}
+      leadingControls={
+        <VisibilityButton
+          visible={points.visibility}
+          onVisibleChange={(visibility) =>
+            updatePoints(points.id, { visibility })
+          }
+          objectLabel="point cloud"
+          name={points.name}
+        />
+      }
+      trailingControls={
+        <OpacityControl
+          opacity={points.opacity}
+          name={points.name}
+          onOpacityChange={(opacity) => updatePoints(points.id, { opacity })}
+        />
+      }
+      onDelete={() => deletePoints(points.id)}
+    >
+      <DataSourceWidget
+        dataSource={points.dataSource}
+        dataProviders={pointsDataProviders}
+        onDataSourceChange={(newDataSource) => {
+          updatePoints(points.id, { dataSource: newDataSource });
+        }}
+        className="bg-card"
+      />
+      <PointsSettingsWidget
+        points={points}
+        activeCategory={activeSettingsCategory}
+        onActiveCategoryChange={setActiveSettingsCategory}
+        className="bg-card"
+      />
+      {pointsData !== null && (
+        <PointsAnnotationsWidget
+          points={points}
+          data={pointsData}
+          activeSettingsCategory={activeSettingsCategory}
+          className="bg-card"
+        />
+      )}
+    </SortableObjectListItem>
   );
 }

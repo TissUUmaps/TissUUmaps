@@ -3,11 +3,9 @@ on:
   push:
     branches:
       - main
-      - development
   pull_request:
     branches:
       - main
-      - development
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -23,7 +21,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version: 24
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -40,16 +38,15 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version: 24
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Build packages
-        run: pnpm run build:packages
+      - name: Type-check
+        run: pnpm run typecheck
       - name: Run linter
         run: pnpm run lint
   test:
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -59,7 +56,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version: 24
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -67,6 +64,8 @@ jobs:
         run: pnpm run build:packages
       - name: Run tests
         run: pnpm run test
+      - name: Run release script tests
+        run: pnpm run test:scripts
       - name: Upload coverage
         uses: codecov/codecov-action@v5
         with:

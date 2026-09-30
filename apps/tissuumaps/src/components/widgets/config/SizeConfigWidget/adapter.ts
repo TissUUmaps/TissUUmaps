@@ -1,4 +1,8 @@
-import type { CoordinateSpace, SizeConfig } from "@tissuumaps/core";
+import type {
+  CoordinateSpace,
+  SizeConfig,
+  TableColumnRef,
+} from "@tissuumaps/core";
 
 export type SizeConfigSource = Exclude<SizeConfig["source"], undefined>;
 
@@ -11,17 +15,21 @@ export type SizeConfigWidgetAdapter = {
   currentSource: SizeConfigSource;
   currentConstantValue: number;
   currentConstantUnit: CoordinateSpace;
-  currentFromColumn: string | null;
+  currentFromTableColumn: TableColumnRef | null;
   currentFromUnit: CoordinateSpace;
-  currentGroupByColumn: string | null;
+  currentGroupByTableColumn: TableColumnRef | null;
   currentGroupByMap: string | null;
   currentGroupByUnit: CoordinateSpace;
   setCurrentSource: (newCurrentSource: SizeConfigSource) => void;
   setCurrentConstantValue: (newCurrentConstantValue: number) => void;
   setCurrentConstantUnit: (newCurrentConstantUnit: CoordinateSpace) => void;
-  setCurrentFromColumn: (newCurrentFromColumn: string | null) => void;
+  setCurrentFromTableColumn: (
+    newCurrentFromTableColumn: TableColumnRef | null,
+  ) => void;
   setCurrentFromUnit: (newCurrentFromUnit: CoordinateSpace) => void;
-  setCurrentGroupByColumn: (newCurrentGroupByColumn: string | null) => void;
+  setCurrentGroupByTableColumn: (
+    newCurrentGroupByTableColumn: TableColumnRef | null,
+  ) => void;
   setCurrentGroupByMap: (newCurrentGroupByMap: string | null) => void;
   setCurrentGroupByUnit: (newCurrentGroupByUnit: CoordinateSpace) => void;
 };

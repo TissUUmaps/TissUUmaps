@@ -14,25 +14,23 @@ export type ItemAnnotationsTableRowData = {
   annotated?: boolean;
 };
 
-export type ItemAnnotationsTableColumnDef =
+type ItemAnnotationsTableColumnDef =
   VirtualTableColumnDef<ItemAnnotationsTableRowData>;
 
 export type ItemAnnotationsTableProps = {
   data?: ItemsData;
   height: number;
   rowHeight: number;
-  table: string | null;
-  extraColumnDefs?: ItemAnnotationsTableColumnDef[];
+  tableId: string | null;
 };
 
 export function ItemAnnotationsTable({
   data,
   height,
   rowHeight,
-  table,
-  extraColumnDefs,
+  tableId,
 }: ItemAnnotationsTableProps) {
-  const tableData = useTableData(table);
+  const tableData = useTableData(tableId);
 
   // the ids and the per-index accessors the rows are built from, so that only
   // the rows within the visible range have to be materialized
@@ -42,7 +40,7 @@ export function ItemAnnotationsTable({
     let isAnnotated: ((id: number | string) => boolean) | undefined;
     if (data !== undefined) {
       ids = data.getIds();
-      if (table !== null) {
+      if (tableId !== null) {
         // the selected table governs the names; while it is still loading there
         // are none yet, rather than the object's own names, which would show a
         // different column for a moment and then be replaced
@@ -85,7 +83,7 @@ export function ItemAnnotationsTable({
       }
     }
     return { ids, getName, isAnnotated };
-  }, [data, table, tableData]);
+  }, [data, tableId, tableData]);
 
   const getRows = useCallback(
     (startIndex: number, endIndex: number) => {
@@ -110,11 +108,8 @@ export function ItemAnnotationsTable({
     if (getName !== undefined) {
       columnDefs.push({ id: "name", header: "Name", accessorKey: "name" });
     }
-    if (extraColumnDefs !== undefined) {
-      columnDefs.push(...extraColumnDefs);
-    }
     return columnDefs;
-  }, [getName, extraColumnDefs]);
+  }, [getName]);
 
   return (
     <VirtualTable

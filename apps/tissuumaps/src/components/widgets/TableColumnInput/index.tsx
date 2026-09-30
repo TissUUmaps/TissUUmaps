@@ -1,8 +1,11 @@
 import type { Autocomplete as AutocompletePrimitive } from "@base-ui/react/autocomplete";
 import { FolderIcon } from "lucide-react";
 import {
+  type Ref,
   useEffect,
   useEffectEvent,
+  useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
   useTransition,
@@ -22,16 +25,27 @@ import {
   AutocompleteTrigger,
 } from "@/components/common/autocomplete";
 import { InputGroupAddon } from "@/components/ui/input-group";
+import { useCompressedRowVirtualizer } from "@/hooks/useCompressedRowVirtualizer";
 import { useLazyTableData } from "@/hooks/useLazyData";
 
 export type TableColumnInputProps = {
   tableId: string | null;
   value: string | null;
-  onValueChange: (column: string | null) => void;
+  onValueChange: (value: string | null) => void;
   className?: string;
 };
 
-const maxSuggestions = 100;
+/** The height of a suggestion, in pixels */
+const rowHeight = 32;
+
+/** The largest height of the suggestion list (`max-h-80`), in pixels */
+const maxListHeight = 320;
+
+/**
+ * How many suggestions are rendered beyond each end of the visible range, so
+ * that the highlight moves onto a rendered one
+ */
+const overscan = 5;
 
 function findQuery(suggestion: string, query: string): number {
   return suggestion.toLowerCase().indexOf(query.toLowerCase());
@@ -63,6 +77,82 @@ function SuggestionText({ suggestion, query }: SuggestionTextProps) {
   );
 }
 
+type SuggestionListHandle = {
+  scrollRowIntoView: (index: number) => void;
+};
+
+type SuggestionListProps = {
+  suggestions: TableColumnQuerySuggestion[];
+  query: string;
+  ref: Ref<SuggestionListHandle>;
+};
+
+/**
+ * Renders only the suggestions within the visible range of the list
+ *
+ * Mounted together with its scroll container, which the virtualizer subscribes
+ * to on mount.
+ */
+function SuggestionList({ suggestions, query, ref }: SuggestionListProps) {
+  const {
+    containerRef,
+    firstIndex,
+    lastIndex,
+    layoutRowsHeight,
+    rowShift,
+    scrollRowIntoView,
+  } = useCompressedRowVirtualizer(
+    suggestions.length,
+    rowHeight,
+    Math.min(suggestions.length * rowHeight, maxListHeight),
+    overscan,
+  );
+  useImperativeHandle(ref, () => ({ scrollRowIntoView }));
+
+  // base-ui leaves the scrolling of a virtualized list to its owner
+  useLayoutEffect(() => {
+    containerRef.current?.scrollTo({ top: 0 });
+  }, [containerRef, suggestions]);
+
+  return (
+    <div
+      ref={containerRef}
+      role="presentation"
+      className="max-h-80 min-h-0 overflow-y-auto"
+      style={{ height: `${suggestions.length * rowHeight}px` }}
+    >
+      <div
+        role="presentation"
+        className="relative"
+        style={{ height: `${layoutRowsHeight}px` }}
+      >
+        {suggestions.slice(firstIndex, lastIndex).map((suggestion, i) => {
+          const index = firstIndex + i;
+          return (
+            <AutocompleteItem
+              key={suggestion.query}
+              index={index}
+              value={suggestion}
+              aria-setsize={suggestions.length}
+              aria-posinset={index + 1}
+              className="absolute inset-x-0 top-0"
+              style={{
+                height: `${rowHeight}px`,
+                transform: `translateY(${index * rowHeight - rowShift}px)`,
+              }}
+            >
+              {suggestion.group && (
+                <FolderIcon className="size-3.5 shrink-0 text-muted-foreground" />
+              )}
+              <SuggestionText suggestion={suggestion.query} query={query} />
+            </AutocompleteItem>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function TableColumnInput({
   tableId,
   value,
@@ -71,7 +161,9 @@ export function TableColumnInput({
 }: TableColumnInputProps) {
   const loadTableData = useLazyTableData(tableId);
 
-  const [text, setText] = useState(value ?? "");
+  const query = value ?? "";
+
+  const [text, setText] = useState(query);
   const [invalid, setInvalid] = useState(false);
   const [suggestions, setSuggestions] = useState<
     TableColumnQuerySuggestion[] | null
@@ -80,12 +172,18 @@ export function TableColumnInput({
   const [pendingQuery, setPendingQuery] = useState<string | null>(null);
 
   // https://react.dev/reference/react/useState#storing-information-from-previous-renders
-  const [prevValue, setPrevValue] = useState(value);
-  if (value !== prevValue) {
-    setPrevValue(value);
-    setText(value ?? "");
+  const [prevQuery, setPrevQuery] = useState(query);
+  const [prevTableId, setPrevTableId] = useState(tableId);
+  if (query !== prevQuery) {
+    setPrevQuery(query);
+    setPrevTableId(tableId);
+    setText(query);
     setInvalid(false);
     setPendingQuery(null);
+  } else if (tableId !== prevTableId) {
+    // the column is resolved again in the newly chosen table
+    setPrevTableId(tableId);
+    setPendingQuery(text.trim() !== "" ? text : null);
   }
 
   const [isSuggestPending, startSuggestTransition] = useTransition();
@@ -132,11 +230,10 @@ export function TableColumnInput({
     const abortController = new AbortController();
     const { signal } = abortController;
     loadTableData({ signal })
-      .then(
-        (tableData) =>
-          tableData?.resolveColumnQuery(pendingQuery, { signal }) ?? null,
-      )
-      .then((column) => {
+      .then(async (tableData) => {
+        const column =
+          (await tableData?.resolveColumnQuery(pendingQuery, { signal })) ??
+          null;
         if (!signal.aborted) {
           handleCommitResolved(column);
         }
@@ -150,25 +247,26 @@ export function TableColumnInput({
     return () => abortController.abort();
   }, [pendingQuery, loadTableData]);
 
-  function commit(query: string) {
-    if (query === (value ?? "")) {
+  function commit(newQuery: string) {
+    if (newQuery === query && !invalid) {
       setPendingQuery(null);
       setInvalid(false);
       return;
     }
-    if (query.trim() === "") {
+    if (newQuery.trim() === "") {
       setPendingQuery(null);
       setText("");
       setInvalid(false);
       onValueChange(null);
       return;
     }
-    setPendingQuery(query);
+    setPendingQuery(newQuery);
   }
 
   const highlightedSuggestionRef = useRef<
     TableColumnQuerySuggestion | undefined
   >(undefined);
+  const suggestionListRef = useRef<SuggestionListHandle>(null);
   // base-ui closes the popup after any item press and only resets the
   // highlighted index on unmount, so cancelling the close would leave a stale
   // highlight on the children; a pressed group suggestion reopens the
@@ -216,23 +314,12 @@ export function TableColumnInput({
     }
   }
 
-  const shownSuggestions = suggestions?.slice(0, maxSuggestions);
-
   function getStatusMessage(): string | null {
     if (suggestions === null) {
       return isSuggestPending ? "Loading table..." : null;
     }
     if (suggestions.length === 0) {
       return text === "" ? "No columns" : `No matches for "${text}"`;
-    }
-    // matching suggestions are listed first, so the first one decides
-    if (findQuery(suggestions[0]!.query, text) === -1) {
-      return suggestions.length > maxSuggestions
-        ? `No matches for "${text}", showing the first ${maxSuggestions} columns`
-        : `No matches for "${text}", showing all columns`;
-    }
-    if (suggestions.length > maxSuggestions) {
-      return `Showing the first ${maxSuggestions} suggestions, keep typing to narrow down`;
     }
     return null;
   }
@@ -242,14 +329,20 @@ export function TableColumnInput({
       value={text}
       onValueChange={handleTextChange}
       mode="none"
-      items={shownSuggestions ?? []}
+      items={suggestions ?? []}
+      virtualized
       itemToStringValue={(suggestion) => suggestion.query}
       openOnInputClick
       open={open}
       onOpenChange={handleOpenChange}
       onOpenChangeComplete={handleOpenChangeComplete}
-      onItemHighlighted={(suggestion) => {
+      onItemHighlighted={(suggestion, { reason, index }) => {
         highlightedSuggestionRef.current = suggestion;
+        // base-ui cannot scroll to a suggestion that is not rendered, e.g.
+        // when the highlight wraps around the list
+        if (suggestion !== undefined && reason === "keyboard") {
+          suggestionListRef.current?.scrollRowIntoView(index);
+        }
       }}
     >
       <AutocompleteInputGroup className={className}>
@@ -268,20 +361,19 @@ export function TableColumnInput({
         />
         <InputGroupAddon align="inline-end">
           <AutocompleteClear />
-          <AutocompleteTrigger aria-label="Show columns" title="Show columns" />
+          <AutocompleteTrigger label="Show columns" />
         </InputGroupAddon>
       </AutocompleteInputGroup>
-      <AutocompletePopup>
+      <AutocompletePopup className="flex flex-col overflow-hidden">
         <AutocompleteStatus>{getStatusMessage()}</AutocompleteStatus>
-        <AutocompleteList>
-          {shownSuggestions?.map((suggestion) => (
-            <AutocompleteItem key={suggestion.query} value={suggestion}>
-              {suggestion.group && (
-                <FolderIcon className="size-3.5 shrink-0 text-muted-foreground" />
-              )}
-              <SuggestionText suggestion={suggestion.query} query={text} />
-            </AutocompleteItem>
-          ))}
+        <AutocompleteList className="flex min-h-0 flex-col">
+          {suggestions !== null && suggestions.length > 0 && (
+            <SuggestionList
+              ref={suggestionListRef}
+              suggestions={suggestions}
+              query={text}
+            />
+          )}
         </AutocompleteList>
       </AutocompletePopup>
     </Autocomplete>

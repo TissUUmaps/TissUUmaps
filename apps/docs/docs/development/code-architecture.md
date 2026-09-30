@@ -15,22 +15,25 @@ This project is structured as a pnpm monorepo as follows:
   - @tissuumaps-render   # Rendering backends (OpenSeadragon, WebGL, SVG)
   - @tissuumaps-storage  # Officially supported data providers
   - @tissuumaps-plugins  # Officially supported TissUUmaps plugins
-  - @tissuumaps-viewer   # The TissUUmaps viewer (React component)
+  - @tissuumaps-react    # The TissUUmaps viewer (React component)
 ```
 
-Each package's `exports` point at its build output in `dist` only, so that
-published packages contain nothing monorepo-specific. During development,
-packages are resolved to their TypeScript sources instead, via a private
-`tissuumaps-development` export condition: `customConditions` in `tsconfig.base.json`
+Each package's `exports` point at its build output in `dist`. During
+development, packages are resolved to their TypeScript sources instead, via a
+private `tissuumaps-development` export condition: `customConditions` in `tsconfig.base.json`
 for TypeScript (and thus for editor navigation), and `resolve.conditions` /
-`ssr.resolve.conditions` in the Vite configs for Vite and Vitest. Because no
-consumer's bundler declares that condition, it is inert in published packages.
+`ssr.resolve.conditions` in the Vite configs for Vite and Vitest. So that
+published packages contain nothing monorepo-specific, `publishConfig.exports`
+replaces `exports` on publishing with a copy that lacks the condition; keep the
+two in sync.
 
 The Vite configs add that condition only when the mode is not `production`, so
 that production builds go through each package's `exports` and `dist` — the very
 graph that is published — instead of silently bypassing it. Production builds of
 the application therefore require the packages to be built first, which the
 topologically ordered `pnpm run build` takes care of.
+
+The application is built into a single HTML file with relative URLs (`vite-plugin-singlefile` sets a relative base), so that the same build runs under any path: a versioned subpath on GitHub Pages, or a downloaded release opened from anywhere. Its version and repository URL are injected at build time from `apps/tissuumaps/package.json` (`__APP_VERSION__` and `__APP_REPOSITORY_URL__`, declared in `src/vite-env.d.ts`) for use by the user interface.
 
 The following diagram outlines the dependency structure among packages and the TissUUmaps application:
 
@@ -41,7 +44,7 @@ flowchart BT
     render["@tissuumaps/render"]
     render --> core
 
-    viewer["@tissuumaps/viewer"]
+    viewer["@tissuumaps/react"]
     viewer --> core
     viewer --> render
 
@@ -59,7 +62,7 @@ flowchart BT
     tissuumaps --> viewer
 ```
 
-Packages declare their `@tissuumaps/*` dependencies as peer dependencies and externalize them in their Vite builds; only the application bundles them.
+Packages declare their `@tissuumaps/*` dependencies as peer dependencies; only the application bundles them. More generally, each package's Vite build externalizes the dependencies and peer dependencies in its `package.json`, including their subpaths, and bundles everything else, such as packages that are only `devDependencies`.
 
 ## @tissuumaps/core
 
@@ -73,6 +76,8 @@ export interface RawImage { ... }
 export type Image = { ... };
 export function createImage(rawImage: RawImage): Image { ... }
 ```
+
+IDs must not contain `:`, which joins an ID with a name in keys like `${tableId}:${column}`.
 
 Data sources are carried as authored: the model only guarantees the base `DataSource` shape (`type`, and optionally `source`). Provider-specific defaults are not part of the model; the responsible data provider applies them in `normalize()` (see below).
 
@@ -96,12 +101,12 @@ Utilities are exclusively implemented as static classes.
 
 ## @tissuumaps/render
 
-This package contains the rendering backends and exposes the core TissUUmaps rendering functionality as an imperative API. It does not depend on React and can be used independently of `@tissuumaps/viewer`. There are three backends: OpenSeadragon (images and labels), WebGL 2 (points and shapes), and an SVG overlay (interactive shape drawing).
+This package contains the rendering backends and exposes the core TissUUmaps rendering functionality as an imperative API. It does not depend on React and can be used independently of `@tissuumaps/react`. There are three backends: OpenSeadragon (images and labels), WebGL 2 (points and shapes), and an SVG overlay (interactive shape drawing).
 
 **Contexts** wrap the underlying rendering technology and manage shared low-level state:
 
 - `OpenSeadragonContext` wraps an `OpenSeadragon.Viewer`, managing viewer options, animation handlers, world bounds, and the (asynchronous, FIFO-ordered) addition/removal of `OpenSeadragon.TiledImage` instances.
-- `WebGLContext` wraps a `WebGL2RenderingContext`, providing helpers for creating programs, buffers, and textures, as well as canvas resizing. Context loss and restoration are handled by `@tissuumaps/viewer`.
+- `WebGLContext` wraps a `WebGL2RenderingContext`, providing helpers for creating programs, buffers, and textures, as well as canvas resizing. Context loss and restoration are handled by `@tissuumaps/react`.
 
 **Renderers** track the state of the objects currently displayed and reconcile changes in the application state (layers, objects, attribute maps) with the rendering context via a `synchronize()` method:
 
@@ -121,21 +126,27 @@ The package exports only the two contexts, the four renderers, `WebGLFrameSchedu
 
 ## @tissuumaps/storage
 
-A data provider implementation consists of a concrete `DataSource` type with its `...DataSourceType` constant (the registration key), a concrete `DataProvider`, whose `load()` method takes the normalized data source and returns a concrete `Data` accessor, and that accessor, laid out as `XDataSource.ts`, `XDataProvider.ts` and `XData.ts`.
+Data providers are implemented per format and data kind, and all providers of a format live in one directory named after the format: `tiff/` holds `TIFFImageDataProvider` and `TIFFLabelsDataProvider`, `parquet/` the table and the shapes provider. A format may also be virtual, such as `table/`, whose points are backed by a table of the project. A provider implementation consists of a concrete `DataSource` type with its `...DataSourceType` constant (the registration key), a concrete `DataProvider`, whose `load()` method takes the normalized data source and returns a concrete `Data` accessor, and that accessor, laid out as `XDataSource.ts`, `XDataProvider.ts` and `XData.ts`, where `X` names the format and the kind (`TIFFImage`, `ParquetShapes`). Each format directory is separately exported in the `package.json` and `vite.config.ts` files. Directories named after a format are singular; directories that group files of one kind are plural (`profiles/`, `workers/`), so the two cannot be confused.
 
-Each data provider has its own dedicated directory and is separately exported in the `package.json` and `vite.config.ts` files: `ome-zarr` and `tiff` (images and labels), `openseadragon` (images), `table` (points backed by a table), `geojson` and `parquet` (shapes), `csv` and `parquet` (tables).
+The data source `type` is named after the format (`"tiff"`, `"parquet"`) and is unique per data kind only, as the application keeps one provider registry per kind: `"parquet"` is a table type and a shapes type. Where a plain format cannot be a data provider on its own, its interpretable variant is the provider, the directory and the type: a Zarr array without multiscales metadata is not an image, so images come from `OMEZarrImageDataProvider` in `ome-zarr/` with the type `"ome-zarr"`. Formats that share a container abstraction may be grouped in a family directory that holds their shared code, including abstract base providers and data classes; the format directories nest under it and remain the exported ones. The `hdf5/` and `zarr/` table providers nest under `hierarchical/`, which holds the `HierarchicalStore` interface over groups and arrays, the `HierarchicalTableReader` that lists and reads its columns, the `HierarchicalTableDataProviderBase` and `HierarchicalTableDataBase` both providers build on, the worker protocol of the HDF5 provider, and the family's `profiles/`.
+
+Variants of a format that its plain form already reads are profiles. They live in the `profiles/` directory of the format (or of the family, when they apply to every format of it), one file per profile, and belong to the format rather than to a data kind: they are detected from the file, never registered and never a `type`, and any provider of the format may consult them. A stateful profile is an `XParser` class that is instantiated and holds what it reads. The TIFF profiles (`OMETIFFParser`, `QPTIFFParser`, `PlainTIFFParser`) are exclusive, so they share the `TIFFParser` interface, `findTIFFParser` tries them in detection order with the plain parser last, and both the image and the labels provider read the `TIFFStructure` the parser yields. A stateless profile is an `XUtils` class of static methods over the file's metadata; `AnnDataUtils` in `hierarchical/profiles/` decodes the AnnData encoding for the `hdf5` and `zarr` providers alike. `GeoParquetUtils` is additive (a file carries the GeoParquet and the pandas metadata at once), so it stays independent and the plain case is the worker's default path; the table provider takes the `[x]`/`[y]` coordinate columns it derives from point geometry columns, the shapes provider the polygons.
+
+Conventions, single aspects of a format or a profile, follow the same shape: a dedicated file in the format directory when they apply to the format (`parquet/PandasMetadataUtils.ts` reads the pandas index column of any Parquet file), or inside the profile file when they apply to that profile only (the `bbox` ranges of GeoParquet columns in `GeoParquetUtils`), as an `XParser` when they hold state and as an `XUtils` otherwise.
+
+Composite formats, which combine several formats into one dataset (SpatialData: OME-Zarr images and labels, GeoParquet shapes and points, AnnData tables, and per-element transforms), are not data providers. They are import plugins outside this package, which read the layout of the dataset and add data objects of the existing types to the project.
 
 Data providers convert what a file holds to the array types of the storage API (see [Storage](#storage)): 64-bit integers are read as 64-bit floats, and a value beyond the safe integer range fails the load rather than losing precision; numeric columns with missing values are read as floating-point typed arrays with `NaN` for a missing value; ID columns have to hold integers or strings without missing values, which fail the load (see `ArrayUtils.toIDArray` in `@tissuumaps/core`), and position columns are read as 32-bit floats.
 
-Heavy parsing and decoding runs off the main thread: Parquet and GeoJSON in dedicated web workers (`parquet.worker.ts`, `geojson.worker.ts`, inlined into the bundle), CSV via PapaParse's worker mode.
+Heavy parsing and decoding runs off the main thread: TIFF tiles, Parquet, GeoJSON and HDF5 in dedicated web workers (`tiff.worker.ts`, `parquet.worker.ts`, `geojson.worker.ts`, `hdf5.worker.ts`, inlined into the bundle), CSV via PapaParse's worker mode. The HDF5 worker lives as long as its table, as h5wasm reads the file synchronously and keeps it open; Zarr reads are asynchronous fetches and need no worker.
 
 Format metadata belongs in the data provider: channel count, names, colors and contrast limits come from the file, not from the viewer. How the provider reads it is up to it. `OMEZarrImageDataProvider` goes through `OMEZarrTileSource`, `TIFFImageDataProvider` parses the IFDs itself.
 
 ## @tissuumaps/plugins
 
-Each plugin has its own dedicated directory and is separately exported in the `package.json` and `vite.config.ts` files. The plugin contract itself lives in `@tissuumaps/core` (see [Plugins](./plugins.md)).
+Each plugin has its own dedicated directory and is separately exported in the `package.json` and `vite.config.ts` files. The application registers each plugin on startup, by listing it in `builtInPlugins` in `apps/tissuumaps/src/plugins.ts`. The plugin contract itself lives in `@tissuumaps/core` (see [Plugins](./plugins.md)).
 
-## @tissuumaps/viewer
+## @tissuumaps/react
 
 The TissUUmaps `Viewer` component uses an adapter pattern facilitated by the `ViewerAdapter` interface, which decouples rendering from any particular application state management. It makes use of custom hooks that each encapsulate one rendering backend from `@tissuumaps/render` (separation of concerns): `useOpenSeadragon` (image and labels renderers), `useWebGL` (points and shapes renderers and their frame scheduler, including WebGL context loss and restoration), and `useSVG` (interactive drawing overlay). The WebGL canvas element and the SVG overlay element are appended as children to the `viewer.canvas` div element (child of the `viewer.container` div element, parent of the `viewer.drawer.canvas` canvas element) to allow for proper compositioning, where `viewer` is the `OpenSeadragon.Viewer` instance. The WebGL renderers' bounds are fed back into the OpenSeadragon world bounds, so that points and shapes count towards the navigable area.
 
@@ -147,7 +158,7 @@ In the TissUUmaps React app, absolute (`@/`) imports are used for imports across
 
 ### App
 
-`bootstrap` starts up the parts of the application that live outside of React, in this order: the built-in data providers are registered (`data/providers.ts`), the data caches are started, the plugin registry is started and exposed as `window.tissuumaps` (`plugins.ts`), loading of the project is _started_ — from the URL given in the `project` GET parameter, or from `project.json` if that parameter is absent or empty — and finally a `tissuumaps-loaded` event is dispatched on `window` (`events.ts`), after which plugins register themselves (see [Plugins](./plugins.md)); there are no plugins known to the application ahead of time. `bootstrap` returns a teardown function that cancels the project load and stops the registry and the caches, in that order; it is invoked on hot module replacement.
+`bootstrap` starts up the parts of the application that live outside of React, in this order: the built-in data providers are registered (`data/providers.ts`), the data caches are started, the plugin registry is started and exposed as `window.tissuumaps` (`plugins.ts`), the plugins shipped in `@tissuumaps/plugins` are registered (`enableBuiltInPlugins` in `plugins.ts`), the project is set to be marked open as soon as it has a source or data, loading of the project is _started_ — from the URL given in the `project` GET parameter, or from `project.tm4` if that parameter is absent or empty — and finally a `tissuumaps-loaded` event is dispatched on `window` (`events.ts`), after which other plugins register themselves (see [Plugins](./plugins.md)). `bootstrap` returns a teardown function that cancels the project load, stops watching whether the project is open, and stops the registry and the caches, in that order; it is invoked on hot module replacement.
 
 `App` lays out the built-in panels and the plugin panels (`usePluginPanels`) with Dockview, wrapped in the `DialogProvider`.
 
@@ -157,7 +168,7 @@ In the TissUUmaps React app, absolute (`@/`) imports are used for imports across
 
 ### Plugin registry
 
-`plugins.ts` owns the plugin lifecycle described on the [Plugins](./plugins.md) page. It is the only writer of the app store's `plugins`, where it keeps just each plugin's name and the container element of its user interface, so that Immer never freezes anything the plugin owns; the unmount and teardown callbacks are kept in a module-level map. `startPluginRegistry()` returns a teardown that unregisters all plugins.
+`plugins.ts` owns the plugin lifecycle described on the [Plugins](./plugins.md) page: registering sets a plugin up, mounting and unmounting (on request, through the plugins menu and the panel's close button) show and hide its user interface, and unregistering tears it down. It is the only writer of the app store's `plugins`, where it keeps just each plugin's name, whether it can be mounted, and the container element of its user interface while it is mounted, so that Immer never freezes anything the plugin owns; the plugin objects and their unmount and teardown callbacks are kept in a module-level map. `loadPluginFromURL` and `loadPluginFromFile` load third-party plugins as ES modules with `import()`, a local file through a `blob:` URL, and register their default export. `startPluginRegistry()` returns a teardown that unregisters all plugins.
 
 ### Hooks
 
@@ -175,7 +186,7 @@ Components are structured as follows:
 - `ui` - shadcn/ui components, adapted to the application as needed (be careful when updating!)
 - `widgets` - independent high-level components (e.g. configuration widgets) used across panels; the JSON Forms-based data source configuration forms live under `widgets/DataSourceWidget`
 
-A feature component lives in a PascalCase folder named after the component (e.g. `components/panels/ImagesPanel`), with an `index.tsx` that _is_ the component (not a re-export). Everything that belongs to the feature sits next to it as flat files named by role, e.g. `hooks.ts`, `adapter.ts`, `category.ts`, sub-components such as `ImageSettingsWidget.tsx`, and feature hooks such as `useLabelsAnnotationsWidget.tsx`; a sub-feature of its own (e.g. `ProjectPanel/LayersWidget`) is a nested PascalCase folder following the same rule. There are no `types.ts`/`utils.ts` grab-bags. Anything with behavior (dialogs, providers, widgets, panels) follows this rule, even if it sits right next to `ui`. Only `ui` and `common` consist of flat, kebab-case single files (e.g. `ui/button.tsx`), as they are shadcn-style wrappers over `@base-ui/react`.
+A feature component lives in a PascalCase folder named after the component (e.g. `components/panels/ImagesPanel`), with an `index.tsx` that _is_ the component (not a re-export). Everything that belongs to the feature sits next to it as flat files named by role, e.g. `hooks.ts`, `adapter.ts`, `category.ts`, sub-components such as `ImageSettingsWidget.tsx`, and feature hooks such as `useGroupColumn.tsx`; a sub-feature of its own (e.g. `ProjectPanel/LayersWidget`) is a nested PascalCase folder following the same rule. There are no `types.ts`/`utils.ts` grab-bags. Anything with behavior (dialogs, providers, widgets, panels) follows this rule, even if it sits right next to `ui`. Only `ui` and `common` consist of flat, kebab-case single files (e.g. `ui/button.tsx`), as they are shadcn-style wrappers over `@base-ui/react`.
 
 A React context is split into two files: `context.ts` holds the context object and its hook (`createContext`/`useContext` only), and `ContextProvider.tsx` holds the provider component, so that the hook can be imported without pulling in the provider's dependencies.
 
@@ -183,7 +194,7 @@ A React context is split into two files: `context.ts` holds the context object a
 
 Four separate Zustand vanilla stores are used, one per file in `src/stores`, all typed in `@tissuumaps/core` (`types/stores`) so that plugins can consume them:
 
-- `appStore` - transient application state: workspace, interaction mode, registered data providers and plugins
+- `appStore` - transient application state: workspace, whether a project is open, interaction mode, registered data providers and plugins
 - `dataStore` - derived state: a data reference (`DataRef`) per project object, reconciled by the data caches (see below); treat as read-only
 - `projectStore` - the loaded project (layers, images, labels, points, shapes, tables, maps, render options)
 - `settingsStore` - user settings, persisted across sessions
@@ -215,3 +226,12 @@ The caches are implemented as follows:
 ## Documentation (docs)
 
 The documentation is based on Docusaurus and published to GitHub Pages using GitHub Actions. The API documentation for packages is generated by TypeDoc via `docusaurus-plugin-typedoc` and `typedoc-plugin-markdown`. Diagrams are powered by Mermaid.
+
+For deployment, `DOCUSAURUS_BASE_URL` sets the path the documentation is served under. The documentation always lives under `<application>/docs/`, so the "Live" links point at the application above it (or at the development server when building locally).
+
+## Release scripts (scripts)
+
+The dependency-free TypeScript scripts in `scripts/` are run directly by Node (`node scripts/<name>.ts`) by the release workflow (`.github/workflows/release.yaml`, see [Continuous delivery](./development-workflow.md#continuous-delivery)):
+
+- `prepare-registry-build.ts` prepares a checkout for building the application from the _published_ `@tissuumaps/*` packages instead of the workspace sources: it restricts the pnpm workspace to the application and pins the application's `workspace:` dependencies to the versions in the checkout. `verify-registry-deps.ts` then fails unless every package was installed from the registry with the expected version and manifest. Both read the packages through `lib/workspace.ts`. Neither result is ever committed.
+- `assemble-pages.ts` assembles the GitHub Pages site from the release assets: of every MAJOR.MINOR line it deploys the highest stable version under `<version>/`, plus the highest prerelease above it if there is one (or the highest prerelease alone while the line has no stable version); a prerelease is only deployed while no stable version above it exists at all, so abandoned prerelease lines do not accumulate; every other version redirects to the lowest deployed version at or above it (a stable one for a stable version, so that a prerelease never replaces a stable version for its users), or to the latest version when there is none, keeping the rest of the path. A release whose site asset is missing cannot be deployed and only gets a redirect, like a superseded version. The site root redirects to the latest stable version (or the latest prerelease while there is no stable one) and `docs/` to its documentation; while no version is deployed at all, it reports so to the workflow, which deploys the current branch instead. Custom HTML (the Matomo snippet) is inserted into the deployed application pages only, never into the release assets. The retention rules live in `lib/retention.ts`, the redirect rules in `lib/redirect.ts` (inlined into the generated redirect pages) and version precedence in `lib/semver.ts`; all three are covered by `pnpm run test:scripts`.

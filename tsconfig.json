@@ -20,7 +20,7 @@
       "path": "./packages/@tissuumaps-plugins"
     },
     {
-      "path": "./packages/@tissuumaps-viewer"
+      "path": "./packages/@tissuumaps-react"
     }
   ]
 }

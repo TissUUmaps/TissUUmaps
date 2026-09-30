@@ -4,13 +4,14 @@
   "type": "module",
   "packageManager": "pnpm@11.15.1",
   "devDependencies": {
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
     "@eslint/js": "^10.0.1",
     "@microsoft/api-extractor": "^7.58.9",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
-    "@types/node": "^26.0.1",
+    "@types/node": "^24.19.0",
     "@vitejs/plugin-react": "^6.0.3",
     "@vitest/coverage-v8": "^4.1.9",
-    "canvas": "^3.2.3",
     "eslint": "^10.5.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -31,22 +32,26 @@
     "prepare": "husky",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
+    "typecheck": "tsc -b && tsc -p tsconfig.node.json && tsc -p scripts/tsconfig.json",
     "fmt": "prettier --write --ignore-unknown .",
     "fmt:check": "prettier --check --ignore-unknown .",
     "test": "vitest run --passWithNoTests --coverage",
+    "test:scripts": "node --test scripts/lib/*.test.ts",
     "dev": "pnpm run --filter tissuumaps dev",
     "docs": "pnpm run --filter docs start",
     "build": "pnpm run -r --filter !docs build",
     "build:docs": "pnpm run build:packages && pnpm run --filter docs build",
     "build:packages": "pnpm run -r --filter \"./packages/*\" build",
-    "clean": "pnpm run -r clean && rm -rf node_modules"
+    "changeset": "changeset",
+    "release": "pnpm run build:packages && changeset publish",
+    "clean": "pnpm run -r clean && rm -rf coverage node_modules"
   },
   "lint-staged": {
     "**/*.{js,jsx,ts,tsx}": "eslint --fix",
     "**/*": "prettier --write --ignore-unknown"
   },
   "engines": {
-    "node": ">=22.22.1",
+    "node": ">=24.0.0",
     "pnpm": ">=11.15.1"
   }
 }

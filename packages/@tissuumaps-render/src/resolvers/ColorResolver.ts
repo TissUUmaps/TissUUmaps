@@ -39,11 +39,16 @@ export class ColorResolver {
    * The returned colors carry no alpha; the caller folds the separately
    * resolved visibilities and opacities into it.
    *
+   * If the table cannot be loaded, or the configuration cannot be resolved
+   * from it, the failure is logged and the default is used for every item.
+   *
    * @param ids - Ordered list of item IDs
    * @param config - Color configuration specifying the data source
    * @param colorMaps - Available color maps for groupBy lookups
    * @param defaultColor - Fallback color when no valid config or value is found
-   * @param options - Optional abort signal, buffer alignment, and table loader
+   * @param loadTable - Async function that loads a {@link TableData} by ID, or
+   * the object's own table for `undefined`; it rejects for a missing table
+   * @param options - Optional abort signal and buffer alignment
    * @returns A `Uint32Array` of packed RGB color values, one per ID
    */
   static async resolveColors(
@@ -51,61 +56,58 @@ export class ColorResolver {
     config: ColorConfig,
     colorMaps: GroupValueMap<Color>[],
     defaultColor: Color,
-    options?: {
-      signal?: AbortSignal;
-      align?: number;
-      loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;
-    },
+    loadTable: (
+      tableId: string | undefined,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TableData>,
+    options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint32Array> {
-    const { signal, align = 1, loadTable } = options ?? {};
+    const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    let packedColors: Uint32Array;
     const activeConfigSource = getActiveConfigSource(config);
     if (activeConfigSource === "constant" && isConstantConfig(config)) {
-      packedColors = ColorResolver.resolveUniformColors(ids, config, { align });
-    } else if (
-      activeConfigSource === "from" &&
-      isFromConfig(config) &&
-      loadTable !== undefined
-    ) {
-      packedColors = await ColorResolver.resolveColorsFromTableValues(
-        ids,
-        config,
-        defaultColor,
-        loadTable,
-        { signal, align },
-      );
-    } else if (
-      activeConfigSource === "groupBy" &&
-      isGroupByConfig(config) &&
-      loadTable !== undefined
-    ) {
-      packedColors = await ColorResolver.resolveColorsFromTableGroups(
-        ids,
-        config,
-        colorMaps,
-        defaultColor,
-        loadTable,
-        { signal, align },
-      );
-    } else if (activeConfigSource === "random" && isRandomConfig(config)) {
-      packedColors = await ColorResolver.resolveRandomColors(
-        ids,
-        config,
-        defaultColor,
-        { signal, align },
-      );
-    } else {
-      console.warn("No valid color config found, using default color");
-      packedColors = ColorResolver.createUniformColors(
-        ids.length,
-        defaultColor,
-        {
-          align,
-        },
-      );
+      return ColorResolver.resolveUniformColors(ids, config, { align });
     }
-    return packedColors;
+    try {
+      if (activeConfigSource === "from" && isFromConfig(config)) {
+        return await ColorResolver.resolveColorsFromTableValues(
+          ids,
+          config,
+          defaultColor,
+          loadTable,
+          { signal, align },
+        );
+      }
+      if (activeConfigSource === "groupBy" && isGroupByConfig(config)) {
+        return await ColorResolver.resolveColorsFromTableGroups(
+          ids,
+          config,
+          colorMaps,
+          defaultColor,
+          loadTable,
+          { signal, align },
+        );
+      }
+    } catch (error) {
+      signal?.throwIfAborted();
+      console.warn(
+        "Failed to resolve colors from the table, using default color",
+        error,
+      );
+      return ColorResolver.createUniformColors(ids.length, defaultColor, {
+        align,
+      });
+    }
+    if (activeConfigSource === "random" && isRandomConfig(config)) {
+      return ColorResolver.resolveRandomColors(ids, config, defaultColor, {
+        signal,
+        align,
+      });
+    }
+    console.warn("No valid color config found, using default color");
+    return ColorResolver.createUniformColors(ids.length, defaultColor, {
+      align,
+    });
   }
 
   /**
@@ -192,7 +194,7 @@ export class ColorResolver {
    * @param ids - Ordered list of item IDs
    * @param config - From configuration specifying the source column, palette, and range
    * @param defaultColor - Fallback color when the palette is not found or a value is invalid
-   * @param loadTable - Async function that loads the {@link TableData}
+   * @param loadTable - Async function that loads a {@link TableData} by ID
    * @param options - Optional abort signal and buffer alignment
    * @returns A `Uint32Array` of packed color values
    */
@@ -200,7 +202,10 @@ export class ColorResolver {
     ids: IDArray,
     config: Extract<ColorConfig, FromConfig>,
     defaultColor: Color,
-    loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
+    loadTable: (
+      tableId: string | undefined,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint32Array> {
     const { signal, align = 1 } = options ?? {};
@@ -214,7 +219,7 @@ export class ColorResolver {
         align,
       });
     }
-    const data = await loadTable({ signal });
+    const data = await loadTable(config.from.table, { signal });
     const valueRange =
       config.from.range ??
       (await data.loadValueRange(config.from.column, { signal }));
@@ -240,7 +245,7 @@ export class ColorResolver {
    * @param config - GroupBy configuration specifying the source column and map/palette
    * @param colorMaps - Available color maps for group-to-color lookups
    * @param defaultColor - Fallback color when the map/palette is not found or a group is unmapped
-   * @param loadTable - Async function that loads the {@link TableData}
+   * @param loadTable - Async function that loads a {@link TableData} by ID
    * @param options - Optional abort signal and buffer alignment
    * @returns A `Uint32Array` of packed color values
    */
@@ -249,7 +254,10 @@ export class ColorResolver {
     config: Extract<ColorConfig, GroupByConfig<false>>,
     colorMaps: GroupValueMap<Color>[],
     defaultColor: Color,
-    loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
+    loadTable: (
+      tableId: string | undefined,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint32Array> {
     const { signal, align = 1 } = options ?? {};
@@ -274,7 +282,7 @@ export class ColorResolver {
         align,
       });
     }
-    const data = await loadTable({ signal });
+    const data = await loadTable(config.groupBy.table, { signal });
     const packedColors = ColorResolver.createColorBuffer(ids.length, {
       align,
     });

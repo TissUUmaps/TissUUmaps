@@ -1,0 +1,62 @@
+{
+  "name": "@tissuumaps/react",
+  "version": "0.1.0-beta.0",
+  "description": "React viewer component for TissUUmaps",
+  "homepage": "https://tissuumaps.github.io/TissUUmaps/",
+  "bugs": "https://github.com/TissUUmaps/TissUUmaps/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TissUUmaps/TissUUmaps.git",
+    "directory": "packages/@tissuumaps-react"
+  },
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "./dist",
+    "./CHANGELOG.md"
+  ],
+  "exports": {
+    ".": {
+      "tissuumaps-development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.src.json && vite build",
+    "clean": "rm -rf build dist node_modules",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@tissuumaps/core": "workspace:^",
+    "@tissuumaps/render": "workspace:^",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "peerDependencies": {
+    "@tissuumaps/core": "workspace:^",
+    "@tissuumaps/render": "workspace:^",
+    "@types/react": "^19.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@types/react": {
+      "optional": true
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json"
+    }
+  }
+}

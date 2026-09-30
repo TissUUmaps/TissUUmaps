@@ -13,14 +13,24 @@ import { useAppStore } from "@/stores/app";
 const pluginPanelIdPrefix = "plugin:";
 
 /**
- * Keeps the plugin panels in the dockview layout in sync with the plugins
- * registered with the app store
+ * Gets the dockview panel ID of a plugin's panel
  *
- * A plugin's panel is shown for exactly as long as the plugin is registered:
- * registering a plugin that has a `mount` adds a panel to the dockview layout,
- * and unregistering the plugin removes it again. A panel is not made active
- * when it is added, so that a plugin registering during startup does not take
- * the group it is added to over.
+ * @param pluginId - The ID of the plugin
+ * @returns The ID of the plugin's panel, which is only in the dockview layout
+ * while the plugin is mounted
+ */
+export function getPluginPanelId(pluginId: string): string {
+  return pluginPanelIdPrefix + pluginId;
+}
+
+/**
+ * Keeps the plugin panels in the dockview layout in sync with the plugins
+ * mounted according to the app store
+ *
+ * A plugin's panel is shown for exactly as long as the plugin is mounted:
+ * mounting a plugin adds a panel to the dockview layout, made active since
+ * plugins are only mounted on request, and unmounting or unregistering the
+ * plugin removes it again.
  *
  * The panels are shown using the `PluginPanel` component and the
  * `PluginPanelHeader` tab component, both of which the application registers
@@ -44,7 +54,7 @@ export function usePluginPanels(
     const pluginPanels = new Map<string, { id: string; name: string }>();
     for (const [pluginId, plugin] of plugins) {
       if (plugin.container !== undefined) {
-        pluginPanels.set(pluginPanelIdPrefix + pluginId, {
+        pluginPanels.set(getPluginPanelId(pluginId), {
           id: pluginId,
           name: plugin.name,
         });
@@ -67,10 +77,6 @@ export function usePluginPanels(
           title: plugin.name,
           component: "PluginPanel",
           tabComponent: "PluginPanelHeader",
-          // keep the panel mounted while another tab of its group is active
-          renderer: "always",
-          // do not steal the active tab from whatever the user is looking at
-          inactive: true,
           params: { pluginId: plugin.id },
           position:
             referenceGroup !== undefined ? { referenceGroup } : undefined,

@@ -4,14 +4,16 @@ import {
   DockviewReact,
   type DockviewReadyEvent,
   type DockviewTheme,
+  type IDockviewHeaderActionsProps,
   type IDockviewPanelHeaderProps,
   type IDockviewPanelProps,
 } from "dockview-react";
 import { Moon, Sun } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useLayoutEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { usePluginPanels } from "@/hooks/usePluginPanels";
+import { IconButton } from "@/components/common/icon-button";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { getPluginPanelId, usePluginPanels } from "@/hooks/usePluginPanels";
 
 import "./App.css";
 import { DialogProvider } from "./components/dialogs/DialogProvider";
@@ -23,7 +25,9 @@ import { ProjectPanel } from "./components/panels/ProjectPanel";
 import { ShapesPanel } from "./components/panels/ShapesPanel";
 import { TablesPanel } from "./components/panels/TablesPanel";
 import { ViewerPanel } from "./components/panels/ViewerPanel";
+import { PanelId } from "./components/panels/panelId";
 import { NotificationCenter } from "./components/widgets/NotificationCenter";
+import { PluginMenu } from "./components/widgets/PluginMenu";
 import { pluginRegistry } from "./plugins";
 import { useSettingsStore } from "./stores/settings";
 
@@ -32,12 +36,6 @@ const dockviewTheme: DockviewTheme = {
   name: "tailwindcss",
   className: "dockview-theme-tailwindcss",
 };
-
-/**
- * The ID of the project panel, into whose group the panels contributed by
- * plugins are added
- */
-const projectPanelId = "projectPanel";
 
 /**
  * Scrolls a panel's content within the panel, rather than letting it overflow
@@ -58,9 +56,13 @@ function ScrollablePanelContent({ children }: { children: ReactNode }) {
 /** The panels that can be shown in the dockview layout, by component name */
 const dockviewComponents = {
   ViewerPanel: () => <ViewerPanel className="size-full" />,
-  ProjectPanel: () => (
+  ProjectPanel: (props: IDockviewPanelProps) => (
     <ScrollablePanelContent>
-      <ProjectPanel />
+      <ProjectPanel
+        onShowPanel={(panelId) =>
+          props.containerApi.getPanel(panelId)?.api.setActive()
+        }
+      />
     </ScrollablePanelContent>
   ),
   ImagesPanel: () => (
@@ -98,7 +100,7 @@ const dockviewComponents = {
 /**
  * The tab headers available to panels, by component name: one that lets the
  * user close the panel, one for panels that are always shown, and one for the
- * panels contributed by plugins, whose close button unregisters the plugin
+ * panels contributed by plugins, whose close button unmounts the plugin
  */
 const dockviewTabComponents = {
   ClosablePanelHeader: (props: IDockviewPanelHeaderProps) => {
@@ -115,7 +117,7 @@ const dockviewTabComponents = {
         {...props}
         hideClose={false}
         closeActionOverride={() =>
-          pluginRegistry.unregisterPlugin(props.params.pluginId)
+          pluginRegistry.unmountPlugin(props.params.pluginId)
         }
       />
     );
@@ -123,15 +125,32 @@ const dockviewTabComponents = {
 };
 
 /**
- * The dark mode toggle shown at the right end of the dockview tab bar
+ * The plugins menu and the dark mode toggle shown at the right end of the
+ * dockview tab bar
  */
-function DockviewRightHeaderActionsComponent() {
+function DockviewRightHeaderActionsComponent(
+  props: IDockviewHeaderActionsProps,
+) {
   const dark = useSettingsStore((state) => state.dark);
   const setDark = useSettingsStore((state) => state.setDark);
   return (
-    <Button aria-label="Dark mode toggle" onClick={() => setDark(!dark)}>
-      {dark ? <Sun /> : <Moon />}
-    </Button>
+    <div className="flex">
+      <PluginMenu
+        onShowPlugin={(pluginId) =>
+          props.containerApi
+            .getPanel(getPluginPanelId(pluginId))
+            ?.api.setActive()
+        }
+      />
+      <IconButton
+        label={dark ? "Light mode" : "Dark mode"}
+        variant="default"
+        size="icon"
+        onClick={() => setDark(!dark)}
+      >
+        {dark ? <Sun /> : <Moon />}
+      </IconButton>
+    </div>
   );
 }
 
@@ -146,53 +165,53 @@ function DockviewRightHeaderActionsComponent() {
  */
 const onDockviewReady = (event: DockviewReadyEvent) => {
   const viewerPanel = event.api.addPanel({
-    id: "viewerPanel",
+    id: PanelId.viewer,
     title: "Viewer",
     component: "ViewerPanel",
   });
   viewerPanel.group.header.hidden = true;
   viewerPanel.group.locked = true;
   const projectPanel = event.api.addPanel({
-    id: projectPanelId,
+    id: PanelId.project,
     title: "Project",
     component: "ProjectPanel",
     tabComponent: "PersistentPanelHeader",
-    initialWidth: 400,
+    initialWidth: 420,
     position: {
       referencePanel: viewerPanel,
       direction: "right",
     },
   });
   event.api.addPanel({
-    id: "imagesPanel",
+    id: PanelId.images,
     title: "Images",
     component: "ImagesPanel",
     tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: "labelsPanel",
+    id: PanelId.labels,
     title: "Labels",
     component: "LabelsPanel",
     tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: "pointsPanel",
+    id: PanelId.points,
     title: "Points",
     component: "PointsPanel",
     tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: "shapesPanel",
+    id: PanelId.shapes,
     title: "Shapes",
     component: "ShapesPanel",
     tabComponent: "PersistentPanelHeader",
     position: { referenceGroup: projectPanel.group },
   });
   event.api.addPanel({
-    id: "tablesPanel",
+    id: PanelId.tables,
     title: "Tables",
     component: "TablesPanel",
     tabComponent: "PersistentPanelHeader",
@@ -205,32 +224,40 @@ const onDockviewReady = (event: DockviewReadyEvent) => {
  * The application's root component
  *
  * Renders the dockview layout within the app-level providers, and applies
- * Tailwind CSS's `dark` class according to the settings store.
+ * Tailwind CSS's `dark` class to the document element according to the
+ * settings store, so that inherited text colors and the popups portalled into
+ * the body follow it too.
  */
 export function App() {
   const dark = useSettingsStore((state) => state.dark);
   const [dockviewApi, setDockviewApi] = useState<DockviewApi | null>(null);
 
-  usePluginPanels(dockviewApi, projectPanelId);
+  // The panels contributed by plugins join the group of the project panel
+  usePluginPanels(dockviewApi, PanelId.project);
+
+  // Before paint, so that React never renders a light frame in dark mode
+  // https://tailwindcss.com/docs/dark-mode
+  useLayoutEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+  }, [dark]);
 
   return (
-    <DialogProvider>
-      {/* https://tailwindcss.com/docs/dark-mode */}
-      <div
-        className={`w-screen h-screen overflow-hidden ${dark ? "dark" : ""}`}
-      >
-        <DockviewReact
-          theme={dockviewTheme}
-          components={dockviewComponents}
-          tabComponents={dockviewTabComponents}
-          rightHeaderActionsComponent={DockviewRightHeaderActionsComponent}
-          onReady={(event) => {
-            onDockviewReady(event);
-            setDockviewApi(event.api);
-          }}
-        />
-        <NotificationCenter />
-      </div>
-    </DialogProvider>
+    <TooltipProvider delay={300}>
+      <DialogProvider>
+        <div className="w-screen h-screen overflow-hidden">
+          <DockviewReact
+            theme={dockviewTheme}
+            components={dockviewComponents}
+            tabComponents={dockviewTabComponents}
+            rightHeaderActionsComponent={DockviewRightHeaderActionsComponent}
+            onReady={(event) => {
+              onDockviewReady(event);
+              setDockviewApi(event.api);
+            }}
+          />
+          <NotificationCenter />
+        </div>
+      </DialogProvider>
+    </TooltipProvider>
   );
 }

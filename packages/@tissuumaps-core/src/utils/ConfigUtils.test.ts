@@ -12,13 +12,16 @@ describe("ConfigUtils", () => {
     ];
 
     it("returns the map of an active group-by source as it is", () => {
-      const config = { groupBy: { column: "cluster", map: "map1" } };
+      const config: GroupByConfig<false> = {
+        groupBy: { column: "cluster", map: "map1" },
+      };
 
       expect(ConfigUtils.findGroupByMap(config, maps)).toBe(maps[0]);
     });
 
     it("returns undefined if group-by is not the active source", () => {
-      const config = {
+      const config: ConstantConfig<number> &
+        Pick<GroupByConfig<false>, "groupBy"> = {
         source: "constant",
         constant: { value: 1 },
         groupBy: { column: "cluster", map: "map1" },
@@ -28,7 +31,9 @@ describe("ConfigUtils", () => {
     });
 
     it("returns undefined if the map does not exist", () => {
-      const config = { groupBy: { column: "cluster", map: "missing" } };
+      const config: GroupByConfig<false> = {
+        groupBy: { column: "cluster", map: "missing" },
+      };
 
       expect(ConfigUtils.findGroupByMap(config, maps)).toBeUndefined();
     });
@@ -36,18 +41,24 @@ describe("ConfigUtils", () => {
 
   describe("getGroupByMapIds", () => {
     it("returns the map IDs of the group-by configurations, whatever their active source", () => {
-      expect(
-        ConfigUtils.getGroupByMapIds([
-          { groupBy: { column: "cluster", map: "colorMap" } },
-          {
-            source: "constant",
-            constant: { value: 1 },
-            groupBy: { column: "cluster", map: "opacityMap" },
-          },
-          { groupBy: { column: "cluster", map: undefined } },
-          { constant: { value: 1 } },
-        ]),
-      ).toEqual(new Set(["colorMap", "opacityMap"]));
+      const configs: (
+        | ConstantConfig<number>
+        | GroupByConfig<false>
+        | (ConstantConfig<number> & Pick<GroupByConfig<false>, "groupBy">)
+      )[] = [
+        { groupBy: { column: "cluster", map: "colorMap" } },
+        {
+          source: "constant",
+          constant: { value: 1 },
+          groupBy: { column: "cluster", map: "opacityMap" },
+        },
+        { groupBy: { column: "cluster", map: undefined } },
+        { constant: { value: 1 } },
+      ];
+
+      expect(ConfigUtils.getGroupByMapIds(configs)).toEqual(
+        new Set(["colorMap", "opacityMap"]),
+      );
     });
   });
 
@@ -138,7 +149,9 @@ describe("ConfigUtils", () => {
     it("groups by the column with the map, keeping the other sources", () => {
       const config: ConstantConfig<boolean> = { constant: { value: false } };
 
-      expect(ConfigUtils.withGroupByMap(config, "cluster", "map1")).toEqual({
+      expect(
+        ConfigUtils.withGroupByMap(config, { column: "cluster" }, "map1"),
+      ).toEqual({
         constant: { value: false },
         source: "groupBy",
         groupBy: { column: "cluster", map: "map1" },
@@ -150,20 +163,35 @@ describe("ConfigUtils", () => {
         groupBy: { column: "gene", map: undefined, palette: "viridis" },
       };
 
-      expect(ConfigUtils.withGroupByMap(config, "cluster", "map1")).toEqual({
+      expect(
+        ConfigUtils.withGroupByMap(config, { column: "cluster" }, "map1"),
+      ).toEqual({
         source: "groupBy",
         groupBy: { column: "cluster", map: "map1", palette: "viridis" },
       });
     });
 
-    it("carries the unit of the active source over", () => {
-      const config = {
-        constant: { value: 1, unit: "data" as const },
-        groupBy: { column: "cluster", map: "map1", unit: "world" as const },
+    it("replaces the table of the group-by specification", () => {
+      const config: GroupByConfig<false> = {
+        groupBy: { table: "genes", column: "gene", map: undefined },
       };
 
       expect(
-        ConfigUtils.withGroupByMap(config, "cluster", "map2").groupBy,
+        ConfigUtils.withGroupByMap(config, { column: "cluster" }, "map1")
+          .groupBy,
+      ).not.toHaveProperty("table", "genes");
+    });
+
+    it("carries the unit of the active source over", () => {
+      const config: ConstantConfig<number, { unit: "data" }> &
+        GroupByConfig<false, { unit: "world" }> = {
+        constant: { value: 1, unit: "data" },
+        groupBy: { column: "cluster", map: "map1", unit: "world" },
+      };
+
+      expect(
+        ConfigUtils.withGroupByMap(config, { column: "cluster" }, "map2")
+          .groupBy,
       ).toEqual({
         column: "cluster",
         map: "map2",
@@ -179,7 +207,8 @@ describe("ConfigUtils", () => {
       };
 
       expect(
-        ConfigUtils.withGroupByMap(config, "cluster", "map2").groupBy,
+        ConfigUtils.withGroupByMap(config, { column: "cluster" }, "map2")
+          .groupBy,
       ).not.toHaveProperty("unit", "world");
     });
 
@@ -188,45 +217,78 @@ describe("ConfigUtils", () => {
         groupBy: { column: "cluster", map: "map1" },
       };
 
-      expect(ConfigUtils.withGroupByMap(config, "cluster", "map1")).toBe(
-        config,
-      );
+      expect(
+        ConfigUtils.withGroupByMap(config, { column: "cluster" }, "map1"),
+      ).toBe(config);
     });
   });
 
   describe("getGroupByColumn", () => {
     it("returns the column of an active group-by source", () => {
-      expect(
-        ConfigUtils.getGroupByColumn({
-          groupBy: { column: "cluster", map: "map1" },
-        }),
-      ).toBe("cluster");
+      const config: GroupByConfig<false> = {
+        groupBy: { column: "cluster", map: "map1" },
+      };
+
+      expect(ConfigUtils.getGroupByColumn(config)).toMatchObject({
+        column: "cluster",
+      });
     });
 
     it("returns undefined if group-by is not the active source", () => {
-      expect(
-        ConfigUtils.getGroupByColumn({
-          source: "constant",
-          constant: { value: 1 },
-          groupBy: { column: "cluster", map: "map1" },
-        }),
-      ).toBeUndefined();
+      const config: ConstantConfig<number> &
+        Pick<GroupByConfig<false>, "groupBy"> = {
+        source: "constant",
+        constant: { value: 1 },
+        groupBy: { column: "cluster", map: "map1" },
+      };
+
+      expect(ConfigUtils.getGroupByColumn(config)).toBeUndefined();
     });
   });
 
   describe("getUnit", () => {
     it("returns the unit of the active source", () => {
-      expect(
-        ConfigUtils.getUnit({
-          source: "constant",
-          constant: { value: 1, unit: "data" },
-          groupBy: { column: "cluster", map: "map1", unit: "world" },
-        }),
-      ).toBe("data");
+      const config: ConstantConfig<number, { unit: "data" }> &
+        Pick<GroupByConfig<false, { unit: "world" }>, "groupBy"> = {
+        source: "constant",
+        constant: { value: 1, unit: "data" },
+        groupBy: { column: "cluster", map: "map1", unit: "world" },
+      };
+
+      expect(ConfigUtils.getUnit(config)).toBe("data");
     });
 
     it("returns undefined if the active source has no unit", () => {
-      expect(ConfigUtils.getUnit({ constant: { value: 1 } })).toBeUndefined();
+      const config: ConstantConfig<number> = { constant: { value: 1 } };
+
+      expect(ConfigUtils.getUnit(config)).toBeUndefined();
+    });
+  });
+
+  describe("isSameTableColumn", () => {
+    it("matches references to the same column of the same table", () => {
+      expect(
+        ConfigUtils.isSameTableColumn(
+          { table: "cells", column: "cluster" },
+          { table: "cells", column: "cluster" },
+        ),
+      ).toBe(true);
+      expect(
+        ConfigUtils.isSameTableColumn(
+          { table: "cells", column: "cluster" },
+          { table: "genes", column: "cluster" },
+        ),
+      ).toBe(false);
+    });
+
+    it("reads a reference without a table as one to the default table", () => {
+      expect(
+        ConfigUtils.isSameTableColumn(
+          { column: "cluster" },
+          { table: "cells", column: "cluster" },
+          "cells",
+        ),
+      ).toBe(true);
     });
   });
 });

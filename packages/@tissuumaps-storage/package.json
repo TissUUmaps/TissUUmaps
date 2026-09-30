@@ -1,61 +1,74 @@
 {
   "name": "@tissuumaps/storage",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.0",
+  "description": "Official data provider distribution for TissUUmaps",
+  "homepage": "https://tissuumaps.github.io/TissUUmaps/",
+  "bugs": "https://github.com/TissUUmaps/TissUUmaps/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TissUUmaps/TissUUmaps.git",
+    "directory": "packages/@tissuumaps-storage"
+  },
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
   "files": [
-    "./dist"
+    "./dist",
+    "./CHANGELOG.md",
+    "./THIRD_PARTY_LICENSES.txt"
   ],
   "exports": {
     ".": {
       "tissuumaps-development": "./src/index.ts",
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./csv": {
       "tissuumaps-development": "./src/csv/index.ts",
       "types": "./dist/csv.d.ts",
-      "import": "./dist/csv.js",
       "default": "./dist/csv.js"
     },
     "./geojson": {
       "tissuumaps-development": "./src/geojson/index.ts",
       "types": "./dist/geojson.d.ts",
-      "import": "./dist/geojson.js",
       "default": "./dist/geojson.js"
+    },
+    "./hdf5": {
+      "tissuumaps-development": "./src/hierarchical/hdf5/index.ts",
+      "types": "./dist/hdf5.d.ts",
+      "default": "./dist/hdf5.js"
     },
     "./ome-zarr": {
       "tissuumaps-development": "./src/ome-zarr/index.ts",
       "types": "./dist/ome-zarr.d.ts",
-      "import": "./dist/ome-zarr.js",
       "default": "./dist/ome-zarr.js"
     },
     "./openseadragon": {
       "tissuumaps-development": "./src/openseadragon/index.ts",
       "types": "./dist/openseadragon.d.ts",
-      "import": "./dist/openseadragon.js",
       "default": "./dist/openseadragon.js"
     },
     "./parquet": {
       "tissuumaps-development": "./src/parquet/index.ts",
       "types": "./dist/parquet.d.ts",
-      "import": "./dist/parquet.js",
       "default": "./dist/parquet.js"
     },
     "./table": {
       "tissuumaps-development": "./src/table/index.ts",
       "types": "./dist/table.d.ts",
-      "import": "./dist/table.js",
       "default": "./dist/table.js"
     },
     "./tiff": {
       "tissuumaps-development": "./src/tiff/index.ts",
       "types": "./dist/tiff.d.ts",
-      "import": "./dist/tiff.js",
       "default": "./dist/tiff.js"
-    }
+    },
+    "./zarr": {
+      "tissuumaps-development": "./src/hierarchical/zarr/index.ts",
+      "types": "./dist/zarr.d.ts",
+      "default": "./dist/zarr.js"
+    },
+    "./package.json": "./package.json"
   },
   "scripts": {
     "build": "tsc -b tsconfig.src.json && vite build",
@@ -63,25 +76,73 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@zarrita/storage": "github:TissUUmaps/zarrita.js#9a1af2ec95f9a32dd03b3c0bf3054a9801a961b0&path:packages/@zarrita-storage",
-    "geotiff": "^3.0.5",
-    "geotiff-tilesource": "github:TissUUmaps/GeoTIFFTileSource#fcea2d0e47c94414b2f35e380328e6b99ebdbf28",
-    "omezarr-tilesource": "^0.8.0",
+    "@types/papaparse": "^5.5.2",
+    "geotiff": "3.0.5",
+    "omezarr-tilesource": "^0.8.1",
     "papaparse": "^5.5.4"
   },
   "devDependencies": {
     "@tissuumaps/core": "workspace:^",
     "@types/geojson": "^7946.0.16",
-    "@types/papaparse": "^5.5.2",
+    "@zarrita/storage": "github:TissUUmaps/zarrita.js#9a1af2ec95f9a32dd03b3c0bf3054a9801a961b0&path:packages/@zarrita-storage",
+    "geotiff-tilesource": "github:TissUUmaps/GeoTIFFTileSource#fcea2d0e47c94414b2f35e380328e6b99ebdbf28",
+    "h5wasm": "^0.10.3",
     "hyparquet": "^1.26.1",
     "hyparquet-compressors": "^1.1.1",
-    "openseadragon": "^6.1.1"
+    "ome-zarr.js": "^0.0.20",
+    "openseadragon": "^6.1.1",
+    "zarrita": "^0.7.5"
   },
   "peerDependencies": {
     "@tissuumaps/core": "workspace:^",
-    "openseadragon": "^6.1.1"
+    "ome-zarr.js": "^0.0.20",
+    "openseadragon": "^6.1.1",
+    "zarrita": "^0.7.5"
   },
-  "engines": {
-    "node": ">=22.22.1"
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./csv": {
+        "types": "./dist/csv.d.ts",
+        "default": "./dist/csv.js"
+      },
+      "./geojson": {
+        "types": "./dist/geojson.d.ts",
+        "default": "./dist/geojson.js"
+      },
+      "./hdf5": {
+        "types": "./dist/hdf5.d.ts",
+        "default": "./dist/hdf5.js"
+      },
+      "./ome-zarr": {
+        "types": "./dist/ome-zarr.d.ts",
+        "default": "./dist/ome-zarr.js"
+      },
+      "./openseadragon": {
+        "types": "./dist/openseadragon.d.ts",
+        "default": "./dist/openseadragon.js"
+      },
+      "./parquet": {
+        "types": "./dist/parquet.d.ts",
+        "default": "./dist/parquet.js"
+      },
+      "./table": {
+        "types": "./dist/table.d.ts",
+        "default": "./dist/table.js"
+      },
+      "./tiff": {
+        "types": "./dist/tiff.d.ts",
+        "default": "./dist/tiff.js"
+      },
+      "./zarr": {
+        "types": "./dist/zarr.d.ts",
+        "default": "./dist/zarr.js"
+      },
+      "./package.json": "./package.json"
+    }
   }
 }

@@ -7,6 +7,21 @@ import {
   defineConfig,
 } from "vite";
 
+import packageJson from "./package.json" with { type: "json" };
+
+// published dependencies and peers, which are external with their subpaths
+const {
+  dependencies = {},
+  peerDependencies = {},
+}: {
+  dependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+} = packageJson;
+const externalPackages = [
+  ...Object.keys(dependencies),
+  ...Object.keys(peerDependencies),
+];
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [
@@ -16,20 +31,17 @@ export default defineConfig(({ mode }) => ({
     }),
   ],
   build: {
+    minify: false,
     lib: {
       entry: resolve(import.meta.dirname, "src/index.ts"),
       formats: ["es"],
       fileName: "index",
     },
     rolldownOptions: {
-      external: [
-        "@jsonforms/core",
-        "d3-color",
-        "d3-scale-chromatic",
-        "gl-matrix",
-        "openseadragon",
-        "zustand",
-      ],
+      external: (id) =>
+        externalPackages.some(
+          (name) => id === name || id.startsWith(`${name}/`),
+        ),
       checks: {
         pluginTimings: false,
       },
@@ -37,9 +49,6 @@ export default defineConfig(({ mode }) => ({
   },
   test: {
     include: ["./src/**/*.test.js", "./src/**/*.test.ts"],
-    typecheck: {
-      tsconfig: resolve(import.meta.dirname, "tsconfig.test.json"),
-    },
   },
   resolve: {
     conditions:

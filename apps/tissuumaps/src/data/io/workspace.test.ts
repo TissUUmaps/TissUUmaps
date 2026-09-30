@@ -12,7 +12,7 @@ const directory = {
 } as FileSystemDirectoryHandle;
 const projectFile = {
   kind: "file",
-  name: "project.tmap",
+  name: "project.tm4",
 } as FileSystemFileHandle;
 
 function stubDirectoryPicker(
@@ -30,6 +30,7 @@ function stubOpenFilePicker(
 describe("workspace", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   describe("isWorkspaceSupported", () => {
@@ -80,6 +81,15 @@ describe("workspace", () => {
       await expect(pickProjectFile()).resolves.toBe(projectFile);
       expect(picker).toHaveBeenCalledWith(
         expect.objectContaining({ multiple: false }),
+      );
+    });
+
+    it("opens the picker in the given directory", async () => {
+      const picker = vi.fn(() => Promise.resolve([projectFile]));
+      stubOpenFilePicker(picker);
+      await pickProjectFile({ startIn: directory });
+      expect(picker).toHaveBeenCalledWith(
+        expect.objectContaining({ startIn: directory }),
       );
     });
 

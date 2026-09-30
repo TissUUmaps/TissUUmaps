@@ -9,19 +9,40 @@ describe("ProjectUtils", () => {
   const labels = createLabels({
     id: "labels",
     name: "Labels",
+    layer: "layer",
     dataSource: { type: "tiff" },
   });
   const points = createPoints({
     id: "points",
     name: "Points",
+    layer: "layer",
     dataSource: { type: "csv" },
   });
   const shapes = createShapes({
     id: "shapes",
     name: "Shapes",
+    layer: "layer",
     dataSource: { type: "geojson" },
   });
   const project = { labels: [labels], points: [points], shapes: [shapes] };
+
+  describe("hasData", () => {
+    const empty = {
+      images: [],
+      labels: [],
+      points: [],
+      shapes: [],
+      tables: [],
+    };
+
+    it("returns false without data objects", () => {
+      expect(ProjectUtils.hasData(empty)).toBe(false);
+    });
+
+    it("returns true with a data object", () => {
+      expect(ProjectUtils.hasData({ ...empty, points: [points] })).toBe(true);
+    });
+  });
 
   describe("getMarkerConfigs", () => {
     it("returns the marker configurations of the points", () => {

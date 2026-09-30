@@ -283,7 +283,9 @@ describe("ColorResolver", () => {
         { signal: controller.signal },
       );
 
-      expect(loadTable).toHaveBeenCalledWith({ signal: controller.signal });
+      expect(loadTable).toHaveBeenCalledWith(undefined, {
+        signal: controller.signal,
+      });
     });
   });
 
@@ -544,13 +546,14 @@ describe("ColorResolver", () => {
         config,
         [],
         black,
+        vi.fn(),
       );
 
       const packedRed = ColorResolver.packColor(red);
       expect(Array.from(packedColors)).toEqual([packedRed, packedRed]);
     });
 
-    it("dispatches to from config when loadTable is given", async () => {
+    it("dispatches to from config when its table is found", async () => {
       const palette = colorPalettes[0]!;
       const data = createMockTableData(new Uint32Array([1]), [0], [0, 1]);
       const loadTable = vi.fn().mockResolvedValue(data);
@@ -563,9 +566,7 @@ describe("ColorResolver", () => {
         config,
         [],
         black,
-        {
-          loadTable,
-        },
+        loadTable,
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
@@ -573,7 +574,58 @@ describe("ColorResolver", () => {
       expect(packedColors[0]).toBe(ColorResolver.packColor(expectedColor));
     });
 
-    it("dispatches to groupBy config when loadTable is given", async () => {
+    it("loads the table the config names", async () => {
+      const palette = colorPalettes[0]!;
+      const data = createMockTableData(new Uint32Array([1]), [0], [0, 1]);
+      const loadTable = vi.fn().mockResolvedValue(data);
+      const config = {
+        from: { table: "other", column: "col1", palette: palette.id },
+      } satisfies ColorConfig;
+
+      await ColorResolver.resolveColors(
+        new Uint32Array([1]),
+        config,
+        [],
+        black,
+        loadTable,
+      );
+
+      expect(loadTable).toHaveBeenCalledWith("other", { signal: undefined });
+    });
+
+    it("falls back to the default color if the table is not found", async () => {
+      const config = {
+        from: { table: "gone", column: "col1", palette: colorPalettes[0]!.id },
+      } satisfies ColorConfig;
+
+      const packedColors = await ColorResolver.resolveColors(
+        new Uint32Array([1]),
+        config,
+        [],
+        red,
+        () => Promise.reject(new Error("Table with ID 'gone' not found")),
+      );
+
+      expect(packedColors[0]).toBe(ColorResolver.packColor(red));
+    });
+
+    it("falls back to the default color if the table fails to load", async () => {
+      const config = {
+        groupBy: { table: "broken", column: "col1", map: undefined },
+      } satisfies ColorConfig;
+
+      const packedColors = await ColorResolver.resolveColors(
+        new Uint32Array([1]),
+        config,
+        [],
+        red,
+        () => Promise.reject(new Error("No data provider is registered")),
+      );
+
+      expect(packedColors[0]).toBe(ColorResolver.packColor(red));
+    });
+
+    it("dispatches to groupBy config when its table is found", async () => {
       const ids = new Uint32Array([1]);
       const data = createMockTableData(ids, ["cat-a"]);
       const loadTable = vi.fn().mockResolvedValue(data);
@@ -591,7 +643,7 @@ describe("ColorResolver", () => {
         config,
         [colorMap],
         black,
-        { loadTable },
+        loadTable,
       );
 
       expect(loadTable).toHaveBeenCalledOnce();
@@ -611,6 +663,7 @@ describe("ColorResolver", () => {
         config,
         [],
         black,
+        vi.fn(),
       );
 
       expect(packedColors.length).toBe(1);
@@ -627,42 +680,7 @@ describe("ColorResolver", () => {
         config,
         [],
         red,
-      );
-
-      expect(packedColors[0]).toBe(ColorResolver.packColor(red));
-    });
-
-    it("falls back to the default color for a from config without loadTable", async () => {
-      const config = {
-        from: { column: "col1", palette: colorPalettes[0]!.id },
-      } satisfies ColorConfig;
-
-      const packedColors = await ColorResolver.resolveColors(
-        new Uint32Array([1]),
-        config,
-        [],
-        red,
-      );
-
-      expect(packedColors[0]).toBe(ColorResolver.packColor(red));
-    });
-
-    it("falls back to the default color for a groupBy config without loadTable", async () => {
-      const colorMap: GroupValueMap<Color> = {
-        id: "cm1",
-        name: "CM",
-        values: { "cat-a": green },
-      };
-      const config = {
-        groupBy: { column: "col1", map: "cm1" },
-      } satisfies ColorConfig;
-
-      const packedColors = await ColorResolver.resolveColors(
-        new Uint32Array([1]),
-        config,
-        [colorMap],
-        red,
-        {},
+        vi.fn(),
       );
 
       expect(packedColors[0]).toBe(ColorResolver.packColor(red));
@@ -674,9 +692,14 @@ describe("ColorResolver", () => {
       const config = { constant: { value: red } } satisfies ColorConfig;
 
       await expect(
-        ColorResolver.resolveColors(new Uint32Array([1]), config, [], black, {
-          signal: controller.signal,
-        }),
+        ColorResolver.resolveColors(
+          new Uint32Array([1]),
+          config,
+          [],
+          black,
+          vi.fn(),
+          { signal: controller.signal },
+        ),
       ).rejects.toThrow();
     });
   });

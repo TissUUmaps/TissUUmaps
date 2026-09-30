@@ -10,6 +10,27 @@ import type { Project } from "../model/project";
 /** Utility methods for projects */
 export class ProjectUtils {
   /**
+   * Returns whether a project has any data objects
+   *
+   * @param project - The project, or only its data objects
+   * @returns `true` if the project has images, labels, points, shapes or tables
+   */
+  static hasData(
+    project: Pick<
+      Project,
+      "images" | "labels" | "points" | "shapes" | "tables"
+    >,
+  ): boolean {
+    return (
+      project.images.length > 0 ||
+      project.labels.length > 0 ||
+      project.points.length > 0 ||
+      project.shapes.length > 0 ||
+      project.tables.length > 0
+    );
+  }
+
+  /**
    * Returns the marker configurations of a project's points
    *
    * @param project - The project, or only its labels, points and shapes

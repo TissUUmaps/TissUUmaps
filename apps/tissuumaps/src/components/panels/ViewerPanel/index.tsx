@@ -1,13 +1,13 @@
 import { useMemo } from "react";
 import { useShallow } from "zustand/shallow";
 
-import { type Color, ImageChannelViewMode } from "@tissuumaps/core";
+import { ImageChannelViewMode } from "@tissuumaps/core";
 import {
   Viewer,
   type ViewerAdapter,
   ViewerControl,
   ViewerControlAnchor,
-} from "@tissuumaps/viewer";
+} from "@tissuumaps/react";
 
 import {
   useImageDataLoader,
@@ -19,19 +19,21 @@ import {
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
-import { InteractionModeViewerControls } from "./InteractionModeViewerControls";
+// TODO: restore once shape drawing is linked with actions
+// import { InteractionModeViewerControls } from "./InteractionModeViewerControls";
 import { PointSizeViewerControl } from "./PointSizeViewerControl";
+import { highlightItemGroup } from "./highlightItemGroup";
 
 export type ViewerPanelProps = {
   className?: string;
 };
 
-/** The background color of the viewer, behind all rendered content */
-const viewerBackgroundColor: Color = { r: 0, g: 0, b: 0 };
-
 export function ViewerPanel({ className }: ViewerPanelProps) {
   const interactionMode = useAppStore((state) => state.interactionMode);
   const imageChannelPreview = useAppStore((state) => state.imageChannelPreview);
+  const viewerBackgroundColor = useProjectStore(
+    (state) => state.viewerBackgroundColor,
+  );
 
   const images = useProjectStore((state) => state.images);
   const previewedImages = useMemo(
@@ -48,6 +50,10 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
               : image,
           ),
     [images, imageChannelPreview],
+  );
+
+  const highlightedItemGroup = useAppStore(
+    (state) => state.highlightedItemGroup,
   );
 
   const projectState = useProjectStore(
@@ -74,9 +80,23 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
   const loadShapes = useShapesDataLoader();
   const loadTable = useTableDataLoader();
 
+  // Memoized on its own: the renderers compare the opacity map it builds by
+  // identity, so rebuilding it for an unrelated change of the adapter would
+  // re-resolve and re-upload the colors of every highlighted object.
+  const { labels, points, shapes, opacityMaps } = projectState;
+  const highlightedState = useMemo(
+    () =>
+      highlightItemGroup(
+        { labels, points, shapes, opacityMaps },
+        highlightedItemGroup,
+      ),
+    [labels, points, shapes, opacityMaps, highlightedItemGroup],
+  );
+
   const viewerAdapter: ViewerAdapter = useMemo(
     () => ({
       ...projectState,
+      ...highlightedState,
       images: previewedImages,
       interactionMode,
       loadImage,
@@ -88,6 +108,7 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
     [
       projectState,
       previewedImages,
+      highlightedState,
       interactionMode,
       loadImage,
       loadLabels,
@@ -103,9 +124,11 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
       backgroundColor={viewerBackgroundColor}
       className={className}
     >
+      {/* TODO: restore once shape drawing is linked with actions
       <ViewerControl anchor={ViewerControlAnchor.TOP_LEFT}>
         <InteractionModeViewerControls />
       </ViewerControl>
+      */}
       {projectState.points.length > 0 && (
         <ViewerControl anchor={ViewerControlAnchor.TOP_RIGHT}>
           <PointSizeViewerControl />

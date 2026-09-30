@@ -75,6 +75,10 @@ export const markerPalette = [
   Marker.Gaussian,
 ];
 
+// The palettes are built at module load; the pure annotations (and `concat` over
+// spread, which bundlers cannot prove side-effect free) let bundles that do not
+// use them, such as the storage workers, drop them (and D3!) entirely
+
 /** A named, identifiable list of colors */
 export type ColorPalette = {
   /** Color palette ID */
@@ -98,6 +102,7 @@ const sampledColorPaletteSize = 256;
  * @param colorScheme - Maps a position within `[0, 1]` to a CSS color string
  * @returns The color palette, holding `sampledColorPaletteSize` colors
  */
+/* @__NO_SIDE_EFFECTS__ */
 function sampledColorPalette(
   id: string,
   name: string,
@@ -118,6 +123,7 @@ function sampledColorPalette(
  * @param hexColors - The colors making up the palette, in order
  * @returns The color palette
  */
+/* @__NO_SIDE_EFFECTS__ */
 function hexColorPalette(
   id: string,
   name: string,
@@ -169,7 +175,7 @@ export const continuousColorPalettes: ColorPalette[] = [
   {
     id: "batlow",
     name: "Batlow",
-    colors: ColorUtils.parsePalette(batlow),
+    colors: /* @__PURE__ */ ColorUtils.parsePalette(batlow),
   },
 ];
 
@@ -178,7 +184,9 @@ export const categoricalColorPalettes: ColorPalette[] = [
   {
     id: "distinct",
     name: "Distinct",
-    colors: ColorUtils.parsePalette(distinct, { maxValue: 255 }),
+    colors: /* @__PURE__ */ ColorUtils.parsePalette(distinct, {
+      maxValue: 255,
+    }),
   },
   hexColorPalette("category10", "Category 10", schemeCategory10),
   hexColorPalette("observable10", "Observable 10", schemeObservable10),
@@ -194,15 +202,13 @@ export const categoricalColorPalettes: ColorPalette[] = [
   {
     id: "batlowS",
     name: "Batlow",
-    colors: ColorUtils.parsePalette(batlowS),
+    colors: /* @__PURE__ */ ColorUtils.parsePalette(batlowS),
   },
 ];
 
 /** All available color palettes, continuous and categorical */
-export const colorPalettes: ColorPalette[] = [
-  ...continuousColorPalettes,
-  ...categoricalColorPalettes,
-];
+export const colorPalettes: ColorPalette[] =
+  /* @__PURE__ */ continuousColorPalettes.concat(categoricalColorPalettes);
 
 /**
  * Looks up a color palette by ID
@@ -210,6 +216,7 @@ export const colorPalettes: ColorPalette[] = [
  * @param colorPaletteId - The ID of the color palette
  * @returns The color palette, or `undefined` if no palette has the ID
  */
+/* @__NO_SIDE_EFFECTS__ */
 export function findColorPalette(
   colorPaletteId: string | undefined,
 ): ColorPalette | undefined {

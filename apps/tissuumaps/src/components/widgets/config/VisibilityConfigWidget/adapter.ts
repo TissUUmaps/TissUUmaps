@@ -1,4 +1,4 @@
-import type { VisibilityConfig } from "@tissuumaps/core";
+import type { TableColumnRef, VisibilityConfig } from "@tissuumaps/core";
 
 export type VisibilityConfigSource = Exclude<
   VisibilityConfig["source"],
@@ -12,12 +12,16 @@ export type VisibilityConfigWidgetAdapter = {
   activeSource: VisibilityConfigSource;
   currentSource: VisibilityConfigSource;
   currentConstantValue: boolean;
-  currentFromColumn: string | null;
-  currentGroupByColumn: string | null;
+  currentFromTableColumn: TableColumnRef | null;
+  currentGroupByTableColumn: TableColumnRef | null;
   currentGroupByMap: string | null;
   setCurrentSource: (newCurrentSource: VisibilityConfigSource) => void;
   setCurrentConstantValue: (newCurrentConstantValue: boolean) => void;
-  setCurrentFromColumn: (newCurrentFromColumn: string | null) => void;
-  setCurrentGroupByColumn: (newCurrentGroupByColumn: string | null) => void;
+  setCurrentFromTableColumn: (
+    newCurrentFromTableColumn: TableColumnRef | null,
+  ) => void;
+  setCurrentGroupByTableColumn: (
+    newCurrentGroupByTableColumn: TableColumnRef | null,
+  ) => void;
   setCurrentGroupByMap: (newCurrentGroupByMap: string | null) => void;
 };

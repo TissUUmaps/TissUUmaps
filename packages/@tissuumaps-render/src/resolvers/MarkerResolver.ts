@@ -28,11 +28,16 @@ export class MarkerResolver {
    * Dispatches to the appropriate loader (constant, from, or groupBy) depending on which
    * configuration source is active.
    *
+   * If the table cannot be loaded, or the configuration cannot be resolved
+   * from it, the failure is logged and the default is used for every item.
+   *
    * @param ids - Ordered list of item IDs
    * @param config - Marker configuration specifying the data source
    * @param markerMaps - Available marker maps for groupBy lookups
    * @param defaultMarker - Fallback marker when no valid config or value is found
-   * @param options - Optional abort signal, buffer alignment, and table loader
+   * @param loadTable - Async function that loads a {@link TableData} by ID, or
+   * the object's own table for `undefined`; it rejects for a missing table
+   * @param options - Optional abort signal and buffer alignment
    * @returns A `Uint8Array` of packed marker values, one per ID
    */
   static async resolveMarkers(
@@ -40,44 +45,47 @@ export class MarkerResolver {
     config: MarkerConfig,
     markerMaps: GroupValueMap<Marker>[],
     defaultMarker: Marker,
-    options?: {
-      signal?: AbortSignal;
-      align?: number;
-      loadTable?: (options?: { signal?: AbortSignal }) => Promise<TableData>;
-    },
+    loadTable: (
+      tableId: string | undefined,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TableData>,
+    options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint8Array> {
-    const { signal, align = 1, loadTable } = options ?? {};
+    const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
     const activeConfigSource = getActiveConfigSource(config);
     if (activeConfigSource === "constant" && isConstantConfig(config)) {
       return MarkerResolver.resolveUniformMarkers(ids, config, { align });
     }
-    if (
-      activeConfigSource === "from" &&
-      isFromConfig(config) &&
-      loadTable !== undefined
-    ) {
-      return MarkerResolver.resolveMarkersFromTableValues(
-        ids,
-        config,
-        defaultMarker,
-        loadTable,
-        { signal, align },
+    try {
+      if (activeConfigSource === "from" && isFromConfig(config)) {
+        return await MarkerResolver.resolveMarkersFromTableValues(
+          ids,
+          config,
+          defaultMarker,
+          loadTable,
+          { signal, align },
+        );
+      }
+      if (activeConfigSource === "groupBy" && isGroupByConfig(config)) {
+        return await MarkerResolver.resolveMarkersFromTableGroups(
+          ids,
+          config,
+          markerMaps,
+          defaultMarker,
+          loadTable,
+          { signal, align },
+        );
+      }
+    } catch (error) {
+      signal?.throwIfAborted();
+      console.warn(
+        "Failed to resolve markers from the table, using default marker",
+        error,
       );
-    }
-    if (
-      activeConfigSource === "groupBy" &&
-      isGroupByConfig(config) &&
-      loadTable !== undefined
-    ) {
-      return MarkerResolver.resolveMarkersFromTableGroups(
-        ids,
-        config,
-        markerMaps,
-        defaultMarker,
-        loadTable,
-        { signal, align },
-      );
+      return MarkerResolver.createUniformMarkers(ids.length, defaultMarker, {
+        align,
+      });
     }
     console.warn("No valid marker config found, using default marker");
     return MarkerResolver.createUniformMarkers(ids.length, defaultMarker, {
@@ -157,7 +165,7 @@ export class MarkerResolver {
    * @param ids - Ordered list of item IDs
    * @param config - From configuration specifying the source column
    * @param defaultMarker - Fallback marker when a value is missing or invalid
-   * @param loadTable - Async function that loads the {@link TableData}
+   * @param loadTable - Async function that loads a {@link TableData} by ID
    * @param options - Optional abort signal and buffer alignment
    * @returns A `Uint8Array` of packed marker values
    */
@@ -165,12 +173,15 @@ export class MarkerResolver {
     ids: IDArray,
     config: Extract<MarkerConfig, FromConfig>,
     defaultMarker: Marker,
-    loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
+    loadTable: (
+      tableId: string | undefined,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number },
   ): Promise<Uint8Array> {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
-    const data = await loadTable({ signal });
+    const data = await loadTable(config.from.table, { signal });
     const packedMarkers = MarkerResolver.createMarkerBuffer(ids.length, {
       align,
     });
@@ -195,7 +206,7 @@ export class MarkerResolver {
    * @param config - GroupBy configuration specifying the source column and optional map
    * @param markerMaps - Available marker maps for group-to-marker lookups
    * @param defaultMarker - Fallback marker when the map is not found or a group is unmapped
-   * @param loadTable - Async function that loads the {@link TableData}
+   * @param loadTable - Async function that loads a {@link TableData} by ID
    * @param options - Optional abort signal and buffer alignment
    * @returns A `Uint8Array` of packed marker values
    */
@@ -204,7 +215,10 @@ export class MarkerResolver {
     config: Extract<MarkerConfig, GroupByConfig<false>>,
     markerMaps: GroupValueMap<Marker>[],
     defaultMarker: Marker,
-    loadTable: (options?: { signal?: AbortSignal }) => Promise<TableData>,
+    loadTable: (
+      tableId: string | undefined,
+      options?: { signal?: AbortSignal },
+    ) => Promise<TableData>,
     options?: { signal?: AbortSignal; align?: number },
   ) {
     const { signal, align = 1 } = options ?? {};
@@ -218,7 +232,7 @@ export class MarkerResolver {
         align,
       });
     }
-    const data = await loadTable({ signal });
+    const data = await loadTable(config.groupBy.table, { signal });
     const packedMarkers = MarkerResolver.createMarkerBuffer(ids.length, {
       align,
     });

@@ -3,10 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { SourceUtils } from "./SourceUtils";
 
 const baseUrl = "https://app.example/tm/index.html";
-const projectUrl = "https://data.example/projects/p1/project.json";
-const projectPath = "/proj/project.json";
+const projectUrl = "https://data.example/projects/p1/project.tm4";
+const projectPath = "/proj/project.tm4";
 
-type FakeFile = { kind: "file"; name: string };
+type FakeFile = { kind: "file"; name: string; getFile?: () => Promise<File> };
 type FakeDir = {
   kind: "directory";
   name: string;
@@ -54,7 +54,7 @@ function makeDir(
 }
 
 /**
- * /proj/project.json, /proj/points.csv, /proj/s:c.tif, /proj/sub/y.csv,
+ * /proj/project.tm4, /proj/points.csv, /proj/s:c.tif, /proj/sub/y.csv,
  * /shared/x.csv
  */
 const pointsFile = makeFile("points.csv");
@@ -64,7 +64,7 @@ const xFile = makeFile("x.csv");
 const subDir = makeDir("sub", { "y.csv": yFile });
 const workspace = makeDir("", {
   proj: makeDir("proj", {
-    "project.json": makeFile("project.json"),
+    "project.tm4": makeFile("project.tm4"),
     "points.csv": pointsFile,
     "s:c.tif": colonFile,
     sub: subDir,
@@ -120,6 +120,45 @@ describe("SourceUtils", () => {
           baseUrl,
         }),
       ).toBe(workspacePath);
+    });
+  });
+
+  describe("getParentSource", () => {
+    it("returns the parent directory of a URL, keeping its query", () => {
+      expect(
+        SourceUtils.getParentSource("https://data.example/a/b.zarr/?key=1"),
+      ).toEqual({
+        parentSource: "https://data.example/a?key=1",
+        name: "b.zarr",
+      });
+    });
+
+    it("decodes the name but keeps the parent URL encoded", () => {
+      expect(
+        SourceUtils.getParentSource("https://data.example/my%20dir/a%20b"),
+      ).toEqual({
+        parentSource: "https://data.example/my%20dir",
+        name: "a b",
+      });
+    });
+
+    it("goes up to the root of a URL's path, and no further", () => {
+      expect(SourceUtils.getParentSource("https://data.example/a")).toEqual({
+        parentSource: "https://data.example/",
+        name: "a",
+      });
+      expect(SourceUtils.getParentSource("https://data.example/")).toBeNull();
+    });
+
+    it("returns the parent directory of a workspace-relative path", () => {
+      expect(SourceUtils.getParentSource("/proj/data/b.zarr")).toEqual({
+        parentSource: "/proj/data",
+        name: "b.zarr",
+      });
+    });
+
+    it("returns null directly in the workspace", () => {
+      expect(SourceUtils.getParentSource("/b.zarr")).toBeNull();
     });
   });
 
@@ -588,6 +627,57 @@ describe("SourceUtils", () => {
       await expect(
         SourceUtils.resolveSourceFile("/proj/missing.csv", workspace),
       ).rejects.toMatchObject({ name: "NotFoundError" });
+    });
+  });
+
+  describe("openSourceFile", () => {
+    const opened = new File(["a,b"], "y.csv");
+    let onGetFile: (() => void) | undefined;
+    const openableWorkspace = makeDir("", {
+      proj: makeDir("proj", {
+        sub: makeDir("sub", {
+          "y.csv": {
+            ...makeFile("y.csv"),
+            getFile: () => {
+              onGetFile?.();
+              return Promise.resolve(opened);
+            },
+          },
+        }),
+      }),
+    }) as unknown as FileSystemDirectoryHandle;
+
+    afterEach(() => {
+      onGetFile = undefined;
+    });
+
+    it("returns URLs as is", async () => {
+      await expect(
+        SourceUtils.openSourceFile("https://x.example/f.csv", workspace),
+      ).resolves.toEqual({ url: "https://x.example/f.csv" });
+    });
+
+    it("opens a file", async () => {
+      await expect(
+        SourceUtils.openSourceFile("/proj/sub/y.csv", openableWorkspace),
+      ).resolves.toEqual({ file: opened });
+    });
+
+    it("rejects like resolveSourceFile", async () => {
+      await expect(
+        SourceUtils.openSourceFile("/proj/sub", workspace),
+      ).rejects.toMatchObject({ name: "TypeMismatchError" });
+    });
+
+    it("rejects with the abort reason if aborted while opening the file", async () => {
+      const controller = new AbortController();
+      const reason = new Error("stop");
+      onGetFile = () => controller.abort(reason);
+      await expect(
+        SourceUtils.openSourceFile("/proj/sub/y.csv", openableWorkspace, {
+          signal: controller.signal,
+        }),
+      ).rejects.toBe(reason);
     });
   });
 

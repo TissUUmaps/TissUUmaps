@@ -1,5 +1,5 @@
 {
-  "projectName": "TissUUmaps4",
+  "projectName": "TissUUmaps",
   "projectOwner": "TissUUmaps",
   "files": [
     "CONTRIBUTORS.md"
@@ -50,6 +50,15 @@
       "contributions": [
         "code",
         "review"
+      ]
+    },
+    {
+      "login": "KattisLej",
+      "name": "Katarina Lejonlid",
+      "avatar_url": "https://avatars.githubusercontent.com/u/105041852?v=4",
+      "profile": "https://github.com/KattisLej",
+      "contributions": [
+        "code"
       ]
     }
   ]

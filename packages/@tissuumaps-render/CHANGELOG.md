@@ -1,14 +1,12 @@
-# Changelog
+# @tissuumaps/render
 
-All notable changes to this project will be documented in this file.
+## 0.1.0-beta.0
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+### Minor Changes
 
-## Unreleased
+- [#230](https://github.com/TissUUmaps/TissUUmaps/pull/230) [`3e2feac`](https://github.com/TissUUmaps/TissUUmaps/commit/3e2feaccf033d6ebf785e78e129671cd7683bd2e) Thanks [@jwindhager](https://github.com/jwindhager)! - Initial beta release.
 
-### Added
+### Patch Changes
 
-### Changed
-
-### Removed
+- Updated dependencies [[`3e2feac`](https://github.com/TissUUmaps/TissUUmaps/commit/3e2feaccf033d6ebf785e78e129671cd7683bd2e)]:
+  - @tissuumaps/core@0.1.0-beta.0

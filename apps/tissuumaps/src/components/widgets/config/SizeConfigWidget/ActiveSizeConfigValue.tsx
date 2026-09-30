@@ -4,6 +4,9 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
+import { formatTableColumn } from "@/components/widgets/TableColumnField/formatTableColumn";
+import { useProjectStore } from "@/stores/project";
+
 import type { SizeConfigWidgetAdapter } from "./adapter";
 
 export type ActiveSizeConfigValueProps = {
@@ -17,12 +20,18 @@ export function ActiveSizeConfigValue({
 }: ActiveSizeConfigValueProps) {
   const { activeSource, sizeConfig, defaultSize, tableId } = adapter;
 
+  const tables = useProjectStore((state) => state.tables);
+
   if (activeSource === "constant" && isConstantConfig(sizeConfig)) {
     return <div className={className}>{sizeConfig.constant.value}</div>;
   }
 
   if (activeSource === "from" && isFromConfig(sizeConfig) && tableId !== null) {
-    return <div className={className}>{sizeConfig.from.column}</div>;
+    return (
+      <div className={className}>
+        {formatTableColumn(sizeConfig.from, tables)}
+      </div>
+    );
   }
 
   if (
@@ -30,7 +39,11 @@ export function ActiveSizeConfigValue({
     isGroupByConfig(sizeConfig) &&
     tableId !== null
   ) {
-    return <div className={className}>{sizeConfig.groupBy.column}</div>;
+    return (
+      <div className={className}>
+        {formatTableColumn(sizeConfig.groupBy, tables)}
+      </div>
+    );
   }
 
   return <div className={className}>{defaultSize}</div>;

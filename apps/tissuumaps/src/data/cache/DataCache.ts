@@ -2,6 +2,7 @@ import {
   type AnnotatedDataProvider,
   type AnnotatedDataProviderLoadOptions,
   type AnnotatedDataSource,
+  AsyncUtils,
   type Data,
   type DataObject,
   type DataProvider,
@@ -276,7 +277,11 @@ export class DataCache<
           entry.deps,
           this.makeEntryDependencies(entry.dataSource, context, { peek: true }),
         )
-          ? entry.objectIds.intersection(retainedObjectIds)
+          ? new Set(
+              [...entry.objectIds].filter((objectId) =>
+                retainedObjectIds.has(objectId),
+              ),
+            )
           : new Set<string>();
       if (newEntryObjectIds.size > 0) {
         entry.objectIds = newEntryObjectIds;
@@ -392,7 +397,7 @@ export class DataCache<
       promise: dataPromise,
       resolve: resolveDataPromise,
       reject: rejectDataPromise,
-    } = Promise.withResolvers<DataWrapper<TData>>();
+    } = AsyncUtils.withResolvers<DataWrapper<TData>>();
     dataPromise.catch(() => {}); // prevent unhandled rejections in console
     const newEntry: DataCacheEntry<TDataSource, TData, TEntryDependencies> = {
       dataSource: normalizedDataSource,

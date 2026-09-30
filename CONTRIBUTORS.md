@@ -17,6 +17,7 @@
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/cavenel"><img src="https://avatars.githubusercontent.com/u/6164758?v=4?s=100" width="100px;" alt="Christophe Avenel"/><br /><sub><b>Christophe Avenel</b></sub></a><br /><a href="#code-cavenel" title="Code">💻</a> <a href="#ideas-cavenel" title="Ideas, Planning, & Feedback">🤔</a> <a href="#review-cavenel" title="Reviewed Pull Requests">👀</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/Jessica-Sandler"><img src="https://avatars.githubusercontent.com/u/123460937?v=4?s=100" width="100px;" alt="Jessica Sandler"/><br /><sub><b>Jessica Sandler</b></sub></a><br /><a href="#code-Jessica-Sandler" title="Code">💻</a> <a href="#review-Jessica-Sandler" title="Reviewed Pull Requests">👀</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/HenrikeW"><img src="https://avatars.githubusercontent.com/u/65461017?v=4?s=100" width="100px;" alt="Henrike Wiemker"/><br /><sub><b>Henrike Wiemker</b></sub></a><br /><a href="#code-HenrikeW" title="Code">💻</a> <a href="#review-HenrikeW" title="Reviewed Pull Requests">👀</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/KattisLej"><img src="https://avatars.githubusercontent.com/u/105041852?v=4?s=100" width="100px;" alt="Katarina Lejonlid"/><br /><sub><b>Katarina Lejonlid</b></sub></a><br /><a href="#code-KattisLej" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
@@ -26,12 +27,4 @@
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
-We would also like to thank the original [TissUUmaps](https://github.com/TissUUmaps/TissUUmaps) team for their contributions.
-
-## How to Contribute
-
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for more information.
-
-## Acknowledgments
-
-This project is made possible by the open source community.
+We would also like to thank the original [TissUUmaps](https://github.com/TissUUmaps/TissUUmaps3) team for their contributions.

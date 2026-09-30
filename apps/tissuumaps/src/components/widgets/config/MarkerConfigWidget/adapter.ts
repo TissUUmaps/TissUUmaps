@@ -1,4 +1,4 @@
-import type { Marker, MarkerConfig } from "@tissuumaps/core";
+import type { Marker, MarkerConfig, TableColumnRef } from "@tissuumaps/core";
 
 export type MarkerConfigSource = Exclude<MarkerConfig["source"], undefined>;
 
@@ -9,12 +9,16 @@ export type MarkerConfigWidgetAdapter = {
   activeSource: MarkerConfigSource;
   currentSource: MarkerConfigSource;
   currentConstantValue: Marker;
-  currentFromColumn: string | null;
-  currentGroupByColumn: string | null;
+  currentFromTableColumn: TableColumnRef | null;
+  currentGroupByTableColumn: TableColumnRef | null;
   currentGroupByMap: string | null;
   setCurrentSource: (newCurrentSource: MarkerConfigSource) => void;
   setCurrentConstantValue: (newCurrentValue: Marker) => void;
-  setCurrentFromColumn: (newCurrentFromColumn: string | null) => void;
-  setCurrentGroupByColumn: (newCurrentGroupByColumn: string | null) => void;
+  setCurrentFromTableColumn: (
+    newCurrentFromTableColumn: TableColumnRef | null,
+  ) => void;
+  setCurrentGroupByTableColumn: (
+    newCurrentGroupByTableColumn: TableColumnRef | null,
+  ) => void;
   setCurrentGroupByMap: (newCurrentGroupByMap: string | null) => void;
 };
