@@ -12,7 +12,7 @@ const directory = {
 } as FileSystemDirectoryHandle;
 const projectFile = {
   kind: "file",
-  name: "project.tmap",
+  name: "project.tm4",
 } as FileSystemFileHandle;
 
 function stubDirectoryPicker(

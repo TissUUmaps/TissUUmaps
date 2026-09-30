@@ -3,8 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { SourceUtils } from "./SourceUtils";
 
 const baseUrl = "https://app.example/tm/index.html";
-const projectUrl = "https://data.example/projects/p1/project.json";
-const projectPath = "/proj/project.json";
+const projectUrl = "https://data.example/projects/p1/project.tm4";
+const projectPath = "/proj/project.tm4";
 
 type FakeFile = { kind: "file"; name: string; getFile?: () => Promise<File> };
 type FakeDir = {
@@ -54,7 +54,7 @@ function makeDir(
 }
 
 /**
- * /proj/project.json, /proj/points.csv, /proj/s:c.tif, /proj/sub/y.csv,
+ * /proj/project.tm4, /proj/points.csv, /proj/s:c.tif, /proj/sub/y.csv,
  * /shared/x.csv
  */
 const pointsFile = makeFile("points.csv");
@@ -64,7 +64,7 @@ const xFile = makeFile("x.csv");
 const subDir = makeDir("sub", { "y.csv": yFile });
 const workspace = makeDir("", {
   proj: makeDir("proj", {
-    "project.json": makeFile("project.json"),
+    "project.tm4": makeFile("project.tm4"),
     "points.csv": pointsFile,
     "s:c.tif": colonFile,
     sub: subDir,

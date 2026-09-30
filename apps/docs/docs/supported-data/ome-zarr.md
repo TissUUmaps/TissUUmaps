@@ -63,7 +63,7 @@ A label image with a channel axis is opened on its first channel. As for images,
 
 A project showing a multi-channel OME-Zarr image with a segmentation on top of it, where the segmentation is annotated by a CSV table and colored by one of its columns:
 
-```json title="project.tmap"
+```json title="project.tm4"
 {
   "name": "OME-Zarr example",
   "layers": [{ "id": "layer", "name": "Sample" }],

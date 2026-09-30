@@ -17,7 +17,7 @@ describe("pickProjectFileFromInput", () => {
   });
 
   it("returns the chosen file", async () => {
-    const file = new File(["{}"], "project.tmap");
+    const file = new File(["{}"], "project.tm4");
     stubFileInputClick((input) => {
       Object.defineProperty(input, "files", { value: [file] });
       input.dispatchEvent(new Event("change"));
@@ -32,7 +32,7 @@ describe("pickProjectFileFromInput", () => {
       input.dispatchEvent(new Event("cancel"));
     });
     await pickProjectFileFromInput();
-    expect(accept).toBe(".tmap,.json");
+    expect(accept).toBe(".tm4");
   });
 
   it("returns null when the user cancels", async () => {

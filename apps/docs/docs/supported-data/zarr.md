@@ -40,7 +40,7 @@ AnnData objects are recognized and decoded as in [HDF5](./hdf5#anndata) files, w
 
 A project showing the spots of the table of a SpatialData store as points, placed by their spatial coordinates and colored by cluster:
 
-```json title="project.tmap"
+```json title="project.tm4"
 {
   "layers": [{ "id": "layer", "name": "Visium" }],
   "tables": [

@@ -25,7 +25,7 @@ The points take the IDs and names of the table's rows, and the table annotates t
 
 A project showing the cells of a CSV table as points, placed by two of its columns and colored by a third:
 
-```json title="project.tmap"
+```json title="project.tm4"
 {
   "layers": [{ "id": "layer", "name": "Sample" }],
   "tables": [

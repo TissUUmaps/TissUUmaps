@@ -67,7 +67,7 @@ Label IDs are read per tile as the tiles are drawn, so arbitrarily large label m
 
 A project showing a multiplexed OME-TIFF with a segmentation on top of it, where the segmentation is annotated by a CSV table and colored by one of its columns:
 
-```json title="project.tmap"
+```json title="project.tm4"
 {
   "name": "TIFF example",
   "layers": [{ "id": "layer", "name": "Sample" }],

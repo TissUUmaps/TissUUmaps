@@ -9,7 +9,7 @@ import { appStore } from "./stores/app";
 import { projectStore } from "./stores/project";
 
 /** The project loaded on startup when the URL does not name one */
-const fallbackProjectUrl = "project.json";
+const fallbackProjectUrl = "project.tm4";
 
 /**
  * Starts up the parts of the application that live outside of React

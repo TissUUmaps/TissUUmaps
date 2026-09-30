@@ -258,7 +258,7 @@ export function saveProjectToJSON(project?: Project): string {
 }
 
 /**
- * Serializes a project to JSON and downloads it as a `.tmap` file
+ * Serializes a project to JSON and downloads it as a `.tm4` file
  *
  * The file is named after the project, with whitespace replaced by hyphens and
  * any other non-alphanumeric characters removed, falling back to `Untitled`.
@@ -277,7 +277,7 @@ export function saveAndDownloadProjectToJSON(project?: Project): void {
   const projectBlob = new Blob([projectJSON], { type: "application/json" });
   const projectUrl = URL.createObjectURL(projectBlob);
   const projectLink = document.createElement("a");
-  projectLink.download = `${sanitizedProjectName || "Untitled"}.tmap`;
+  projectLink.download = `${sanitizedProjectName || "Untitled"}.tm4`;
   projectLink.href = projectUrl;
   projectLink.click();
   setTimeout(() => URL.revokeObjectURL(projectUrl), 60_000);

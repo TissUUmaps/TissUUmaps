@@ -44,7 +44,7 @@ export function ProjectWelcomeView({ className }: ProjectWelcomeViewProps) {
         <EmptyDescription>
           {workspaceName !== null
             ? `Open a project from ${workspaceName}, or start an empty project and add images, labels, points or shapes from the folder.`
-            : "Load a TissUUmaps project (.tmap or .json) from your computer or from a link, or open a folder with your data."}
+            : "Load a TissUUmaps project (.tm4) from your computer or from a link, or open a folder with your data."}
         </EmptyDescription>
       </EmptyHeader>
       {workspaceName !== null ? (
