@@ -199,11 +199,27 @@ export async function pickWorkspaceSaveFile(
     }
     throw error;
   }
-  const segments = await workspace.resolve(file);
-  if (segments === null) {
+  const source = await resolveWorkspacePath(workspace, file);
+  if (source === null) {
     throw new Error("The file is not in the connected folder");
   }
-  return { file, source: SourceUtils.makeWorkspacePath(segments) };
+  return { file, source };
+}
+
+/**
+ * Locates a file or directory within the workspace
+ *
+ * @param workspace - The directory handle of the open workspace
+ * @param handle - The file or directory to locate
+ * @returns The workspace-relative path of the file or directory (with `/`
+ * prefix), or `null` if it does not lie within the workspace
+ */
+export async function resolveWorkspacePath(
+  workspace: FileSystemDirectoryHandle,
+  handle: FileSystemHandle,
+): Promise<string | null> {
+  const segments = await workspace.resolve(handle);
+  return segments !== null ? SourceUtils.makeWorkspacePath(segments) : null;
 }
 
 /**

@@ -1,7 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-// The immer middleware types complete the project store's type, which this
-// test program does not otherwise see
-import type {} from "zustand/middleware/immer";
 
 import { createProject } from "@tissuumaps/core";
 
@@ -161,7 +158,7 @@ function makeSourceFile(writable: ReturnType<typeof makeWritable>) {
 
 describe("saveProjectToSourceFile", () => {
   it("rejects a project that was not loaded from the workspace", async () => {
-    loadProject(createProject({ name: "Project" }), null);
+    loadProject(createProject({ name: "Project" }), null, null);
     await expect(saveProjectToSourceFile()).rejects.toThrow();
   });
 
@@ -196,7 +193,7 @@ describe("saveProjectToSourceFile", () => {
     const { sourceFile } = makeSourceFile(writable);
     loadProject(createProject({ name: "Project" }), "/project.tm4", sourceFile);
     writable.write.mockImplementation(() => {
-      loadProject(createProject({ name: "Other" }), null);
+      loadProject(createProject({ name: "Other" }), null, null);
       projectStore.getState().setName("Other renamed");
       return Promise.resolve();
     });
@@ -296,7 +293,7 @@ describe("saveProjectAs", () => {
   it("writes the rebased project and switches to the new file", async () => {
     const writable = makeWritable();
     const { sourceFile } = makeSourceFile(writable);
-    loadProject(makeProjectWithSources(["/data/a.tif"]), null);
+    loadProject(makeProjectWithSources(["/data/a.tif"]), null, null);
     projectStore.getState().setName("Renamed");
     await saveProjectAs(sourceFile, "/data/study.tm4", workspace);
     const state = projectStore.getState();

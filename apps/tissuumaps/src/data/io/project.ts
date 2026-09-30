@@ -11,6 +11,8 @@ import {
 
 import { projectStore } from "@/stores/project";
 
+import { resolveWorkspacePath } from "./workspace";
+
 /** The GET parameter naming the project to load */
 export const projectURLParam = "project";
 
@@ -67,9 +69,8 @@ function cleanProject(project: Project): Project {
  */
 export function hasUnsavedChanges(state: ProjectStoreState): boolean {
   const project = pickProject(state);
-  const savedProject = pickProject(state.savedProject);
   return (Object.keys(project) as (keyof Project)[]).some(
-    (key) => project[key] !== savedProject[key],
+    (key) => project[key] !== state.savedProject[key],
   );
 }
 
@@ -88,12 +89,13 @@ export function hasUnsavedChanges(state: ProjectStoreState): boolean {
  * the workspace-relative path of the project file (with `/` prefix), or `null`
  * if it was loaded from neither
  * @param projectFile - The project file within the workspace that the project
- * was loaded from, for saving it back, if any
+ * was loaded from, for saving it back, or `null` if it was not loaded from
+ * such a file
  */
 export function loadProject(
   project: Project,
   projectSource: string | null,
-  projectFile: FileSystemFileHandle | null = null,
+  projectFile: FileSystemFileHandle | null,
 ): void {
   const cleanedProject = cleanProject(project);
   projectStore.setState(
@@ -129,7 +131,7 @@ export async function loadProjectFromURL(
     projectUrl,
     options,
   );
-  loadProject(project, resolvedProjectUrl);
+  loadProject(project, resolvedProjectUrl, null);
 }
 
 /**
@@ -150,7 +152,7 @@ export async function loadProjectFromFile(
   projectFile: File,
   options?: { signal?: AbortSignal },
 ): Promise<void> {
-  loadProject(await readProjectFile(projectFile, options), null);
+  loadProject(await readProjectFile(projectFile, options), null, null);
 }
 
 /**
@@ -174,9 +176,9 @@ export async function resolveProjectSource(
   if (workspace === null) {
     return null;
   }
-  const segments = await workspace.resolve(projectFile);
+  const projectSource = await resolveWorkspacePath(workspace, projectFile);
   signal?.throwIfAborted(); // resolve() does not throw on abort
-  return segments !== null ? SourceUtils.makeWorkspacePath(segments) : null;
+  return projectSource;
 }
 
 /**
@@ -511,6 +513,16 @@ async function writeProjectFile(
     await writable.abort().catch(() => undefined);
     throw error;
   }
+}
+
+/**
+ * Forgets the workspace file the open project was loaded from, so that it can
+ * no longer be saved back to it
+ *
+ * Called when the workspace changes, as the file belongs to the previous one.
+ */
+export function forgetSourceFile(): void {
+  projectStore.setState({ sourceFile: null });
 }
 
 /**

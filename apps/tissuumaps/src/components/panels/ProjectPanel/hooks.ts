@@ -5,6 +5,8 @@ import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { usePromptDialog } from "@/components/dialogs/PromptDialog/hooks";
 import {
   clearProjectURLParam,
+  forgetSourceFile,
+  hasUnsavedChanges,
   loadProjectFromFile,
   loadProjectFromFileHandle,
   loadProjectFromURL,
@@ -98,6 +100,28 @@ export function useOpenProjectFromURL(): () => void {
 }
 
 /**
+ * Returns a callback that asks the user to confirm discarding the open
+ * project's unsaved changes
+ *
+ * @returns The callback, which resolves to `true` right away when there is
+ * nothing unsaved to lose
+ */
+function useConfirmDiscard(): (
+  title: string,
+  body: string,
+) => Promise<boolean> {
+  const confirm = useConfirmDialog();
+
+  return useCallback(
+    (title: string, body: string) =>
+      hasUnsavedChanges(projectStore.getState())
+        ? confirm({ title, body })
+        : Promise.resolve(true),
+    [confirm],
+  );
+}
+
+/**
  * Returns a callback that logs a failed save and reports it in an alert dialog
  *
  * @returns The callback
@@ -183,27 +207,28 @@ export function useStartEmptyProject(): () => void {
 }
 
 /**
- * Returns a callback that closes the open project, after confirmation
+ * Returns a callback that closes the open project, after confirmation if it
+ * has unsaved changes
  *
  * @returns The callback
  */
 export function useCloseProject(): () => void {
   const clearProject = useProjectStore((state) => state.clear);
   const setProjectOpen = useAppStore((state) => state.setProjectOpen);
-  const confirm = useConfirmDialog();
+  const confirmDiscard = useConfirmDiscard();
 
   return useCallback(() => {
-    void confirm({
-      title: "Close project",
-      body: "Are you sure you want to close the project? All unsaved changes will be lost.",
-    }).then((confirmed) => {
+    void confirmDiscard(
+      "Close project",
+      "Are you sure you want to close the project? All unsaved changes will be lost.",
+    ).then((confirmed) => {
       if (confirmed) {
         clearProject();
         clearProjectURLParam();
         setProjectOpen(false);
       }
     });
-  }, [clearProject, confirm, setProjectOpen]);
+  }, [clearProject, confirmDiscard, setProjectOpen]);
 }
 
 /**
@@ -221,6 +246,7 @@ export function useOpenWorkspace(): () => void {
       .then((directory) => {
         if (directory !== null) {
           setWorkspace(directory);
+          forgetSourceFile();
         }
       })
       .catch((error) => {
@@ -245,6 +271,7 @@ export function useCloseWorkspace(): () => void {
     }).then((confirmed) => {
       if (confirmed) {
         setWorkspace(null);
+        forgetSourceFile();
       }
     });
   }, [confirm, setWorkspace]);
