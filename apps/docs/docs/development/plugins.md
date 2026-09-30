@@ -83,8 +83,11 @@ registered, but is not opened.
 - A module loaded from a local file has to be a single file, bundled if need be:
   its relative imports cannot be resolved, and neither can paths relative to
   `import.meta.url`. Imports of absolute URLs work.
+- A plugin that registered itself when its module ran is not registered again,
+  so its `setup` is only called once.
 - Loading the same URL again does not run the module again, since the browser
-  caches modules by URL, but registers its default export again.
+  caches modules by URL. If the plugin is still registered, it is only opened
+  again; if it has been unregistered in the meantime, it is registered again.
 - Loaded plugins are not remembered: after reloading the page, they have to be
   loaded again.
 

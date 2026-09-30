@@ -137,6 +137,26 @@ describe("loadPluginFromURL", () => {
     });
   });
 
+  it("does not set up a plugin again that the module has registered itself", async () => {
+    const url = makeModuleUrl(
+      'const plugin = { id: "self", name: "Self", setup: () => { window.selfSetups = (window.selfSetups ?? 0) + 1; } }; export default plugin; window.tissuumaps.registerPlugin(plugin);',
+    );
+    await expect(loadPluginFromURL(url)).resolves.toBe("self");
+    expect(window).toHaveProperty("selfSetups", 1);
+  });
+
+  it("sets a plugin up again only once it has been unregistered, when loading the same URL again", async () => {
+    const url = makeModuleUrl(
+      'export default { id: "again", name: "Again", setup: () => { window.againSetups = (window.againSetups ?? 0) + 1; } };',
+    );
+    await loadPluginFromURL(url);
+    await loadPluginFromURL(url);
+    expect(window).toHaveProperty("againSetups", 1);
+    pluginRegistry.unregisterPlugin("again");
+    await loadPluginFromURL(url);
+    expect(window).toHaveProperty("againSetups", 2);
+  });
+
   it("throws for a module without a default export", async () => {
     const url = makeModuleUrl("export const plugin = {};");
     await expect(loadPluginFromURL(url)).rejects.toThrow("no default export");

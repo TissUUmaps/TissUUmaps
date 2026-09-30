@@ -224,11 +224,12 @@ export async function loadPluginFromFile(file: File): Promise<string> {
  * {@link pluginRegistry}
  *
  * The module's default export has to be a plugin, which is registered, and
- * thereby set up, but not mounted.
+ * thereby set up, but not mounted. A plugin that is already registered as that
+ * same object, because the module registered it itself when it ran, or because
+ * the same URL has been loaded before, is not registered again.
  *
  * A module on another origin has to be served with CORS. Modules are cached by
- * URL: loading the same URL again does not run the module again, but registers
- * its default export again.
+ * URL: loading the same URL again does not run the module again.
  *
  * @param pluginUrl - The URL of the module, absolute or relative to the
  * document base URL
@@ -252,7 +253,10 @@ export async function loadPluginFromURL(pluginUrl: string): Promise<string> {
   if (!isPlugin(plugin)) {
     throw new Error(`The default export of ${pluginUrl} is not a plugin`);
   }
-  pluginRegistry.registerPlugin(plugin);
+  // not set up again if the module has registered it itself, or on reloading
+  if (pluginRegistrations.get(plugin.id)?.plugin !== plugin) {
+    pluginRegistry.registerPlugin(plugin);
+  }
   if (!pluginRegistrations.has(plugin.id)) {
     throw new Error(
       `Error during setup of plugin ${plugin.id}, see the browser console for details`,
