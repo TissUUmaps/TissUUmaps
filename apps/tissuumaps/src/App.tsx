@@ -4,6 +4,7 @@ import {
   DockviewReact,
   type DockviewReadyEvent,
   type DockviewTheme,
+  type IDockviewHeaderActionsProps,
   type IDockviewPanelHeaderProps,
   type IDockviewPanelProps,
 } from "dockview-react";
@@ -12,7 +13,7 @@ import { type ReactNode, useLayoutEffect, useState } from "react";
 
 import { IconButton } from "@/components/common/icon-button";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { usePluginPanels } from "@/hooks/usePluginPanels";
+import { getPluginPanelId, usePluginPanels } from "@/hooks/usePluginPanels";
 
 import "./App.css";
 import { DialogProvider } from "./components/dialogs/DialogProvider";
@@ -26,6 +27,7 @@ import { TablesPanel } from "./components/panels/TablesPanel";
 import { ViewerPanel } from "./components/panels/ViewerPanel";
 import { PanelId } from "./components/panels/panelId";
 import { NotificationCenter } from "./components/widgets/NotificationCenter";
+import { PluginMenu } from "./components/widgets/PluginMenu";
 import { pluginRegistry } from "./plugins";
 import { useSettingsStore } from "./stores/settings";
 
@@ -98,7 +100,7 @@ const dockviewComponents = {
 /**
  * The tab headers available to panels, by component name: one that lets the
  * user close the panel, one for panels that are always shown, and one for the
- * panels contributed by plugins, whose close button unregisters the plugin
+ * panels contributed by plugins, whose close button unmounts the plugin
  */
 const dockviewTabComponents = {
   ClosablePanelHeader: (props: IDockviewPanelHeaderProps) => {
@@ -115,7 +117,7 @@ const dockviewTabComponents = {
         {...props}
         hideClose={false}
         closeActionOverride={() =>
-          pluginRegistry.unregisterPlugin(props.params.pluginId)
+          pluginRegistry.unmountPlugin(props.params.pluginId)
         }
       />
     );
@@ -123,20 +125,32 @@ const dockviewTabComponents = {
 };
 
 /**
- * The dark mode toggle shown at the right end of the dockview tab bar
+ * The plugins menu and the dark mode toggle shown at the right end of the
+ * dockview tab bar
  */
-function DockviewRightHeaderActionsComponent() {
+function DockviewRightHeaderActionsComponent(
+  props: IDockviewHeaderActionsProps,
+) {
   const dark = useSettingsStore((state) => state.dark);
   const setDark = useSettingsStore((state) => state.setDark);
   return (
-    <IconButton
-      label={dark ? "Light mode" : "Dark mode"}
-      variant="default"
-      size="icon"
-      onClick={() => setDark(!dark)}
-    >
-      {dark ? <Sun /> : <Moon />}
-    </IconButton>
+    <div className="flex">
+      <PluginMenu
+        onShowPlugin={(pluginId) =>
+          props.containerApi
+            .getPanel(getPluginPanelId(pluginId))
+            ?.api.setActive()
+        }
+      />
+      <IconButton
+        label={dark ? "Light mode" : "Dark mode"}
+        variant="default"
+        size="icon"
+        onClick={() => setDark(!dark)}
+      >
+        {dark ? <Sun /> : <Moon />}
+      </IconButton>
+    </div>
   );
 }
 
@@ -162,7 +176,7 @@ const onDockviewReady = (event: DockviewReadyEvent) => {
     title: "Project",
     component: "ProjectPanel",
     tabComponent: "PersistentPanelHeader",
-    initialWidth: 400,
+    initialWidth: 420,
     position: {
       referencePanel: viewerPanel,
       direction: "right",

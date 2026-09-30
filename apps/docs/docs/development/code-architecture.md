@@ -144,7 +144,7 @@ Format metadata belongs in the data provider: channel count, names, colors and c
 
 ## @tissuumaps/plugins
 
-Each plugin has its own dedicated directory and is separately exported in the `package.json` and `vite.config.ts` files. The plugin contract itself lives in `@tissuumaps/core` (see [Plugins](./plugins.md)).
+Each plugin has its own dedicated directory and is separately exported in the `package.json` and `vite.config.ts` files. The application registers each plugin on startup, by listing it in `builtInPlugins` in `apps/tissuumaps/src/plugins.ts`. The plugin contract itself lives in `@tissuumaps/core` (see [Plugins](./plugins.md)).
 
 ## @tissuumaps/react
 
@@ -158,7 +158,7 @@ In the TissUUmaps React app, absolute (`@/`) imports are used for imports across
 
 ### App
 
-`bootstrap` starts up the parts of the application that live outside of React, in this order: the built-in data providers are registered (`data/providers.ts`), the data caches are started, the plugin registry is started and exposed as `window.tissuumaps` (`plugins.ts`), the project is set to be marked open as soon as it has a source or data, loading of the project is _started_ — from the URL given in the `project` GET parameter, or from `project.tm4` if that parameter is absent or empty — and finally a `tissuumaps-loaded` event is dispatched on `window` (`events.ts`), after which plugins register themselves (see [Plugins](./plugins.md)); there are no plugins known to the application ahead of time. `bootstrap` returns a teardown function that cancels the project load, stops watching whether the project is open, and stops the registry and the caches, in that order; it is invoked on hot module replacement.
+`bootstrap` starts up the parts of the application that live outside of React, in this order: the built-in data providers are registered (`data/providers.ts`), the data caches are started, the plugin registry is started and exposed as `window.tissuumaps` (`plugins.ts`), the plugins shipped in `@tissuumaps/plugins` are registered (`enableBuiltInPlugins` in `plugins.ts`), the project is set to be marked open as soon as it has a source or data, loading of the project is _started_ — from the URL given in the `project` GET parameter, or from `project.tm4` if that parameter is absent or empty — and finally a `tissuumaps-loaded` event is dispatched on `window` (`events.ts`), after which other plugins register themselves (see [Plugins](./plugins.md)). `bootstrap` returns a teardown function that cancels the project load, stops watching whether the project is open, and stops the registry and the caches, in that order; it is invoked on hot module replacement.
 
 `App` lays out the built-in panels and the plugin panels (`usePluginPanels`) with Dockview, wrapped in the `DialogProvider`.
 
@@ -168,7 +168,7 @@ In the TissUUmaps React app, absolute (`@/`) imports are used for imports across
 
 ### Plugin registry
 
-`plugins.ts` owns the plugin lifecycle described on the [Plugins](./plugins.md) page. It is the only writer of the app store's `plugins`, where it keeps just each plugin's name and the container element of its user interface, so that Immer never freezes anything the plugin owns; the unmount and teardown callbacks are kept in a module-level map. `startPluginRegistry()` returns a teardown that unregisters all plugins.
+`plugins.ts` owns the plugin lifecycle described on the [Plugins](./plugins.md) page: registering sets a plugin up, mounting and unmounting (on request, through the plugins menu and the panel's close button) show and hide its user interface, and unregistering tears it down. It is the only writer of the app store's `plugins`, where it keeps just each plugin's name, whether it can be mounted, and the container element of its user interface while it is mounted, so that Immer never freezes anything the plugin owns; the plugin objects and their unmount and teardown callbacks are kept in a module-level map. `loadPluginFromURL` and `loadPluginFromFile` load third-party plugins as ES modules with `import()`, a local file through a `blob:` URL, and register their default export. `startPluginRegistry()` returns a teardown that unregisters all plugins.
 
 ### Hooks
 
