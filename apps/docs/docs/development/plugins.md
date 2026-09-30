@@ -4,48 +4,53 @@ sidebar_position: 8
 
 # Plugins
 
-Once the application has started up, TissUUmaps exposes its plugin registry as
-`window.tissuumaps`. Plugins register themselves through the registry:
+A plugin is an ES module that exports the plugin as its default export _and_
+registers it through the plugin registry, which TissUUmaps exposes as
+`window.tissuumaps` once the application has started up:
 
 ```javascript
-window.tissuumaps.registerPlugin({
+const plugin = {
   id: "my-plugin",
   name: "My plugin",
   setup: ({ appStore, dataStore, projectStore, settingsStore }) => {
     return () => {}; // teardown
   },
-});
+};
+
+export default plugin;
+
+if (window.tissuumaps !== undefined) {
+  window.tissuumaps.registerPlugin(plugin); // startup already finished
+} else {
+  window.addEventListener(
+    "tissuumaps-loaded",
+    () => window.tissuumaps.registerPlugin(plugin),
+    { once: true },
+  );
+}
 ```
+
+Written this way, the same file works however it gets into TissUUmaps: the user
+can load it through the plugins menu, which uses the default export (see
+[Loading plugins from the plugins menu](#loading-plugins-from-the-plugins-menu)),
+and a deployment can include it in the page, where it registers itself:
+
+```html
+<script type="module" src="my-plugin.js"></script>
+```
+
+Because of the `export`, a plugin included in the page has to be loaded with
+`type="module"`; a classic `<script>` fails with a syntax error.
 
 A plugin can be registered at any time, but `window.tissuumaps` only exists once
 the application has started up. TissUUmaps signals this by dispatching a
 `tissuumaps-loaded` event on `window` at the end of its startup — a plain event
-that is not replayed, so a listener added afterwards never fires.
-
-Whether a plugin script runs before or after startup usually cannot be
-guaranteed: a classic `<script>` in `index.html` runs before the application's
-deferred `<script type="module">`, but an `async` or dynamically imported script
-races it. Use the combined pattern, which is correct either way:
-
-```javascript
-function registerMyPlugin() {
-  window.tissuumaps.registerPlugin({
-    id: "my-plugin",
-    name: "My plugin",
-    setup: ({ appStore, dataStore, projectStore, settingsStore }) => {
-      return () => {}; // teardown
-    },
-  });
-}
-
-if (window.tissuumaps !== undefined) {
-  registerMyPlugin(); // startup already finished
-} else {
-  window.addEventListener("tissuumaps-loaded", registerMyPlugin, {
-    once: true,
-  });
-}
-```
+that is not replayed, so a listener added afterwards never fires. Whether a
+plugin runs before or after startup usually cannot be guaranteed: module scripts
+run in document order, so it depends on where the plugin's `<script>` is placed
+relative to the application's, and an `async` or dynamically imported module
+races it. Checking `window.tissuumaps` first and listening for
+`tissuumaps-loaded` otherwise, as above, is correct either way.
 
 Note that the project is not yet loaded when `tissuumaps-loaded` fires — loading
 is only started during startup. A plugin that depends on project contents should
@@ -58,30 +63,19 @@ For TypeScript, the `Plugin`, `PluginRegistry` and `PluginStores` types are
 exported from `@tissuumaps/core`, and `window.tissuumaps` is typed as
 `PluginRegistry | undefined`.
 
-## Loading third-party plugins
+The plugins shipped with TissUUmaps in `@tissuumaps/plugins` are the exception:
+the application registers them itself on startup, so they only need to export the
+plugin.
 
-Instead of registering itself, a plugin can be loaded by the user, through the
-plugins menu in the tab bar: _Load plugin from file…_ picks a local file, and
-_Load plugin from URL…_ asks for a URL, absolute or relative to the page. Such a
-plugin is an ES module whose default export is the plugin:
+## Loading plugins from the plugins menu
 
-```javascript
-export default {
-  id: "my-plugin",
-  name: "My plugin",
-  mount: (container, { projectStore }) => {
-    container.textContent = `${projectStore.getState().images.length} images`;
-  },
-};
-```
-
-TissUUmaps registers the default export, which sets the plugin up, and opens the
-plugin's panel right away if it has a `mount`. The default export is required:
-loading a module without one fails, even if the module registers a plugin
-through `window.tissuumaps` when it runs — that plugin then stays registered,
-but is not opened. Self-registration, as shown above, is meant for scripts
-included in the page, such as a `<script>` added to `index.html`; a module that
-is to be loaded through the plugins menu exports its plugin instead.
+The user can load a plugin through the plugins menu in the tab bar: _Load plugin
+from file…_ picks a local file, and _Load plugin from URL…_ asks for a URL,
+absolute or relative to the page. TissUUmaps runs the module, registers its
+default export, which sets the plugin up, and opens the plugin's panel right away
+if it has a `mount`. Loading a module without a default export fails, even if
+the module registers a plugin itself when it runs — that plugin then stays
+registered, but is not opened.
 
 - A module loaded from a URL on another origin has to be served with
   [CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS) headers,
@@ -190,7 +184,7 @@ and its panel appears as a tab titled with the plugin's `name`, next to the
 built-in Project, Images, Labels, Points, Shapes and Tables panels:
 
 ```javascript
-window.tissuumaps.registerPlugin({
+const plugin = {
   id: "my-plugin",
   name: "My plugin",
   mount: (container, { projectStore }) => {
@@ -202,7 +196,8 @@ window.tissuumaps.registerPlugin({
     container.append(paragraph);
     return projectStore.subscribe(update); // unmount
   },
-});
+};
+// exported and registered as shown above
 ```
 
 Because `mount` receives the stores itself, a plugin that only adds a user
