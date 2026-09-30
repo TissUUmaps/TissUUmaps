@@ -1,8 +1,11 @@
+import { SourceUtils } from "@tissuumaps/core";
+
 /** The picker APIs missing from `lib.dom.d.ts` */
 type FileSystemAccessWindow = Window & {
   showDirectoryPicker?: (options?: {
     id?: string;
     mode?: "read" | "readwrite";
+    startIn?: FileSystemHandle;
   }) => Promise<FileSystemDirectoryHandle>;
   showOpenFilePicker?: (options?: {
     id?: string;
@@ -93,6 +96,62 @@ export async function pickProjectFile(options?: {
     }
     throw error;
   }
+}
+
+/**
+ * Lets the user pick a file or directory within the workspace
+ *
+ * @param workspace - The directory handle of the open workspace, which the
+ * picker opens in
+ * @param kind - Whether to pick a file or a directory
+ * @returns The workspace-relative path of the picked file or directory (with
+ * `/` prefix), or `null` if the user cancelled the picker
+ * @throws Error if the browser does not support picking a file or directory,
+ * if access to it was denied, or if it is the workspace itself or does not lie
+ * within the workspace
+ */
+export async function pickWorkspacePath(
+  workspace: FileSystemDirectoryHandle,
+  kind: FileSystemHandleKind,
+): Promise<string | null> {
+  const w = window as FileSystemAccessWindow;
+  if (
+    w.showOpenFilePicker === undefined ||
+    w.showDirectoryPicker === undefined
+  ) {
+    throw new Error(
+      "Picking a file or directory is not supported by this browser",
+    );
+  }
+  let handle: FileSystemHandle | undefined;
+  try {
+    // Called as methods: the pickers throw if they lose their receiver. No
+    // picker id, so that the workspace picker keeps its own last directory.
+    handle =
+      kind === "file"
+        ? (await w.showOpenFilePicker({ startIn: workspace }))[0]
+        : await w.showDirectoryPicker({ mode: "read", startIn: workspace });
+  } catch (error) {
+    if (isAbortError(error)) {
+      return null;
+    }
+    throw error;
+  }
+  if (handle === undefined) {
+    return null;
+  }
+  const segments = await workspace.resolve(handle);
+  if (segments === null) {
+    throw new Error(
+      `The ${kind === "file" ? "file" : "folder"} is not in the connected folder`,
+    );
+  }
+  if (segments.length === 0) {
+    throw new Error(
+      "The connected folder itself cannot be a data source; pick a folder inside it",
+    );
+  }
+  return SourceUtils.makeWorkspacePath(segments);
 }
 
 /**
