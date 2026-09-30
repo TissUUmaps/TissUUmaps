@@ -176,7 +176,7 @@ const onDockviewReady = (event: DockviewReadyEvent) => {
     title: "Project",
     component: "ProjectPanel",
     tabComponent: "PersistentPanelHeader",
-    initialWidth: 400,
+    initialWidth: 420,
     position: {
       referencePanel: viewerPanel,
       direction: "right",
