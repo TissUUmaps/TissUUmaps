@@ -11,6 +11,7 @@ import {
   SortableObjectListItem,
 } from "@/components/widgets/ObjectList";
 import { useShapesData } from "@/hooks/useData";
+import { useExpandedShapesIds } from "@/hooks/useExpandedIds";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -20,10 +21,13 @@ import { ShapesSettingsWidget } from "./ShapesSettingsWidget";
 import type { ShapesSettingsCategory } from "./category";
 
 export type ShapesPanelProps = {
+  /** Brings the panel to the front */
+  onShow: () => void;
   className?: string;
 };
 
-export function ShapesPanel({ className }: ShapesPanelProps) {
+export function ShapesPanel({ onShow, className }: ShapesPanelProps) {
+  const [expandedIds, setExpandedIds] = useExpandedShapesIds(onShow);
   const shapesDataProviders = useAppStore((state) => state.shapesDataProviders);
 
   const layers = useProjectStore((state) => state.layers);
@@ -33,7 +37,12 @@ export function ShapesPanel({ className }: ShapesPanelProps) {
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
-      <SortableObjectList objects={shapes} onMove={moveShapes}>
+      <SortableObjectList
+        objects={shapes}
+        onMove={moveShapes}
+        expandedIds={expandedIds}
+        onExpandedIdsChange={setExpandedIds}
+      >
         {(currentShapes, index) => (
           <ShapesAccordionItem
             key={currentShapes.id}

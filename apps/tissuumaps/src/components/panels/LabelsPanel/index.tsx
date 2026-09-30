@@ -10,6 +10,7 @@ import {
   SortableObjectList,
   SortableObjectListItem,
 } from "@/components/widgets/ObjectList";
+import { useExpandedLabelsIds } from "@/hooks/useExpandedIds";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -19,10 +20,13 @@ import { LabelsSettingsWidget } from "./LabelsSettingsWidget";
 import type { LabelsSettingsCategory } from "./category";
 
 export type LabelsPanelProps = {
+  /** Brings the panel to the front */
+  onShow: () => void;
   className?: string;
 };
 
-export function LabelsPanel({ className }: LabelsPanelProps) {
+export function LabelsPanel({ onShow, className }: LabelsPanelProps) {
+  const [expandedIds, setExpandedIds] = useExpandedLabelsIds(onShow);
   const labelsDataProviders = useAppStore((state) => state.labelsDataProviders);
 
   const layers = useProjectStore((state) => state.layers);
@@ -32,7 +36,12 @@ export function LabelsPanel({ className }: LabelsPanelProps) {
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
-      <SortableObjectList objects={labels} onMove={moveLabels}>
+      <SortableObjectList
+        objects={labels}
+        onMove={moveLabels}
+        expandedIds={expandedIds}
+        onExpandedIdsChange={setExpandedIds}
+      >
         {(currentLabels, index) => (
           <LabelsAccordionItem
             key={currentLabels.id}

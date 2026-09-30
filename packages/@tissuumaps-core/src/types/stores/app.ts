@@ -106,6 +106,42 @@ export type AppStoreState = {
     string,
     { name: string; mountable: boolean; container?: HTMLElement }
   >;
+
+  /**
+   * The latest request to show the settings of an image, or `null` if there has
+   * been none
+   *
+   * Set by {@link AppStoreActions.showImageSettings} to a new object on every call, so
+   * that a repeated request for the same image is a change too.
+   */
+  imageSettingsRequest: { imageId: string } | null;
+
+  /**
+   * The latest request to show the settings of labels, or `null` if there has
+   * been none
+   *
+   * Set by {@link AppStoreActions.showLabelsSettings} to a new object on every call, so
+   * that a repeated request for the same labels is a change too.
+   */
+  labelsSettingsRequest: { labelsId: string } | null;
+
+  /**
+   * The latest request to show the settings of points, or `null` if there has
+   * been none
+   *
+   * Set by {@link AppStoreActions.showPointsSettings} to a new object on every call, so
+   * that a repeated request for the same points is a change too.
+   */
+  pointsSettingsRequest: { pointsId: string } | null;
+
+  /**
+   * The latest request to show the settings of shapes, or `null` if there has
+   * been none
+   *
+   * Set by {@link AppStoreActions.showShapesSettings} to a new object on every call, so
+   * that a repeated request for the same shapes is a change too.
+   */
+  shapesSettingsRequest: { shapesId: string } | null;
 };
 
 /**
@@ -157,6 +193,38 @@ export type AppStoreActions = {
   setHighlightedItemGroup: (
     highlightedItemGroup: HighlightedItemGroup | null,
   ) => void;
+
+  /**
+   * Shows the settings of an image: the Images panel is brought to the front
+   * and the settings are expanded
+   *
+   * @param imageId - ID of the image whose settings to show
+   */
+  showImageSettings: (imageId: string) => void;
+
+  /**
+   * Shows the settings of labels: the Labels panel is brought to the front
+   * and the settings are expanded
+   *
+   * @param labelsId - ID of the labels whose settings to show
+   */
+  showLabelsSettings: (labelsId: string) => void;
+
+  /**
+   * Shows the settings of points: the Points panel is brought to the front
+   * and the settings are expanded
+   *
+   * @param pointsId - ID of the points whose settings to show
+   */
+  showPointsSettings: (pointsId: string) => void;
+
+  /**
+   * Shows the settings of shapes: the Shapes panel is brought to the front
+   * and the settings are expanded
+   *
+   * @param shapesId - ID of the shapes whose settings to show
+   */
+  showShapesSettings: (shapesId: string) => void;
 
   /**
    * Registers an image data provider
