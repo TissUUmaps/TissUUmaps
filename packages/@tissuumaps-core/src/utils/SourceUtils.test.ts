@@ -97,6 +97,48 @@ describe("SourceUtils", () => {
     });
   });
 
+  describe("isAppPath", () => {
+    it("returns true for app-relative paths", () => {
+      expect(SourceUtils.isAppPath("//data/points.csv")).toBe(true);
+    });
+
+    it("returns false for other sources", () => {
+      expect(SourceUtils.isAppPath("/proj/points.csv")).toBe(false);
+      expect(SourceUtils.isAppPath("points.csv")).toBe(false);
+      expect(SourceUtils.isAppPath("https://x.example/f.csv")).toBe(false);
+    });
+  });
+
+  describe("makeRelativePath", () => {
+    it("expresses a path within the directory", () => {
+      expect(
+        SourceUtils.makeRelativePath("/proj/data/points.csv", "/proj"),
+      ).toBe("data/points.csv");
+    });
+
+    it("climbs out of the directory with .. segments", () => {
+      expect(
+        SourceUtils.makeRelativePath("/shared/points.csv", "/proj/sub"),
+      ).toBe("../../shared/points.csv");
+    });
+
+    it("expresses a path from the workspace root", () => {
+      expect(SourceUtils.makeRelativePath("/points.csv", "/")).toBe(
+        "points.csv",
+      );
+    });
+
+    it("returns . for the directory itself", () => {
+      expect(SourceUtils.makeRelativePath("/proj", "/proj")).toBe(".");
+    });
+
+    it("prefixes a first segment that looks like a URL scheme", () => {
+      expect(SourceUtils.makeRelativePath("/proj/s1:ch2.tif", "/proj")).toBe(
+        "./s1:ch2.tif",
+      );
+    });
+  });
+
   describe("makeWorkspacePath", () => {
     it("joins the segments with the workspace prefix", () => {
       expect(SourceUtils.makeWorkspacePath(["proj", "points.csv"])).toBe(

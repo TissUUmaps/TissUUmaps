@@ -164,7 +164,7 @@ In the TissUUmaps React app, absolute (`@/`) imports are used for imports across
 
 ### Project I/O
 
-`data/io/project.ts` loads a project into the stores (`loadProject`, `loadProjectFromURL`, `loadProjectFromFile`), serializes it back (`saveProject`, `saveProjectToJSON`, `saveAndDownloadProjectToJSON`), and keeps the `project` GET parameter in sync with the loaded project (`setProjectURLParam`, `clearProjectURLParam`).
+`data/io/project.ts` loads a project into the stores (`loadProject`, `loadProjectFromURL`, `loadProjectFromFile`), serializes it back (`saveProject`, `saveProjectToJSON`, `saveAndDownloadProjectToJSON`), saves it to the workspace (`saveProjectToSourceFile`, `saveProjectAs`), tells whether it has unsaved changes (`hasUnsavedChanges`), and keeps the `project` GET parameter in sync with the loaded project (`setProjectURLParam`, `clearProjectURLParam`).
 
 ### Plugin registry
 

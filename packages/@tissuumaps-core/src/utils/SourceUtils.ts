@@ -60,8 +60,19 @@ export class SourceUtils {
   static isWorkspacePath(normalizedSource: string): boolean {
     return (
       normalizedSource.startsWith(SourceUtils._workspacePathPrefix) &&
-      !normalizedSource.startsWith(SourceUtils._appPathPrefix)
+      !SourceUtils.isAppPath(normalizedSource)
     );
+  }
+
+  /**
+   * Returns whether a source is an app-relative path (with `//` prefix), which
+   * {@link SourceUtils.normalizeSource} turns into an absolute URL
+   *
+   * @param source - The source, as authored
+   * @returns `true` for app-relative paths
+   */
+  static isAppPath(source: string): boolean {
+    return source.startsWith(SourceUtils._appPathPrefix);
   }
 
   /**
@@ -76,6 +87,48 @@ export class SourceUtils {
     return (
       SourceUtils._workspacePathPrefix + segments.join(SourceUtils._pathSep)
     );
+  }
+
+  /**
+   * Expresses a workspace-relative path relative to a directory within the
+   * workspace, as a project-relative path
+   *
+   * @param workspacePath - The normalized workspace-relative path to express
+   *   (see {@link SourceUtils.normalizeSource})
+   * @param baseDirectoryPath - The workspace-relative path of the directory to
+   *   express it from, `/` for the workspace root
+   * @returns The project-relative path, with `..` segments where it leaves the
+   *   directory (e.g. `../images/a.tif`), prefixed with `./` if its first
+   *   segment would otherwise be taken for a URL scheme, or `.` for the
+   *   directory itself
+   */
+  static makeRelativePath(
+    workspacePath: string,
+    baseDirectoryPath: string,
+  ): string {
+    const split = (path: string) =>
+      path.split(SourceUtils._pathSep).filter((segment) => segment !== "");
+    const segments = split(workspacePath);
+    const baseSegments = split(baseDirectoryPath);
+    let common = 0;
+    while (
+      common < segments.length &&
+      common < baseSegments.length &&
+      segments[common] === baseSegments[common]
+    ) {
+      common++;
+    }
+    const relativeSegments = [
+      ...Array.from({ length: baseSegments.length - common }, () => ".."),
+      ...segments.slice(common),
+    ];
+    if (relativeSegments.length === 0) {
+      return ".";
+    }
+    const relativePath = relativeSegments.join(SourceUtils._pathSep);
+    return SourceUtils._urlSchemePattern.test(relativePath)
+      ? `./${relativePath}`
+      : relativePath;
   }
 
   /**

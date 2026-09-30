@@ -3,6 +3,7 @@ import {
   FolderIcon,
   LinkIcon,
   type LucideIcon,
+  SaveIcon,
 } from "lucide-react";
 
 import { SourceUtils } from "@tissuumaps/core";
@@ -11,7 +12,10 @@ import { IconButton } from "@/components/common/icon-button";
 import { objectKindIcons } from "@/components/object-kind-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { saveAndDownloadProjectToJSON } from "@/data/io/project";
+import {
+  hasUnsavedChanges,
+  saveAndDownloadProjectToJSON,
+} from "@/data/io/project";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -19,6 +23,7 @@ import { useProjectStore } from "@/stores/project";
 import { PanelId } from "../panelId";
 import { ProjectMenu } from "./ProjectMenu";
 import { formatProjectSource } from "./formatProjectSource";
+import { useSaveProjectToFolder } from "./hooks";
 
 export type ProjectHeaderProps = {
   onShowPanel: (panelId: PanelId) => void;
@@ -29,12 +34,17 @@ export function ProjectHeader({ onShowPanel, className }: ProjectHeaderProps) {
   const name = useProjectStore((state) => state.name);
   const setName = useProjectStore((state) => state.setName);
   const source = useProjectStore((state) => state.source);
+  // Only shown when Save can clear it
+  const unsavedChanges = useProjectStore(
+    (state) => state.sourceFile !== null && hasUnsavedChanges(state),
+  );
   const workspaceName = useAppStore((state) => state.workspace?.name ?? null);
   const imageCount = useProjectStore((state) => state.images.length);
   const labelsCount = useProjectStore((state) => state.labels.length);
   const pointsCount = useProjectStore((state) => state.points.length);
   const shapesCount = useProjectStore((state) => state.shapes.length);
   const tableCount = useProjectStore((state) => state.tables.length);
+  const saveProjectToFolder = useSaveProjectToFolder();
 
   const dataCounts: DataCount[] = [
     {
@@ -97,6 +107,11 @@ export function ProjectHeader({ onShowPanel, className }: ProjectHeaderProps) {
           }}
           className="hover:border-input h-8 flex-1 border-transparent bg-transparent px-1.5 text-base font-semibold shadow-none md:text-base dark:bg-transparent"
         />
+        {saveProjectToFolder !== null && (
+          <IconButton label="Save project" onClick={saveProjectToFolder}>
+            <SaveIcon />
+          </IconButton>
+        )}
         <IconButton
           label="Download project"
           onClick={() => saveAndDownloadProjectToJSON()}
@@ -105,12 +120,22 @@ export function ProjectHeader({ onShowPanel, className }: ProjectHeaderProps) {
         </IconButton>
         <ProjectMenu />
       </div>
-      {sourceLabel !== null && (
+      {(sourceLabel !== null || unsavedChanges) && (
         <div className="text-muted-foreground flex min-w-0 items-center gap-1.5 px-1.5 text-xs">
-          <SourceIcon className="size-3.5 shrink-0" />
-          <span className="truncate" title={source ?? undefined}>
-            {sourceLabel}
-          </span>
+          {sourceLabel !== null && (
+            <>
+              <SourceIcon className="size-3.5 shrink-0" />
+              <span className="truncate" title={source ?? undefined}>
+                {sourceLabel}
+              </span>
+            </>
+          )}
+          {sourceLabel !== null && unsavedChanges && <span>·</span>}
+          {unsavedChanges && (
+            <span className="text-foreground shrink-0 font-medium">
+              Unsaved changes
+            </span>
+          )}
         </div>
       )}
       {dataCounts.length > 0 && (

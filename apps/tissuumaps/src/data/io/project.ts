@@ -3,6 +3,7 @@ import { freeze } from "immer";
 import {
   JSONUtils,
   type Project,
+  type ProjectStoreState,
   type RawProject,
   SourceUtils,
   createProject,
@@ -10,37 +11,79 @@ import {
 
 import { projectStore } from "@/stores/project";
 
+import { resolveWorkspacePath } from "./workspace";
+
 /** The GET parameter naming the project to load */
 export const projectURLParam = "project";
 
 /**
+ * Picks the project's own properties, without copying them
+ *
+ * This drops the store's actions as well as any other state that is not part
+ * of the project itself, such as where the project was loaded from.
+ *
+ * @param project - The project to pick from
+ * @returns The project's own properties, shared with `project`
+ */
+function pickProject(project: Project): Project {
+  return {
+    name: project.name,
+    layers: project.layers,
+    images: project.images,
+    labels: project.labels,
+    points: project.points,
+    shapes: project.shapes,
+    tables: project.tables,
+    markerMaps: project.markerMaps,
+    sizeMaps: project.sizeMaps,
+    colorMaps: project.colorMaps,
+    visibilityMaps: project.visibilityMaps,
+    opacityMaps: project.opacityMaps,
+    osOptions: project.osOptions,
+    glOptions: project.glOptions,
+    viewerBackgroundColor: project.viewerBackgroundColor,
+  };
+}
+
+/**
  * Creates a deep copy of a project, keeping only the project's own properties
  *
- * This detaches the copy from the project store, and drops the store's actions
- * as well as any other state that is not part of the project itself, such as
- * where the project was loaded from.
+ * This detaches the copy from the project store (see {@link pickProject}).
  *
  * @param project - The project to copy
  * @returns The copied project
  */
 function cleanProject(project: Project): Project {
-  return {
-    name: project.name,
-    layers: structuredClone(project.layers),
-    images: structuredClone(project.images),
-    labels: structuredClone(project.labels),
-    points: structuredClone(project.points),
-    shapes: structuredClone(project.shapes),
-    tables: structuredClone(project.tables),
-    markerMaps: structuredClone(project.markerMaps),
-    sizeMaps: structuredClone(project.sizeMaps),
-    colorMaps: structuredClone(project.colorMaps),
-    visibilityMaps: structuredClone(project.visibilityMaps),
-    opacityMaps: structuredClone(project.opacityMaps),
-    osOptions: structuredClone(project.osOptions),
-    glOptions: structuredClone(project.glOptions),
-    viewerBackgroundColor: structuredClone(project.viewerBackgroundColor),
-  };
+  return structuredClone(pickProject(project));
+}
+
+/**
+ * Returns whether any part of a project differs by reference from another
+ *
+ * @param project - The project to compare
+ * @param otherProject - The project to compare it with
+ * @returns `true` if any part of `project` is not the one of `otherProject`
+ */
+function hasChangedParts(project: Project, otherProject: Project): boolean {
+  const parts = pickProject(project);
+  return (Object.keys(parts) as (keyof Project)[]).some(
+    (key) => parts[key] !== otherProject[key],
+  );
+}
+
+/**
+ * Returns whether the open project has changed since it was last loaded or
+ * saved
+ *
+ * Every change goes through the project store's actions, which replace the
+ * changed parts of the project. A replaced part counts as changed, even if it
+ * is equal to the saved one.
+ *
+ * @param state - The project store state
+ * @returns `true` if any part of the project differs from the saved project
+ */
+export function hasUnsavedChanges(state: ProjectStoreState): boolean {
+  return hasChangedParts(state, state.savedProject);
 }
 
 /**
@@ -57,17 +100,24 @@ function cleanProject(project: Project): Project {
  * @param projectSource - Where the project was loaded from: its absolute URL,
  * the workspace-relative path of the project file (with `/` prefix), or `null`
  * if it was loaded from neither
+ * @param projectFile - The project file within the workspace that the project
+ * was loaded from, for saving it back, or `null` if it was not loaded from
+ * such a file
  */
 export function loadProject(
   project: Project,
   projectSource: string | null,
+  projectFile: FileSystemFileHandle | null,
 ): void {
+  const cleanedProject = cleanProject(project);
   projectStore.setState(
     freeze(
       {
-        ...cleanProject(project),
+        ...cleanedProject,
         source: projectSource,
+        sourceFile: projectFile,
         instanceId: crypto.randomUUID(),
+        savedProject: cleanedProject,
       },
       true,
     ),
@@ -93,7 +143,7 @@ export async function loadProjectFromURL(
     projectUrl,
     options,
   );
-  loadProject(project, resolvedProjectUrl);
+  loadProject(project, resolvedProjectUrl, null);
 }
 
 /**
@@ -114,7 +164,7 @@ export async function loadProjectFromFile(
   projectFile: File,
   options?: { signal?: AbortSignal },
 ): Promise<void> {
-  loadProject(await readProjectFile(projectFile, options), null);
+  loadProject(await readProjectFile(projectFile, options), null, null);
 }
 
 /**
@@ -138,9 +188,9 @@ export async function resolveProjectSource(
   if (workspace === null) {
     return null;
   }
-  const segments = await workspace.resolve(projectFile);
+  const projectSource = await resolveWorkspacePath(workspace, projectFile);
   signal?.throwIfAborted(); // resolve() does not throw on abort
-  return segments !== null ? SourceUtils.makeWorkspacePath(segments) : null;
+  return projectSource;
 }
 
 /**
@@ -151,7 +201,8 @@ export async function resolveProjectSource(
  * project-relative data sources are resolved within the file's directory.
  * Otherwise it is loaded without a source, like an uploaded file, and its
  * project-relative data sources fall back to being workspace-relative and then
- * app-relative (see `SourceUtils`).
+ * app-relative (see `SourceUtils`). Only a file within the workspace is kept
+ * for saving the project back to it.
  *
  * @param projectFile - The handle of the file to read the project from
  * @param workspace - The directory handle of the open workspace, if any
@@ -171,7 +222,11 @@ export async function loadProjectFromFileHandle(
   );
   const file = await projectFile.getFile();
   signal?.throwIfAborted(); // getFile() does not throw on abort
-  loadProject(await readProjectFile(file, options), projectSource);
+  loadProject(
+    await readProjectFile(file, options),
+    projectSource,
+    projectSource !== null ? projectFile : null,
+  );
 }
 
 /**
@@ -258,29 +313,241 @@ export function saveProjectToJSON(project?: Project): string {
 }
 
 /**
+ * Makes the name of a project file from the name of the project
+ *
+ * @param projectName - The name of the project
+ * @returns The project name with whitespace replaced by hyphens and any other
+ * non-alphanumeric characters removed, falling back to `Untitled`, with the
+ * `.tm4` extension
+ */
+export function makeProjectFileName(projectName: string): string {
+  const sanitizedProjectName = projectName
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-zA-Z0-9_-]+/g, "")
+    .replace(/^[-_]+|[-_]+$/g, "");
+  return `${sanitizedProjectName || "Untitled"}.tm4`;
+}
+
+/**
  * Serializes a project to JSON and downloads it as a `.tm4` file
  *
- * The file is named after the project, with whitespace replaced by hyphens and
- * any other non-alphanumeric characters removed, falling back to `Untitled`.
+ * The file is named after the project (see {@link makeProjectFileName}).
  *
  * @param project - The project to download, defaulting to the currently open
  * project
  */
 export function saveAndDownloadProjectToJSON(project?: Project): void {
   const savedProject = saveProject(project);
-  const sanitizedProjectName = savedProject.name
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-zA-Z0-9_-]+/g, "")
-    .replace(/^[-_]+|[-_]+$/g, "");
   const projectJSON = JSONUtils.stringify(savedProject);
   const projectBlob = new Blob([projectJSON], { type: "application/json" });
   const projectUrl = URL.createObjectURL(projectBlob);
   const projectLink = document.createElement("a");
-  projectLink.download = `${sanitizedProjectName || "Untitled"}.tm4`;
+  projectLink.download = makeProjectFileName(savedProject.name);
   projectLink.href = projectUrl;
   projectLink.click();
   setTimeout(() => URL.revokeObjectURL(projectUrl), 60_000);
+}
+
+/**
+ * Saves the currently open project back to the workspace file it was loaded
+ * from, and marks it as saved (see {@link hasUnsavedChanges})
+ *
+ * The project is written to the file handle it was loaded from, so connecting
+ * another workspace in the meantime cannot redirect the save. The browser asks
+ * for permission to write the file, as the workspace is opened for reading
+ * only. The project is only marked as saved if it is still open and still
+ * belongs to that file once written, and changes made while it is being
+ * written are not.
+ *
+ * @param options - Optional abort signal
+ * @throws Error if the open project was not loaded from a file within the
+ * workspace
+ * @throws DOMException if the file cannot be written, e.g. because the
+ * permission to write it was denied (`NotAllowedError`)
+ */
+export async function saveProjectToSourceFile(options?: {
+  signal?: AbortSignal;
+}): Promise<void> {
+  const { signal } = options ?? {};
+  signal?.throwIfAborted();
+  const state = projectStore.getState();
+  if (state.sourceFile === null) {
+    throw new Error("The open project was not loaded from the workspace");
+  }
+  const { instanceId } = state;
+  const project = pickProject(state);
+  await writeProjectFile(state.sourceFile, project, options);
+  const currentState = projectStore.getState();
+  if (
+    currentState.instanceId === instanceId &&
+    currentState.sourceFile === state.sourceFile
+  ) {
+    projectStore.setState({ savedProject: project });
+  }
+}
+
+/**
+ * Saves the currently open project to a new file within the workspace, and
+ * makes that file the one the project was loaded from
+ *
+ * The sources of the project's data objects are rewritten for the new file
+ * (see {@link rebaseProjectSources}), and the open project takes them over, so
+ * that saving it again writes to the new file. The project is only switched
+ * over if it is still open once written, and changes made while it is being
+ * written are kept, but not marked as saved.
+ *
+ * @param projectFile - The handle of the new file
+ * @param projectSource - The workspace-relative path of the new file (with `/`
+ * prefix)
+ * @param workspace - The directory handle of the open workspace
+ * @param options - Optional abort signal
+ * @throws Error if a source of the project is invalid
+ * @throws DOMException if the file cannot be written, e.g. because the
+ * permission to write it was denied (`NotAllowedError`)
+ */
+export async function saveProjectAs(
+  projectFile: FileSystemFileHandle,
+  projectSource: string,
+  workspace: FileSystemDirectoryHandle,
+  options?: { signal?: AbortSignal },
+): Promise<void> {
+  const { signal } = options ?? {};
+  signal?.throwIfAborted();
+  const state = projectStore.getState();
+  const { instanceId } = state;
+  const project = rebaseProjectSources(
+    pickProject(state),
+    workspace,
+    state.source,
+    projectSource,
+  );
+  await writeProjectFile(projectFile, project, options);
+  const currentState = projectStore.getState();
+  if (currentState.instanceId !== instanceId) {
+    return;
+  }
+  const currentProject = hasChangedParts(currentState, state)
+    ? rebaseProjectSources(
+        pickProject(currentState),
+        workspace,
+        currentState.source,
+        projectSource,
+      )
+    : project;
+  projectStore.setState(
+    freeze(
+      {
+        ...currentProject,
+        source: projectSource,
+        sourceFile: projectFile,
+        savedProject: project,
+      },
+      true,
+    ),
+  );
+}
+
+/**
+ * Rewrites the sources of a project's data objects for a new project file
+ * within the workspace
+ *
+ * Sources within the workspace, whether workspace-relative or relative to the
+ * current project file, become relative to the new project file. URLs and
+ * app-relative paths stay as they are, and paths relative to a project loaded
+ * from a URL become absolute URLs, as the new file cannot reach them relatively.
+ *
+ * @param project - The project whose sources to rewrite
+ * @param workspace - The directory handle of the open workspace
+ * @param fromProjectSource - Where the project was loaded from (see
+ * `ProjectStoreState.source`)
+ * @param toProjectSource - The workspace-relative path of the new project file
+ * (with `/` prefix)
+ * @returns The project with rewritten sources, sharing the unchanged parts
+ * @throws Error if a source is invalid (see `SourceUtils.normalizeSource`)
+ */
+export function rebaseProjectSources(
+  project: Project,
+  workspace: FileSystemDirectoryHandle | null,
+  fromProjectSource: string | null,
+  toProjectSource: string,
+): Project {
+  const directory =
+    SourceUtils.getParentSource(toProjectSource)?.parentSource ?? "/";
+  const rebaseSource = (source: string | undefined): string | undefined => {
+    if (source === undefined || source === "") {
+      return source;
+    }
+    if (SourceUtils.isAppPath(source)) {
+      return source;
+    }
+    const normalizedSource = SourceUtils.normalizeSource(
+      source,
+      workspace,
+      fromProjectSource,
+    );
+    return SourceUtils.isWorkspacePath(normalizedSource)
+      ? SourceUtils.makeRelativePath(normalizedSource, directory)
+      : normalizedSource;
+  };
+  const rebase = <TObject extends { dataSource: { source?: string } }>(
+    object: TObject,
+  ): TObject => {
+    const source = rebaseSource(object.dataSource.source);
+    return source !== object.dataSource.source
+      ? { ...object, dataSource: { ...object.dataSource, source } }
+      : object;
+  };
+  return {
+    ...project,
+    images: project.images.map(rebase),
+    labels: project.labels.map(rebase),
+    points: project.points.map(rebase),
+    shapes: project.shapes.map(rebase),
+    tables: project.tables.map(rebase),
+  };
+}
+
+/**
+ * Writes a project to a file, replacing its contents
+ *
+ * A failed write discards the partly written contents, leaving the file as it
+ * was.
+ *
+ * @param projectFile - The handle of the file to write
+ * @param project - The project to write
+ * @param options - Optional abort signal
+ * @throws DOMException if the file cannot be written, e.g. because the
+ * permission to write it was denied (`NotAllowedError`)
+ */
+async function writeProjectFile(
+  projectFile: FileSystemFileHandle,
+  project: Project,
+  options?: { signal?: AbortSignal },
+): Promise<void> {
+  const { signal } = options ?? {};
+  signal?.throwIfAborted();
+  const writable = await projectFile.createWritable();
+  try {
+    signal?.throwIfAborted(); // createWritable() does not throw on abort
+    await writable.write(saveProjectToJSON(project));
+    await writable.close();
+  } catch (error) {
+    // The write error is the one to report, not a failure to discard the
+    // partly written file
+    await writable.abort().catch(() => undefined);
+    throw error;
+  }
+}
+
+/**
+ * Forgets the workspace file the open project was loaded from, so that it can
+ * no longer be saved back to it
+ *
+ * Called when the workspace changes, as the file belongs to the previous one.
+ */
+export function forgetSourceFile(): void {
+  projectStore.setState({ sourceFile: null });
 }
 
 /**
@@ -290,9 +557,19 @@ export function saveAndDownloadProjectToJSON(project?: Project): void {
  * @param projectUrl - The URL the project was loaded from
  */
 export function setProjectURLParam(projectUrl: string): void {
+  window.history.replaceState({}, "", makeProjectLink(projectUrl));
+}
+
+/**
+ * Makes a link to the app that opens a project
+ *
+ * @param projectUrl - The URL of the project
+ * @returns The current app URL with the project URL as its GET parameter
+ */
+export function makeProjectLink(projectUrl: string): string {
   const url = new URL(window.location.href);
   url.searchParams.set(projectURLParam, projectUrl);
-  window.history.replaceState({}, "", url);
+  return url.href;
 }
 
 /**
