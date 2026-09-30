@@ -139,13 +139,7 @@ export interface DataProvider<
   /** The JSON schema for the data source */
   readonly schema: JsonSchema;
 
-  /**
-   * The JSON Forms UI schema for the data source
-   *
-   * A control for the `source` field may set the option `directory: true` if
-   * the source is a directory (e.g. a Zarr store), so that the app lets the
-   * user pick a folder instead of a file.
-   */
+  /** The JSON Forms UI schema for the data source */
   readonly uischema: UISchemaElement;
 
   /**

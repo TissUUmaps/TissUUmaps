@@ -1,6 +1,6 @@
 import type { CellProps } from "@jsonforms/core";
 import { withJsonFormsCellProps } from "@jsonforms/react";
-import { FolderOpenIcon } from "lucide-react";
+import { FileIcon, FolderOpenIcon } from "lucide-react";
 
 import { IconButton } from "@/components/common/icon-button";
 import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
@@ -10,10 +10,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import {
-  pickWorkspaceDirectoryPath,
-  pickWorkspaceFilePath,
-} from "@/data/io/workspace";
+import { pickWorkspacePath } from "@/data/io/workspace";
 import { useAppStore } from "@/stores/app";
 
 export const SourceCell = withJsonFormsCellProps((props: CellProps) => {
@@ -26,6 +23,24 @@ export const SourceCell = withJsonFormsCellProps((props: CellProps) => {
   const options = {
     ...(props.config as { [key: string]: unknown }),
     ...props.uischema.options,
+  };
+  const pick = (
+    workspace: FileSystemDirectoryHandle,
+    kind: FileSystemHandleKind,
+  ) => {
+    pickWorkspacePath(workspace, kind)
+      .then((source) => {
+        if (source !== null) {
+          props.handleChange(props.path, source);
+        }
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to pick a data source", error);
+        void alert({
+          title: "Cannot choose a source",
+          body: error instanceof Error ? error.message : String(error),
+        });
+      });
   };
   return (
     <InputGroup>
@@ -46,27 +61,16 @@ export const SourceCell = withJsonFormsCellProps((props: CellProps) => {
       {workspace !== null && (
         <InputGroupAddon align="inline-end">
           <IconButton
-            label="Choose from the connected folder"
+            label="Choose a file in the connected folder"
             render={<InputGroupButton size="icon-xs" />}
-            onClick={() => {
-              (options.directory === true
-                ? pickWorkspaceDirectoryPath(workspace)
-                : pickWorkspaceFilePath(workspace)
-              )
-                .then((source) => {
-                  if (source !== null) {
-                    props.handleChange(props.path, source);
-                  }
-                })
-                .catch((error: unknown) => {
-                  console.error("Failed to pick a data source", error);
-                  void alert({
-                    title: "Cannot use this source",
-                    body:
-                      error instanceof Error ? error.message : String(error),
-                  });
-                });
-            }}
+            onClick={() => pick(workspace, "file")}
+          >
+            <FileIcon />
+          </IconButton>
+          <IconButton
+            label="Choose a folder in the connected folder"
+            render={<InputGroupButton size="icon-xs" />}
+            onClick={() => pick(workspace, "directory")}
           >
             <FolderOpenIcon />
           </IconButton>
