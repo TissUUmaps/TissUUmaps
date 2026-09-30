@@ -5,8 +5,8 @@ import type { FocusedObject } from "@tissuumaps/core";
 import { appStore } from "@/stores/app";
 
 /**
- * The IDs of the objects of a collection whose settings are expanded, to which
- * each object requested through the app store's `focusObject` is added
+ * Keeps the IDs of the objects of a collection whose settings are expanded,
+ * adding each object requested through the app store's `focusObject`
  *
  * @param kind - The collection whose requests to handle
  * @returns The expanded object IDs and a setter for them

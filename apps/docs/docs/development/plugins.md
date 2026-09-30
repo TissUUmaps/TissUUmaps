@@ -181,7 +181,8 @@ data loading by changing the project instead, for example
 A plugin shows the user the settings of a project object, e.g. one it created,
 by calling `appStore.getState().focusObject({ kind: "images", id })`: the panel
 of the object's collection is brought to the front and the object's settings are
-expanded. `kind` is one of `images`, `labels`, `points` and `shapes`.
+expanded, but not scrolled into view. `kind` is one of `images`, `labels`,
+`points` and `shapes`.
 
 ## User interface plugins
 
