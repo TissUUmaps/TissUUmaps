@@ -11,7 +11,6 @@ import {
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { IconButton } from "@/components/common/icon-button";
-import { SimpleColorPicker } from "@/components/common/simple-color-picker";
 import { Input } from "@/components/ui/input";
 import {
   InputGroup,
@@ -24,6 +23,7 @@ import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSe
 import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 
+import ColorPicker from "../../../common/color-picker";
 import { ColorPaletteSelect } from "./ColorPaletteSelect";
 import type { ColorConfigWidgetAdapter } from "./adapter";
 
@@ -126,13 +126,13 @@ function ConstantColorConfigWidget({
             }}
           />
         </Field>
-        <SimpleColorPicker
+        <ColorPicker
           color={color}
           onColorChange={setColor}
           className="row-start-2 col-start-4"
         >
           <Square fill={`rgb(${color.r}, ${color.g}, ${color.b})`} /> Pick
-        </SimpleColorPicker>
+        </ColorPicker>
       </div>
     </div>
   );
