@@ -24,7 +24,7 @@ export function ObjectList({
     <Accordion
       multiple
       value={expandedIds}
-      onValueChange={(value) => onExpandedIdsChange?.(value as string[])}
+      onValueChange={onExpandedIdsChange}
       className={cn("gap-1", className)}
     >
       {children}

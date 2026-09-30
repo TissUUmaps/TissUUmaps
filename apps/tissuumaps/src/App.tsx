@@ -13,7 +13,7 @@ import { type ReactNode, useLayoutEffect, useState } from "react";
 
 import { IconButton } from "@/components/common/icon-button";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useFocusedObjectPanel } from "@/hooks/useFocusedObject";
+import { useFocusedObjectPanel } from "@/hooks/useFocusedObjectPanel";
 import { getPluginPanelId, usePluginPanels } from "@/hooks/usePluginPanels";
 
 import "./App.css";

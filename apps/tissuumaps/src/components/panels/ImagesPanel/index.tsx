@@ -9,7 +9,7 @@ import {
   SortableObjectListItem,
 } from "@/components/widgets/ObjectList";
 import { useImageData } from "@/hooks/useData";
-import { useExpandedObjectIds } from "@/hooks/useFocusedObject";
+import { useExpandedObjectIds } from "@/hooks/useExpandedObjectIds";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
