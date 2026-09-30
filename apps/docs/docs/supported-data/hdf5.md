@@ -43,7 +43,7 @@ A group whose `encoding-type` is `anndata` is an [AnnData object](https://anndat
 
 A project showing the cells of an AnnData file as points, placed by their spatial coordinates and colored by cell type:
 
-```json title="project.tmap"
+```json title="project.tm4"
 {
   "layers": [{ "id": "layer", "name": "Sample" }],
   "tables": [

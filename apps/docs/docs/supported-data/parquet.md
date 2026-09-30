@@ -60,7 +60,7 @@ IDs must be unique. An ID column with duplicate values is ignored with a warning
 
 A project showing the circles and the polygons of a [SpatialData](https://spatialdata.scverse.org/) store. The circles are a GeoParquet file of points with a radius, read as a table and drawn as a point cloud sized by that radius; the polygons are read as shapes:
 
-```json title="project.tmap"
+```json title="project.tm4"
 {
   "layers": [{ "id": "layer", "name": "Visium" }],
   "tables": [

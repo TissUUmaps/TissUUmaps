@@ -19,7 +19,7 @@ type FileSystemAccessWindow = Window & {
 const workspacePickerId = "tissuumaps-workspace";
 
 /** The file extensions of project files */
-export const projectFileExtensions = [".tmap", ".json"];
+export const projectFileExtensions = [".tm4"];
 
 /**
  * Returns whether the browser can pick a workspace directory
