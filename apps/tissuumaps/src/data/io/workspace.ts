@@ -1,25 +1,27 @@
 import { SourceUtils } from "@tissuumaps/core";
 
-/** The picker APIs missing from `lib.dom.d.ts` */
-type FileSystemAccessWindow = Window & {
-  showDirectoryPicker?: (options?: {
-    id?: string;
-    mode?: "read" | "readwrite";
-    startIn?: FileSystemHandle;
-  }) => Promise<FileSystemDirectoryHandle>;
-  showSaveFilePicker?: (options?: {
-    id?: string;
-    startIn?: FileSystemHandle;
-    suggestedName?: string;
-    types?: { description?: string; accept: Record<string, string[]> }[];
-  }) => Promise<FileSystemFileHandle>;
-  showOpenFilePicker?: (options?: {
-    id?: string;
-    startIn?: FileSystemHandle;
-    multiple?: boolean;
-    types?: { description?: string; accept: Record<string, string[]> }[];
-  }) => Promise<FileSystemFileHandle[]>;
-};
+declare global {
+  /** The picker APIs missing from `lib.dom.d.ts` */
+  interface Window {
+    showDirectoryPicker?: (options?: {
+      id?: string;
+      mode?: "read" | "readwrite";
+      startIn?: FileSystemHandle;
+    }) => Promise<FileSystemDirectoryHandle>;
+    showSaveFilePicker?: (options?: {
+      id?: string;
+      startIn?: FileSystemHandle;
+      suggestedName?: string;
+      types?: { description?: string; accept: Record<string, string[]> }[];
+    }) => Promise<FileSystemFileHandle>;
+    showOpenFilePicker?: (options?: {
+      id?: string;
+      startIn?: FileSystemHandle;
+      multiple?: boolean;
+      types?: { description?: string; accept: Record<string, string[]> }[];
+    }) => Promise<FileSystemFileHandle[]>;
+  }
+}
 
 /**
  * Identifies the picker, so that the browser reopens it in the directory it
@@ -36,9 +38,7 @@ export const projectFileExtensions = [".tm4"];
  * @returns `true` if {@link pickWorkspace} is available
  */
 export function isWorkspaceSupported(): boolean {
-  return (
-    typeof (window as FileSystemAccessWindow).showDirectoryPicker === "function"
-  );
+  return typeof window.showDirectoryPicker === "function";
 }
 
 /**
@@ -51,13 +51,15 @@ export function isWorkspaceSupported(): boolean {
  * access to the directory was denied
  */
 export async function pickWorkspace(): Promise<FileSystemDirectoryHandle | null> {
-  const w = window as FileSystemAccessWindow;
-  if (w.showDirectoryPicker === undefined) {
+  if (window.showDirectoryPicker === undefined) {
     throw new Error("Picking a directory is not supported by this browser");
   }
   try {
     // Called as a method: the picker throws if it loses its receiver
-    return await w.showDirectoryPicker({ id: workspacePickerId, mode: "read" });
+    return await window.showDirectoryPicker({
+      id: workspacePickerId,
+      mode: "read",
+    });
   } catch (error) {
     if (isAbortError(error)) {
       return null;
@@ -78,13 +80,12 @@ export async function pickWorkspace(): Promise<FileSystemDirectoryHandle | null>
 export async function pickProjectFile(options?: {
   startIn?: FileSystemDirectoryHandle;
 }): Promise<FileSystemFileHandle | null> {
-  const w = window as FileSystemAccessWindow;
-  if (w.showOpenFilePicker === undefined) {
+  if (window.showOpenFilePicker === undefined) {
     throw new Error("Picking a file is not supported by this browser");
   }
   try {
     // Called as a method: the picker throws if it loses its receiver
-    const projectFiles = await w.showOpenFilePicker({
+    const projectFiles = await window.showOpenFilePicker({
       id: workspacePickerId,
       startIn: options?.startIn,
       multiple: false,
@@ -120,10 +121,9 @@ export async function pickWorkspacePath(
   workspace: FileSystemDirectoryHandle,
   kind: FileSystemHandleKind,
 ): Promise<string | null> {
-  const w = window as FileSystemAccessWindow;
   if (
-    w.showOpenFilePicker === undefined ||
-    w.showDirectoryPicker === undefined
+    window.showOpenFilePicker === undefined ||
+    window.showDirectoryPicker === undefined
   ) {
     throw new Error(
       "Picking a file or directory is not supported by this browser",
@@ -135,8 +135,11 @@ export async function pickWorkspacePath(
     // picker id, so that the workspace picker keeps its own last directory.
     handle =
       kind === "file"
-        ? (await w.showOpenFilePicker({ startIn: workspace }))[0]
-        : await w.showDirectoryPicker({ mode: "read", startIn: workspace });
+        ? (await window.showOpenFilePicker({ startIn: workspace }))[0]
+        : await window.showDirectoryPicker({
+            mode: "read",
+            startIn: workspace,
+          });
   } catch (error) {
     if (isAbortError(error)) {
       return null;
@@ -175,14 +178,13 @@ export async function pickWorkspaceSaveFile(
   workspace: FileSystemDirectoryHandle,
   suggestedName: string,
 ): Promise<{ file: FileSystemFileHandle; source: string } | null> {
-  const w = window as FileSystemAccessWindow;
-  if (w.showSaveFilePicker === undefined) {
+  if (window.showSaveFilePicker === undefined) {
     throw new Error("Saving a file is not supported by this browser");
   }
   let file: FileSystemFileHandle;
   try {
     // Called as a method: the picker throws if it loses its receiver
-    file = await w.showSaveFilePicker({
+    file = await window.showSaveFilePicker({
       id: workspacePickerId,
       startIn: workspace,
       suggestedName,
