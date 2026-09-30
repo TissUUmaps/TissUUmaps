@@ -10,6 +10,7 @@ import {
   SortableObjectList,
   SortableObjectListItem,
 } from "@/components/widgets/ObjectList";
+import { useExpandedObjectIds } from "@/hooks/useFocusedObject";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -23,6 +24,7 @@ export type LabelsPanelProps = {
 };
 
 export function LabelsPanel({ className }: LabelsPanelProps) {
+  const [expandedIds, setExpandedIds] = useExpandedObjectIds("labels");
   const labelsDataProviders = useAppStore((state) => state.labelsDataProviders);
 
   const layers = useProjectStore((state) => state.layers);
@@ -32,7 +34,12 @@ export function LabelsPanel({ className }: LabelsPanelProps) {
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
-      <SortableObjectList objects={labels} onMove={moveLabels}>
+      <SortableObjectList
+        objects={labels}
+        onMove={moveLabels}
+        expandedIds={expandedIds}
+        onExpandedIdsChange={setExpandedIds}
+      >
         {(currentLabels, index) => (
           <LabelsAccordionItem
             key={currentLabels.id}

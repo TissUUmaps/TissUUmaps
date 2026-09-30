@@ -9,6 +9,7 @@ import {
   SortableObjectListItem,
 } from "@/components/widgets/ObjectList";
 import { useImageData } from "@/hooks/useData";
+import { useExpandedObjectIds } from "@/hooks/useFocusedObject";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -21,6 +22,7 @@ export type ImagesPanelProps = {
 };
 
 export function ImagesPanel({ className }: ImagesPanelProps) {
+  const [expandedIds, setExpandedIds] = useExpandedObjectIds("images");
   const imageDataProviders = useAppStore((state) => state.imageDataProviders);
 
   const layers = useProjectStore((state) => state.layers);
@@ -30,7 +32,12 @@ export function ImagesPanel({ className }: ImagesPanelProps) {
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
-      <SortableObjectList objects={images} onMove={moveImage}>
+      <SortableObjectList
+        objects={images}
+        onMove={moveImage}
+        expandedIds={expandedIds}
+        onExpandedIdsChange={setExpandedIds}
+      >
         {(image, index) => (
           <ImageAccordionItem key={image.id} image={image} index={index} />
         )}

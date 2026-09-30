@@ -214,6 +214,7 @@ export {
   type AppStore,
   type AppStoreApi,
   type HighlightedItemGroup,
+  type FocusedObject,
 } from "./types/stores/app";
 export {
   type DataRef,

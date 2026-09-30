@@ -178,6 +178,11 @@ data loading by changing the project instead, for example
 `projectStore.getState().updateTable(tableId, { dataSource })`. Likewise,
 `appStore`'s `plugins` is written by the registry alone.
 
+A plugin shows the user the settings of a project object, e.g. one it created,
+by calling `appStore.getState().focusObject({ kind: "images", id })`: the panel
+of the object's collection is brought to the front and the object's settings are
+expanded. `kind` is one of `images`, `labels`, `points` and `shapes`.
+
 ## User interface plugins
 
 A plugin adds a panel to the TissUUmaps user interface by declaring a `mount`.

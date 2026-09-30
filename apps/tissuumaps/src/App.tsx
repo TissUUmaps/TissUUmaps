@@ -13,6 +13,7 @@ import { type ReactNode, useLayoutEffect, useState } from "react";
 
 import { IconButton } from "@/components/common/icon-button";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useFocusedObjectPanel } from "@/hooks/useFocusedObject";
 import { getPluginPanelId, usePluginPanels } from "@/hooks/usePluginPanels";
 
 import "./App.css";
@@ -234,6 +235,7 @@ export function App() {
 
   // The panels contributed by plugins join the group of the project panel
   usePluginPanels(dockviewApi, PanelId.project);
+  useFocusedObjectPanel(dockviewApi);
 
   // Before paint, so that React never renders a light frame in dark mode
   // https://tailwindcss.com/docs/dark-mode

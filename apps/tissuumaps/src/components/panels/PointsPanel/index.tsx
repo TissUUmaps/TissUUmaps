@@ -11,6 +11,7 @@ import {
   SortableObjectListItem,
 } from "@/components/widgets/ObjectList";
 import { usePointsData } from "@/hooks/useData";
+import { useExpandedObjectIds } from "@/hooks/useFocusedObject";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -24,6 +25,7 @@ export type PointsPanelProps = {
 };
 
 export function PointsPanel({ className }: PointsPanelProps) {
+  const [expandedIds, setExpandedIds] = useExpandedObjectIds("points");
   const pointsDataProviders = useAppStore((state) => state.pointsDataProviders);
 
   const layers = useProjectStore((state) => state.layers);
@@ -33,7 +35,12 @@ export function PointsPanel({ className }: PointsPanelProps) {
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
-      <SortableObjectList objects={points} onMove={movePoints}>
+      <SortableObjectList
+        objects={points}
+        onMove={movePoints}
+        expandedIds={expandedIds}
+        onExpandedIdsChange={setExpandedIds}
+      >
         {(currentPoints, index) => (
           <PointsAccordionItem
             key={currentPoints.id}

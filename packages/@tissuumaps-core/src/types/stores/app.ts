@@ -38,6 +38,15 @@ export type HighlightedItemGroup = {
   group: string;
 };
 
+/** A project object, by the collection it belongs to and its ID */
+export type FocusedObject = {
+  /** The collection of the object */
+  kind: "images" | "labels" | "points" | "shapes";
+
+  /** ID of the object */
+  id: string;
+};
+
 /**
  * The state of the app store, holding what is not part of the project
  */
@@ -106,6 +115,15 @@ export type AppStoreState = {
     string,
     { name: string; mountable: boolean; container?: HTMLElement }
   >;
+
+  /**
+   * The project object whose settings are to be brought to the front, or
+   * `null` if none is pending
+   *
+   * Set by {@link AppStoreActions.focusObject}, and cleared by the application
+   * once the object's settings have been brought to the front.
+   */
+  focusedObject: FocusedObject | null;
 };
 
 /**
@@ -157,6 +175,14 @@ export type AppStoreActions = {
   setHighlightedItemGroup: (
     highlightedItemGroup: HighlightedItemGroup | null,
   ) => void;
+
+  /**
+   * Brings the settings of a project object to the front: the panel of its
+   * collection is activated and the object's settings are expanded
+   *
+   * @param focusedObject - The object whose settings to show
+   */
+  focusObject: (focusedObject: FocusedObject) => void;
 
   /**
    * Registers an image data provider

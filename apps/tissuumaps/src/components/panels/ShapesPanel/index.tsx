@@ -11,6 +11,7 @@ import {
   SortableObjectListItem,
 } from "@/components/widgets/ObjectList";
 import { useShapesData } from "@/hooks/useData";
+import { useExpandedObjectIds } from "@/hooks/useFocusedObject";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -24,6 +25,7 @@ export type ShapesPanelProps = {
 };
 
 export function ShapesPanel({ className }: ShapesPanelProps) {
+  const [expandedIds, setExpandedIds] = useExpandedObjectIds("shapes");
   const shapesDataProviders = useAppStore((state) => state.shapesDataProviders);
 
   const layers = useProjectStore((state) => state.layers);
@@ -33,7 +35,12 @@ export function ShapesPanel({ className }: ShapesPanelProps) {
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
-      <SortableObjectList objects={shapes} onMove={moveShapes}>
+      <SortableObjectList
+        objects={shapes}
+        onMove={moveShapes}
+        expandedIds={expandedIds}
+        onExpandedIdsChange={setExpandedIds}
+      >
         {(currentShapes, index) => (
           <ShapesAccordionItem
             key={currentShapes.id}
