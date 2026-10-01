@@ -1,6 +1,7 @@
 import { deepEqual } from "fast-equals";
 
 import {
+  ArrayUtils,
   GeometryUtils,
   type IDArray,
   type Layer,
@@ -71,6 +72,12 @@ export abstract class WebGLRendererBase<
   private readonly _layerItemsInfosCache = new WeakMap<
     TObjectData,
     WeakMap<TableData, Map<string, Map<string, ItemsInfo | null>>>
+  >();
+  private _outlinedItem: { objectId: string; itemId: number | string } | null =
+    null;
+  private _outlinedItemIndices = new WeakMap<
+    ObjectRef<TObject, TObjectData>,
+    number
   >();
 
   /**
@@ -689,6 +696,51 @@ export abstract class WebGLRendererBase<
       }
     }
     return renderPasses;
+  }
+
+  /**
+   * Sets the item to outline, by the ID of its object and its own ID
+   *
+   * Does not redraw.
+   *
+   * @param outlinedItem - The item to outline, or `null` to outline none
+   */
+  protected setOutlinedObjectItem(
+    outlinedItem: { objectId: string; itemId: number | string } | null,
+  ): void {
+    this._outlinedItem = outlinedItem;
+    this._outlinedItemIndices = new WeakMap();
+  }
+
+  /**
+   * Returns the index of the outlined item within a render pass
+   *
+   * The lookup is linear in the number of items, so its result is kept per
+   * object reference until the outlined item changes; a synchronization that
+   * replaces the reference looks it up anew.
+   *
+   * @param renderPass - The pass, see {@link getRenderPasses}
+   * @returns The index of the outlined item within the pass, or `null` if the
+   * pass does not draw it
+   */
+  protected getOutlinedItemIndex(renderPass: {
+    object: TObject;
+    renderedObject: TRenderedObject;
+  }): number | null {
+    const outlinedItem = this._outlinedItem;
+    if (
+      outlinedItem === null ||
+      renderPass.object.id !== outlinedItem.objectId
+    ) {
+      return null;
+    }
+    const { ref } = renderPass.renderedObject;
+    let index = this._outlinedItemIndices.get(ref);
+    if (index === undefined) {
+      index = ArrayUtils.indexOfId(ref.itemIds, outlinedItem.itemId);
+      this._outlinedItemIndices.set(ref, index);
+    }
+    return index !== -1 ? index : null;
   }
 
   /**

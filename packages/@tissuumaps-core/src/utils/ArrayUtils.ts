@@ -2,7 +2,7 @@ import type { IDArray, IntOrUintArray } from "../types/arrays";
 import { NumberUtils } from "./NumberUtils";
 
 /**
- * Utility methods for converting arrays to the types the storage API holds
+ * Utility methods for the array types the storage API holds
  */
 export class ArrayUtils {
   /**
@@ -49,6 +49,22 @@ export class ArrayUtils {
       ids[i] = id;
     }
     return ids;
+  }
+
+  /**
+   * Returns the index of an item ID in an `IDArray`
+   *
+   * A number is never found in a string array, nor a string in a numeric one.
+   *
+   * @param ids - The IDs to search
+   * @param id - The ID to find
+   * @returns The index of the first match, or `-1` if there is none
+   */
+  static indexOfId(ids: IDArray, id: number | string): number {
+    if (Array.isArray(ids)) {
+      return typeof id === "string" ? ids.indexOf(id) : -1;
+    }
+    return typeof id === "number" ? ids.indexOf(id) : -1;
   }
 
   /**

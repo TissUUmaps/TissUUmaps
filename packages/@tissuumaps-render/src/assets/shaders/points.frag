@@ -20,6 +20,8 @@ uniform sampler2D u_markerAtlas;
 uniform bool u_pick;
 uniform uint u_pickIdBase; // pick ID of the first point of this pass
 
+uniform vec4 u_outlineRgba; // RGBA color to draw the marker in instead of its own, for the outline of the outlined point; alpha 0 for its own
+
 flat in vec4 v_rgba;
 flat in uvec3 v_marker;
 flat in uint v_index;
@@ -43,13 +45,15 @@ void main() {
         fragRgba = packPickId(u_pickIdBase + v_index);
         return;
     }
-    float pixelWidth = dFdx(uv.x) * float(textureSize(u_markerAtlas, 0).x);
+    float pixelWidth = dFdx(uv.x) * float(textureSize(u_markerAtlas, 0).x); // atlas texels per device pixel
     // Beyond MAX_DISTANCE from the outline, the atlas stores the same distance for all texels.
     // Capping the anti-aliasing width keeps that background transparent at small point sizes.
     float aaWidth = min(pixelWidth, 2.0 * MAX_DISTANCE);
-    float alpha = v_rgba.a * clamp(dist / aaWidth + 0.5, 0.0, 1.0);
-    if(alpha < ALPHA_THRESHOLD) {
+    float coverage = clamp(dist / aaWidth + 0.5, 0.0, 1.0);
+    vec4 rgba = u_outlineRgba.a > 0.0 ? u_outlineRgba : v_rgba;
+    rgba = vec4(rgba.rgb, 1.0) * (rgba.a * coverage); // premultiplied
+    if(rgba.a < ALPHA_THRESHOLD) {
         discard;
     }
-    fragRgba = vec4(v_rgba.rgb * alpha, alpha);
+    fragRgba = rgba;
 }

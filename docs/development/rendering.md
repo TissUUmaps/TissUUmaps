@@ -92,3 +92,5 @@ Standard approach (dismissed):
 ## Picking
 
 A click picks the item drawn at the clicked pixel. Points and shapes are picked on the GPU: `WebGLPicker` has the WebGL renderers draw them again into a 9×9 offscreen framebuffer around the pixel, in the order they are drawn on screen, each item in the color of its pick ID (the items of all render passes, numbered consecutively), and resolves the ID nearest to the pixel. Reading the framebuffer back waits for the GPU, which is why picking runs on clicks only, not on hover. Labels are picked if no point or shape is: `OpenSeadragonLabelsRenderer.pickLabel` reads the label ID at the position from the full-resolution label image (`LabelsData.loadLabelId`), one chunk or tile per labels object, from the top down, and skips labels that are drawn fully transparent.
+
+The picked point or shape is outlined in white and black, so that it shows against any background: a point is drawn again after all others, with an outline around its marker, and a shape is outlined along the inside of its edges, whatever its stroke. Labels are not outlined.

@@ -56,7 +56,8 @@ import { WebGLUtils } from "./WebGLUtils";
  *
  * Manages a shader program, a marker atlas texture, and per-object GPU
  * buffers. Points are rendered as `gl.POINTS` using per-vertex attributes (x,
- * y, size, rgba, marker), one draw call per object.
+ * y, size, rgba, marker), one draw call per object, plus three for the
+ * outlined point.
  *
  * Every object owns its vertex array and attribute buffers. Synchronizing
  * compares the current model against the snapshot those buffers were loaded
@@ -83,6 +84,11 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     RGBA: 3,
     MARKER: 4,
   };
+  /**
+   * Width of the outline around the outlined point, in device pixels: white
+   * next to the marker and black beyond, half each, as for shapes
+   */
+  private static readonly _outlineWidth = 4;
   private static readonly _textureUnits = {
     MARKER_ATLAS: 0,
   };
@@ -100,6 +106,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     opacityFactor: WebGLUniformLocation;
     pick: WebGLUniformLocation;
     pickIdBase: WebGLUniformLocation;
+    pointSizeOffset: WebGLUniformLocation;
+    outlineRgba: WebGLUniformLocation;
   };
   private _markerAtlasTexture: WebGLTexture | undefined;
   private _destroyed: boolean = false;
@@ -154,6 +162,11 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       ),
       pick: context.getUniformLocation(this._program, "u_pick"),
       pickIdBase: context.getUniformLocation(this._program, "u_pickIdBase"),
+      pointSizeOffset: context.getUniformLocation(
+        this._program,
+        "u_pointSizeOffset",
+      ),
+      outlineRgba: context.getUniformLocation(this._program, "u_outlineRgba"),
     };
     // texture units never change, so the sampler uniforms are set only once
     context.gl.useProgram(this._program);
@@ -180,7 +193,16 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   /**
    * Issues the WebGL draw calls for all synchronized points
    *
-   * See {@link _draw}.
+   * Binds the shader program, configures the global uniforms (transform,
+   * viewport, canvas size in device pixels), binds the marker atlas texture,
+   * and then draws every object in its own `gl.POINTS` call with alpha
+   * blending, with its data → world matrix, point size factor and opacity
+   * factor as uniforms, computed from the current model (see
+   * {@link getRenderPasses}), and with the constants of its per-point
+   * attributes as generic vertex attributes (see {@link _backAttribute}).
+   * Objects whose layer or object is invisible are skipped. The outlined point
+   * (see {@link setOutlinedItem}) is drawn again last, over its outline, so
+   * that no other point covers it.
    *
    * @throws Error if the renderer has not been initialized
    */
@@ -221,18 +243,27 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   }
 
   /**
+   * Sets the point to outline
+   *
+   * Items of labels or shapes outline no point. Does not redraw.
+   *
+   * @param item - The item to outline, or `null` to outline none
+   */
+  setOutlinedItem(item: AnnotatedItemRef | null): void {
+    this.setOutlinedObjectItem(
+      item !== null && "pointsId" in item.annotatedObject
+        ? { objectId: item.annotatedObject.pointsId, itemId: item.itemId }
+        : null,
+    );
+  }
+
+  /**
    * Issues the WebGL draw calls for all synchronized points, in their own
    * colors or in the colors of their pick IDs
    *
-   * Binds the shader program, configures the global uniforms (transform,
-   * viewport, canvas size in device pixels), binds the marker atlas texture,
-   * and then draws every object in its own `gl.POINTS` call, with its data →
-   * world matrix, point size factor and opacity factor as uniforms, computed
-   * from the current model (see {@link getRenderPasses}), and with the
-   * constants of its per-point attributes as generic vertex attributes (see
-   * {@link _backAttribute}). Objects whose layer or object is invisible are
-   * skipped. Points are blended over what is drawn already, unless pick IDs
-   * are drawn.
+   * Pick IDs are drawn without blending and without the outline. The outlined
+   * point is drawn again last in both cases, so that the point on top on
+   * screen is also the one that is picked.
    *
    * @param firstPickId - The pick ID of the first point, or `null` to draw the
    * points in their own colors
@@ -253,6 +284,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       this._uniformLocations.pick,
       firstPickId !== null ? 1 : 0,
     );
+    this.context.gl.uniform1f(this._uniformLocations.pointSizeOffset, 0);
+    this.context.gl.uniform4f(this._uniformLocations.outlineRgba, 0, 0, 0, 0);
     this.context.gl.uniform1f(
       this._uniformLocations.globalPointSizeFactor,
       this.renderOptions.globalPointSizeFactor,
@@ -285,11 +318,18 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     if (firstPickId === null) {
       this.context.enableAlphaBlending();
     }
-    for (const {
-      layer,
-      object: points,
-      renderedObject: renderedPoints,
-    } of renderPasses) {
+    const outlinedPoints: {
+      renderPass: (typeof renderPasses)[number];
+      opacityFactor: number;
+      pickIdBase: number;
+      index: number;
+    }[] = [];
+    for (const renderPass of renderPasses) {
+      const {
+        layer,
+        object: points,
+        renderedObject: renderedPoints,
+      } = renderPass;
       const pickIdBase = nextPickId;
       nextPickId += renderedPoints.ref.itemIds.length;
       const opacityFactor = WebGLPointsRenderer.computeOpacityFactor(
@@ -299,58 +339,139 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       if (opacityFactor === 0) {
         continue;
       }
-      this.context.gl.uniformMatrix3x2fv(
-        this._uniformLocations.dataToWorldMatrix,
-        false,
-        WebGLUtils.convertMatrixToGLMat3x2(
-          WebGLUtils.createDataToWorldMatrix(points.transform, layer.transform),
-        ),
-      );
-      this.context.gl.uniform1f(
-        this._uniformLocations.pointSizeFactor,
-        WebGLPointsRenderer._computePointSizeFactor(layer, points),
-      );
-      this.context.gl.uniform1f(
-        this._uniformLocations.opacityFactor,
-        opacityFactor,
-      );
-      this.context.gl.uniform1ui(this._uniformLocations.pickIdBase, pickIdBase);
-      this.context.gl.bindVertexArray(renderedPoints.vao);
-      const { marker, size, rgba } = renderedPoints.attributes;
-      if (typeof marker === "number") {
-        this.context.gl.vertexAttribI4ui(
-          WebGLPointsRenderer._attribLocations.MARKER,
-          marker,
-          0,
-          0,
-          0,
-        );
-      }
-      if (typeof size === "number") {
-        this.context.gl.vertexAttrib1f(
-          WebGLPointsRenderer._attribLocations.SIZE,
-          size,
-        );
-      }
-      if (typeof rgba === "number") {
-        this.context.gl.vertexAttribI4ui(
-          WebGLPointsRenderer._attribLocations.RGBA,
-          rgba,
-          0,
-          0,
-          0,
-        );
-      }
+      this._bindRenderPass(renderPass, opacityFactor, pickIdBase);
       this.context.gl.drawArrays(
         WebGL2RenderingContext.POINTS,
         0,
         renderedPoints.ref.itemIds.length,
       );
+      const outlinedIndex = this.getOutlinedItemIndex(renderPass);
+      if (outlinedIndex !== null) {
+        outlinedPoints.push({
+          renderPass,
+          opacityFactor,
+          pickIdBase,
+          index: outlinedIndex,
+        });
+      }
+    }
+    // drawn again last, also when picking, so that no other point covers it
+    const outlineWidth = WebGLPointsRenderer._outlineWidth;
+    for (const {
+      renderPass,
+      opacityFactor,
+      pickIdBase,
+      index,
+    } of outlinedPoints) {
+      this._bindRenderPass(renderPass, opacityFactor, pickIdBase);
+      if (firstPickId === null) {
+        // the marker in black and, less enlarged, in white below the point
+        // itself, so that the outline shows against any background
+        this.context.gl.uniform1f(
+          this._uniformLocations.pointSizeOffset,
+          2 * outlineWidth,
+        );
+        this.context.gl.uniform4f(
+          this._uniformLocations.outlineRgba,
+          0,
+          0,
+          0,
+          1,
+        );
+        this.context.gl.drawArrays(WebGL2RenderingContext.POINTS, index, 1);
+        this.context.gl.uniform1f(
+          this._uniformLocations.pointSizeOffset,
+          outlineWidth,
+        );
+        this.context.gl.uniform4f(
+          this._uniformLocations.outlineRgba,
+          1,
+          1,
+          1,
+          1,
+        );
+        this.context.gl.drawArrays(WebGL2RenderingContext.POINTS, index, 1);
+        this.context.gl.uniform1f(this._uniformLocations.pointSizeOffset, 0);
+        this.context.gl.uniform4f(
+          this._uniformLocations.outlineRgba,
+          0,
+          0,
+          0,
+          0,
+        );
+      }
+      this.context.gl.drawArrays(WebGL2RenderingContext.POINTS, index, 1);
     }
     this.context.gl.bindVertexArray(null);
     this.context.disableAlphaBlending();
     this.context.gl.useProgram(null);
     return nextPickId;
+  }
+
+  /**
+   * Binds the vertex array and sets the per-pass uniforms and constant
+   * attributes of a render pass
+   *
+   * @param renderPass - The pass to bind, see {@link getRenderPasses}
+   * @param opacityFactor - The layer and object opacity of the pass
+   * @param pickIdBase - The pick ID of the first point of the pass
+   */
+  private _bindRenderPass(
+    renderPass: {
+      layer: Layer;
+      object: Points;
+      renderedObject: RenderedPoints;
+    },
+    opacityFactor: number,
+    pickIdBase: number,
+  ): void {
+    const {
+      layer,
+      object: points,
+      renderedObject: renderedPoints,
+    } = renderPass;
+    this.context.gl.uniformMatrix3x2fv(
+      this._uniformLocations.dataToWorldMatrix,
+      false,
+      WebGLUtils.convertMatrixToGLMat3x2(
+        WebGLUtils.createDataToWorldMatrix(points.transform, layer.transform),
+      ),
+    );
+    this.context.gl.uniform1f(
+      this._uniformLocations.pointSizeFactor,
+      WebGLPointsRenderer._computePointSizeFactor(layer, points),
+    );
+    this.context.gl.uniform1f(
+      this._uniformLocations.opacityFactor,
+      opacityFactor,
+    );
+    this.context.gl.uniform1ui(this._uniformLocations.pickIdBase, pickIdBase);
+    this.context.gl.bindVertexArray(renderedPoints.vao);
+    const { marker, size, rgba } = renderedPoints.attributes;
+    if (typeof marker === "number") {
+      this.context.gl.vertexAttribI4ui(
+        WebGLPointsRenderer._attribLocations.MARKER,
+        marker,
+        0,
+        0,
+        0,
+      );
+    }
+    if (typeof size === "number") {
+      this.context.gl.vertexAttrib1f(
+        WebGLPointsRenderer._attribLocations.SIZE,
+        size,
+      );
+    }
+    if (typeof rgba === "number") {
+      this.context.gl.vertexAttribI4ui(
+        WebGLPointsRenderer._attribLocations.RGBA,
+        rgba,
+        0,
+        0,
+        0,
+      );
+    }
   }
 
   /**
@@ -775,13 +896,13 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * A per-point attribute is backed either by a buffer holding one value per
    * point, or, if its configuration is a constant, by nothing: the vertex
    * attribute array is disabled in the vertex array, and the constant is
-   * supplied as a generic vertex attribute when drawing (see {@link draw}).
-   * Per-point values refill an existing buffer in place, or allocate one and
-   * enable the attribute array if the attribute was constant before; a constant
-   * releases an existing buffer and disables the attribute array. The buffer is
-   * released with the vertex array bound, as that is the only way a deleted
-   * buffer is detached from its attribute pointer; otherwise the vertex array
-   * would keep it alive.
+   * supplied as a generic vertex attribute when drawing (see
+   * {@link _bindRenderPass}). Per-point values refill an existing buffer in
+   * place, or allocate one and enable the attribute array if the attribute was
+   * constant before; a constant releases an existing buffer and disables the
+   * attribute array. The buffer is released with the vertex array bound, as
+   * that is the only way a deleted buffer is detached from its attribute
+   * pointer; otherwise the vertex array would keep it alive.
    *
    * @param vao - The vertex array of the object
    * @param location - The attribute location, see {@link _attribLocations}

@@ -12,6 +12,7 @@ uniform float u_globalPointSizeFactor;
 uniform mat3x2 u_worldToViewportMatrix;
 uniform vec2 u_viewportSize; // in world units
 uniform vec2 u_canvasSize; // in device pixels
+uniform float u_pointSizeOffset; // added to the point size, in device pixels; the outline of the outlined point is drawn that much larger
 
 // Per-object uniforms
 // An object is one point cloud on one layer, drawn in its own pass.
@@ -62,7 +63,7 @@ void main() {
     }
     // Anti-aliasing: points are at least one device pixel wide, smaller points fade by (areal) coverage instead
     float coverage = min(devicePointSize, 1.0);
-    gl_PointSize = max(devicePointSize, 1.0);
+    gl_PointSize = max(devicePointSize, 1.0) + u_pointSizeOffset;
 
     // Compute point position in normalized device coordinates (NDCs)
     vec2 worldPosition = u_dataToWorldMatrix * vec3(a_x, a_y, 1.0);

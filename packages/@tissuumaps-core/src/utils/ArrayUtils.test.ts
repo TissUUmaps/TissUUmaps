@@ -88,4 +88,27 @@ describe("ArrayUtils", () => {
       ).toThrow();
     });
   });
+
+  describe("indexOfId", () => {
+    it("finds numeric IDs in typed arrays", () => {
+      expect(ArrayUtils.indexOfId(new Uint32Array([5, 7]), 7)).toBe(1);
+      expect(ArrayUtils.indexOfId(new Float64Array([5, 7]), 5)).toBe(0);
+      expect(ArrayUtils.indexOfId(new Uint32Array([5, 7]), 6)).toBe(-1);
+    });
+
+    it("finds string IDs in string arrays", () => {
+      expect(ArrayUtils.indexOfId(["a", "b"], "b")).toBe(1);
+      expect(ArrayUtils.indexOfId(["a", "b"], "c")).toBe(-1);
+    });
+
+    it("returns the index of the first match", () => {
+      expect(ArrayUtils.indexOfId(new Uint32Array([5, 7, 7]), 7)).toBe(1);
+      expect(ArrayUtils.indexOfId(["a", "b", "b"], "b")).toBe(1);
+    });
+
+    it("does not match IDs of the other type", () => {
+      expect(ArrayUtils.indexOfId(["1"], 1)).toBe(-1);
+      expect(ArrayUtils.indexOfId(new Uint32Array([1]), "1")).toBe(-1);
+    });
+  });
 });

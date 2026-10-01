@@ -91,6 +91,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     devicePixelSize: WebGLUniformLocation;
     pick: WebGLUniformLocation;
     pickIdBase: WebGLUniformLocation;
+    outlinedShape: WebGLUniformLocation;
   };
 
   /**
@@ -131,6 +132,10 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       ),
       pick: context.getUniformLocation(this._program, "u_pick"),
       pickIdBase: context.getUniformLocation(this._program, "u_pickIdBase"),
+      outlinedShape: context.getUniformLocation(
+        this._program,
+        "u_outlinedShape",
+      ),
     };
     // texture units never change, so the sampler uniforms are set only once
     context.gl.useProgram(this._program);
@@ -152,7 +157,19 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   /**
    * Issues the WebGL draw calls for all synchronized shapes
    *
-   * See {@link _draw}.
+   * Renders each shapes object as a quad whose fragment shader performs
+   * scanline-based polygon rasterization using the per-object scanline data
+   * texture, with the viewport → world matrix as a global uniform and its
+   * world → data matrix, bounds, numbers of scanlines and bins, half stroke
+   * width and device pixel size in data units (for anti-aliasing) and opacity
+   * factor as per-pass uniforms, computed from the current model (see
+   * {@link getRenderPasses}). The quad covers the object's bounds, dilated by
+   * how far the anti-aliased strokes reach beyond them, within the viewport, so
+   * that fragments are only shaded where the object can be; objects outside the
+   * viewport, objects whose layer or object is invisible, and objects without
+   * scanlines or bins are skipped. The outlined shape (see
+   * {@link setOutlinedItem}) is outlined along the inside of its edges, unless
+   * it is hidden.
    */
   draw(): void {
     this._draw(null);
@@ -190,21 +207,25 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   }
 
   /**
+   * Sets the shape to outline
+   *
+   * Items of labels or points outline no shape. Does not redraw.
+   *
+   * @param item - The item to outline, or `null` to outline none
+   */
+  setOutlinedItem(item: AnnotatedItemRef | null): void {
+    this.setOutlinedObjectItem(
+      item !== null && "shapesId" in item.annotatedObject
+        ? { objectId: item.annotatedObject.shapesId, itemId: item.itemId }
+        : null,
+    );
+  }
+
+  /**
    * Issues the WebGL draw calls for all synchronized shapes, in their own
    * colors or in the colors of their pick IDs
    *
-   * Renders each shapes object as a quad whose fragment shader performs
-   * scanline-based polygon rasterization using the per-object scanline data
-   * texture, with the viewport → world matrix as a global uniform and its
-   * world → data matrix, bounds, numbers of scanlines and bins, half stroke
-   * width and device pixel size in data units (for anti-aliasing) and opacity
-   * factor as per-pass uniforms, computed from the current model (see
-   * {@link getRenderPasses}). The quad covers the object's bounds, dilated by
-   * how far the anti-aliased strokes reach beyond them, within the viewport, so
-   * that fragments are only shaded where the object can be; objects outside the
-   * viewport, objects whose layer or object is invisible, and objects without
-   * scanlines or bins are skipped. Shapes are blended over what is drawn
-   * already, unless pick IDs are drawn.
+   * Pick IDs are drawn without blending and without the outline.
    *
    * @param firstPickId - The pick ID of the first shape, or `null` to draw the
    * shapes in their own colors
@@ -235,11 +256,12 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     if (firstPickId === null) {
       this.context.enableAlphaBlending();
     }
-    for (const {
-      layer,
-      object: shapes,
-      renderedObject: renderedShapes,
-    } of renderPasses) {
+    for (const renderPass of renderPasses) {
+      const {
+        layer,
+        object: shapes,
+        renderedObject: renderedShapes,
+      } = renderPass;
       const pickIdBase = nextPickId;
       nextPickId += renderedShapes.ref.itemIds.length;
       if (renderedShapes.numScanlines < 1 || renderedShapes.numBins < 1) {
@@ -303,6 +325,12 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         worldDevicePixelSize / (shapes.transform.scale * layer.transform.scale),
       );
       this.context.gl.uniform1ui(this._uniformLocations.pickIdBase, pickIdBase);
+      const outlinedIndex =
+        firstPickId === null ? this.getOutlinedItemIndex(renderPass) : null;
+      this.context.gl.uniform1ui(
+        this._uniformLocations.outlinedShape,
+        outlinedIndex !== null ? outlinedIndex + 1 : 0,
+      );
       this.context.gl.activeTexture(
         WebGL2RenderingContext.TEXTURE0 +
           WebGLShapesRenderer._textureUnits.SCANLINE_DATA,

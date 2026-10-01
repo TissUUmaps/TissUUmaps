@@ -3,6 +3,9 @@
 #define SCANLINE_DATA_TEXTURE_WIDTH 4096u  // see WebGLShapesRenderer
 #define SHAPE_RGBAS_TEXTURE_WIDTH 4096u  // see WebGLShapesRenderer
 
+// Width of the outline drawn along the inside of the outlined shape, in device pixels
+#define OUTLINE_WIDTH 4.0
+
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices#implicit_defaults
 precision highp float; // no default otherwise
 precision highp int; // defaults to mediump otherwise
@@ -19,6 +22,8 @@ uniform float u_devicePixelSize; // size of a device pixel, in data dimensions
 // Pick pass: every shape is drawn in the color of its pick ID, see WebGLPicker
 uniform bool u_pick;
 uniform uint u_pickIdBase; // pick ID of the first shape of this pass
+
+uniform uint u_outlinedShape; // index of the outlined shape of this pass, plus one, or 0 for none
 
 /*
  * Scanline data (RGBA32UI texture)
@@ -162,7 +167,7 @@ void main() {
             int wn = windingNumber(v_pos, u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, shapeOffset + 1u, numEdges, minDist);
             if(u_pick) {
                 // hit test at the fragment center, without anti-aliasing (later shapes are drawn over earlier ones)
-                bool strokeHit = minDist < u_halfStrokeWidth && unpackRgba(utexel(u_shapeStrokeRgbas, SHAPE_RGBAS_TEXTURE_WIDTH, shapeIndex)[0]).a > 0.0;
+                bool strokeHit = strokeFade > 0.0 && minDist < hsw && unpackRgba(utexel(u_shapeStrokeRgbas, SHAPE_RGBAS_TEXTURE_WIDTH, shapeIndex)[0]).a > 0.0;
                 bool fillHit = (wn & 1) != 0 && unpackRgba(utexel(u_shapeFillRgbas, SHAPE_RGBAS_TEXTURE_WIDTH, shapeIndex)[0]).a > 0.0;
                 if(strokeHit || fillHit) {
                     picked = true;
@@ -191,6 +196,16 @@ void main() {
                 strokeRgba *= strokeCoverage;
             }
             vec4 shapeRgba = strokeRgba + (1.0 - strokeRgba.a) * fillRgba;
+            // a shape that is not drawn (transparent fill and stroke) is not outlined either
+            if(shapeIndex + 1u == u_outlinedShape && (unpackRgba(utexel(u_shapeFillRgbas, SHAPE_RGBAS_TEXTURE_WIDTH, shapeIndex)[0]).a > 0.0 || unpackRgba(utexel(u_shapeStrokeRgbas, SHAPE_RGBAS_TEXTURE_WIDTH, shapeIndex)[0]).a > 0.0)) {
+                // outline the shape along the inside of its edges, whatever its stroke,
+                // in white along the edges and black further in, so that it shows
+                // against any background
+                float outlineWidth = OUTLINE_WIDTH * u_devicePixelSize;
+                float outlineCoverage = fillCoverage * clamp((outlineWidth - signedDist) / u_devicePixelSize + 0.5, 0.0, 1.0);
+                float tone = signedDist < 0.5 * outlineWidth ? 1.0 : 0.0;
+                shapeRgba = mix(shapeRgba, vec4(vec3(tone), 1.0), outlineCoverage);
+            }
             fragRgba = shapeRgba + (1.0 - shapeRgba.a) * fragRgba;
         }
     }
