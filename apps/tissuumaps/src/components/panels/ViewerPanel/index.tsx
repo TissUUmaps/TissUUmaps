@@ -20,6 +20,7 @@ import {
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
+import { ScaleBarViewerControl } from "./ScaleBarViewerControl";
 import { ViewerToolbar } from "./ViewerToolbar";
 import { highlightItemGroup } from "./highlightItemGroup";
 
@@ -132,6 +133,10 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
         <ViewerToolbar
           onResetViewport={() => viewerRef.current?.resetViewport()}
         />
+      </ViewerControl>
+      {/* lines up to the right of the navigator, which is mounted first */}
+      <ViewerControl anchor={ViewerControlAnchor.BOTTOM_LEFT} autoFade={false}>
+        <ScaleBarViewerControl />
       </ViewerControl>
     </Viewer>
   );

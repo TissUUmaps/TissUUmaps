@@ -457,6 +457,14 @@ export type ProjectStoreActions = {
   ) => void;
 
   /**
+   * Sets the project's world unit size
+   *
+   * @param worldUnitSize - The physical size of one world unit, in micrometers
+   * (µm), or `undefined` if it is unknown
+   */
+  setWorldUnitSize: (worldUnitSize: Project["worldUnitSize"]) => void;
+
+  /**
    * Replaces the project with a new, empty one
    */
   clear: () => void;

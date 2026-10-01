@@ -24,3 +24,7 @@ sidebar_position: 4
 | Viewport -> Device | _device coordinates_ = _device pixel ratio_ \* _viewport coordinates_                |
 
 User-configurable variables are highlighted in bold.
+
+## Physical units
+
+The project's world unit size is the physical size of one world unit, in micrometers. If it is set, the viewer shows a scale bar.

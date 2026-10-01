@@ -33,6 +33,8 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
   const setViewerBackgroundColor = useProjectStore(
     (state) => state.setViewerBackgroundColor,
   );
+  const worldUnitSize = useProjectStore((state) => state.worldUnitSize);
+  const setWorldUnitSize = useProjectStore((state) => state.setWorldUnitSize);
 
   const { globalPointSizeFactor } = glOptions.pointsRenderOptions;
   const viewerBackgroundColorHex = ColorUtils.toHex(viewerBackgroundColor);
@@ -50,6 +52,29 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
           <SquareIcon fill={viewerBackgroundColorHex} />
           {viewerBackgroundColorHex}
         </ColorPicker>
+      </Field>
+      <Field>
+        <FieldLabel>World unit size (µm)</FieldLabel>
+        <FieldControl
+          render={
+            <Input
+              type="number"
+              inputMode="decimal"
+              min={0}
+              placeholder="Unknown"
+              value={worldUnitSize ?? ""}
+              onChange={(event) => {
+                const newValue = event.target.valueAsNumber;
+                setWorldUnitSize(
+                  isNaN(newValue) ? undefined : Math.max(0, newValue),
+                );
+              }}
+            />
+          }
+        />
+        <FieldDescription className="text-muted-foreground text-xs">
+          Shows a scale bar; a world unit is an image pixel, unless transformed
+        </FieldDescription>
       </Field>
       <Field>
         <FieldLabel>Point size factor</FieldLabel>

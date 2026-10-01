@@ -175,6 +175,13 @@ export interface RawProject extends RawModel {
    * @defaultValue {@link projectDefaults.viewerBackgroundColor}
    */
   viewerBackgroundColor?: Color;
+
+  /**
+   * Physical size of one world unit, in micrometers (µm)
+   *
+   * The viewer shows a scale bar only if this is set to a positive value.
+   */
+  worldUnitSize?: number;
 }
 
 /**
