@@ -185,7 +185,7 @@ export class TIFFLabelsDataProvider implements LabelsDataProvider<
       GeoTIFF: tiff,
       GeoTIFFImages: levels,
     });
-    return new TIFFLabelsData(tileSource);
+    return new TIFFLabelsData(tileSource, levels[0]!);
   }
 }
 

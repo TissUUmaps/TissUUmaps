@@ -23,4 +23,12 @@ export class LabelsDataWrapper
   ): ReturnType<LabelsData["getTileData"]> {
     return this.data.getTileData(event);
   }
+
+  loadLabelId(
+    x: number,
+    y: number,
+    options?: { signal?: AbortSignal },
+  ): Promise<number | undefined> {
+    return this.data.loadLabelId(x, y, options);
+  }
 }

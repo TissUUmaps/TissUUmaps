@@ -58,23 +58,84 @@ export class OMEZarrLabelsData implements LabelsData {
       throw new Error(`Expected a single tile, got ${data.chunks.length}`);
     }
     const tile = data.chunks[0]!;
+    return {
+      values: OMEZarrLabelsData._getLabelIds(tile.data),
+      width: tile.shape[1]!,
+      height: tile.shape[0]!,
+    };
+  }
+
+  /**
+   * Loads the label ID at a pixel of the full-resolution label image
+   *
+   * Loads the full-resolution tile holding the pixel, i.e. a single chunk of
+   * the Zarr array, from the plane the tile source draws.
+   *
+   * @param x - Horizontal pixel position; pixel i spans [i, i + 1)
+   * @param y - Vertical pixel position; pixel i spans [i, i + 1)
+   * @param options - Optional abort signal
+   * @returns The label ID at the pixel, or `undefined` if the position lies
+   * outside the label image
+   * @throws Error if the tile source does not load exactly one tile, or if the
+   * tile is not an 8-, 16- or 32-bit integer array
+   */
+  async loadLabelId(
+    x: number,
+    y: number,
+    options?: { signal?: AbortSignal },
+  ): Promise<number | undefined> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    const level = this._tileSource.maxLevel;
+    const column = Math.floor(x);
+    const row = Math.floor(y);
     if (
-      tile.data instanceof Int8Array ||
-      tile.data instanceof Int16Array ||
-      tile.data instanceof Int32Array ||
-      tile.data instanceof Uint8Array ||
-      tile.data instanceof Uint16Array ||
-      tile.data instanceof Uint32Array
+      column < 0 ||
+      row < 0 ||
+      column >= this._tileSource.getWidth(level) ||
+      row >= this._tileSource.getHeight(level)
     ) {
-      return {
-        values: tile.data,
-        width: tile.shape[1]!,
-        height: tile.shape[0]!,
-      };
+      return undefined;
     }
-    throw new Error(
-      `Data type '${tile.data.constructor.name}' is not supported`,
+    const tileWidth = this._tileSource.getTileWidth(level);
+    const tileHeight = this._tileSource.getTileHeight(level);
+    const tileX = Math.floor(column / tileWidth);
+    const tileY = Math.floor(row / tileHeight);
+    const chunks = await this._tileSource.loadChunks(
+      level,
+      { x: tileX, y: tileY },
+      { signal },
     );
+    if (chunks.length !== 1) {
+      throw new Error(`Expected a single tile, got ${chunks.length}`);
+    }
+    const chunk = chunks[0]!;
+    const labelIds = OMEZarrLabelsData._getLabelIds(chunk.data);
+    return labelIds[
+      (row - tileY * tileHeight) * chunk.shape[1]! +
+        (column - tileX * tileWidth)
+    ];
+  }
+
+  /**
+   * Returns the data of a tile as label IDs
+   *
+   * @param data - The data of the tile
+   * @returns The data itself
+   * @throws Error if the data is not an 8-, 16- or 32-bit integer array
+   */
+  private static _getLabelIds(data: ArrayBufferView): IntOrUintArray {
+    if (
+      data instanceof Int8Array ||
+      data instanceof Int16Array ||
+      data instanceof Int32Array ||
+      data instanceof Uint8Array ||
+      data instanceof Uint16Array ||
+      data instanceof Uint32Array
+    ) {
+      return data;
+    }
+    throw new Error(`Data type '${data.constructor.name}' is not supported`);
   }
 
   close(): void {}

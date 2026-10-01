@@ -30,6 +30,22 @@ export interface LabelsData extends RasterData {
     width: number;
     height: number;
   }>;
+
+  /**
+   * Loads the label ID at a pixel of the full-resolution label image
+   *
+   * @param x - Horizontal pixel position; pixel i spans [i, i + 1)
+   * @param y - Vertical pixel position; pixel i spans [i, i + 1)
+   * @param options - Optional abort signal
+   * @returns The label ID at the pixel, or `undefined` if the position lies
+   * outside the label image
+   * @throws Error if the label image does not hold integers of up to 32 bits
+   */
+  loadLabelId(
+    x: number,
+    y: number,
+    options?: { signal?: AbortSignal },
+  ): Promise<number | undefined>;
 }
 
 /**

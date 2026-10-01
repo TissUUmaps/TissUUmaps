@@ -1,3 +1,4 @@
+import type { GeoTIFFImage } from "geotiff";
 import type { TiffRaster } from "geotiff-tilesource";
 import type OpenSeadragon from "openseadragon";
 
@@ -8,7 +9,7 @@ import type {
   TileSourceConfig,
 } from "@tissuumaps/core";
 
-import { tiffRasterType } from "./installTIFFTileSource";
+import { installTIFFTileSource, tiffRasterType } from "./installTIFFTileSource";
 
 /**
  * The loaded label mask of a TIFF file
@@ -19,12 +20,15 @@ import { tiffRasterType } from "./installTIFFTileSource";
  */
 export class TIFFLabelsData implements LabelsData {
   private readonly _tileSource: OpenSeadragon.TileSource;
+  private readonly _image: GeoTIFFImage;
 
   /**
    * @param tileSource - The tile source of the label mask
+   * @param image - The full-resolution image of the label mask
    */
-  constructor(tileSource: OpenSeadragon.TileSource) {
+  constructor(tileSource: OpenSeadragon.TileSource, image: GeoTIFFImage) {
     this._tileSource = tileSource;
+    this._image = image;
   }
 
   /** Returns the tile source of the label mask */
@@ -62,6 +66,49 @@ export class TIFFLabelsData implements LabelsData {
       width: raster.width,
       height: raster.height,
     };
+  }
+
+  /**
+   * Loads the label ID at a pixel of the full-resolution label mask
+   *
+   * Decodes the tile or strip holding the pixel on the shared decoder pool.
+   *
+   * @param x - Horizontal pixel position; pixel i spans [i, i + 1)
+   * @param y - Vertical pixel position; pixel i spans [i, i + 1)
+   * @param options - Optional abort signal
+   * @returns The label ID at the pixel, or `undefined` if the position lies
+   * outside the label mask
+   * @throws Error if the label mask has no band
+   */
+  async loadLabelId(
+    x: number,
+    y: number,
+    options?: { signal?: AbortSignal },
+  ): Promise<number | undefined> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    const column = Math.floor(x);
+    const row = Math.floor(y);
+    if (
+      column < 0 ||
+      row < 0 ||
+      column >= this._image.getWidth() ||
+      row >= this._image.getHeight()
+    ) {
+      return undefined;
+    }
+    const { pool } = installTIFFTileSource();
+    const rasters = await this._image.readRasters({
+      window: [column, row, column + 1, row + 1],
+      pool,
+      signal,
+    });
+    signal?.throwIfAborted(); // the decoder pool does not abort decoding
+    const band = rasters[0];
+    if (band === undefined) {
+      throw new Error("The label mask has no bands");
+    }
+    return band[0];
   }
 
   /** Closing does nothing: the decoder pool is shared, and the file is read on demand */
