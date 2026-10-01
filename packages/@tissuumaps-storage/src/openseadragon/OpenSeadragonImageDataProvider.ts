@@ -83,9 +83,32 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
       { signal },
     );
     if (source.url !== undefined) {
-      return new OpenSeadragonImageData(source.url);
+      return new OpenSeadragonImageData(
+        isImageURL(source.url)
+          ? { type: "image", url: source.url }
+          : source.url,
+      );
     }
     const objectUrl = URL.createObjectURL(source.file);
-    return new OpenSeadragonImageData(objectUrl, objectUrl);
+    return new OpenSeadragonImageData(
+      source.file.type.startsWith("image/")
+        ? { type: "image", url: objectUrl }
+        : objectUrl,
+      objectUrl,
+    );
   }
+}
+
+/** File extensions of plain images, which OpenSeadragon opens as a single tile */
+const imageExtensionPattern = /\.(jpe?g|png|gif|webp|bmp|avif|svg)$/i;
+
+/**
+ * Returns whether an absolute URL points to a plain image rather than to a
+ * tile source descriptor
+ *
+ * @param url - The absolute URL
+ * @returns `true` if the URL's path has an image file extension
+ */
+export function isImageURL(url: string): boolean {
+  return imageExtensionPattern.test(new URL(url).pathname);
 }
