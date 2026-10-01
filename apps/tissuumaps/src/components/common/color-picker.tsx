@@ -17,6 +17,7 @@ export type ColorPickerProps = {
   onColorChange: (color: Color) => void;
   children?: React.ReactNode;
   className?: string;
+  placement?: GithubPlacement;
 };
 
 export function ColorPicker({
@@ -24,6 +25,7 @@ export function ColorPicker({
   onColorChange,
   children,
   className,
+  placement,
 }: ColorPickerProps) {
   const hsva = hexToHsva(ColorUtils.toHex(color));
   return (
@@ -34,7 +36,7 @@ export function ColorPicker({
       <PopoverContent>
         <Chrome
           color={hsva}
-          placement={GithubPlacement.BottomRight}
+          placement={placement ? placement : GithubPlacement.BottomRight}
           showAlpha={false}
           onChange={(newColor) => {
             const hex = hsvaToHex(newColor.hsva);
