@@ -1,5 +1,11 @@
 # @tissuumaps/storage
 
+## 0.1.0-beta.2
+
+### Minor Changes
+
+- [#263](https://github.com/TissUUmaps/TissUUmaps/pull/263) [`74e598a`](https://github.com/TissUUmaps/TissUUmaps/commit/74e598a64d32d0e0d5c72a1c2cbd597bb565f63c) Thanks [@jwindhager](https://github.com/jwindhager)! - Bump version to fix package publishing
+
 ## 0.1.0-beta.1
 
 ### Minor Changes
