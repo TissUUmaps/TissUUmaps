@@ -231,7 +231,20 @@ For deployment, `DOCUSAURUS_BASE_URL` sets the path the documentation is served 
 
 ## Release scripts (scripts)
 
-The dependency-free TypeScript scripts in `scripts/` are run directly by Node (`node scripts/<name>.ts`) by the release workflow (`.github/workflows/release.yaml`, see [Continuous delivery](./development-workflow.md#continuous-delivery)):
+`scripts/gha-assemble-pages.ts` assembles the GitHub Pages site from the release assets. It is a dependency-free TypeScript script that the release workflow (`.github/workflows/release.yaml`, see [Continuous delivery](./development-workflow.md#continuous-delivery)) runs directly with Node.
 
-- `prepare-registry-build.ts` prepares a checkout for building the application from the _published_ `@tissuumaps/*` packages instead of the workspace sources: it restricts the pnpm workspace to the application and pins the application's `workspace:` dependencies to the versions in the checkout. `verify-registry-deps.ts` then fails unless every package was installed from the registry with the expected version and manifest. Both read the packages through `lib/workspace.ts`. Neither result is ever committed.
-- `assemble-pages.ts` assembles the GitHub Pages site from the release assets: of every MAJOR.MINOR line it deploys the highest stable version under `<version>/`, plus the highest prerelease above it if there is one (or the highest prerelease alone while the line has no stable version); a prerelease is only deployed while no stable version above it exists at all, so abandoned prerelease lines do not accumulate; every other version redirects to the lowest deployed version at or above it (a stable one for a stable version, so that a prerelease never replaces a stable version for its users), or to the latest version when there is none, keeping the rest of the path. A release whose site asset is missing cannot be deployed and only gets a redirect, like a superseded version. The site root redirects to the latest stable version (or the latest prerelease while there is no stable one) and `docs/` to its documentation; while no version is deployed at all, it reports so to the workflow, which deploys the current branch instead. Custom HTML (the Matomo snippet) is inserted into the deployed application pages only, never into the release assets. The retention rules live in `lib/retention.ts`, the redirect rules in `lib/redirect.ts` (inlined into the generated redirect pages) and version precedence in `lib/semver.ts`; all three are covered by `pnpm run test:scripts`.
+The site has one directory per MAJOR.MINOR line, `<MAJOR.MINOR>/`, which holds one version of the application with its documentation under `docs/`:
+
+- A line deploys its highest stable version, or its highest prerelease while it has no stable version. A prerelease of a later patch (e.g. `4.0.1-rc.1` after `4.0.0`) is therefore never deployed.
+- A line of prereleases only is deployed only while no stable version above it exists, so abandoned prerelease lines do not accumulate.
+- A release without its site assets (e.g. after a failed upload) cannot be deployed; its line falls back to the highest version that can.
+
+Redirects:
+
+- The site root goes to the latest stable line (or the latest prerelease line while there is no stable one).
+- `docs/` goes to the latest line's documentation, keeping the rest of the path.
+- Any other path outside the deployed lines, including a line that is not deployed, goes to the latest line's root (through the script of `404.html`). A missing page inside a deployed line is a genuine 404.
+
+While no version can be deployed at all, the script fails, so that the deployed site is left as it is. Custom HTML (the Matomo snippet in `.github/pages/custom.html`) replaces the `<!-- GHA_CUSTOM_HTML -->` marker of the deployed application pages only, never of the release assets; a deployed page without the marker fails the script.
+
+All functions are exported, among them the rules for which versions to deploy (`selectVersionsToDeploy`), the redirect rules (`resolveRedirectTarget`) and version precedence (`compareVersions`), so that `scripts/gha-assemble-pages.test.ts` can import them without running the script (`pnpm run test:scripts`). The redirect pages run `resolveRedirectTarget` in the browser, inlined through its source text.

@@ -47,8 +47,8 @@ If this PR depends on another PR (even in another repo), please link to it with 
 <!--
 Final Checklist:
 - My PR is the minimum possible work for the desired functionality
-- I have added a changeset (`pnpm changeset`) if my PR changes a published package or the app
 - My code is self-explanatory; I have only added comments where essential
 - I have made corresponding changes to docstrings and documentation (if applicable)
 - I have added tests that prove my fix is effective or that my feature works (if applicable)
+- I have added a changeset (`pnpm changeset`) if my PR changes a published package or the app (`pnpm changeset --empty` if it needs no release)
 -->

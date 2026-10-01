@@ -2,7 +2,7 @@
   "name": "@tissuumaps/root",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@11.15.1",
+  "packageManager": "pnpm@12.8.1",
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.1",
     "@changesets/cli": "^3.0.3",
@@ -36,11 +36,11 @@
     "fmt": "prettier --write --ignore-unknown .",
     "fmt:check": "prettier --check --ignore-unknown .",
     "test": "vitest run --passWithNoTests --coverage",
-    "test:scripts": "node --test scripts/lib/*.test.ts",
+    "test:scripts": "node --test scripts/*.test.ts",
     "dev": "pnpm run --filter tissuumaps dev",
     "docs": "pnpm run --filter docs start",
     "build": "pnpm run -r --filter !docs build",
-    "build:docs": "pnpm run build:packages && pnpm run --filter docs build",
+    "build:docs": "pnpm run --filter docs build",
     "build:packages": "pnpm run -r --filter \"./packages/*\" build",
     "changeset": "changeset",
     "release": "pnpm run build:packages && changeset publish",
@@ -53,5 +53,12 @@
   "engines": {
     "node": ">=24.0.0",
     "pnpm": ">=11.15.1"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "^24.0.0",
+      "onFail": "download"
+    }
   }
 }
