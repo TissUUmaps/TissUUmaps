@@ -1,5 +1,11 @@
 # tissuumaps
 
+## 4.0.0-beta.2
+
+### Major Changes
+
+- [#265](https://github.com/TissUUmaps/TissUUmaps/pull/265) [`7302ee8`](https://github.com/TissUUmaps/TissUUmaps/commit/7302ee8bc8a69b1cf03b47dd49eb7e1ac6f08b9f) Thanks [@jwindhager](https://github.com/jwindhager)! - Bump TissUUmaps version to fix publishing workflow
+
 ## 4.0.0-beta.1
 
 ### Minor Changes
