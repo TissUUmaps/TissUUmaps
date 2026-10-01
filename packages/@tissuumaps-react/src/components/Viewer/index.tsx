@@ -45,13 +45,13 @@ export function Viewer({
       return;
     }
     setOSContext(os.context);
-    // Push the viewport and container size straight into the renderers instead
+    // Push the viewport and container size straight into the overlays instead
     // of through React state. OSD raises "viewport-change" and "resize" from its
     // animation-frame update, after the springs advanced and before it draws the
     // world, and getBounds(true) returns the bounds it is about to paint.
-    // Drawing here therefore lands in the same frame, whereas a passive
-    // useEffect runs after paint and would leave the overlay one frame behind
-    // the OSD canvas.
+    // Updating the overlays here therefore lands in the same frame, whereas a
+    // passive useEffect runs after paint and would leave the overlay one frame
+    // behind the OSD canvas.
     const updateViewport = (viewport: Rect) => {
       setGLViewport(viewport);
       setSVGViewport(viewport);

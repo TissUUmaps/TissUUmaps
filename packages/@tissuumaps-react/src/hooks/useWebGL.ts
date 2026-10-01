@@ -8,6 +8,7 @@ import {
 } from "@tissuumaps/core";
 import {
   WebGLContext,
+  WebGLFrameScheduler,
   WebGLPointsRenderer,
   WebGLShapesRenderer,
 } from "@tissuumaps/render";
@@ -19,24 +20,8 @@ type GL = {
   context: WebGLContext;
   pointsRenderer: WebGLPointsRenderer;
   shapesRenderer: WebGLShapesRenderer;
+  scheduler: WebGLFrameScheduler;
 };
-
-/**
- * Clears the canvas and redraws both WebGL renderers
- *
- * Module-level so it closes over nothing from the render scope: the memoized
- * setters can call it without listing it as a dependency, however it changes.
- *
- * @param gl - The GL object to draw on; nothing is drawn if null
- */
-function drawGL(gl: GL | null) {
-  if (gl !== null) {
-    gl.context.clear();
-    // points are drawn over shapes, so that transcripts show over filled cells
-    gl.shapesRenderer.draw();
-    gl.pointsRenderer.draw();
-  }
-}
 
 /**
  * Creates a state updater that sets new bounds, but keeps the current ones if
@@ -98,40 +83,20 @@ export function useWebGL(adapter: ViewerAdapter) {
   const requestedSyncPointsRef = useRef(0);
   const requestedSyncShapesRef = useRef(0);
 
-  const [redraw, dispatchRedraw] = useReducer((x) => x + 1, 0);
-
   const [glPointsBounds, setGLPointsBounds] = useState<Rect | null>(null);
   const [glShapesBounds, setGLShapesBounds] = useState<Rect | null>(null);
 
   const setGLViewport = useCallback((viewport: Rect) => {
-    if (
-      viewportRef.current === null ||
-      !GeometryUtils.rectEquals(viewport, viewportRef.current)
-    ) {
-      viewportRef.current = viewport;
-      if (glRef.current !== null) {
-        glRef.current.pointsRenderer.viewport = viewport;
-        glRef.current.shapesRenderer.viewport = viewport;
-        drawGL(glRef.current); // keep direct to avoid lags!
-      }
+    viewportRef.current = viewport;
+    if (glRef.current !== null) {
+      glRef.current.scheduler.setViewport(viewport);
     }
   }, []);
 
   const setGLContainerSize = useCallback((containerSize: Dims) => {
     containerSizeRef.current = containerSize;
     if (glRef.current !== null) {
-      const redraw = glRef.current.context.resizeCanvas(
-        glRef.current.canvas,
-        containerSize,
-      );
-      // OSD raises "resize" before it updates the viewport bounds, so this
-      // draws the old viewport and is superseded by the viewport-change draw
-      // later in the same update - except on a resize that leaves the bounds
-      // unchanged, where it is the only draw that refills the resized, and
-      // therefore blank, canvas.
-      if (redraw) {
-        drawGL(glRef.current); // keep direct to avoid lags!
-      }
+      glRef.current.scheduler.setContainerSize(containerSize);
     }
   }, []);
 
@@ -145,9 +110,6 @@ export function useWebGL(adapter: ViewerAdapter) {
     async function startGL() {
       abortController.signal.throwIfAborted();
       const context = new WebGLContext(canvas);
-      if (containerSizeRef.current !== null) {
-        context.resizeCanvas(canvas, containerSizeRef.current);
-      }
       const {
         promise: pointsRendererInitPromise,
         resolve: resolvePointsRendererInitPromise,
@@ -182,12 +144,20 @@ export function useWebGL(adapter: ViewerAdapter) {
         context.destroy();
         throw new Error("Error creating shapes renderer", { cause: error });
       }
-      // set only now, as it may have changed while awaiting the renderers
-      if (viewportRef.current !== null) {
-        pointsRenderer.viewport = viewportRef.current;
-        shapesRenderer.viewport = viewportRef.current;
+      // points are drawn over shapes, so that transcripts show over filled cells
+      const scheduler = new WebGLFrameScheduler(context, canvas, [
+        shapesRenderer,
+        pointsRenderer,
+      ]);
+      // set only now, as both may have changed while awaiting the points
+      // renderer
+      if (containerSizeRef.current !== null) {
+        scheduler.setContainerSize(containerSizeRef.current);
       }
-      const gl = { canvas, context, pointsRenderer, shapesRenderer };
+      if (viewportRef.current !== null) {
+        scheduler.setViewport(viewportRef.current);
+      }
+      const gl = { canvas, context, pointsRenderer, shapesRenderer, scheduler };
       glRef.current = gl;
       setGLReady(true);
       return gl;
@@ -205,7 +175,8 @@ export function useWebGL(adapter: ViewerAdapter) {
       setGLReady(false);
       glRef.current = null;
       if (gl !== null) {
-        const { context, pointsRenderer, shapesRenderer } = gl;
+        const { context, pointsRenderer, shapesRenderer, scheduler } = gl;
+        scheduler.destroy();
         pointsRenderer.destroy();
         shapesRenderer.destroy();
         context.destroy();
@@ -263,7 +234,7 @@ export function useWebGL(adapter: ViewerAdapter) {
     if (glReady && glRef.current !== null) {
       glRef.current.pointsRenderer.renderOptions =
         glOptions.pointsRenderOptions;
-      dispatchRedraw();
+      glRef.current.scheduler.invalidate();
       if (glRef.current.pointsRenderer.needsSynchronization()) {
         requestedSyncPointsRef.current++;
         dispatchSyncPoints();
@@ -278,7 +249,7 @@ export function useWebGL(adapter: ViewerAdapter) {
       // the rendered bounds include the stroke width, a render option
       const newShapesBounds = glRef.current.shapesRenderer.getRenderedBounds();
       setGLShapesBounds(updateBounds(newShapesBounds));
-      dispatchRedraw();
+      glRef.current.scheduler.invalidate();
       if (glRef.current.shapesRenderer.needsSynchronization()) {
         requestedSyncShapesRef.current++;
         dispatchSyncShapes();
@@ -292,7 +263,7 @@ export function useWebGL(adapter: ViewerAdapter) {
         const newPointsBounds =
           glRef.current.pointsRenderer.getRenderedBounds();
         setGLPointsBounds(updateBounds(newPointsBounds));
-        dispatchRedraw();
+        glRef.current.scheduler.invalidate();
       }
       if (glRef.current.pointsRenderer.needsSynchronization()) {
         requestedSyncPointsRef.current++;
@@ -307,7 +278,7 @@ export function useWebGL(adapter: ViewerAdapter) {
         const newShapesBounds =
           glRef.current.shapesRenderer.getRenderedBounds();
         setGLShapesBounds(updateBounds(newShapesBounds));
-        dispatchRedraw();
+        glRef.current.scheduler.invalidate();
       }
       if (glRef.current.shapesRenderer.needsSynchronization()) {
         requestedSyncShapesRef.current++;
@@ -347,7 +318,7 @@ export function useWebGL(adapter: ViewerAdapter) {
             const newPointsBounds =
               glRef.current.pointsRenderer.getRenderedBounds();
             setGLPointsBounds(updateBounds(newPointsBounds));
-            drawGL(glRef.current); // direct (async continuation in own task)
+            glRef.current.scheduler.invalidate();
           }
         })
         .catch((error) => {
@@ -401,7 +372,7 @@ export function useWebGL(adapter: ViewerAdapter) {
             const newShapesBounds =
               glRef.current.shapesRenderer.getRenderedBounds();
             setGLShapesBounds(updateBounds(newShapesBounds));
-            drawGL(glRef.current); // direct (async continuation in own task)
+            glRef.current.scheduler.invalidate();
           }
         })
         .catch((error) => {
@@ -423,12 +394,6 @@ export function useWebGL(adapter: ViewerAdapter) {
     loadTable,
     syncShapes,
   ]);
-
-  useEffect(() => {
-    if (glReady) {
-      drawGL(glRef.current);
-    }
-  }, [glReady, redraw]);
 
   return {
     initGL,
