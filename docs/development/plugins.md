@@ -209,7 +209,8 @@ The item last picked in the viewer by a click is `appStore.getState().pickedItem
 its object (`{ labelsId }`, `{ pointsId }` or `{ shapesId }`), its item ID and
 the picked position in world coordinates, or `null` if nothing is picked. A
 plugin observes picks with `appStore.subscribe`, and picks an item itself with
-`setPickedItem`, which outlines a point or shape.
+`setPickedItem`, which outlines a point or shape and shows the item at the
+world position passed with it.
 
 A plugin adds support for a project format by registering a project provider
 (see `ProjectProvider` in `@tissuumaps/core`) in `setup`, after which the

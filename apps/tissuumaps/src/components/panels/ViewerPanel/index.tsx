@@ -26,6 +26,7 @@ import { appStore, useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
 import { ColorbarsViewerControl } from "./ColorbarsViewerControl";
+import { PickedItemOverlay } from "./PickedItemOverlay";
 import { ScalebarViewerControl } from "./ScalebarViewerControl";
 import { ViewerToolbar } from "./ViewerToolbar";
 import { highlightItemGroup } from "./highlightItemGroup";
@@ -181,6 +182,7 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
           <ColorbarsViewerControl />
         </ViewerControl>
       )}
+      <PickedItemOverlay />
     </Viewer>
   );
 }

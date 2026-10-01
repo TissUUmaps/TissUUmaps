@@ -152,6 +152,9 @@ export class OpenSeadragonContext {
       element: viewerElement,
     });
     this.viewer.navigator.setVisible(viewerOptions?.showNavigator !== false);
+    // the canvas creates no stacking context otherwise, so an overlay raised
+    // over the canvas's other children would also cover the controls
+    this.viewer.canvas.style.isolation = "isolate";
     this._backgroundPixelUrl = OpenSeadragonUtils.createPixelUrl(
       backgroundColor.r,
       backgroundColor.g,
@@ -338,6 +341,33 @@ export class OpenSeadragonContext {
       true,
     );
     return { x, y };
+  }
+
+  /**
+   * Adds an element to the viewer as an overlay anchored at a world position
+   *
+   * The element's top-left corner is placed at the position, and follows it as
+   * the viewer is panned and zoomed.
+   *
+   * @param element - The element to add
+   * @param worldPosition - The position to anchor it at, in world coordinates
+   */
+  addOverlay(element: HTMLElement, worldPosition: Vertex): void {
+    this.viewer.addOverlay({
+      element,
+      location: new OpenSeadragon.Point(worldPosition.x, worldPosition.y),
+      placement: OpenSeadragon.Placement.TOP_LEFT,
+      checkResize: false,
+    });
+  }
+
+  /**
+   * Removes an overlay added by {@link addOverlay}
+   *
+   * @param element - The element of the overlay
+   */
+  removeOverlay(element: HTMLElement): void {
+    this.viewer.removeOverlay(element);
   }
 
   /**
