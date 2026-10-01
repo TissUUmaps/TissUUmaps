@@ -1,6 +1,6 @@
 import type { Color } from "@tissuumaps/core";
 
-import { SimpleColorPicker } from "@/components/common/simple-color-picker";
+import ColorPicker from "../../../common/color-picker";
 
 export type GroupColorCellProps = {
   color: Color;
@@ -9,7 +9,7 @@ export type GroupColorCellProps = {
 
 export function GroupColorCell({ color, onColorChange }: GroupColorCellProps) {
   return (
-    <SimpleColorPicker
+    <ColorPicker
       color={color}
       onColorChange={onColorChange}
       className="h-6 w-10 bg-transparent p-0.5 hover:bg-muted"
@@ -18,6 +18,6 @@ export function GroupColorCell({ color, onColorChange }: GroupColorCellProps) {
         className="h-4 w-8 rounded-xs border"
         style={{ backgroundColor: `rgb(${color.r}, ${color.g}, ${color.b})` }}
       />
-    </SimpleColorPicker>
+    </ColorPicker>
   );
 }
