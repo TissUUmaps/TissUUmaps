@@ -5,6 +5,7 @@ import React from "react";
 
 import { type Color, ColorUtils } from "@tissuumaps/core";
 
+import { IconButton } from "@/components/common/icon-button";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -15,6 +16,7 @@ import {
 export type ColorPickerProps = {
   color: Color;
   onColorChange: (color: Color) => void;
+  label?: string;
   children?: React.ReactNode;
   className?: string;
   placement?: GithubPlacement;
@@ -23,6 +25,7 @@ export type ColorPickerProps = {
 export function ColorPicker({
   color,
   onColorChange,
+  label,
   children,
   className,
   placement,
@@ -30,7 +33,10 @@ export function ColorPicker({
   const hsva = hexToHsva(ColorUtils.toHex(color));
   return (
     <Popover>
-      <PopoverTrigger className={className} render={<Button />}>
+      <PopoverTrigger
+        className={className}
+        render={label === undefined ? <Button /> : <IconButton label={label} />}
+      >
         {children}
       </PopoverTrigger>
       <PopoverContent>
