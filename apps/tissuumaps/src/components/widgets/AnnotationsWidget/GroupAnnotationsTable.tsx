@@ -2,13 +2,18 @@ import type {
   ColumnVisibilityState,
   SortingState,
 } from "@tanstack/react-table";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-import type { HighlightedItemGroup, TableColumnRef } from "@tissuumaps/core";
+import type {
+  AnnotatedObjectRef,
+  PickedItem,
+  TableColumnRef,
+} from "@tissuumaps/core";
 
 import {
   VirtualTable,
   type VirtualTableColumnDef,
+  type VirtualTableHandle,
 } from "@/components/common/virtual-table";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -56,10 +61,17 @@ export type GroupAnnotationsTableProps = {
   rowHeight: number;
 
   /** The object whose items are grouped, which the eye buttons highlight */
-  annotatedObject: HighlightedItemGroup["annotatedObject"];
+  annotatedObject: AnnotatedObjectRef;
 
   groupBy: TableColumnRef;
   groupCounts: Map<string, number> | null;
+
+  /** The picked item, whose group is scrolled to once per pick */
+  pickedItem: PickedItem | null;
+
+  /** The group of the picked item, highlighted, or `null` for none */
+  pickedGroup: string | null;
+
   groupVisibility?: GroupVisibility;
   groupColumnDefs?: GroupAnnotationsTableColumnDef[];
 };
@@ -70,6 +82,8 @@ export function GroupAnnotationsTable({
   annotatedObject,
   groupBy,
   groupCounts,
+  pickedItem,
+  pickedGroup,
   groupVisibility,
   groupColumnDefs,
 }: GroupAnnotationsTableProps) {
@@ -170,6 +184,25 @@ export function GroupAnnotationsTable({
     [groupRows],
   );
 
+  const pickedRowIndex = useMemo(
+    () => groupRows.findIndex((groupRow) => groupRow.group === pickedGroup),
+    [groupRows, pickedGroup],
+  );
+
+  // scrolled to once per pick, so that sorting or scrolling does not jump back
+  const tableRef = useRef<VirtualTableHandle>(null);
+  const scrolledPickedItemRef = useRef<PickedItem | null>(null);
+  useLayoutEffect(() => {
+    if (
+      pickedItem !== null &&
+      pickedItem !== scrolledPickedItemRef.current &&
+      pickedRowIndex !== -1
+    ) {
+      scrolledPickedItemRef.current = pickedItem;
+      tableRef.current?.scrollRowIntoView(pickedRowIndex);
+    }
+  }, [pickedItem, pickedRowIndex]);
+
   const columnDefs = useMemo(() => {
     if (groupVisibility === undefined) {
       return sortableColumnDefs;
@@ -225,9 +258,13 @@ export function GroupAnnotationsTable({
 
   return (
     <VirtualTable
+      ref={tableRef}
       rowCount={groupRows.length}
       getRows={getRows}
       getRowId={(row) => row.group}
+      rowClassName={(row) =>
+        row.group === pickedGroup ? "bg-muted" : undefined
+      }
       columnDefs={columnDefs}
       rowHeight={rowHeight}
       height={height}

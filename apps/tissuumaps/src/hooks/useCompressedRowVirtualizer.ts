@@ -1,5 +1,7 @@
 import { type RefObject, useLayoutEffect, useRef, useState } from "react";
 
+import { useLatestCallback } from "./useLatestCallback";
+
 /**
  * Maps a scroll range that is too tall for the browser onto one it can lay out
  *
@@ -31,6 +33,37 @@ function compressScrollRange(
 }
 
 /**
+ * Computes the scroll offset that brings a row fully into view below the
+ * header, scrolling the least distance
+ *
+ * @param rowIndex - The index of the row
+ * @param rowHeight - The height of every row, in pixels
+ * @param headerHeight - The height of the header that sticks to the top of the
+ * scroll container, in pixels
+ * @param viewportHeight - The height of the visible part of the scroll
+ * container, in pixels
+ * @param scrollOffset - The current scroll offset, in content pixels
+ * @returns The new scroll offset, in content pixels, or `null` if the row is
+ * fully in view already
+ */
+export function computeRowScrollOffset(
+  rowIndex: number,
+  rowHeight: number,
+  headerHeight: number,
+  viewportHeight: number,
+  scrollOffset: number,
+): number | null {
+  const rowTop = headerHeight + rowIndex * rowHeight;
+  if (rowTop < scrollOffset + headerHeight) {
+    return rowTop - headerHeight;
+  }
+  if (rowTop + rowHeight > scrollOffset + viewportHeight) {
+    return rowTop + rowHeight - viewportHeight;
+  }
+  return null;
+}
+
+/**
  * The tallest scroll content that is laid out, in pixels
  *
  * Browsers cap the height of an element at a few ten million pixels, Chrome
@@ -59,7 +92,10 @@ export type CompressedRowVirtualizer<THeader extends HTMLElement> = {
   layoutRowsHeight: number;
   /** How far the rows have run ahead of the layout, in pixels */
   rowShift: number;
-  /** Scrolls the least distance that brings a row fully into view */
+  /**
+   * Scrolls the least distance that brings a row fully into view below the
+   * header; a hidden scroll container is scrolled once it is shown
+   */
   scrollRowIntoView: (index: number) => void;
 };
 
@@ -95,6 +131,34 @@ export function useCompressedRowVirtualizer<
   // the offset is also kept in a ref, so that restoring it after a resize does
   // not have to re-subscribe on every scroll
   const scrollOffsetRef = useRef(0);
+  const pendingRowIndexRef = useRef<number | null>(null);
+
+  const scrollRowIntoView = useLatestCallback((index: number) => {
+    const container = containerRef.current;
+    if (container === null) {
+      return;
+    }
+    // a hidden container cannot be scrolled, so the row is scrolled into view
+    // once it is shown (see the resize observer below)
+    if (container.clientHeight === 0) {
+      pendingRowIndexRef.current = index;
+      return;
+    }
+    pendingRowIndexRef.current = null;
+    // measured rather than taken from the state, which lags behind a container
+    // that has just been shown
+    const newOffset = computeRowScrollOffset(
+      index,
+      rowHeight,
+      headerRef.current?.offsetHeight ?? 0,
+      container.clientHeight,
+      scrollOffsetRef.current,
+    );
+    if (newOffset !== null) {
+      scrollOffsetRef.current = newOffset;
+      container.scrollTop = Math.round(newOffset / compressionRef.current);
+    }
+  });
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -123,6 +187,9 @@ export function useCompressedRowVirtualizer<
       if (container.scrollTop !== layoutOffset) {
         container.scrollTop = layoutOffset;
       }
+      if (pendingRowIndexRef.current !== null) {
+        scrollRowIntoView(pendingRowIndexRef.current);
+      }
     });
     container.addEventListener("scroll", onScroll, { passive: true });
     resizeObserver.observe(container);
@@ -133,7 +200,7 @@ export function useCompressedRowVirtualizer<
       container.removeEventListener("scroll", onScroll);
       resizeObserver.disconnect();
     };
-  }, []);
+  }, [scrollRowIntoView]);
 
   const { layoutHeight, compression } = compressScrollRange(
     headerHeight + rowCount * rowHeight,
@@ -158,24 +225,6 @@ export function useCompressedRowVirtualizer<
   // the rows follow the header in the scroll content, so the offset into them
   // is the scroll offset less the header
   const rowsScrollOffset = Math.max(0, scrollOffset - headerHeight);
-
-  function scrollRowIntoView(index: number) {
-    const container = containerRef.current;
-    if (container === null) {
-      return;
-    }
-    const rowTop = headerHeight + index * rowHeight;
-    const offset = scrollOffsetRef.current;
-    let newOffset: number;
-    if (rowTop < offset) {
-      newOffset = rowTop;
-    } else if (rowTop + rowHeight > offset + viewportHeight) {
-      newOffset = rowTop + rowHeight - viewportHeight;
-    } else {
-      return;
-    }
-    container.scrollTop = Math.round(newOffset / compressionRef.current);
-  }
 
   return {
     containerRef,

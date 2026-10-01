@@ -13,7 +13,7 @@ import {
   useTable,
 } from "@tanstack/react-table";
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
-import { type ReactNode, useMemo } from "react";
+import { type ReactNode, type Ref, useImperativeHandle, useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -84,6 +84,12 @@ export type VirtualTableColumnDef<TRowData extends RowData> = ColumnDef<
   TRowData
 >;
 
+/** What a `VirtualTable` ref exposes */
+export type VirtualTableHandle = {
+  /** Scrolls the least distance that brings a row fully into view */
+  scrollRowIntoView: (rowIndex: number) => void;
+};
+
 export type VirtualTableProps<TRowData extends RowData> = {
   rowCount: number;
   /** Returns the rows within `[startIndex, endIndex)` */
@@ -116,6 +122,7 @@ export type VirtualTableProps<TRowData extends RowData> = {
   columnVisibility?: ColumnVisibilityState;
 
   className?: string;
+  ref?: Ref<VirtualTableHandle>;
 };
 
 export function VirtualTable<TRowData extends RowData>({
@@ -132,6 +139,7 @@ export function VirtualTable<TRowData extends RowData>({
   onSortingChange,
   columnVisibility,
   className,
+  ref,
 }: VirtualTableProps<TRowData>) {
   const {
     containerRef,
@@ -140,12 +148,14 @@ export function VirtualTable<TRowData extends RowData>({
     lastIndex,
     layoutRowsHeight,
     rowShift,
+    scrollRowIntoView,
   } = useCompressedRowVirtualizer<HTMLTableSectionElement>(
     rowCount,
     rowHeight,
     height,
     overscan,
   );
+  useImperativeHandle(ref, () => ({ scrollRowIntoView }), [scrollRowIntoView]);
 
   // only the rows within the visible range are materialized, so that the cost
   // of the table does not depend on the number of rows

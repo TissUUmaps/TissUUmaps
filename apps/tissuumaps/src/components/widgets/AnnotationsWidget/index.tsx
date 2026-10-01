@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 
 import type {
-  HighlightedItemGroup,
+  AnnotatedObjectRef,
   ItemsData,
   TableColumnRef,
 } from "@tissuumaps/core";
@@ -10,7 +10,9 @@ import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { TableColumnField } from "@/components/controls/TableColumnField";
 import { Input } from "@/components/ui/input";
+import { useItemValue } from "@/data/hooks/useItemValue";
 import { cn } from "@/lib/utils";
+import { useAppStore } from "@/stores/app";
 
 import {
   GroupAnnotationsTable,
@@ -48,6 +50,24 @@ function filterGroupsByName(
   );
 }
 
+/**
+ * Tells whether two object references refer to the same object
+ *
+ * @param a - The first reference
+ * @param b - The second reference
+ * @returns Whether both refer to the same labels, points or shapes
+ */
+function isSameAnnotatedObject(
+  a: AnnotatedObjectRef,
+  b: AnnotatedObjectRef,
+): boolean {
+  return (
+    ("labelsId" in a && "labelsId" in b && a.labelsId === b.labelsId) ||
+    ("pointsId" in a && "pointsId" in b && a.pointsId === b.pointsId) ||
+    ("shapesId" in a && "shapesId" in b && a.shapesId === b.shapesId)
+  );
+}
+
 export type AnnotationsWidgetProps = {
   data?: ItemsData;
   tableHeight: number;
@@ -57,7 +77,7 @@ export type AnnotationsWidgetProps = {
    * The object whose items are annotated, which the eye buttons highlight; its
    * identity must be stable, as the highlight follows it
    */
-  annotatedObject: HighlightedItemGroup["annotatedObject"];
+  annotatedObject: AnnotatedObjectRef;
 
   selectedGroupBy: TableColumnRef | null;
   onSelectedGroupByChange: (column: TableColumnRef | null) => void;
@@ -81,9 +101,26 @@ export function AnnotationsWidget({
 }: AnnotationsWidgetProps) {
   const [nameQuery, setNameQuery] = useState("");
 
+  // the item picked in the viewer, if it is one of this object's
+  const pickedItem = useAppStore((state) =>
+    state.pickedItem !== null &&
+    isSameAnnotatedObject(state.pickedItem.annotatedObject, annotatedObject)
+      ? state.pickedItem
+      : null,
+  );
   // the cap counts every group, as a new map is filled with every group
   const hasTooManyGroups =
     groupCounts !== null && groupCounts.size > maxGroupCount;
+
+  // not loaded while there are too many groups for the group table
+  const groupTableColumn = !hasTooManyGroups ? selectedGroupBy : null;
+  const pickedGroupValue = useItemValue(
+    groupTableColumn !== null ? (groupTableColumn.table ?? tableId) : null,
+    groupTableColumn?.column ?? null,
+    pickedItem?.itemId ?? null,
+  );
+  const pickedGroup =
+    pickedGroupValue !== null ? String(pickedGroupValue.value) : null;
 
   const filteredGroupCounts = useMemo(
     () =>
@@ -156,6 +193,8 @@ export function AnnotationsWidget({
             annotatedObject={annotatedObject}
             groupBy={selectedGroupBy}
             groupCounts={filteredGroupCounts}
+            pickedItem={pickedItem}
+            pickedGroup={pickedGroup}
             groupVisibility={groupVisibility}
             groupColumnDefs={groupColumnDefs}
           />
@@ -166,6 +205,7 @@ export function AnnotationsWidget({
           height={tableHeight}
           rowHeight={tableRowHeight}
           tableId={tableId}
+          pickedItem={pickedItem}
         />
       )}
     </Fieldset>

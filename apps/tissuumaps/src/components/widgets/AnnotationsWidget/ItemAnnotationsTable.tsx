@@ -1,12 +1,19 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef } from "react";
 
-import type { IDArray, ItemsData } from "@tissuumaps/core";
+import {
+  ArrayUtils,
+  type IDArray,
+  type ItemsData,
+  type PickedItem,
+} from "@tissuumaps/core";
 
 import {
   VirtualTable,
   type VirtualTableColumnDef,
+  type VirtualTableHandle,
 } from "@/components/common/virtual-table";
 import { useTableData } from "@/data/hooks/useData";
+import { cn } from "@/lib/utils";
 
 export type ItemAnnotationsTableRowData = {
   id: number | string;
@@ -22,6 +29,9 @@ export type ItemAnnotationsTableProps = {
   height: number;
   rowHeight: number;
   tableId: string | null;
+
+  /** The picked item, highlighted and scrolled to if it is one of the items */
+  pickedItem: PickedItem | null;
 };
 
 export function ItemAnnotationsTable({
@@ -29,6 +39,7 @@ export function ItemAnnotationsTable({
   height,
   rowHeight,
   tableId,
+  pickedItem,
 }: ItemAnnotationsTableProps) {
   const tableData = useTableData(tableId);
 
@@ -101,6 +112,27 @@ export function ItemAnnotationsTable({
     [ids, getName, isAnnotated],
   );
 
+  const pickedItemId = pickedItem?.itemId ?? null;
+  const pickedRowIndex = useMemo(
+    () =>
+      pickedItemId !== null ? ArrayUtils.indexOfId(ids, pickedItemId) : -1,
+    [ids, pickedItemId],
+  );
+
+  // scrolled to once per pick, so that sorting or scrolling does not jump back
+  const tableRef = useRef<VirtualTableHandle>(null);
+  const scrolledPickedItemRef = useRef<PickedItem | null>(null);
+  useLayoutEffect(() => {
+    if (
+      pickedItem !== null &&
+      pickedItem !== scrolledPickedItemRef.current &&
+      pickedRowIndex !== -1
+    ) {
+      scrolledPickedItemRef.current = pickedItem;
+      tableRef.current?.scrollRowIntoView(pickedRowIndex);
+    }
+  }, [pickedItem, pickedRowIndex]);
+
   const columnDefs = useMemo(() => {
     const columnDefs: ItemAnnotationsTableColumnDef[] = [
       { id: "id", header: "ID", accessorKey: "id" },
@@ -113,6 +145,7 @@ export function ItemAnnotationsTable({
 
   return (
     <VirtualTable
+      ref={tableRef}
       rowCount={ids.length}
       getRows={getRows}
       getRowId={(row) => String(row.id)}
@@ -120,7 +153,10 @@ export function ItemAnnotationsTable({
       rowHeight={rowHeight}
       height={height}
       rowClassName={(row) =>
-        row.annotated === false ? "text-muted-foreground" : undefined
+        cn(
+          row.annotated === false && "text-muted-foreground",
+          row.id === pickedItemId && "bg-muted",
+        )
       }
     />
   );
