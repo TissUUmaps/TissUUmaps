@@ -14,7 +14,7 @@ The repository includes a list of recommended extensions for VSCode (`.vscode/ex
 pnpm run dev        # application development server
 pnpm run docs       # documentation development server
 pnpm run build      # packages and application (excludes the documentation)
-pnpm run build:docs # packages and documentation
+pnpm run build:docs # documentation (requires the packages to be built first)
 ```
 
 Building the documentation for deployment takes the environment variables described in [Code architecture](./code-architecture.md#documentation-docs).
@@ -80,7 +80,7 @@ Every pull request that changes a published package or the application adds a ch
 pnpm changeset
 ```
 
-The command asks which packages are affected and whether the change is a `patch` (bug fix), `minor` (new, backwards-compatible functionality) or `major` (breaking change) bump, and writes a markdown file to `.changeset/`, which is committed along with the change. Pull requests that touch neither a package nor the application (documentation, tooling, tests) need no changeset.
+The command asks which packages are affected and whether the change is a `patch` (bug fix), `minor` (new, backwards-compatible functionality) or `major` (breaking change) bump, and writes a markdown file to `.changeset/`, which is committed along with the change. Pull requests that touch neither a package nor the application (documentation, root tooling) need no changeset. Changes inside a package or the application that need no release (e.g. tests only) add an empty changeset instead (`pnpm changeset --empty`), since continuous integration fails for changed packages without a changeset.
 
 `pnpm changeset version` consumes the pending changesets: it bumps the affected versions, updates the version ranges between the packages, and prepends the entries to each package's `CHANGELOG.md`. The changelogs are generated; do not edit them by hand. `pnpm run release` builds the packages and publishes those whose version is not on npm yet (`changeset publish`).
 
@@ -96,7 +96,10 @@ Pre-commit hooks are automatically installed during `pnpm install` using the `pr
 
 Continuous integration is powered by GitHub Actions, for pushes to `main` and for pull requests into it.
 
-Linting, formatting, type checking and testing (see above) need to pass without errors before merging a pull request. Formatting, linting and type checking are checked on pull requests only; the tests, including those of the release scripts, run on every push and pull request.
+Linting, formatting, type checking, building and testing (see above) need to pass without errors before merging a pull request:
+
+- On pull requests only: formatting, type checking and linting, the builds of the packages, the application and the documentation (the same builds as for a release), and that a pull request changing a package or the application adds a changeset (`changeset status`, skipped for the "Version Packages" pull request).
+- On every push and pull request: the tests, including those of the release script.
 
 A review is automatically requested from Copilot and needs to be resolved for every pull request.
 
@@ -108,18 +111,31 @@ Releases are automated with changesets and GitHub Actions (`.github/workflows/re
 
 1. While changesets are pending, the workflow opens or updates a "Version Packages" pull request that applies them (see [Versioning and changelogs](#versioning-and-changelogs)).
 2. Merging that pull request publishes the bumped packages to npm (`pnpm run release`), tags the releases (`@tissuumaps/core@0.1.0-beta.0`, `tissuumaps@4.0.0-beta.0`, ...) and creates the corresponding GitHub releases with the changelog entries as notes.
-3. If the application was released, the workflow builds its site from the _published_ packages, never from the workspace sources (see [Release scripts](./code-architecture.md#release-scripts-scripts)): the single-file application with its public files, uploaded to the GitHub release as `tissuumaps-<version>.zip`, which can be hosted on any web server; and its documentation as `tissuumaps-<version>-docs.zip`, built for its deployed path and only used by the deployment.
+3. If the application was released, the workflow builds its site and uploads it to the application's GitHub release:
+   - `tissuumaps-<version>.zip`: the single-file application with its public files, which can be hosted on any web server.
+   - `tissuumaps-<version>-docs.zip`: its documentation, built for its deployed path and only used by the deployment.
+
+   The site is built from the repository at the application's release tag, without waiting for the packages to appear on npm. As long as every change to a package comes with a changeset for that package, the package sources at that tag are those of the published versions.
+
 4. The GitHub Pages site is re-assembled and deployed (see below).
 
-Publishing needs the `NPM_TOKEN` repository secret until the packages exist on npm and trusted publishing is configured for them. A manual run of the workflow (`workflow_dispatch`) rebuilds the site asset of the given release tag, or, with the tag left empty, just re-assembles and deploys the site. The "Version Packages" pull request is opened with the workflow's own token, which does not trigger the continuous integration checks; close and reopen it to run them before merging.
+Further details:
+
+- Packages are published through npm trusted publishing (OIDC), so no npm token is needed.
+- The release workflow only runs in the `TissUUmaps/TissUUmaps` repository, never in forks.
+- A manual run of the workflow (`workflow_dispatch`) rebuilds the site assets of the given release tag. With the tag left empty, it only re-assembles and deploys the site.
+- The "Version Packages" pull request is opened with the workflow's own token, which does not trigger the continuous integration checks. Close and reopen it to run them before merging.
 
 ## Continuous deployment
 
-The application and its documentation are deployed to GitHub Pages by version, assembled from the release assets (see [Release scripts](./code-architecture.md#release-scripts-scripts)):
+The application and its documentation are deployed to GitHub Pages, one MAJOR.MINOR line at a time, assembled from the release assets (the exact rules are described in [Release scripts](./code-architecture.md#release-scripts-scripts)):
 
-- https://tissuumaps.github.io/TissUUmaps/ redirects to the latest version, https://tissuumaps.github.io/TissUUmaps/docs/ to its documentation.
-- `https://tissuumaps.github.io/TissUUmaps/<version>/` is the application of a version, with its documentation under `docs/`.
-- Of every MAJOR.MINOR line only the newest version is kept (plus a prerelease above it, if any); every other version redirects to the version that replaces it, keeping the rest of the path (the exact rules are described in [Code architecture](./code-architecture.md#release-scripts-scripts)).
-- While no version can be deployed (none has been released, or no release has its assets yet), the current `main` is deployed instead: the application at the root and its documentation under `docs/`.
+- `https://tissuumaps.github.io/TissUUmaps/<MAJOR.MINOR>/` (e.g. `4.0/`) is the application of a line, with its documentation under `docs/`. It serves the line's latest stable version, or its latest prerelease while the line has no stable version.
+- https://tissuumaps.github.io/TissUUmaps/ redirects to the latest line, and https://tissuumaps.github.io/TissUUmaps/docs/ to its documentation.
+- Paths of lines that are not deployed (abandoned prerelease lines) redirect to the latest line.
+- While no version can be deployed (none has been released, or no release has its assets yet), the deployment fails and the deployed site is left as it is.
 
-The Matomo snippet in `.github/pages/custom.html` is inserted into the application page of every deployed version at deployment; the release assets stay free of it. The site also mirrors the plugin index of TissUUmaps 3 under `plugins/` from the repository named by the `V3_PLUGINS_REPO` repository variable, since TissUUmaps 3 loads its plugins from this location.
+Two things are added at deployment:
+
+- The Matomo snippet in `.github/pages/custom.html`, inserted into the application page of every deployed line. The release assets stay free of it.
+- A mirror of the TissUUmaps 3 plugin index under `plugins/`, copied from the repository named by the `V3_PLUGINS_REPO` repository variable, since TissUUmaps 3 loads its plugins from this location.

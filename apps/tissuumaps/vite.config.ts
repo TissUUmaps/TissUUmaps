@@ -59,10 +59,5 @@ export default defineConfig(({ mode }) => ({
     __APP_REPOSITORY_URL__: JSON.stringify(
       packageJson.repository.url.replace(/^git\+/, "").replace(/\.git$/, ""),
     ),
-    "import.meta.env.VITE_CUSTOM_HTML": JSON.stringify(
-      process.env.VITE_CUSTOM_HTML_FILE
-        ? readFileSync(process.env.VITE_CUSTOM_HTML_FILE, "utf8")
-        : "",
-    ),
   },
 }));
