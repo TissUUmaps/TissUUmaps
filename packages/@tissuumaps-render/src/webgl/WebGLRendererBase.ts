@@ -692,6 +692,33 @@ export abstract class WebGLRendererBase<
   }
 
   /**
+   * Finds the item that a pick ID offset refers to
+   *
+   * The pick IDs of a renderer number the items of its render passes (see
+   * {@link getRenderPasses}) consecutively, pass by pass, whether the pass is
+   * drawn or skipped, so that drawing and resolving cannot disagree. Both refer
+   * to what is drawn right now, so a pick has to be resolved before the model
+   * or the rendered objects change.
+   *
+   * @param pickIdOffset - The pick ID less the renderer's first pick ID
+   * @returns The object and the ID of the item, or `null` if the offset lies
+   * beyond the items of all passes
+   */
+  protected findPickedItem(
+    pickIdOffset: number,
+  ): { object: TObject; itemId: number | string } | null {
+    let offset = pickIdOffset;
+    for (const { object, renderedObject } of this.getRenderPasses()) {
+      const { itemIds } = renderedObject.ref;
+      if (offset < itemIds.length) {
+        return { object, itemId: itemIds[offset]! };
+      }
+      offset -= itemIds.length;
+    }
+    return null;
+  }
+
+  /**
    * Records the current model and render options as what the rendered objects
    * are being synchronized with
    *

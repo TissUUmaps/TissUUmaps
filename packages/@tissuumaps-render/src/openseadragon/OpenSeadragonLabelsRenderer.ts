@@ -1,6 +1,8 @@
 import { deepEqual } from "fast-equals";
+import OpenSeadragon from "openseadragon";
 
 import {
+  type AnnotatedItemRef,
   AsyncUtils,
   type Color,
   ColorUtils,
@@ -10,6 +12,7 @@ import {
   type LabelsData,
   type Table,
   type TableData,
+  type Vertex,
   defaultLabelColor,
   defaultLabelOpacity,
   defaultLabelVisibility,
@@ -159,6 +162,68 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
         );
       this._renderedLabels.set(labels.id, { data, state, dataTransfer });
     }
+  }
+
+  /**
+   * Finds the label that is visible at a world position
+   *
+   * Objects are tried from the top down, and the first label that is drawn at
+   * the position wins, i.e. the first whose color, as the object's data
+   * transfer resolves it, is not fully transparent (background always is).
+   * Label IDs are read from the full-resolution label image (see
+   * {@link LabelsData.loadLabelId}).
+   *
+   * @param worldPosition - The position to pick, in world coordinates
+   * @param options - Optional abort signal
+   * @returns The picked label, or `null` if no label is visible at the position
+   * @throws Error if a label ID cannot be read
+   */
+  async pickLabel(
+    worldPosition: Vertex,
+    options?: { signal?: AbortSignal },
+  ): Promise<AnnotatedItemRef | null> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    const renderedObjects = this.getRenderedObjects();
+    for (let i = renderedObjects.length - 1; i >= 0; i--) {
+      const { ref, tiledImages } = renderedObjects[i]!;
+      const tiledImage = tiledImages?.[0];
+      const dataTransfer = this._renderedLabels.get(
+        ref.object.id,
+      )?.dataTransfer;
+      if (
+        tiledImage === undefined ||
+        tiledImage.getOpacity() === 0 ||
+        dataTransfer === undefined
+      ) {
+        continue;
+      }
+      const imagePosition = tiledImage.viewportToImageCoordinates(
+        new OpenSeadragon.Point(worldPosition.x, worldPosition.y),
+        true,
+      );
+      // viewportToImageCoordinates() undoes the rotation, but not the flip
+      if (tiledImage.getFlip()) {
+        imagePosition.x = tiledImage.getContentSize().x - imagePosition.x;
+      }
+      const labelId = await ref.data.loadLabelId(
+        imagePosition.x,
+        imagePosition.y,
+        { signal },
+      );
+      if (labelId === undefined) {
+        continue;
+      }
+      const labelRgbas = new Uint32Array(1);
+      // signed label IDs (e.g. int32 masks) keep their sign
+      dataTransfer.transferValues(Float64Array.of(labelId), labelRgbas);
+      const labelAlpha = labelRgbas[0]! >>> 24; // 0xAABBGGRR
+      if (labelAlpha === 0) {
+        continue;
+      }
+      return { annotatedObject: { labelsId: ref.object.id }, itemId: labelId };
+    }
+    return null;
   }
 
   /**

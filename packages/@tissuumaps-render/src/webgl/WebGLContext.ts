@@ -421,6 +421,19 @@ export class WebGLContext {
   }
 
   /**
+   * Creates a new framebuffer
+   *
+   * @throws Error if framebuffer creation fails
+   */
+  createFramebuffer(): WebGLFramebuffer {
+    const framebuffer = this.gl.createFramebuffer();
+    if (framebuffer === null) {
+      throw new Error("Failed to create framebuffer.");
+    }
+    return framebuffer;
+  }
+
+  /**
    * Creates a new WebGL buffer
    *
    * @throws Error if buffer creation fails

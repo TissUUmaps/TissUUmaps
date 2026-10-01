@@ -216,6 +216,8 @@ export {
   type AppStoreActions,
   type AppStore,
   type AppStoreApi,
+  type AnnotatedObjectRef,
+  type AnnotatedItemRef,
   type HighlightedItemGroup,
 } from "./types/stores/app";
 export {

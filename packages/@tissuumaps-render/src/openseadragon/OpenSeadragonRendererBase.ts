@@ -286,6 +286,20 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
+   * Returns the rendered objects, in the order of the world
+   *
+   * Later objects are drawn over earlier ones.
+   *
+   * @returns The rendered objects
+   */
+  protected getRenderedObjects(): readonly RenderedObject<
+    TObject,
+    TObjectData
+  >[] {
+    return this._renderedObjects;
+  }
+
+  /**
    * Destroys the renderer by removing the anchor tiled image and all rendered objects from the OpenSeadragon viewer, and its bounds from the context
    *
    * Rendered objects whose tiled images have not been added to the world yet are

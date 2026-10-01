@@ -16,6 +16,10 @@ uniform float u_opacityFactor; // layer and object opacity, 0 if the layer or ob
 uniform float u_halfStrokeWidth; // in data dimensions
 uniform float u_devicePixelSize; // size of a device pixel, in data dimensions
 
+// Pick pass: every shape is drawn in the color of its pick ID, see WebGLPicker
+uniform bool u_pick;
+uniform uint u_pickIdBase; // pick ID of the first shape of this pass
+
 /*
  * Scanline data (RGBA32UI texture)
  *
@@ -115,6 +119,11 @@ vec4 unpackRgba(uint rgba) {
     return vec4(r, g, b, a);
 }
 
+// Packs a pick ID into the bytes of an RGBA8 target, 0xAABBGGRR (red in the lowest byte)
+vec4 packPickId(uint id) {
+    return vec4(float((id >> 0) & 0xFFu), float((id >> 8) & 0xFFu), float((id >> 16) & 0xFFu), float((id >> 24) & 0xFFu)) / 255.0;
+}
+
 void main() {
     // anti-aliasing: strokes are at least one pixel wide, thinner strokes fade by coverage instead
     float hsw = max(u_halfStrokeWidth, 0.5 * u_devicePixelSize);
@@ -137,6 +146,8 @@ void main() {
     // iterate over the bin's shapes
     fragRgba = vec4(0.0);
     uvec4 shapeRefs4;
+    bool picked = false;
+    uint pickedShapeIndex = 0u;
     for(uint i = 0u; i < numShapes; ++i) {
         uint shapeRefIndex = shapeRefOffset + i;
         if(i == 0u || (shapeRefIndex & 3u) == 0u) {
@@ -149,6 +160,16 @@ void main() {
         if(v_pos.x >= uintBitsToFloat(shapeInfo[2]) - margin && v_pos.x <= uintBitsToFloat(shapeInfo[3]) + margin) {
             float minDist;
             int wn = windingNumber(v_pos, u_scanlineData, SCANLINE_DATA_TEXTURE_WIDTH, shapeOffset + 1u, numEdges, minDist);
+            if(u_pick) {
+                // hit test at the fragment center, without anti-aliasing (later shapes are drawn over earlier ones)
+                bool strokeHit = minDist < u_halfStrokeWidth && unpackRgba(utexel(u_shapeStrokeRgbas, SHAPE_RGBAS_TEXTURE_WIDTH, shapeIndex)[0]).a > 0.0;
+                bool fillHit = (wn & 1) != 0 && unpackRgba(utexel(u_shapeFillRgbas, SHAPE_RGBAS_TEXTURE_WIDTH, shapeIndex)[0]).a > 0.0;
+                if(strokeHit || fillHit) {
+                    picked = true;
+                    pickedShapeIndex = shapeIndex;
+                }
+                continue;
+            }
             // pixel coverage of the stroke and fill areas, approximated from the distance to the closest edge
             // (even-odd rule: holes are cut out whatever the orientation of their rings)
             float signedDist = (wn & 1) != 0 ? minDist : -minDist; // positive inside the fill area
@@ -172,6 +193,13 @@ void main() {
             vec4 shapeRgba = strokeRgba + (1.0 - strokeRgba.a) * fillRgba;
             fragRgba = shapeRgba + (1.0 - shapeRgba.a) * fragRgba;
         }
+    }
+    if(u_pick) {
+        if(!picked) {
+            discard; // writing zero would erase the pick ID of whatever is below
+        }
+        fragRgba = packPickId(u_pickIdBase + pickedShapeIndex);
+        return;
     }
     // apply the layer and object opacity to the composited shapes (premultiplied)
     fragRgba *= u_opacityFactor;

@@ -2,6 +2,7 @@ import { deepEqual } from "fast-equals";
 import type { mat3 } from "gl-matrix";
 
 import {
+  type AnnotatedItemRef,
   AsyncUtils,
   type Color,
   ColorUtils,
@@ -88,6 +89,8 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     opacityFactor: WebGLUniformLocation;
     halfStrokeWidth: WebGLUniformLocation;
     devicePixelSize: WebGLUniformLocation;
+    pick: WebGLUniformLocation;
+    pickIdBase: WebGLUniformLocation;
   };
 
   /**
@@ -126,6 +129,8 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         this._program,
         "u_devicePixelSize",
       ),
+      pick: context.getUniformLocation(this._program, "u_pick"),
+      pickIdBase: context.getUniformLocation(this._program, "u_pickIdBase"),
     };
     // texture units never change, so the sampler uniforms are set only once
     context.gl.useProgram(this._program);
@@ -147,6 +152,47 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   /**
    * Issues the WebGL draw calls for all synchronized shapes
    *
+   * See {@link _draw}.
+   */
+  draw(): void {
+    this._draw(null);
+  }
+
+  /**
+   * Draws all synchronized shapes in the colors of their pick IDs, without
+   * blending, so that the shape on top of a pixel is the one whose ID remains
+   *
+   * The shapes are numbered consecutively, starting at `firstPickId`, in the
+   * order of {@link getRenderPasses} (see {@link getPickedItem}).
+   *
+   * @param firstPickId - The pick ID of the first shape
+   * @returns The pick ID following the last shape's
+   */
+  drawPickIds(firstPickId: number): number {
+    return this._draw(firstPickId);
+  }
+
+  /**
+   * Returns the shape that a pick ID drawn by {@link drawPickIds} refers to
+   *
+   * @param pickIdOffset - The pick ID less the first pick ID it was drawn with
+   * @returns The picked shape, or `null` if the offset refers to none
+   */
+  getPickedItem(pickIdOffset: number): AnnotatedItemRef | null {
+    const pickedItem = this.findPickedItem(pickIdOffset);
+    if (pickedItem === null) {
+      return null;
+    }
+    return {
+      annotatedObject: { shapesId: pickedItem.object.id },
+      itemId: pickedItem.itemId,
+    };
+  }
+
+  /**
+   * Issues the WebGL draw calls for all synchronized shapes, in their own
+   * colors or in the colors of their pick IDs
+   *
    * Renders each shapes object as a quad whose fragment shader performs
    * scanline-based polygon rasterization using the per-object scanline data
    * texture, with the viewport → world matrix as a global uniform and its
@@ -157,14 +203,24 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * how far the anti-aliased strokes reach beyond them, within the viewport, so
    * that fragments are only shaded where the object can be; objects outside the
    * viewport, objects whose layer or object is invisible, and objects without
-   * scanlines or bins are skipped.
+   * scanlines or bins are skipped. Shapes are blended over what is drawn
+   * already, unless pick IDs are drawn.
+   *
+   * @param firstPickId - The pick ID of the first shape, or `null` to draw the
+   * shapes in their own colors
+   * @returns The pick ID following the last shape's
    */
-  draw(): void {
+  private _draw(firstPickId: number | null): number {
+    let nextPickId = firstPickId ?? 0;
     const renderPasses = this.getRenderPasses();
     if (renderPasses.length === 0) {
-      return;
+      return nextPickId;
     }
     this.context.gl.useProgram(this._program);
+    this.context.gl.uniform1i(
+      this._uniformLocations.pick,
+      firstPickId !== null ? 1 : 0,
+    );
     this.context.gl.uniformMatrix3x2fv(
       this._uniformLocations.viewportToWorldMatrix,
       false,
@@ -176,12 +232,16 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       0.5 *
       (this.viewport.width / this.context.gl.canvas.width +
         this.viewport.height / this.context.gl.canvas.height);
-    this.context.enableAlphaBlending();
+    if (firstPickId === null) {
+      this.context.enableAlphaBlending();
+    }
     for (const {
       layer,
       object: shapes,
       renderedObject: renderedShapes,
     } of renderPasses) {
+      const pickIdBase = nextPickId;
+      nextPickId += renderedShapes.ref.itemIds.length;
       if (renderedShapes.numScanlines < 1 || renderedShapes.numBins < 1) {
         continue;
       }
@@ -242,6 +302,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         this._uniformLocations.devicePixelSize,
         worldDevicePixelSize / (shapes.transform.scale * layer.transform.scale),
       );
+      this.context.gl.uniform1ui(this._uniformLocations.pickIdBase, pickIdBase);
       this.context.gl.activeTexture(
         WebGL2RenderingContext.TEXTURE0 +
           WebGLShapesRenderer._textureUnits.SCANLINE_DATA,
@@ -270,6 +331,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     }
     this.context.disableAlphaBlending();
     this.context.gl.useProgram(null);
+    return nextPickId;
   }
 
   /**

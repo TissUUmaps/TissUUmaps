@@ -1,6 +1,7 @@
 import { deepEqual } from "fast-equals";
 
 import {
+  type AnnotatedItemRef,
   AsyncUtils,
   type Color,
   type ColorConfig,
@@ -97,6 +98,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     dataToWorldMatrix: WebGLUniformLocation;
     pointSizeFactor: WebGLUniformLocation;
     opacityFactor: WebGLUniformLocation;
+    pick: WebGLUniformLocation;
+    pickIdBase: WebGLUniformLocation;
   };
   private _markerAtlasTexture: WebGLTexture | undefined;
   private _destroyed: boolean = false;
@@ -149,6 +152,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         this._program,
         "u_opacityFactor",
       ),
+      pick: context.getUniformLocation(this._program, "u_pick"),
+      pickIdBase: context.getUniformLocation(this._program, "u_pickIdBase"),
     };
     // texture units never change, so the sampler uniforms are set only once
     context.gl.useProgram(this._program);
@@ -175,26 +180,79 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   /**
    * Issues the WebGL draw calls for all synchronized points
    *
-   * Binds the shader program, configures the global uniforms (transform,
-   * viewport, canvas size in device pixels), binds the marker atlas texture,
-   * and then draws every object in its own `gl.POINTS` call with alpha
-   * blending, with its data → world matrix, point size factor and opacity
-   * factor as uniforms, computed from the current model (see
-   * {@link getRenderPasses}), and with the constants of its per-point
-   * attributes as generic vertex attributes (see {@link _backAttribute}).
-   * Objects whose layer or object is invisible are skipped.
+   * See {@link _draw}.
    *
    * @throws Error if the renderer has not been initialized
    */
   draw(): void {
+    this._draw(null);
+  }
+
+  /**
+   * Draws all synchronized points in the colors of their pick IDs, without
+   * blending, so that the point on top of a pixel is the one whose ID remains
+   *
+   * The points are numbered consecutively, starting at `firstPickId`, in the
+   * order of {@link getRenderPasses} (see {@link getPickedItem}).
+   *
+   * @param firstPickId - The pick ID of the first point
+   * @returns The pick ID following the last point's
+   * @throws Error if the renderer has not been initialized
+   */
+  drawPickIds(firstPickId: number): number {
+    return this._draw(firstPickId);
+  }
+
+  /**
+   * Returns the point that a pick ID drawn by {@link drawPickIds} refers to
+   *
+   * @param pickIdOffset - The pick ID less the first pick ID it was drawn with
+   * @returns The picked point, or `null` if the offset refers to none
+   */
+  getPickedItem(pickIdOffset: number): AnnotatedItemRef | null {
+    const pickedItem = this.findPickedItem(pickIdOffset);
+    if (pickedItem === null) {
+      return null;
+    }
+    return {
+      annotatedObject: { pointsId: pickedItem.object.id },
+      itemId: pickedItem.itemId,
+    };
+  }
+
+  /**
+   * Issues the WebGL draw calls for all synchronized points, in their own
+   * colors or in the colors of their pick IDs
+   *
+   * Binds the shader program, configures the global uniforms (transform,
+   * viewport, canvas size in device pixels), binds the marker atlas texture,
+   * and then draws every object in its own `gl.POINTS` call, with its data →
+   * world matrix, point size factor and opacity factor as uniforms, computed
+   * from the current model (see {@link getRenderPasses}), and with the
+   * constants of its per-point attributes as generic vertex attributes (see
+   * {@link _backAttribute}). Objects whose layer or object is invisible are
+   * skipped. Points are blended over what is drawn already, unless pick IDs
+   * are drawn.
+   *
+   * @param firstPickId - The pick ID of the first point, or `null` to draw the
+   * points in their own colors
+   * @returns The pick ID following the last point's
+   * @throws Error if the renderer has not been initialized
+   */
+  private _draw(firstPickId: number | null): number {
     if (this._markerAtlasTexture === undefined) {
       throw new Error("Not initialized");
     }
+    let nextPickId = firstPickId ?? 0;
     const renderPasses = this.getRenderPasses();
     if (renderPasses.length === 0) {
-      return;
+      return nextPickId;
     }
     this.context.gl.useProgram(this._program);
+    this.context.gl.uniform1i(
+      this._uniformLocations.pick,
+      firstPickId !== null ? 1 : 0,
+    );
     this.context.gl.uniform1f(
       this._uniformLocations.globalPointSizeFactor,
       this.renderOptions.globalPointSizeFactor,
@@ -224,12 +282,16 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       WebGL2RenderingContext.TEXTURE_2D,
       this._markerAtlasTexture,
     );
-    this.context.enableAlphaBlending();
+    if (firstPickId === null) {
+      this.context.enableAlphaBlending();
+    }
     for (const {
       layer,
       object: points,
       renderedObject: renderedPoints,
     } of renderPasses) {
+      const pickIdBase = nextPickId;
+      nextPickId += renderedPoints.ref.itemIds.length;
       const opacityFactor = WebGLPointsRenderer.computeOpacityFactor(
         layer,
         points,
@@ -252,6 +314,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         this._uniformLocations.opacityFactor,
         opacityFactor,
       );
+      this.context.gl.uniform1ui(this._uniformLocations.pickIdBase, pickIdBase);
       this.context.gl.bindVertexArray(renderedPoints.vao);
       const { marker, size, rgba } = renderedPoints.attributes;
       if (typeof marker === "number") {
@@ -287,6 +350,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     this.context.gl.bindVertexArray(null);
     this.context.disableAlphaBlending();
     this.context.gl.useProgram(null);
+    return nextPickId;
   }
 
   /**

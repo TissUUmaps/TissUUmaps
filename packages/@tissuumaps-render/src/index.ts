@@ -4,5 +4,6 @@ export { OpenSeadragonImageRenderer } from "./openseadragon/OpenSeadragonImageRe
 export { OpenSeadragonLabelsRenderer } from "./openseadragon/OpenSeadragonLabelsRenderer";
 
 export { WebGLContext } from "./webgl/WebGLContext";
+export { WebGLPicker } from "./webgl/WebGLPicker";
 export { WebGLPointsRenderer } from "./webgl/WebGLPointsRenderer";
 export { WebGLShapesRenderer } from "./webgl/WebGLShapesRenderer";

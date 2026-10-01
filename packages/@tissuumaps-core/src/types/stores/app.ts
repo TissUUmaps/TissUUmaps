@@ -23,14 +23,28 @@ export type ImageChannelPreview = {
   channelIndex: number;
 };
 
+/**
+ * A labels, points or shapes object, by its ID within its collection
+ *
+ * IDs are only unique within each collection, which is why the collection is
+ * part of the reference.
+ */
+export type AnnotatedObjectRef =
+  { labelsId: string } | { pointsId: string } | { shapesId: string };
+
+/** An item of a labels, points or shapes object, by its ID within the object */
+export type AnnotatedItemRef = {
+  /** The object the item belongs to */
+  annotatedObject: AnnotatedObjectRef;
+
+  /** The ID of the item; for labels, the label ID */
+  itemId: number | string;
+};
+
 /** The items of one group of a labels, points or shapes object, highlighted in the viewer */
 export type HighlightedItemGroup = {
-  /**
-   * The object whose items are grouped, by the ID of its labels, points or
-   * shapes; IDs are only unique within each of these lists
-   */
-  annotatedObject:
-    { labelsId: string } | { pointsId: string } | { shapesId: string };
+  /** The object whose items are grouped */
+  annotatedObject: AnnotatedObjectRef;
 
   /** The categorical table column */
   groupBy: TableColumnRef;

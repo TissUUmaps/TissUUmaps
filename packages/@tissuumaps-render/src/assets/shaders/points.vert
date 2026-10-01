@@ -29,6 +29,7 @@ layout(location = 4) in uint a_marker; // marker index
 // Outputs to fragment shader
 flat out vec4 v_rgba; // with the opacity factor and coverage applied to alpha
 flat out uvec3 v_marker; // (col, row, channel)
+flat out uint v_index; // index of the point within its object
 
 // Unpacks a uint-packed 8-bit RGBA color, 0xAABBGGRR (red in the lowest byte)
 vec4 unpackRgba(uint rgba) {
@@ -49,6 +50,8 @@ uvec3 markerAtlasCoords(uint marker) {
 
 // Main vertex shader function
 void main() {
+    v_index = uint(gl_VertexID);
+
     // Compute point size in device pixels and discard points with non-positive size
     // The canvas is sized in device pixels already, so no device pixel ratio applies here.
     float canvasPixelRatio = dot(u_canvasSize / u_viewportSize, vec2(0.5)); // device pixels per world unit
