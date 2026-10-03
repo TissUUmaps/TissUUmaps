@@ -21,6 +21,7 @@ import { useProjectStore } from "@/stores/project";
 
 // TODO: restore once shape drawing is linked with actions
 // import { InteractionModeViewerControls } from "./InteractionModeViewerControls";
+import { HomeViewerControl } from "./HomeViewerControl";
 import { PointSizeViewerControl } from "./PointSizeViewerControl";
 import { highlightItemGroup } from "./highlightItemGroup";
 
@@ -129,6 +130,11 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
         <InteractionModeViewerControls />
       </ViewerControl>
       */}
+      {/* mounted first, so it keeps the corner: OpenSeadragon places each
+          later right-anchored control to the left of the existing ones */}
+      <ViewerControl anchor={ViewerControlAnchor.TOP_RIGHT}>
+        <HomeViewerControl />
+      </ViewerControl>
       {projectState.points.length > 0 && (
         <ViewerControl anchor={ViewerControlAnchor.TOP_RIGHT}>
           <PointSizeViewerControl />
