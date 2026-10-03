@@ -17,6 +17,7 @@ import {
 import { SimpleColorPicker } from "@/components/common/simple-color-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
@@ -33,9 +34,12 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
   const setViewerBackgroundColor = useProjectStore(
     (state) => state.setViewerBackgroundColor,
   );
+  const osOptions = useProjectStore((state) => state.osOptions);
+  const setOSOptions = useProjectStore((state) => state.setOSOptions);
 
   const { globalPointSizeFactor } = glOptions.pointsRenderOptions;
   const viewerBackgroundColorHex = ColorUtils.toHex(viewerBackgroundColor);
+  const showNavigator = osOptions.viewerOptions.showNavigator !== false;
 
   return (
     <div className={cn("flex flex-col gap-2 pl-6", className)}>
@@ -49,6 +53,24 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
           <SquareIcon fill={viewerBackgroundColorHex} />
           {viewerBackgroundColorHex}
         </SimpleColorPicker>
+      </Field>
+      <Field>
+        <FieldLabel>Navigator</FieldLabel>
+        <div className="flex flex-row items-center gap-x-2">
+          <Switch
+            checked={showNavigator}
+            onCheckedChange={(checked) =>
+              setOSOptions({
+                ...osOptions,
+                viewerOptions: {
+                  ...osOptions.viewerOptions,
+                  showNavigator: checked,
+                },
+              })
+            }
+          />
+          {showNavigator ? "Shown" : "Hidden"}
+        </div>
       </Field>
       <Field>
         <FieldLabel>Point size factor</FieldLabel>
