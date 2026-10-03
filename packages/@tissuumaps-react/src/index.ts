@@ -5,3 +5,4 @@ export {
   ViewerControlAnchor,
   type ViewerControlProps,
 } from "./components/ViewerControl";
+export { useResetViewport } from "./hooks/useResetViewport";
