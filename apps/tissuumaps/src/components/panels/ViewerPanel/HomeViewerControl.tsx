@@ -14,8 +14,10 @@ export function HomeViewerControl({ className }: HomeViewerControlProps) {
     <IconButton
       label="Reset view"
       size="icon"
+      // bg-clip-border: the button's default bg-clip-padding leaves a gray
+      // seam between the border and the background along the rounded corners
       className={cn(
-        "m-2 rounded-xl border-border bg-background shadow-lg",
+        "m-2 rounded-xl border-border bg-background bg-clip-border shadow-lg",
         className,
       )}
       onClick={resetViewport}
