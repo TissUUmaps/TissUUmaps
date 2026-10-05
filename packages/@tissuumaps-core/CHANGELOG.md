@@ -1,5 +1,11 @@
 # @tissuumaps/core
 
+## 0.1.0-beta.2
+
+### Minor Changes
+
+- [#296](https://github.com/TissUUmaps/TissUUmaps/pull/296) [`15a214a`](https://github.com/TissUUmaps/TissUUmaps/commit/15a214a7950a1e9aa605ca5445cc4273b826ca2d) Thanks [@jwindhager](https://github.com/jwindhager)! - `immer` is declared as an optional peer dependency ([#277](https://github.com/TissUUmaps/TissUUmaps/issues/277)), since the store types depend on it through `zustand/immer`.
+
 ## 0.1.0-beta.1
 
 ### Minor Changes
