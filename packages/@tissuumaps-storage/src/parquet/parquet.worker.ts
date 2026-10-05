@@ -12,6 +12,7 @@ import {
   type IDArray,
   NumberUtils,
   type ShapesGeometry,
+  TableUtils,
   type TypedArray,
   type TypedArrayOrArray,
 } from "@tissuumaps/core";
@@ -524,10 +525,14 @@ function parseStatistic(value: unknown): number | undefined {
   return NumberUtils.tryParseFinite(value, { requireSafeBigInt: true });
 }
 
+/**
+ * Reads the value range of a column, or of one axis of a point geometry
+ * column, from the file metadata where possible, and otherwise computes it
+ * from the column values
+ */
 async function handleRangeRequest(
   request: ParquetRangeRequest,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _onProgress: (progress: number, total: number) => void,
+  onProgress: (progress: number, total: number) => void,
 ): Promise<{
   response: ParquetRangeResponse;
   transfer?: Transferable[];
@@ -535,19 +540,30 @@ async function handleRangeRequest(
   const buffer = await openParquet(request.source);
   const metadata = await parquetMetadataAsync(buffer);
   if (request.axis !== undefined) {
+    const axisRange = GeoParquetUtils.getAxisRange(
+      metadata,
+      request.column,
+      request.axis,
+    );
+    if (axisRange !== undefined) {
+      return { response: { op: "range", range: axisRange } };
+    }
+    const coordinates = await GeoParquetUtils.readCoordinateColumns(
+      buffer,
+      metadata,
+      request.column,
+      onProgress,
+    );
     return {
       response: {
         op: "range",
-        range: GeoParquetUtils.getAxisRange(
-          metadata,
-          request.column,
-          request.axis,
-        ),
+        range: await TableUtils.computeValueRange(coordinates[request.axis]),
       },
     };
   }
   let vmin = Infinity;
   let vmax = -Infinity;
+  let hasStatistics = true;
   for (const rowGroup of metadata.row_groups) {
     const columnChunk = rowGroup.columns.find(
       (column) => column.meta_data?.path_in_schema.join(".") === request.column,
@@ -555,14 +571,15 @@ async function handleRangeRequest(
     if (columnChunk === undefined) {
       throw new Error(`Column "${request.column}" not found in Parquet file`);
     }
-    if (columnChunk.meta_data?.statistics === undefined) {
-      return { response: { op: "range", range: undefined } };
+    const statistics = columnChunk.meta_data?.statistics;
+    if (statistics?.null_count === rowGroup.num_rows) {
+      continue;
     }
-    const { min_value, max_value } = columnChunk.meta_data.statistics;
-    const min = parseStatistic(min_value);
-    const max = parseStatistic(max_value);
+    const min = parseStatistic(statistics?.min_value);
+    const max = parseStatistic(statistics?.max_value);
     if (min === undefined || max === undefined) {
-      return { response: { op: "range", range: undefined } };
+      hasStatistics = false;
+      break;
     }
     if (min < vmin) {
       vmin = min;
@@ -571,13 +588,28 @@ async function handleRangeRequest(
       vmax = max;
     }
   }
+  if (hasStatistics) {
+    return {
+      response: { op: "range", range: vmin < vmax ? [vmin, vmax] : undefined },
+    };
+  }
+  const element = parquetSchema(metadata).children.find(
+    (columnMetadata) => columnMetadata.element.name === request.column,
+  )?.element;
+  // a column read as a plain array has no numeric range
+  if (element === undefined || getColumnArrayType(element) === undefined) {
+    return { response: { op: "range", range: undefined } };
+  }
+  const values = await readParquetColumn(
+    buffer,
+    metadata,
+    request.column,
+    onProgress,
+  );
   return {
     response: {
       op: "range",
-      range:
-        Number.isFinite(vmin) && Number.isFinite(vmax)
-          ? [vmin, vmax]
-          : undefined,
+      range: await TableUtils.computeValueRange(values),
     },
   };
 }
