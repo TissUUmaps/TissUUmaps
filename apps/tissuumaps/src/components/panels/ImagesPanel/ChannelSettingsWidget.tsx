@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import {
+  type Color,
   ColorUtils,
   type Image,
   type ImageChannel,
@@ -17,7 +18,6 @@ import {
 } from "@/components/common/collapsible";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { OpacityControl } from "@/components/common/opacity-control";
-import { SimpleColorPicker } from "@/components/common/simple-color-picker";
 import { VisibilityButton } from "@/components/common/visibility-button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
+import ColorPicker from "../../common/color-picker";
 import { ContrastRangeWidget } from "./ContrastRangeWidget";
 import { channelViewModeLabels } from "./channelViewMode";
 
@@ -195,9 +196,11 @@ function ChannelSettingsRow({
           />
         )}
         {image.channelViewMode !== ImageChannelViewMode.grayscale ? (
-          <SimpleColorPicker
+          <ColorPicker
             color={color}
-            onColorChange={(newColor) => updateChannel({ color: newColor })}
+            onColorChange={(newColor: Color) =>
+              updateChannel({ color: newColor })
+            }
             label="Channel color"
             className="size-4 p-0 border-input shadow-xs"
           >
@@ -205,7 +208,7 @@ function ChannelSettingsRow({
               className="block size-full rounded-sm"
               style={{ backgroundColor: ColorUtils.toHex(color) }}
             />
-          </SimpleColorPicker>
+          </ColorPicker>
         ) : null}
         <CollapsibleTrigger className="flex-1 min-w-0">
           <span className="truncate" title={name}>

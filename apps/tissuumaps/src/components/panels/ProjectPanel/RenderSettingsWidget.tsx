@@ -1,3 +1,4 @@
+import { GithubPlacement } from "@uiw/react-color-github";
 import { RotateCcwIcon, SquareIcon } from "lucide-react";
 
 import { ColorUtils, projectDefaults } from "@tissuumaps/core";
@@ -14,11 +15,12 @@ import {
   FieldDescription,
   FieldLabel,
 } from "@/components/common/field";
-import { SimpleColorPicker } from "@/components/common/simple-color-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
+
+import ColorPicker from "../../common/color-picker";
 
 export type RenderSettingsWidgetProps = {
   className?: string;
@@ -41,14 +43,15 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
     <div className={cn("flex flex-col gap-2 pl-6", className)}>
       <Field className="flex flex-col items-start">
         <FieldLabel>Viewer background color</FieldLabel>
-        <SimpleColorPicker
+        <ColorPicker
           color={viewerBackgroundColor}
           onColorChange={setViewerBackgroundColor}
+          placement={GithubPlacement.Top}
         >
           <span className="sr-only">Viewer background color</span>
           <SquareIcon fill={viewerBackgroundColorHex} />
           {viewerBackgroundColorHex}
-        </SimpleColorPicker>
+        </ColorPicker>
       </Field>
       <Field>
         <FieldLabel>Point size factor</FieldLabel>

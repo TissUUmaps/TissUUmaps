@@ -1,4 +1,7 @@
-import { HexColorPicker } from "react-colorful";
+import { hexToHsva, hsvaToHex } from "@uiw/color-convert";
+import Chrome from "@uiw/react-color-chrome";
+import { GithubPlacement } from "@uiw/react-color-github";
+import React from "react";
 
 import { type Color, ColorUtils } from "@tissuumaps/core";
 
@@ -10,21 +13,24 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-export type SimpleColorPickerProps = {
+export type ColorPickerProps = {
   color: Color;
   onColorChange: (color: Color) => void;
   label?: string;
   children?: React.ReactNode;
   className?: string;
+  placement?: GithubPlacement;
 };
 
-export function SimpleColorPicker({
+export function ColorPicker({
   color,
   onColorChange,
   label,
   children,
   className,
-}: SimpleColorPickerProps) {
+  placement,
+}: ColorPickerProps) {
+  const hsva = hexToHsva(ColorUtils.toHex(color));
   return (
     <Popover>
       <PopoverTrigger
@@ -34,11 +40,18 @@ export function SimpleColorPicker({
         {children}
       </PopoverTrigger>
       <PopoverContent>
-        <HexColorPicker
-          color={ColorUtils.toHex(color)}
-          onChange={(hex) => onColorChange(ColorUtils.fromHex(hex))}
+        <Chrome
+          color={hsva}
+          placement={placement ? placement : GithubPlacement.BottomRight}
+          showAlpha={false}
+          onChange={(newColor) => {
+            const hex = hsvaToHex(newColor.hsva);
+            onColorChange(ColorUtils.fromHex(hex));
+          }}
         />
       </PopoverContent>
     </Popover>
   );
 }
+
+export default ColorPicker;
