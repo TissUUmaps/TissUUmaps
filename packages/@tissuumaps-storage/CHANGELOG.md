@@ -1,5 +1,19 @@
 # @tissuumaps/storage
 
+## 0.1.0-beta.3
+
+### Minor Changes
+
+- [#297](https://github.com/TissUUmaps/TissUUmaps/pull/297) [`5adda33`](https://github.com/TissUUmaps/TissUUmaps/commit/5adda33862da2f14d6d1be8eb26231f10c7d6f52) Thanks [@jwindhager](https://github.com/jwindhager)! - HDF5 and Zarr table data no longer implement `loadValueRange`, which decoded the whole column in the worker and so was no cheaper than loading it; their value ranges are now computed from the loaded column values (e.g. by `TableUtils.loadValueRange`), so continuous colors no longer read a column twice. Code calling `loadValueRange` directly on `HDF5TableData` or `ZarrTableData` has to use `TableUtils.loadValueRange` instead. Parquet columns without row group statistics, and point geometry columns without a GeoParquet bounding box, now get a value range computed from their values instead of none.
+
+- [#295](https://github.com/TissUUmaps/TissUUmaps/pull/295) [`67b9236`](https://github.com/TissUUmaps/TissUUmaps/commit/67b92362506385171c41b0b9356a23c463303d29) Thanks [@jwindhager](https://github.com/jwindhager)! - Plain images can be opened from a URL or path ([#274](https://github.com/TissUUmaps/TissUUmaps/issues/274)): an image data source's `source` with a PNG, JPEG or WebP file extension, or a `data:image/` URL, is opened as a plain image, also from the workspace; any other `source` is handed to OpenSeadragon as a tile source descriptor, which cannot be opened from the workspace. The data source `type` becomes `image` (was `openseadragon`) and its `tileSourceConfig` field becomes `tileSource`, which takes the URL of a descriptor or an inline tile source configuration and takes precedence over `source`. Inline tile source configurations taken from a project no longer fail to open because OpenSeadragon writes into them. Projects using `openseadragon` data sources have to be updated.
+
+### Patch Changes
+
+- [#268](https://github.com/TissUUmaps/TissUUmaps/pull/268) [`4888805`](https://github.com/TissUUmaps/TissUUmaps/commit/4888805fd81a2af44297432a8decc3cfaec7093e) Thanks [@cavenel](https://github.com/cavenel)! - CSV tables load again in production builds: papaparse 5.7.0, whose minified build crashes in its parser worker (mholt/PapaParse#1122), is excluded from the supported papaparse versions.
+- Updated dependencies [[`15a214a`](https://github.com/TissUUmaps/TissUUmaps/commit/15a214a7950a1e9aa605ca5445cc4273b826ca2d)]:
+  - @tissuumaps/core@0.1.0-beta.2
+
 ## 0.1.0-beta.2
 
 ### Minor Changes
