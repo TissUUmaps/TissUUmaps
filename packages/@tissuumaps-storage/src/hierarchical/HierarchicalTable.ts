@@ -43,19 +43,6 @@ export interface HierarchicalTable {
     options?: { numRows?: number; signal?: AbortSignal },
   ): Promise<TypedArrayOrArray<unknown>>;
 
-  /**
-   * Reads the minimum and maximum value of a numeric column
-   *
-   * @param query - The column query (see {@link ColumnQueryUtils})
-   * @param options - See {@link HierarchicalTable.readColumn}
-   * @returns The [min, max] range, or `undefined` if the column is not numeric
-   * or holds no two distinct finite values
-   */
-  readRange(
-    query: string,
-    options?: { numRows?: number; signal?: AbortSignal },
-  ): Promise<[number, number] | undefined>;
-
   /** Closes the table and releases its store */
   close(): void;
 }

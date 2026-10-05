@@ -28,30 +28,13 @@ export type HierarchicalTableColumnResponse = {
   data: TypedArrayOrArray<unknown>;
 };
 
-/** Reads the value range of a column, see {@link HierarchicalTable.readRange} */
-export type HierarchicalTableRangeRequest = {
-  op: "range";
-  column: string;
-  numRows?: number;
-};
-
-/** The value range of a column */
-export type HierarchicalTableRangeResponse = {
-  op: "range";
-  range: [number, number] | undefined;
-};
-
 /** A request to the worker */
 export type HierarchicalTableWorkerRequest =
-  | HierarchicalTableOpenRequest
-  | HierarchicalTableColumnRequest
-  | HierarchicalTableRangeRequest;
+  HierarchicalTableOpenRequest | HierarchicalTableColumnRequest;
 
 /** A successful response of the worker */
 export type HierarchicalTableWorkerResponse =
-  | HierarchicalTableOpenResponse
-  | HierarchicalTableColumnResponse
-  | HierarchicalTableRangeResponse;
+  HierarchicalTableOpenResponse | HierarchicalTableColumnResponse;
 
 /** The response to a request, by the operation the request names */
 export type HierarchicalTableWorkerResponseFor<
