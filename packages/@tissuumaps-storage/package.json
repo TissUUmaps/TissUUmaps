@@ -79,7 +79,7 @@
     "@types/papaparse": "^5.5.2",
     "geotiff": "3.0.5",
     "omezarr-tilesource": "^0.8.1",
-    "papaparse": "5.6.0"
+    "papaparse": "^5.6.1 <5.7.0 || ^5.7.1"
   },
   "devDependencies": {
     "@tissuumaps/core": "workspace:^",
