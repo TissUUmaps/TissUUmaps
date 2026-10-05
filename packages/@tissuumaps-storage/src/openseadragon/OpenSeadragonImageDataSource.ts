@@ -1,13 +1,13 @@
 import type { ImageDataSource, TileSourceConfig } from "@tissuumaps/core";
 
-export const openSeadragonImageDataSourceType = "openseadragon";
+export const openSeadragonImageDataSourceType = "image";
 
 export const openSeadragonImageDataSourceDefaults = {};
 
 export interface OpenSeadragonImageDataSource extends ImageDataSource<
   typeof openSeadragonImageDataSourceType
 > {
-  tileSourceConfig?: TileSourceConfig;
+  tileSource?: string | TileSourceConfig;
 }
 
 export type NormalizedOpenSeadragonImageDataSource = Required<
@@ -19,4 +19,5 @@ export type NormalizedOpenSeadragonImageDataSource = Required<
   Omit<
     OpenSeadragonImageDataSource,
     keyof typeof openSeadragonImageDataSourceDefaults
-  >;
+  > &
+  Required<Pick<OpenSeadragonImageDataSource, "tileSource">>;

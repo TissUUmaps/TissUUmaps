@@ -637,8 +637,17 @@ export class OpenSeadragonContext {
     const { signal } = options ?? {};
     // OpenSeadragon types tile sources as `string | object`, which also covers
     // promises of an already opened tile source; anything else is passed through
-    const tileSource = await Promise.resolve(tiledImageOptions.tileSource);
+    let tileSource = await Promise.resolve(tiledImageOptions.tileSource);
     signal?.throwIfAborted();
+    // OpenSeadragon writes defaults into plain configuration objects, which may
+    // be frozen (e.g. when taken from the project); class instances such as
+    // opened tile sources are passed as is, as a copy would lose their prototype
+    if (typeof tileSource === "object" && tileSource !== null) {
+      const prototype: unknown = Object.getPrototypeOf(tileSource);
+      if (prototype === Object.prototype || prototype === null) {
+        tileSource = { ...tileSource };
+      }
+    }
     try {
       const { source: openedTileSource } =
         (await this.viewer.instantiateTileSourceClass(

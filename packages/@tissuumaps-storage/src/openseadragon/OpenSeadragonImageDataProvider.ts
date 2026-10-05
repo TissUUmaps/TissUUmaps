@@ -16,17 +16,23 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
   OpenSeadragonImageData,
   NormalizedOpenSeadragonImageDataSource
 > {
-  readonly name = "OpenSeadragon";
+  private static readonly _imageFileExtensions = new Set([
+    ".jpeg",
+    ".jpg",
+    ".png",
+    ".webp",
+  ]);
+  private static readonly _imageDataUrlPrefix = "data:image/";
+
+  readonly name = "Image (e.g. PNG, JPEG, DZI, IIIF)";
 
   readonly schema = {
     type: "object",
     properties: {
-      source: {
-        type: "string",
-      },
-      // TODO tileSourceConfig
+      source: { type: "string" },
+      tileSource: { type: ["string", "object"] },
     },
-    required: ["source"], // TODO ... or tileSourceConfig
+    anyOf: [{ required: ["source"] }, { required: ["tileSource"] }],
   };
 
   readonly uischema = {
@@ -37,7 +43,7 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
         scope: "#/properties/source",
         label: "Source",
       },
-      // TODO tileSourceConfig
+      // tileSource is not available through the UI for now
     ],
   };
 
@@ -46,14 +52,42 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
     workspace: FileSystemDirectoryHandle | null,
     projectSource: string | null,
   ): NormalizedOpenSeadragonImageDataSource {
-    let { source } = dataSource;
-    if (source !== undefined) {
+    let { source, tileSource } = dataSource;
+    if (typeof tileSource === "string") {
+      tileSource = SourceUtils.normalizeSource(
+        tileSource,
+        workspace,
+        projectSource,
+      );
+      source = tileSource;
+    } else if (tileSource !== undefined) {
+      source = undefined;
+    } else if (source !== undefined) {
       source = SourceUtils.normalizeSource(source, workspace, projectSource);
+      tileSource = OpenSeadragonImageDataProvider._isImageSource(source)
+        ? {
+            type: "image",
+            url: source,
+            crossOriginPolicy: "Anonymous",
+            ajaxWithCredentials: false,
+          }
+        : source;
+    } else {
+      throw new Error("Either source or tileSource must be specified.");
+    }
+    if (
+      typeof tileSource === "string" &&
+      SourceUtils.isWorkspacePath(tileSource)
+    ) {
+      throw new Error(
+        `Tile sources cannot be opened from the workspace: ${tileSource}`,
+      );
     }
     return {
       ...openSeadragonImageDataSourceDefaults,
       ...dataSource,
       source,
+      tileSource,
     };
   }
 
@@ -63,29 +97,39 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
   ): Promise<OpenSeadragonImageData> {
     const { signal, workspace = null } = options ?? {};
     signal?.throwIfAborted();
-
-    if (normalizedDataSource.tileSourceConfig !== undefined) {
-      if (normalizedDataSource.source !== undefined) {
-        throw new Error(
-          "Specify either a tile source configuration or a source, not both.",
-        );
-      }
-      return new OpenSeadragonImageData(normalizedDataSource.tileSourceConfig);
+    const { source, tileSource } = normalizedDataSource;
+    if (source === undefined || typeof tileSource === "string") {
+      return new OpenSeadragonImageData(tileSource);
     }
-    if (normalizedDataSource.source === undefined) {
-      throw new Error(
-        "A tile source configuration or a source is required to load data.",
+    const { url, file } = await SourceUtils.openSourceFile(source, workspace, {
+      signal,
+    });
+    if (url !== undefined) {
+      return new OpenSeadragonImageData({ ...tileSource, url });
+    }
+    const objectUrl = URL.createObjectURL(file);
+    return new OpenSeadragonImageData(
+      { ...tileSource, url: objectUrl },
+      objectUrl,
+    );
+  }
+
+  private static _isImageSource(normalizedSource: string): boolean {
+    if (normalizedSource.startsWith("data:")) {
+      return normalizedSource.startsWith(
+        OpenSeadragonImageDataProvider._imageDataUrlPrefix,
       );
     }
-    const source = await SourceUtils.openSourceFile(
-      normalizedDataSource.source,
-      workspace,
-      { signal },
+    const path = SourceUtils.isWorkspacePath(normalizedSource)
+      ? normalizedSource
+      : new URL(normalizedSource).pathname;
+    const fileName = path.substring(path.lastIndexOf("/") + 1);
+    const extensionIndex = fileName.lastIndexOf(".");
+    return (
+      extensionIndex !== -1 &&
+      OpenSeadragonImageDataProvider._imageFileExtensions.has(
+        fileName.substring(extensionIndex).toLowerCase(),
+      )
     );
-    if (source.url !== undefined) {
-      return new OpenSeadragonImageData(source.url);
-    }
-    const objectUrl = URL.createObjectURL(source.file);
-    return new OpenSeadragonImageData(objectUrl, objectUrl);
   }
 }
