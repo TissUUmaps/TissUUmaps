@@ -543,8 +543,8 @@ importers:
         specifier: ^0.8.1
         version: 0.8.1(ome-zarr.js@0.0.20)(openseadragon@6.1.1)(zarrita@0.7.5)
       papaparse:
-        specifier: ^5.5.4
-        version: 5.7.0
+        specifier: ^5.6.1 <5.7.0 || ^5.7.1
+        version: 5.6.1
     devDependencies:
       "@tissuumaps/core":
         specifier: workspace:^
@@ -10307,10 +10307,10 @@ packages:
         integrity: sha512-zJq6RP/5q+TO2OpFV3FHzlPnFjmkb7Nc99a5SNjJE+uu/PkpChs+NIZSSzbBoD+6kjiISXjfYdwj1ZRQ81dz/w==,
       }
 
-  papaparse@5.7.0:
+  papaparse@5.6.1:
     resolution:
       {
-        integrity: sha512-qBGxg/7Q3Kl9Wfhrz2Z74UnvnHTXLNG6jmKJFeBvP2+y4lV7So+7SR62+Zd47JvdrCkX+nDcnr0ObPzek/+6RA==,
+        integrity: sha512-5RZr2+haMhCDZHMXlreJ/NO5d3Wfu5PmIvsGjkMdnqE1K+MHnkC4PgxqhFwEh9hCsdtN0Pz0UVD5Mtgp3sNxaw==,
       }
 
   param-case@3.0.4:
@@ -20707,7 +20707,7 @@ snapshots:
 
   pako@2.2.0: {}
 
-  papaparse@5.7.0: {}
+  papaparse@5.6.1: {}
 
   param-case@3.0.4:
     dependencies:
