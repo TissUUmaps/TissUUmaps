@@ -481,6 +481,9 @@ importers:
       "@types/d3-scale-chromatic":
         specifier: ^3.1.0
         version: 3.1.0
+      immer:
+        specifier: ^11.1.8
+        version: 11.1.18
       openseadragon:
         specifier: ^6.1.1
         version: 6.1.1
