@@ -192,7 +192,8 @@ layout, e.g. that of a plugin that is not mounted, has no effect.
 `appStore`'s `expandedImageIds`, `expandedLabelsIds`, `expandedPointsIds`,
 `expandedShapesIds` and `expandedTableIds` are the IDs of the objects whose
 entries are expanded in the respective panels, and are set with
-`setExpandedImageIds` etc. A plugin shows the user an image, e.g. one it
+`setExpandedImageIds` etc. They are cleared whenever another project is loaded
+or the project is closed, but may contain the IDs of deleted objects. A plugin shows the user an image, e.g. one it
 created, by expanding its entry and bringing the Images panel to the front:
 
 ```javascript

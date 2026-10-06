@@ -120,26 +120,36 @@ export type AppStoreState = {
 
   /**
    * The IDs of the images whose entries are expanded in the Images panel
+   *
+   * Cleared whenever another project is loaded or the project is closed.
    */
   expandedImageIds: string[];
 
   /**
    * The IDs of the labels whose entries are expanded in the Labels panel
+   *
+   * Cleared whenever another project is loaded or the project is closed.
    */
   expandedLabelsIds: string[];
 
   /**
    * The IDs of the points whose entries are expanded in the Points panel
+   *
+   * Cleared whenever another project is loaded or the project is closed.
    */
   expandedPointsIds: string[];
 
   /**
    * The IDs of the shapes whose entries are expanded in the Shapes panel
+   *
+   * Cleared whenever another project is loaded or the project is closed.
    */
   expandedShapesIds: string[];
 
   /**
    * The IDs of the tables whose entries are expanded in the Tables panel
+   *
+   * Cleared whenever another project is loaded or the project is closed.
    */
   expandedTableIds: string[];
 };
