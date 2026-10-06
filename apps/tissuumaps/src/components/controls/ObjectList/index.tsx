@@ -1,6 +1,8 @@
 import { DragDropProvider } from "@dnd-kit/react";
 import type { ReactNode } from "react";
 
+import type { DataObject, DataSource, Layer } from "@tissuumaps/core";
+
 import { Accordion } from "@/components/common/accordion";
 import { useTopFirstSortable } from "@/hooks/useTopFirstSortable";
 import { cn } from "@/lib/utils";
@@ -32,7 +34,9 @@ export function ObjectList({
   );
 }
 
-export type SortableObjectListProps<TObject> = {
+export type SortableObjectListProps<
+  TObject extends Layer | DataObject<DataSource>,
+> = {
   objects: TObject[];
   onMove: (objectId: string, newIndex: number) => void;
   children: (object: TObject, index: number) => ReactNode;
@@ -41,7 +45,9 @@ export type SortableObjectListProps<TObject> = {
   className?: string;
 };
 
-export function SortableObjectList<TObject>({
+export function SortableObjectList<
+  TObject extends Layer | DataObject<DataSource>,
+>({
   objects,
   onMove,
   children,
