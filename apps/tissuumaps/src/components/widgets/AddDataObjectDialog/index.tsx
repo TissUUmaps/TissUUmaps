@@ -7,6 +7,8 @@ import type { Data, DataProvider, DataSource, Layer } from "@tissuumaps/core";
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset } from "@/components/common/fieldset";
 import { SimpleSelect } from "@/components/common/simple-select";
+import { cells } from "@/components/jsonforms/cells";
+import { renderers } from "@/components/jsonforms/renderers";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,9 +20,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-
-import { cells } from "../DataSourceWidget/cells";
-import { renderers } from "../DataSourceWidget/renderers";
 
 export type AddDataObjectDialogProps<
   TDataSource extends DataSource = DataSource,
