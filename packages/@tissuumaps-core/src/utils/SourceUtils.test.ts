@@ -73,95 +73,6 @@ const workspace = makeDir("", {
 }) as unknown as FileSystemDirectoryHandle;
 
 describe("SourceUtils", () => {
-  describe("isWorkspacePath", () => {
-    it("returns true for workspace-relative paths", () => {
-      expect(SourceUtils.isWorkspacePath("/proj/points.csv")).toBe(true);
-      expect(SourceUtils.isWorkspacePath("/points.csv")).toBe(true);
-    });
-
-    it("returns false for URLs", () => {
-      expect(SourceUtils.isWorkspacePath("https://x.example/f.csv")).toBe(
-        false,
-      );
-      expect(SourceUtils.isWorkspacePath("blob:https://app.example/123")).toBe(
-        false,
-      );
-      expect(SourceUtils.isWorkspacePath("file:///proj/points.csv")).toBe(
-        false,
-      );
-    });
-
-    it("returns false for app-relative paths", () => {
-      expect(SourceUtils.isWorkspacePath("//data/points.csv")).toBe(false);
-      expect(SourceUtils.isWorkspacePath("///data/points.csv")).toBe(false);
-    });
-  });
-
-  describe("makeWorkspacePath", () => {
-    it("joins the segments with the workspace prefix", () => {
-      expect(SourceUtils.makeWorkspacePath(["proj", "points.csv"])).toBe(
-        "/proj/points.csv",
-      );
-      expect(SourceUtils.makeWorkspacePath(["points.csv"])).toBe("/points.csv");
-    });
-
-    it("builds a workspace-relative path", () => {
-      expect(
-        SourceUtils.isWorkspacePath(
-          SourceUtils.makeWorkspacePath(["proj", "points.csv"]),
-        ),
-      ).toBe(true);
-    });
-
-    it("normalizes to itself", () => {
-      const workspacePath = SourceUtils.makeWorkspacePath(["proj", "a.csv"]);
-      expect(
-        SourceUtils.normalizeSource(workspacePath, workspace, null, {
-          baseUrl,
-        }),
-      ).toBe(workspacePath);
-    });
-  });
-
-  describe("getParentSource", () => {
-    it("returns the parent directory of a URL, keeping its query", () => {
-      expect(
-        SourceUtils.getParentSource("https://data.example/a/b.zarr/?key=1"),
-      ).toEqual({
-        parentSource: "https://data.example/a?key=1",
-        name: "b.zarr",
-      });
-    });
-
-    it("decodes the name but keeps the parent URL encoded", () => {
-      expect(
-        SourceUtils.getParentSource("https://data.example/my%20dir/a%20b"),
-      ).toEqual({
-        parentSource: "https://data.example/my%20dir",
-        name: "a b",
-      });
-    });
-
-    it("goes up to the root of a URL's path, and no further", () => {
-      expect(SourceUtils.getParentSource("https://data.example/a")).toEqual({
-        parentSource: "https://data.example/",
-        name: "a",
-      });
-      expect(SourceUtils.getParentSource("https://data.example/")).toBeNull();
-    });
-
-    it("returns the parent directory of a workspace-relative path", () => {
-      expect(SourceUtils.getParentSource("/proj/data/b.zarr")).toEqual({
-        parentSource: "/proj/data",
-        name: "b.zarr",
-      });
-    });
-
-    it("returns null directly in the workspace", () => {
-      expect(SourceUtils.getParentSource("/b.zarr")).toBeNull();
-    });
-  });
-
   describe("normalizeSource", () => {
     afterEach(() => {
       vi.unstubAllGlobals();
@@ -630,6 +541,38 @@ describe("SourceUtils", () => {
     });
   });
 
+  describe("resolveSourceDirectory", () => {
+    it("returns URLs as is", async () => {
+      await expect(
+        SourceUtils.resolveSourceDirectory(
+          "https://x.example/d.zarr",
+          workspace,
+        ),
+      ).resolves.toBe("https://x.example/d.zarr");
+    });
+
+    it("opens a directory", async () => {
+      await expect(
+        SourceUtils.resolveSourceDirectory("/proj/sub", workspace),
+      ).resolves.toBe(subDir);
+    });
+
+    it("rejects a file", async () => {
+      await expect(
+        SourceUtils.resolveSourceDirectory("/proj/points.csv", workspace),
+      ).rejects.toMatchObject({
+        name: "TypeMismatchError",
+        message: "Not a workspace directory: /proj/points.csv",
+      });
+    });
+
+    it("rejects like resolveSource", async () => {
+      await expect(
+        SourceUtils.resolveSourceDirectory("/proj/missing", workspace),
+      ).rejects.toMatchObject({ name: "NotFoundError" });
+    });
+  });
+
   describe("openSourceFile", () => {
     const opened = new File(["a,b"], "y.csv");
     let onGetFile: (() => void) | undefined;
@@ -681,35 +624,235 @@ describe("SourceUtils", () => {
     });
   });
 
-  describe("resolveSourceDirectory", () => {
-    it("returns URLs as is", async () => {
-      await expect(
-        SourceUtils.resolveSourceDirectory(
-          "https://x.example/d.zarr",
-          workspace,
+  describe("isWorkspacePath", () => {
+    it("returns true for workspace-relative paths", () => {
+      expect(SourceUtils.isWorkspacePath("/proj/points.csv")).toBe(true);
+      expect(SourceUtils.isWorkspacePath("/points.csv")).toBe(true);
+    });
+
+    it("returns false for URLs", () => {
+      expect(SourceUtils.isWorkspacePath("https://x.example/f.csv")).toBe(
+        false,
+      );
+      expect(SourceUtils.isWorkspacePath("blob:https://app.example/123")).toBe(
+        false,
+      );
+      expect(SourceUtils.isWorkspacePath("file:///proj/points.csv")).toBe(
+        false,
+      );
+    });
+
+    it("returns false for app-relative paths", () => {
+      expect(SourceUtils.isWorkspacePath("//data/points.csv")).toBe(false);
+      expect(SourceUtils.isWorkspacePath("///data/points.csv")).toBe(false);
+    });
+  });
+
+  describe("makeWorkspacePath", () => {
+    it("joins the segments with the workspace prefix", () => {
+      expect(SourceUtils.makeWorkspacePath(["proj", "points.csv"])).toBe(
+        "/proj/points.csv",
+      );
+      expect(SourceUtils.makeWorkspacePath(["points.csv"])).toBe("/points.csv");
+    });
+
+    it("builds a workspace-relative path", () => {
+      expect(
+        SourceUtils.isWorkspacePath(
+          SourceUtils.makeWorkspacePath(["proj", "points.csv"]),
         ),
-      ).resolves.toBe("https://x.example/d.zarr");
+      ).toBe(true);
     });
 
-    it("opens a directory", async () => {
-      await expect(
-        SourceUtils.resolveSourceDirectory("/proj/sub", workspace),
-      ).resolves.toBe(subDir);
+    it("normalizes to itself", () => {
+      const workspacePath = SourceUtils.makeWorkspacePath(["proj", "a.csv"]);
+      expect(
+        SourceUtils.normalizeSource(workspacePath, workspace, null, {
+          baseUrl,
+        }),
+      ).toBe(workspacePath);
+    });
+  });
+
+  describe("makeProjectPath", () => {
+    it("keeps the path without a workspace-relative project source", () => {
+      expect(SourceUtils.makeProjectPath("/proj/a.csv", null)).toBe(
+        "/proj/a.csv",
+      );
+      expect(SourceUtils.makeProjectPath("/proj/a.csv", projectUrl)).toBe(
+        "/proj/a.csv",
+      );
     });
 
-    it("rejects a file", async () => {
-      await expect(
-        SourceUtils.resolveSourceDirectory("/proj/points.csv", workspace),
-      ).rejects.toMatchObject({
-        name: "TypeMismatchError",
-        message: "Not a workspace directory: /proj/points.csv",
+    it("keeps URLs unchanged", () => {
+      expect(
+        SourceUtils.makeProjectPath("https://data.example/x.csv", projectPath),
+      ).toBe("https://data.example/x.csv");
+    });
+
+    it("makes the path relative to the project file's directory", () => {
+      expect(SourceUtils.makeProjectPath("/proj/points.csv", projectPath)).toBe(
+        "points.csv",
+      );
+      expect(SourceUtils.makeProjectPath("/proj/sub/y.csv", projectPath)).toBe(
+        "sub/y.csv",
+      );
+      expect(SourceUtils.makeProjectPath("/shared/x.csv", projectPath)).toBe(
+        "../shared/x.csv",
+      );
+      expect(SourceUtils.makeProjectPath("/proj", projectPath)).toBe(".");
+    });
+
+    it("handles a project file at the workspace root", () => {
+      expect(SourceUtils.makeProjectPath("/proj/a.csv", "/p.tm4")).toBe(
+        "proj/a.csv",
+      );
+    });
+
+    it("leads up to an ancestor of the project file's directory", () => {
+      expect(SourceUtils.makeProjectPath("/a", "/a/b/c/p.tm4")).toBe("../..");
+      expect(SourceUtils.makeProjectPath("/a/x.csv", "/a/b/c/p.tm4")).toBe(
+        "../../x.csv",
+      );
+    });
+
+    it("compares whole segments, not name prefixes", () => {
+      expect(SourceUtils.makeProjectPath("/proj2/x.csv", projectPath)).toBe(
+        "../proj2/x.csv",
+      );
+    });
+
+    it("prefixes a first segment with a colon, so it is no URL", () => {
+      expect(SourceUtils.makeProjectPath("/proj/s:c.tif", projectPath)).toBe(
+        "./s:c.tif",
+      );
+    });
+
+    it("normalizes back to the workspace-relative path", () => {
+      for (const workspacePath of [
+        "/proj/points.csv",
+        "/proj/sub/y.csv",
+        "/shared/x.csv",
+        "/proj/s:c.tif",
+        "/proj",
+      ]) {
+        expect(
+          SourceUtils.normalizeSource(
+            SourceUtils.makeProjectPath(workspacePath, projectPath),
+            workspace,
+            projectPath,
+            { baseUrl },
+          ),
+        ).toBe(workspacePath);
+      }
+    });
+  });
+
+  describe("getPathSegments", () => {
+    it("returns the segments of a workspace-relative path", () => {
+      expect(SourceUtils.getPathSegments("/proj/sub/y.csv")).toEqual([
+        "proj",
+        "sub",
+        "y.csv",
+      ]);
+    });
+
+    it("returns the decoded segments of a URL's path", () => {
+      expect(
+        SourceUtils.getPathSegments(
+          "https://data.example/my%20dir/a.zarr/?x=1",
+        ),
+      ).toEqual(["my dir", "a.zarr"]);
+    });
+
+    it("returns no segments for URLs without a path", () => {
+      expect(SourceUtils.getPathSegments("https://data.example/")).toEqual([]);
+      expect(SourceUtils.getPathSegments("data:text/csv,a,b")).toEqual([]);
+      expect(
+        SourceUtils.getPathSegments("blob:https://app.example/1234"),
+      ).toEqual([]);
+    });
+  });
+
+  describe("getParentSource", () => {
+    it("returns the parent directory of a URL, keeping its query", () => {
+      expect(
+        SourceUtils.getParentSource("https://data.example/a/b.zarr/?key=1"),
+      ).toEqual({
+        parentSource: "https://data.example/a?key=1",
+        name: "b.zarr",
       });
     });
 
-    it("rejects like resolveSource", async () => {
-      await expect(
-        SourceUtils.resolveSourceDirectory("/proj/missing", workspace),
-      ).rejects.toMatchObject({ name: "NotFoundError" });
+    it("decodes the name but keeps the parent URL encoded", () => {
+      expect(
+        SourceUtils.getParentSource("https://data.example/my%20dir/a%20b"),
+      ).toEqual({
+        parentSource: "https://data.example/my%20dir",
+        name: "a b",
+      });
+    });
+
+    it("goes up to the root of a URL's path, and no further", () => {
+      expect(SourceUtils.getParentSource("https://data.example/a")).toEqual({
+        parentSource: "https://data.example/",
+        name: "a",
+      });
+      expect(SourceUtils.getParentSource("https://data.example/")).toBeNull();
+    });
+
+    it("returns the parent directory of a workspace-relative path", () => {
+      expect(SourceUtils.getParentSource("/proj/data/b.zarr")).toEqual({
+        parentSource: "/proj/data",
+        name: "b.zarr",
+      });
+    });
+
+    it("returns null directly in the workspace", () => {
+      expect(SourceUtils.getParentSource("/b.zarr")).toBeNull();
+    });
+
+    it("returns null for URLs without a path", () => {
+      expect(SourceUtils.getParentSource("data:text/csv,a,b")).toBeNull();
+      expect(
+        SourceUtils.getParentSource("blob:https://app.example/1234"),
+      ).toBeNull();
+    });
+
+    it("keeps a malformed escape in the name as is", () => {
+      expect(
+        SourceUtils.getParentSource("https://data.example/a/100%"),
+      ).toEqual({ parentSource: "https://data.example/a", name: "100%" });
+    });
+  });
+
+  describe("getStem", () => {
+    it("drops the last extension of a workspace-relative path", () => {
+      expect(SourceUtils.getStem("/proj/points.csv")).toBe("points");
+      expect(SourceUtils.getStem("/cells.ome.zarr")).toBe("cells.ome");
+    });
+
+    it("keeps names without an extension and leading dots", () => {
+      expect(SourceUtils.getStem("/x.zarr/tables/table")).toBe("table");
+      expect(SourceUtils.getStem("/proj/.hidden")).toBe(".hidden");
+    });
+
+    it("decodes the last segment of a URL, ignoring query and hash", () => {
+      expect(
+        SourceUtils.getStem("https://data.example/a/my%20cells.tif?x=1#y"),
+      ).toBe("my cells");
+      expect(SourceUtils.getStem("https://data.example/a/b.zarr/")).toBe("b");
+    });
+
+    it("keeps a malformed escape as is", () => {
+      expect(SourceUtils.getStem("https://data.example/a/100%.csv")).toBe(
+        "100%",
+      );
+    });
+
+    it("returns an empty string for URLs without a path", () => {
+      expect(SourceUtils.getStem("data:image/png;base64,AAAA")).toBe("");
+      expect(SourceUtils.getStem("https://data.example/")).toBe("");
     });
   });
 });

@@ -38,6 +38,13 @@
  * URL's path are dropped silently. Resolving within the workspace collapses the
  * segments and fails if the path leaves the workspace.
  *
+ * Helpers work on normalized sources: {@link SourceUtils.isWorkspacePath}
+ * classifies them, {@link SourceUtils.makeWorkspacePath} builds them,
+ * {@link SourceUtils.getPathSegments}, {@link SourceUtils.getParentSource} and
+ * {@link SourceUtils.getStem} take them apart, and
+ * {@link SourceUtils.makeProjectPath} turns them back into project-relative
+ * paths.
+ *
  * A relative path whose first segment contains a colon (e.g.
  * `sample1:ch2.tif`) is taken for a URL; write it as `./sample1:ch2.tif`
  * instead.
@@ -47,70 +54,6 @@ export class SourceUtils {
   private static readonly _appPathPrefix = "//";
   private static readonly _workspacePathPrefix = SourceUtils._pathSep;
   private static readonly _urlSchemePattern = /^[a-z][a-z0-9+.-]*:/i;
-
-  /**
-   * Returns whether a normalized source refers to a file or directory within
-   * the workspace
-   *
-   * @param normalizedSource - The normalized source (see
-   *   {@link SourceUtils.normalizeSource})
-   * @returns `true` for workspace-relative paths, `false` for URLs and
-   *   app-relative paths
-   */
-  static isWorkspacePath(normalizedSource: string): boolean {
-    return (
-      normalizedSource.startsWith(SourceUtils._workspacePathPrefix) &&
-      !normalizedSource.startsWith(SourceUtils._appPathPrefix)
-    );
-  }
-
-  /**
-   * Builds a workspace-relative path from the segments of a path within the
-   * workspace, as returned by `FileSystemDirectoryHandle.resolve`
-   *
-   * @param segments - The path segments, from the workspace root down to the
-   *   file or directory
-   * @returns The workspace-relative path (with `/` prefix)
-   */
-  static makeWorkspacePath(segments: string[]): string {
-    return (
-      SourceUtils._workspacePathPrefix + segments.join(SourceUtils._pathSep)
-    );
-  }
-
-  /**
-   * Returns the directory that contains a normalized source
-   *
-   * @param normalizedSource - The normalized source (see
-   *   {@link SourceUtils.normalizeSource})
-   * @returns The normalized parent source and the name of the source within
-   *   it, decoded for URLs; `null` if the source is the root of its URL's path
-   *   or lies directly in the workspace, as the workspace root is no source
-   */
-  static getParentSource(
-    normalizedSource: string,
-  ): { parentSource: string; name: string } | null {
-    if (SourceUtils.isWorkspacePath(normalizedSource)) {
-      const segments = normalizedSource
-        .substring(SourceUtils._workspacePathPrefix.length)
-        .split(SourceUtils._pathSep);
-      const name = segments.pop();
-      if (name === undefined || segments.length === 0) {
-        return null;
-      }
-      return { parentSource: SourceUtils.makeWorkspacePath(segments), name };
-    }
-    const url = new URL(normalizedSource);
-    const segments = url.pathname
-      .split(SourceUtils._pathSep)
-      .filter((segment) => segment !== "");
-    const name = segments.pop();
-    if (name === undefined) {
-      return null;
-    }
-    url.pathname = segments.join(SourceUtils._pathSep);
-    return { parentSource: url.toString(), name: decodeURIComponent(name) };
-  }
 
   /**
    * Normalizes a source, applying the fallbacks for missing project sources
@@ -205,9 +148,7 @@ export class SourceUtils {
         `Cannot resolve workspace-relative path without workspace: ${normalizedSource}`,
       );
     }
-    const segments = SourceUtils._collapseSegments(
-      normalizedSource.substring(SourceUtils._workspacePathPrefix.length),
-    );
+    const segments = SourceUtils._getWorkspaceSegments(normalizedSource);
     const entryName = segments.pop();
     if (entryName === undefined) {
       throw new Error(`Not a workspace file or directory: ${normalizedSource}`);
@@ -268,6 +209,43 @@ export class SourceUtils {
   }
 
   /**
+   * Resolves a normalized source to an absolute URL or a directory handle
+   *
+   * Like {@link SourceUtils.resolveSource}, for sources that have to refer to
+   * a directory.
+   *
+   * @param normalizedSource - See {@link SourceUtils.resolveSource}
+   * @param workspace - See {@link SourceUtils.resolveSource}
+   * @param options - See {@link SourceUtils.resolveSource}
+   * @returns A promise that resolves to the absolute URL, or to the directory
+   *   handle for sources within the workspace
+   * @throws See {@link SourceUtils.resolveSource}
+   * @throws DOMException if the source refers to a file within the workspace
+   *   (`TypeMismatchError`)
+   */
+  static async resolveSourceDirectory(
+    normalizedSource: string,
+    workspace: FileSystemDirectoryHandle | null,
+    options?: { signal?: AbortSignal },
+  ): Promise<string | FileSystemDirectoryHandle> {
+    const resolvedSource = await SourceUtils.resolveSource(
+      normalizedSource,
+      workspace,
+      options,
+    );
+    if (
+      typeof resolvedSource !== "string" &&
+      resolvedSource.kind !== "directory"
+    ) {
+      throw new DOMException(
+        `Not a workspace directory: ${normalizedSource}`,
+        "TypeMismatchError",
+      );
+    }
+    return resolvedSource;
+  }
+
+  /**
    * Resolves a normalized source to an absolute URL or an opened file
    *
    * Like {@link SourceUtils.resolveSourceFile}, for readers that take either
@@ -309,40 +287,165 @@ export class SourceUtils {
   }
 
   /**
-   * Resolves a normalized source to an absolute URL or a directory handle
+   * Returns whether a normalized source refers to a file or directory within
+   * the workspace
    *
-   * Like {@link SourceUtils.resolveSource}, for sources that have to refer to
-   * a directory.
-   *
-   * @param normalizedSource - See {@link SourceUtils.resolveSource}
-   * @param workspace - See {@link SourceUtils.resolveSource}
-   * @param options - See {@link SourceUtils.resolveSource}
-   * @returns A promise that resolves to the absolute URL, or to the directory
-   *   handle for sources within the workspace
-   * @throws See {@link SourceUtils.resolveSource}
-   * @throws DOMException if the source refers to a file within the workspace
-   *   (`TypeMismatchError`)
+   * @param normalizedSource - The normalized source (see
+   *   {@link SourceUtils.normalizeSource})
+   * @returns `true` for workspace-relative paths, `false` for URLs and
+   *   app-relative paths
    */
-  static async resolveSourceDirectory(
-    normalizedSource: string,
-    workspace: FileSystemDirectoryHandle | null,
-    options?: { signal?: AbortSignal },
-  ): Promise<string | FileSystemDirectoryHandle> {
-    const resolvedSource = await SourceUtils.resolveSource(
-      normalizedSource,
-      workspace,
-      options,
+  static isWorkspacePath(normalizedSource: string): boolean {
+    return (
+      normalizedSource.startsWith(SourceUtils._workspacePathPrefix) &&
+      !normalizedSource.startsWith(SourceUtils._appPathPrefix)
     );
+  }
+
+  /**
+   * Builds a workspace-relative path from the segments of a path within the
+   * workspace, as returned by `FileSystemDirectoryHandle.resolve`
+   *
+   * @param segments - The path segments, from the workspace root down to the
+   *   file or directory
+   * @returns The workspace-relative path (with `/` prefix)
+   */
+  static makeWorkspacePath(segments: string[]): string {
+    return (
+      SourceUtils._workspacePathPrefix + segments.join(SourceUtils._pathSep)
+    );
+  }
+
+  /**
+   * Turns a workspace-relative path into a path relative to the project file,
+   * if the project was loaded from the workspace
+   *
+   * The result normalizes back to the same workspace-relative path (see
+   * {@link SourceUtils.normalizeSource}), so data sources stay valid when the
+   * project and its data are moved together. A first segment that contains a
+   * colon gets a `./` prefix where it would otherwise be taken for a URL.
+   *
+   * @param normalizedSource - The normalized source (see
+   *   {@link SourceUtils.normalizeSource}); a workspace-relative path has to
+   *   name a file or directory within the workspace, not its root
+   * @param projectSource - Where the project was loaded from (see
+   *   {@link SourceUtils.normalizeSource})
+   * @returns The project-relative path (e.g. `points.csv` or
+   *   `../shared/x.csv`, or `.` for the project file's own directory) if both
+   *   the source and the project source are workspace-relative; the source
+   *   unchanged otherwise
+   */
+  static makeProjectPath(
+    normalizedSource: string,
+    projectSource: string | null,
+  ): string {
     if (
-      typeof resolvedSource !== "string" &&
-      resolvedSource.kind !== "directory"
+      projectSource === null ||
+      !SourceUtils.isWorkspacePath(projectSource) ||
+      !SourceUtils.isWorkspacePath(normalizedSource)
     ) {
-      throw new DOMException(
-        `Not a workspace directory: ${normalizedSource}`,
-        "TypeMismatchError",
-      );
+      return normalizedSource;
     }
-    return resolvedSource;
+    const projectDirSegments = SourceUtils._getWorkspaceSegments(
+      projectSource,
+    ).slice(0, -1);
+    const segments = SourceUtils._getWorkspaceSegments(normalizedSource);
+    let commonLength = 0;
+    while (
+      commonLength < projectDirSegments.length &&
+      commonLength < segments.length &&
+      projectDirSegments[commonLength] === segments[commonLength]
+    ) {
+      commonLength++;
+    }
+    const relativeSegments = [
+      ...Array<string>(projectDirSegments.length - commonLength).fill(".."),
+      ...segments.slice(commonLength),
+    ];
+    const projectPath = relativeSegments.join(SourceUtils._pathSep);
+    if (projectPath === "") {
+      return ".";
+    }
+    return SourceUtils._urlSchemePattern.test(projectPath)
+      ? `.${SourceUtils._pathSep}${projectPath}`
+      : projectPath;
+  }
+
+  /**
+   * Returns the path segments of a normalized source
+   *
+   * @param normalizedSource - The normalized source (see
+   *   {@link SourceUtils.normalizeSource})
+   * @returns The segments from the workspace root down to the file or
+   *   directory, or the decoded segments of a URL's path, without its query and
+   *   hash; empty for URLs without a path, such as `data:` URLs, and for the
+   *   root of an origin
+   * @throws TypeError if the source is neither a workspace-relative path nor
+   *   an absolute URL
+   * @throws Error if a workspace-relative path leads above the workspace root
+   */
+  static getPathSegments(normalizedSource: string): string[] {
+    if (SourceUtils.isWorkspacePath(normalizedSource)) {
+      return SourceUtils._getWorkspaceSegments(normalizedSource);
+    }
+    return SourceUtils._getURLSegments(new URL(normalizedSource)).map(
+      (segment) => SourceUtils._decodeSegment(segment),
+    );
+  }
+
+  /**
+   * Returns the directory that contains a normalized source
+   *
+   * @param normalizedSource - The normalized source (see
+   *   {@link SourceUtils.normalizeSource})
+   * @returns The normalized parent source and the name of the source within
+   *   it, decoded for URLs; `null` if the source is the root of its URL's path,
+   *   is a URL without a path (such as a `data:` URL), or lies directly in the
+   *   workspace, as the workspace root is no source
+   * @throws See {@link SourceUtils.getPathSegments}
+   */
+  static getParentSource(
+    normalizedSource: string,
+  ): { parentSource: string; name: string } | null {
+    if (SourceUtils.isWorkspacePath(normalizedSource)) {
+      const segments = SourceUtils._getWorkspaceSegments(normalizedSource);
+      const name = segments.pop();
+      if (name === undefined || segments.length === 0) {
+        return null;
+      }
+      return { parentSource: SourceUtils.makeWorkspacePath(segments), name };
+    }
+    const url = new URL(normalizedSource);
+    const segments = SourceUtils._getURLSegments(url);
+    const name = segments.pop();
+    if (name === undefined) {
+      return null;
+    }
+    url.pathname = segments.join(SourceUtils._pathSep);
+    return {
+      parentSource: url.toString(),
+      name: SourceUtils._decodeSegment(name),
+    };
+  }
+
+  /**
+   * Returns the name of the file or directory a normalized source refers to,
+   * without its last extension
+   *
+   * Only the last extension is dropped, so `cells.ome.zarr` gives `cells.ome`.
+   * A leading dot does not start an extension, so `.hidden` stays as is.
+   *
+   * @param normalizedSource - The normalized source (see
+   *   {@link SourceUtils.normalizeSource})
+   * @returns The stem of the last path segment, decoded for URLs; an empty
+   *   string for URLs without a path, such as `data:` URLs or the root of an
+   *   origin
+   * @throws See {@link SourceUtils.getPathSegments}
+   */
+  static getStem(normalizedSource: string): string {
+    const name = SourceUtils.getPathSegments(normalizedSource).at(-1) ?? "";
+    const extensionIndex = name.lastIndexOf(".");
+    return extensionIndex > 0 ? name.substring(0, extensionIndex) : name;
   }
 
   /**
@@ -381,8 +484,8 @@ export class SourceUtils {
           });
         }
       }
-      const projectDirSegments = SourceUtils._collapseSegments(
-        projectSource.substring(SourceUtils._workspacePathPrefix.length),
+      const projectDirSegments = SourceUtils._getWorkspaceSegments(
+        projectSource,
       ).slice(0, -1);
       const segments = SourceUtils._collapseSegments(
         projectPath,
@@ -428,18 +531,16 @@ export class SourceUtils {
     if (!workspacePath.startsWith(SourceUtils._workspacePathPrefix)) {
       throw new Error(`Invalid workspace-relative path: ${workspacePath}`);
     }
-    const path = workspacePath.substring(
-      SourceUtils._workspacePathPrefix.length,
-    );
     if (workspace !== null) {
-      const segments = SourceUtils._collapseSegments(path);
+      const segments = SourceUtils._getWorkspaceSegments(workspacePath);
       if (segments.length === 0) {
         throw new Error(`Not a workspace file or directory: ${workspacePath}`);
       }
       return SourceUtils.makeWorkspacePath(segments);
     }
     return SourceUtils._normalizeAppPath(
-      SourceUtils._appPathPrefix + path,
+      SourceUtils._appPathPrefix +
+        workspacePath.substring(SourceUtils._workspacePathPrefix.length),
       options,
     );
   }
@@ -471,6 +572,38 @@ export class SourceUtils {
   }
 
   /**
+   * Splits a workspace-relative path into its collapsed segments, the inverse
+   * of {@link SourceUtils.makeWorkspacePath}
+   *
+   * @param workspacePath - The workspace-relative path (with `/` prefix)
+   * @returns The segments from the workspace root down to the file or
+   *   directory, empty for the root itself
+   * @throws Error if the path leads above the workspace root
+   */
+  private static _getWorkspaceSegments(workspacePath: string): string[] {
+    return SourceUtils._collapseSegments(
+      workspacePath.substring(SourceUtils._workspacePathPrefix.length),
+    );
+  }
+
+  /**
+   * Splits the path of a URL into its segments
+   *
+   * @param url - The URL
+   * @returns The non-empty, still encoded segments of the URL's path; empty
+   *   for URLs without a hierarchical path, such as `data:` and `blob:` URLs,
+   *   whose path does not start with `/`
+   */
+  private static _getURLSegments(url: URL): string[] {
+    if (!url.pathname.startsWith(SourceUtils._pathSep)) {
+      return [];
+    }
+    return url.pathname
+      .split(SourceUtils._pathSep)
+      .filter((segment) => segment !== "");
+  }
+
+  /**
    * Splits a path into segments, dropping empty and `.` segments and
    * collapsing `..` segments against the segments preceding them
    *
@@ -499,5 +632,20 @@ export class SourceUtils {
       }
     }
     return segments;
+  }
+
+  /**
+   * Decodes a percent-encoded URL path segment
+   *
+   * @param segment - The encoded segment
+   * @returns The decoded segment, or the segment as is if it holds a malformed
+   *   escape (e.g. a stray `%`), which the URL parser lets through
+   */
+  private static _decodeSegment(segment: string): string {
+    try {
+      return decodeURIComponent(segment);
+    } catch {
+      return segment;
+    }
   }
 }
