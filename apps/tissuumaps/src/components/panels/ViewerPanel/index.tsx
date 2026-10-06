@@ -15,7 +15,7 @@ import {
   usePointsDataLoader,
   useShapesDataLoader,
   useTableDataLoader,
-} from "@/hooks/useDataLoader";
+} from "@/data/hooks/useDataLoader";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 

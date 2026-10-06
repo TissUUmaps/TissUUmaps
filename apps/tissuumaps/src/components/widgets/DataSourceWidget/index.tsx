@@ -9,10 +9,9 @@ import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { IconButton } from "@/components/common/icon-button";
 import { SimpleSelect } from "@/components/common/simple-select";
+import { cells } from "@/components/jsonforms/cells";
+import { renderers } from "@/components/jsonforms/renderers";
 import { cn } from "@/lib/utils";
-
-import { cells } from "./cells";
-import { renderers } from "./renderers";
 
 export type DataSourceWidgetProps<TDataSource extends DataSource> = {
   dataSource: TDataSource;

@@ -1,0 +1,72 @@
+import { DragDropProvider } from "@dnd-kit/react";
+import type { ReactNode } from "react";
+
+import type { DataObject, DataSource, Layer } from "@tissuumaps/core";
+
+import { Accordion } from "@/components/common/accordion";
+import { cn } from "@/lib/utils";
+
+import { useTopFirstSortable } from "./useTopFirstSortable";
+
+export { ObjectListItem, SortableObjectListItem } from "./ObjectListItem";
+
+export type ObjectListProps = {
+  children: ReactNode;
+  expandedIds?: string[];
+  onExpandedIdsChange?: (expandedIds: string[]) => void;
+  className?: string;
+};
+
+export function ObjectList({
+  children,
+  expandedIds,
+  onExpandedIdsChange,
+  className,
+}: ObjectListProps) {
+  return (
+    <Accordion
+      multiple
+      value={expandedIds}
+      onValueChange={onExpandedIdsChange}
+      className={cn("gap-1", className)}
+    >
+      {children}
+    </Accordion>
+  );
+}
+
+export type SortableObjectListProps<
+  TObject extends Layer | DataObject<DataSource>,
+> = {
+  objects: TObject[];
+  onMove: (objectId: string, newIndex: number) => void;
+  children: (object: TObject, index: number) => ReactNode;
+  expandedIds?: string[];
+  onExpandedIdsChange?: (expandedIds: string[]) => void;
+  className?: string;
+};
+
+export function SortableObjectList<
+  TObject extends Layer | DataObject<DataSource>,
+>({
+  objects,
+  onMove,
+  children,
+  expandedIds,
+  onExpandedIdsChange,
+  className,
+}: SortableObjectListProps<TObject>) {
+  const { topFirstItems, onDragEnd } = useTopFirstSortable(objects, onMove);
+
+  return (
+    <DragDropProvider onDragEnd={onDragEnd}>
+      <ObjectList
+        expandedIds={expandedIds}
+        onExpandedIdsChange={onExpandedIdsChange}
+        className={className}
+      >
+        {topFirstItems.map((object, index) => children(object, index))}
+      </ObjectList>
+    </DragDropProvider>
+  );
+}

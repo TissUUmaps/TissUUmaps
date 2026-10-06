@@ -8,8 +8,8 @@ import type {
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
+import { TableColumnField } from "@/components/controls/TableColumnField";
 import { Input } from "@/components/ui/input";
-import { TableColumnField } from "@/components/widgets/TableColumnField";
 import { cn } from "@/lib/utils";
 
 import {

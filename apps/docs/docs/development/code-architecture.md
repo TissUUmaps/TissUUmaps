@@ -172,7 +172,7 @@ In the TissUUmaps React app, absolute (`@/`) imports are used for imports across
 
 ### Hooks
 
-Where possible and useful, React `useEffect` and `useCallback` hooks are encapsulated using custom hooks. Generic, feature-independent hooks live in `src/hooks` (e.g. `useControlled`, the per-type data hooks `useImageData`, `useTableData`, ... in `useData.ts`); feature-specific hooks are colocated in the feature folder they serve.
+Where possible and useful, React `useEffect` and `useCallback` hooks are encapsulated using custom hooks. Generic, feature-independent hooks live in `src/hooks` (e.g. `useControlled`, `useDraftState`); the hooks through which components and renderers access the data caches live in `src/data/hooks` (e.g. the per-type data hooks `useImageData`, `useTableData`, ... in `useData.ts`); feature-specific hooks are colocated in the feature folder they serve.
 
 ### Components
 
@@ -180,13 +180,16 @@ The user interface is built primarily using TailwindCSS, shadcn/ui, Base UI comp
 
 Components are structured as follows:
 
+- `app` - application-level components that are only used by `App` itself
 - `common` - custom low-level components that are commonly reused throughout the codebase
+- `controls` - application-specific components ("controls") used across panels and widgets
 - `dialogs` - the dialog provider and context, and the alert, confirm and prompt dialogs
+- `jsonforms` - the JSON Forms renderer set of the data source configuration forms: `renderers.ts` and `cells.ts` register the controls, layouts and cells in the `controls`, `layouts` and `cells` folders, named after the JSON Forms concepts (unrelated to the `controls` category above)
 - `panels` - high-level UI building blocks (layout components) that are used as Dockview panels
 - `ui` - shadcn/ui components, adapted to the application as needed (be careful when updating!)
-- `widgets` - independent high-level components (e.g. configuration widgets) used across panels; the JSON Forms-based data source configuration forms live under `widgets/DataSourceWidget`
+- `widgets` - widgets used across panels (e.g. configuration widgets); a widget is a self-contained section of a panel that edits one aspect of an object, and widgets used by a single panel live in that panel's folder instead
 
-A feature component lives in a PascalCase folder named after the component (e.g. `components/panels/ImagesPanel`), with an `index.tsx` that _is_ the component (not a re-export). Everything that belongs to the feature sits next to it as flat files named by role, e.g. `hooks.ts`, `adapter.ts`, `category.ts`, sub-components such as `ImageSettingsWidget.tsx`, and feature hooks such as `useGroupColumn.tsx`; a sub-feature of its own (e.g. `ProjectPanel/LayersWidget`) is a nested PascalCase folder following the same rule. There are no `types.ts`/`utils.ts` grab-bags. Anything with behavior (dialogs, providers, widgets, panels) follows this rule, even if it sits right next to `ui`. Only `ui` and `common` consist of flat, kebab-case single files (e.g. `ui/button.tsx`), as they are shadcn-style wrappers over `@base-ui/react`.
+A feature component lives in a PascalCase folder named after the component (e.g. `components/panels/ImagesPanel`), with an `index.tsx` that _is_ the component (not a re-export). Everything that belongs to the feature sits next to it as flat files named by role, e.g. `hooks.ts`, `adapter.ts`, `category.ts`, sub-components such as `ImageSettingsWidget.tsx`, and feature hooks such as `useGroupColumn.tsx`; a sub-feature of its own (e.g. `ProjectPanel/LayersWidget`) is a nested PascalCase folder following the same rule. There are no `types.ts`/`utils.ts` grab-bags. Anything with behavior (dialogs, providers, widgets, panels) follows this rule, even if it sits right next to `ui`. Only `ui` and `common` consist of flat, kebab-case single files (e.g. `ui/button.tsx`), as they are shadcn-style wrappers over `@base-ui/react`. `jsonforms` is laid out by JSON Forms concept instead (see above), as its renderers and cells are registered as sets rather than imported individually.
 
 A React context is split into two files: `context.ts` holds the context object and its hook (`createContext`/`useContext` only), and `ContextProvider.tsx` holds the provider component, so that the hook can be imported without pulling in the provider's dependencies.
 

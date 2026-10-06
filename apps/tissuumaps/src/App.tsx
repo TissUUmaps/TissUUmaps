@@ -17,6 +17,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { getPluginPanelId, usePluginPanels } from "@/hooks/usePluginPanels";
 
 import "./App.css";
+import { NotificationCenter } from "./components/app/NotificationCenter";
+import { PluginMenu } from "./components/app/PluginMenu";
 import { DialogProvider } from "./components/dialogs/DialogProvider";
 import { ImagesPanel } from "./components/panels/ImagesPanel";
 import { LabelsPanel } from "./components/panels/LabelsPanel";
@@ -27,8 +29,6 @@ import { ShapesPanel } from "./components/panels/ShapesPanel";
 import { TablesPanel } from "./components/panels/TablesPanel";
 import { ViewerPanel } from "./components/panels/ViewerPanel";
 import { PanelId } from "./components/panels/panelId";
-import { NotificationCenter } from "./components/widgets/NotificationCenter";
-import { PluginMenu } from "./components/widgets/PluginMenu";
 import { pluginRegistry } from "./plugins";
 import { useSettingsStore } from "./stores/settings";
 
