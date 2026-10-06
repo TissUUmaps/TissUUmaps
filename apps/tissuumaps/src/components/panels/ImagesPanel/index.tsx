@@ -8,7 +8,7 @@ import {
   SortableObjectListItem,
 } from "@/components/controls/ObjectList";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
-import { useImageData } from "@/hooks/useData";
+import { useImageData } from "@/data/hooks/useData";
 import { useExpandedImageIds } from "@/hooks/useExpandedIds";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";

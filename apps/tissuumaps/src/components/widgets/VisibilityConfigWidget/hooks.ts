@@ -9,7 +9,7 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { useConfigWidgetState } from "@/hooks/useConfigWidgetState";
+import { useDraftState } from "@/hooks/useDraftState";
 
 import type {
   VisibilityConfigSource,
@@ -106,7 +106,7 @@ export function useVisibilityConfigWidget(
   tableId: string | null,
 ): VisibilityConfigWidgetAdapter {
   const activeSource = getActiveConfigSource(visibilityConfig) ?? "constant";
-  const [state, setState] = useConfigWidgetState(
+  const [state, setState] = useDraftState(
     visibilityConfig,
     onVisibilityConfigChange,
     (config) => configToState(config, defaultVisibility),

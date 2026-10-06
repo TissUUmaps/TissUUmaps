@@ -10,7 +10,7 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { useConfigWidgetState } from "@/hooks/useConfigWidgetState";
+import { useDraftState } from "@/hooks/useDraftState";
 
 import type { SizeConfigSource, SizeConfigWidgetAdapter } from "./adapter";
 
@@ -125,7 +125,7 @@ export function useSizeConfigWidget(
   tableId: string | null,
 ): SizeConfigWidgetAdapter {
   const activeSource = getActiveConfigSource(sizeConfig) ?? "constant";
-  const [state, setState] = useConfigWidgetState(
+  const [state, setState] = useDraftState(
     sizeConfig,
     onSizeConfigChange,
     (config) => configToState(config, defaultSize, defaultSizeUnit),

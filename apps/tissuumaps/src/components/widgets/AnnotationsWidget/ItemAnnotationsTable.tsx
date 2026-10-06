@@ -6,7 +6,7 @@ import {
   VirtualTable,
   type VirtualTableColumnDef,
 } from "@/components/common/virtual-table";
-import { useTableData } from "@/hooks/useData";
+import { useTableData } from "@/data/hooks/useData";
 
 export type ItemAnnotationsTableRowData = {
   id: number | string;

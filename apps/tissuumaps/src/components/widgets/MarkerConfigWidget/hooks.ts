@@ -10,7 +10,7 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { useConfigWidgetState } from "@/hooks/useConfigWidgetState";
+import { useDraftState } from "@/hooks/useDraftState";
 
 import type { MarkerConfigSource, MarkerConfigWidgetAdapter } from "./adapter";
 
@@ -99,7 +99,7 @@ export function useMarkerConfigWidget(
   tableId: string | null,
 ): MarkerConfigWidgetAdapter {
   const activeSource = getActiveConfigSource(markerConfig) ?? "constant";
-  const [state, setState] = useConfigWidgetState(
+  const [state, setState] = useDraftState(
     markerConfig,
     onMarkerConfigChange,
     (config) => configToState(config, defaultMarker),

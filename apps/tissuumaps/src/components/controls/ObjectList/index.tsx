@@ -4,8 +4,9 @@ import type { ReactNode } from "react";
 import type { DataObject, DataSource, Layer } from "@tissuumaps/core";
 
 import { Accordion } from "@/components/common/accordion";
-import { useTopFirstSortable } from "@/hooks/useTopFirstSortable";
 import { cn } from "@/lib/utils";
+
+import { useTopFirstSortable } from "./useTopFirstSortable";
 
 export { ObjectListItem, SortableObjectListItem } from "./ObjectListItem";
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import { type TableData, TableUtils } from "@tissuumaps/core";
 
-import { useTableData } from "./useData";
+import { useTableData } from "@/data/hooks/useData";
 
 type LoadedGroupCounts = {
   tableData: TableData;
@@ -46,7 +46,10 @@ export function useItemGroupCounts(
       })
       .catch((error) => {
         if (!abortController.signal.aborted) {
-          console.error("Error loading table unique value counts", error);
+          console.error(
+            `Failed to load the group counts of column '${column}'`,
+            error,
+          );
         }
       });
     return () => {

@@ -12,8 +12,8 @@ import {
   isRandomConfig,
 } from "@tissuumaps/core";
 
-import { useConfigWidgetState } from "@/hooks/useConfigWidgetState";
-import { useTableData } from "@/hooks/useData";
+import { useTableData } from "@/data/hooks/useData";
+import { useDraftState } from "@/hooks/useDraftState";
 
 import type { ColorConfigSource, ColorConfigWidgetAdapter } from "./adapter";
 
@@ -152,7 +152,7 @@ export function useColorConfigWidget(
   tableId: string | null,
 ): ColorConfigWidgetAdapter {
   const activeSource = getActiveConfigSource(colorConfig) ?? "constant";
-  const [state, setState] = useConfigWidgetState(
+  const [state, setState] = useDraftState(
     colorConfig,
     onColorConfigChange,
     (config) => configToState(config, defaultColor),

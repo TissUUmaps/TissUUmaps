@@ -10,7 +10,7 @@ import {
   SortableObjectListItem,
 } from "@/components/controls/ObjectList";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
-import { useShapesData } from "@/hooks/useData";
+import { useShapesData } from "@/data/hooks/useData";
 import { useExpandedShapesIds } from "@/hooks/useExpandedIds";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";

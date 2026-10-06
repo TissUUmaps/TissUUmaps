@@ -25,8 +25,8 @@ import {
   AutocompleteTrigger,
 } from "@/components/common/autocomplete";
 import { InputGroupAddon } from "@/components/ui/input-group";
+import { useLazyTableData } from "@/data/hooks/useLazyData";
 import { useCompressedRowVirtualizer } from "@/hooks/useCompressedRowVirtualizer";
-import { useLazyTableData } from "@/hooks/useLazyData";
 
 export type TableColumnInputProps = {
   tableId: string | null;

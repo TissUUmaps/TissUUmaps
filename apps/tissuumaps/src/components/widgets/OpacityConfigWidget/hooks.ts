@@ -9,7 +9,7 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { useConfigWidgetState } from "@/hooks/useConfigWidgetState";
+import { useDraftState } from "@/hooks/useDraftState";
 
 import type {
   OpacityConfigSource,
@@ -106,7 +106,7 @@ export function useOpacityConfigWidget(
   tableId: string | null,
 ): OpacityConfigWidgetAdapter {
   const activeSource = getActiveConfigSource(opacityConfig) ?? "constant";
-  const [state, setState] = useConfigWidgetState(
+  const [state, setState] = useDraftState(
     opacityConfig,
     onOpacityConfigChange,
     (config) => configToState(config, defaultOpacity),
