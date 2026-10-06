@@ -9,7 +9,6 @@ import {
 } from "@/components/controls/ObjectList";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { useImageData } from "@/data/hooks/useData";
-import { useExpandedImageIds } from "@/hooks/useExpandedIds";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -18,13 +17,12 @@ import { ChannelSettingsWidget } from "./ChannelSettingsWidget";
 import { ImageSettingsWidget } from "./ImageSettingsWidget";
 
 export type ImagesPanelProps = {
-  /** Brings the panel to the front */
-  onShow: () => void;
   className?: string;
 };
 
-export function ImagesPanel({ onShow, className }: ImagesPanelProps) {
-  const [expandedIds, setExpandedIds] = useExpandedImageIds(onShow);
+export function ImagesPanel({ className }: ImagesPanelProps) {
+  const expandedImageIds = useAppStore((state) => state.expandedImageIds);
+  const setExpandedImageIds = useAppStore((state) => state.setExpandedImageIds);
   const imageDataProviders = useAppStore((state) => state.imageDataProviders);
 
   const layers = useProjectStore((state) => state.layers);
@@ -37,8 +35,8 @@ export function ImagesPanel({ onShow, className }: ImagesPanelProps) {
       <SortableObjectList
         objects={images}
         onMove={moveImage}
-        expandedIds={expandedIds}
-        onExpandedIdsChange={setExpandedIds}
+        expandedIds={expandedImageIds}
+        onExpandedIdsChange={setExpandedImageIds}
       >
         {(image, index) => (
           <ImageAccordionItem key={image.id} image={image} index={index} />

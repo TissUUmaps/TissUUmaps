@@ -189,11 +189,20 @@ panel: while the user interacts with the viewer, `activePanelId` keeps the panel
 that was active last. Setting an ID that does not identify a panel of the
 layout, e.g. that of a plugin that is not mounted, has no effect.
 
-A plugin shows the user the settings of an image, e.g. one it created, by
-calling `appStore.getState().showImageSettings(imageId)`: the Images panel is brought
-to the front and the image's settings are expanded, but not scrolled into view.
-`showLabelsSettings`, `showPointsSettings` and `showShapesSettings` do the same for labels, points
-and shapes.
+`appStore`'s `expandedImageIds`, `expandedLabelsIds`, `expandedPointsIds`,
+`expandedShapesIds` and `expandedTableIds` are the IDs of the objects whose
+entries are expanded in the respective panels, and are set with
+`setExpandedImageIds` etc. A plugin shows the user an image, e.g. one it
+created, by expanding its entry and bringing the Images panel to the front:
+
+```javascript
+const { expandedImageIds, setExpandedImageIds, setActivePanelId } =
+  appStore.getState();
+setExpandedImageIds([...expandedImageIds, imageId]);
+setActivePanelId("images");
+```
+
+The entry is expanded but not scrolled into view.
 
 ## User interface plugins
 

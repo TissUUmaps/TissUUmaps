@@ -119,40 +119,29 @@ export type AppStoreState = {
   activePanelId: string;
 
   /**
-   * The latest request to show the settings of an image, or `null` if there has
-   * been none
-   *
-   * Set by {@link AppStoreActions.showImageSettings} to a new object on every call, so
-   * that a repeated request for the same image is a change too.
+   * The IDs of the images whose entries are expanded in the Images panel
    */
-  imageSettingsRequest: { imageId: string } | null;
+  expandedImageIds: string[];
 
   /**
-   * The latest request to show the settings of labels, or `null` if there has
-   * been none
-   *
-   * Set by {@link AppStoreActions.showLabelsSettings} to a new object on every call, so
-   * that a repeated request for the same labels is a change too.
+   * The IDs of the labels whose entries are expanded in the Labels panel
    */
-  labelsSettingsRequest: { labelsId: string } | null;
+  expandedLabelsIds: string[];
 
   /**
-   * The latest request to show the settings of points, or `null` if there has
-   * been none
-   *
-   * Set by {@link AppStoreActions.showPointsSettings} to a new object on every call, so
-   * that a repeated request for the same points is a change too.
+   * The IDs of the points whose entries are expanded in the Points panel
    */
-  pointsSettingsRequest: { pointsId: string } | null;
+  expandedPointsIds: string[];
 
   /**
-   * The latest request to show the settings of shapes, or `null` if there has
-   * been none
-   *
-   * Set by {@link AppStoreActions.showShapesSettings} to a new object on every call, so
-   * that a repeated request for the same shapes is a change too.
+   * The IDs of the shapes whose entries are expanded in the Shapes panel
    */
-  shapesSettingsRequest: { shapesId: string } | null;
+  expandedShapesIds: string[];
+
+  /**
+   * The IDs of the tables whose entries are expanded in the Tables panel
+   */
+  expandedTableIds: string[];
 };
 
 /**
@@ -218,36 +207,39 @@ export type AppStoreActions = {
   setActivePanelId: (activePanelId: string) => void;
 
   /**
-   * Shows the settings of an image: the Images panel is brought to the front
-   * and the settings are expanded
+   * Sets the images whose entries are expanded in the Images panel
    *
-   * @param imageId - ID of the image whose settings to show
+   * @param expandedImageIds - The IDs of the images, in any order
    */
-  showImageSettings: (imageId: string) => void;
+  setExpandedImageIds: (expandedImageIds: string[]) => void;
 
   /**
-   * Shows the settings of labels: the Labels panel is brought to the front
-   * and the settings are expanded
+   * Sets the labels whose entries are expanded in the Labels panel
    *
-   * @param labelsId - ID of the labels whose settings to show
+   * @param expandedLabelsIds - The IDs of the labels, in any order
    */
-  showLabelsSettings: (labelsId: string) => void;
+  setExpandedLabelsIds: (expandedLabelsIds: string[]) => void;
 
   /**
-   * Shows the settings of points: the Points panel is brought to the front
-   * and the settings are expanded
+   * Sets the points whose entries are expanded in the Points panel
    *
-   * @param pointsId - ID of the points whose settings to show
+   * @param expandedPointsIds - The IDs of the points, in any order
    */
-  showPointsSettings: (pointsId: string) => void;
+  setExpandedPointsIds: (expandedPointsIds: string[]) => void;
 
   /**
-   * Shows the settings of shapes: the Shapes panel is brought to the front
-   * and the settings are expanded
+   * Sets the shapes whose entries are expanded in the Shapes panel
    *
-   * @param shapesId - ID of the shapes whose settings to show
+   * @param expandedShapesIds - The IDs of the shapes, in any order
    */
-  showShapesSettings: (shapesId: string) => void;
+  setExpandedShapesIds: (expandedShapesIds: string[]) => void;
+
+  /**
+   * Sets the tables whose entries are expanded in the Tables panel
+   *
+   * @param expandedTableIds - The IDs of the tables, in any order
+   */
+  setExpandedTableIds: (expandedTableIds: string[]) => void;
 
   /**
    * Registers an image data provider

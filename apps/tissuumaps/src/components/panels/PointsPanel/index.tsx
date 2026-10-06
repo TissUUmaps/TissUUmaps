@@ -11,7 +11,6 @@ import {
 } from "@/components/controls/ObjectList";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { usePointsData } from "@/data/hooks/useData";
-import { useExpandedPointsIds } from "@/hooks/useExpandedIds";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -21,13 +20,14 @@ import { PointsSettingsWidget } from "./PointsSettingsWidget";
 import type { PointsSettingsCategory } from "./category";
 
 export type PointsPanelProps = {
-  /** Brings the panel to the front */
-  onShow: () => void;
   className?: string;
 };
 
-export function PointsPanel({ onShow, className }: PointsPanelProps) {
-  const [expandedIds, setExpandedIds] = useExpandedPointsIds(onShow);
+export function PointsPanel({ className }: PointsPanelProps) {
+  const expandedPointsIds = useAppStore((state) => state.expandedPointsIds);
+  const setExpandedPointsIds = useAppStore(
+    (state) => state.setExpandedPointsIds,
+  );
   const pointsDataProviders = useAppStore((state) => state.pointsDataProviders);
 
   const layers = useProjectStore((state) => state.layers);
@@ -40,8 +40,8 @@ export function PointsPanel({ onShow, className }: PointsPanelProps) {
       <SortableObjectList
         objects={points}
         onMove={movePoints}
-        expandedIds={expandedIds}
-        onExpandedIdsChange={setExpandedIds}
+        expandedIds={expandedPointsIds}
+        onExpandedIdsChange={setExpandedPointsIds}
       >
         {(currentPoints, index) => (
           <PointsAccordionItem

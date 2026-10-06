@@ -10,7 +10,6 @@ import {
   SortableObjectListItem,
 } from "@/components/controls/ObjectList";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
-import { useExpandedLabelsIds } from "@/hooks/useExpandedIds";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -20,13 +19,14 @@ import { LabelsSettingsWidget } from "./LabelsSettingsWidget";
 import type { LabelsSettingsCategory } from "./category";
 
 export type LabelsPanelProps = {
-  /** Brings the panel to the front */
-  onShow: () => void;
   className?: string;
 };
 
-export function LabelsPanel({ onShow, className }: LabelsPanelProps) {
-  const [expandedIds, setExpandedIds] = useExpandedLabelsIds(onShow);
+export function LabelsPanel({ className }: LabelsPanelProps) {
+  const expandedLabelsIds = useAppStore((state) => state.expandedLabelsIds);
+  const setExpandedLabelsIds = useAppStore(
+    (state) => state.setExpandedLabelsIds,
+  );
   const labelsDataProviders = useAppStore((state) => state.labelsDataProviders);
 
   const layers = useProjectStore((state) => state.layers);
@@ -39,8 +39,8 @@ export function LabelsPanel({ onShow, className }: LabelsPanelProps) {
       <SortableObjectList
         objects={labels}
         onMove={moveLabels}
-        expandedIds={expandedIds}
-        onExpandedIdsChange={setExpandedIds}
+        expandedIds={expandedLabelsIds}
+        onExpandedIdsChange={setExpandedLabelsIds}
       >
         {(currentLabels, index) => (
           <LabelsAccordionItem

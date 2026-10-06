@@ -12,6 +12,8 @@ export type TablesPanelProps = {
 };
 
 export function TablesPanel({ className }: TablesPanelProps) {
+  const expandedTableIds = useAppStore((state) => state.expandedTableIds);
+  const setExpandedTableIds = useAppStore((state) => state.setExpandedTableIds);
   const tableDataProviders = useAppStore((state) => state.tableDataProviders);
 
   const tables = useProjectStore((state) => state.tables);
@@ -19,7 +21,10 @@ export function TablesPanel({ className }: TablesPanelProps) {
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
-      <ObjectList>
+      <ObjectList
+        expandedIds={expandedTableIds}
+        onExpandedIdsChange={setExpandedTableIds}
+      >
         {tables.map((table) => (
           <TableAccordionItem key={table.id} table={table} />
         ))}

@@ -1,7 +1,6 @@
 import {
   type DockviewApi,
   DockviewDefaultTab,
-  type DockviewPanelApi,
   DockviewReact,
   type DockviewReadyEvent,
   type DockviewTheme,
@@ -54,15 +53,6 @@ function ScrollablePanelContent({ children }: { children: ReactNode }) {
   );
 }
 
-/** Brings a dockview panel to the front */
-function showPanel(api: DockviewPanelApi): void {
-  // dockview re-opens a panel that is activated while already active, which
-  // re-attaches its content and resets the scroll positions within
-  if (!api.isActive) {
-    api.setActive();
-  }
-}
-
 /** The panels that can be shown in the dockview layout, by component name */
 const dockviewComponents = {
   ViewerPanel: () => <ViewerPanel className="size-full" />,
@@ -71,24 +61,24 @@ const dockviewComponents = {
       <ProjectPanel />
     </ScrollablePanelContent>
   ),
-  ImagesPanel: (props: IDockviewPanelProps) => (
+  ImagesPanel: () => (
     <ScrollablePanelContent>
-      <ImagesPanel onShow={() => showPanel(props.api)} />
+      <ImagesPanel />
     </ScrollablePanelContent>
   ),
-  LabelsPanel: (props: IDockviewPanelProps) => (
+  LabelsPanel: () => (
     <ScrollablePanelContent>
-      <LabelsPanel onShow={() => showPanel(props.api)} />
+      <LabelsPanel />
     </ScrollablePanelContent>
   ),
-  PointsPanel: (props: IDockviewPanelProps) => (
+  PointsPanel: () => (
     <ScrollablePanelContent>
-      <PointsPanel onShow={() => showPanel(props.api)} />
+      <PointsPanel />
     </ScrollablePanelContent>
   ),
-  ShapesPanel: (props: IDockviewPanelProps) => (
+  ShapesPanel: () => (
     <ScrollablePanelContent>
-      <ShapesPanel onShow={() => showPanel(props.api)} />
+      <ShapesPanel />
     </ScrollablePanelContent>
   ),
   TablesPanel: () => (
