@@ -62,7 +62,9 @@ export function enableBuiltInDataProviders(): void {
 
   appStoreState.registerPointsDataProvider(
     tablePointsDataSourceType,
-    new TablePointsDataProvider(),
+    new TablePointsDataProvider({
+      getTableDataProviders: () => appStore.getState().tableDataProviders,
+    }),
   );
 
   appStoreState.registerShapesDataProvider(

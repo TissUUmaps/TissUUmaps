@@ -34,6 +34,9 @@ export class TIFFImageDataProvider implements ImageDataProvider<
   TIFFImageData,
   NormalizedTIFFImageDataSource
 > {
+  /** The file extensions of the sources this data provider supports */
+  private static readonly _extensions = new Set([".tif", ".tiff", ".qptiff"]);
+
   /**
    * The pixels a histogram is built from (see
    * {@link TIFFImageDataProvider._computeChannelHistogram}); more do not make
@@ -112,6 +115,21 @@ export class TIFFImageDataProvider implements ImageDataProvider<
         projectSource,
       ),
     };
+  }
+
+  /**
+   * Returns whether a source has a TIFF file extension (see
+   * {@link TIFFImageDataProvider._extensions})
+   *
+   * @param normalizedSource - The normalized source to check
+   * @returns A promise that resolves to whether the source is supported
+   */
+  supports(normalizedSource: string): Promise<boolean> {
+    return Promise.resolve(
+      TIFFImageDataProvider._extensions.has(
+        SourceUtils.getExtension(normalizedSource),
+      ),
+    );
   }
 
   /**

@@ -14,6 +14,7 @@ import {
   type OMEZarrImageDataSource,
   omeZarrImageDataSourceDefaults,
 } from "./OMEZarrImageDataSource";
+import { OMEZarrUtils } from "./OMEZarrUtils";
 import { openOMEZarr } from "./openOMEZarr";
 
 /**
@@ -106,6 +107,29 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
         projectSource,
       ),
     };
+  }
+
+  /**
+   * Returns whether a source is an OME-Zarr image that is no label image (see
+   * {@link OMEZarrUtils.inspectImage})
+   *
+   * @param normalizedSource - The normalized source to check
+   * @param workspace - The directory handle of the open workspace, if any
+   * @param options - Optional abort signal
+   * @returns A promise that resolves to whether the source is supported
+   * @throws See {@link OMEZarrUtils.inspectImage}
+   */
+  async supports(
+    normalizedSource: string,
+    workspace: FileSystemDirectoryHandle | null,
+    options?: { signal?: AbortSignal },
+  ): Promise<boolean> {
+    const image = await OMEZarrUtils.inspectImage(
+      normalizedSource,
+      workspace,
+      options,
+    );
+    return image !== undefined && !image.labels;
   }
 
   /**

@@ -10,8 +10,9 @@ export const omeZarrImageDataSourceDefaults = {};
  * Data source for OME-Zarr images
  *
  * The `source` refers to a remote OME-Zarr store (a URL), a remote zipped
- * OME-Zarr file (a URL ending in `.ozx`), or an OME-Zarr store (a directory)
- * or zipped OME-Zarr file in the open workspace (a workspace-relative or
+ * OME-Zarr file (a URL with the zipped OME-Zarr extension, in any case, see
+ * `OMEZarrUtils.isZipSource`), or an OME-Zarr store (a directory) or zipped
+ * OME-Zarr file in the open workspace (a workspace-relative or
  * project-relative path).
  *
  * Images with a channel axis (even one of length one) are opened as

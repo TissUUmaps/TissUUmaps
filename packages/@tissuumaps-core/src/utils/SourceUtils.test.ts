@@ -826,6 +826,22 @@ describe("SourceUtils", () => {
     });
   });
 
+  describe("getExtension", () => {
+    it("returns the last extension, lower-cased", () => {
+      expect(SourceUtils.getExtension("/proj/points.CSV")).toBe(".csv");
+      expect(SourceUtils.getExtension("/cells.ome.zarr")).toBe(".zarr");
+      expect(
+        SourceUtils.getExtension("https://data.example/a/b.tif?x=1#y"),
+      ).toBe(".tif");
+    });
+
+    it("returns an empty string without an extension", () => {
+      expect(SourceUtils.getExtension("/x.zarr/tables/table")).toBe("");
+      expect(SourceUtils.getExtension("/proj/.hidden")).toBe("");
+      expect(SourceUtils.getExtension("data:image/png;base64,AAAA")).toBe("");
+    });
+  });
+
   describe("getStem", () => {
     it("drops the last extension of a workspace-relative path", () => {
       expect(SourceUtils.getStem("/proj/points.csv")).toBe("points");

@@ -33,6 +33,9 @@ export class TIFFLabelsDataProvider implements LabelsDataProvider<
   TIFFLabelsData,
   NormalizedTIFFLabelsDataSource
 > {
+  /** The file extensions of the sources this data provider supports */
+  private static readonly _extensions = new Set([".tif", ".tiff", ".qptiff"]);
+
   readonly name = "TIFF";
 
   readonly schema = {
@@ -110,6 +113,21 @@ export class TIFFLabelsDataProvider implements LabelsDataProvider<
         projectSource,
       ),
     };
+  }
+
+  /**
+   * Returns whether a source has a TIFF file extension (see
+   * {@link TIFFLabelsDataProvider._extensions})
+   *
+   * @param normalizedSource - The normalized source to check
+   * @returns A promise that resolves to whether the source is supported
+   */
+  supports(normalizedSource: string): Promise<boolean> {
+    return Promise.resolve(
+      TIFFLabelsDataProvider._extensions.has(
+        SourceUtils.getExtension(normalizedSource),
+      ),
+    );
   }
 
   /**

@@ -17,6 +17,9 @@ export class ParquetTableDataProvider implements TableDataProvider<
   ParquetTableData,
   NormalizedParquetTableDataSource
 > {
+  /** The file extensions of the sources this data provider supports */
+  private static readonly _extensions = new Set([".parquet", ".geoparquet"]);
+
   readonly name = "Parquet";
 
   readonly schema = {
@@ -74,6 +77,22 @@ export class ParquetTableDataProvider implements TableDataProvider<
         projectSource,
       ),
     };
+  }
+
+  /**
+   * Returns whether a source has a Parquet or GeoParquet file extension (see
+   * {@link ParquetTableDataProvider._extensions}), as the point geometry of
+   * GeoParquet files is read as coordinate columns
+   *
+   * @param normalizedSource - The normalized source to check
+   * @returns A promise that resolves to whether the source is supported
+   */
+  supports(normalizedSource: string): Promise<boolean> {
+    return Promise.resolve(
+      ParquetTableDataProvider._extensions.has(
+        SourceUtils.getExtension(normalizedSource),
+      ),
+    );
   }
 
   async load(

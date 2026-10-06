@@ -5,12 +5,15 @@ import { type OMEZarr, OMEZarrTileSource } from "omezarr-tilesource";
 
 import { SourceUtils } from "@tissuumaps/core";
 
+import { OMEZarrUtils } from "./OMEZarrUtils";
+
 /**
  * Opens the OME-Zarr image a data source points to, loading its metadata and
  * the arrays of all its resolution levels with `OMEZarrTileSource.loadOMEZarr`
  *
  * The normalized source is resolved with `SourceUtils.resolveSource`: a URL is
- * opened as a remote zipped OME-Zarr file if it ends in `.ozx`, and as a remote
+ * opened as a remote zipped OME-Zarr file if it has the zipped OME-Zarr
+ * extension in any case (see `OMEZarrUtils.isZipSource`), and as a remote
  * OME-Zarr store otherwise; a file in the open workspace as a zipped OME-Zarr
  * file, and a directory in the open workspace as an OME-Zarr store (see
  * `FileSystemHandleStore`).
@@ -24,8 +27,7 @@ import { SourceUtils } from "@tissuumaps/core";
  * @param options - `signal` aborts the load; `workspace` is the directory
  * handle of the open workspace, required for workspace-relative sources
  * @returns A promise that resolves to the loaded image and arrays, and to the
- * absolute URL and the `zip` flag to open its tile sources with (`zip` is
- * `undefined` for URLs, which the tile source classifies itself)
+ * absolute URL and the `zip` flag to open its tile sources with
  * @throws Error if the source is workspace-relative while no workspace is open
  */
 export async function openOMEZarr(
@@ -34,7 +36,7 @@ export async function openOMEZarr(
     signal?: AbortSignal;
     workspace?: FileSystemDirectoryHandle | null;
   },
-): Promise<{ loaded: OMEZarr; url: string; zip: boolean | undefined }> {
+): Promise<{ loaded: OMEZarr; url: string; zip: boolean }> {
   const { signal, workspace = null } = options ?? {};
   signal?.throwIfAborted();
   const resolvedSource = await SourceUtils.resolveSource(
@@ -43,12 +45,11 @@ export async function openOMEZarr(
     { signal },
   );
   if (typeof resolvedSource === "string") {
-    const loaded = await OMEZarrTileSource.loadOMEZarr(
-      resolvedSource,
-      undefined,
-      { signal },
-    );
-    return { loaded, url: resolvedSource, zip: undefined };
+    const zip = OMEZarrUtils.isZipSource(normalizedSource);
+    const loaded = await OMEZarrTileSource.loadOMEZarr(resolvedSource, zip, {
+      signal,
+    });
+    return { loaded, url: resolvedSource, zip };
   }
   const url = `urn:uuid:${crypto.randomUUID()}`;
   if (resolvedSource.kind === "file") {

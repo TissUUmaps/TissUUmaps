@@ -17,6 +17,9 @@ export class ParquetShapesDataProvider implements ShapesDataProvider<
   ParquetShapesData,
   NormalizedParquetShapesDataSource
 > {
+  /** The file extensions of the (Geo)Parquet sources to check for shapes */
+  private static readonly _extensions = new Set([".parquet", ".geoparquet"]);
+
   readonly name = "Parquet";
 
   readonly schema = {
@@ -90,6 +93,47 @@ export class ParquetShapesDataProvider implements ShapesDataProvider<
         projectSource,
       ),
     };
+  }
+
+  /**
+   * Returns whether a source is a GeoParquet file of shapes
+   *
+   * A file with a (Geo)Parquet extension (see
+   * {@link ParquetShapesDataProvider._extensions}) has to have a primary
+   * geometry column that is not a point column, which is read from its
+   * metadata without reading any data.
+   *
+   * @param normalizedSource - The normalized source to check
+   * @param workspace - The directory handle of the open workspace, if any
+   * @param options - Optional abort signal
+   * @returns A promise that resolves to whether the source is supported
+   * @throws Error if the source cannot be read, or if the operation is
+   * aborted
+   */
+  async supports(
+    normalizedSource: string,
+    workspace: FileSystemDirectoryHandle | null,
+    options?: { signal?: AbortSignal },
+  ): Promise<boolean> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    if (
+      !ParquetShapesDataProvider._extensions.has(
+        SourceUtils.getExtension(normalizedSource),
+      )
+    ) {
+      return false;
+    }
+    const { file, url } = await SourceUtils.openSourceFile(
+      normalizedSource,
+      workspace,
+      { signal },
+    );
+    const { hasShapesColumn } = await runParquetWorker(
+      { op: "geo", source: { file, url } },
+      { signal },
+    );
+    return hasShapesColumn;
   }
 
   async load(

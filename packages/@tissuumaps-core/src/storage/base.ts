@@ -174,6 +174,26 @@ export interface DataProvider<
   ): TNormalizedDataSource;
 
   /**
+   * Returns whether this data provider can likely open a source
+   *
+   * Used to pick a data provider for a source the user entered or dropped,
+   * e.g. by its file extension or by cheaply reading its metadata. A data
+   * provider without this method is never picked automatically, but can
+   * still be chosen by the user. Callers treat a rejection as `false`.
+   *
+   * @param normalizedSource - The source, normalized with
+   * `SourceUtils.normalizeSource` like {@link DataProvider.normalize} does
+   * @param workspace - The directory handle of the open workspace, if any
+   * @param options - Optional abort signal
+   * @returns A promise that resolves to whether the source is supported
+   */
+  supports?(
+    normalizedSource: string,
+    workspace: FileSystemDirectoryHandle | null,
+    options?: { signal?: AbortSignal },
+  ): Promise<boolean>;
+
+  /**
    * Opens a data source and returns the loaded data accessor
    *
    * The data source has to have been normalized by

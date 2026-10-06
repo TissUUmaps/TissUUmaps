@@ -40,8 +40,9 @@
  *
  * Helpers work on normalized sources: {@link SourceUtils.isWorkspacePath}
  * classifies them, {@link SourceUtils.makeWorkspacePath} builds them,
- * {@link SourceUtils.getPathSegments}, {@link SourceUtils.getParentSource} and
- * {@link SourceUtils.getStem} take them apart, and
+ * {@link SourceUtils.getPathSegments}, {@link SourceUtils.getParentSource},
+ * {@link SourceUtils.getStem} and {@link SourceUtils.getExtension} take them
+ * apart, and
  * {@link SourceUtils.makeProjectPath} turns them back into project-relative
  * paths.
  *
@@ -444,8 +445,29 @@ export class SourceUtils {
    */
   static getStem(normalizedSource: string): string {
     const name = SourceUtils.getPathSegments(normalizedSource).at(-1) ?? "";
-    const extensionIndex = name.lastIndexOf(".");
-    return extensionIndex > 0 ? name.substring(0, extensionIndex) : name;
+    const extensionIndex = SourceUtils._getExtensionIndex(name);
+    return extensionIndex !== -1 ? name.substring(0, extensionIndex) : name;
+  }
+
+  /**
+   * Returns the last extension of the file or directory a normalized source
+   * refers to, lower-cased for comparison
+   *
+   * Only the last extension is returned, so `cells.ome.zarr` gives `.zarr`.
+   * A leading dot does not start an extension, so `.hidden` has none.
+   *
+   * @param normalizedSource - The normalized source (see
+   *   {@link SourceUtils.normalizeSource})
+   * @returns The extension including its dot (e.g. `.csv`), or an empty
+   *   string if the last path segment has none
+   * @throws See {@link SourceUtils.getPathSegments}
+   */
+  static getExtension(normalizedSource: string): string {
+    const name = SourceUtils.getPathSegments(normalizedSource).at(-1) ?? "";
+    const extensionIndex = SourceUtils._getExtensionIndex(name);
+    return extensionIndex !== -1
+      ? name.substring(extensionIndex).toLowerCase()
+      : "";
   }
 
   /**
@@ -632,6 +654,18 @@ export class SourceUtils {
       }
     }
     return segments;
+  }
+
+  /**
+   * Returns where the last extension of a file or directory name starts
+   *
+   * @param name - The name
+   * @returns The index of the extension's dot, or `-1` if the name has no
+   *   extension; a leading dot does not start one
+   */
+  private static _getExtensionIndex(name: string): number {
+    const extensionIndex = name.lastIndexOf(".");
+    return extensionIndex > 0 ? extensionIndex : -1;
   }
 
   /**
