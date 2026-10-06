@@ -4,8 +4,9 @@ import type { Table, TableColumnRef } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { SimpleSelect } from "@/components/common/simple-select";
-import { TableColumnInput } from "@/components/widgets/TableColumnInput";
 import { useProjectStore } from "@/stores/project";
+
+import { TableColumnInput } from "./TableColumnInput";
 
 export type TableColumnFieldProps = {
   label: string;
