@@ -16,26 +16,29 @@ const fallbackProjectUrl = "project.tm4";
  *
  * Registers the built-in data providers, starts the data caches and the plugin
  * registry, registers the built-in plugins, marks the project open once it has
- * a source or data,
+ * a source or data, collapses the expanded objects whenever another project is
+ * loaded or the project is closed,
  * starts loading the initial project, and finally announces that the
  * application has loaded.
  * The project is only loading, not loaded, by the time this returns.
  *
- * @returns A callback that cancels the initial project loading, stops watching
- * whether the project is open, and stops the plugin registry and the data
- * caches, invoked on hot module replacement
+ * @returns A callback that cancels the initial project loading, stops
+ * collapsing the expanded objects and marking the project open, and stops the
+ * plugin registry and the data caches, invoked on hot module replacement
  */
 export function bootstrap(): () => void {
   enableBuiltInDataProviders();
   const stopDataCaches = startDataCaches();
   const stopPluginRegistry = startPluginRegistry();
   enableBuiltInPlugins();
-  const stopProjectOpenTracking = startProjectOpenTracking();
+  const stopMarkingProjectOpen = startMarkingProjectOpen();
+  const stopCollapsingOnProjectSwitch = startCollapsingOnProjectSwitch();
   const cancelInitialProjectLoading = loadInitialProject();
   notifyTissUUmapsLoaded();
   return () => {
     cancelInitialProjectLoading();
-    stopProjectOpenTracking();
+    stopCollapsingOnProjectSwitch();
+    stopMarkingProjectOpen();
     stopPluginRegistry();
     stopDataCaches();
   };
@@ -47,13 +50,37 @@ export function bootstrap(): () => void {
  *
  * @returns A callback that stops watching the project
  */
-function startProjectOpenTracking(): () => void {
+function startMarkingProjectOpen(): () => void {
   return projectStore.subscribe((projectState) => {
     if (
       !appStore.getState().projectOpen &&
       (projectState.source !== null || ProjectUtils.hasData(projectState))
     ) {
       appStore.getState().setProjectOpen(true);
+    }
+  });
+}
+
+/**
+ * Collapses the expanded objects of every panel whenever another project is
+ * loaded or the project is closed, i.e. whenever the project's instance ID
+ * changes
+ *
+ * Object IDs are only unique within a project, so the expanded IDs of the
+ * previous project would otherwise expand objects of the new one.
+ *
+ * @returns A callback that stops watching the project
+ */
+function startCollapsingOnProjectSwitch(): () => void {
+  return projectStore.subscribe((projectState, prevProjectState) => {
+    if (projectState.instanceId !== prevProjectState.instanceId) {
+      appStore.setState({
+        expandedImageIds: [],
+        expandedLabelsIds: [],
+        expandedPointsIds: [],
+        expandedShapesIds: [],
+        expandedTableIds: [],
+      });
     }
   });
 }

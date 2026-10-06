@@ -4,6 +4,8 @@ import { immer } from "zustand/middleware/immer";
 
 import type { AppStore, AppStoreApi, AppStoreState } from "@tissuumaps/core";
 
+import { PanelId } from "@/panels";
+
 import "./zustand";
 
 /**
@@ -11,7 +13,8 @@ import "./zustand";
  *
  * This comprises the open workspace, whether a project is open,
  * the current interaction mode, the hovered channel preview, the registered
- * data providers, and the registered plugins.
+ * data providers, the registered plugins, the active panel, and the expanded
+ * objects of each panel.
  * The plugins are written by the plugin registry, which owns their lifecycle,
  * rather than through an action.
  */
@@ -26,14 +29,12 @@ export const appStore: AppStoreApi = createStore<AppStore>()(
       setProjectOpen: (projectOpen) => set({ projectOpen }),
       setHighlightedItemGroup: (highlightedItemGroup) =>
         set({ highlightedItemGroup }),
-      showImageSettings: (imageId) =>
-        set({ imageSettingsRequest: { imageId } }),
-      showLabelsSettings: (labelsId) =>
-        set({ labelsSettingsRequest: { labelsId } }),
-      showPointsSettings: (pointsId) =>
-        set({ pointsSettingsRequest: { pointsId } }),
-      showShapesSettings: (shapesId) =>
-        set({ shapesSettingsRequest: { shapesId } }),
+      setActivePanelId: (activePanelId) => set({ activePanelId }),
+      setExpandedImageIds: (expandedImageIds) => set({ expandedImageIds }),
+      setExpandedLabelsIds: (expandedLabelsIds) => set({ expandedLabelsIds }),
+      setExpandedPointsIds: (expandedPointsIds) => set({ expandedPointsIds }),
+      setExpandedShapesIds: (expandedShapesIds) => set({ expandedShapesIds }),
+      setExpandedTableIds: (expandedTableIds) => set({ expandedTableIds }),
       registerImageDataProvider: (type, dataProvider) =>
         set((draft) => {
           draft.imageDataProviders.set(type, dataProvider);
@@ -71,7 +72,8 @@ export function useAppStore<T>(selector: (state: AppStore) => T): T {
 
 /**
  * Creates the initial {@link appStore} state, with nothing registered, no
- * workspace open and no project open
+ * workspace open, no project open, the project panel active and nothing
+ * expanded
  */
 function createInitialAppStoreState(): AppStoreState {
   return {
@@ -86,9 +88,11 @@ function createInitialAppStoreState(): AppStoreState {
     shapesDataProviders: new Map(),
     tableDataProviders: new Map(),
     plugins: new Map(),
-    imageSettingsRequest: null,
-    labelsSettingsRequest: null,
-    pointsSettingsRequest: null,
-    shapesSettingsRequest: null,
+    activePanelId: PanelId.project,
+    expandedImageIds: [],
+    expandedLabelsIds: [],
+    expandedPointsIds: [],
+    expandedShapesIds: [],
+    expandedTableIds: [],
   };
 }

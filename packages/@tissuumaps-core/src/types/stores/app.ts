@@ -108,40 +108,50 @@ export type AppStoreState = {
   >;
 
   /**
-   * The latest request to show the settings of an image, or `null` if there has
-   * been none
+   * The ID of the active panel, i.e. the panel whose tab was selected last
    *
-   * Set by {@link AppStoreActions.showImageSettings} to a new object on every call, so
-   * that a repeated request for the same image is a change too.
+   * Either the ID of a built-in panel or that of a mounted plugin's panel, as
+   * listed in the plugin documentation. Kept in sync with the panel layout in
+   * both directions: selecting a tab sets it, and setting it brings that
+   * panel's tab to the front and activates its group. The viewer has no tab and
+   * is never the active panel, so focusing it leaves this unchanged.
    */
-  imageSettingsRequest: { imageId: string } | null;
+  activePanelId: string;
 
   /**
-   * The latest request to show the settings of labels, or `null` if there has
-   * been none
+   * The IDs of the images whose entries are expanded in the Images panel
    *
-   * Set by {@link AppStoreActions.showLabelsSettings} to a new object on every call, so
-   * that a repeated request for the same labels is a change too.
+   * Cleared whenever another project is loaded or the project is closed.
    */
-  labelsSettingsRequest: { labelsId: string } | null;
+  expandedImageIds: string[];
 
   /**
-   * The latest request to show the settings of points, or `null` if there has
-   * been none
+   * The IDs of the labels whose entries are expanded in the Labels panel
    *
-   * Set by {@link AppStoreActions.showPointsSettings} to a new object on every call, so
-   * that a repeated request for the same points is a change too.
+   * Cleared whenever another project is loaded or the project is closed.
    */
-  pointsSettingsRequest: { pointsId: string } | null;
+  expandedLabelsIds: string[];
 
   /**
-   * The latest request to show the settings of shapes, or `null` if there has
-   * been none
+   * The IDs of the points whose entries are expanded in the Points panel
    *
-   * Set by {@link AppStoreActions.showShapesSettings} to a new object on every call, so
-   * that a repeated request for the same shapes is a change too.
+   * Cleared whenever another project is loaded or the project is closed.
    */
-  shapesSettingsRequest: { shapesId: string } | null;
+  expandedPointsIds: string[];
+
+  /**
+   * The IDs of the shapes whose entries are expanded in the Shapes panel
+   *
+   * Cleared whenever another project is loaded or the project is closed.
+   */
+  expandedShapesIds: string[];
+
+  /**
+   * The IDs of the tables whose entries are expanded in the Tables panel
+   *
+   * Cleared whenever another project is loaded or the project is closed.
+   */
+  expandedTableIds: string[];
 };
 
 /**
@@ -195,36 +205,51 @@ export type AppStoreActions = {
   ) => void;
 
   /**
-   * Shows the settings of an image: the Images panel is brought to the front
-   * and the settings are expanded
+   * Makes a panel the active panel, bringing its tab to the front
    *
-   * @param imageId - ID of the image whose settings to show
+   * An ID that does not identify a panel of the layout, e.g. that of the viewer
+   * or of a plugin that is not mounted, is reverted, leaving the layout
+   * unchanged.
+   *
+   * @param activePanelId - The ID of the panel, see
+   * {@link AppStoreState.activePanelId}
    */
-  showImageSettings: (imageId: string) => void;
+  setActivePanelId: (activePanelId: string) => void;
 
   /**
-   * Shows the settings of labels: the Labels panel is brought to the front
-   * and the settings are expanded
+   * Sets the images whose entries are expanded in the Images panel
    *
-   * @param labelsId - ID of the labels whose settings to show
+   * @param expandedImageIds - The IDs of the images, in any order
    */
-  showLabelsSettings: (labelsId: string) => void;
+  setExpandedImageIds: (expandedImageIds: string[]) => void;
 
   /**
-   * Shows the settings of points: the Points panel is brought to the front
-   * and the settings are expanded
+   * Sets the labels whose entries are expanded in the Labels panel
    *
-   * @param pointsId - ID of the points whose settings to show
+   * @param expandedLabelsIds - The IDs of the labels, in any order
    */
-  showPointsSettings: (pointsId: string) => void;
+  setExpandedLabelsIds: (expandedLabelsIds: string[]) => void;
 
   /**
-   * Shows the settings of shapes: the Shapes panel is brought to the front
-   * and the settings are expanded
+   * Sets the points whose entries are expanded in the Points panel
    *
-   * @param shapesId - ID of the shapes whose settings to show
+   * @param expandedPointsIds - The IDs of the points, in any order
    */
-  showShapesSettings: (shapesId: string) => void;
+  setExpandedPointsIds: (expandedPointsIds: string[]) => void;
+
+  /**
+   * Sets the shapes whose entries are expanded in the Shapes panel
+   *
+   * @param expandedShapesIds - The IDs of the shapes, in any order
+   */
+  setExpandedShapesIds: (expandedShapesIds: string[]) => void;
+
+  /**
+   * Sets the tables whose entries are expanded in the Tables panel
+   *
+   * @param expandedTableIds - The IDs of the tables, in any order
+   */
+  setExpandedTableIds: (expandedTableIds: string[]) => void;
 
   /**
    * Registers an image data provider

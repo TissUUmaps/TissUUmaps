@@ -1,27 +1,8 @@
 import type { DockviewApi } from "dockview-react";
 import { useEffect } from "react";
 
+import { getPluginPanelId, isPluginPanelId } from "@/panels";
 import { useAppStore } from "@/stores/app";
-
-/**
- * The prefix of the dockview panel ID of a plugin's panel, followed by the
- * plugin's ID
- *
- * The prefix identifies the plugin panels among the dockview panels, so that
- * {@link usePluginPanels} only ever adds and removes its own.
- */
-const pluginPanelIdPrefix = "plugin:";
-
-/**
- * Gets the dockview panel ID of a plugin's panel
- *
- * @param pluginId - The ID of the plugin
- * @returns The ID of the plugin's panel, which is only in the dockview layout
- * while the plugin is mounted
- */
-export function getPluginPanelId(pluginId: string): string {
-  return pluginPanelIdPrefix + pluginId;
-}
 
 /**
  * Keeps the plugin panels in the dockview layout in sync with the plugins
@@ -62,7 +43,7 @@ export function usePluginPanels(
     }
     for (const dockviewPanel of dockviewApi.panels) {
       if (
-        dockviewPanel.id.startsWith(pluginPanelIdPrefix) &&
+        isPluginPanelId(dockviewPanel.id) &&
         !pluginPanels.has(dockviewPanel.id)
       ) {
         dockviewApi.removePanel(dockviewPanel);

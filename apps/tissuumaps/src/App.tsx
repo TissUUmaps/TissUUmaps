@@ -1,11 +1,9 @@
 import {
   type DockviewApi,
   DockviewDefaultTab,
-  type DockviewPanelApi,
   DockviewReact,
   type DockviewReadyEvent,
   type DockviewTheme,
-  type IDockviewHeaderActionsProps,
   type IDockviewPanelHeaderProps,
   type IDockviewPanelProps,
 } from "dockview-react";
@@ -14,7 +12,8 @@ import { type ReactNode, useLayoutEffect, useState } from "react";
 
 import { IconButton } from "@/components/common/icon-button";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { getPluginPanelId, usePluginPanels } from "@/hooks/usePluginPanels";
+import { useActivePanelSync } from "@/hooks/useActivePanelSync";
+import { usePluginPanels } from "@/hooks/usePluginPanels";
 
 import "./App.css";
 import { NotificationCenter } from "./components/app/NotificationCenter";
@@ -28,7 +27,7 @@ import { ProjectPanel } from "./components/panels/ProjectPanel";
 import { ShapesPanel } from "./components/panels/ShapesPanel";
 import { TablesPanel } from "./components/panels/TablesPanel";
 import { ViewerPanel } from "./components/panels/ViewerPanel";
-import { PanelId } from "./components/panels/panelId";
+import { PanelId } from "./panels";
 import { pluginRegistry } from "./plugins";
 import { useSettingsStore } from "./stores/settings";
 
@@ -54,45 +53,32 @@ function ScrollablePanelContent({ children }: { children: ReactNode }) {
   );
 }
 
-/** Brings a dockview panel to the front */
-function showPanel(api: DockviewPanelApi): void {
-  // dockview re-opens a panel that is activated while already active, which
-  // re-attaches its content and resets the scroll positions within
-  if (!api.isActive) {
-    api.setActive();
-  }
-}
-
 /** The panels that can be shown in the dockview layout, by component name */
 const dockviewComponents = {
   ViewerPanel: () => <ViewerPanel className="size-full" />,
-  ProjectPanel: (props: IDockviewPanelProps) => (
+  ProjectPanel: () => (
     <ScrollablePanelContent>
-      <ProjectPanel
-        onShowPanel={(panelId) =>
-          props.containerApi.getPanel(panelId)?.api.setActive()
-        }
-      />
+      <ProjectPanel />
     </ScrollablePanelContent>
   ),
-  ImagesPanel: (props: IDockviewPanelProps) => (
+  ImagesPanel: () => (
     <ScrollablePanelContent>
-      <ImagesPanel onShow={() => showPanel(props.api)} />
+      <ImagesPanel />
     </ScrollablePanelContent>
   ),
-  LabelsPanel: (props: IDockviewPanelProps) => (
+  LabelsPanel: () => (
     <ScrollablePanelContent>
-      <LabelsPanel onShow={() => showPanel(props.api)} />
+      <LabelsPanel />
     </ScrollablePanelContent>
   ),
-  PointsPanel: (props: IDockviewPanelProps) => (
+  PointsPanel: () => (
     <ScrollablePanelContent>
-      <PointsPanel onShow={() => showPanel(props.api)} />
+      <PointsPanel />
     </ScrollablePanelContent>
   ),
-  ShapesPanel: (props: IDockviewPanelProps) => (
+  ShapesPanel: () => (
     <ScrollablePanelContent>
-      <ShapesPanel onShow={() => showPanel(props.api)} />
+      <ShapesPanel />
     </ScrollablePanelContent>
   ),
   TablesPanel: () => (
@@ -138,20 +124,12 @@ const dockviewTabComponents = {
  * The plugins menu and the dark mode toggle shown at the right end of the
  * dockview tab bar
  */
-function DockviewRightHeaderActionsComponent(
-  props: IDockviewHeaderActionsProps,
-) {
+function DockviewRightHeaderActionsComponent() {
   const dark = useSettingsStore((state) => state.dark);
   const setDark = useSettingsStore((state) => state.setDark);
   return (
     <div className="flex">
-      <PluginMenu
-        onShowPlugin={(pluginId) =>
-          props.containerApi
-            .getPanel(getPluginPanelId(pluginId))
-            ?.api.setActive()
-        }
-      />
+      <PluginMenu />
       <IconButton
         label={dark ? "Light mode" : "Dark mode"}
         variant="default"
@@ -244,6 +222,7 @@ export function App() {
 
   // The panels contributed by plugins join the group of the project panel
   usePluginPanels(dockviewApi, PanelId.project);
+  useActivePanelSync(dockviewApi);
 
   // Before paint, so that React never renders a light frame in dark mode
   // https://tailwindcss.com/docs/dark-mode

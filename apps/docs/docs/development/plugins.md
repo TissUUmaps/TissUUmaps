@@ -178,11 +178,32 @@ data loading by changing the project instead, for example
 `projectStore.getState().updateTable(tableId, { dataSource })`. Likewise,
 `appStore`'s `plugins` is written by the registry alone.
 
-A plugin shows the user the settings of an image, e.g. one it created, by
-calling `appStore.getState().showImageSettings(imageId)`: the Images panel is brought
-to the front and the image's settings are expanded, but not scrolled into view.
-`showLabelsSettings`, `showPointsSettings` and `showShapesSettings` do the same for labels, points
-and shapes.
+`appStore`'s `activePanelId` is the ID of the active panel, i.e. the panel whose
+tab the user selected last, and is kept in sync with the panel layout in both
+directions. A plugin brings a panel to the front with
+`appStore.getState().setActivePanelId(panelId)`. The built-in panels have the
+IDs `"project"`, `"images"`, `"labels"`, `"points"`, `"shapes"` and `"tables"`,
+and a mounted plugin's panel has `"plugin:"` followed by the plugin's `id`, for
+example `"plugin:my-plugin"`. The viewer has no tab and is never the active
+panel: while the user interacts with the viewer, `activePanelId` keeps the panel
+that was active last. Setting an ID that does not identify a panel of the
+layout, e.g. that of a plugin that is not mounted, has no effect.
+
+`appStore`'s `expandedImageIds`, `expandedLabelsIds`, `expandedPointsIds`,
+`expandedShapesIds` and `expandedTableIds` are the IDs of the objects whose
+entries are expanded in the respective panels, and are set with
+`setExpandedImageIds` etc. They are cleared whenever another project is loaded
+or the project is closed, but may contain the IDs of deleted objects. A plugin shows the user an image, e.g. one it
+created, by expanding its entry and bringing the Images panel to the front:
+
+```javascript
+const { expandedImageIds, setExpandedImageIds, setActivePanelId } =
+  appStore.getState();
+setExpandedImageIds([...expandedImageIds, imageId]);
+setActivePanelId("images");
+```
+
+The entry is expanded but not scrolled into view.
 
 ## User interface plugins
 
