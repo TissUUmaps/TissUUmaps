@@ -180,6 +180,7 @@ The user interface is built primarily using TailwindCSS, shadcn/ui, Base UI comp
 
 Components are structured as follows:
 
+- `app` - application-level components that are only used by `App` itself
 - `common` - custom low-level components that are commonly reused throughout the codebase
 - `dialogs` - the dialog provider and context, and the alert, confirm and prompt dialogs
 - `panels` - high-level UI building blocks (layout components) that are used as Dockview panels
