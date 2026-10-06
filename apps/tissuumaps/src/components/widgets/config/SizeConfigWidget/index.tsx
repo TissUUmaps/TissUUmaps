@@ -1,10 +1,10 @@
 import { type CoordinateSpace, ProjectUtils } from "@tissuumaps/core";
 
 import { Field, FieldItem, FieldLabel } from "@/components/common/field";
+import { GroupValueMapSelect } from "@/components/controls/GroupValueMapSelect";
+import { TableColumnField } from "@/components/controls/TableColumnField";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { TableColumnField } from "@/components/widgets/TableColumnField";
-import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
 import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 

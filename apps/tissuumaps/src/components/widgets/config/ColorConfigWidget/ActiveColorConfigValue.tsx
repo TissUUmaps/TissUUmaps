@@ -7,7 +7,7 @@ import {
   isRandomConfig,
 } from "@tissuumaps/core";
 
-import { formatTableColumn } from "@/components/widgets/TableColumnField/formatTableColumn";
+import { formatTableColumn } from "@/components/controls/TableColumnField/formatTableColumn";
 import { useProjectStore } from "@/stores/project";
 
 import type { ColorConfigWidgetAdapter } from "./adapter";

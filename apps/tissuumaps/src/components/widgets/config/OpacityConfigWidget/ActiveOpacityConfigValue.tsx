@@ -4,7 +4,7 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { formatTableColumn } from "@/components/widgets/TableColumnField/formatTableColumn";
+import { formatTableColumn } from "@/components/controls/TableColumnField/formatTableColumn";
 import { percentFormat } from "@/lib/format";
 import { useProjectStore } from "@/stores/project";
 

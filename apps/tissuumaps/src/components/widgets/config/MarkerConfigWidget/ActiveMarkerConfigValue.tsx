@@ -4,8 +4,8 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
+import { formatTableColumn } from "@/components/controls/TableColumnField/formatTableColumn";
 import { markers } from "@/components/markers";
-import { formatTableColumn } from "@/components/widgets/TableColumnField/formatTableColumn";
 import { useProjectStore } from "@/stores/project";
 
 import type { MarkerConfigWidgetAdapter } from "./adapter";

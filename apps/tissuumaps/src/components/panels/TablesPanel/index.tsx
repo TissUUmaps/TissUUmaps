@@ -1,8 +1,8 @@
 import { type Table, createTable } from "@tissuumaps/core";
 
-import { AddDataObjectButton } from "@/components/widgets/AddDataObjectButton";
+import { AddDataObjectButton } from "@/components/controls/AddDataObjectButton";
+import { ObjectList, ObjectListItem } from "@/components/controls/ObjectList";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
-import { ObjectList, ObjectListItem } from "@/components/widgets/ObjectList";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";

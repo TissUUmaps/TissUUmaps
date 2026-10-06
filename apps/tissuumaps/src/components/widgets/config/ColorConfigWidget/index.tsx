@@ -12,6 +12,8 @@ import {
 import { Field, FieldLabel } from "@/components/common/field";
 import { IconButton } from "@/components/common/icon-button";
 import { SimpleColorPicker } from "@/components/common/simple-color-picker";
+import { GroupValueMapSelect } from "@/components/controls/GroupValueMapSelect";
+import { TableColumnField } from "@/components/controls/TableColumnField";
 import { Input } from "@/components/ui/input";
 import {
   InputGroup,
@@ -19,8 +21,6 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { TableColumnField } from "@/components/widgets/TableColumnField";
-import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
 import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 

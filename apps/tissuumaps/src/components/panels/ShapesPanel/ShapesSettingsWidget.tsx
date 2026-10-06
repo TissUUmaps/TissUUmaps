@@ -21,8 +21,8 @@ import {
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { SimpleSelect } from "@/components/common/simple-select";
+import { formatTableColumn } from "@/components/controls/TableColumnField/formatTableColumn";
 import { Input } from "@/components/ui/input";
-import { formatTableColumn } from "@/components/widgets/TableColumnField/formatTableColumn";
 import { TransformSettingsWidget } from "@/components/widgets/TransformSettingsWidget";
 import {
   ActiveColorConfigValue,

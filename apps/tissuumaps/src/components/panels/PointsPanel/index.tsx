@@ -4,12 +4,12 @@ import { type Points, createPoints } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
-import { AddDataObjectButton } from "@/components/widgets/AddDataObjectButton";
-import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { AddDataObjectButton } from "@/components/controls/AddDataObjectButton";
 import {
   SortableObjectList,
   SortableObjectListItem,
-} from "@/components/widgets/ObjectList";
+} from "@/components/controls/ObjectList";
+import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { usePointsData } from "@/hooks/useData";
 import { useExpandedPointsIds } from "@/hooks/useExpandedIds";
 import { cn } from "@/lib/utils";

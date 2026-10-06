@@ -2,9 +2,9 @@ import { ProjectUtils } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { SimpleSelect } from "@/components/common/simple-select";
+import { GroupValueMapSelect } from "@/components/controls/GroupValueMapSelect";
+import { TableColumnField } from "@/components/controls/TableColumnField";
 import { markers } from "@/components/markers";
-import { TableColumnField } from "@/components/widgets/TableColumnField";
-import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
 import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 

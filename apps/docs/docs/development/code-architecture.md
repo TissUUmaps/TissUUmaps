@@ -182,11 +182,12 @@ Components are structured as follows:
 
 - `app` - application-level components that are only used by `App` itself
 - `common` - custom low-level components that are commonly reused throughout the codebase
+- `controls` - application-specific components ("controls") used across panels and widgets
 - `dialogs` - the dialog provider and context, and the alert, confirm and prompt dialogs
 - `jsonforms` - the JSON Forms renderers and cells of the data source configuration forms
 - `panels` - high-level UI building blocks (layout components) that are used as Dockview panels
 - `ui` - shadcn/ui components, adapted to the application as needed (be careful when updating!)
-- `widgets` - independent high-level components (e.g. configuration widgets) used across panels
+- `widgets` - widgets used across panels (e.g. configuration widgets); a widget is a self-contained section of a panel that edits one aspect of an object, and widgets used by a single panel live in that panel's folder instead
 
 A feature component lives in a PascalCase folder named after the component (e.g. `components/panels/ImagesPanel`), with an `index.tsx` that _is_ the component (not a re-export). Everything that belongs to the feature sits next to it as flat files named by role, e.g. `hooks.ts`, `adapter.ts`, `category.ts`, sub-components such as `ImageSettingsWidget.tsx`, and feature hooks such as `useGroupColumn.tsx`; a sub-feature of its own (e.g. `ProjectPanel/LayersWidget`) is a nested PascalCase folder following the same rule. There are no `types.ts`/`utils.ts` grab-bags. Anything with behavior (dialogs, providers, widgets, panels) follows this rule, even if it sits right next to `ui`. Only `ui` and `common` consist of flat, kebab-case single files (e.g. `ui/button.tsx`), as they are shadcn-style wrappers over `@base-ui/react`.
 

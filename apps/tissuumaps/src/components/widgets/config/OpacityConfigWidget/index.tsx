@@ -2,8 +2,8 @@ import { ProjectUtils } from "@tissuumaps/core";
 
 import { Field, FieldLabel } from "@/components/common/field";
 import { OpacityControl } from "@/components/common/opacity-control";
-import { TableColumnField } from "@/components/widgets/TableColumnField";
-import { GroupValueMapSelect } from "@/components/widgets/config/GroupValueMapSelect";
+import { GroupValueMapSelect } from "@/components/controls/GroupValueMapSelect";
+import { TableColumnField } from "@/components/controls/TableColumnField";
 import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 
