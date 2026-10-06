@@ -8,13 +8,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getPluginPanelId } from "@/panels";
 import { pluginRegistry } from "@/plugins";
 import { useAppStore } from "@/stores/app";
 
 import { useLoadPluginFromFile, useLoadPluginFromURL } from "./hooks";
 
 export type PluginMenuProps = {
-  onShowPlugin: (pluginId: string) => void;
   className?: string;
 };
 
@@ -23,10 +23,11 @@ export type PluginMenuProps = {
  * followed by the options for loading a third-party plugin
  *
  * Picking a plugin mounts it, which shows its panel; picking one that is
- * already mounted calls `onShowPlugin` instead, to show its panel.
+ * already mounted brings its panel to the front instead.
  */
-export function PluginMenu({ onShowPlugin, className }: PluginMenuProps) {
+export function PluginMenu({ className }: PluginMenuProps) {
   const plugins = useAppStore((state) => state.plugins);
+  const setActivePanelId = useAppStore((state) => state.setActivePanelId);
   const loadPluginFromFile = useLoadPluginFromFile();
   const loadPluginFromURL = useLoadPluginFromURL();
 
@@ -52,7 +53,7 @@ export function PluginMenu({ onShowPlugin, className }: PluginMenuProps) {
               key={pluginId}
               onClick={() => {
                 if (plugin.container !== undefined) {
-                  onShowPlugin(pluginId);
+                  setActivePanelId(getPluginPanelId(pluginId));
                 } else {
                   pluginRegistry.mountPlugin(pluginId);
                 }

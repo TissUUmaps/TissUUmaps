@@ -178,6 +178,17 @@ data loading by changing the project instead, for example
 `projectStore.getState().updateTable(tableId, { dataSource })`. Likewise,
 `appStore`'s `plugins` is written by the registry alone.
 
+`appStore`'s `activePanelId` is the ID of the active panel, i.e. the panel whose
+tab the user selected last, and is kept in sync with the panel layout in both
+directions. A plugin brings a panel to the front with
+`appStore.getState().setActivePanelId(panelId)`. The built-in panels have the
+IDs `"project"`, `"images"`, `"labels"`, `"points"`, `"shapes"` and `"tables"`,
+and a mounted plugin's panel has `"plugin:"` followed by the plugin's `id`, for
+example `"plugin:my-plugin"`. The viewer has no tab and is never the active
+panel: while the user interacts with the viewer, `activePanelId` keeps the panel
+that was active last. Setting an ID that does not identify a panel of the
+layout, e.g. that of a plugin that is not mounted, has no effect.
+
 A plugin shows the user the settings of an image, e.g. one it created, by
 calling `appStore.getState().showImageSettings(imageId)`: the Images panel is brought
 to the front and the image's settings are expanded, but not scrolled into view.

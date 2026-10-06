@@ -160,7 +160,7 @@ In the TissUUmaps React app, absolute (`@/`) imports are used for imports across
 
 `bootstrap` starts up the parts of the application that live outside of React, in this order: the built-in data providers are registered (`data/providers.ts`), the data caches are started, the plugin registry is started and exposed as `window.tissuumaps` (`plugins.ts`), the plugins shipped in `@tissuumaps/plugins` are registered (`enableBuiltInPlugins` in `plugins.ts`), the project is set to be marked open as soon as it has a source or data, loading of the project is _started_ — from the URL given in the `project` GET parameter, or from `project.tm4` if that parameter is absent or empty — and finally a `tissuumaps-loaded` event is dispatched on `window` (`events.ts`), after which other plugins register themselves (see [Plugins](./plugins.md)). `bootstrap` returns a teardown function that cancels the project load, stops watching whether the project is open, and stops the registry and the caches, in that order; it is invoked on hot module replacement.
 
-`App` lays out the built-in panels and the plugin panels (`usePluginPanels`) with Dockview, wrapped in the `DialogProvider`.
+`App` lays out the built-in panels and the plugin panels (`usePluginPanels`) with Dockview, wrapped in the `DialogProvider`, and keeps the panel whose tab is in front in sync with the app store's `activePanelId` in both directions (`useActivePanelSync`).
 
 ### Project I/O
 

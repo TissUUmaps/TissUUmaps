@@ -4,6 +4,8 @@ import { immer } from "zustand/middleware/immer";
 
 import type { AppStore, AppStoreApi, AppStoreState } from "@tissuumaps/core";
 
+import { PanelId } from "@/panels";
+
 import "./zustand";
 
 /**
@@ -11,7 +13,7 @@ import "./zustand";
  *
  * This comprises the open workspace, whether a project is open,
  * the current interaction mode, the hovered channel preview, the registered
- * data providers, and the registered plugins.
+ * data providers, the registered plugins, and the panel in front.
  * The plugins are written by the plugin registry, which owns their lifecycle,
  * rather than through an action.
  */
@@ -26,6 +28,7 @@ export const appStore: AppStoreApi = createStore<AppStore>()(
       setProjectOpen: (projectOpen) => set({ projectOpen }),
       setHighlightedItemGroup: (highlightedItemGroup) =>
         set({ highlightedItemGroup }),
+      setActivePanelId: (activePanelId) => set({ activePanelId }),
       showImageSettings: (imageId) =>
         set({ imageSettingsRequest: { imageId } }),
       showLabelsSettings: (labelsId) =>
@@ -71,7 +74,7 @@ export function useAppStore<T>(selector: (state: AppStore) => T): T {
 
 /**
  * Creates the initial {@link appStore} state, with nothing registered, no
- * workspace open and no project open
+ * workspace open, no project open and the project panel in front
  */
 function createInitialAppStoreState(): AppStoreState {
   return {
@@ -86,6 +89,7 @@ function createInitialAppStoreState(): AppStoreState {
     shapesDataProviders: new Map(),
     tableDataProviders: new Map(),
     plugins: new Map(),
+    activePanelId: PanelId.project,
     imageSettingsRequest: null,
     labelsSettingsRequest: null,
     pointsSettingsRequest: null,

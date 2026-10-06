@@ -108,6 +108,17 @@ export type AppStoreState = {
   >;
 
   /**
+   * The ID of the active panel, i.e. the panel whose tab was selected last
+   *
+   * Either the ID of a built-in panel or that of a mounted plugin's panel, as
+   * listed in the plugin documentation. Kept in sync with the panel layout in
+   * both directions: selecting a tab sets it, and setting it brings that
+   * panel's tab to the front and activates its group. The viewer has no tab and
+   * is never the active panel, so focusing it leaves this unchanged.
+   */
+  activePanelId: string;
+
+  /**
    * The latest request to show the settings of an image, or `null` if there has
    * been none
    *
@@ -193,6 +204,18 @@ export type AppStoreActions = {
   setHighlightedItemGroup: (
     highlightedItemGroup: HighlightedItemGroup | null,
   ) => void;
+
+  /**
+   * Makes a panel the active panel, bringing its tab to the front
+   *
+   * An ID that does not identify a panel of the layout, e.g. that of the viewer
+   * or of a plugin that is not mounted, is reverted, leaving the layout
+   * unchanged.
+   *
+   * @param activePanelId - The ID of the panel, see
+   * {@link AppStoreState.activePanelId}
+   */
+  setActivePanelId: (activePanelId: string) => void;
 
   /**
    * Shows the settings of an image: the Images panel is brought to the front
