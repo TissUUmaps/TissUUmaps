@@ -12,9 +12,9 @@ import {
   isRandomConfig,
 } from "@tissuumaps/core";
 
+import { useConfigWidgetState } from "@/hooks/useConfigWidgetState";
 import { useTableData } from "@/hooks/useData";
 
-import { useConfigWidgetState } from "../useConfigWidgetState";
 import type { ColorConfigSource, ColorConfigWidgetAdapter } from "./adapter";
 
 type ColorConfigWidgetState = {

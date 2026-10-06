@@ -23,25 +23,25 @@ import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { formatTableColumn } from "@/components/controls/TableColumnField/formatTableColumn";
 import { Input } from "@/components/ui/input";
-import { TransformSettingsWidget } from "@/components/widgets/TransformSettingsWidget";
 import {
   ActiveColorConfigValue,
   ColorConfigSourceToggleGroup,
   ColorConfigWidget,
-} from "@/components/widgets/config/ColorConfigWidget";
-import { useColorConfigWidget } from "@/components/widgets/config/ColorConfigWidget/hooks";
+} from "@/components/widgets/ColorConfigWidget";
+import { useColorConfigWidget } from "@/components/widgets/ColorConfigWidget/hooks";
 import {
   ActiveOpacityConfigValue,
   OpacityConfigSourceToggleGroup,
   OpacityConfigWidget,
-} from "@/components/widgets/config/OpacityConfigWidget";
-import { useOpacityConfigWidget } from "@/components/widgets/config/OpacityConfigWidget/hooks";
+} from "@/components/widgets/OpacityConfigWidget";
+import { useOpacityConfigWidget } from "@/components/widgets/OpacityConfigWidget/hooks";
+import { TransformSettingsWidget } from "@/components/widgets/TransformSettingsWidget";
 import {
   ActiveVisibilityConfigValue,
   VisibilityConfigSourceToggleGroup,
   VisibilityConfigWidget,
-} from "@/components/widgets/config/VisibilityConfigWidget";
-import { useVisibilityConfigWidget } from "@/components/widgets/config/VisibilityConfigWidget/hooks";
+} from "@/components/widgets/VisibilityConfigWidget";
+import { useVisibilityConfigWidget } from "@/components/widgets/VisibilityConfigWidget/hooks";
 import { useControlled } from "@/hooks/useControlled";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";

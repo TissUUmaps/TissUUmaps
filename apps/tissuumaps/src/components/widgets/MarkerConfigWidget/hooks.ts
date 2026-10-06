@@ -10,7 +10,8 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { useConfigWidgetState } from "../useConfigWidgetState";
+import { useConfigWidgetState } from "@/hooks/useConfigWidgetState";
+
 import type { MarkerConfigSource, MarkerConfigWidgetAdapter } from "./adapter";
 
 type MarkerConfigWidgetState = {

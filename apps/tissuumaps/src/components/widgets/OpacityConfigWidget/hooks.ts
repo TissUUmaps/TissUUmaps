@@ -1,44 +1,45 @@
 import { useMemo } from "react";
 
 import {
+  type OpacityConfig,
   type TableColumnRef,
-  type VisibilityConfig,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
   isGroupByConfig,
 } from "@tissuumaps/core";
 
-import { useConfigWidgetState } from "../useConfigWidgetState";
+import { useConfigWidgetState } from "@/hooks/useConfigWidgetState";
+
 import type {
-  VisibilityConfigSource,
-  VisibilityConfigWidgetAdapter,
+  OpacityConfigSource,
+  OpacityConfigWidgetAdapter,
 } from "./adapter";
 
-type VisibilityConfigWidgetState = {
-  currentSource: VisibilityConfigSource;
-  currentConstantValue: boolean;
+type OpacityConfigWidgetState = {
+  currentSource: OpacityConfigSource;
+  currentConstantValue: number;
   currentFromTableColumn: TableColumnRef | null;
   currentGroupByTableColumn: TableColumnRef | null;
   currentGroupByMap: string | null;
 };
 
 /**
- * Returns the widget state that shows the given visibility configuration
+ * Returns the widget state that shows the given opacity configuration
  *
- * @param config - The visibility configuration
- * @param defaultVisibility - The constant visibility if the configuration has none
+ * @param config - The opacity configuration
+ * @param defaultOpacity - The constant opacity if the configuration has none
  * @returns The widget state
  */
 function configToState(
-  config: VisibilityConfig,
-  defaultVisibility: boolean,
-): VisibilityConfigWidgetState {
+  config: OpacityConfig,
+  defaultOpacity: number,
+): OpacityConfigWidgetState {
   return {
     currentSource: getActiveConfigSource(config) ?? "constant",
     currentConstantValue: isConstantConfig(config)
       ? config.constant.value
-      : defaultVisibility,
+      : defaultOpacity,
     currentFromTableColumn: isFromConfig(config) ? config.from : null,
     currentGroupByTableColumn: isGroupByConfig(config) ? config.groupBy : null,
     currentGroupByMap:
@@ -49,17 +50,17 @@ function configToState(
 }
 
 /**
- * Returns the visibility configuration that the widget state sets
+ * Returns the opacity configuration that the widget state sets
  *
  * @param state - The widget state
- * @param config - The visibility configuration to update
- * @returns The updated visibility configuration, or `null` if the current source
+ * @param config - The opacity configuration to update
+ * @returns The updated opacity configuration, or `null` if the current source
  * is incomplete
  */
 function stateToConfig(
-  state: VisibilityConfigWidgetState,
-  config: VisibilityConfig,
-): VisibilityConfig | null {
+  state: OpacityConfigWidgetState,
+  config: OpacityConfig,
+): OpacityConfig | null {
   switch (state.currentSource) {
     case "constant":
       return {
@@ -98,25 +99,25 @@ function stateToConfig(
   }
 }
 
-export function useVisibilityConfigWidget(
-  visibilityConfig: VisibilityConfig,
-  onVisibilityConfigChange: (newVisibilityConfig: VisibilityConfig) => void,
-  defaultVisibility: boolean,
+export function useOpacityConfigWidget(
+  opacityConfig: OpacityConfig,
+  onOpacityConfigChange: (newOpacityConfig: OpacityConfig) => void,
+  defaultOpacity: number,
   tableId: string | null,
-): VisibilityConfigWidgetAdapter {
-  const activeSource = getActiveConfigSource(visibilityConfig) ?? "constant";
+): OpacityConfigWidgetAdapter {
+  const activeSource = getActiveConfigSource(opacityConfig) ?? "constant";
   const [state, setState] = useConfigWidgetState(
-    visibilityConfig,
-    onVisibilityConfigChange,
-    (config) => configToState(config, defaultVisibility),
+    opacityConfig,
+    onOpacityConfigChange,
+    (config) => configToState(config, defaultOpacity),
     stateToConfig,
   );
 
   const setters = useMemo(
     () => ({
-      setCurrentSource: (currentSource: VisibilityConfigSource) =>
+      setCurrentSource: (currentSource: OpacityConfigSource) =>
         setState((state) => ({ ...state, currentSource })),
-      setCurrentConstantValue: (currentConstantValue: boolean) =>
+      setCurrentConstantValue: (currentConstantValue: number) =>
         setState((state) => ({ ...state, currentConstantValue })),
       setCurrentFromTableColumn: (
         currentFromTableColumn: TableColumnRef | null,
@@ -131,8 +132,8 @@ export function useVisibilityConfigWidget(
   );
 
   return {
-    visibilityConfig,
-    defaultVisibility,
+    opacityConfig,
+    defaultOpacity,
     tableId,
     activeSource,
     ...state,
