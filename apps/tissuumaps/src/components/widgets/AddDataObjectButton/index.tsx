@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
-export type AddDataObjectDialogProps<
+export type AddDataObjectButtonProps<
   TDataSource extends DataSource = DataSource,
 > = {
   title: string;
@@ -34,12 +34,12 @@ export type AddDataObjectDialogProps<
   ) => void;
 };
 
-export function AddDataObjectDialog<TDataSource extends DataSource>({
+export function AddDataObjectButton<TDataSource extends DataSource>({
   title,
   layers,
   dataProviders,
   onAdd,
-}: AddDataObjectDialogProps<TDataSource>) {
+}: AddDataObjectButtonProps<TDataSource>) {
   const providerEntries = Array.from(dataProviders.entries());
   const requiresLayer = layers !== undefined;
 

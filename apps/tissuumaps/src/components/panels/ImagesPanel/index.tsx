@@ -2,7 +2,7 @@ import { type Image, createImage } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
-import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
+import { AddDataObjectButton } from "@/components/widgets/AddDataObjectButton";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import {
   SortableObjectList,
@@ -44,7 +44,7 @@ export function ImagesPanel({ onShow, className }: ImagesPanelProps) {
           <ImageAccordionItem key={image.id} image={image} index={index} />
         )}
       </SortableObjectList>
-      <AddDataObjectDialog
+      <AddDataObjectButton
         title="Add image"
         layers={layers}
         dataProviders={imageDataProviders}

@@ -4,7 +4,7 @@ import { type Labels, createLabels } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
-import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
+import { AddDataObjectButton } from "@/components/widgets/AddDataObjectButton";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import {
   SortableObjectList,
@@ -50,7 +50,7 @@ export function LabelsPanel({ onShow, className }: LabelsPanelProps) {
           />
         )}
       </SortableObjectList>
-      <AddDataObjectDialog
+      <AddDataObjectButton
         title="Add labels"
         layers={layers}
         dataProviders={labelsDataProviders}

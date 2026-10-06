@@ -4,7 +4,7 @@ import { type Shapes, createShapes } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
-import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
+import { AddDataObjectButton } from "@/components/widgets/AddDataObjectButton";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import {
   SortableObjectList,
@@ -51,7 +51,7 @@ export function ShapesPanel({ onShow, className }: ShapesPanelProps) {
           />
         )}
       </SortableObjectList>
-      <AddDataObjectDialog
+      <AddDataObjectButton
         title="Add shapes"
         layers={layers}
         dataProviders={shapesDataProviders}

@@ -1,6 +1,6 @@
 import { type Table, createTable } from "@tissuumaps/core";
 
-import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
+import { AddDataObjectButton } from "@/components/widgets/AddDataObjectButton";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { ObjectList, ObjectListItem } from "@/components/widgets/ObjectList";
 import { cn } from "@/lib/utils";
@@ -24,7 +24,7 @@ export function TablesPanel({ className }: TablesPanelProps) {
           <TableAccordionItem key={table.id} table={table} />
         ))}
       </ObjectList>
-      <AddDataObjectDialog
+      <AddDataObjectButton
         title="Add table"
         dataProviders={tableDataProviders}
         onAdd={(name, _layerId, dataSource) => {
