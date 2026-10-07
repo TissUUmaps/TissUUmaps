@@ -2,8 +2,8 @@ import type { Table } from "@tissuumaps/core";
 
 import { AddDataObjectButton } from "@/components/controls/AddDataObjectButton";
 import { ObjectList, ObjectListItem } from "@/components/controls/ObjectList";
+import { useAddTableDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
-import { addTableDataObject } from "@/data/io/dataObject";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -15,7 +15,7 @@ export type TablesPanelProps = {
 export function TablesPanel({ className }: TablesPanelProps) {
   const expandedTableIds = useAppStore((state) => state.expandedTableIds);
   const setExpandedTableIds = useAppStore((state) => state.setExpandedTableIds);
-  const tableDataProviders = useAppStore((state) => state.tableDataProviders);
+  const addDialogParams = useAddTableDialogParams();
 
   const tables = useProjectStore((state) => state.tables);
 
@@ -29,13 +29,7 @@ export function TablesPanel({ className }: TablesPanelProps) {
           <TableAccordionItem key={table.id} table={table} />
         ))}
       </ObjectList>
-      <AddDataObjectButton
-        title="Add table"
-        dataProviders={tableDataProviders}
-        onAdd={(name, _layerId, origSource, preparedDataSource) =>
-          addTableDataObject(name, origSource, preparedDataSource)
-        }
-      />
+      <AddDataObjectButton {...addDialogParams} />
     </div>
   );
 }

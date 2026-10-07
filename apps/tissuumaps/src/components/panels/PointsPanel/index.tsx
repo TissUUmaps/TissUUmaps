@@ -9,9 +9,9 @@ import {
   SortableObjectList,
   SortableObjectListItem,
 } from "@/components/controls/ObjectList";
+import { useAddPointsDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { usePointsData } from "@/data/hooks/useData";
-import { addPointsDataObject } from "@/data/io/dataObject";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -29,7 +29,7 @@ export function PointsPanel({ className }: PointsPanelProps) {
   const setExpandedPointsIds = useAppStore(
     (state) => state.setExpandedPointsIds,
   );
-  const pointsDataProviders = useAppStore((state) => state.pointsDataProviders);
+  const addDialogParams = useAddPointsDialogParams();
 
   const points = useProjectStore((state) => state.points);
   const movePoints = useProjectStore((state) => state.movePoints);
@@ -50,12 +50,7 @@ export function PointsPanel({ className }: PointsPanelProps) {
           />
         )}
       </SortableObjectList>
-      <AddDataObjectButton
-        title="Add points"
-        dataProviders={pointsDataProviders}
-        withLayer
-        onAdd={addPointsDataObject}
-      />
+      <AddDataObjectButton {...addDialogParams} />
     </div>
   );
 }

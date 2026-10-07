@@ -4,6 +4,8 @@
 "tissuumaps": minor
 ---
 
+Data objects, projects and folders can be added by drag and drop. Files and folders dropped on a data panel or its tab open one pre-filled add dialog each, and a project file or folder dropped on the project panel is opened after confirmation.
+
 `SourceUtils` gains `getPathSegments`, which splits a source into its path segments, `getStem` and `getExtension`, which return the name of a source without its last extension and that extension, and `makeProjectPath`, which turns a workspace-relative path into one relative to a project file in the workspace. `getParentSource` no longer throws for URLs with malformed percent-escapes, and returns `null` for URLs without a path, such as `data:` URLs.
 
 Data providers gain an optional `supports` method, which tells whether a source is likely of their format. All built-in data providers implement it: by file extension, and for OME-Zarr groups and Parquet shapes by also reading their metadata. Remote zipped OME-Zarr files are recognized by their `.ozx` extension in any case.

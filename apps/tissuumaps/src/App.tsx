@@ -13,10 +13,12 @@ import { type ReactNode, useLayoutEffect, useState } from "react";
 import { IconButton } from "@/components/common/icon-button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useActivePanelSync } from "@/hooks/useActivePanelSync";
+import { useFileDragTracking } from "@/hooks/useFileDrag";
 import { usePluginPanels } from "@/hooks/usePluginPanels";
 
 import "./App.css";
 import { NotificationCenter } from "./components/app/NotificationCenter";
+import { PanelDropTarget } from "./components/app/PanelDropTarget";
 import { PluginMenu } from "./components/app/PluginMenu";
 import { DialogProvider } from "./components/dialogs/DialogProvider";
 import { ImagesPanel } from "./components/panels/ImagesPanel";
@@ -57,34 +59,46 @@ function ScrollablePanelContent({ children }: { children: ReactNode }) {
 const dockviewComponents = {
   ViewerPanel: () => <ViewerPanel className="size-full" />,
   ProjectPanel: () => (
-    <ScrollablePanelContent>
-      <ProjectPanel />
-    </ScrollablePanelContent>
+    <PanelDropTarget panelId={PanelId.project} variant="content">
+      <ScrollablePanelContent>
+        <ProjectPanel />
+      </ScrollablePanelContent>
+    </PanelDropTarget>
   ),
   ImagesPanel: () => (
-    <ScrollablePanelContent>
-      <ImagesPanel />
-    </ScrollablePanelContent>
+    <PanelDropTarget panelId={PanelId.images} variant="content">
+      <ScrollablePanelContent>
+        <ImagesPanel />
+      </ScrollablePanelContent>
+    </PanelDropTarget>
   ),
   LabelsPanel: () => (
-    <ScrollablePanelContent>
-      <LabelsPanel />
-    </ScrollablePanelContent>
+    <PanelDropTarget panelId={PanelId.labels} variant="content">
+      <ScrollablePanelContent>
+        <LabelsPanel />
+      </ScrollablePanelContent>
+    </PanelDropTarget>
   ),
   PointsPanel: () => (
-    <ScrollablePanelContent>
-      <PointsPanel />
-    </ScrollablePanelContent>
+    <PanelDropTarget panelId={PanelId.points} variant="content">
+      <ScrollablePanelContent>
+        <PointsPanel />
+      </ScrollablePanelContent>
+    </PanelDropTarget>
   ),
   ShapesPanel: () => (
-    <ScrollablePanelContent>
-      <ShapesPanel />
-    </ScrollablePanelContent>
+    <PanelDropTarget panelId={PanelId.shapes} variant="content">
+      <ScrollablePanelContent>
+        <ShapesPanel />
+      </ScrollablePanelContent>
+    </PanelDropTarget>
   ),
   TablesPanel: () => (
-    <ScrollablePanelContent>
-      <TablesPanel />
-    </ScrollablePanelContent>
+    <PanelDropTarget panelId={PanelId.tables} variant="content">
+      <ScrollablePanelContent>
+        <TablesPanel />
+      </ScrollablePanelContent>
+    </PanelDropTarget>
   ),
   PluginPanel: (props: IDockviewPanelProps<{ pluginId: string }>) => (
     <ScrollablePanelContent>
@@ -103,7 +117,11 @@ const dockviewTabComponents = {
     return <DockviewDefaultTab hideClose={false} {...props} />;
   },
   PersistentPanelHeader: (props: IDockviewPanelHeaderProps) => {
-    return <DockviewDefaultTab hideClose={true} {...props} />;
+    return (
+      <PanelDropTarget panelId={props.api.id} variant="tab">
+        <DockviewDefaultTab hideClose={true} {...props} />
+      </PanelDropTarget>
+    );
   },
   PluginPanelHeader: (
     props: IDockviewPanelHeaderProps<{ pluginId: string }>,
@@ -223,6 +241,7 @@ export function App() {
   // The panels contributed by plugins join the group of the project panel
   usePluginPanels(dockviewApi, PanelId.project);
   useActivePanelSync(dockviewApi);
+  useFileDragTracking();
 
   // Before paint, so that React never renders a light frame in dark mode
   // https://tailwindcss.com/docs/dark-mode

@@ -9,9 +9,9 @@ import {
   SortableObjectList,
   SortableObjectListItem,
 } from "@/components/controls/ObjectList";
+import { useAddShapesDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { useShapesData } from "@/data/hooks/useData";
-import { addShapesDataObject } from "@/data/io/dataObject";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -29,7 +29,7 @@ export function ShapesPanel({ className }: ShapesPanelProps) {
   const setExpandedShapesIds = useAppStore(
     (state) => state.setExpandedShapesIds,
   );
-  const shapesDataProviders = useAppStore((state) => state.shapesDataProviders);
+  const addDialogParams = useAddShapesDialogParams();
 
   const shapes = useProjectStore((state) => state.shapes);
   const moveShapes = useProjectStore((state) => state.moveShapes);
@@ -50,12 +50,7 @@ export function ShapesPanel({ className }: ShapesPanelProps) {
           />
         )}
       </SortableObjectList>
-      <AddDataObjectButton
-        title="Add shapes"
-        dataProviders={shapesDataProviders}
-        withLayer
-        onAdd={addShapesDataObject}
-      />
+      <AddDataObjectButton {...addDialogParams} />
     </div>
   );
 }

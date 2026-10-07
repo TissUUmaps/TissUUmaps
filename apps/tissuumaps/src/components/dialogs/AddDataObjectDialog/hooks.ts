@@ -4,17 +4,85 @@ import {
   type Data,
   type DataProvider,
   type DataSource,
+  type ImageDataSource,
+  type LabelsDataSource,
+  type PointsDataSource,
+  type ShapesDataSource,
   SourceUtils,
+  type TableDataSource,
 } from "@tissuumaps/core";
 
+import {
+  addImageDataObject,
+  addLabelsDataObject,
+  addPointsDataObject,
+  addShapesDataObject,
+  addTableDataObject,
+} from "@/data/io/dataObject";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
+import type { AddDataObjectDialogParams } from ".";
 import { useDialogContext } from "../DialogContext";
 
 /** Returns the `addDataObject` function of the nearest `DialogProvider`. */
 export function useAddDataObjectDialog() {
   return useDialogContext().addDataObject;
+}
+
+/** Returns the params of the dialog that adds images */
+export function useAddImageDialogParams(): AddDataObjectDialogParams<ImageDataSource> {
+  const dataProviders = useAppStore((state) => state.imageDataProviders);
+  return {
+    title: "Add image",
+    dataProviders,
+    withLayer: true,
+    onAdd: addImageDataObject,
+  };
+}
+
+/** Returns the params of the dialog that adds labels */
+export function useAddLabelsDialogParams(): AddDataObjectDialogParams<LabelsDataSource> {
+  const dataProviders = useAppStore((state) => state.labelsDataProviders);
+  return {
+    title: "Add labels",
+    dataProviders,
+    withLayer: true,
+    onAdd: addLabelsDataObject,
+  };
+}
+
+/** Returns the params of the dialog that adds points */
+export function useAddPointsDialogParams(): AddDataObjectDialogParams<PointsDataSource> {
+  const dataProviders = useAppStore((state) => state.pointsDataProviders);
+  return {
+    title: "Add points",
+    dataProviders,
+    withLayer: true,
+    onAdd: addPointsDataObject,
+  };
+}
+
+/** Returns the params of the dialog that adds shapes */
+export function useAddShapesDialogParams(): AddDataObjectDialogParams<ShapesDataSource> {
+  const dataProviders = useAppStore((state) => state.shapesDataProviders);
+  return {
+    title: "Add shapes",
+    dataProviders,
+    withLayer: true,
+    onAdd: addShapesDataObject,
+  };
+}
+
+/** Returns the params of the dialog that adds tables */
+export function useAddTableDialogParams(): AddDataObjectDialogParams<TableDataSource> {
+  const dataProviders = useAppStore((state) => state.tableDataProviders);
+  return {
+    title: "Add table",
+    dataProviders,
+    onAdd: (name, _layerId, origSource, preparedDataSource) =>
+      addTableDataObject(name, origSource, preparedDataSource),
+  };
 }
 
 /**

@@ -5,6 +5,7 @@ import {
   pickProjectFile,
   pickWorkspace,
   pickWorkspacePath,
+  resolveWorkspacePath,
 } from "./workspace";
 
 const directory = {
@@ -177,6 +178,23 @@ describe("workspace", () => {
       await expect(
         pickWorkspacePath(makeWorkspace(["image.ome.zarr"]), "directory"),
       ).resolves.toBeNull();
+    });
+  });
+
+  describe("resolveWorkspacePath", () => {
+    it("returns the workspace path of a file in the workspace", async () => {
+      await expect(
+        resolveWorkspacePath(dataFile, makeWorkspace(["data", "cells.csv"])),
+      ).resolves.toBe("/data/cells.csv");
+    });
+
+    it("rejects the workspace itself, and anything outside it", async () => {
+      await expect(
+        resolveWorkspacePath(directory, makeWorkspace([])),
+      ).rejects.toThrow(/connected folder itself/);
+      await expect(
+        resolveWorkspacePath(dataFile, makeWorkspace(null)),
+      ).rejects.toThrow(/not in the connected folder/);
     });
   });
 });

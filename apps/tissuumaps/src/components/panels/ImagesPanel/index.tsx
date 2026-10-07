@@ -7,9 +7,9 @@ import {
   SortableObjectList,
   SortableObjectListItem,
 } from "@/components/controls/ObjectList";
+import { useAddImageDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { useImageData } from "@/data/hooks/useData";
-import { addImageDataObject } from "@/data/io/dataObject";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -24,7 +24,7 @@ export type ImagesPanelProps = {
 export function ImagesPanel({ className }: ImagesPanelProps) {
   const expandedImageIds = useAppStore((state) => state.expandedImageIds);
   const setExpandedImageIds = useAppStore((state) => state.setExpandedImageIds);
-  const imageDataProviders = useAppStore((state) => state.imageDataProviders);
+  const addDialogParams = useAddImageDialogParams();
 
   const images = useProjectStore((state) => state.images);
   const moveImage = useProjectStore((state) => state.moveImage);
@@ -41,12 +41,7 @@ export function ImagesPanel({ className }: ImagesPanelProps) {
           <ImageAccordionItem key={image.id} image={image} index={index} />
         )}
       </SortableObjectList>
-      <AddDataObjectButton
-        title="Add image"
-        dataProviders={imageDataProviders}
-        withLayer
-        onAdd={addImageDataObject}
-      />
+      <AddDataObjectButton {...addDialogParams} />
     </div>
   );
 }

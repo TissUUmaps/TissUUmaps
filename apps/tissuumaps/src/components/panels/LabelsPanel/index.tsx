@@ -9,8 +9,8 @@ import {
   SortableObjectList,
   SortableObjectListItem,
 } from "@/components/controls/ObjectList";
+import { useAddLabelsDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
-import { addLabelsDataObject } from "@/data/io/dataObject";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -28,7 +28,7 @@ export function LabelsPanel({ className }: LabelsPanelProps) {
   const setExpandedLabelsIds = useAppStore(
     (state) => state.setExpandedLabelsIds,
   );
-  const labelsDataProviders = useAppStore((state) => state.labelsDataProviders);
+  const addDialogParams = useAddLabelsDialogParams();
 
   const labels = useProjectStore((state) => state.labels);
   const moveLabels = useProjectStore((state) => state.moveLabels);
@@ -49,12 +49,7 @@ export function LabelsPanel({ className }: LabelsPanelProps) {
           />
         )}
       </SortableObjectList>
-      <AddDataObjectButton
-        title="Add labels"
-        dataProviders={labelsDataProviders}
-        withLayer
-        onAdd={addLabelsDataObject}
-      />
+      <AddDataObjectButton {...addDialogParams} />
     </div>
   );
 }
