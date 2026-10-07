@@ -5,6 +5,7 @@ import {
   pickProjectFile,
   pickWorkspace,
   pickWorkspacePath,
+  readDroppedItems,
   resolveWorkspacePath,
 } from "./workspace";
 
@@ -195,6 +196,44 @@ describe("workspace", () => {
       await expect(
         resolveWorkspacePath(dataFile, makeWorkspace(null)),
       ).rejects.toThrow(/not in the connected folder/);
+    });
+  });
+
+  describe("readDroppedItems", () => {
+    const file = new File([""], "cells.csv");
+
+    it("reads the dropped files with their handles, if available", async () => {
+      const dataTransfer = {
+        items: [
+          {
+            kind: "file",
+            getAsFile: () => file,
+            getAsFileSystemHandle: () => Promise.resolve(dataFile),
+          },
+          { kind: "string", getAsFile: () => null },
+          { kind: "file", getAsFile: () => file },
+        ],
+      } as unknown as DataTransfer;
+      await expect(readDroppedItems(dataTransfer)).resolves.toEqual([
+        { handle: dataFile, file },
+        { handle: null, file },
+      ]);
+    });
+
+    it("reads an item whose handle cannot be obtained without one", async () => {
+      const dataTransfer = {
+        items: [
+          {
+            kind: "file",
+            getAsFile: () => file,
+            getAsFileSystemHandle: () =>
+              Promise.reject(new DOMException("Gone", "NotFoundError")),
+          },
+        ],
+      } as unknown as DataTransfer;
+      await expect(readDroppedItems(dataTransfer)).resolves.toEqual([
+        { handle: null, file },
+      ]);
     });
   });
 });
