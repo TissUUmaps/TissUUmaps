@@ -1,5 +1,8 @@
 import { createContext, useContext } from "react";
 
+import type { DataSource } from "@tissuumaps/core";
+
+import type { AddDataObjectDialogParams } from "./AddDataObjectDialog";
 import type { AlertDialogParams } from "./AlertDialog";
 import type { ConfirmDialogParams } from "./ConfirmDialog";
 import type { PromptDialogParams } from "./PromptDialog";
@@ -11,6 +14,14 @@ export type DialogContextValue = {
   confirm: (params: ConfirmDialogParams) => Promise<boolean>;
   /** Opens a text-input dialog. Resolves to the entered string, or `null`. */
   prompt: (params: PromptDialogParams) => Promise<string | null>;
+  /**
+   * Queues add data object dialogs: one per given source, pre-filled with it,
+   * so none for an empty array, or a single empty one if `sources` is omitted.
+   */
+  addDataObject: <TDataSource extends DataSource>(
+    params: AddDataObjectDialogParams<TDataSource>,
+    sources?: string[],
+  ) => void;
 };
 
 export const DialogContext = createContext<DialogContextValue | null>(null);

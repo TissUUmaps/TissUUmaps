@@ -1,4 +1,3 @@
-import { createAjv } from "@jsonforms/core";
 import { JsonForms } from "@jsonforms/react";
 import { EditIcon, RotateCcwIcon, SaveIcon, XIcon } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -10,16 +9,11 @@ import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { IconButton } from "@/components/common/icon-button";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { SourceField } from "@/components/controls/SourceField";
+import { ajv } from "@/components/jsonforms/ajv";
 import { cells } from "@/components/jsonforms/cells";
 import { renderers } from "@/components/jsonforms/renderers";
 import { usePrepareDataSource } from "@/data/hooks/usePrepareDataSource";
 import { cn } from "@/lib/utils";
-
-/**
- * The Ajv instance data sources are validated with, configured like the one
- * JSON Forms uses; shared, so that it compiles each schema only once
- */
-const ajv = createAjv();
 
 export type DataSourceWidgetProps<TDataSource extends DataSource> = {
   dataSource: TDataSource;
@@ -96,6 +90,7 @@ function DataSourceView({
         (!("elements" in dataProvider.uischema) ||
           dataProvider.uischema.elements.length > 0) && (
           <JsonForms
+            ajv={ajv}
             data={dataSource}
             schema={dataProvider.schema}
             uischema={dataProvider.uischema}
@@ -145,8 +140,8 @@ function DataSourceEditor<TDataSource extends DataSource>({
     );
 
   const save = async () => {
-    // without keys its data provider's schema does not declare, e.g. ones
-    // left over from another type
+    // without keys its data provider's schema does not declare, e.g. ones a
+    // project file carries
     const knownKeys = new Set([
       "type",
       ...Object.keys(dataProvider?.schema.properties ?? {}),
@@ -180,7 +175,23 @@ function DataSourceEditor<TDataSource extends DataSource>({
             disabled={isPreparing}
             onValueChange={(type) => {
               if (type !== null) {
-                setDraft((draft) => ({ ...draft, type }));
+                const dataProvider = dataProviders.get(type);
+                if (dataProvider?.schema.properties?.source !== undefined) {
+                  setDraft((draft) => {
+                    let result = draft;
+                    if (draft.type !== type) {
+                      result = { type } as TDataSource;
+                      if (draft.source !== undefined) {
+                        result.source = draft.source;
+                      }
+                    }
+                    return result;
+                  });
+                } else {
+                  setDraft((draft) =>
+                    draft.type !== type ? ({ type } as TDataSource) : draft,
+                  );
+                }
               }
             }}
           />
@@ -232,6 +243,7 @@ function DataSourceEditor<TDataSource extends DataSource>({
           {(!("elements" in dataProvider.uischema) ||
             dataProvider.uischema.elements.length > 0) && (
             <JsonForms
+              ajv={ajv}
               data={draft}
               onChange={({ data }) => setDraft(data as TDataSource)}
               schema={dataProvider.schema}

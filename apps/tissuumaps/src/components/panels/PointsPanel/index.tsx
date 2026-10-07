@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { type Points, createPoints } from "@tissuumaps/core";
+import type { Points } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
@@ -11,6 +11,7 @@ import {
 } from "@/components/controls/ObjectList";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { usePointsData } from "@/data/hooks/useData";
+import { addPointsDataObject } from "@/data/io/dataObject";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -30,9 +31,7 @@ export function PointsPanel({ className }: PointsPanelProps) {
   );
   const pointsDataProviders = useAppStore((state) => state.pointsDataProviders);
 
-  const layers = useProjectStore((state) => state.layers);
   const points = useProjectStore((state) => state.points);
-  const addPoints = useProjectStore((state) => state.addPoints);
   const movePoints = useProjectStore((state) => state.movePoints);
 
   return (
@@ -53,18 +52,9 @@ export function PointsPanel({ className }: PointsPanelProps) {
       </SortableObjectList>
       <AddDataObjectButton
         title="Add points"
-        layers={layers}
         dataProviders={pointsDataProviders}
-        onAdd={(name, layerId, dataSource) => {
-          if (!layerId) return;
-          const newPoints = createPoints({
-            id: crypto.randomUUID(),
-            name,
-            dataSource,
-            layer: layerId,
-          });
-          addPoints(newPoints);
-        }}
+        withLayer
+        onAdd={addPointsDataObject}
       />
     </div>
   );

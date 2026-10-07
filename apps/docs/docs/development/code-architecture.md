@@ -91,6 +91,8 @@ Data accessors hand their data out in fixed array types (see `types/arrays`): it
 
 A data provider first `normalize()`s a data source: it applies the defaults and normalizes the `source` with `SourceUtils.normalizeSource`, which resolves it against the project source and the open workspace into an absolute URL or a workspace-relative path. It then `load()`s the normalized data source into a `Data` accessor, resolving a workspace-relative path to a file or directory handle with `SourceUtils.resolveSource`. Data providers that accept only one kind use `SourceUtils.resolveSourceFile` or `SourceUtils.resolveSourceDirectory` instead. Accessor functions starting with `load...` are asynchronous; those starting with `get...` are synchronous. Concrete implementations live in `@tissuumaps/storage`.
 
+Data objects are added from a source, with optional help from the data providers: they can tell whether they support a source, read its name from its metadata, and prepare the data source before the data object is added, e.g. by adding a table that the data source then references. The app renders the `source` itself, so it is not part of any data provider's UI schema.
+
 ### Types
 
 The `types` module holds the contracts shared between packages and the application: the state and action types of the four application stores (`types/stores`), the plugin contract (`Plugin`, `PluginRegistry`, `PluginStores` in `types/plugins`), and the OpenSeadragon and WebGL option types, along with generic array, geometry, interaction and callback types. `palettes.ts` holds the built-in color palettes.
@@ -183,7 +185,7 @@ Components are structured as follows:
 - `app` - application-level components that are only used by `App` itself
 - `common` - custom low-level components that are commonly reused throughout the codebase
 - `controls` - application-specific components ("controls") used across panels and widgets
-- `dialogs` - the dialog provider and context, and the alert, confirm and prompt dialogs
+- `dialogs` - dialogs that are opened imperatively, e.g. alerts, and the provider that shows them
 - `jsonforms` - the JSON Forms renderer set of the data source configuration forms: `renderers.ts` and `cells.ts` register the controls, layouts and cells in the `controls`, `layouts` and `cells` folders, named after the JSON Forms concepts (unrelated to the `controls` category above)
 - `panels` - high-level UI building blocks (layout components) that are used as Dockview panels
 - `ui` - shadcn/ui components, adapted to the application as needed (be careful when updating!)

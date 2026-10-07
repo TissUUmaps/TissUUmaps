@@ -1,4 +1,4 @@
-import { type Image, createImage } from "@tissuumaps/core";
+import type { Image } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
@@ -9,6 +9,7 @@ import {
 } from "@/components/controls/ObjectList";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { useImageData } from "@/data/hooks/useData";
+import { addImageDataObject } from "@/data/io/dataObject";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -25,9 +26,7 @@ export function ImagesPanel({ className }: ImagesPanelProps) {
   const setExpandedImageIds = useAppStore((state) => state.setExpandedImageIds);
   const imageDataProviders = useAppStore((state) => state.imageDataProviders);
 
-  const layers = useProjectStore((state) => state.layers);
   const images = useProjectStore((state) => state.images);
-  const addImage = useProjectStore((state) => state.addImage);
   const moveImage = useProjectStore((state) => state.moveImage);
 
   return (
@@ -44,18 +43,9 @@ export function ImagesPanel({ className }: ImagesPanelProps) {
       </SortableObjectList>
       <AddDataObjectButton
         title="Add image"
-        layers={layers}
         dataProviders={imageDataProviders}
-        onAdd={(name, layerId, dataSource) => {
-          if (!layerId) return;
-          const image = createImage({
-            id: crypto.randomUUID(),
-            name,
-            dataSource,
-            layer: layerId,
-          });
-          addImage(image);
-        }}
+        withLayer
+        onAdd={addImageDataObject}
       />
     </div>
   );

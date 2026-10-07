@@ -9,6 +9,7 @@ export type SourceFieldProps = {
   schema: JsonSchema;
   value: string | undefined;
   onValueChange: (value: string | undefined) => void;
+  onValueCommit?: (value: string | undefined) => void;
   showErrors?: boolean;
   disabled?: boolean;
   className?: string;
@@ -25,6 +26,7 @@ export function SourceField({
   schema,
   value,
   onValueChange,
+  onValueCommit,
   showErrors = false,
   disabled = false,
   className,
@@ -40,6 +42,7 @@ export function SourceField({
       <SourceInput
         value={value}
         onValueChange={onValueChange}
+        onValueCommit={onValueCommit}
         disabled={disabled}
         invalid={isMissing}
       />

@@ -1,8 +1,9 @@
-import { type Table, createTable } from "@tissuumaps/core";
+import type { Table } from "@tissuumaps/core";
 
 import { AddDataObjectButton } from "@/components/controls/AddDataObjectButton";
 import { ObjectList, ObjectListItem } from "@/components/controls/ObjectList";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { addTableDataObject } from "@/data/io/dataObject";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -17,7 +18,6 @@ export function TablesPanel({ className }: TablesPanelProps) {
   const tableDataProviders = useAppStore((state) => state.tableDataProviders);
 
   const tables = useProjectStore((state) => state.tables);
-  const addTable = useProjectStore((state) => state.addTable);
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
@@ -32,14 +32,9 @@ export function TablesPanel({ className }: TablesPanelProps) {
       <AddDataObjectButton
         title="Add table"
         dataProviders={tableDataProviders}
-        onAdd={(name, _layerId, dataSource) => {
-          const table = createTable({
-            id: crypto.randomUUID(),
-            name,
-            dataSource,
-          });
-          addTable(table);
-        }}
+        onAdd={(name, _layerId, origSource, preparedDataSource) =>
+          addTableDataObject(name, origSource, preparedDataSource)
+        }
       />
     </div>
   );

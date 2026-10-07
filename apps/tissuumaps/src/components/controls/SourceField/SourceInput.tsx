@@ -1,4 +1,5 @@
 import { FileIcon, FolderOpenIcon } from "lucide-react";
+import { useRef } from "react";
 
 import { SourceUtils } from "@tissuumaps/core";
 
@@ -17,6 +18,7 @@ import { useProjectStore } from "@/stores/project";
 export type SourceInputProps = {
   value: string | undefined;
   onValueChange: (value: string | undefined) => void;
+  onValueCommit?: (value: string | undefined) => void;
   disabled?: boolean;
   invalid?: boolean;
   className?: string;
@@ -28,11 +30,13 @@ export type SourceInputProps = {
  * While a workspace is open, a file or folder in it can be picked as well. The
  * picked path is relative to the project file if the project was loaded from
  * the workspace, and workspace-relative otherwise (see
- * `SourceUtils.makeProjectPath`).
+ * `SourceUtils.makeProjectPath`). A value is committed when a file or folder
+ * is picked, and when the input loses focus after the value changed.
  */
 export function SourceInput({
   value,
   onValueChange,
+  onValueCommit,
   disabled = false,
   invalid = false,
   className,
@@ -41,6 +45,12 @@ export function SourceInput({
   const projectSource = useProjectStore((state) => state.source);
   const alert = useAlertDialog();
 
+  const committedValueRef = useRef(value);
+  const commit = (value: string | undefined) => {
+    committedValueRef.current = value;
+    onValueCommit?.(value);
+  };
+
   const pick = (
     workspace: FileSystemDirectoryHandle,
     kind: FileSystemHandleKind,
@@ -48,9 +58,12 @@ export function SourceInput({
     pickWorkspacePath(workspace, kind)
       .then((workspacePath) => {
         if (workspacePath !== null) {
-          onValueChange(
-            SourceUtils.makeProjectPath(workspacePath, projectSource),
+          const source = SourceUtils.makeProjectPath(
+            workspacePath,
+            projectSource,
           );
+          onValueChange(source);
+          commit(source);
         }
       })
       .catch((error: unknown) => {
@@ -74,6 +87,11 @@ export function SourceInput({
             event.target.value !== "" ? event.target.value : undefined,
           )
         }
+        onBlur={() => {
+          if (value !== committedValueRef.current) {
+            commit(value);
+          }
+        }}
       />
       {workspace !== null && (
         <InputGroupAddon align="inline-end">
