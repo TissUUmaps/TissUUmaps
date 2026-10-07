@@ -4,7 +4,8 @@ import * as zarr from "zarrita";
 import { SourceUtils } from "@tissuumaps/core";
 
 /**
- * Reads what OME-Zarr data sources are, without opening them
+ * Reads what OME-Zarr data sources are and what their images are named,
+ * without opening them
  *
  * The OME-NGFF attributes of a Zarr group are stored under `ome` in its
  * attributes (OME-Zarr 0.5, Zarr v3), or at the top level of its attributes
@@ -46,6 +47,49 @@ export class OMEZarrUtils {
     return SourceUtils.getPathSegments(normalizedSource).some((segment) =>
       segment.toLowerCase().endsWith(OMEZarrUtils._storeExtension),
     );
+  }
+
+  /**
+   * Reads the name of the OME-Zarr image a normalized source points to, from
+   * its first multiscales
+   *
+   * Zipped OME-Zarr files (see {@link OMEZarrUtils.isZipSource}) and sources
+   * outside Zarr stores (see {@link OMEZarrUtils.isStoreSource}) are not read.
+   * Blank names are ignored, and names are trimmed.
+   *
+   * @param normalizedSource - The normalized source
+   * @param workspace - The directory handle of the open workspace, if any
+   * @param options - Optional abort signal
+   * @returns A promise that resolves to the name, or to `undefined` if the
+   *   image has none
+   * @throws See {@link OMEZarrUtils.readAttributes}
+   */
+  static async readImageName(
+    normalizedSource: string,
+    workspace: FileSystemDirectoryHandle | null,
+    options?: { signal?: AbortSignal },
+  ): Promise<string | undefined> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    if (
+      OMEZarrUtils.isZipSource(normalizedSource) ||
+      !OMEZarrUtils.isStoreSource(normalizedSource)
+    ) {
+      return undefined;
+    }
+    const attributes = await OMEZarrUtils.readAttributes(
+      normalizedSource,
+      workspace,
+      options,
+    );
+    const multiscales = attributes?.multiscales;
+    const name: unknown = Array.isArray(multiscales)
+      ? (multiscales[0] as { name?: unknown } | undefined)?.name
+      : undefined;
+    if (typeof name !== "string") {
+      return undefined;
+    }
+    return name.trim() || undefined;
   }
 
   /**

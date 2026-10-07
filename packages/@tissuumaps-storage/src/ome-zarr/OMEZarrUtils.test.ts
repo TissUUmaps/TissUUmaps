@@ -52,6 +52,47 @@ describe("OMEZarrUtils", () => {
     });
   });
 
+  describe("readImageName", () => {
+    const workspace = makeDir({
+      "named.zarr": makeDir({
+        "zarr.json": JSON.stringify({
+          zarr_format: 3,
+          node_type: "group",
+          attributes: { ome: { multiscales: [{ name: "Cells" }] } },
+        }),
+      }),
+      "blank.zarr": makeDir({
+        ".zgroup": JSON.stringify({ zarr_format: 2 }),
+        ".zattrs": JSON.stringify({ multiscales: [{ name: " " }] }),
+      }),
+      "unnamed.zarr": makeDir({
+        ".zgroup": JSON.stringify({ zarr_format: 2 }),
+        ".zattrs": JSON.stringify({ multiscales }),
+      }),
+    });
+
+    it("reads the name of the first multiscales", async () => {
+      await expect(
+        OMEZarrUtils.readImageName("/named.zarr", workspace),
+      ).resolves.toBe("Cells");
+    });
+
+    it("ignores blank and missing names", async () => {
+      await expect(
+        OMEZarrUtils.readImageName("/blank.zarr", workspace),
+      ).resolves.toBeUndefined();
+      await expect(
+        OMEZarrUtils.readImageName("/unnamed.zarr", workspace),
+      ).resolves.toBeUndefined();
+    });
+
+    it("does not read zipped OME-Zarr files", async () => {
+      await expect(
+        OMEZarrUtils.readImageName("/named.ozx", workspace),
+      ).resolves.toBeUndefined();
+    });
+  });
+
   describe("readAttributes", () => {
     const workspace = makeDir({
       "v05.zarr": makeDir({

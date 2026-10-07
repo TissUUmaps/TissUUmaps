@@ -133,6 +133,25 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
   }
 
   /**
+   * Reads the image's own name from its metadata (see
+   * {@link OMEZarrUtils.readImageName})
+   *
+   * @param normalizedSource - The normalized source
+   * @param workspace - The directory handle of the open workspace, if any
+   * @param options - Optional abort signal
+   * @returns A promise that resolves to the name, or to `undefined` if the
+   *   image has none
+   * @throws See {@link OMEZarrUtils.readImageName}
+   */
+  readName(
+    normalizedSource: string,
+    workspace: FileSystemDirectoryHandle | null,
+    options?: { signal?: AbortSignal },
+  ): Promise<string | undefined> {
+    return OMEZarrUtils.readImageName(normalizedSource, workspace, options);
+  }
+
+  /**
    * Opens an OME-Zarr image data source and returns the loaded image data
    *
    * The OME-Zarr image and its arrays are loaded once with {@link openOMEZarr}

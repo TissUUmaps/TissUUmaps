@@ -131,6 +131,25 @@ export class OMEZarrLabelsDataProvider implements LabelsDataProvider<
   }
 
   /**
+   * Reads the image's own name from its metadata (see
+   * {@link OMEZarrUtils.readImageName})
+   *
+   * @param normalizedSource - The normalized source
+   * @param workspace - The directory handle of the open workspace, if any
+   * @param options - Optional abort signal
+   * @returns A promise that resolves to the name, or to `undefined` if the
+   *   image has none
+   * @throws See {@link OMEZarrUtils.readImageName}
+   */
+  readName(
+    normalizedSource: string,
+    workspace: FileSystemDirectoryHandle | null,
+    options?: { signal?: AbortSignal },
+  ): Promise<string | undefined> {
+    return OMEZarrUtils.readImageName(normalizedSource, workspace, options);
+  }
+
+  /**
    * Opens an OME-Zarr labels data source and returns the loaded labels data
    *
    * The OME-Zarr label image and its arrays are loaded with
