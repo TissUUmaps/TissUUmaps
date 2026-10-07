@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 
 import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
 import { endFileDrag, useIsFileDragActive } from "@/hooks/useFileDrag";
@@ -6,6 +6,12 @@ import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 
 import { usePanelDrop } from "./hooks";
+
+/**
+ * How many milliseconds a drag has to stay on an overlay before its `onRest`
+ * is called
+ */
+const restDelay = 500;
 
 export type PanelDropTargetProps = {
   panelId: string;
@@ -20,7 +26,8 @@ export type PanelDropTargetProps = {
  *
  * While files are dragged, an overlay covers the target if the panel accepts
  * them; on the content, it names the target and, while hovered, what it
- * accepts. A drop on a tab header brings the panel to the front.
+ * accepts. A drop on a tab header, or a drag staying on it, brings the panel
+ * to the front.
  */
 export function PanelDropTarget({
   panelId,
@@ -39,6 +46,9 @@ export function PanelDropTarget({
         <PanelDropOverlay
           label={variant === "content" ? drop.label : undefined}
           accepts={drop.accepts}
+          onRest={
+            variant === "tab" ? () => setActivePanelId(panelId) : undefined
+          }
           onDrop={(dataTransfer) => {
             endFileDrag();
             if (variant === "tab") {
@@ -61,6 +71,7 @@ export function PanelDropTarget({
 type PanelDropOverlayProps = {
   label: string | undefined;
   accepts: string[];
+  onRest?: () => void;
   onDrop: (dataTransfer: DataTransfer) => void;
 };
 
@@ -70,8 +81,18 @@ type PanelDropOverlayProps = {
  * Rendered only during a drag, so that its hover state starts afresh with
  * every drag.
  */
-function PanelDropOverlay({ label, accepts, onDrop }: PanelDropOverlayProps) {
+function PanelDropOverlay({
+  label,
+  accepts,
+  onRest,
+  onDrop,
+}: PanelDropOverlayProps) {
   const [isOver, setOver] = useState(false);
+  // when the drag entered the overlay, measured with the events' timestamps,
+  // as browsers keep firing `dragover` while it stays; `null` while not over
+  // the overlay, or once rested
+  const enteredAtRef = useRef<number | null>(null);
+
   return (
     <div
       className={cn(
@@ -81,13 +102,22 @@ function PanelDropOverlay({ label, accepts, onDrop }: PanelDropOverlayProps) {
       onDragEnter={(event) => {
         event.preventDefault();
         setOver(true);
+        enteredAtRef.current = event.timeStamp;
       }}
       onDragOver={(event) => {
         event.preventDefault();
         event.stopPropagation();
         event.dataTransfer.dropEffect = "copy";
+        const enteredAt = enteredAtRef.current;
+        if (enteredAt !== null && event.timeStamp - enteredAt >= restDelay) {
+          enteredAtRef.current = null;
+          onRest?.();
+        }
       }}
-      onDragLeave={() => setOver(false)}
+      onDragLeave={() => {
+        setOver(false);
+        enteredAtRef.current = null;
+      }}
       onDrop={(event) => {
         event.preventDefault();
         event.stopPropagation();

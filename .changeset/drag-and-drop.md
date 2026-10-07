@@ -4,7 +4,7 @@
 "tissuumaps": minor
 ---
 
-Data objects, projects and folders can be added by drag and drop. Files and folders dropped on a data panel or its tab open one pre-filled add dialog each, and a project file or folder dropped on the project panel is opened after confirmation.
+Data objects, projects and folders can be added by drag and drop. Files and folders dropped on a data panel or its tab open one pre-filled add dialog each, and a project file or folder dropped on the project panel is opened after confirmation. A drag that stays on a tab that accepts it brings its panel to the front.
 
 `SourceUtils` gains `getPathSegments`, which splits a source into its path segments, `getStem` and `getExtension`, which return the name of a source without its last extension and that extension, and `makeProjectPath`, which turns a workspace-relative path into one relative to a project file in the workspace. `getParentSource` no longer throws for URLs with malformed percent-escapes, and returns `null` for URLs without a path, such as `data:` URLs.
 
