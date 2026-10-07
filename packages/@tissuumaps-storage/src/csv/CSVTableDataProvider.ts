@@ -57,11 +57,6 @@ export class CSVTableDataProvider implements TableDataProvider<
   readonly uischema = {
     type: "VerticalLayout",
     elements: [
-      {
-        type: "Control",
-        scope: "#/properties/source",
-        label: "Source",
-      },
       // TODO columns
       {
         type: "Control",

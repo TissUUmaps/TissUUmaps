@@ -53,11 +53,6 @@ export class ParquetShapesDataProvider implements ShapesDataProvider<
     elements: [
       {
         type: "Control",
-        scope: "#/properties/source",
-        label: "Source",
-      },
-      {
-        type: "Control",
         scope: "#/properties/geometryColumn",
         label: "Geometry Column",
       },

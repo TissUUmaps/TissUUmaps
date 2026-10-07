@@ -46,11 +46,6 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
     elements: [
       {
         type: "Control",
-        scope: "#/properties/source",
-        label: "Source",
-      },
-      {
-        type: "Control",
         scope: "#/properties/idProperty",
         label: "ID Property",
       },

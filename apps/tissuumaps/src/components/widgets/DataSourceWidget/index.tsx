@@ -1,6 +1,6 @@
 import { createAjv } from "@jsonforms/core";
 import { JsonForms } from "@jsonforms/react";
-import { EditIcon, RotateCcwIcon, SaveIcon } from "lucide-react";
+import { EditIcon, RotateCcwIcon, SaveIcon, XIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { Data, DataProvider, DataSource } from "@tissuumaps/core";
@@ -9,9 +9,17 @@ import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { IconButton } from "@/components/common/icon-button";
 import { SimpleSelect } from "@/components/common/simple-select";
+import { SourceField } from "@/components/controls/SourceField";
 import { cells } from "@/components/jsonforms/cells";
 import { renderers } from "@/components/jsonforms/renderers";
+import { usePrepareDataSource } from "@/data/hooks/usePrepareDataSource";
 import { cn } from "@/lib/utils";
+
+/**
+ * The Ajv instance data sources are validated with, configured like the one
+ * JSON Forms uses; shared, so that it compiles each schema only once
+ */
+const ajv = createAjv();
 
 export type DataSourceWidgetProps<TDataSource extends DataSource> = {
   dataSource: TDataSource;
@@ -20,123 +28,245 @@ export type DataSourceWidgetProps<TDataSource extends DataSource> = {
   className?: string;
 };
 
+/**
+ * Shows a data source, and edits it on demand
+ *
+ * The source is not part of any data provider's UI schema, but rendered here.
+ */
 export function DataSourceWidget<TDataSource extends DataSource>({
   dataSource,
   dataProviders,
   onDataSourceChange,
   className,
 }: DataSourceWidgetProps<TDataSource>) {
-  const [dataSourceDraft, setDataSourceDraft] = useState<TDataSource | null>(
-    null,
+  const [isEditing, setEditing] = useState(false);
+  return (
+    <Fieldset
+      className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
+    >
+      {isEditing ? (
+        <DataSourceEditor
+          dataSource={dataSource}
+          dataProviders={dataProviders}
+          onSave={(newDataSource) => {
+            onDataSourceChange(newDataSource);
+            setEditing(false);
+          }}
+          onCancel={() => setEditing(false)}
+        />
+      ) : (
+        <DataSourceView
+          dataSource={dataSource}
+          dataProviders={dataProviders}
+          onEdit={() => setEditing(true)}
+        />
+      )}
+    </Fieldset>
   );
-  const currentDataSource = dataSourceDraft ?? dataSource;
-  const isEditing = dataSourceDraft !== null;
+}
 
+type DataSourceViewProps = {
+  dataSource: DataSource;
+  dataProviders: Map<string, DataProvider<DataSource, Data>>;
+  onEdit: () => void;
+};
+
+function DataSourceView({
+  dataSource,
+  dataProviders,
+  onEdit,
+}: DataSourceViewProps) {
+  const dataProvider = dataProviders.get(dataSource.type);
+  // without a data provider, the source is the only hint to the data
+  const showSource =
+    dataProvider === undefined ||
+    dataProvider.schema.properties?.source !== undefined;
+  return (
+    <>
+      <FieldsetLegend className="flex flex-row items-center gap-x-1 font-medium text-foreground">
+        Type: {dataProvider?.name ?? `type=${dataSource.type}`}
+        <IconButton label="Edit" className="ml-auto" onClick={onEdit}>
+          <EditIcon className="size-4" />
+        </IconButton>
+      </FieldsetLegend>
+      {showSource && <SourceRow source={dataSource.source} />}
+      {dataProvider === undefined ? (
+        <MissingDataProviderHint />
+      ) : (
+        (!("elements" in dataProvider.uischema) ||
+          dataProvider.uischema.elements.length > 0) && (
+          <JsonForms
+            data={dataSource}
+            schema={dataProvider.schema}
+            uischema={dataProvider.uischema}
+            renderers={renderers}
+            cells={cells}
+            readonly
+          />
+        )
+      )}
+    </>
+  );
+}
+
+type DataSourceEditorProps<TDataSource extends DataSource> = {
+  dataSource: TDataSource;
+  dataProviders: Map<string, DataProvider<DataSource, Data>>;
+  onSave: (newDataSource: TDataSource) => void;
+  onCancel: () => void;
+};
+
+function DataSourceEditor<TDataSource extends DataSource>({
+  dataSource,
+  dataProviders,
+  onSave,
+  onCancel,
+}: DataSourceEditorProps<TDataSource>) {
+  const [draft, setDraft] = useState(() => structuredClone(dataSource));
+  const { isPreparing, prepare, cancel } = usePrepareDataSource();
+
+  const dataProvider = dataProviders.get(draft.type);
   const providerEntries = useMemo(
     () => Array.from(dataProviders.entries()),
     [dataProviders],
   );
 
-  const dataProvider = dataProviders.get(currentDataSource.type);
-
-  // Validate the current draft against the active provider's schema using the
-  // same Ajv config JsonForms uses, so shared fields (e.g. URL) carry over and
-  // validity is re-checked on every edit or type switch instead of being reset.
-  const ajv = useMemo(() => createAjv(), []);
   const validate = useMemo(
     () =>
       dataProvider !== undefined ? ajv.compile(dataProvider.schema) : null,
-    [ajv, dataProvider],
+    [dataProvider],
   );
-  const hasErrors =
-    isEditing && (validate === null || !validate(currentDataSource));
+  const isValid = validate !== null && validate(draft);
+  // errors at the root, such as an unmet `anyOf`, belong to no field
+  const hasRootErrors =
+    !isValid &&
+    (validate?.errors ?? []).some(
+      (error) => error.instancePath === "" && error.keyword !== "required",
+    );
+
+  const save = async () => {
+    // without keys its data provider's schema does not declare, e.g. ones
+    // left over from another type
+    const knownKeys = new Set([
+      "type",
+      ...Object.keys(dataProvider?.schema.properties ?? {}),
+    ]);
+    const newDataSource = Object.fromEntries(
+      Object.entries(draft).filter(([key]) => knownKeys.has(key)),
+    ) as TDataSource;
+    // prepared only if its source or type changed, as preparing may create
+    // data objects for the source (see DataProvider.prepareDataSource)
+    const isChanged =
+      newDataSource.type !== dataSource.type ||
+      newDataSource.source !== dataSource.source;
+    const preparedDataSource = isChanged
+      ? await prepare(newDataSource, dataProvider)
+      : newDataSource;
+    if (preparedDataSource !== undefined) {
+      onSave(preparedDataSource);
+    }
+  };
 
   return (
-    <Fieldset
-      className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
-    >
+    <>
       <FieldsetLegend className="flex flex-row items-center gap-x-1 font-medium text-foreground">
-        {isEditing ? (
-          <Field className="flex flex-row items-center gap-x-1">
-            <FieldLabel>Source</FieldLabel>
-            <SimpleSelect
-              items={providerEntries}
-              itemLabel={([, provider]) => provider.name}
-              itemValue={([type]) => type}
-              value={currentDataSource.type}
-              onValueChange={(value) => {
-                if (value !== null) {
-                  setDataSourceDraft({
-                    ...dataSourceDraft,
-                    type: value,
-                  });
-                }
-              }}
-            />
-          </Field>
-        ) : (
-          <>Source: {dataProvider?.name ?? `type=${currentDataSource.type}`}</>
-        )}
-        {isEditing ? (
-          <span className="ml-auto flex flex-row">
-            <IconButton
-              label="Reset"
-              onClick={() => setDataSourceDraft(structuredClone(dataSource))}
-            >
-              <RotateCcwIcon className="size-4" />
-            </IconButton>
-            <IconButton
-              label="Save"
-              disabled={hasErrors}
-              onClick={() => {
-                const knownKeys = new Set([
-                  "type",
-                  ...Object.keys(dataProvider?.schema.properties ?? {}),
-                ]);
-                const cleaned = Object.fromEntries(
-                  Object.entries(dataSourceDraft).filter(([k]) =>
-                    knownKeys.has(k),
-                  ),
-                ) as TDataSource;
-                onDataSourceChange(cleaned);
-                setDataSourceDraft(null);
-              }}
-            >
-              <SaveIcon className="size-4" />
-            </IconButton>
-          </span>
-        ) : (
+        <Field className="flex flex-row items-center gap-x-1">
+          <FieldLabel>Type</FieldLabel>
+          <SimpleSelect
+            items={providerEntries}
+            itemLabel={([, provider]) => provider.name}
+            itemValue={([type]) => type}
+            value={draft.type}
+            disabled={isPreparing}
+            onValueChange={(type) => {
+              if (type !== null) {
+                setDraft((draft) => ({ ...draft, type }));
+              }
+            }}
+          />
+        </Field>
+        <span className="ml-auto flex flex-row">
+          <IconButton label="Cancel" onClick={onCancel}>
+            <XIcon className="size-4" />
+          </IconButton>
           <IconButton
-            label="Edit"
-            className="ml-auto"
+            label="Reset"
             onClick={() => {
-              setDataSourceDraft(structuredClone(dataSource));
+              cancel(); // a pending save, which may hang on remote data
+              setDraft(structuredClone(dataSource));
             }}
           >
-            <EditIcon className="size-4" />
+            <RotateCcwIcon className="size-4" />
           </IconButton>
-        )}
-      </FieldsetLegend>
-      {dataProvider !== undefined ? (
-        <JsonForms
-          data={currentDataSource}
-          onChange={({ data }) => {
-            if (isEditing) {
-              setDataSourceDraft(data as TDataSource);
-            }
-          }}
-          schema={dataProvider.schema}
-          uischema={dataProvider.uischema}
-          renderers={renderers}
-          cells={cells}
-          readonly={!isEditing}
-        />
-      ) : (
-        <span className="text-xs text-muted-foreground">
-          No data provider is registered for this data source type.
-          {isEditing && " Select another source above."}
+          <IconButton
+            label="Save"
+            disabled={!isValid || isPreparing}
+            onClick={() => void save()}
+          >
+            <SaveIcon className="size-4" />
+          </IconButton>
         </span>
+      </FieldsetLegend>
+      {dataProvider === undefined ? (
+        <>
+          <SourceRow source={draft.source} />
+          <MissingDataProviderHint isEditing />
+        </>
+      ) : (
+        <>
+          <SourceField
+            schema={dataProvider.schema}
+            value={draft.source}
+            onValueChange={(source) =>
+              setDraft((draft) => {
+                const newDraft = { ...draft, source };
+                if (source === undefined) {
+                  delete newDraft.source;
+                }
+                return newDraft;
+              })
+            }
+            showErrors
+            disabled={isPreparing}
+          />
+          {(!("elements" in dataProvider.uischema) ||
+            dataProvider.uischema.elements.length > 0) && (
+            <JsonForms
+              data={draft}
+              onChange={({ data }) => setDraft(data as TDataSource)}
+              schema={dataProvider.schema}
+              uischema={dataProvider.uischema}
+              renderers={renderers}
+              cells={cells}
+              readonly={isPreparing}
+            />
+          )}
+        </>
       )}
-    </Fieldset>
+      {hasRootErrors && (
+        <span className="text-xs text-destructive">Invalid data source</span>
+      )}
+    </>
+  );
+}
+
+function SourceRow({ source }: { source: string | undefined }) {
+  if (source === undefined) {
+    return null;
+  }
+  return (
+    <Field className="grid grid-cols-[auto_1fr] gap-x-2 items-baseline">
+      <FieldLabel>Source:</FieldLabel>
+      <span className="truncate">{source}</span>
+    </Field>
+  );
+}
+
+function MissingDataProviderHint({ isEditing = false }) {
+  return (
+    <span className="text-xs text-muted-foreground">
+      No data provider is registered for this data source type.
+      {isEditing && " Select another type above."}
+    </span>
   );
 }

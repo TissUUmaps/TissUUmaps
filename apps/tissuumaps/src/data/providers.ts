@@ -102,8 +102,8 @@ export function enableBuiltInDataProviders(): void {
           name ??= SourceUtils.getStem(normalizedSource);
         }
         let preparedDataSource = dataSource;
-        if (tableDataProvider.prepare !== undefined) {
-          preparedDataSource = await tableDataProvider.prepare(
+        if (tableDataProvider.prepareDataSource !== undefined) {
+          preparedDataSource = await tableDataProvider.prepareDataSource(
             dataSource,
             workspace,
             projectSource,

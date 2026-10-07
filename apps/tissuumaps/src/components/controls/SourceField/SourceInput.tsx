@@ -1,6 +1,6 @@
-import type { CellProps } from "@jsonforms/core";
-import { withJsonFormsCellProps } from "@jsonforms/react";
 import { FileIcon, FolderOpenIcon } from "lucide-react";
+
+import { SourceUtils } from "@tissuumaps/core";
 
 import { IconButton } from "@/components/common/icon-button";
 import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
@@ -12,26 +12,45 @@ import {
 } from "@/components/ui/input-group";
 import { pickWorkspacePath } from "@/data/io/workspace";
 import { useAppStore } from "@/stores/app";
+import { useProjectStore } from "@/stores/project";
 
-export const SourceCell = withJsonFormsCellProps((props: CellProps) => {
+export type SourceInputProps = {
+  value: string | undefined;
+  onValueChange: (value: string | undefined) => void;
+  disabled?: boolean;
+  invalid?: boolean;
+  className?: string;
+};
+
+/**
+ * A text input for the source of a data source
+ *
+ * While a workspace is open, a file or folder in it can be picked as well. The
+ * picked path is relative to the project file if the project was loaded from
+ * the workspace, and workspace-relative otherwise (see
+ * `SourceUtils.makeProjectPath`).
+ */
+export function SourceInput({
+  value,
+  onValueChange,
+  disabled = false,
+  invalid = false,
+  className,
+}: SourceInputProps) {
   const workspace = useAppStore((state) => state.workspace);
+  const projectSource = useProjectStore((state) => state.source);
   const alert = useAlertDialog();
-  const value = (props.data as string | undefined | null) ?? "";
-  if (!props.enabled) {
-    return value;
-  }
-  const options = {
-    ...(props.config as { [key: string]: unknown }),
-    ...props.uischema.options,
-  };
+
   const pick = (
     workspace: FileSystemDirectoryHandle,
     kind: FileSystemHandleKind,
   ) => {
     pickWorkspacePath(workspace, kind)
-      .then((source) => {
-        if (source !== null) {
-          props.handleChange(props.path, source);
+      .then((workspacePath) => {
+        if (workspacePath !== null) {
+          onValueChange(
+            SourceUtils.makeProjectPath(workspacePath, projectSource),
+          );
         }
       })
       .catch((error: unknown) => {
@@ -42,27 +61,26 @@ export const SourceCell = withJsonFormsCellProps((props: CellProps) => {
         });
       });
   };
+
   return (
-    <InputGroup>
+    <InputGroup data-disabled={disabled} className={className}>
       <InputGroupInput
         type="text"
-        id={props.id}
-        value={value}
+        disabled={disabled}
+        aria-invalid={invalid}
+        value={value ?? ""}
         onChange={(event) =>
-          props.handleChange(
-            props.path,
+          onValueChange(
             event.target.value !== "" ? event.target.value : undefined,
           )
         }
-        autoFocus={options.focus as boolean | undefined}
-        placeholder={options.placeholder as string | undefined}
-        maxLength={props.schema.maxLength}
       />
       {workspace !== null && (
         <InputGroupAddon align="inline-end">
           <IconButton
             label="Choose a file in the connected folder"
             render={<InputGroupButton size="icon-xs" />}
+            disabled={disabled}
             onClick={() => pick(workspace, "file")}
           >
             <FileIcon />
@@ -70,6 +88,7 @@ export const SourceCell = withJsonFormsCellProps((props: CellProps) => {
           <IconButton
             label="Choose a folder in the connected folder"
             render={<InputGroupButton size="icon-xs" />}
+            disabled={disabled}
             onClick={() => pick(workspace, "directory")}
           >
             <FolderOpenIcon />
@@ -78,4 +97,4 @@ export const SourceCell = withJsonFormsCellProps((props: CellProps) => {
       )}
     </InputGroup>
   );
-});
+}

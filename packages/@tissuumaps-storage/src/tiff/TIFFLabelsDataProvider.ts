@@ -64,11 +64,6 @@ export class TIFFLabelsDataProvider implements LabelsDataProvider<
     type: "VerticalLayout",
     elements: [
       {
-        type: "Control",
-        scope: "#/properties/source",
-        label: "Source",
-      },
-      {
         type: "HorizontalLayout",
         elements: [
           {

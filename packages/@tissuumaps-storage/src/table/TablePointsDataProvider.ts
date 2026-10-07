@@ -82,7 +82,7 @@ export class TablePointsDataProvider implements PointsDataProvider<
    *   registered with the application, by data source type; it is called
    *   whenever they are needed, as providers may be registered at any time.
    *   `addTable` adds a table backed by a data source to the project and
-   *   resolves to its ID (see {@link TablePointsDataProvider.prepare})
+   *   resolves to its ID (see {@link TablePointsDataProvider.prepareDataSource})
    */
   constructor(options: {
     getTableDataProviders: () => Map<
@@ -167,7 +167,7 @@ export class TablePointsDataProvider implements PointsDataProvider<
    * @throws Error if no table data provider supports the source, if the
    *   source cannot be normalized, or if the operation is aborted
    */
-  async prepare(
+  async prepareDataSource(
     dataSource: TablePointsDataSource,
     workspace: FileSystemDirectoryHandle | null,
     projectSource: string | null,

@@ -139,7 +139,12 @@ export interface DataProvider<
   /** The JSON schema for the data source */
   readonly schema: JsonSchema;
 
-  /** The JSON Forms UI schema for the data source */
+  /**
+   * The JSON Forms UI schema for the data source
+   *
+   * It must not contain a control for the data source's `source`, which the
+   * application renders itself if the schema declares it, as a string.
+   */
   readonly uischema: UISchemaElement;
 
   /**
@@ -215,20 +220,22 @@ export interface DataProvider<
   ): Promise<string | undefined>;
 
   /**
-   * Prepares a data source before a data object backed by it is added
+   * Prepares a data source before a data object backed by it is added, or
+   * before it is saved with a changed source or type
    *
-   * Called once per added data object, with the data source the user entered.
+   * Called once per added data object, with the data source the user entered,
+   * and once per saved edit that changes the data source's `source` or `type`.
    * May create the data objects the data source depends on, and returns the
-   * data source to add.
+   * data source to add or save.
    *
    * @param dataSource - The data source to prepare, not normalized
    * @param workspace - The directory handle of the open workspace, if any
    * @param projectSource - Where the project was loaded from, if anywhere (see
    * {@link DataProvider.normalize})
    * @param options - Optional abort signal
-   * @returns A promise that resolves to the data source to add
+   * @returns A promise that resolves to the data source to add or save
    */
-  prepare?(
+  prepareDataSource?(
     dataSource: TDataSource,
     workspace: FileSystemDirectoryHandle | null,
     projectSource: string | null,

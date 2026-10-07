@@ -62,11 +62,6 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
     type: "VerticalLayout",
     elements: [
       {
-        type: "Control",
-        scope: "#/properties/source",
-        label: "Source",
-      },
-      {
         type: "HorizontalLayout",
         elements: [
           {

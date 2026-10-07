@@ -56,11 +56,6 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
   readonly uischema = {
     type: "VerticalLayout",
     elements: [
-      {
-        type: "Control",
-        scope: "#/properties/source",
-        label: "Source",
-      },
       // tileSource is not available through the UI for now
     ],
   };

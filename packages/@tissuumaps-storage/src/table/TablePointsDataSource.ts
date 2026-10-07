@@ -12,7 +12,7 @@ export interface TablePointsDataSource extends PointsDataSource<
 > {
   /**
    * A table file to add as a new table, which the data source then references
-   * instead (see `TablePointsDataProvider.prepare`); never persisted
+   * instead (see `TablePointsDataProvider.prepareDataSource`); never persisted
    */
   source?: string;
   table?: string;

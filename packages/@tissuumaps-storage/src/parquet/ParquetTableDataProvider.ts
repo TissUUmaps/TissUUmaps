@@ -47,11 +47,6 @@ export class ParquetTableDataProvider implements TableDataProvider<
     elements: [
       {
         type: "Control",
-        scope: "#/properties/source",
-        label: "Source",
-      },
-      {
-        type: "Control",
         scope: "#/properties/idColumn",
         label: "ID Column",
       },
