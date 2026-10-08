@@ -26,13 +26,15 @@ const fallbackProjectUrl = "project.tm4";
  * Registers the built-in data providers and project providers, starts the data
  * caches and the plugin registry, registers the built-in plugins, marks the
  * project open once it has a source or data, collapses the expanded objects
- * whenever another project is loaded or the project is closed, starts loading
- * the initial projects, and finally announces that the application has loaded.
- * The projects are only loading, not loaded, by the time this returns.
+ * and clears the picked item whenever another project is loaded or the
+ * project is closed, starts loading the initial projects, and finally
+ * announces that the application has loaded. The projects are only loading,
+ * not loaded, by the time this returns.
  *
  * @returns A callback that cancels loading the initial projects, stops
- * collapsing the expanded objects and marking the project open, and stops the
- * plugin registry and the data caches, invoked on hot module replacement
+ * clearing the picked item, collapsing the expanded objects and marking the
+ * project open, and stops the plugin registry and the data caches, invoked on
+ * hot module replacement
  */
 export function bootstrap(): () => void {
   enableBuiltInDataProviders();
@@ -42,11 +44,14 @@ export function bootstrap(): () => void {
   enableBuiltInPlugins();
   const stopMarkingProjectOpen = startMarkingProjectOpen();
   const stopCollapsingOnProjectSwitch = startCollapsingOnProjectSwitch();
+  const stopClearingPickedItemOnProjectSwitch =
+    startClearingPickedItemOnProjectSwitch();
   const initialProjectsLoading = new AbortController();
   void loadInitialProjects({ signal: initialProjectsLoading.signal });
   notifyTissUUmapsLoaded();
   return () => {
     initialProjectsLoading.abort();
+    stopClearingPickedItemOnProjectSwitch();
     stopCollapsingOnProjectSwitch();
     stopMarkingProjectOpen();
     stopPluginRegistry();
@@ -91,6 +96,22 @@ function startCollapsingOnProjectSwitch(): () => void {
         expandedShapesIds: [],
         expandedTableIds: [],
       });
+    }
+  });
+}
+
+/**
+ * Clears the item picked in the viewer whenever another project is loaded or
+ * the project is closed, i.e. whenever the project's instance ID changes
+ *
+ * A pick refers to the objects of the project it was made in.
+ *
+ * @returns A callback that stops watching the project
+ */
+function startClearingPickedItemOnProjectSwitch(): () => void {
+  return projectStore.subscribe((projectState, prevProjectState) => {
+    if (projectState.instanceId !== prevProjectState.instanceId) {
+      appStore.getState().setPickedItem(null);
     }
   });
 }

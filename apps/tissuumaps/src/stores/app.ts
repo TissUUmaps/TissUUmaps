@@ -17,9 +17,10 @@ import "./zustand";
  * The store holding application state that is not part of the project
  *
  * This comprises the open workspace, whether a project is open,
- * the current interaction mode, the hovered channel preview, the registered
- * data providers and project providers, the registered plugins, the active panel, and the expanded
- * objects of each panel.
+ * the current interaction mode, the hovered channel preview, the item picked
+ * in the viewer, the registered data providers and project providers, the
+ * registered plugins, the active panel, and the expanded objects of each
+ * panel.
  * The plugins are written by the plugin registry, which owns their lifecycle,
  * rather than through an action.
  */
@@ -34,6 +35,7 @@ export const appStore: AppStoreApi = createStore<AppStore>()(
       setProjectOpen: (projectOpen) => set({ projectOpen }),
       setHighlightedItemGroup: (highlightedItemGroup) =>
         set({ highlightedItemGroup }),
+      setPickedItem: (pickedItem) => set({ pickedItem }),
       setActivePanelId: (activePanelId) => set({ activePanelId }),
       setExpandedImageIds: (expandedImageIds) => set({ expandedImageIds }),
       setExpandedLabelsIds: (expandedLabelsIds) => set({ expandedLabelsIds }),
@@ -91,6 +93,7 @@ function createInitialAppStoreState(): AppStoreState {
     interactionMode: InteractionMode.pan,
     imageChannelPreview: null,
     highlightedItemGroup: null,
+    pickedItem: null,
     imageDataProviders: new Map(),
     labelsDataProviders: new Map(),
     pointsDataProviders: new Map(),

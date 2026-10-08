@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
-import { type Color, ColorUtils, type Rect } from "@tissuumaps/core";
+import {
+  type AnnotatedItemRef,
+  type Color,
+  ColorUtils,
+  type Rect,
+  type Vertex,
+} from "@tissuumaps/core";
 import {
   OpenSeadragonContext,
   OpenSeadragonImageRenderer,
@@ -290,6 +296,16 @@ export function useOpenSeadragon(
     syncLabels,
   ]);
 
+  const pickOSLabel = useCallback(
+    (
+      worldPosition: Vertex,
+      options?: { signal?: AbortSignal },
+    ): Promise<AnnotatedItemRef | null> =>
+      osRef.current?.labelsRenderer.pickLabel(worldPosition, options) ??
+      Promise.resolve(null),
+    [],
+  );
+
   const updateOSContentBounds = useCallback(
     (contentBounds: Rect[]) => {
       const abortController = new AbortController();
@@ -314,5 +330,5 @@ export function useOpenSeadragon(
     [osReady],
   );
 
-  return { initOS, osRef, osReady, updateOSContentBounds };
+  return { initOS, osRef, osReady, updateOSContentBounds, pickOSLabel };
 }

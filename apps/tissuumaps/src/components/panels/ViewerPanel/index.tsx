@@ -1,7 +1,11 @@
-import { useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { useShallow } from "zustand/shallow";
 
-import { ImageChannelViewMode } from "@tissuumaps/core";
+import {
+  type AnnotatedObjectRef,
+  ImageChannelViewMode,
+  type PickedItem,
+} from "@tissuumaps/core";
 import {
   Viewer,
   type ViewerAdapter,
@@ -17,7 +21,8 @@ import {
   useShapesDataLoader,
   useTableDataLoader,
 } from "@/data/hooks/useDataLoader";
-import { useAppStore } from "@/stores/app";
+import { PanelId } from "@/panels";
+import { appStore, useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
 import { ColorbarsViewerControl } from "./ColorbarsViewerControl";
@@ -64,6 +69,18 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
     (state) => state.highlightedItemGroup,
   );
 
+  const pickedItem = useAppStore((state) => state.pickedItem);
+  const setPickedItem = useAppStore((state) => state.setPickedItem);
+  const onPickedItemChange = useCallback(
+    (newPickedItem: PickedItem | null) => {
+      setPickedItem(newPickedItem);
+      if (newPickedItem !== null) {
+        showSettings(newPickedItem.annotatedObject);
+      }
+    },
+    [setPickedItem],
+  );
+
   const projectState = useProjectStore(
     useShallow((state) => ({
       projectInstanceId: state.instanceId,
@@ -107,6 +124,8 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
       ...highlightedState,
       images: previewedImages,
       interactionMode,
+      pickedItem,
+      onPickedItemChange,
       loadImage,
       loadLabels,
       loadPoints,
@@ -118,6 +137,8 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
       previewedImages,
       highlightedState,
       interactionMode,
+      pickedItem,
+      onPickedItemChange,
       loadImage,
       loadLabels,
       loadPoints,
@@ -162,4 +183,31 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
       )}
     </Viewer>
   );
+}
+
+/**
+ * Expands the settings of an object and brings its panel to the front
+ *
+ * @param annotatedObject - The object whose settings to show
+ */
+function showSettings(annotatedObject: AnnotatedObjectRef): void {
+  const state = appStore.getState();
+  const expand = (ids: string[], id: string) =>
+    ids.includes(id) ? ids : [...ids, id];
+  if ("labelsId" in annotatedObject) {
+    state.setExpandedLabelsIds(
+      expand(state.expandedLabelsIds, annotatedObject.labelsId),
+    );
+    state.setActivePanelId(PanelId.labels);
+  } else if ("pointsId" in annotatedObject) {
+    state.setExpandedPointsIds(
+      expand(state.expandedPointsIds, annotatedObject.pointsId),
+    );
+    state.setActivePanelId(PanelId.points);
+  } else {
+    state.setExpandedShapesIds(
+      expand(state.expandedShapesIds, annotatedObject.shapesId),
+    );
+    state.setActivePanelId(PanelId.shapes);
+  }
 }

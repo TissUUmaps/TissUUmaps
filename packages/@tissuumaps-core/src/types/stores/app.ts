@@ -12,6 +12,7 @@ import type { PointsData, PointsDataProvider } from "../../storage/points";
 import type { ProjectProvider } from "../../storage/project";
 import type { ShapesData, ShapesDataProvider } from "../../storage/shapes";
 import type { TableData, TableDataProvider } from "../../storage/table";
+import type { Vertex } from "../geometry";
 import type { InteractionMode } from "../interaction";
 
 /** A single image channel shown on its own, without touching the project */
@@ -39,6 +40,12 @@ export type AnnotatedItemRef = {
 
   /** The ID of the item; for labels, the label ID */
   itemId: number | string;
+};
+
+/** An item picked in the viewer, and where it was picked */
+export type PickedItem = AnnotatedItemRef & {
+  /** The picked position, in world coordinates */
+  worldPosition: Vertex;
 };
 
 /** The items of one group of a labels, points or shapes object, highlighted in the viewer */
@@ -77,6 +84,9 @@ export type AppStoreState = {
    * object, or `null` for none
    */
   highlightedItemGroup: HighlightedItemGroup | null;
+
+  /** The item last picked in the viewer, or `null` for none */
+  pickedItem: PickedItem | null;
 
   /** The registered image data providers, by data source type */
   imageDataProviders: Map<
@@ -222,6 +232,13 @@ export type AppStoreActions = {
   setHighlightedItemGroup: (
     highlightedItemGroup: HighlightedItemGroup | null,
   ) => void;
+
+  /**
+   * Sets the item picked in the viewer
+   *
+   * @param pickedItem - The picked item, or `null` to pick none
+   */
+  setPickedItem: (pickedItem: PickedItem | null) => void;
 
   /**
    * Makes a panel the active panel, bringing its tab to the front

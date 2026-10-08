@@ -12,6 +12,7 @@ import type { OpenSeadragonContext } from "@tissuumaps/render";
 import type { ViewerAdapter } from "../../adapter";
 import { OpenSeadragonContextProvider } from "../../context/OpenSeadragonContextProvider";
 import { useOpenSeadragon } from "../../hooks/useOpenSeadragon";
+import { usePicking } from "../../hooks/usePicking";
 import { useSVG } from "../../hooks/useSVG";
 import { useWebGL } from "../../hooks/useWebGL";
 
@@ -38,18 +39,18 @@ export function Viewer({
     [osContext],
   );
 
-  const { initOS, osRef, osReady, updateOSContentBounds } = useOpenSeadragon(
-    adapter,
-    backgroundColor,
-  );
+  const { initOS, osRef, osReady, updateOSContentBounds, pickOSLabel } =
+    useOpenSeadragon(adapter, backgroundColor);
   const {
     initGL,
     setGLViewport,
     setGLContainerSize,
+    pickGL,
     glPointsBounds,
     glShapesBounds,
   } = useWebGL(adapter);
   const { initSVG, setSVGViewport, setSVGContainerSize } = useSVG(adapter);
+  usePicking(adapter, osContext, pickGL, pickOSLabel);
 
   // the setters and init callbacks are memoized; a new identity tears down and
   // recreates the whole overlay

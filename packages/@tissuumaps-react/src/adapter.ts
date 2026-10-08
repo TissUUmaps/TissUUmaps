@@ -10,6 +10,7 @@ import type {
   Marker,
   MultiPolygon,
   OpenSeadragonOptions,
+  PickedItem,
   Points,
   PointsData,
   Shapes,
@@ -58,4 +59,13 @@ export interface ViewerAdapter {
   // shapes drawing
   interactionMode: InteractionMode;
   addShape?: (shape: MultiPolygon) => void;
+
+  // picking
+  /** The picked item, outlined if it is a point or a shape */
+  pickedItem: PickedItem | null;
+  /**
+   * Called when an item is picked by a click, or the pick is cleared by a
+   * click on nothing or by Escape; nothing is picked without it
+   */
+  onPickedItemChange?: (pickedItem: PickedItem | null) => void;
 }

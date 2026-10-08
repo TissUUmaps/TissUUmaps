@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
 import {
+  type AnnotatedItemRef,
   AsyncUtils,
   type Dims,
   GeometryUtils,
   type Rect,
+  type Vertex,
 } from "@tissuumaps/core";
 import {
   WebGLContext,
+  WebGLPicker,
   WebGLPointsRenderer,
   WebGLShapesRenderer,
 } from "@tissuumaps/render";
@@ -19,6 +22,9 @@ type GL = {
   context: WebGLContext;
   pointsRenderer: WebGLPointsRenderer;
   shapesRenderer: WebGLShapesRenderer;
+  /** Both renderers, in the order they are drawn in */
+  renderers: readonly (WebGLShapesRenderer | WebGLPointsRenderer)[];
+  picker: WebGLPicker;
 };
 
 /**
@@ -32,9 +38,9 @@ type GL = {
 function drawGL(gl: GL | null) {
   if (gl !== null) {
     gl.context.clear();
-    // points are drawn over shapes, so that transcripts show over filled cells
-    gl.shapesRenderer.draw();
-    gl.pointsRenderer.draw();
+    for (const renderer of gl.renderers) {
+      renderer.draw();
+    }
   }
 }
 
@@ -79,6 +85,7 @@ export function useWebGL(adapter: ViewerAdapter) {
     visibilityMaps,
     opacityMaps,
     glOptions,
+    pickedItem,
     loadPoints,
     loadShapes,
     loadTable,
@@ -135,6 +142,27 @@ export function useWebGL(adapter: ViewerAdapter) {
     }
   }, []);
 
+  const pickGL = useCallback(
+    (containerPosition: Vertex): AnnotatedItemRef | null => {
+      const gl = glRef.current;
+      if (gl === null) {
+        return null;
+      }
+      const { canvas, picker } = gl;
+      if (canvas.clientWidth === 0 || canvas.clientHeight === 0) {
+        return null;
+      }
+      // the canvas fills its parent, but its backing size is clamped (see
+      // WebGLContext.resizeCanvas), so its own size ratio takes the place of
+      // devicePixelRatio
+      return picker.pick({
+        x: (containerPosition.x * canvas.width) / canvas.clientWidth,
+        y: (containerPosition.y * canvas.height) / canvas.clientHeight,
+      });
+    },
+    [],
+  );
+
   const initGL = useCallback((parentOrNull: HTMLElement | null) => {
     if (parentOrNull === null) {
       return () => {};
@@ -186,12 +214,30 @@ export function useWebGL(adapter: ViewerAdapter) {
           cause: error,
         });
       }
+      // points are drawn over shapes, so that transcripts show over filled cells
+      const renderers = [shapesRenderer, pointsRenderer];
+      let picker: WebGLPicker;
+      try {
+        picker = new WebGLPicker(context, renderers);
+      } catch (error) {
+        pointsRenderer.destroy();
+        shapesRenderer.destroy();
+        context.destroy();
+        throw new Error("Error creating picker", { cause: error });
+      }
       // set only now, as it may have changed while awaiting the renderers
       if (viewportRef.current !== null) {
         pointsRenderer.viewport = viewportRef.current;
         shapesRenderer.viewport = viewportRef.current;
       }
-      const gl = { canvas, context, pointsRenderer, shapesRenderer };
+      const gl = {
+        canvas,
+        context,
+        pointsRenderer,
+        shapesRenderer,
+        renderers,
+        picker,
+      };
       glRef.current = gl;
       setGLReady(true);
       return gl;
@@ -209,7 +255,8 @@ export function useWebGL(adapter: ViewerAdapter) {
       setGLReady(false);
       glRef.current = null;
       if (gl !== null) {
-        const { context, pointsRenderer, shapesRenderer } = gl;
+        const { context, pointsRenderer, shapesRenderer, picker } = gl;
+        picker.destroy();
         pointsRenderer.destroy();
         shapesRenderer.destroy();
         context.destroy();
@@ -262,6 +309,14 @@ export function useWebGL(adapter: ViewerAdapter) {
       parentOrNull.removeChild(canvas);
     };
   }, []);
+
+  useEffect(() => {
+    if (glReady && glRef.current !== null) {
+      glRef.current.pointsRenderer.setOutlinedItem(pickedItem);
+      glRef.current.shapesRenderer.setOutlinedItem(pickedItem);
+      dispatchRedraw();
+    }
+  }, [glReady, pickedItem]);
 
   useEffect(() => {
     if (glReady && glRef.current !== null) {
@@ -434,6 +489,7 @@ export function useWebGL(adapter: ViewerAdapter) {
     initGL,
     setGLViewport,
     setGLContainerSize,
+    pickGL,
     glPointsBounds,
     glShapesBounds,
   };

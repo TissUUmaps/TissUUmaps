@@ -8,6 +8,7 @@ import {
   type OpenSeadragonViewerOptions,
   type Rect,
   type TypedArray,
+  type Vertex,
 } from "@tissuumaps/core";
 
 import { OpenSeadragonUtils } from "./OpenSeadragonUtils";
@@ -320,6 +321,23 @@ export class OpenSeadragonContext {
       width: viewport.width,
       height: viewport.height,
     };
+  }
+
+  /**
+   * Converts a position on the viewer container to world coordinates
+   *
+   * Reflects the current viewport, not the target of an ongoing animation.
+   *
+   * @param containerPosition - The position, in screen-space pixels from the
+   * top-left corner of the viewer container
+   * @returns The position in world coordinates
+   */
+  getWorldPosition(containerPosition: Vertex): Vertex {
+    const { x, y } = this.viewer.viewport.pointFromPixel(
+      new OpenSeadragon.Point(containerPosition.x, containerPosition.y),
+      true,
+    );
+    return { x, y };
   }
 
   /**
