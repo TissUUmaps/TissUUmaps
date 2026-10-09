@@ -1,7 +1,7 @@
-import { useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { useShallow } from "zustand/shallow";
 
-import { ImageChannelViewMode } from "@tissuumaps/core";
+import { type Dims, ImageChannelViewMode, type Rect } from "@tissuumaps/core";
 import {
   Viewer,
   type ViewerAdapter,
@@ -20,7 +20,10 @@ import {
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
-import { ScaleBarViewerControl } from "./ScaleBarViewerControl";
+import {
+  ScaleBarViewerControl,
+  type ScaleBarViewerControlHandle,
+} from "./ScaleBarViewerControl";
 import { ViewerToolbar } from "./ViewerToolbar";
 import { highlightItemGroup } from "./highlightItemGroup";
 
@@ -30,6 +33,7 @@ export type ViewerPanelProps = {
 
 export function ViewerPanel({ className }: ViewerPanelProps) {
   const viewerRef = useRef<OpenSeadragonContext>(null);
+  const scaleBarRef = useRef<ScaleBarViewerControlHandle>(null);
   const interactionMode = useAppStore((state) => state.interactionMode);
   const imageChannelPreview = useAppStore((state) => state.imageChannelPreview);
   const viewerBackgroundColor = useProjectStore(
@@ -119,12 +123,20 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
     ],
   );
 
+  const onViewportChange = useCallback(
+    (viewport: Rect, containerSize: Dims) => {
+      scaleBarRef.current?.setViewport(viewport, containerSize);
+    },
+    [],
+  );
+
   return (
     <Viewer
       ref={viewerRef}
       adapter={viewerAdapter}
       backgroundColor={viewerBackgroundColor}
       className={className}
+      onViewportChange={onViewportChange}
     >
       {/* not faded: the toolbar's menus and popovers render outside the
           viewer, and OpenSeadragon fades its controls once the pointer
@@ -136,7 +148,7 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
       </ViewerControl>
       {/* lines up to the right of the navigator, which is mounted first */}
       <ViewerControl anchor={ViewerControlAnchor.BOTTOM_LEFT} autoFade={false}>
-        <ScaleBarViewerControl />
+        <ScaleBarViewerControl ref={scaleBarRef} />
       </ViewerControl>
     </Viewer>
   );
