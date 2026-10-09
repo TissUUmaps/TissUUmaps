@@ -1,15 +1,17 @@
 import { HouseIcon } from "lucide-react";
 
-import { useResetViewport } from "@tissuumaps/react";
-
 import { IconButton } from "@/components/common/icon-button";
 import { cn } from "@/lib/utils";
 
-export type HomeViewerControlProps = { className?: string };
+export type HomeViewerControlProps = {
+  onClick: () => void;
+  className?: string;
+};
 
-export function HomeViewerControl({ className }: HomeViewerControlProps) {
-  const resetViewport = useResetViewport();
-
+export function HomeViewerControl({
+  onClick,
+  className,
+}: HomeViewerControlProps) {
   return (
     <IconButton
       label="Reset view"
@@ -20,7 +22,7 @@ export function HomeViewerControl({ className }: HomeViewerControlProps) {
         "m-2 rounded-xl border-border bg-background bg-clip-border shadow-lg",
         className,
       )}
-      onClick={resetViewport}
+      onClick={onClick}
     >
       <HouseIcon />
     </IconButton>

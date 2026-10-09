@@ -1,4 +1,10 @@
-import { type ReactNode, useEffect, useState } from "react";
+import {
+  type ReactNode,
+  type Ref,
+  useEffect,
+  useImperativeHandle,
+  useState,
+} from "react";
 
 import { type Color, ColorUtils, type Dims, type Rect } from "@tissuumaps/core";
 import type { OpenSeadragonContext } from "@tissuumaps/render";
@@ -9,11 +15,21 @@ import { useOpenSeadragon } from "../../hooks/useOpenSeadragon";
 import { useSVG } from "../../hooks/useSVG";
 import { useWebGL } from "../../hooks/useWebGL";
 
+export type ViewerHandle = {
+  /**
+   * Fits the viewport to all content again, as on opening a project
+   *
+   * Does nothing until the viewer is ready.
+   */
+  resetViewport: () => void;
+};
+
 export type ViewerProps = {
   adapter: ViewerAdapter;
   backgroundColor: Color;
   children?: ReactNode;
   className?: string;
+  ref?: Ref<ViewerHandle>;
 };
 
 export function Viewer({
@@ -21,8 +37,15 @@ export function Viewer({
   backgroundColor,
   children,
   className,
+  ref,
 }: ViewerProps) {
   const [osContext, setOSContext] = useState<OpenSeadragonContext | null>(null);
+
+  useImperativeHandle(
+    ref,
+    () => ({ resetViewport: () => osContext?.resetViewport() }),
+    [osContext],
+  );
 
   const { initOS, osRef, osReady, updateOSContentBounds } = useOpenSeadragon(
     adapter,

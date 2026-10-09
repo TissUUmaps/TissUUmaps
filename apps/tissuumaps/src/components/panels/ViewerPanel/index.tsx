@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { useShallow } from "zustand/shallow";
 
 import { ImageChannelViewMode } from "@tissuumaps/core";
@@ -7,6 +7,7 @@ import {
   type ViewerAdapter,
   ViewerControl,
   ViewerControlAnchor,
+  type ViewerHandle,
 } from "@tissuumaps/react";
 
 import {
@@ -30,6 +31,7 @@ export type ViewerPanelProps = {
 };
 
 export function ViewerPanel({ className }: ViewerPanelProps) {
+  const viewerRef = useRef<ViewerHandle>(null);
   const interactionMode = useAppStore((state) => state.interactionMode);
   const imageChannelPreview = useAppStore((state) => state.imageChannelPreview);
   const viewerBackgroundColor = useProjectStore(
@@ -121,6 +123,7 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
 
   return (
     <Viewer
+      ref={viewerRef}
       adapter={viewerAdapter}
       backgroundColor={viewerBackgroundColor}
       className={className}
@@ -133,7 +136,7 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
       {/* mounted first, so it keeps the corner: OpenSeadragon places each
           later right-anchored control to the left of the existing ones */}
       <ViewerControl anchor={ViewerControlAnchor.TOP_RIGHT}>
-        <HomeViewerControl />
+        <HomeViewerControl onClick={() => viewerRef.current?.resetViewport()} />
       </ViewerControl>
       {projectState.points.length > 0 && (
         <ViewerControl anchor={ViewerControlAnchor.TOP_RIGHT}>
