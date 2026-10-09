@@ -39,7 +39,7 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
 
   const { globalPointSizeFactor } = glOptions.pointsRenderOptions;
   const viewerBackgroundColorHex = ColorUtils.toHex(viewerBackgroundColor);
-  const showNavigator = osOptions.viewerOptions.showNavigator !== false;
+  const navigatorVisible = osOptions.viewerOptions.showNavigator !== false;
 
   return (
     <div className={cn("flex flex-col gap-2 pl-6", className)}>
@@ -58,7 +58,7 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
         <FieldLabel>Navigator</FieldLabel>
         <div className="flex flex-row items-center gap-x-2">
           <Switch
-            checked={showNavigator}
+            checked={navigatorVisible}
             onCheckedChange={(checked) =>
               setOSOptions({
                 ...osOptions,
@@ -69,7 +69,7 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
               })
             }
           />
-          {showNavigator ? "Shown" : "Hidden"}
+          {navigatorVisible ? "Shown" : "Hidden"}
         </div>
       </Field>
       <Field>
