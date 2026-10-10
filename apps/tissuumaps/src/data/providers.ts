@@ -111,7 +111,7 @@ export function enableBuiltInDataProviders(): void {
           );
         }
         return addTableDataObject(
-          name ?? "Untitled",
+          name?.trim() || "Untitled",
           dataSource.source,
           preparedDataSource,
         );
