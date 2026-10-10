@@ -1,0 +1,40 @@
+name: v3-plugins
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: "Repository whose gh-pages branch holds the TissUUmaps 3 plugin index"
+        type: string
+        required: true
+        default: TissUUmaps/TissUUmaps3
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+permissions: {}
+jobs:
+  deploy:
+    if: github.repository == 'TissUUmaps/TissUUmaps'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Mirror the plugin index
+        run: |
+          mkdir mirror _site
+          gh api "repos/$REPO/tarball/gh-pages" | tar xz --strip-components=1 -C mirror
+          mv mirror/plugins _site/plugins
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ inputs.repo }}
+      - name: Setup Pages
+        uses: actions/configure-pages@v6
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v5
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

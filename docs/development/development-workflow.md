@@ -19,8 +19,6 @@ pnpm run build:apidocs  # API documentation in docs/api (requires `pnpm run buil
 
 The documentation is rendered by the [website](https://github.com/TissUUmaps/website). To preview it, clone the website next to this repository and follow its README.
 
-Building the documentation for deployment takes the environment variables described in [Code architecture](./code-architecture.md#documentation-docs).
-
 Type checking is part of each package's `build` (`tsc -b`); `pnpm run typecheck` type-checks all projects (emitting only the packages' declaration files into `build/`), including the configuration files and the release scripts.
 
 ## Linting
@@ -60,7 +58,7 @@ This is an academic project. As such, we encourage rigorous testing, but loosely
 
 ## Documentation
 
-User and developer documentation is written in markdown, rendered using Docusaurus, and deployed to GitHub Pages (see below).
+User and developer documentation is written in markdown and rendered by the [website](https://github.com/TissUUmaps/website), versioned with the application (see below).
 
 API documentation for packages can be auto-generated from TSDoc code comments.
 
@@ -80,7 +78,7 @@ The repository has a single `main` branch, into which feature branches are merge
 
 ## Versioning and changelogs
 
-Versions and changelogs are managed with [changesets](https://github.com/changesets/changesets). The published `@tissuumaps/*` packages are versioned independently of each other; the `tissuumaps` application has its own version (4.x). The documentation is not versioned.
+Versions and changelogs are managed with [changesets](https://github.com/changesets/changesets). The published `@tissuumaps/*` packages are versioned independently of each other; the `tissuumaps` application has its own version (4.x). The documentation is versioned with the application.
 
 Every pull request that changes a published package or the application adds a changeset describing the change from a user's perspective:
 
@@ -106,7 +104,7 @@ Continuous integration is powered by GitHub Actions, for pushes to `main` and fo
 
 Linting, formatting, type checking, building and testing (see above) need to pass without errors before merging a pull request:
 
-- On pull requests only: formatting, type checking and linting, the builds of the packages, the application and the documentation (the same builds as for a release), and that a pull request changing a package or the application adds a changeset (`changeset status`, skipped for the "Version Packages" pull request).
+- On pull requests only: formatting, type checking and linting, the builds of the packages, the application and the API documentation (the same builds as for a release), the documentation links, and that a pull request changing a package or the application adds a changeset (`changeset status`, skipped for the "Version Packages" pull request).
 - On every push and pull request: the tests, including those of the release script.
 
 A review is automatically requested from Copilot and needs to be resolved for every pull request.
@@ -119,31 +117,21 @@ Releases are automated with changesets and GitHub Actions (`.github/workflows/re
 
 1. While changesets are pending, the workflow opens or updates a "Version Packages" pull request that applies them (see [Versioning and changelogs](#versioning-and-changelogs)).
 2. Merging that pull request publishes the bumped packages to npm (`pnpm run release`), tags the releases (`@tissuumaps/core@0.1.0-beta.0`, `tissuumaps@4.0.0-beta.0`, ...) and creates the corresponding GitHub releases with the changelog entries as notes.
-3. If the application was released, the workflow builds its site and uploads it to the application's GitHub release:
-   - `tissuumaps-<version>.zip`: the single-file application with its public files, which can be hosted on any web server.
-   - `tissuumaps-<version>-docs.zip`: its documentation, built for its deployed path and only used by the deployment.
+3. If the application was released, the workflow builds it and uploads it to the application's GitHub release as `tissuumaps-<version>.zip`: the single-file application with its public files, which can be hosted on any web server.
 
-   The site is built from the repository at the application's release tag, without waiting for the packages to appear on npm. As long as every change to a package comes with a changeset for that package, the package sources at that tag are those of the published versions.
+   The application is built from the repository at the application's release tag, without waiting for the packages to appear on npm. As long as every change to a package comes with a changeset for that package, the package sources at that tag are those of the published versions.
 
-4. The GitHub Pages site is re-assembled and deployed (see below).
+4. The workflow then publishes the release's documentation to the website (see below).
 
 Further details:
 
 - Packages are published through npm trusted publishing (OIDC), so no npm token is needed.
 - The release workflow only runs in the `TissUUmaps/TissUUmaps` repository, never in forks.
-- A manual run of the workflow (`workflow_dispatch`) rebuilds the site assets of the given release tag. With the tag left empty, it only re-assembles and deploys the site.
+- A manual run of the workflow (`workflow_dispatch`) rebuilds the application asset of the given release tag and republishes its documentation.
 - The "Version Packages" pull request is opened with the workflow's own token, which does not trigger the continuous integration checks. Close and reopen it to run them before merging.
 
 ## Continuous deployment
 
-The application and its documentation are deployed to GitHub Pages, one MAJOR.MINOR line at a time, assembled from the release assets (the exact rules are described in [Release scripts](./code-architecture.md#release-scripts-scripts)):
+The [website](https://github.com/TissUUmaps/website) hosts the application and its documentation, one MAJOR.MINOR line at a time. On every application release, the release workflow publishes the documentation to the website's `releases/<MAJOR.MINOR>/` (see [Release scripts](./code-architecture.md#release-scripts-scripts)), using the `WEBSITE_DEPLOY_KEY` deploy key. The website then deploys itself, with the application downloaded from the release. It inserts its analytics snippet at the `<!-- GHA_CUSTOM_HTML -->` marker of the application page (`apps/tissuumaps/index.html`), so the marker must stay.
 
-- `https://tissuumaps.github.io/TissUUmaps/<MAJOR.MINOR>/` (e.g. `4.0/`) is the application of a line, with its documentation under `docs/`. It serves the line's latest stable version, or its latest prerelease while the line has no stable version.
-- https://tissuumaps.github.io/TissUUmaps/ redirects to the latest line, and https://tissuumaps.github.io/TissUUmaps/docs/ to its documentation.
-- Paths of lines that are not deployed (abandoned prerelease lines) redirect to the latest line.
-- While no version can be deployed (none has been released, or no release has its assets yet), the deployment fails and the deployed site is left as it is.
-
-Two things are added at deployment:
-
-- The Matomo snippet in `.github/pages/custom.html`, inserted into the application page of every deployed line. The release assets stay free of it.
-- A mirror of the TissUUmaps 3 plugin index under `plugins/`, copied from the repository named by the `V3_PLUGINS_REPO` repository variable, since TissUUmaps 3 loads its plugins from this location.
+This repository's GitHub Pages site only mirrors the TissUUmaps 3 plugin index under `plugins/`, since TissUUmaps 3 loads its plugins from there. It is deployed by a manual run of `.github/workflows/v3-plugins.yaml`, which copies the index from the given repository.
