@@ -11,30 +11,32 @@ import {
   createDataObjectID,
 } from "./dataObject";
 
+const uuid = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+
 describe("createDataObjectID", () => {
-  it("replaces the dots of the file name with hyphens", () => {
-    expect(createDataObjectID("/a/cells.ome.zarr", [])).toBe("cells-ome-zarr");
-    expect(createDataObjectID("/a/x.zarr/labels/cells", [])).toBe("cells");
+  it("names the ID after the file name, with hyphens for dots and a UUID", () => {
+    expect(createDataObjectID("/a/cells.ome.zarr")).toMatch(
+      new RegExp(`^cells-ome-zarr-${uuid}$`),
+    );
+    expect(createDataObjectID("/a/x.zarr/labels/cells")).toMatch(
+      new RegExp(`^cells-${uuid}$`),
+    );
     expect(
-      createDataObjectID("https://data.example/a/my%20cells.v2.csv?x=1", []),
-    ).toBe("my cells-v2-csv");
+      createDataObjectID("https://data.example/a/my%20cells.v2.csv?x=1"),
+    ).toMatch(new RegExp(`^my cells-v2-csv-${uuid}$`));
   });
 
-  it("falls back to a random UUID", () => {
-    expect(createDataObjectID(undefined, [])).toMatch(/^[0-9a-f-]{36}$/);
-    expect(createDataObjectID("data:text/csv,a", [])).toMatch(
-      /^[0-9a-f-]{36}$/,
+  it("falls back to the UUID alone", () => {
+    expect(createDataObjectID(undefined)).toMatch(new RegExp(`^${uuid}$`));
+    expect(createDataObjectID("data:text/csv,a")).toMatch(
+      new RegExp(`^${uuid}$`),
     );
   });
 
-  it("appends the first free numeric suffix to a taken ID", () => {
-    expect(
-      createDataObjectID("/a/cells.csv", [
-        "cells-csv",
-        "cells-csv-2",
-        "cells-csv-4",
-      ]),
-    ).toBe("cells-csv-3");
+  it("creates a new ID for the same source every time", () => {
+    expect(createDataObjectID("/a/cells.csv")).not.toBe(
+      createDataObjectID("/a/cells.csv"),
+    );
   });
 });
 
@@ -48,19 +50,12 @@ describe("addImageDataObject", () => {
   });
 
   it("adds the image with an ID from its source, and expands it", () => {
-    expect(addImageDataObject("Cells", "layer", source, dataSource)).toBe(
-      "cells-ome-tif",
-    );
+    const id = addImageDataObject("Cells", "layer", source, dataSource);
+    expect(id).toMatch(new RegExp(`^cells-ome-tif-${uuid}$`));
     expect(projectStore.getState().images).toMatchObject([
-      { id: "cells-ome-tif", name: "Cells", layer: "layer", dataSource },
+      { id, name: "Cells", layer: "layer", dataSource },
     ]);
-    expect(appStore.getState().expandedImageIds).toEqual(["cells-ome-tif"]);
-  });
-
-  it("expands a reused ID only once", () => {
-    appStore.getState().setExpandedImageIds(["cells-ome-tif"]);
-    addImageDataObject("Cells", "layer", source, dataSource);
-    expect(appStore.getState().expandedImageIds).toEqual(["cells-ome-tif"]);
+    expect(appStore.getState().expandedImageIds).toEqual([id]);
   });
 
   it("rejects an image without a layer", () => {
@@ -81,16 +76,15 @@ describe("addPointsDataObject", () => {
       type: "table",
       table: "cells-csv",
     } as PointsDataSource;
-    expect(
-      addPointsDataObject(
-        "Cells",
-        "layer",
-        "https://data.example/cells.csv",
-        preparedDataSource,
-      ),
-    ).toBe("cells-csv");
+    const id = addPointsDataObject(
+      "Cells",
+      "layer",
+      "https://data.example/cells.csv",
+      preparedDataSource,
+    );
+    expect(id).toMatch(new RegExp(`^cells-csv-${uuid}$`));
     expect(projectStore.getState().points).toMatchObject([
-      { id: "cells-csv", dataSource: preparedDataSource },
+      { id, dataSource: preparedDataSource },
     ]);
   });
 });

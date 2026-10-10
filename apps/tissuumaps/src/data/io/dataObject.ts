@@ -16,39 +16,27 @@ import { appStore } from "@/stores/app";
 import { projectStore } from "@/stores/project";
 
 /**
- * Creates an ID for a data object that is unique among the IDs of its kind
+ * Creates a unique ID for a data object, named after its source
  *
- * The ID is the file name of the source with every `.` replaced by `-`, so
- * `cells.ome.zarr` gives `cells-ome-zarr`; if that is taken, it gets the first
- * free numeric suffix, starting at `-2`. Without a source, or for URLs without
- * a path, it is a random UUID, which is assumed to be unique.
+ * The ID is the file name of the source with every `.` replaced by `-`,
+ * followed by a random UUID, so `cells.ome.zarr` gives e.g.
+ * `cells-ome-zarr-0f8e…`. The UUID keeps the ID unique, also against the IDs
+ * of deleted data objects that may still be referenced. Without a source, or
+ * for URLs without a path, the ID is the UUID alone.
  *
  * @param normalizedSource - The normalized source of the data object, if any
- * @param existingIds - The IDs of the existing data objects of the same kind
  * @returns The ID
  * @throws See `SourceUtils.getPathSegments`
  */
 export function createDataObjectID(
   normalizedSource: string | undefined,
-  existingIds: string[],
 ): string {
   const fileName =
     normalizedSource !== undefined
       ? SourceUtils.getPathSegments(normalizedSource).at(-1)
       : undefined;
-  if (!fileName) {
-    return crypto.randomUUID();
-  }
-  const id = fileName.replaceAll(".", "-");
-  const ids = new Set(existingIds);
-  if (!ids.has(id)) {
-    return id;
-  }
-  let n = 2;
-  while (ids.has(`${id}-${n}`)) {
-    n++;
-  }
-  return `${id}-${n}`;
+  const uuid = crypto.randomUUID();
+  return fileName ? `${fileName.replaceAll(".", "-")}-${uuid}` : uuid;
 }
 
 /**
@@ -91,10 +79,7 @@ export function addImageDataObject(
   if (layerId === undefined) {
     throw new Error("Images have to be added to a layer.");
   }
-  const id = createDataObjectID(
-    normalizeSource(origSource),
-    projectStore.getState().images.map((image) => image.id),
-  );
+  const id = createDataObjectID(normalizeSource(origSource));
   projectStore
     .getState()
     .addImage(
@@ -128,10 +113,7 @@ export function addLabelsDataObject(
   if (layerId === undefined) {
     throw new Error("Labels have to be added to a layer.");
   }
-  const id = createDataObjectID(
-    normalizeSource(origSource),
-    projectStore.getState().labels.map((labels) => labels.id),
-  );
+  const id = createDataObjectID(normalizeSource(origSource));
   projectStore.getState().addLabels(
     createLabels({
       id,
@@ -168,10 +150,7 @@ export function addPointsDataObject(
   if (layerId === undefined) {
     throw new Error("Points have to be added to a layer.");
   }
-  const id = createDataObjectID(
-    normalizeSource(origSource),
-    projectStore.getState().points.map((points) => points.id),
-  );
+  const id = createDataObjectID(normalizeSource(origSource));
   projectStore.getState().addPoints(
     createPoints({
       id,
@@ -208,10 +187,7 @@ export function addShapesDataObject(
   if (layerId === undefined) {
     throw new Error("Shapes have to be added to a layer.");
   }
-  const id = createDataObjectID(
-    normalizeSource(origSource),
-    projectStore.getState().shapes.map((shapes) => shapes.id),
-  );
+  const id = createDataObjectID(normalizeSource(origSource));
   projectStore.getState().addShapes(
     createShapes({
       id,
@@ -243,10 +219,7 @@ export function addTableDataObject(
   origSource: string | undefined,
   preparedDataSource: TableDataSource,
 ): string {
-  const id = createDataObjectID(
-    normalizeSource(origSource),
-    projectStore.getState().tables.map((table) => table.id),
-  );
+  const id = createDataObjectID(normalizeSource(origSource));
   projectStore
     .getState()
     .addTable(createTable({ id, name, dataSource: preparedDataSource }));
