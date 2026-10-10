@@ -75,7 +75,7 @@ export type AddDataObjectDialogProps<
  * (see `DataProvider.supports`): the first one that does is selected, unless
  * the user chose one, and those that do not are muted. The name is then read
  * from the source (see `DataProvider.readName`), or else is its file name,
- * unless the user edited it. Adding is disabled while this inspection runs.
+ * unless the user edited it. Adding during this inspection waits for it.
  *
  * Errors are shown once the source was committed or adding was attempted.
  * The data source is prepared before the data object is added (see
@@ -116,6 +116,7 @@ export function AddDataObjectDialog<TDataSource extends DataSource>({
   );
   const [layerId, setLayerId] = useState(layers[0]?.id);
   const [showErrors, setShowErrors] = useState(false);
+  const [isAddPending, setAddPending] = useState(false);
 
   const isNameEditedRef = useRef(false);
   const chosenTypeRef = useRef<string | null>(null);
@@ -211,6 +212,17 @@ export function AddDataObjectDialog<TDataSource extends DataSource>({
     onClose();
   };
 
+  // a click on Add during an inspection adds once the inspection is done
+  const addPending = useLatestCallback(() => {
+    setAddPending(false);
+    void add();
+  });
+  useEffect(() => {
+    if (isAddPending && !isInspecting) {
+      addPending();
+    }
+  }, [isAddPending, isInspecting, addPending]);
+
   return (
     <Dialog
       open={open}
@@ -218,6 +230,7 @@ export function AddDataObjectDialog<TDataSource extends DataSource>({
         if (!newOpen) {
           cancelInspection();
           cancelPreparation();
+          setAddPending(false);
           onClose();
         }
       }}
@@ -352,8 +365,14 @@ export function AddDataObjectDialog<TDataSource extends DataSource>({
             Cancel
           </DialogClose>
           <Button
-            onClick={() => void add()}
-            disabled={isInspecting || isPreparing || !open}
+            onClick={() => {
+              if (isInspecting) {
+                setAddPending(true);
+              } else {
+                void add();
+              }
+            }}
+            disabled={isAddPending || isPreparing || !open}
           >
             Add
           </Button>
