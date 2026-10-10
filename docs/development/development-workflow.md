@@ -11,11 +11,13 @@ The repository includes a list of recommended extensions for VSCode (`.vscode/ex
 ## Running and building
 
 ```sh
-pnpm run dev        # application development server
-pnpm run docs       # documentation development server
-pnpm run build      # packages and application (excludes the documentation)
-pnpm run build:docs # documentation (requires the packages to be built first)
+pnpm run dev            # application development server
+pnpm run build          # packages and application
+pnpm run build:packages # packages only
+pnpm run build:apidocs  # API documentation in docs/api (requires `pnpm run build:packages` first)
 ```
+
+The documentation is rendered by the [website](https://github.com/TissUUmaps/website). To preview it, clone the website next to this repository and follow its README.
 
 Building the documentation for deployment takes the environment variables described in [Code architecture](./code-architecture.md#documentation-docs).
 
@@ -28,6 +30,12 @@ The code can be linted using ESLint:
 ```sh
 pnpm run lint
 pnpm run lint:fix
+```
+
+The links between documentation pages, including links into the generated API documentation, are checked using remark (after `pnpm run build:apidocs`):
+
+```sh
+pnpm run lint:docs
 ```
 
 ## Formatting

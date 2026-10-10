@@ -1,0 +1,12 @@
+{
+  "$schema": "https://typedoc-plugin-markdown.org/schema.json",
+  "entryPoints": ["packages/*"],
+  "entryPointStrategy": "packages",
+  "packageOptions": {
+    "entryPoints": ["src/index.ts"]
+  },
+  "plugin": ["typedoc-plugin-markdown", "typedoc-docusaurus-theme"],
+  "out": "docs/api",
+  "docsPath": "./docs",
+  "readme": "none"
+}

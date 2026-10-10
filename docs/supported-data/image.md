@@ -33,4 +33,4 @@ A plain image is shown as a single tile at its full resolution. Tiles of a tile 
 
 ## API
 
-The data provider is implemented in the [`@tissuumaps/storage`](/docs/api/@tissuumaps/storage) package as [`OpenSeadragonImageDataProvider`](/docs/api/@tissuumaps/storage/classes/OpenSeadragonImageDataProvider).
+The data provider is implemented in the [`@tissuumaps/storage`](../api/@tissuumaps/storage/index.md) package as [`OpenSeadragonImageDataProvider`](../api/@tissuumaps/storage/classes/OpenSeadragonImageDataProvider.md).

@@ -86,7 +86,7 @@ jobs:
       - name: Build the packages and the application
         run: pnpm run build
       - name: Build the documentation
-        run: pnpm run build:docs
+        run: pnpm run build:apidocs
         env:
           DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/${{ steps.release.outputs.line }}/docs/
       - name: Upload the release assets

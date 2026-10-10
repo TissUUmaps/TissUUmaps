@@ -123,4 +123,4 @@ Both the image and the labels are TIFF files served next to the project file, an
 
 ## API
 
-The data provider is implemented in the [`@tissuumaps/storage`](/docs/api/@tissuumaps/storage) package as [`TIFFImageDataProvider`](/docs/api/@tissuumaps/storage/classes/TIFFImageDataProvider) and [`TIFFLabelsDataProvider`](/docs/api/@tissuumaps/storage/classes/TIFFLabelsDataProvider). Reading the file is delegated to [geotiff.js](https://geotiffjs.github.io/), and tiling to our fork of [GeoTIFFTileSource](https://github.com/TissUUmaps/GeoTIFFTileSource) (see [Dependencies](../development/dependencies.md)).
+The data provider is implemented in the [`@tissuumaps/storage`](../api/@tissuumaps/storage/index.md) package as [`TIFFImageDataProvider`](../api/@tissuumaps/storage/classes/TIFFImageDataProvider.md) and [`TIFFLabelsDataProvider`](../api/@tissuumaps/storage/classes/TIFFLabelsDataProvider.md). Reading the file is delegated to [geotiff.js](https://geotiffjs.github.io/), and tiling to our fork of [GeoTIFFTileSource](https://github.com/TissUUmaps/GeoTIFFTileSource) (see [Dependencies](../development/dependencies.md)).

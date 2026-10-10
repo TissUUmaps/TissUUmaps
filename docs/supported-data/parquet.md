@@ -117,4 +117,4 @@ The value range of a numeric column, e.g. for coloring by its values, is read fr
 
 ## API
 
-The data provider is implemented in the [`@tissuumaps/storage`](/docs/api/@tissuumaps/storage) package as [`ParquetTableDataProvider`](/docs/api/@tissuumaps/storage/classes/ParquetTableDataProvider) and [`ParquetShapesDataProvider`](/docs/api/@tissuumaps/storage/classes/ParquetShapesDataProvider). Reading the file is delegated to [hyparquet](https://hyparquet.com/), in a worker.
+The data provider is implemented in the [`@tissuumaps/storage`](../api/@tissuumaps/storage/index.md) package as [`ParquetTableDataProvider`](../api/@tissuumaps/storage/classes/ParquetTableDataProvider.md) and [`ParquetShapesDataProvider`](../api/@tissuumaps/storage/classes/ParquetShapesDataProvider.md). Reading the file is delegated to [hyparquet](https://hyparquet.com/), in a worker.

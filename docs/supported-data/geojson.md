@@ -33,4 +33,4 @@ The `idProperty` names the feature property holding the shape IDs, which keep th
 
 ## API
 
-The data provider is implemented in the [`@tissuumaps/storage`](/docs/api/@tissuumaps/storage) package as [`GeoJSONShapesDataProvider`](/docs/api/@tissuumaps/storage/classes/GeoJSONShapesDataProvider). The file is parsed in a worker.
+The data provider is implemented in the [`@tissuumaps/storage`](../api/@tissuumaps/storage/index.md) package as [`GeoJSONShapesDataProvider`](../api/@tissuumaps/storage/classes/GeoJSONShapesDataProvider.md). The file is parsed in a worker.
