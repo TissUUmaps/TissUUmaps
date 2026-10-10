@@ -9,6 +9,7 @@ import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { IconButton } from "@/components/common/icon-button";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { SourceField } from "@/components/controls/SourceField";
+import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
 import { ajv } from "@/components/jsonforms/ajv";
 import { cells } from "@/components/jsonforms/cells";
 import { renderers } from "@/components/jsonforms/renderers";
@@ -119,6 +120,7 @@ function DataSourceEditor<TDataSource extends DataSource>({
 }: DataSourceEditorProps<TDataSource>) {
   const [draft, setDraft] = useState(() => structuredClone(dataSource));
   const { isPreparing, prepare, cancel } = usePrepareDataSource();
+  const alert = useAlertDialog();
 
   const dataProvider = dataProviders.get(draft.type);
   const providerEntries = useMemo(
@@ -151,12 +153,22 @@ function DataSourceEditor<TDataSource extends DataSource>({
     ) as TDataSource;
     // prepared only if its source or type changed, as preparing may create
     // data objects for the source (see DataProvider.prepareDataSource)
-    const isChanged =
+    let preparedDataSource: TDataSource | undefined = newDataSource;
+    if (
       newDataSource.type !== dataSource.type ||
-      newDataSource.source !== dataSource.source;
-    const preparedDataSource = isChanged
-      ? await prepare(newDataSource, dataProvider)
-      : newDataSource;
+      newDataSource.source !== dataSource.source
+    ) {
+      try {
+        preparedDataSource = await prepare(newDataSource, dataProvider);
+      } catch (error) {
+        console.error("Failed to prepare the data source", error);
+        void alert({
+          title: "Cannot prepare the data source",
+          body: error instanceof Error ? error.message : String(error),
+        });
+        return;
+      }
+    }
     if (preparedDataSource !== undefined) {
       onSave(preparedDataSource);
     }

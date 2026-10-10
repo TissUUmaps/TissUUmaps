@@ -179,7 +179,17 @@ export function AddDataObjectDialog<TDataSource extends DataSource>({
       setShowErrors(true);
       return;
     }
-    const preparedDataSource = await prepare(draft, dataProvider);
+    let preparedDataSource: TDataSource | undefined;
+    try {
+      preparedDataSource = await prepare(draft, dataProvider);
+    } catch (error) {
+      console.error("Failed to prepare the data source", error);
+      void alert({
+        title: "Cannot prepare the data source",
+        body: error instanceof Error ? error.message : String(error),
+      });
+      return;
+    }
     if (preparedDataSource === undefined) {
       return;
     }

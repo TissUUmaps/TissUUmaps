@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 
 import type { Data, DataProvider, DataSource } from "@tissuumaps/core";
 
-import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
 import { appStore } from "@/stores/app";
 import { projectStore } from "@/stores/project";
 
@@ -12,12 +11,11 @@ import { projectStore } from "@/stores/project";
  *
  * One data source is prepared at a time, against the open workspace and the
  * project source. Preparing is aborted by `cancel` and when the component
- * unmounts, so that the data provider creates nothing more for it. A failure
- * is shown in an alert.
+ * unmounts, so that the data provider creates nothing more for it.
  *
  * `prepare` resolves to the prepared data source (the data source itself if
  * its data provider has nothing to prepare), or to `undefined` if preparing
- * failed or was aborted.
+ * was aborted. It rejects if preparing failed.
  *
  * @returns Whether a data source is being prepared, `prepare` and `cancel`
  */
@@ -26,8 +24,6 @@ export function usePrepareDataSource() {
 
   const abortControllerRef = useRef<AbortController | null>(null);
   useEffect(() => () => abortControllerRef.current?.abort(), []);
-
-  const alert = useAlertDialog();
 
   const cancel = () => {
     abortControllerRef.current?.abort();
@@ -56,14 +52,10 @@ export function usePrepareDataSource() {
         { signal },
       )) as TDataSource;
     } catch (error) {
-      if (!signal.aborted) {
-        console.error("Failed to prepare the data source", error);
-        void alert({
-          title: "Cannot prepare the data source",
-          body: error instanceof Error ? error.message : String(error),
-        });
+      if (signal.aborted) {
+        return undefined;
       }
-      return undefined;
+      throw error;
     } finally {
       // a cancelled preparation must not end a newer one
       if (abortControllerRef.current === abortController) {
