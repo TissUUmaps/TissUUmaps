@@ -22,6 +22,9 @@ export class ZarrTableDataProvider extends HierarchicalTableDataProviderBase<
   ZarrTableData,
   NormalizedZarrTableDataSource
 > {
+  /** The extension of Zarr stores, of which any segment of a source may be */
+  private static readonly _storeExtension = ".zarr";
+
   readonly name = "Zarr";
 
   override normalize(
@@ -38,6 +41,25 @@ export class ZarrTableDataProvider extends HierarchicalTableDataProviderBase<
         projectSource,
       ),
     };
+  }
+
+  /**
+   * Returns whether a source lies within a Zarr store, judged by whether any
+   * of its segments has the store extension (see
+   * {@link ZarrTableDataProvider._storeExtension})
+   *
+   * A source may point at a group below the store root, such as the
+   * `tables/<name>` of a SpatialData store.
+   *
+   * @param normalizedSource - The normalized source to check
+   * @returns A promise that resolves to whether the source is supported
+   */
+  supports(normalizedSource: string): Promise<boolean> {
+    return Promise.resolve(
+      SourceUtils.getPathSegments(normalizedSource).some((segment) =>
+        segment.toLowerCase().endsWith(ZarrTableDataProvider._storeExtension),
+      ),
+    );
   }
 
   protected override async openHierarchicalTable(

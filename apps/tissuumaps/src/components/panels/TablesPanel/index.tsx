@@ -1,7 +1,8 @@
-import { type Table, createTable } from "@tissuumaps/core";
+import type { Table } from "@tissuumaps/core";
 
 import { AddDataObjectButton } from "@/components/controls/AddDataObjectButton";
 import { ObjectList, ObjectListItem } from "@/components/controls/ObjectList";
+import { useAddTableDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
@@ -14,10 +15,9 @@ export type TablesPanelProps = {
 export function TablesPanel({ className }: TablesPanelProps) {
   const expandedTableIds = useAppStore((state) => state.expandedTableIds);
   const setExpandedTableIds = useAppStore((state) => state.setExpandedTableIds);
-  const tableDataProviders = useAppStore((state) => state.tableDataProviders);
+  const addDialogParams = useAddTableDialogParams();
 
   const tables = useProjectStore((state) => state.tables);
-  const addTable = useProjectStore((state) => state.addTable);
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
@@ -29,18 +29,7 @@ export function TablesPanel({ className }: TablesPanelProps) {
           <TableAccordionItem key={table.id} table={table} />
         ))}
       </ObjectList>
-      <AddDataObjectButton
-        title="Add table"
-        dataProviders={tableDataProviders}
-        onAdd={(name, _layerId, dataSource) => {
-          const table = createTable({
-            id: crypto.randomUUID(),
-            name,
-            dataSource,
-          });
-          addTable(table);
-        }}
-      />
+      <AddDataObjectButton {...addDialogParams} />
     </div>
   );
 }

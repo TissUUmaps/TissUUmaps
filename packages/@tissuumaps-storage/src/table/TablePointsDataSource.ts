@@ -10,8 +10,12 @@ export const tablePointsDataSourceDefaults = {
 export interface TablePointsDataSource extends PointsDataSource<
   typeof tablePointsDataSourceType
 > {
-  source: undefined; // Table data does not use a source
-  table: string;
+  /**
+   * A table file to add as a new table, which the data source then references
+   * instead (see `TablePointsDataProvider.prepareDataSource`); never persisted
+   */
+  source?: string;
+  table?: string;
   x?: string;
   y?: string;
 }

@@ -3,7 +3,10 @@
 import type { GeoTIFFImage } from "geotiff";
 import { describe, expect, it } from "vitest";
 
-import { getLabelLevels } from "./TIFFLabelsDataProvider";
+import {
+  TIFFLabelsDataProvider,
+  getLabelLevels,
+} from "./TIFFLabelsDataProvider";
 
 function fakeImage(options?: {
   sampleFormat?: number;
@@ -52,5 +55,26 @@ describe("getLabelLevels", () => {
     expect(() =>
       getLabelLevels({ pyramids: [[wide]], channels: [{}] }),
     ).toThrow(/64-bit samples/);
+  });
+});
+
+describe("TIFFLabelsDataProvider", () => {
+  describe("supports", () => {
+    const provider = new TIFFLabelsDataProvider();
+
+    it("supports TIFF file extensions, including OME-TIFF and QPTIFF", async () => {
+      for (const source of [
+        "/a.tif",
+        "/a.TIFF",
+        "/a.ome.tif",
+        "https://data.example/a.qptiff",
+      ]) {
+        await expect(provider.supports(source)).resolves.toBe(true);
+      }
+    });
+
+    it("does not support other sources", async () => {
+      await expect(provider.supports("/a.png")).resolves.toBe(false);
+    });
   });
 });

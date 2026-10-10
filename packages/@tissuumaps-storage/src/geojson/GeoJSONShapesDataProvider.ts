@@ -17,6 +17,9 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
   GeoJSONShapesData,
   NormalizedGeoJSONShapesDataSource
 > {
+  /** The file extensions of the sources this data provider supports */
+  private static readonly _extensions = new Set([".geojson"]);
+
   readonly name = "GeoJSON";
 
   readonly schema = {
@@ -41,11 +44,6 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
   readonly uischema = {
     type: "VerticalLayout",
     elements: [
-      {
-        type: "Control",
-        scope: "#/properties/source",
-        label: "Source",
-      },
       {
         type: "Control",
         scope: "#/properties/idProperty",
@@ -78,6 +76,21 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
         projectSource,
       ),
     };
+  }
+
+  /**
+   * Returns whether a source has a GeoJSON file extension (see
+   * {@link GeoJSONShapesDataProvider._extensions})
+   *
+   * @param normalizedSource - The normalized source to check
+   * @returns A promise that resolves to whether the source is supported
+   */
+  supports(normalizedSource: string): Promise<boolean> {
+    return Promise.resolve(
+      GeoJSONShapesDataProvider._extensions.has(
+        SourceUtils.getExtension(normalizedSource),
+      ),
+    );
   }
 
   async load(

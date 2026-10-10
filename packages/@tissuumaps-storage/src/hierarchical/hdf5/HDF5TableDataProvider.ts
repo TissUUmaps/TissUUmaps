@@ -22,6 +22,9 @@ export class HDF5TableDataProvider extends HierarchicalTableDataProviderBase<
   HDF5TableData,
   NormalizedHDF5TableDataSource
 > {
+  /** The file extensions of the sources this data provider supports */
+  private static readonly _extensions = new Set([".h5", ".hdf5", ".h5ad"]);
+
   readonly name = "HDF5";
 
   override normalize(
@@ -38,6 +41,21 @@ export class HDF5TableDataProvider extends HierarchicalTableDataProviderBase<
         projectSource,
       ),
     };
+  }
+
+  /**
+   * Returns whether a source has an HDF5 file extension (see
+   * {@link HDF5TableDataProvider._extensions})
+   *
+   * @param normalizedSource - The normalized source to check
+   * @returns A promise that resolves to whether the source is supported
+   */
+  supports(normalizedSource: string): Promise<boolean> {
+    return Promise.resolve(
+      HDF5TableDataProvider._extensions.has(
+        SourceUtils.getExtension(normalizedSource),
+      ),
+    );
   }
 
   protected override async openHierarchicalTable(

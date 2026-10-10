@@ -33,6 +33,14 @@ export type ParquetResponse<TRequest extends ParquetRequest> = {
   op: TRequest["op"];
 };
 
+export type ParquetGeoRequest = ParquetRequest<"geo"> & {
+  source: ParquetSource;
+};
+
+export type ParquetGeoResponse = ParquetResponse<ParquetGeoRequest> & {
+  hasShapesColumn: boolean;
+};
+
 export type ParquetFileRequest = ParquetRequest<"file"> & {
   source: ParquetSource;
   idColumn: string | undefined;
@@ -93,6 +101,7 @@ export type ParquetRangeResponse = ParquetResponse<ParquetRangeRequest> & {
 };
 
 export type ParquetWorkerRequest =
+  | ParquetGeoRequest
   | ParquetFileRequest
   | ParquetColumnRequest
   | ParquetCoordinatesRequest
@@ -100,6 +109,7 @@ export type ParquetWorkerRequest =
   | ParquetRangeRequest;
 
 export type ParquetWorkerResponse =
+  | ParquetGeoResponse
   | ParquetFileResponse
   | ParquetColumnResponse
   | ParquetCoordinatesResponse
@@ -127,6 +137,9 @@ ctx.onmessage = (event) => {
     try {
       let result;
       switch (event.data.op) {
+        case "geo":
+          result = await handleGeoRequest(event.data);
+          break;
         case "file":
           result = await handleFileRequest(event.data, (progress, total) =>
             ctx.postMessage({ progress, total }),
@@ -388,6 +401,21 @@ async function readIdsAndNames(
     return { ids: undefined, names };
   }
   return { ids, names };
+}
+
+async function handleGeoRequest(request: ParquetGeoRequest): Promise<{
+  response: ParquetGeoResponse;
+  transfer?: Transferable[];
+}> {
+  const buffer = await openParquet(request.source);
+  const metadata = await parquetMetadataAsync(buffer);
+  let hasShapesColumn = true;
+  try {
+    GeoParquetUtils.getShapesColumn(metadata, undefined);
+  } catch {
+    hasShapesColumn = false; // no geometry column, or one of points
+  }
+  return { response: { op: "geo", hasShapesColumn } };
 }
 
 async function handleFileRequest(

@@ -30,6 +30,9 @@ export class CSVTableDataProvider implements TableDataProvider<
   CSVTableData,
   NormalizedCSVTableDataSource
 > {
+  /** The file extensions of the sources this data provider supports */
+  private static readonly _extensions = new Set([".csv"]);
+
   readonly name = "CSV";
 
   readonly schema = {
@@ -54,11 +57,6 @@ export class CSVTableDataProvider implements TableDataProvider<
   readonly uischema = {
     type: "VerticalLayout",
     elements: [
-      {
-        type: "Control",
-        scope: "#/properties/source",
-        label: "Source",
-      },
       // TODO columns
       {
         type: "Control",
@@ -89,6 +87,21 @@ export class CSVTableDataProvider implements TableDataProvider<
         projectSource,
       ),
     };
+  }
+
+  /**
+   * Returns whether a source has a CSV file extension (see
+   * {@link CSVTableDataProvider._extensions})
+   *
+   * @param normalizedSource - The normalized source to check
+   * @returns A promise that resolves to whether the source is supported
+   */
+  supports(normalizedSource: string): Promise<boolean> {
+    return Promise.resolve(
+      CSVTableDataProvider._extensions.has(
+        SourceUtils.getExtension(normalizedSource),
+      ),
+    );
   }
 
   async load(

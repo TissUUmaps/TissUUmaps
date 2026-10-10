@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { type Labels, createLabels } from "@tissuumaps/core";
+import type { Labels } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
@@ -9,6 +9,7 @@ import {
   SortableObjectList,
   SortableObjectListItem,
 } from "@/components/controls/ObjectList";
+import { useAddLabelsDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
@@ -27,11 +28,9 @@ export function LabelsPanel({ className }: LabelsPanelProps) {
   const setExpandedLabelsIds = useAppStore(
     (state) => state.setExpandedLabelsIds,
   );
-  const labelsDataProviders = useAppStore((state) => state.labelsDataProviders);
+  const addDialogParams = useAddLabelsDialogParams();
 
-  const layers = useProjectStore((state) => state.layers);
   const labels = useProjectStore((state) => state.labels);
-  const addLabels = useProjectStore((state) => state.addLabels);
   const moveLabels = useProjectStore((state) => state.moveLabels);
 
   return (
@@ -50,21 +49,7 @@ export function LabelsPanel({ className }: LabelsPanelProps) {
           />
         )}
       </SortableObjectList>
-      <AddDataObjectButton
-        title="Add labels"
-        layers={layers}
-        dataProviders={labelsDataProviders}
-        onAdd={(name, layerId, dataSource) => {
-          if (!layerId) return;
-          const newLabels = createLabels({
-            id: crypto.randomUUID(),
-            name,
-            dataSource,
-            layer: layerId,
-          });
-          addLabels(newLabels);
-        }}
-      />
+      <AddDataObjectButton {...addDialogParams} />
     </div>
   );
 }

@@ -260,6 +260,28 @@ The panel is shown for exactly as long as the plugin is mounted:
   the callback returned by `setup` afterwards, so an unmount callback may still
   rely on whatever `setup` set up.
 
+### Dropping files
+
+TissUUmaps ignores files dropped outside of its own drop targets. To accept
+dropped files, a plugin element handles `dragover` and `drop` itself, and stops
+the propagation of `dragover`:
+
+```javascript
+element.addEventListener("dragover", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  event.dataTransfer.dropEffect = "copy";
+});
+element.addEventListener("drop", (event) => {
+  event.preventDefault();
+  const files = Array.from(event.dataTransfer.files);
+  // ...
+});
+```
+
+Without `stopPropagation()` on `dragover`, the drop is refused. Let `drop`
+propagate, so that TissUUmaps notices that the drag has ended.
+
 ### Bringing your own framework
 
 `mount` is a plain DOM contract, so a plugin can use whichever framework it

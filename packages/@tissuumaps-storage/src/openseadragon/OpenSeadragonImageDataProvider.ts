@@ -16,12 +16,30 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
   OpenSeadragonImageData,
   NormalizedOpenSeadragonImageDataSource
 > {
+  /**
+   * The extensions of tile source descriptor files: DZI, and the XML and JSON
+   * that DZI, IIIF and legacy image pyramid descriptors are served as
+   */
+  private static readonly _descriptorFileExtensions = new Set([
+    ".dzi",
+    ".json",
+    ".xml",
+  ]);
+
+  /**
+   * The extensions of plain image files: JPEG, PNG, WebP
+   */
   private static readonly _imageFileExtensions = new Set([
     ".jpeg",
     ".jpg",
     ".png",
     ".webp",
   ]);
+
+  /**
+   * The prefix of data URLs that are images, which OpenSeadragon can open as
+   * tile sources
+   */
   private static readonly _imageDataUrlPrefix = "data:image/";
 
   readonly name = "Image (e.g. PNG, JPEG, DZI, IIIF)";
@@ -38,11 +56,6 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
   readonly uischema = {
     type: "VerticalLayout",
     elements: [
-      {
-        type: "Control",
-        scope: "#/properties/source",
-        label: "Source",
-      },
       // tileSource is not available through the UI for now
     ],
   };
@@ -91,6 +104,28 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
     };
   }
 
+  /**
+   * Returns whether a source is a plain image or a tile source descriptor,
+   * judged by its extension (see
+   * {@link OpenSeadragonImageDataProvider._imageFileExtensions} and
+   * {@link OpenSeadragonImageDataProvider._descriptorFileExtensions})
+   *
+   * Descriptors are only supported as URLs, as they cannot be opened from the
+   * workspace (see {@link OpenSeadragonImageDataProvider.normalize}).
+   *
+   * @param normalizedSource - The normalized source to check
+   * @returns A promise that resolves to whether the source is supported
+   */
+  supports(normalizedSource: string): Promise<boolean> {
+    return Promise.resolve(
+      OpenSeadragonImageDataProvider._isImageSource(normalizedSource) ||
+        (!SourceUtils.isWorkspacePath(normalizedSource) &&
+          OpenSeadragonImageDataProvider._descriptorFileExtensions.has(
+            SourceUtils.getExtension(normalizedSource),
+          )),
+    );
+  }
+
   async load(
     normalizedDataSource: NormalizedOpenSeadragonImageDataSource,
     options?: DataProviderLoadOptions,
@@ -120,16 +155,8 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
         OpenSeadragonImageDataProvider._imageDataUrlPrefix,
       );
     }
-    const path = SourceUtils.isWorkspacePath(normalizedSource)
-      ? normalizedSource
-      : new URL(normalizedSource).pathname;
-    const fileName = path.substring(path.lastIndexOf("/") + 1);
-    const extensionIndex = fileName.lastIndexOf(".");
-    return (
-      extensionIndex !== -1 &&
-      OpenSeadragonImageDataProvider._imageFileExtensions.has(
-        fileName.substring(extensionIndex).toLowerCase(),
-      )
+    return OpenSeadragonImageDataProvider._imageFileExtensions.has(
+      SourceUtils.getExtension(normalizedSource),
     );
   }
 }

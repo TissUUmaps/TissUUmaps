@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { type Shapes, createShapes } from "@tissuumaps/core";
+import type { Shapes } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
@@ -9,6 +9,7 @@ import {
   SortableObjectList,
   SortableObjectListItem,
 } from "@/components/controls/ObjectList";
+import { useAddShapesDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { useShapesData } from "@/data/hooks/useData";
 import { cn } from "@/lib/utils";
@@ -28,11 +29,9 @@ export function ShapesPanel({ className }: ShapesPanelProps) {
   const setExpandedShapesIds = useAppStore(
     (state) => state.setExpandedShapesIds,
   );
-  const shapesDataProviders = useAppStore((state) => state.shapesDataProviders);
+  const addDialogParams = useAddShapesDialogParams();
 
-  const layers = useProjectStore((state) => state.layers);
   const shapes = useProjectStore((state) => state.shapes);
-  const addShapes = useProjectStore((state) => state.addShapes);
   const moveShapes = useProjectStore((state) => state.moveShapes);
 
   return (
@@ -51,21 +50,7 @@ export function ShapesPanel({ className }: ShapesPanelProps) {
           />
         )}
       </SortableObjectList>
-      <AddDataObjectButton
-        title="Add shapes"
-        layers={layers}
-        dataProviders={shapesDataProviders}
-        onAdd={(name, layerId, dataSource) => {
-          if (!layerId) return;
-          const newShapes = createShapes({
-            id: crypto.randomUUID(),
-            name,
-            dataSource,
-            layer: layerId,
-          });
-          addShapes(newShapes);
-        }}
-      />
+      <AddDataObjectButton {...addDialogParams} />
     </div>
   );
 }

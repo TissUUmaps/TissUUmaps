@@ -12,7 +12,6 @@ import {
 import { BooleanCell } from "./cells/BooleanCell";
 import { IntegerCell } from "./cells/IntegerCell";
 import { NumberCell } from "./cells/NumberCell";
-import { SourceCell } from "./cells/SourceCell";
 import { StringEnumCell } from "./cells/StringEnumCell";
 import { TableEnumCell } from "./cells/TableEnumCell";
 import { TextCell } from "./cells/TextCell";
@@ -29,9 +28,5 @@ export const cells = [
   {
     tester: rankWith(3, and(isStringControl, scopeEndIs("table"))),
     cell: TableEnumCell,
-  },
-  {
-    tester: rankWith(3, and(isStringControl, scopeEndIs("source"))),
-    cell: SourceCell,
   },
 ];

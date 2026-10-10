@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { type Points, createPoints } from "@tissuumaps/core";
+import type { Points } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
@@ -9,6 +9,7 @@ import {
   SortableObjectList,
   SortableObjectListItem,
 } from "@/components/controls/ObjectList";
+import { useAddPointsDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { usePointsData } from "@/data/hooks/useData";
 import { cn } from "@/lib/utils";
@@ -28,11 +29,9 @@ export function PointsPanel({ className }: PointsPanelProps) {
   const setExpandedPointsIds = useAppStore(
     (state) => state.setExpandedPointsIds,
   );
-  const pointsDataProviders = useAppStore((state) => state.pointsDataProviders);
+  const addDialogParams = useAddPointsDialogParams();
 
-  const layers = useProjectStore((state) => state.layers);
   const points = useProjectStore((state) => state.points);
-  const addPoints = useProjectStore((state) => state.addPoints);
   const movePoints = useProjectStore((state) => state.movePoints);
 
   return (
@@ -51,21 +50,7 @@ export function PointsPanel({ className }: PointsPanelProps) {
           />
         )}
       </SortableObjectList>
-      <AddDataObjectButton
-        title="Add points"
-        layers={layers}
-        dataProviders={pointsDataProviders}
-        onAdd={(name, layerId, dataSource) => {
-          if (!layerId) return;
-          const newPoints = createPoints({
-            id: crypto.randomUUID(),
-            name,
-            dataSource,
-            layer: layerId,
-          });
-          addPoints(newPoints);
-        }}
-      />
+      <AddDataObjectButton {...addDialogParams} />
     </div>
   );
 }
