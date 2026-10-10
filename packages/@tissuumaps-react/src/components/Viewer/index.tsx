@@ -15,21 +15,12 @@ import { useOpenSeadragon } from "../../hooks/useOpenSeadragon";
 import { useSVG } from "../../hooks/useSVG";
 import { useWebGL } from "../../hooks/useWebGL";
 
-export type ViewerHandle = {
-  /**
-   * Fits the viewport to all content again, as on opening a project
-   *
-   * Does nothing until the viewer is ready.
-   */
-  resetViewport: () => void;
-};
-
 export type ViewerProps = {
   adapter: ViewerAdapter;
   backgroundColor: Color;
   children?: ReactNode;
   className?: string;
-  ref?: Ref<ViewerHandle>;
+  ref?: Ref<OpenSeadragonContext>;
 };
 
 export function Viewer({
@@ -41,9 +32,9 @@ export function Viewer({
 }: ViewerProps) {
   const [osContext, setOSContext] = useState<OpenSeadragonContext | null>(null);
 
-  useImperativeHandle(
+  useImperativeHandle<OpenSeadragonContext | null, OpenSeadragonContext | null>(
     ref,
-    () => ({ resetViewport: () => osContext?.resetViewport() }),
+    () => osContext,
     [osContext],
   );
 

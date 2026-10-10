@@ -7,8 +7,8 @@ import {
   type ViewerAdapter,
   ViewerControl,
   ViewerControlAnchor,
-  type ViewerHandle,
 } from "@tissuumaps/react";
+import type { OpenSeadragonContext } from "@tissuumaps/render";
 
 import {
   useImageDataLoader,
@@ -31,7 +31,7 @@ export type ViewerPanelProps = {
 };
 
 export function ViewerPanel({ className }: ViewerPanelProps) {
-  const viewerRef = useRef<ViewerHandle>(null);
+  const viewerRef = useRef<OpenSeadragonContext>(null);
   const interactionMode = useAppStore((state) => state.interactionMode);
   const imageChannelPreview = useAppStore((state) => state.imageChannelPreview);
   const viewerBackgroundColor = useProjectStore(
