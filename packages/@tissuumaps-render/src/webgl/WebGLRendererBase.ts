@@ -162,67 +162,65 @@ export abstract class WebGLRendererBase<
   /**
    * Synchronizes the rendered objects with the current model and render options
    *
-   * Loads the objects of the model (see {@link loadObjects}), drops the
-   * rendered objects that no longer match one (see
-   * {@link matchOrDestroyRenderedObjects}), and then creates or updates the
-   * rest in two passes. The first prepares every object (see
-   * {@link prepareRenderedObject}), issuing all requests before the first
-   * `await`: requests are shared with, and cancelled once abandoned by, a
-   * superseded synchronization, unless they are reclaimed within the same
-   * task. The second awaits the preparations in order and uploads each of them
-   * in one synchronous block (see {@link createRenderedObject} and
-   * {@link updateRenderedObject}), so a draw never sees a half-updated object.
+   * Starts loading the objects of the model (see {@link loadObjects}), and
+   * right away drops the rendered objects that none of them addresses. Each
+   * object is then synchronized on its own, as soon as its data has loaded: its
+   * rendered object is reused or dropped, the object is prepared (see
+   * {@link prepareRenderedObject}), and the preparation is uploaded in one
+   * synchronous block (see {@link createRenderedObject} and
+   * {@link updateRenderedObject}). A draw thus never sees a half-updated
+   * object, and a slow or failing object never holds back the others.
    *
-   * An object whose preparation fails, or finds nothing to render, is logged
-   * and dropped. A synchronization that fails or is aborted leaves the model
-   * unsynchronized (see {@link _discardSyncState}), and the changes it made
-   * before it stopped are reported by the next one that completes.
+   * An object issues its requests right after its data has loaded, without
+   * awaiting in between. Requests are shared with a superseded synchronization,
+   * and cancelled once it abandons them, unless they are reclaimed within the
+   * same task. Data that has already loaded allows that.
+   *
+   * An object whose data or preparation fails, or that has nothing to render,
+   * is logged and dropped. A synchronization that fails or is aborted leaves
+   * the model unsynchronized (see {@link _discardSyncState}). The next one that
+   * completes reports the changes it made.
    *
    * @param syncContext - The inputs to synchronize with: the tables and
-   * group-to-value maps that the objects resolve their properties from, and
-   * the loaders for object and table data. It carries inputs only; what an
-   * object was resolved from is captured per object (see {@link ObjectRef})
-   * @param options - Optional abort signal
+   * group-to-value maps that the objects resolve their properties from, and the
+   * loaders for object and table data. It carries inputs only; what an object
+   * was resolved from is captured per object (see {@link ObjectRef})
+   * @param options - Optional abort signal, and a callback that is called
+   * synchronously whenever a rendered object is added, updated or dropped, so
+   * that the caller can draw each object as soon as it is ready
    * @returns A promise that resolves to whether any rendered object changed
    * since the last completed synchronization
    * @throws Error if no model has been set (see {@link setModel})
    */
   async synchronize(
     syncContext: TSyncContext,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; onChange?: () => void },
   ): Promise<boolean> {
-    const { signal } = options ?? {};
+    const { signal, onChange } = options ?? {};
     signal?.throwIfAborted();
     const syncState = this._recordSyncState();
     try {
-      const newRefs = await this.loadObjects(syncContext, { signal });
-      const matches = this.matchOrDestroyRenderedObjects(newRefs);
-      const preparations = matches.map(({ newRef, renderedObject }) => {
-        const preparedPromise = this.prepareRenderedObject(
-          newRef,
-          renderedObject,
-          syncContext,
-          { signal },
-        );
-        preparedPromise.catch(() => {}); // prevent unhandled rejections in console
-        return { newRef, renderedObject, preparedPromise };
-      });
-      for (const { newRef, renderedObject, preparedPromise } of preparations) {
-        const prepared = await this._settleRenderedObjectPreparation(
-          newRef,
-          renderedObject,
-          preparedPromise,
-          { signal },
-        );
-        if (prepared === undefined) {
-          continue;
-        }
-        // no awaits from here on, so that the object is uploaded atomically
-        if (renderedObject === undefined) {
-          this.addRenderedObject(this.createRenderedObject(newRef, prepared));
-        } else if (this.updateRenderedObject(renderedObject, prepared)) {
-          this._hasUnreportedChanges = true;
-        }
+      const loadings = this.loadObjects(syncContext, { signal });
+      if (this._cleanRenderedObjects(loadings)) {
+        onChange?.();
+      }
+      const syncResults = await Promise.allSettled(
+        loadings.map(({ layerId, object, newRefPromise }) =>
+          this._synchronizeRenderedObject(
+            layerId,
+            object.id,
+            newRefPromise,
+            syncContext,
+            { signal, onChange },
+          ),
+        ),
+      );
+      signal?.throwIfAborted(); // Promise.allSettled() does not throw on abort
+      const firstSyncFailure = syncResults.find(
+        (result) => result.status === "rejected",
+      );
+      if (firstSyncFailure !== undefined) {
+        throw firstSyncFailure.reason;
       }
     } catch (error) {
       this._discardSyncState(syncState);
@@ -329,32 +327,38 @@ export abstract class WebGLRendererBase<
   }
 
   /**
-   * Concurrently loads the data of all objects to be rendered on the layers of the current model
+   * Starts loading the data of all objects to be rendered on the layers of the current model
    *
-   * An object assigned to a layer by layer ID is loaded for that layer only, an
+   * An object assigned to a layer by layer ID is loaded for that layer only. An
    * object assigned per item by a table column is loaded for every layer, with
    * the items on each layer resolved from the table (see
    * {@link _getLayerItemsInfos}). The data of an object, and of a table, is
-   * loaded once, no matter how many references it is shared by.
+   * loaded once, however many references share it.
    *
-   * The returned references are ordered by layer and then by object. Objects
-   * whose data or table failed to load are logged and skipped, and so are
-   * objects whose items are assigned per item without a table to resolve the
-   * assignment from. Objects without items on a layer are skipped silently,
-   * which also covers empty objects and objects whose table is empty - those
-   * are legitimate states, not failures.
+   * Returns right away, with one loading per object and layer, ordered by layer
+   * and then by object. Each loading settles on its own. It rejects if the
+   * object's data or table fails to load, which is logged. It resolves to
+   * `null` if the object has no items on the layer, which is not logged: empty
+   * objects and empty tables are legitimate states, not failures. An object
+   * whose items are assigned per item, but that has no table to resolve the
+   * assignment from, is logged and gets no loading.
    *
    * @param syncContext - The inputs of the current synchronization: the tables
-   * that the objects resolve their item layers from, and the loaders for
-   * object and table data
+   * that the objects resolve their item layers from, and the loaders for object
+   * and table data
    * @param options - Optional abort signal
-   * @returns A promise that resolves to one reference per loaded object and layer
+   * @returns One loading per object and layer, whose promise resolves to the
+   * object's reference, or to `null` if the object has no items on the layer
    * @throws Error if no model has been set (see {@link setModel})
    */
-  protected async loadObjects(
+  protected loadObjects(
     syncContext: TSyncContext,
     options?: { signal?: AbortSignal },
-  ): Promise<ObjectRef<TObject, TObjectData>[]> {
+  ): {
+    layerId: string;
+    object: TObject;
+    newRefPromise: Promise<ObjectRef<TObject, TObjectData> | null>;
+  }[] {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const model = this._model;
@@ -368,7 +372,11 @@ export abstract class WebGLRendererBase<
       string,
       Promise<Map<string, ItemsInfo | null>>
     >();
-    const newRefPromises: Promise<ObjectRef<TObject, TObjectData>>[] = [];
+    const loadings: {
+      layerId: string;
+      object: TObject;
+      newRefPromise: Promise<ObjectRef<TObject, TObjectData> | null>;
+    }[] = [];
     const objectIdsWithoutTable = new Set<string>();
     for (const currentLayer of model.layers) {
       for (const currentObject of model.objects) {
@@ -500,86 +508,36 @@ export abstract class WebGLRendererBase<
           layerItemsInfosPromise,
         ]).then(([data, layerItemsInfos]) => {
           signal?.throwIfAborted();
+          let newRef: ObjectRef<TObject, TObjectData>;
           if (layerItemsInfos !== undefined) {
             const itemsInfo = layerItemsInfos.get(currentLayer.id);
-            return {
+            newRef = {
               layerId: currentLayer.id,
               object: currentObject,
               itemIds: itemsInfo?.itemIds ?? [],
               itemsMask: itemsInfo?.itemsMask,
               data,
             };
+          } else {
+            newRef = {
+              layerId: currentLayer.id,
+              object: currentObject,
+              itemIds: data.getIds(),
+              itemsMask: undefined,
+              data,
+            };
           }
-          return {
-            layerId: currentLayer.id,
-            object: currentObject,
-            itemIds: data.getIds(),
-            itemsMask: undefined,
-            data,
-          };
+          return newRef.itemIds.length > 0 ? newRef : null;
         });
-        newRefPromises.push(newRefPromise);
+        newRefPromise.catch(() => {}); // prevent unhandled rejections in console
+        loadings.push({
+          layerId: currentLayer.id,
+          object: currentObject,
+          newRefPromise,
+        });
       }
     }
-    const results = await Promise.allSettled(newRefPromises);
-    signal?.throwIfAborted();
-    return results
-      .filter((result) => result.status === "fulfilled")
-      .filter((result) => result.value.itemIds.length > 0)
-      .map((result) => result.value);
-  }
-
-  /**
-   * Matches the rendered objects to a new set of references, and destroys the
-   * ones left over
-   *
-   * A rendered object is matched by the layer and object it is kept under, and
-   * kept if its contributed items and data source are those of the reference,
-   * which it then adopts and is returned for reuse with. Every other rendered
-   * object - one that no reference addresses, or one whose items or data source
-   * changed - is destroyed and dropped.
-   *
-   * @param newRefs - The object references to match against
-   * @returns One match per reference, in the order of the references, each with
-   * the rendered object to reuse for it, or `undefined` if it has none yet
-   */
-  protected matchOrDestroyRenderedObjects(
-    newRefs: ObjectRef<TObject, TObjectData>[],
-  ): {
-    newRef: ObjectRef<TObject, TObjectData>;
-    renderedObject: TRenderedObject | undefined;
-  }[] {
-    const matchedRenderedObjects = new Set<TRenderedObject>();
-    const matches = newRefs.map((newRef) => {
-      const renderedObject = this._renderedObjects
-        .get(newRef.layerId)
-        ?.get(newRef.object.id);
-      if (
-        renderedObject !== undefined &&
-        renderedObject.ref.itemIds === newRef.itemIds &&
-        renderedObject.ref.itemsMask === newRef.itemsMask &&
-        // check data source configuration instead of data
-        deepEqual(
-          renderedObject.ref.object.dataSource,
-          newRef.object.dataSource,
-        )
-      ) {
-        renderedObject.ref = newRef;
-        matchedRenderedObjects.add(renderedObject);
-        return { newRef, renderedObject };
-      }
-      return { newRef, renderedObject: undefined };
-    });
-    for (const renderedObjects of this._renderedObjects.values()) {
-      for (const [objectId, renderedObject] of renderedObjects) {
-        if (!matchedRenderedObjects.has(renderedObject)) {
-          renderedObjects.delete(objectId);
-          this.destroyRenderedObject(renderedObject);
-          this._hasUnreportedChanges = true;
-        }
-      }
-    }
-    return matches;
+    return loadings;
   }
 
   /**
@@ -627,14 +585,17 @@ export abstract class WebGLRendererBase<
   /**
    * Prepares everything that has to be uploaded for an object
    *
-   * Runs in the first pass of {@link synchronize}, which calls it synchronously
-   * for every object of a synchronization, one after the other: every request
-   * has to be issued before the first `await`. Decides, from the object's
-   * current rendered state, which of its GPU resources have to be rebuilt, and
-   * resolves only those.
+   * Called by {@link synchronize} as soon as the object's data has loaded.
+   * Every request has to be issued before the first `await` (see
+   * {@link synchronize}). Decides, from the object's current rendered state,
+   * which of its GPU resources have to be rebuilt, and resolves only those.
+   *
+   * Once the signal is aborted, it has to reject rather than resolve, as
+   * {@link synchronize} uploads whatever it resolves to.
    *
    * @param newRef - The object to prepare
-   * @param renderedObject - The object's current rendered state, if it is reused
+   * @param renderedObject - The object's current rendered state, if it is
+   * reused
    * @param syncContext - The inputs of the current synchronization
    * @param options - Optional abort signal
    * @returns What {@link createRenderedObject} or {@link updateRenderedObject}
@@ -651,7 +612,8 @@ export abstract class WebGLRendererBase<
   /**
    * Creates the rendered object, with its GPU resources, of a newly prepared object
    *
-   * Runs in the second pass of {@link synchronize}, synchronously.
+   * Called synchronously by {@link synchronize} once the object has been
+   * prepared.
    *
    * @param newRef - The object
    * @param prepared - Its preparation, made without a rendered object to reuse
@@ -665,7 +627,8 @@ export abstract class WebGLRendererBase<
   /**
    * Updates the GPU resources of a rendered object from its preparation
    *
-   * Runs in the second pass of {@link synchronize}, synchronously.
+   * Called synchronously by {@link synchronize} once the object has been
+   * prepared.
    *
    * @param renderedObject - The rendered object to update in place
    * @param prepared - Its preparation, made with it as the rendered object to reuse
@@ -874,49 +837,134 @@ export abstract class WebGLRendererBase<
   }
 
   /**
-   * Awaits the preparation of an object, dropping the object if it fails or
-   * finds nothing to render
+   * Drops the rendered objects that none of the given loadings addresses
    *
-   * @param newRef - The prepared object
-   * @param renderedObject - The object's current rendered state, if any, which
-   * is removed if the object is dropped
-   * @param preparedPromise - The preparation, see {@link prepareRenderedObject}
-   * @param options - Optional abort signal
-   * @returns The preparation, or `undefined` if the object was dropped (which
-   * is logged)
+   * Their layer or object has left the model, or the object has moved to
+   * another layer, so they are no longer drawn (see {@link getRenderPasses}).
+   * They are dropped right away, rather than once the remaining objects have
+   * loaded. Whether the others can be reused is decided per object, once its
+   * data has loaded (see {@link _synchronizeRenderedObject}).
+   *
+   * @param loadings - The loadings of the current synchronization (see
+   * {@link loadObjects})
+   * @returns Whether any rendered object was dropped
    */
-  private async _settleRenderedObjectPreparation(
-    newRef: ObjectRef<TObject, TObjectData>,
-    renderedObject: TRenderedObject | undefined,
-    preparedPromise: Promise<TPreparedObject | null>,
-    options?: { signal?: AbortSignal },
-  ): Promise<TPreparedObject | undefined> {
-    const { signal } = options ?? {};
+  private _cleanRenderedObjects(
+    loadings: Pick<ObjectRef<TObject, TObjectData>, "layerId" | "object">[],
+  ): boolean {
+    let removed = false;
+    for (const [layerId, renderedObjects] of this._renderedObjects) {
+      for (const [objectId, renderedObject] of renderedObjects) {
+        if (
+          !loadings.some(
+            (loading) =>
+              loading.layerId === layerId && loading.object.id === objectId,
+          )
+        ) {
+          this.removeRenderedObject(renderedObject);
+          removed = true;
+        }
+      }
+    }
+    return removed;
+  }
+
+  /**
+   * Synchronizes the rendered object of one object and layer, once its data has loaded
+   *
+   * The rendered object kept under the layer and object is reused if its items
+   * and data source match the new reference, which it then adopts. Otherwise,
+   * it is dropped. The object is then prepared and uploaded (see
+   * {@link synchronize}). If the object's data failed to load, or it has no
+   * items on the layer, it is only dropped. So is it if its preparation fails or
+   * finds nothing to render, which is logged.
+   *
+   * @param layerId - The ID of the layer
+   * @param objectId - The ID of the object
+   * @param newRefPromise - The object's loading (see {@link loadObjects})
+   * @param syncContext - The inputs of the current synchronization
+   * @param options - Optional abort signal, and the callback to call whenever
+   * the rendered object is added, updated or dropped
+   * @returns A promise that resolves once the object has been synchronized
+   */
+  private async _synchronizeRenderedObject(
+    layerId: string,
+    objectId: string,
+    newRefPromise: Promise<ObjectRef<TObject, TObjectData> | null>,
+    syncContext: TSyncContext,
+    options?: { signal?: AbortSignal; onChange?: () => void },
+  ): Promise<void> {
+    const { signal, onChange } = options ?? {};
+    signal?.throwIfAborted();
+    let newRef;
+    try {
+      newRef = await newRefPromise;
+    } catch {
+      signal?.throwIfAborted(); // an aborted loading rejects, too
+      newRef = null; // logged by loadObjects
+    }
+    let renderedObject;
+    const oldRenderedObject = this._renderedObjects.get(layerId)?.get(objectId);
+    if (oldRenderedObject !== undefined) {
+      if (
+        newRef !== null &&
+        oldRenderedObject.ref.itemIds === newRef.itemIds &&
+        oldRenderedObject.ref.itemsMask === newRef.itemsMask &&
+        // check data source configuration instead of data
+        deepEqual(
+          oldRenderedObject.ref.object.dataSource,
+          newRef.object.dataSource,
+        )
+      ) {
+        oldRenderedObject.ref = newRef;
+        renderedObject = oldRenderedObject;
+      } else {
+        this.removeRenderedObject(oldRenderedObject);
+      }
+    }
+    if (newRef === null) {
+      if (oldRenderedObject !== undefined && onChange !== undefined) {
+        onChange();
+      }
+      return;
+    }
     let prepared;
     try {
-      prepared = await preparedPromise;
+      prepared = await this.prepareRenderedObject(
+        newRef,
+        renderedObject,
+        syncContext,
+        { signal },
+      );
     } catch (error) {
-      signal?.throwIfAborted();
+      signal?.throwIfAborted(); // an aborted preparation rejects, too
       console.error(
         `Failed to prepare object with ID '${newRef.object.id}'`,
         error,
       );
-      if (renderedObject !== undefined) {
-        this.removeRenderedObject(renderedObject);
-      }
-      return undefined;
     }
-    signal?.throwIfAborted();
     if (prepared === null) {
       console.warn(
         `Object with ID '${newRef.object.id}' has nothing to render, skipping`,
       );
+    }
+    if (prepared === undefined || prepared === null) {
       if (renderedObject !== undefined) {
         this.removeRenderedObject(renderedObject);
       }
-      return undefined;
+      if (oldRenderedObject !== undefined && onChange !== undefined) {
+        onChange();
+      }
+      return;
     }
-    return prepared;
+    // no awaits from here on, so that the object is uploaded atomically
+    if (renderedObject === undefined) {
+      this.addRenderedObject(this.createRenderedObject(newRef, prepared));
+      onChange?.();
+    } else if (this.updateRenderedObject(renderedObject, prepared)) {
+      this._hasUnreportedChanges = true;
+      onChange?.();
+    }
   }
 
   /**
@@ -1012,9 +1060,8 @@ export type ObjectRef<
  * Extended by the renderers with the GPU resources they own, and with a
  * snapshot of the object properties those were built from, which their change
  * detection compares against. Rendered objects are mutated in place across
- * synchronizations:
- * {@link WebGLRendererBase.matchOrDestroyRenderedObjects} replaces the
- * reference of a matched object, and the renderers replace the bounds, the
+ * synchronizations: {@link WebGLRendererBase.synchronize} replaces the
+ * reference of a reused object, and the renderers replace the bounds, the
  * snapshot and the GPU resources of an object as they are rebuilt.
  */
 export type RenderedObjectBase<
