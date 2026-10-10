@@ -1,4 +1,4 @@
-import { SourceUtils, createTable } from "@tissuumaps/core";
+import { SourceUtils } from "@tissuumaps/core";
 import {
   CSVTableDataProvider,
   GeoJSONShapesDataProvider,
@@ -26,7 +26,7 @@ import {
   zarrTableDataSourceType,
 } from "@tissuumaps/storage";
 
-import { createDataObjectID } from "@/data/io/dataObject";
+import { addTableDataObject } from "@/data/io/dataObject";
 import { appStore } from "@/stores/app";
 import { projectStore } from "@/stores/project";
 
@@ -110,20 +110,11 @@ export function enableBuiltInDataProviders(): void {
             { signal },
           );
         }
-        // created right before adding, after the last await, so that the ID
-        // is still unique when the table is added
-        const id = createDataObjectID(
-          normalizedSource,
-          projectStore.getState().tables.map((table) => table.id),
+        return addTableDataObject(
+          name ?? "Untitled",
+          dataSource.source,
+          preparedDataSource,
         );
-        projectStore.getState().addTable(
-          createTable({
-            id,
-            name: name ?? "Untitled",
-            dataSource: preparedDataSource,
-          }),
-        );
-        return id;
       },
     }),
   );
