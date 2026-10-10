@@ -20,5 +20,5 @@ Under a Content Security Policy, allow `img-src data:` for the marker atlas of
 
 ## Documentation
 
-- [API reference](https://tissuumaps.github.io/TissUUmaps/docs/docs/api/@tissuumaps/react/)
-- [Code architecture](https://tissuumaps.github.io/TissUUmaps/docs/docs/development/code-architecture/)
+- [API reference](https://tissuumaps.github.io/docs/api/@tissuumaps/react/)
+- [Code architecture](https://tissuumaps.github.io/docs/development/code-architecture/)

@@ -2,7 +2,7 @@
   "name": "@tissuumaps/storage",
   "version": "0.1.0-beta.3",
   "description": "Official data provider distribution for TissUUmaps",
-  "homepage": "https://tissuumaps.github.io/TissUUmaps/",
+  "homepage": "https://tissuumaps.github.io/",
   "bugs": "https://github.com/TissUUmaps/TissUUmaps/issues",
   "repository": {
     "type": "git",
