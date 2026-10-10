@@ -12,7 +12,12 @@ import {
 import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { useLoadProjectFile } from "@/components/panels/ProjectPanel/hooks";
-import { readDroppedItems, resolveWorkspacePath } from "@/data/io/workspace";
+import {
+  isWorkspaceSupported,
+  projectFileExtensions,
+  readDroppedItems,
+  resolveWorkspacePath,
+} from "@/data/io/workspace";
 import { PanelId } from "@/panels";
 import { useAppStore } from "@/stores/app";
 import { projectStore, useProjectStore } from "@/stores/project";
@@ -23,7 +28,8 @@ import { projectStore, useProjectStore } from "@/stores/project";
  *
  * The project panel accepts a single project file, which it loads, or a
  * single directory, which it opens as the workspace, either after
- * confirmation. The data panels accept files and directories within the
+ * confirmation. It rejects files without a project file extension before
+ * asking. The data panels accept files and directories within the
  * workspace, and open one add data object dialog per item; they accept
  * nothing while no project or workspace is open, while no data provider of
  * their kind is registered, or while their data objects need a layer and
@@ -56,10 +62,13 @@ export function usePanelDrop(panelId: string): {
   const dropProject = async (dataTransfer: DataTransfer) => {
     const items = await readDroppedItems(dataTransfer);
     const item = items[0];
+    const dropHint = isWorkspaceSupported()
+      ? `Drop a single project file (${projectFileExtensions.join(", ")}) or folder.`
+      : `Drop a single project file (${projectFileExtensions.join(", ")}).`;
     if (item === undefined || items.length > 1) {
       await alert({
         title: "Cannot open the dropped items",
-        body: "Drop a single project file or folder.",
+        body: dropHint,
       });
       return;
     }
@@ -85,25 +94,39 @@ export function usePanelDrop(panelId: string): {
       }
       return;
     }
-    const name = item.handle?.name ?? item.file?.name ?? "";
+    const projectFile =
+      item.handle?.kind === "file"
+        ? (item.handle as FileSystemFileHandle)
+        : item.file;
+    if (projectFile === null) {
+      await alert({
+        title: "Cannot open the dropped item",
+        body: `The dropped item cannot be read. ${dropHint}`,
+      });
+      return;
+    }
+    if (
+      !projectFileExtensions.some((projectFileExtension) =>
+        projectFile.name.toLowerCase().endsWith(projectFileExtension),
+      )
+    ) {
+      await alert({
+        title: "Cannot open the dropped item",
+        body: `"${projectFile.name}" is not a project file. ${dropHint}`,
+      });
+      return;
+    }
     const confirmed = await confirm({
       title: "Open project",
       body: isProjectOpen
-        ? `Open the project "${name}"? It replaces the open project, and unsaved changes are lost.`
-        : `Open the project "${name}"?`,
+        ? `Open the project "${projectFile.name}"? It replaces the open project, and unsaved changes are lost.`
+        : `Open the project "${projectFile.name}"?`,
       actionLabel: "Open",
     });
     if (!confirmed) {
       return;
     }
     try {
-      const projectFile =
-        item.handle?.kind === "file"
-          ? (item.handle as FileSystemFileHandle)
-          : item.file;
-      if (projectFile === null) {
-        throw new Error("The dropped item cannot be read.");
-      }
       await loadProjectFile(projectFile);
     } catch (error) {
       console.error("Failed to load the dropped project", error);
@@ -170,7 +193,10 @@ export function usePanelDrop(panelId: string): {
     case PanelId.project:
       return {
         label: "Drop to open",
-        accepts: ["Project file", "Folder (workspace)"],
+        accepts: [
+          ...(isWorkspaceSupported() ? ["Workspace (folder)"] : []),
+          `Project file (${projectFileExtensions.join(", ")})`,
+        ],
         onDrop: dropProject,
       };
     case PanelId.images:
