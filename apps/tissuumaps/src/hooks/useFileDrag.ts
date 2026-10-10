@@ -14,6 +14,21 @@ function isFileDrag(event: DragEvent): boolean {
   return event.dataTransfer?.types.includes("Files") ?? false;
 }
 
+/**
+ * Subscribes to the start and end of file drags (see `useSyncExternalStore`)
+ *
+ * Defined once at module level, as `useSyncExternalStore` resubscribes
+ * whenever it receives a different function, i.e. on every render if the
+ * function were created in the hook.
+ *
+ * @param listener - Called whenever files start or stop being dragged
+ * @returns A function that unsubscribes the listener again
+ */
+function subscribeToFileDrag(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
 function setFileDragDepth(depth: number): void {
   const wasDragging = fileDragDepth > 0;
   fileDragDepth = depth;
@@ -94,11 +109,5 @@ export function useFileDragTracking(): void {
  * @returns `true` while files are dragged over the window
  */
 export function useIsFileDragActive(): boolean {
-  return useSyncExternalStore(
-    (listener) => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-    () => fileDragDepth > 0,
-  );
+  return useSyncExternalStore(subscribeToFileDrag, () => fileDragDepth > 0);
 }
