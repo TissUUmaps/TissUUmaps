@@ -20,17 +20,17 @@ install them yourself.
 Each format has its own entry point, so that only the providers you use are
 bundled; the package root exports all of them.
 
-| Entry point                         | Data providers                                                                                        |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `@tissuumaps/storage/csv`           | [CSV](https://tissuumaps.github.io/TissUUmaps/docs/docs/supported-data/csv/) tables                   |
-| `@tissuumaps/storage/geojson`       | [GeoJSON](https://tissuumaps.github.io/TissUUmaps/docs/docs/supported-data/geojson/) shapes           |
-| `@tissuumaps/storage/hdf5`          | [HDF5](https://tissuumaps.github.io/TissUUmaps/docs/docs/supported-data/hdf5/) tables                 |
-| `@tissuumaps/storage/ome-zarr`      | [OME-Zarr](https://tissuumaps.github.io/TissUUmaps/docs/docs/supported-data/ome-zarr/) images, labels |
-| `@tissuumaps/storage/openseadragon` | OpenSeadragon [images](https://tissuumaps.github.io/TissUUmaps/docs/docs/supported-data/image/)       |
-| `@tissuumaps/storage/parquet`       | [Parquet](https://tissuumaps.github.io/TissUUmaps/docs/docs/supported-data/parquet/) shapes, tables   |
-| `@tissuumaps/storage/table`         | [points from tables](https://tissuumaps.github.io/TissUUmaps/docs/docs/supported-data/table/)         |
-| `@tissuumaps/storage/tiff`          | [TIFF](https://tissuumaps.github.io/TissUUmaps/docs/docs/supported-data/tiff/) images, labels         |
-| `@tissuumaps/storage/zarr`          | [Zarr](https://tissuumaps.github.io/TissUUmaps/docs/docs/supported-data/zarr/) tables                 |
+| Entry point                         | Data providers                                                                        |
+| ----------------------------------- | ------------------------------------------------------------------------------------- |
+| `@tissuumaps/storage/csv`           | [CSV](https://tissuumaps.github.io/docs/supported-data/csv/) tables                   |
+| `@tissuumaps/storage/geojson`       | [GeoJSON](https://tissuumaps.github.io/docs/supported-data/geojson/) shapes           |
+| `@tissuumaps/storage/hdf5`          | [HDF5](https://tissuumaps.github.io/docs/supported-data/hdf5/) tables                 |
+| `@tissuumaps/storage/ome-zarr`      | [OME-Zarr](https://tissuumaps.github.io/docs/supported-data/ome-zarr/) images, labels |
+| `@tissuumaps/storage/openseadragon` | OpenSeadragon [images](https://tissuumaps.github.io/docs/supported-data/image/)       |
+| `@tissuumaps/storage/parquet`       | [Parquet](https://tissuumaps.github.io/docs/supported-data/parquet/) shapes, tables   |
+| `@tissuumaps/storage/table`         | [points from tables](https://tissuumaps.github.io/docs/supported-data/table/)         |
+| `@tissuumaps/storage/tiff`          | [TIFF](https://tissuumaps.github.io/docs/supported-data/tiff/) images, labels         |
+| `@tissuumaps/storage/zarr`          | [Zarr](https://tissuumaps.github.io/docs/supported-data/zarr/) tables                 |
 
 The CSV, GeoJSON, HDF5 and Parquet providers parse, and the TIFF providers
 decode, in web workers loaded from `blob:` URLs. Under a Content Security Policy,
@@ -40,8 +40,8 @@ providers for some compressions, run WebAssembly in these workers; allow it with
 
 ## Documentation
 
-- [API reference](https://tissuumaps.github.io/TissUUmaps/docs/docs/api/@tissuumaps/storage/)
-- [Supported data](https://tissuumaps.github.io/TissUUmaps/docs/docs/supported-data/)
+- [API reference](https://tissuumaps.github.io/docs/api/@tissuumaps/storage/)
+- [Supported data](https://tissuumaps.github.io/docs/supported-data/)
 
 ## Known issues
 
@@ -63,5 +63,5 @@ patchedDependencies:
 
 The patch is a git diff relative to the geotiff package root, so it can also
 be applied with other package managers' patching mechanisms. See
-[Dependencies](https://tissuumaps.github.io/TissUUmaps/docs/docs/development/dependencies/)
+[Dependencies](https://tissuumaps.github.io/docs/development/dependencies/)
 for details.
