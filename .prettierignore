@@ -2,3 +2,4 @@
 apps/docs/.docusaurus/
 apps/docs/build/
 apps/docs/docs/api/
+pnpm-lock.yaml
