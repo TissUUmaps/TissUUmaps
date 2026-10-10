@@ -38,7 +38,7 @@ export function ProjectWelcomeView({ className }: ProjectWelcomeViewProps) {
     <Empty className={cn("flex-none justify-start px-6 py-8", className)}>
       <EmptyHeader>
         <EmptyMedia>
-          <img src={logoUrl} alt="" className="h-24" />
+          <img src={logoUrl} alt="" className="h-24" draggable={false} />
         </EmptyMedia>
         <EmptyTitle>Welcome to TissUUmaps</EmptyTitle>
         <EmptyDescription>
