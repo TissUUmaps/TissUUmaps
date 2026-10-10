@@ -158,18 +158,20 @@ export abstract class OpenSeadragonRendererBase<
   /**
    * Synchronizes the viewer's tiled images with the current model
    *
-   * Loads all objects assigned to the layers of the model set by
-   * {@link setModel}, removes the tiled images that are no longer needed, and
-   * creates or updates the remaining ones. Resolves once the tiled images have
-   * actually been added to the world, i.e. once the viewer reflects the model
-   * state that was read. The model may be set again while the synchronization
-   * runs; it reads the model once, so it sees one consistent state, while the
-   * properties it applies to the tiled images come from the current model (see
+   * Starts loading the objects on the layers of the model (see
+   * {@link setModel}), and right away removes the tiled images that are no
+   * longer needed (see {@link _cleanRenderedObjects}). Each object is then
+   * synchronized as soon as it has loaded, without waiting for the others: its
+   * tiled images are updated, or created at its position in the world (see
+   * {@link _synchronizeRenderedObject}).
+   *
+   * Resolves once the tiled images of all objects are in the world. The model
+   * is read once, so the synchronization sees one consistent state, but the
+   * properties applied to the tiled images come from the current model (see
    * {@link _updateRenderedObject}).
    *
-   * Objects whose tiled images cannot be created, e.g. because their data
-   * provides no tile sources, are logged and skipped, just like objects whose
-   * data failed to load (see {@link _loadObjects}). A synchronization that
+   * Objects whose data fails to load, or whose tiled images cannot be created
+   * (e.g. without tile sources), are logged and dropped. A synchronization that
    * fails or is aborted leaves the model unsynchronized (see
    * {@link needsSynchronization}).
    *
@@ -189,46 +191,38 @@ export abstract class OpenSeadragonRendererBase<
     const syncState = this.getSyncState();
     this._lastSyncState = syncState;
     try {
-      const newRefs = await this._loadObjects(context, { signal });
-      const renderedObjectsByNewRef = await this._cleanRenderedObjects(
-        newRefs,
+      const loadings = this._loadObjects(context, { signal });
+      const renderedObjectsByLoading = await this._cleanRenderedObjects(
+        loadings,
         { signal },
       );
       // drop the state of the other objects only once their tiled images are
       // gone, as setModel would otherwise update them without it
-      this.retainObjects(newRefs.map((newRef) => newRef.object));
-      let offset = 0;
-      const newRenderedObjects: RenderedObject<TObject, TObjectData>[] = [];
-      for (const newRef of newRefs) {
-        let renderedObject = renderedObjectsByNewRef.get(newRef);
-        if (renderedObject === undefined) {
-          try {
-            renderedObject = this._createRenderedObject(offset, newRef, {
-              signal,
-            });
-          } catch (error) {
-            console.error(
-              `Failed to create tiled images for object with ID '${newRef.object.id}'`,
-              error,
-            );
-            continue;
-          }
-        } else {
-          this._updateRenderedObject(renderedObject, newRef);
-        }
-        newRenderedObjects.push(renderedObject);
-        offset +=
-          (renderedObject.usesBackdrop ? 1 : 0) +
-          renderedObject.tileSourceCount;
+      this.retainObjects(loadings.map((loading) => loading.object));
+      const syncResults = await Promise.allSettled(
+        loadings.map((loading, index) =>
+          this._synchronizeRenderedObject(
+            loadings.slice(0, index),
+            loading.newRefPromise,
+            renderedObjectsByLoading.get(loading),
+            { signal },
+          ),
+        ),
+      );
+      signal?.throwIfAborted(); // Promise.allSettled() does not throw on abort
+      const firstSyncFailure = syncResults.find(
+        (result) => result.status === "rejected",
+      );
+      if (firstSyncFailure !== undefined) {
+        throw firstSyncFailure.reason;
       }
-      this._renderedObjects = newRenderedObjects;
       await Promise.allSettled(
-        newRenderedObjects.map(
+        this._renderedObjects.map(
           (renderedObject) => renderedObject.tiledImagesPromise,
         ),
       );
       signal?.throwIfAborted(); // Promise.allSettled() does not throw on abort
-      await this._updateBoundsAndReveal(newRenderedObjects, { signal });
+      await this._updateBoundsAndReveal(this._renderedObjects, { signal });
     } catch (error) {
       if (this._lastSyncState === syncState) {
         this._lastSyncState = undefined;
@@ -398,13 +392,12 @@ export abstract class OpenSeadragonRendererBase<
   /**
    * Retains what was resolved for the given objects, and discards the rest
    *
-   * Called by {@link synchronize} once all objects have loaded and the rendered
-   * objects of all others have been deleted, with the objects that are about
-   * to be displayed: those assigned to a rendered layer whose data loaded
-   * successfully. Does nothing here; subclasses that keep
-   * state per object (see {@link resolveObject} and
+   * Called by {@link synchronize} with the objects about to be displayed, i.e.
+   * those assigned to a rendered layer, once the rendered objects of all others
+   * have been deleted and before any object has loaded. Does nothing here;
+   * subclasses that keep state per object (see {@link resolveObject} and
    * {@link resolveTiledImageDataTransfer}) override this to drop the state of
-   * every object that is not among the given ones.
+   * all other objects.
    *
    * @param _objects - The objects (images or labels) about to be displayed
    */
@@ -416,15 +409,19 @@ export abstract class OpenSeadragonRendererBase<
   /**
    * Resolves what a renderer derives from an object, once its data has loaded
    *
-   * Called by {@link _loadObjects} for every object on one of the given layers,
-   * concurrently, right after
-   * its data has loaded and before its tiled images are created or updated. An
-   * object that cannot be resolved is logged, but kept: its tiled images are
-   * still created or updated, with whatever the synchronous hooks return for
-   * it. Does nothing here; subclasses override this to resolve, from the
-   * object, its data and the inputs of the synchronization, whatever their
-   * synchronous hooks return later (see {@link resolveTiledImageDataTransfer}),
-   * and to keep it for as long as its outcome would not change.
+   * Called by {@link _loadObjects} for each object, concurrently, once its data
+   * has loaded and before its tiled images are created or updated. An object
+   * that cannot be resolved is logged, but kept: its tiled images are still
+   * created or updated, with whatever the synchronous hooks return for it.
+   *
+   * Does nothing here. Subclasses override this to resolve what their
+   * synchronous hooks return later (see {@link resolveTiledImageDataTransfer})
+   * from the object, its data and the inputs of the synchronization, and to
+   * keep it for as long as its outcome would not change.
+   *
+   * Once the signal is aborted, it has to reject rather than resolve, as
+   * {@link synchronize} creates or updates the object's tiled images once it
+   * resolves.
    *
    * @param _object - The object (image or labels) to resolve
    * @param _data - The loaded data of the object
@@ -539,33 +536,42 @@ export abstract class OpenSeadragonRendererBase<
   }
 
   /**
-   * Concurrently loads and resolves all objects assigned to the layers of the current model
+   * Starts loading and resolving all objects assigned to the layers of the current model
    *
-   * Each object's data is loaded with the context's `loadObject`, and the object
-   * is then resolved (see {@link resolveObject}). The returned references are
-   * ordered by layer and then by object, which determines the order of the
-   * corresponding tiled images in the world. Objects whose data failed to load
-   * are logged and skipped; objects that could not be resolved are logged, but
-   * kept. The model is read once, before the first `await`, so one
-   * synchronization sees one consistent model state, however often the model
-   * is set while it runs.
+   * Loads each object's data with the context's `loadObject`, then resolves the
+   * object (see {@link resolveObject}). Returns right away, with one loading
+   * per object, in world order: by layer, then by object. A loading rejects if
+   * the object's data fails to load, which is logged. An object that cannot be
+   * resolved is logged, but kept.
+   *
+   * The model is read once, right away, so one synchronization sees one
+   * consistent model state.
    *
    * @param context - The inputs of the current synchronization
    * @param options - Optional abort signal
-   * @returns A promise that resolves to one object reference per successfully loaded object
+   * @returns One loading per object, whose promise resolves to the object's
+   * reference
    * @throws Error if no model has been set (see {@link setModel})
    */
-  private async _loadObjects(
+  private _loadObjects(
     context: TSyncContext,
     options?: { signal?: AbortSignal },
-  ): Promise<ObjectRef<TObject, TObjectData>[]> {
+  ): {
+    layer: Layer;
+    object: TObject;
+    newRefPromise: Promise<ObjectRef<TObject, TObjectData>>;
+  }[] {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const model = this._model;
     if (model === undefined) {
       throw new Error("Model not set");
     }
-    const newRefPromises: Promise<ObjectRef<TObject, TObjectData>>[] = [];
+    const loadings: {
+      layer: Layer;
+      object: TObject;
+      newRefPromise: Promise<ObjectRef<TObject, TObjectData>>;
+    }[] = [];
     for (const currentLayer of model.layers) {
       for (const currentObject of model.objects.filter(
         (object) => object.layer === currentLayer.id,
@@ -596,55 +602,58 @@ export abstract class OpenSeadragonRendererBase<
             );
           }
         });
-        newRefPromises.push(newRefPromise);
+        loadings.push({
+          layer: currentLayer,
+          object: currentObject,
+          newRefPromise,
+        });
       }
     }
-    const results = await Promise.allSettled(newRefPromises);
-    signal?.throwIfAborted();
-    return results
-      .filter((result) => result.status === "fulfilled")
-      .map((result) => result.value);
+    return loadings;
   }
 
   /**
-   * Retains the rendered objects that can be reused for the new object references, and deletes the rest
+   * Keeps the rendered objects that can be reused for a synchronization, and deletes the rest
    *
    * A rendered object is matched by the layer and object it references.
-   * Unmatched rendered objects are deleted first, so that removing an object
-   * does not shift the world indices of the objects behind it. A matched
-   * rendered object is reusable if the data source it was loaded for is that of
-   * the reference, and if its backdrop, if any, and all of its tiled images
-   * already sit at the consecutive world indices expected for its position
-   * among the references, counted from the anchor. A partially misplaced object
-   * is not reusable. The other matched rendered objects are deleted as well,
-   * and are expected to be recreated by the caller via
-   * {@link _createRenderedObject}, which is also how the world is reordered.
+   * Unmatched ones are deleted first, so that their removal does not shift the
+   * world indices of the objects behind them. Only the layers and objects of
+   * the loadings are needed, not their data, so this runs before any of them
+   * has loaded.
    *
-   * The expected indices account for every matched rendered object, reusable or
-   * not, by the world footprint it currently has: a matched object that is
-   * recreated, e.g. because its data source changed, is deleted and inserted at
-   * the same position, with possibly different tiled images, so the objects
-   * behind it keep their indices relative to it and stay reusable. Only the
-   * backdrop and tiled images assigned to it count, i.e. none for an object
-   * whose tiled images could not be added, which is thereby retried without
-   * recreating the objects behind it. The tiled images that an earlier
-   * synchronization is still adding are waited for first, so that each
-   * rendered object is either fully in the world or not at all. This does not
-   * delay the additions of this synchronization, which are queued behind them
-   * anyway (see {@link OpenSeadragonContext.addTiledImage}).
+   * A matched rendered object is reusable if it was loaded for its object's
+   * data source, and if its backdrop, if any, and all of its tiled images sit
+   * at the consecutive world indices expected for its position among the
+   * loadings, counted from the anchor. All other matched rendered objects are
+   * deleted as well, for the caller to recreate them (see
+   * {@link _createRenderedObject}), which is also how the world is reordered.
    *
-   * @param newRefs - The new object references, in the intended world order
+   * The expected indices count every matched rendered object, reusable or not,
+   * by its current footprint. A matched object that is recreated, e.g. because
+   * its data source changed, is reinserted at the same position, so the objects
+   * behind it stay reusable. An object whose tiled images could not be added
+   * has no footprint, and is thereby retried without recreating the objects
+   * behind it.
+   *
+   * The tiled images that an earlier synchronization is still adding are waited
+   * for first, so that each rendered object is either fully in the world or not
+   * at all. This does not delay the additions of this synchronization, which
+   * are queued behind them anyway (see
+   * {@link OpenSeadragonContext.addTiledImage}).
+   *
+   * @param loadings - The loadings of the synchronization (see
+   * {@link _loadObjects}), in world order
    * @param options - Optional abort signal
-   * @returns A map of new object references to their reusable rendered objects
+   * @returns A map of loadings to their reusable rendered objects
    * @throws Error if the renderer has no anchor, i.e. it is not initialized or
    * already destroyed
    */
-  private async _cleanRenderedObjects(
-    newRefs: ObjectRef<TObject, TObjectData>[],
+  private async _cleanRenderedObjects<
+    TLoading extends { layer: Layer; object: TObject },
+  >(
+    loadings: TLoading[],
     options?: { signal?: AbortSignal },
-  ): Promise<
-    Map<ObjectRef<TObject, TObjectData>, RenderedObject<TObject, TObjectData>>
-  > {
+  ): Promise<Map<TLoading, RenderedObject<TObject, TObjectData>>> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     await Promise.allSettled(
@@ -656,19 +665,19 @@ export abstract class OpenSeadragonRendererBase<
     const matchedRenderedObjects = new Set<
       RenderedObject<TObject, TObjectData>
     >();
-    const matchedRenderedObjectsByNewRef = new Map<
-      ObjectRef<TObject, TObjectData>,
+    const matchedRenderedObjectsByLoading = new Map<
+      TLoading,
       RenderedObject<TObject, TObjectData>
     >();
-    for (const newRef of newRefs) {
+    for (const loading of loadings) {
       const renderedObject = this._renderedObjects.find(
         (renderedObject) =>
-          renderedObject.ref.layer.id === newRef.layer.id &&
-          renderedObject.ref.object.id === newRef.object.id,
+          renderedObject.ref.layer.id === loading.layer.id &&
+          renderedObject.ref.object.id === loading.object.id,
       );
       if (renderedObject !== undefined) {
         matchedRenderedObjects.add(renderedObject);
-        matchedRenderedObjectsByNewRef.set(newRef, renderedObject);
+        matchedRenderedObjectsByLoading.set(loading, renderedObject);
       }
     }
     // deletions are queued right away, so the deleted objects are forgotten
@@ -686,20 +695,20 @@ export abstract class OpenSeadragonRendererBase<
     if (anchorIndex === -1) {
       throw new Error("Anchor not found");
     }
-    const renderedObjectsByNewRef = new Map<
-      ObjectRef<TObject, TObjectData>,
+    const renderedObjectsByLoading = new Map<
+      TLoading,
       RenderedObject<TObject, TObjectData>
     >();
     const survivors = new Set<RenderedObject<TObject, TObjectData>>();
     let offset = 1;
-    for (const newRef of newRefs) {
-      const renderedObject = matchedRenderedObjectsByNewRef.get(newRef);
+    for (const loading of loadings) {
+      const renderedObject = matchedRenderedObjectsByLoading.get(loading);
       if (renderedObject !== undefined) {
         if (
           // data source configuration unchanged (checked instead of data)
           deepEqual(
             renderedObject.ref.object.dataSource,
-            newRef.object.dataSource,
+            loading.object.dataSource,
           ) &&
           // tiled images exist, i.e. so does the backdrop if the object uses one
           renderedObject.tiledImages !== undefined &&
@@ -717,7 +726,7 @@ export abstract class OpenSeadragonRendererBase<
                 c,
           )
         ) {
-          renderedObjectsByNewRef.set(newRef, renderedObject);
+          renderedObjectsByLoading.set(loading, renderedObject);
           survivors.add(renderedObject);
         }
         offset +=
@@ -731,40 +740,124 @@ export abstract class OpenSeadragonRendererBase<
     this._renderedObjects = [...survivors];
     await Promise.all(unreusableDeletions);
     signal?.throwIfAborted();
-    return renderedObjectsByNewRef;
+    return renderedObjectsByLoading;
+  }
+
+  /**
+   * Synchronizes the rendered object of one object, once it has loaded
+   *
+   * A reusable rendered object (see {@link _cleanRenderedObjects}) is updated
+   * with the new reference, or deleted if the object failed to load. Otherwise,
+   * a rendered object is created behind those of the preceding loadings,
+   * whether these are in the world already or still being added. Preceding
+   * objects that arrive later are inserted in front of it, as world mutations
+   * run in request order (see {@link OpenSeadragonContext.addTiledImage}).
+   *
+   * @param precedingLoadings - The loadings that precede the object's in world
+   * order (see {@link _loadObjects})
+   * @param newRefPromise - The promise of the object's reference, from its
+   * loading
+   * @param renderedObject - The object's reusable rendered object, if any
+   * @param options - Optional abort signal
+   * @returns A promise that resolves once the object's tiled images have been
+   * updated, or their creation has been requested
+   */
+  private async _synchronizeRenderedObject(
+    precedingLoadings: { layer: Layer; object: TObject }[],
+    newRefPromise: Promise<ObjectRef<TObject, TObjectData>>,
+    renderedObject: RenderedObject<TObject, TObjectData> | undefined,
+    options?: { signal?: AbortSignal },
+  ): Promise<void> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    let newRef;
+    try {
+      newRef = await newRefPromise;
+    } catch {
+      signal?.throwIfAborted(); // an aborted loading rejects, too
+      if (renderedObject !== undefined) {
+        this._renderedObjects = this._renderedObjects.filter(
+          (otherRenderedObject) => otherRenderedObject !== renderedObject,
+        );
+        await this._deleteRenderedObject(renderedObject);
+      }
+      return;
+    }
+    if (renderedObject !== undefined) {
+      this._updateRenderedObject(renderedObject, newRef);
+      return;
+    }
+    const precedingRenderedObjects = this._renderedObjects.filter(
+      (otherRenderedObject) =>
+        precedingLoadings.some(
+          (precedingLoading) =>
+            precedingLoading.layer.id === otherRenderedObject.ref.layer.id &&
+            precedingLoading.object.id === otherRenderedObject.ref.object.id,
+        ),
+    );
+    let offset = 0;
+    for (const otherRenderedObject of precedingRenderedObjects) {
+      if (otherRenderedObject.tiledImages !== undefined) {
+        offset +=
+          (otherRenderedObject.backdrop !== undefined ? 1 : 0) +
+          otherRenderedObject.tiledImages.length;
+      } else {
+        offset +=
+          (otherRenderedObject.usesBackdrop ? 1 : 0) +
+          otherRenderedObject.tileSourceCount;
+      }
+    }
+    let newRenderedObject;
+    try {
+      newRenderedObject = this._createRenderedObject(offset, newRef, {
+        signal,
+      });
+    } catch (error) {
+      console.error(
+        `Failed to create tiled images for object with ID '${newRef.object.id}'`,
+        error,
+      );
+      return;
+    }
+    this._renderedObjects = [
+      ...precedingRenderedObjects,
+      newRenderedObject,
+      ...this._renderedObjects.slice(precedingRenderedObjects.length),
+    ];
   }
 
   /**
    * Creates a new rendered object for the given object reference and adds one TiledImage per channel, preceded by a backdrop where required, to the world
    *
-   * The TiledImages are inserted at consecutive indices, starting `offset` places
-   * after the anchor, which establishes the world layout that
-   * {@link _cleanRenderedObjects} expects. `offset` therefore counts TiledImages,
-   * not objects, and callers have to advance it by
-   * {@link RenderedObject.tileSourceCount} plus the object's backdrop, if it has
-   * one. The indices are resolved once each addition is executed, as the anchor
-   * may have been replaced, and world indices may have shifted, while it was
-   * enqueued.
+   * The TiledImages are inserted at consecutive indices, starting `offset`
+   * places after the anchor, which is the world layout that
+   * {@link _cleanRenderedObjects} expects. `offset` thus counts TiledImages,
+   * not objects: the backdrops and TiledImages of the preceding rendered
+   * objects, including those still being added. The indices are resolved when
+   * each addition is executed, as the anchor may have been replaced, and world
+   * indices may have shifted, in the meantime.
    *
-   * The tile sources are opened here, rather than by the additions themselves,
-   * so that the backdrop can be sized like the object's content, which is only
-   * known once one of them has been opened. The additions are all requested
-   * before this function returns, and in world order, so that the TiledImages of
-   * the object that the caller creates next end up behind them.
+   * The tile sources are opened here, rather than by the additions, so that the
+   * backdrop can be sized like the object's content, which is only known once
+   * one of them has opened. All additions are requested before this function
+   * returns, in world order, so that the TiledImages of the object created next
+   * end up behind them.
    *
-   * Returns before the TiledImages exist: they are added asynchronously and only
-   * then assigned to the rendered object, transformed, and included in the anchor
-   * bounds, which is when {@link RenderedObject.tiledImagesPromise} resolves. The
-   * backdrop and TiledImages are removed again immediately after they were added
-   * if the rendered object is deleted or the operation is aborted in the
-   * meantime, or if any of them could not be added at all - a partially added
-   * object would shift the world indices of every object after it. For the same
-   * reason, a tile source that fails to open is replaced by a transparent
-   * placeholder rather than skipped: the indices of the objects created after
-   * this one are resolved against the full footprint of this one, so it has to
-   * take up all of its indices until it is removed again. If the context
-   * is destroyed, nothing is done at all, as the viewer tears down its world
-   * itself.
+   * Returns before the TiledImages exist: they are added asynchronously, and
+   * only then assigned to the rendered object, transformed and included in the
+   * anchor bounds, which is when {@link RenderedObject.tiledImagesPromise}
+   * resolves.
+   *
+   * If the rendered object is deleted or the operation is aborted in the
+   * meantime, or if any TiledImage could not be added, the added backdrop and
+   * TiledImages are removed again right away: a partially added object would
+   * shift the world indices of every object behind it. For the same reason, a
+   * tile source that fails to open is replaced by a transparent placeholder
+   * rather than skipped, as the objects created after this one are placed
+   * against its full footprint. The rendered object is dropped from
+   * {@link _renderedObjects} as its removals are queued, so that objects
+   * created from then on are placed without it. If the context is destroyed,
+   * nothing is done at all, as the viewer tears down its world itself.
    *
    * @param offset - The number of TiledImages between the anchor and the object's first new TiledImage
    * @param newRef - The object reference for which to create a rendered object
@@ -900,12 +993,16 @@ export abstract class OpenSeadragonRendererBase<
           newRenderedObject.pendingDelete ||
           this._destroyed
         ) {
-          if (backdrop !== undefined) {
-            await this.context.removeTiledImage(backdrop);
-          }
-          for (const tiledImage of tiledImages) {
-            await this.context.removeTiledImage(tiledImage);
-          }
+          this._renderedObjects = this._renderedObjects.filter(
+            (renderedObject) => renderedObject !== newRenderedObject,
+          );
+          const addedTiledImages =
+            backdrop !== undefined ? [backdrop, ...tiledImages] : tiledImages;
+          await Promise.all(
+            addedTiledImages.map((tiledImage) =>
+              this.context.removeTiledImage(tiledImage),
+            ),
+          );
           signal?.throwIfAborted();
           if (failure !== undefined) {
             console.error(
