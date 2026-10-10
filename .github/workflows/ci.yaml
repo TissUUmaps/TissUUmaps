@@ -68,8 +68,10 @@ jobs:
           require-lockfile: true
       - name: Build the packages and the application
         run: pnpm run build
-      - name: Build the documentation
-        run: pnpm run build:docs
+      - name: Build the API documentation
+        run: pnpm run build:apidocs
+      - name: Check the documentation links
+        run: pnpm run lint:docs
   test:
     runs-on: ubuntu-latest
     steps:
