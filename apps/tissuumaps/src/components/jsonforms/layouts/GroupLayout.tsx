@@ -11,10 +11,17 @@ import { memo } from "react";
 
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 
+import { ReadOnlyLayoutElements } from "./ReadOnlyLayoutElements";
+
 // eslint-disable-next-line react-refresh/only-export-components
 const MemoizedGroupLayout = memo((props: Omit<LayoutProps, "data">) => {
   const layout = props.uischema as GroupLayoutSchema;
   const { renderers, cells } = useJsonForms();
+
+  if (!props.enabled) {
+    return <ReadOnlyLayoutElements {...props} />;
+  }
+
   return (
     <Fieldset hidden={!props.visible} className="flex flex-col">
       {props.label && <FieldsetLegend>{props.label}</FieldsetLegend>}

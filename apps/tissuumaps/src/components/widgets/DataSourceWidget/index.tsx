@@ -78,29 +78,36 @@ function DataSourceView({
     dataProvider.schema.properties?.source !== undefined;
   return (
     <>
-      <FieldsetLegend className="flex flex-row items-center gap-x-1 font-medium text-foreground">
-        Type: {dataProvider?.name ?? `type=${dataSource.type}`}
-        <IconButton label="Edit" className="ml-auto" onClick={onEdit}>
+      <FieldsetLegend className="sr-only">Data source</FieldsetLegend>
+      <div className="flex flex-row items-start gap-x-2">
+        <dl className="grid flex-1 grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
+          <div className="contents">
+            <dt className="text-muted-foreground">Type</dt>
+            <dd>{dataProvider?.name ?? dataSource.type}</dd>
+          </div>
+          {showSource && dataSource.source !== undefined && (
+            <div className="contents">
+              <dt className="text-muted-foreground">Source</dt>
+              <dd className="wrap-anywhere">{dataSource.source}</dd>
+            </div>
+          )}
+          {dataProvider !== undefined && (
+            <JsonForms
+              ajv={ajv}
+              data={dataSource}
+              schema={dataProvider.schema}
+              uischema={dataProvider.uischema}
+              renderers={renderers}
+              cells={cells}
+              readonly
+            />
+          )}
+        </dl>
+        <IconButton label="Edit" size="icon-xs" onClick={onEdit}>
           <EditIcon className="size-4" />
         </IconButton>
-      </FieldsetLegend>
-      {showSource && <SourceRow source={dataSource.source} />}
-      {dataProvider === undefined ? (
-        <MissingDataProviderHint />
-      ) : (
-        (!("elements" in dataProvider.uischema) ||
-          dataProvider.uischema.elements.length > 0) && (
-          <JsonForms
-            ajv={ajv}
-            data={dataSource}
-            schema={dataProvider.schema}
-            uischema={dataProvider.uischema}
-            renderers={renderers}
-            cells={cells}
-            readonly
-          />
-        )
-      )}
+      </div>
+      {dataProvider === undefined && <MissingDataProviderHint />}
     </>
   );
 }
