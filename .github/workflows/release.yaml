@@ -6,8 +6,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Application release whose site asset is (re)built, e.g. tissuumaps@4.0.0-beta.0; leave empty to only re-assemble and deploy the site"
+        description: "Application release whose asset is rebuilt and whose documentation is republished to the website, e.g. tissuumaps@4.0.0-beta.3"
         type: string
+        required: true
 concurrency:
   group: release
   cancel-in-progress: false
@@ -49,9 +50,9 @@ jobs:
           create-github-releases: true
         env:
           NPM_CONFIG_PROVENANCE: true
-  # Builds the application and its documentation from the release (the one
-  # just published if the application was released, or the one given to a
-  # manual run), and stores them as the release assets
+  # Builds the application from the release (the one just published if the
+  # application was released, or the one given to a manual run), stores it as
+  # the release asset, and publishes the release's documentation to the website
   build-site:
     needs: release
     if: ${{ !cancelled() && github.repository == 'TissUUmaps/TissUUmaps' && (inputs.tag != '' || (needs.release.outputs.published == 'true' && contains(fromJSON(needs.release.outputs.published-packages).*.name, 'tissuumaps'))) }}
@@ -72,7 +73,6 @@ jobs:
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "line=$(cut -d. -f1,2 <<< "$version")" >> "$GITHUB_OUTPUT"
         env:
           INPUT_TAG: ${{ inputs.tag }}
       - name: Set up pnpm and Node, and install dependencies
@@ -85,58 +85,35 @@ jobs:
           runtime: node
       - name: Build the packages and the application
         run: pnpm run build
-      - name: Build the documentation
-        run: pnpm run build:docs
-        env:
-          DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/${{ steps.release.outputs.line }}/docs/
-      - name: Upload the release assets
+      - name: Upload the application release asset
         run: |
           (cd apps/tissuumaps/dist && zip -qr "$GITHUB_WORKSPACE/tissuumaps-$VERSION.zip" .)
-          (cd apps/docs/build && zip -qr "$GITHUB_WORKSPACE/tissuumaps-$VERSION-docs.zip" .)
-          gh release upload "tissuumaps@$VERSION" "tissuumaps-$VERSION.zip" "tissuumaps-$VERSION-docs.zip" --clobber
+          gh release upload "tissuumaps@$VERSION" "tissuumaps-$VERSION.zip" --clobber
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.release.outputs.version }}
-  # Assembles the site from the release assets and deploys it to GitHub Pages;
-  # fails while no release has its assets, leaving the deployed site as it is
-  deploy-pages:
-    needs: [release, build-site]
-    if: ${{ !cancelled() && !failure() && github.repository == 'TissUUmaps/TissUUmaps' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    concurrency:
-      group: github-pages
-      cancel-in-progress: false
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Checkout code
+      - name: Build API documentation
+        run: pnpm run build:apidocs
+      - name: Checkout the website
         uses: actions/checkout@v7
-      - name: Set up pnpm and Node
-        uses: pnpm/setup@v3
         with:
-          install: false
-      - name: Assemble the site from release assets
-        run: node scripts/gha-assemble-pages.ts
-        env:
-          GH_TOKEN: ${{ github.token }}
-      - name: Mirror the legacy TissUUmaps 3 plugin index
-        if: vars.V3_PLUGINS_REPO != ''
+          repository: TissUUmaps/website
+          ssh-key: ${{ secrets.WEBSITE_DEPLOY_KEY }}
+          path: website
+      - name: Publish the documentation
         run: |
-          mkdir mirror
-          gh api "repos/$V3_PLUGINS_REPO/tarball/gh-pages" | tar xz --strip-components=1 -C mirror
-          mv mirror/plugins _site/plugins
+          node scripts/gha-publish-docs.ts "$VERSION" docs website/releases
+          cd website
+          git add releases
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs: publish TissUUmaps $VERSION"
+          for attempt in 1 2 3; do
+            git pull --rebase && git push && exit 0
+          done
+          exit 1
         env:
-          GH_TOKEN: ${{ github.token }}
-          V3_PLUGINS_REPO: ${{ vars.V3_PLUGINS_REPO }}
-      - name: Setup Pages
-        uses: actions/configure-pages@v6
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v5
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
+          VERSION: ${{ steps.release.outputs.version }}

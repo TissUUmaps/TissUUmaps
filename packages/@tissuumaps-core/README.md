@@ -19,6 +19,6 @@ stores and the data provider interfaces) silently degrade to `any` when
 
 ## Documentation
 
-- [API reference](https://tissuumaps.github.io/TissUUmaps/docs/docs/api/@tissuumaps/core/)
-- [Data model](https://tissuumaps.github.io/TissUUmaps/docs/docs/concepts/data-model/)
-- [Code architecture](https://tissuumaps.github.io/TissUUmaps/docs/docs/development/code-architecture/)
+- [API reference](https://tissuumaps.github.io/docs/api/@tissuumaps/core/)
+- [Data model](https://tissuumaps.github.io/docs/concepts/data-model/)
+- [Code architecture](https://tissuumaps.github.io/docs/development/code-architecture/)

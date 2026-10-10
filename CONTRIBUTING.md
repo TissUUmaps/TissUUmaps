@@ -15,7 +15,7 @@ This project and everyone participating in it is governed by the [TissUUmaps Cod
 
 ## Questions
 
-Before asking a question, please read the [documentation](https://tissuumaps.github.io/TissUUmaps/docs/) and search the [issue tracker](https://github.com/TissUUmaps/TissUUmaps/issues) for existing answers. If you still need clarification, open an [issue](https://github.com/TissUUmaps/TissUUmaps/issues/new) with as much context as you can, or reach out to the broader community via the [Image.sc Forum](https://forum.image.sc).
+Before asking a question, please read the [documentation](https://tissuumaps.github.io/docs/) and search the [issue tracker](https://github.com/TissUUmaps/TissUUmaps/issues) for existing answers. If you still need clarification, open an [issue](https://github.com/TissUUmaps/TissUUmaps/issues/new) with as much context as you can, or reach out to the broader community via the [Image.sc Forum](https://forum.image.sc).
 
 ## Bug Reports and Feature Requests
 
@@ -32,7 +32,7 @@ Never report security vulnerabilities or bugs involving sensitive information in
 
 ## Code and Documentation
 
-To contribute code or documentation, see the [developer documentation](https://tissuumaps.github.io/TissUUmaps/docs/docs/development/getting-started), in particular the [coding conventions](https://tissuumaps.github.io/TissUUmaps/docs/docs/development/coding-conventions), the [development workflow](https://tissuumaps.github.io/TissUUmaps/docs/docs/development/development-workflow) and the [AI policy](https://tissuumaps.github.io/TissUUmaps/docs/docs/development/ai-policy).
+To contribute code or documentation, see the [developer documentation](https://tissuumaps.github.io/docs/development/getting-started), in particular the [coding conventions](https://tissuumaps.github.io/docs/development/coding-conventions), the [development workflow](https://tissuumaps.github.io/docs/development/development-workflow) and the [AI policy](https://tissuumaps.github.io/docs/development/ai-policy).
 
 ## Join The Project Team
 

@@ -4,7 +4,6 @@ packages:
 
 allowBuilds:
   "@swc/core": true
-  core-js: true
   omezarr-tilesource: true
 
 minimumReleaseAge: 1440

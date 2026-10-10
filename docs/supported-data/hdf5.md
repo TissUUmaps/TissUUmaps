@@ -85,4 +85,4 @@ The table has one row per cell, as the `obs` index gives the number of rows. Any
 
 ## API
 
-The data provider is implemented in the [`@tissuumaps/storage`](/docs/api/@tissuumaps/storage) package as [`HDF5TableDataProvider`](/docs/api/@tissuumaps/storage/classes/HDF5TableDataProvider). Reading the file is delegated to [h5wasm](https://github.com/usnistgov/h5wasm), in a Web Worker (see [Dependencies](../development/dependencies.md)).
+The data provider is implemented in the [`@tissuumaps/storage`](../api/@tissuumaps/storage/index.md) package as [`HDF5TableDataProvider`](../api/@tissuumaps/storage/classes/HDF5TableDataProvider.md). Reading the file is delegated to [h5wasm](https://github.com/usnistgov/h5wasm), in a Web Worker (see [Dependencies](../development/dependencies.md)).

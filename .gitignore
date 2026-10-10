@@ -27,3 +27,5 @@ build
 *.sw?
 
 *.tsbuildinfo
+
+/docs/api

@@ -4,7 +4,7 @@ sidebar_position: 9
 
 # Zarr
 
-The built-in **Zarr data provider** opens [Zarr](https://zarr.dev/) stores as **tables**, including the AnnData tables of [SpatialData](https://spatialdata.scverse.org/) stores. Stores are read in the browser with [zarrita](https://github.com/manzt/zarrita.js); reads are fetches, so no worker is needed. Images of a Zarr store are read by the [OME-Zarr](./ome-zarr) data provider instead.
+The built-in **Zarr data provider** opens [Zarr](https://zarr.dev/) stores as **tables**, including the AnnData tables of [SpatialData](https://spatialdata.scverse.org/) stores. Stores are read in the browser with [zarrita](https://github.com/manzt/zarrita.js); reads are fetches, so no worker is needed. Images of a Zarr store are read by the [OME-Zarr](./ome-zarr.md) data provider instead.
 
 ## Data source
 
@@ -26,7 +26,7 @@ A store holding several tables must be opened at one of them. Consolidated metad
 
 ## Tables
 
-Any Zarr store with consolidated metadata is read as a table of its arrays. Columns are addressed as in [HDF5](./hdf5#tables) files: a column is the path of an array within the store, and one column of a matrix is `path[i]`, or `path[name]` for an AnnData expression matrix.
+Any Zarr store with consolidated metadata is read as a table of its arrays. Columns are addressed as in [HDF5](./hdf5.md#tables) files: a column is the path of an array within the store, and one column of a matrix is `path[i]`, or `path[name]` for an AnnData expression matrix.
 
 ## Profiles
 
@@ -34,7 +34,7 @@ One profile is detected from the store's attributes:
 
 ### AnnData
 
-AnnData objects are recognized and decoded as in [HDF5](./hdf5#anndata) files, whether the source points at one or at a store containing them.
+AnnData objects are recognized and decoded as in [HDF5](./hdf5.md#anndata) files, whether the source points at one or at a store containing them.
 
 ## Example
 
@@ -75,8 +75,8 @@ The source points at the table inside the store; its consolidated metadata is fo
 - Zarr v3 arrays whose chunks are compressed inside shards (the `sharding_indexed` codec with an inner compressor, which zarr-python 3 and anndata write by default) cannot be read yet. Write them without sharding (`shards=None`) or as Zarr v2, which SpatialData does.
 - Nodes whose metadata cannot be read are skipped instead of failing the store. AnnData writes a few of them under `uns`.
 - Zipped stores are not supported.
-- The [HDF5 limitations](./hdf5#limitations) on sparse matrices, 64-bit integers, row counts, variable names and column lengths apply as well. AnnData writes `X` as CSR by default.
+- The [HDF5 limitations](./hdf5.md#limitations) on sparse matrices, 64-bit integers, row counts, variable names and column lengths apply as well. AnnData writes `X` as CSR by default.
 
 ## API
 
-The data provider is implemented in the [`@tissuumaps/storage`](/docs/api/@tissuumaps/storage) package as [`ZarrTableDataProvider`](/docs/api/@tissuumaps/storage/classes/ZarrTableDataProvider). Reading the store is delegated to [zarrita](https://github.com/manzt/zarrita.js).
+The data provider is implemented in the [`@tissuumaps/storage`](../api/@tissuumaps/storage/index.md) package as [`ZarrTableDataProvider`](../api/@tissuumaps/storage/classes/ZarrTableDataProvider.md). Reading the store is delegated to [zarrita](https://github.com/manzt/zarrita.js).
