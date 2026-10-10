@@ -175,23 +175,7 @@ function DataSourceEditor<TDataSource extends DataSource>({
             disabled={isPreparing}
             onValueChange={(type) => {
               if (type !== null) {
-                const dataProvider = dataProviders.get(type);
-                if (dataProvider?.schema.properties?.source !== undefined) {
-                  setDraft((draft) => {
-                    let result = draft;
-                    if (draft.type !== type) {
-                      result = { type } as TDataSource;
-                      if (draft.source !== undefined) {
-                        result.source = draft.source;
-                      }
-                    }
-                    return result;
-                  });
-                } else {
-                  setDraft((draft) =>
-                    draft.type !== type ? ({ type } as TDataSource) : draft,
-                  );
-                }
+                setDraft((draft) => ({ ...draft, type }));
               }
             }}
           />
