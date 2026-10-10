@@ -19,9 +19,13 @@ export class WebGLContext {
    * @throws Error if the browser does not support WebGL 2.0
    */
   constructor(canvas: HTMLCanvasElement) {
+    // every draw clears and redraws the whole canvas (see WebGLFrameScheduler),
+    // so the drawing buffer needs no preserving; nothing uses depth or stencil
     const gl = canvas.getContext("webgl2", {
       antialias: false,
-      preserveDrawingBuffer: true,
+      depth: false,
+      stencil: false,
+      preserveDrawingBuffer: false,
     });
     if (gl === null) {
       throw new Error("WebGL 2.0 is not supported by the browser.");
