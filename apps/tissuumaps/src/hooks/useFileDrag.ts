@@ -34,8 +34,11 @@ export function endFileDrag(): void {
  * Tracks whether files are dragged over the window (see
  * {@link useIsFileDragActive}), while the calling component is mounted
  *
- * Files dropped outside of a drop target are ignored, rather than opened by
- * the browser. Used once, by the application's root component.
+ * Files dropped outside of a drop target are ignored, rather than opened by the
+ * browser. Drop targets have to stop the propagation of `dragover`, or files
+ * cannot be dropped on them. Drop targets that also stop the propagation of
+ * `drop` have to end the file drag themselves. Used once, by the application's
+ * root component.
  */
 export function useFileDragTracking(): void {
   useEffect(() => {
