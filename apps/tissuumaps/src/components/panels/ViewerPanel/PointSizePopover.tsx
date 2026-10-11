@@ -58,6 +58,7 @@ function pointSizeFactorToSliderPosition(pointSizeFactor: number): number {
 export type PointSizePopoverProps = { className?: string };
 
 export function PointSizePopover({ className }: PointSizePopoverProps) {
+  const hasPoints = useProjectStore((state) => state.points.length > 0);
   const glOptions = useProjectStore((state) => state.glOptions);
   const setGLOptions = useProjectStore((state) => state.setGLOptions);
 
@@ -66,7 +67,13 @@ export function PointSizePopover({ className }: PointSizePopoverProps) {
   return (
     <Popover>
       <PopoverTrigger
-        render={<IconButton label="Point size" className={className} />}
+        disabled={!hasPoints}
+        render={
+          <IconButton
+            label={hasPoints ? "Point size" : "Point size (no points)"}
+            className={className}
+          />
+        }
       >
         <ChartScatterIcon />
       </PopoverTrigger>

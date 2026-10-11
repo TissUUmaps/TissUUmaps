@@ -125,8 +125,9 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
       backgroundColor={viewerBackgroundColor}
       className={className}
     >
-      {/* OpenSeadragon fades controls once the pointer leaves the viewer,
-          which it does to use the toolbar's popovers */}
+      {/* not faded: the toolbar's menus and popovers render outside the
+          viewer, and OpenSeadragon fades its controls once the pointer
+          leaves it */}
       <ViewerControl anchor={ViewerControlAnchor.TOP_RIGHT} autoFade={false}>
         <ViewerToolbar
           onResetViewport={() => viewerRef.current?.resetViewport()}
