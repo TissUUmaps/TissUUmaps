@@ -1,5 +1,5 @@
 ---
-"tissuumaps": patch
+"tissuumaps": minor
 ---
 
-Replace the color picker library to improve color selection behavior.
+The color picker accepts typed hex, RGB and HSL values and, in Chromium-based browsers, has an eyedropper.
