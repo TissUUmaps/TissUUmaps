@@ -1,5 +1,21 @@
 # @tissuumaps/core
 
+## 0.1.0-beta.3
+
+### Minor Changes
+
+- [#302](https://github.com/TissUUmaps/TissUUmaps/pull/302) [`a422564`](https://github.com/TissUUmaps/TissUUmaps/commit/a4225640dd4be545727210c11e5c12d3d81d650a) Thanks [@jwindhager](https://github.com/jwindhager)! - Data providers gain the optional `supports`, `readName` and `prepareDataSource` methods, and `SourceUtils` gains `getPathSegments`, `getStem`, `getExtension` and `makeProjectPath`.
+
+  Breaking: data provider UI schemas no longer contain the `source` control, which the app now renders itself.
+
+- [#300](https://github.com/TissUUmaps/TissUUmaps/pull/300) [`9fc85a9`](https://github.com/TissUUmaps/TissUUmaps/commit/9fc85a9148be339aa0e419620253f03aace7041a) Thanks [@jwindhager](https://github.com/jwindhager)! - The app store tracks the active panel (`activePanelId`) and the expanded objects of each panel (`expandedImageIds` etc.).
+
+  Breaking: `showImageSettings` etc. and the `imageSettingsRequest` etc. state are removed. Plugins call `setExpandedImageIds` etc. and `setActivePanelId` instead.
+
+### Patch Changes
+
+- [#307](https://github.com/TissUUmaps/TissUUmaps/pull/307) [`16e181e`](https://github.com/TissUUmaps/TissUUmaps/commit/16e181efd919f11a54b259c7e96231b724e628dd) Thanks [@jwindhager](https://github.com/jwindhager)! - Documentation links point to the new TissUUmaps website at https://tissuumaps.github.io/: the app's Docs link, and the packages' READMEs and homepages.
+
 ## 0.1.0-beta.2
 
 ### Minor Changes
