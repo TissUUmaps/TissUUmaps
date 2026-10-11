@@ -1,5 +1,19 @@
 # @tissuumaps/storage
 
+## 0.1.0-beta.4
+
+### Minor Changes
+
+- [#302](https://github.com/TissUUmaps/TissUUmaps/pull/302) [`a422564`](https://github.com/TissUUmaps/TissUUmaps/commit/a4225640dd4be545727210c11e5c12d3d81d650a) Thanks [@jwindhager](https://github.com/jwindhager)! - All built-in data providers implement `supports`, and the OME-TIFF and OME-Zarr image and labels providers implement `readName`.
+
+  Breaking: the table points data provider's constructor takes `getTableDataProviders` and `addTable`.
+
+### Patch Changes
+
+- [#303](https://github.com/TissUUmaps/TissUUmaps/pull/303) [`9db26e3`](https://github.com/TissUUmaps/TissUUmaps/commit/9db26e3cb3e06d54e9ad4cae7aaadf25bbf396eb) Thanks [@jwindhager](https://github.com/jwindhager)! - CSV tables load again in production builds: papaparse is pinned to 5.6.0, since the minified 5.6.1 and 5.7.0 builds crash in their parser worker (mholt/PapaParse#1122).
+- Updated dependencies [[`75433b7`](https://github.com/TissUUmaps/TissUUmaps/commit/75433b7dfe6f553f6c7020fe7088a6b38e099790), [`9fc85a9`](https://github.com/TissUUmaps/TissUUmaps/commit/9fc85a9148be339aa0e419620253f03aace7041a)]:
+  - @tissuumaps/core@0.1.0-beta.3
+
 ## 0.1.0-beta.3
 
 ### Minor Changes

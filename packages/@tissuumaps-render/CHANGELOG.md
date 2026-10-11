@@ -1,5 +1,16 @@
 # @tissuumaps/render
 
+## 0.1.0-beta.3
+
+### Minor Changes
+
+- [#290](https://github.com/TissUUmaps/TissUUmaps/pull/290) [`cd0c14e`](https://github.com/TissUUmaps/TissUUmaps/commit/cd0c14e27ccb02645ab37d1da4c829ff3e56e0c2) Thanks [@cavenel](https://github.com/cavenel)! - `OpenSeadragonContext` applies `osOptions.viewerOptions.showNavigator` live, without rebuilding the viewer.
+
+### Patch Changes
+
+- Updated dependencies [[`75433b7`](https://github.com/TissUUmaps/TissUUmaps/commit/75433b7dfe6f553f6c7020fe7088a6b38e099790), [`9fc85a9`](https://github.com/TissUUmaps/TissUUmaps/commit/9fc85a9148be339aa0e419620253f03aace7041a)]:
+  - @tissuumaps/core@0.1.0-beta.3
+
 ## 0.1.0-beta.2
 
 ### Patch Changes
