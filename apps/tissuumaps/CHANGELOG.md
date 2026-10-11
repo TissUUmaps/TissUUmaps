@@ -1,5 +1,29 @@
 # tissuumaps
 
+## 4.0.0-beta.3
+
+### Minor Changes
+
+- [#289](https://github.com/TissUUmaps/TissUUmaps/pull/289) [`68c1573`](https://github.com/TissUUmaps/TissUUmaps/commit/68c1573ce0ddc822806b5d8191e4fb0e8f226be9) Thanks [@cavenel](https://github.com/cavenel)! - Add a Home button to the viewer that fits the view to all content.
+
+- [#302](https://github.com/TissUUmaps/TissUUmaps/pull/302) [`a422564`](https://github.com/TissUUmaps/TissUUmaps/commit/a4225640dd4be545727210c11e5c12d3d81d650a) Thanks [@jwindhager](https://github.com/jwindhager)! - Add data objects, projects and folders by drag and drop: dropped files and folders open a pre-filled add dialog, and a project file or folder dropped on the project panel is opened after confirmation.
+
+  The add dialog picks the data provider and name from the source, and source pickers fill in paths relative to the project file if it lies in the connected folder.
+
+- [#300](https://github.com/TissUUmaps/TissUUmaps/pull/300) [`9fc85a9`](https://github.com/TissUUmaps/TissUUmaps/commit/9fc85a9148be339aa0e419620253f03aace7041a) Thanks [@jwindhager](https://github.com/jwindhager)! - Breaking for plugins: the app store's `showImageSettings` etc. are removed. To show an object's settings, add its ID to `expandedImageIds` etc. and set `activePanelId`.
+
+- [#308](https://github.com/TissUUmaps/TissUUmaps/pull/308) [`352ff36`](https://github.com/TissUUmaps/TissUUmaps/commit/352ff36bad440ebbdb56d4c4d7deafe2e0f81c0d) Thanks [@jwindhager](https://github.com/jwindhager)! - Opening a project file from outside the connected folder now asks for confirmation first, and warns that its relative paths may fail to resolve.
+
+- [#290](https://github.com/TissUUmaps/TissUUmaps/pull/290) [`cd0c14e`](https://github.com/TissUUmaps/TissUUmaps/commit/cd0c14e27ccb02645ab37d1da4c829ff3e56e0c2) Thanks [@cavenel](https://github.com/cavenel)! - Add a project setting to show or hide the navigator.
+
+### Patch Changes
+
+- Updated dependencies [[`75433b7`](https://github.com/TissUUmaps/TissUUmaps/commit/75433b7dfe6f553f6c7020fe7088a6b38e099790), [`75433b7`](https://github.com/TissUUmaps/TissUUmaps/commit/75433b7dfe6f553f6c7020fe7088a6b38e099790), [`75433b7`](https://github.com/TissUUmaps/TissUUmaps/commit/75433b7dfe6f553f6c7020fe7088a6b38e099790), [`9fc85a9`](https://github.com/TissUUmaps/TissUUmaps/commit/9fc85a9148be339aa0e419620253f03aace7041a), [`9db26e3`](https://github.com/TissUUmaps/TissUUmaps/commit/9db26e3cb3e06d54e9ad4cae7aaadf25bbf396eb), [`75433b7`](https://github.com/TissUUmaps/TissUUmaps/commit/75433b7dfe6f553f6c7020fe7088a6b38e099790)]:
+  - @tissuumaps/react@0.1.0-beta.1
+  - @tissuumaps/core@0.1.0-beta.3
+  - @tissuumaps/storage@0.1.0-beta.4
+  - @tissuumaps/render@0.1.0-beta.3
+
 ## 4.0.0-beta.2
 
 ### Minor Changes
