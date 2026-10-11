@@ -182,7 +182,7 @@ export function useOpenEmptyProject(): () => void {
 
 /**
  * Returns a callback that asks the user for a project URL, and loads the
- * project from it
+ * project from it, after confirmation if the open project has unsaved changes
  *
  * Failures are logged, as the callback is called from event handlers.
  *
@@ -190,12 +190,19 @@ export function useOpenEmptyProject(): () => void {
  */
 export function useOpenProjectFromURL(): () => void {
   const prompt = usePromptDialog();
+  const confirmDiscard = useConfirmDiscard();
 
   return useCallback(() => {
     void prompt({ title: "Enter project URL to load" })
       .then(async (value) => {
         const projectUrl = value?.trim();
-        if (projectUrl) {
+        if (
+          projectUrl &&
+          (await confirmDiscard(
+            "Open project",
+            "Are you sure you want to open another project? All unsaved changes will be lost.",
+          ))
+        ) {
           await loadProjectFromURL(projectUrl);
           setProjectURLParam(projectUrl);
         }
@@ -203,18 +210,18 @@ export function useOpenProjectFromURL(): () => void {
       .catch((error) => {
         console.error("Failed to load project from URL", error);
       });
-  }, [prompt]);
+  }, [prompt, confirmDiscard]);
 }
 
 /**
  * Returns a callback that lets the user pick a project file, within the
  * workspace if one is open, and loads it
  *
- * A project file picked outside the open workspace is loaded only after
- * confirmation, as its project-relative paths are then resolved against the
- * workspace instead of the project file's directory (see
- * `loadProjectFromFileHandle`). Failures are logged, as the callback is
- * called from event handlers.
+ * The project is loaded only after confirmation if the open project has
+ * unsaved changes, or if the file was picked outside the open workspace, as
+ * its project-relative paths are then resolved against the workspace instead
+ * of the project file's directory (see `loadProjectFromFileHandle`). Failures
+ * are logged, as the callback is called from event handlers.
  *
  * @returns The callback
  */
@@ -233,17 +240,25 @@ export function useOpenProjectFromFile(): () => void {
         if (projectFile === null) {
           return;
         }
-        if (
+        const unsavedChanges = hasUnsavedChanges(projectStore.getState());
+        const isOutsideWorkspace =
           workspace !== null &&
           (projectFile instanceof File ||
-            (await resolveProjectSource(projectFile, workspace)) === null) &&
-          !(await confirm({
-            title: "Open project from outside the folder",
-            body: `"${projectFile.name}" is not in the connected folder "${workspace.name}". Its relative paths will be looked up in "${workspace.name}" instead of next to the project file, so some of its data may fail to load. Open it anyway?`,
+            (await resolveProjectSource(projectFile, workspace)) === null);
+        if (unsavedChanges || isOutsideWorkspace) {
+          const question = unsavedChanges
+            ? `Open the project "${projectFile.name}"? It replaces the open project, and unsaved changes are lost.`
+            : `Open the project "${projectFile.name}"?`;
+          const confirmed = await confirm({
+            title: "Open project",
+            body: isOutsideWorkspace
+              ? `"${projectFile.name}" is not in the connected folder "${workspace.name}". Its relative paths will be looked up in "${workspace.name}" instead of next to the project file, so some of its data may fail to load. ${question}`
+              : question,
             actionLabel: "Open",
-          }))
-        ) {
-          return;
+          });
+          if (!confirmed) {
+            return;
+          }
         }
         await loadProjectFile(projectFile);
       })
