@@ -628,8 +628,8 @@ export abstract class OpenSeadragonRendererBase<
    * by its current footprint. A matched object that is recreated, e.g. because
    * its data source changed, is reinserted at the same position, so the objects
    * behind it stay reusable. An object whose tiled images could not be added
-   * has no footprint, and is thereby retried without recreating the objects
-   * behind it.
+   * has been forgotten (see {@link _createRenderedObject}), so it is created
+   * anew, without recreating the objects behind it.
    *
    * The tiled images that an earlier synchronization is still adding are waited
    * for first, so that each rendered object is either fully in the world or not
@@ -644,12 +644,12 @@ export abstract class OpenSeadragonRendererBase<
    * @throws Error if the renderer has no anchor, i.e. it is not initialized or
    * already destroyed
    */
-  private async _cleanRenderedObjects<
-    TLoading extends { layer: Layer; object: TObject },
-  >(
-    loadings: TLoading[],
+  private async _cleanRenderedObjects(
+    loadings: { layer: Layer; object: TObject }[],
     options?: { signal?: AbortSignal },
-  ): Promise<Map<TLoading, RenderedObject<TObject, TObjectData>>> {
+  ): Promise<
+    Map<{ layer: Layer; object: TObject }, RenderedObject<TObject, TObjectData>>
+  > {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     await Promise.allSettled(
@@ -662,7 +662,7 @@ export abstract class OpenSeadragonRendererBase<
       RenderedObject<TObject, TObjectData>
     >();
     const matchedRenderedObjectsByLoading = new Map<
-      TLoading,
+      { layer: Layer; object: TObject },
       RenderedObject<TObject, TObjectData>
     >();
     for (const loading of loadings) {
@@ -692,7 +692,7 @@ export abstract class OpenSeadragonRendererBase<
       throw new Error("Anchor not found");
     }
     const renderedObjectsByLoading = new Map<
-      TLoading,
+      { layer: Layer; object: TObject },
       RenderedObject<TObject, TObjectData>
     >();
     const survivors = new Set<RenderedObject<TObject, TObjectData>>();
@@ -794,15 +794,9 @@ export abstract class OpenSeadragonRendererBase<
     );
     let offset = 0;
     for (const otherRenderedObject of precedingRenderedObjects) {
-      if (otherRenderedObject.tiledImages !== undefined) {
-        offset +=
-          (otherRenderedObject.backdrop !== undefined ? 1 : 0) +
-          otherRenderedObject.tiledImages.length;
-      } else {
-        offset +=
-          (otherRenderedObject.usesBackdrop ? 1 : 0) +
-          otherRenderedObject.tileSourceCount;
-      }
+      offset +=
+        (otherRenderedObject.usesBackdrop ? 1 : 0) +
+        otherRenderedObject.tileSourceCount;
     }
     let newRenderedObject;
     try {
