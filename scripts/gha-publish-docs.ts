@@ -1,13 +1,14 @@
 /**
  * Publishes the documentation of an application release to the website
  *
- * The website (`TissUUmaps/website`) holds the released documentation of every
- * MAJOR.MINOR line in `releases/<line>/`: `release.json` with the released
- * `version`, and `docs/` with the documentation, including the generated API
- * documentation. This script replaces a line's release with the given one,
- * unless the line holds a higher version, or a stable version while the given
- * one is a prerelease (see {@link shouldPublish}). Every line thus keeps its
- * highest stable version, or its highest prerelease while it has none.
+ * The website (`TissUUmaps/TissUUmaps.github.io`) holds the released
+ * documentation of every MAJOR.MINOR line in `releases/<line>/`: `release.json`
+ * with the released `version`, and `docs/` with the documentation, including
+ * the generated API documentation. This script replaces a line's release with
+ * the given one, unless the line holds a higher version, or a stable version
+ * while the given one is a prerelease (see {@link shouldPublish}). Every line
+ * thus keeps its highest stable version, or its highest prerelease while it has
+ * none.
  *
  * Run by the release workflow (`node scripts/gha-publish-docs.ts <version>
  * <docsDir> <releasesDir>`), which commits and pushes the website checkout.
