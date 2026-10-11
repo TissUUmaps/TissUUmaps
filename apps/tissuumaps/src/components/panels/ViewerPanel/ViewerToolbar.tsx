@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
 import { PointSizePopover } from "./PointSizePopover";
+import { ViewMenu } from "./ViewMenu";
 
 export type ViewerToolbarProps = {
   onResetViewport: () => void;
@@ -28,6 +29,7 @@ export function ViewerToolbar({
         <HouseIcon />
       </IconButton>
       {hasPoints && <PointSizePopover />}
+      <ViewMenu />
     </div>
   );
 }
