@@ -33,7 +33,10 @@ export function ProjectHeader({ className }: ProjectHeaderProps) {
   const name = useProjectStore((state) => state.name);
   const setName = useProjectStore((state) => state.setName);
   const source = useProjectStore((state) => state.source);
-  const unsavedChanges = useProjectStore(hasUnsavedChanges);
+  // Only shown when Save can clear it
+  const unsavedChanges = useProjectStore(
+    (state) => state.sourceFile !== null && hasUnsavedChanges(state),
+  );
   const workspaceName = useAppStore((state) => state.workspace?.name ?? null);
   const setActivePanelId = useAppStore((state) => state.setActivePanelId);
   const imageCount = useProjectStore((state) => state.images.length);

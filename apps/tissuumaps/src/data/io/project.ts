@@ -67,9 +67,8 @@ function cleanProject(project: Project): Project {
  */
 export function hasUnsavedChanges(state: ProjectStoreState): boolean {
   const project = pickProject(state);
-  const savedProject = pickProject(state.savedProject);
   return (Object.keys(project) as (keyof Project)[]).some(
-    (key) => project[key] !== savedProject[key],
+    (key) => project[key] !== state.savedProject[key],
   );
 }
 
@@ -88,12 +87,13 @@ export function hasUnsavedChanges(state: ProjectStoreState): boolean {
  * the workspace-relative path of the project file (with `/` prefix), or `null`
  * if it was loaded from neither
  * @param projectFile - The project file within the workspace that the project
- * was loaded from, for saving it back, if any
+ * was loaded from, for saving it back, or `null` if it was not loaded from
+ * such a file
  */
 export function loadProject(
   project: Project,
   projectSource: string | null,
-  projectFile: FileSystemFileHandle | null = null,
+  projectFile: FileSystemFileHandle | null,
 ): void {
   const cleanedProject = cleanProject(project);
   projectStore.setState(
@@ -129,7 +129,7 @@ export async function loadProjectFromURL(
     projectUrl,
     options,
   );
-  loadProject(project, resolvedProjectUrl);
+  loadProject(project, resolvedProjectUrl, null);
 }
 
 /**
@@ -150,7 +150,7 @@ export async function loadProjectFromFile(
   projectFile: File,
   options?: { signal?: AbortSignal },
 ): Promise<void> {
-  loadProject(await readProjectFile(projectFile, options), null);
+  loadProject(await readProjectFile(projectFile, options), null, null);
 }
 
 /**
