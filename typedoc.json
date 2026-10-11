@@ -1,12 +1,13 @@
 {
   "$schema": "https://typedoc-plugin-markdown.org/schema.json",
+  "name": "API",
   "entryPoints": ["packages/*"],
   "entryPointStrategy": "packages",
   "packageOptions": {
     "entryPoints": ["src/index.ts"]
   },
   "plugin": ["typedoc-plugin-markdown", "typedoc-docusaurus-theme"],
-  "out": "docs/api",
   "docsPath": "./docs",
+  "out": "docs/api",
   "readme": "none"
 }
