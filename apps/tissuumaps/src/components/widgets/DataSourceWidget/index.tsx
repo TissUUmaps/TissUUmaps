@@ -12,7 +12,7 @@ import { SourceField } from "@/components/controls/SourceField";
 import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
 import { ajv } from "@/components/jsonforms/ajv";
 import { cells } from "@/components/jsonforms/cells";
-import { renderers } from "@/components/jsonforms/renderers";
+import { listRenderers, renderers } from "@/components/jsonforms/renderers";
 import { usePrepareDataSource } from "@/data/hooks/usePrepareDataSource";
 import { cn } from "@/lib/utils";
 
@@ -97,7 +97,7 @@ function DataSourceView({
               data={dataSource}
               schema={dataProvider.schema}
               uischema={dataProvider.uischema}
-              renderers={renderers}
+              renderers={listRenderers}
               cells={cells}
               readonly
             />
