@@ -20,8 +20,6 @@ import {
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
-// TODO: restore once shape drawing is linked with actions
-// import { InteractionModeViewerControls } from "./InteractionModeViewerControls";
 import { ViewerToolbar } from "./ViewerToolbar";
 import { highlightItemGroup } from "./highlightItemGroup";
 
@@ -127,11 +125,6 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
       backgroundColor={viewerBackgroundColor}
       className={className}
     >
-      {/* TODO: restore once shape drawing is linked with actions
-      <ViewerControl anchor={ViewerControlAnchor.TOP_LEFT}>
-        <InteractionModeViewerControls />
-      </ViewerControl>
-      */}
       {/* OpenSeadragon fades controls once the pointer leaves the viewer,
           which it does to use the toolbar's popovers */}
       <ViewerControl anchor={ViewerControlAnchor.TOP_RIGHT} autoFade={false}>
