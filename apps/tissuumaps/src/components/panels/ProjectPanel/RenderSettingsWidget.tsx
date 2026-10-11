@@ -1,4 +1,3 @@
-import { GithubPlacement } from "@uiw/react-color-github";
 import { RotateCcwIcon, SquareIcon } from "lucide-react";
 
 import { ColorUtils, projectDefaults } from "@tissuumaps/core";
@@ -9,6 +8,7 @@ import {
   CollapsibleTrigger,
   CollapsibleTriggerRightDownIcon,
 } from "@/components/common/collapsible";
+import { ColorPicker } from "@/components/common/color-picker";
 import {
   Field,
   FieldControl,
@@ -20,8 +20,6 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
-
-import ColorPicker from "../../common/color-picker";
 
 export type RenderSettingsWidgetProps = {
   className?: string;
@@ -50,7 +48,6 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
         <ColorPicker
           color={viewerBackgroundColor}
           onColorChange={setViewerBackgroundColor}
-          placement={GithubPlacement.Top}
         >
           <span className="sr-only">Viewer background color</span>
           <SquareIcon fill={viewerBackgroundColorHex} />

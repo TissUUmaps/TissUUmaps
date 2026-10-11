@@ -1,7 +1,5 @@
 import { hexToHsva, hsvaToHex } from "@uiw/color-convert";
 import Chrome from "@uiw/react-color-chrome";
-import { GithubPlacement } from "@uiw/react-color-github";
-import React from "react";
 
 import { type Color, ColorUtils } from "@tissuumaps/core";
 
@@ -19,7 +17,6 @@ export type ColorPickerProps = {
   label?: string;
   children?: React.ReactNode;
   className?: string;
-  placement?: GithubPlacement;
 };
 
 export function ColorPicker({
@@ -28,7 +25,6 @@ export function ColorPicker({
   label,
   children,
   className,
-  placement,
 }: ColorPickerProps) {
   const hsva = hexToHsva(ColorUtils.toHex(color));
   return (
@@ -42,8 +38,8 @@ export function ColorPicker({
       <PopoverContent>
         <Chrome
           color={hsva}
-          placement={placement ? placement : GithubPlacement.BottomRight}
           showAlpha={false}
+          showTriangle={false}
           onChange={(newColor) => {
             const hex = hsvaToHex(newColor.hsva);
             onColorChange(ColorUtils.fromHex(hex));
@@ -53,5 +49,3 @@ export function ColorPicker({
     </Popover>
   );
 }
-
-export default ColorPicker;

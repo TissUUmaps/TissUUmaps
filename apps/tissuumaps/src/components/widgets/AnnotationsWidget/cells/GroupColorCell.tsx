@@ -1,6 +1,6 @@
 import type { Color } from "@tissuumaps/core";
 
-import ColorPicker from "../../../common/color-picker";
+import { ColorPicker } from "@/components/common/color-picker";
 
 export type GroupColorCellProps = {
   color: Color;

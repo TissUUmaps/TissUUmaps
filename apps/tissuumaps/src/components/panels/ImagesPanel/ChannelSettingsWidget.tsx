@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 
 import {
-  type Color,
   ColorUtils,
   type Image,
   type ImageChannel,
@@ -16,6 +15,7 @@ import {
   CollapsibleTrigger,
   CollapsibleTriggerRightDownIcon,
 } from "@/components/common/collapsible";
+import { ColorPicker } from "@/components/common/color-picker";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
@@ -25,7 +25,6 @@ import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
-import ColorPicker from "../../common/color-picker";
 import { ContrastRangeWidget } from "./ContrastRangeWidget";
 import { channelViewModeLabels } from "./channelViewMode";
 
@@ -198,9 +197,7 @@ function ChannelSettingsRow({
         {image.channelViewMode !== ImageChannelViewMode.grayscale ? (
           <ColorPicker
             color={color}
-            onColorChange={(newColor: Color) =>
-              updateChannel({ color: newColor })
-            }
+            onColorChange={(newColor) => updateChannel({ color: newColor })}
             label="Channel color"
             className="size-4 p-0 border-input shadow-xs"
           >
