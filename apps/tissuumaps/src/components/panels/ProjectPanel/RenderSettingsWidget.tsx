@@ -8,13 +8,13 @@ import {
   CollapsibleTrigger,
   CollapsibleTriggerRightDownIcon,
 } from "@/components/common/collapsible";
+import { ColorPicker } from "@/components/common/color-picker";
 import {
   Field,
   FieldControl,
   FieldDescription,
   FieldLabel,
 } from "@/components/common/field";
-import { SimpleColorPicker } from "@/components/common/simple-color-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -45,14 +45,15 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
     <div className={cn("flex flex-col gap-2 pl-6", className)}>
       <Field className="flex flex-col items-start">
         <FieldLabel>Viewer background color</FieldLabel>
-        <SimpleColorPicker
+        <ColorPicker
           color={viewerBackgroundColor}
           onColorChange={setViewerBackgroundColor}
+          className="font-mono"
         >
           <span className="sr-only">Viewer background color</span>
           <SquareIcon fill={viewerBackgroundColorHex} />
           {viewerBackgroundColorHex}
-        </SimpleColorPicker>
+        </ColorPicker>
       </Field>
       <Field>
         <FieldLabel>Navigator</FieldLabel>

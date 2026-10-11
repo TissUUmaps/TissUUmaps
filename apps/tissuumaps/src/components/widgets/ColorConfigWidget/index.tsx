@@ -9,9 +9,9 @@ import {
   defaultRandomSeed,
 } from "@tissuumaps/core";
 
+import { ColorPicker } from "@/components/common/color-picker";
 import { Field, FieldLabel } from "@/components/common/field";
 import { IconButton } from "@/components/common/icon-button";
-import { SimpleColorPicker } from "@/components/common/simple-color-picker";
 import { GroupValueMapSelect } from "@/components/controls/GroupValueMapSelect";
 import { TableColumnField } from "@/components/controls/TableColumnField";
 import { Input } from "@/components/ui/input";
@@ -126,13 +126,13 @@ function ConstantColorConfigWidget({
             }}
           />
         </Field>
-        <SimpleColorPicker
+        <ColorPicker
           color={color}
           onColorChange={setColor}
           className="row-start-2 col-start-4"
         >
           <Square fill={`rgb(${color.r}, ${color.g}, ${color.b})`} /> Pick
-        </SimpleColorPicker>
+        </ColorPicker>
       </div>
     </div>
   );

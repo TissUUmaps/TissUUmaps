@@ -15,9 +15,9 @@ import {
   CollapsibleTrigger,
   CollapsibleTriggerRightDownIcon,
 } from "@/components/common/collapsible";
+import { ColorPicker } from "@/components/common/color-picker";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { OpacityControl } from "@/components/common/opacity-control";
-import { SimpleColorPicker } from "@/components/common/simple-color-picker";
 import { VisibilityButton } from "@/components/common/visibility-button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -195,7 +195,7 @@ function ChannelSettingsRow({
           />
         )}
         {image.channelViewMode !== ImageChannelViewMode.grayscale ? (
-          <SimpleColorPicker
+          <ColorPicker
             color={color}
             onColorChange={(newColor) => updateChannel({ color: newColor })}
             label="Channel color"
@@ -205,7 +205,7 @@ function ChannelSettingsRow({
               className="block size-full rounded-sm"
               style={{ backgroundColor: ColorUtils.toHex(color) }}
             />
-          </SimpleColorPicker>
+          </ColorPicker>
         ) : null}
         <CollapsibleTrigger className="flex-1 min-w-0">
           <span className="truncate" title={name}>
