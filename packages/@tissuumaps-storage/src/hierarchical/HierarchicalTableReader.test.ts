@@ -469,20 +469,4 @@ describe("HierarchicalTableReader", () => {
       );
     });
   });
-
-  describe("readRange", () => {
-    it("returns the range of numeric columns", async () => {
-      const reader = await openReader(annData({}));
-      expect(await reader.readRange("obs/area")).toEqual([1.5, 3.5]);
-      expect(await reader.readRange("obs/batch")).toEqual([10, 20]);
-    });
-
-    it("returns undefined for string and constant columns", async () => {
-      const reader = await openReader(
-        annData({ constant: array(new Float32Array([1, 1, 1])) }),
-      );
-      expect(await reader.readRange("obs/_index")).toBeUndefined();
-      expect(await reader.readRange("constant")).toBeUndefined();
-    });
-  });
 });

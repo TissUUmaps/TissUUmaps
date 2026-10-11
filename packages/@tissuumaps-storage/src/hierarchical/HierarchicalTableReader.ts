@@ -1,4 +1,4 @@
-import { TableUtils, type TypedArrayOrArray } from "@tissuumaps/core";
+import type { TypedArrayOrArray } from "@tissuumaps/core";
 
 import { ColumnQueryUtils } from "./ColumnQueryUtils";
 import type {
@@ -122,25 +122,6 @@ export class HierarchicalTableReader implements HierarchicalTable {
       );
     }
     return values;
-  }
-
-  /**
-   * Reads the minimum and maximum value of a numeric column
-   *
-   * @param query - The column query (see {@link ColumnQueryUtils})
-   * @param options - See {@link HierarchicalTableReader.readColumn}
-   * @returns The [min, max] range, or `undefined` if the column is not numeric
-   * or holds no two distinct finite values
-   * @throws Error see {@link HierarchicalTableReader.readColumn}
-   */
-  async readRange(
-    query: string,
-    options?: { numRows?: number; signal?: AbortSignal },
-  ): Promise<[number, number] | undefined> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    const values = await this.readColumn(query, options);
-    return await TableUtils.computeValueRange(values, { signal });
   }
 
   /** Closes the store */

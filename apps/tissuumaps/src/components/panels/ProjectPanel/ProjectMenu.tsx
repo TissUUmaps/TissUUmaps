@@ -21,7 +21,7 @@ import { isWorkspaceSupported } from "@/data/io/workspace";
 
 import {
   useCloseProject,
-  useOpenProjectFile,
+  useOpenProjectFromFile,
   useOpenProjectFromURL,
   useOpenWorkspace,
   workspaceUnsupportedMessage,
@@ -32,7 +32,7 @@ export type ProjectMenuProps = {
 };
 
 export function ProjectMenu({ className }: ProjectMenuProps) {
-  const openProjectFile = useOpenProjectFile();
+  const openProjectFromFile = useOpenProjectFromFile();
   const openProjectFromURL = useOpenProjectFromURL();
   const closeProject = useCloseProject();
   const openWorkspace = useOpenWorkspace();
@@ -46,7 +46,7 @@ export function ProjectMenu({ className }: ProjectMenuProps) {
         <EllipsisIcon />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem onClick={openProjectFile}>
+        <DropdownMenuItem onClick={openProjectFromFile}>
           <FileIcon />
           Open project file…
         </DropdownMenuItem>

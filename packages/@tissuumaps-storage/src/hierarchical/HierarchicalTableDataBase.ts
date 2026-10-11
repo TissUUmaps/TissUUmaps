@@ -89,17 +89,6 @@ export abstract class HierarchicalTableDataBase implements TableData {
     return data as TypedArrayOrArray<T>;
   }
 
-  loadValueRange(
-    column: string,
-    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<[number, number] | undefined> {
-    const { signal } = options ?? {};
-    if (signal?.aborted) {
-      return Promise.reject(signal.reason as Error);
-    }
-    return this._table.readRange(column, { numRows: this._numRows, signal });
-  }
-
   close(): void {
     this._table.close();
   }

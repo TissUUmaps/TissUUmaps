@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
-import type { PanelId } from "../panelId";
 import { LayersWidget } from "./LayersWidget";
 import { ProjectFooter } from "./ProjectFooter";
 import { ProjectHeader } from "./ProjectHeader";
@@ -19,11 +18,10 @@ import { RenderSettingsWidget } from "./RenderSettingsWidget";
 import { WorkspaceWidget } from "./WorkspaceWidget";
 
 export type ProjectPanelProps = {
-  onShowPanel: (panelId: PanelId) => void;
   className?: string;
 };
 
-export function ProjectPanel({ onShowPanel, className }: ProjectPanelProps) {
+export function ProjectPanel({ className }: ProjectPanelProps) {
   const projectOpen = useAppStore((state) => state.projectOpen);
   const layerCount = useProjectStore((state) => state.layers.length);
 
@@ -33,7 +31,7 @@ export function ProjectPanel({ onShowPanel, className }: ProjectPanelProps) {
         <ProjectWelcomeView />
       ) : (
         <>
-          <ProjectHeader onShowPanel={onShowPanel} />
+          <ProjectHeader />
           <Accordion multiple defaultValue={["layers"]}>
             <AccordionItem value="layers" className="border-t">
               <AccordionHeader className="text-muted-foreground h-10 gap-1 px-1">

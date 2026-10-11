@@ -20,7 +20,7 @@ jobs:
   # pending; publishes the packages, tags the releases and creates the GitHub
   # releases once it is merged
   release:
-    if: github.event_name == 'push'
+    if: github.repository == 'TissUUmaps/TissUUmaps' && github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -28,124 +28,80 @@ jobs:
       id-token: write
     outputs:
       published: ${{ steps.changesets.outputs.published }}
+      published-packages: ${{ steps.changesets.outputs.published-packages }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+      - name: Checkout the repository
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-      - name: Set up Node
-        uses: actions/setup-node@v6
+      - name: Set up pnpm and node, and install dependencies
+        uses: pnpm/setup@v3
         with:
-          node-version: 24
-          cache: pnpm
-          registry-url: https://registry.npmjs.org
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Version or publish
+          cache: true
+          require-lockfile: true
+      - name: Create version PR or publish unpublished packages
         id: changesets
         uses: changesets/action@v2
         with:
           publish-script: pnpm run release
-          create-github-releases: true
           commit-message: "chore: version packages"
           pr-title: "chore: version packages"
+          create-github-releases: true
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
-  # Finds the application release whose site asset has to be built: the one
-  # just published (unless it has its asset already), or the one given to a
-  # manual run
-  find-release:
-    needs: release
-    if: ${{ !cancelled() && (needs.release.outputs.published == 'true' || inputs.tag != '') }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    outputs:
-      tag: ${{ steps.release.outputs.tag }}
-      version: ${{ steps.release.outputs.version }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-      - name: Find the release
-        id: release
-        run: |
-          tag="${TAG:-tissuumaps@$(node -p "require('./apps/tissuumaps/package.json').version")}"
-          if [[ $tag != tissuumaps@* ]]; then
-            echo "$tag is not an application release tag"
-            exit 1
-          fi
-          version="${tag#tissuumaps@}"
-          if ! assets=$(gh release view "$tag" --json assets --jq '.assets[].name' 2>&1); then
-            # A manual run names a release that must exist; a push may not have released the application
-            if [ -n "$TAG" ]; then
-              echo "$assets"
-              exit 1
-            fi
-            echo "$tag has no release; nothing to build"
-          elif [ -z "$TAG" ] && grep -qxF "tissuumaps-$version.zip" <<< "$assets" && grep -qxF "tissuumaps-$version-docs.zip" <<< "$assets"; then
-            echo "$tag already has its assets"
-          else
-            echo "tag=$tag" >> "$GITHUB_OUTPUT"
-            echo "version=$version" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ inputs.tag }}
-  # Builds the application from the published packages and its documentation,
-  # and stores them as the release assets
+  # Builds the application and its documentation from the release (the one
+  # just published if the application was released, or the one given to a
+  # manual run), and stores them as the release assets
   build-site:
-    needs: find-release
-    if: ${{ !cancelled() && needs.find-release.outputs.tag != '' }}
+    needs: release
+    if: ${{ !cancelled() && github.repository == 'TissUUmaps/TissUUmaps' && (inputs.tag != '' || (needs.release.outputs.published == 'true' && contains(fromJSON(needs.release.outputs.published-packages).*.name, 'tissuumaps'))) }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
     permissions:
       contents: write
-    env:
-      TAG: ${{ needs.find-release.outputs.tag }}
-      VERSION: ${{ needs.find-release.outputs.version }}
     steps:
-      - name: Checkout the release
-        uses: actions/checkout@v6
+      - name: Checkout the repository
+        uses: actions/checkout@v7
         with:
-          ref: ${{ env.TAG }}
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-      - name: Set up Node
-        uses: actions/setup-node@v6
+          ref: ${{ inputs.tag }}
+      - name: Find the release version
+        id: release
+        run: |
+          version="$(node -p "require('./apps/tissuumaps/package.json').version")"
+          if [ -n "$INPUT_TAG" ] && [ "$INPUT_TAG" != "tissuumaps@$version" ]; then
+            echo "$INPUT_TAG is not an application release tag"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "line=$(cut -d. -f1,2 <<< "$version")" >> "$GITHUB_OUTPUT"
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+      - name: Set up pnpm and Node, and install dependencies
+        uses: pnpm/setup@v3
         with:
-          node-version: 24
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+          cache: true
+          require-lockfile: true
+          # The version from devEngines.runtime, or the LTS for releases made
+          # before it was declared (which would otherwise get the runner's Node)
+          runtime: node
+      - name: Build the packages and the application
+        run: pnpm run build
       - name: Build the documentation
         run: pnpm run build:docs
         env:
-          DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/${{ env.VERSION }}/docs/
-      - name: Build the application from the published packages
-        run: |
-          node scripts/prepare-registry-build.ts
-          # The packages may take a few minutes to appear on the registry
-          until pnpm install --no-frozen-lockfile 2>&1 | tee install.log; do
-            grep -qE "ERR_PNPM_(NO_MATCHING_VERSION|FETCH_404)" install.log || exit 1
-            sleep 30
-          done
-          node scripts/verify-registry-deps.ts
-          pnpm --filter tissuumaps exec vite build
+          DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/${{ steps.release.outputs.line }}/docs/
       - name: Upload the release assets
         run: |
           (cd apps/tissuumaps/dist && zip -qr "$GITHUB_WORKSPACE/tissuumaps-$VERSION.zip" .)
           (cd apps/docs/build && zip -qr "$GITHUB_WORKSPACE/tissuumaps-$VERSION-docs.zip" .)
-          gh release upload "$TAG" "tissuumaps-$VERSION.zip" "tissuumaps-$VERSION-docs.zip" --clobber
+          gh release upload "tissuumaps@$VERSION" "tissuumaps-$VERSION.zip" "tissuumaps-$VERSION-docs.zip" --clobber
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
   # Assembles the site from the release assets and deploys it to GitHub Pages;
-  # while no version can be deployed, the current branch is deployed instead
+  # fails while no release has its assets, leaving the deployed site as it is
   deploy-pages:
-    needs: [release, find-release, build-site]
-    if: ${{ !failure() && !cancelled() }}
+    needs: [release, build-site]
+    if: ${{ !cancelled() && !failure() && github.repository == 'TissUUmaps/TissUUmaps' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -159,31 +115,16 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
-      - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/checkout@v7
+      - name: Set up pnpm and Node
+        uses: pnpm/setup@v3
         with:
-          node-version: 24
-      - name: Assemble the site from the release assets
-        id: assemble
-        run: node scripts/assemble-pages.ts --out _site --custom-html .github/pages/custom.html
+          install: false
+      - name: Assemble the site from release assets
+        run: node scripts/gha-assemble-pages.ts
         env:
           GH_TOKEN: ${{ github.token }}
-      - name: Install pnpm
-        if: steps.assemble.outputs.latest == ''
-        uses: pnpm/action-setup@v4
-      - name: Deploy the current branch instead
-        if: steps.assemble.outputs.latest == ''
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm run build:docs
-          pnpm run --filter tissuumaps build
-          cp -r apps/tissuumaps/dist/. _site/
-          cp -r apps/docs/build/. _site/docs/
-        env:
-          VITE_CUSTOM_HTML_FILE: ${{ github.workspace }}/.github/pages/custom.html
-          DOCUSAURUS_BASE_URL: /${{ github.event.repository.name }}/docs/
-      - name: Mirror the TissUUmaps 3 plugin index
+      - name: Mirror the legacy TissUUmaps 3 plugin index
         if: vars.V3_PLUGINS_REPO != ''
         run: |
           mkdir mirror
@@ -193,9 +134,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           V3_PLUGINS_REPO: ${{ vars.V3_PLUGINS_REPO }}
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

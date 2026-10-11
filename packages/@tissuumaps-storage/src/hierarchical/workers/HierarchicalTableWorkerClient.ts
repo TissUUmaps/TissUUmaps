@@ -76,19 +76,6 @@ export class HierarchicalTableWorkerClient implements HierarchicalTable {
     return data;
   }
 
-  async readRange(
-    query: string,
-    options?: { numRows?: number; signal?: AbortSignal },
-  ): Promise<[number, number] | undefined> {
-    const { numRows, signal } = options ?? {};
-    signal?.throwIfAborted();
-    const { range } = await this._channel.request(
-      { op: "range", column: query, numRows },
-      { signal },
-    );
-    return range;
-  }
-
   /** Terminates the worker, rejecting all pending requests */
   close(): void {
     this._channel.terminate();

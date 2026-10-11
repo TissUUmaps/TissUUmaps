@@ -142,10 +142,14 @@ export class OpenSeadragonContext {
     viewerOptions?: OpenSeadragonViewerOptions,
   ) {
     OpenSeadragonUtils.fixTileCacheCounter();
+    // OpenSeadragon reads showNavigator only here, so the navigator is always
+    // created and then shown or hidden; this keeps the option live.
     this.viewer = new OpenSeadragon.Viewer({
       ...viewerOptions,
+      showNavigator: true,
       element: viewerElement,
     });
+    this.viewer.navigator.setVisible(viewerOptions?.showNavigator !== false);
     this._backgroundPixelUrl = OpenSeadragonUtils.createPixelUrl(
       backgroundColor.r,
       backgroundColor.g,
@@ -329,11 +333,15 @@ export class OpenSeadragonContext {
    * Applies viewer options to the OpenSeadragon viewer and all existing tiled images
    *
    * For each option key, performs a shallow merge (one level deep) of nested objects
-   * on both the viewer instance and every tiled image in the world.
+   * on both the viewer instance and every tiled image in the world. `showNavigator`
+   * shows or hides the navigator, as OpenSeadragon reads it only on construction.
    *
    * @param viewerOptions - Options to apply
    */
   setViewerOptions(viewerOptions: OpenSeadragonViewerOptions): void {
+    if (viewerOptions.showNavigator !== undefined) {
+      this.viewer.navigator.setVisible(viewerOptions.showNavigator);
+    }
     // TODO allow more than one level (deep nested shallow merge)
     for (const [key, value] of Object.entries(viewerOptions)) {
       // @ts-expect-error: dynamic property access
@@ -637,8 +645,17 @@ export class OpenSeadragonContext {
     const { signal } = options ?? {};
     // OpenSeadragon types tile sources as `string | object`, which also covers
     // promises of an already opened tile source; anything else is passed through
-    const tileSource = await Promise.resolve(tiledImageOptions.tileSource);
+    let tileSource = await Promise.resolve(tiledImageOptions.tileSource);
     signal?.throwIfAborted();
+    // OpenSeadragon writes defaults into plain configuration objects, which may
+    // be frozen (e.g. when taken from the project); class instances such as
+    // opened tile sources are passed as is, as a copy would lose their prototype
+    if (typeof tileSource === "object" && tileSource !== null) {
+      const prototype: unknown = Object.getPrototypeOf(tileSource);
+      if (prototype === Object.prototype || prototype === null) {
+        tileSource = { ...tileSource };
+      }
+    }
     try {
       const { source: openedTileSource } =
         (await this.viewer.instantiateTileSourceClass(

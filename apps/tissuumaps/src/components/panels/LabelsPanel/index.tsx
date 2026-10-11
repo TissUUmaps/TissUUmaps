@@ -1,16 +1,16 @@
 import { useState } from "react";
 
-import { type Labels, createLabels } from "@tissuumaps/core";
+import type { Labels } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
-import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
-import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { AddDataObjectButton } from "@/components/controls/AddDataObjectButton";
 import {
   SortableObjectList,
   SortableObjectListItem,
-} from "@/components/widgets/ObjectList";
-import { useExpandedLabelsIds } from "@/hooks/useExpandedIds";
+} from "@/components/controls/ObjectList";
+import { useAddLabelsDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
+import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -20,18 +20,17 @@ import { LabelsSettingsWidget } from "./LabelsSettingsWidget";
 import type { LabelsSettingsCategory } from "./category";
 
 export type LabelsPanelProps = {
-  /** Brings the panel to the front */
-  onShow: () => void;
   className?: string;
 };
 
-export function LabelsPanel({ onShow, className }: LabelsPanelProps) {
-  const [expandedIds, setExpandedIds] = useExpandedLabelsIds(onShow);
-  const labelsDataProviders = useAppStore((state) => state.labelsDataProviders);
+export function LabelsPanel({ className }: LabelsPanelProps) {
+  const expandedLabelsIds = useAppStore((state) => state.expandedLabelsIds);
+  const setExpandedLabelsIds = useAppStore(
+    (state) => state.setExpandedLabelsIds,
+  );
+  const addDialogParams = useAddLabelsDialogParams();
 
-  const layers = useProjectStore((state) => state.layers);
   const labels = useProjectStore((state) => state.labels);
-  const addLabels = useProjectStore((state) => state.addLabels);
   const moveLabels = useProjectStore((state) => state.moveLabels);
 
   return (
@@ -39,8 +38,8 @@ export function LabelsPanel({ onShow, className }: LabelsPanelProps) {
       <SortableObjectList
         objects={labels}
         onMove={moveLabels}
-        expandedIds={expandedIds}
-        onExpandedIdsChange={setExpandedIds}
+        expandedIds={expandedLabelsIds}
+        onExpandedIdsChange={setExpandedLabelsIds}
       >
         {(currentLabels, index) => (
           <LabelsAccordionItem
@@ -50,21 +49,7 @@ export function LabelsPanel({ onShow, className }: LabelsPanelProps) {
           />
         )}
       </SortableObjectList>
-      <AddDataObjectDialog
-        title="Add labels"
-        layers={layers}
-        dataProviders={labelsDataProviders}
-        onAdd={(name, layerId, dataSource) => {
-          if (!layerId) return;
-          const newLabels = createLabels({
-            id: crypto.randomUUID(),
-            name,
-            dataSource,
-            layer: layerId,
-          });
-          addLabels(newLabels);
-        }}
-      />
+      <AddDataObjectButton {...addDialogParams} />
     </div>
   );
 }

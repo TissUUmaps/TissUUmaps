@@ -1,17 +1,17 @@
 import { useState } from "react";
 
-import { type Shapes, createShapes } from "@tissuumaps/core";
+import type { Shapes } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
-import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
-import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { AddDataObjectButton } from "@/components/controls/AddDataObjectButton";
 import {
   SortableObjectList,
   SortableObjectListItem,
-} from "@/components/widgets/ObjectList";
-import { useShapesData } from "@/hooks/useData";
-import { useExpandedShapesIds } from "@/hooks/useExpandedIds";
+} from "@/components/controls/ObjectList";
+import { useAddShapesDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
+import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { useShapesData } from "@/data/hooks/useData";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -21,18 +21,17 @@ import { ShapesSettingsWidget } from "./ShapesSettingsWidget";
 import type { ShapesSettingsCategory } from "./category";
 
 export type ShapesPanelProps = {
-  /** Brings the panel to the front */
-  onShow: () => void;
   className?: string;
 };
 
-export function ShapesPanel({ onShow, className }: ShapesPanelProps) {
-  const [expandedIds, setExpandedIds] = useExpandedShapesIds(onShow);
-  const shapesDataProviders = useAppStore((state) => state.shapesDataProviders);
+export function ShapesPanel({ className }: ShapesPanelProps) {
+  const expandedShapesIds = useAppStore((state) => state.expandedShapesIds);
+  const setExpandedShapesIds = useAppStore(
+    (state) => state.setExpandedShapesIds,
+  );
+  const addDialogParams = useAddShapesDialogParams();
 
-  const layers = useProjectStore((state) => state.layers);
   const shapes = useProjectStore((state) => state.shapes);
-  const addShapes = useProjectStore((state) => state.addShapes);
   const moveShapes = useProjectStore((state) => state.moveShapes);
 
   return (
@@ -40,8 +39,8 @@ export function ShapesPanel({ onShow, className }: ShapesPanelProps) {
       <SortableObjectList
         objects={shapes}
         onMove={moveShapes}
-        expandedIds={expandedIds}
-        onExpandedIdsChange={setExpandedIds}
+        expandedIds={expandedShapesIds}
+        onExpandedIdsChange={setExpandedShapesIds}
       >
         {(currentShapes, index) => (
           <ShapesAccordionItem
@@ -51,21 +50,7 @@ export function ShapesPanel({ onShow, className }: ShapesPanelProps) {
           />
         )}
       </SortableObjectList>
-      <AddDataObjectDialog
-        title="Add shapes"
-        layers={layers}
-        dataProviders={shapesDataProviders}
-        onAdd={(name, layerId, dataSource) => {
-          if (!layerId) return;
-          const newShapes = createShapes({
-            id: crypto.randomUUID(),
-            name,
-            dataSource,
-            layer: layerId,
-          });
-          addShapes(newShapes);
-        }}
-      />
+      <AddDataObjectButton {...addDialogParams} />
     </div>
   );
 }

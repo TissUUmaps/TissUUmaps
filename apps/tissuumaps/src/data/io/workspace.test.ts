@@ -5,6 +5,8 @@ import {
   pickProjectFile,
   pickWorkspace,
   pickWorkspacePath,
+  readDroppedItems,
+  resolveWorkspacePath,
 } from "./workspace";
 
 const directory = {
@@ -177,6 +179,61 @@ describe("workspace", () => {
       await expect(
         pickWorkspacePath(makeWorkspace(["image.ome.zarr"]), "directory"),
       ).resolves.toBeNull();
+    });
+  });
+
+  describe("resolveWorkspacePath", () => {
+    it("returns the workspace path of a file in the workspace", async () => {
+      await expect(
+        resolveWorkspacePath(dataFile, makeWorkspace(["data", "cells.csv"])),
+      ).resolves.toBe("/data/cells.csv");
+    });
+
+    it("rejects the workspace itself, and anything outside it", async () => {
+      await expect(
+        resolveWorkspacePath(directory, makeWorkspace([])),
+      ).rejects.toThrow(/connected folder itself/);
+      await expect(
+        resolveWorkspacePath(dataFile, makeWorkspace(null)),
+      ).rejects.toThrow(/not in the connected folder/);
+    });
+  });
+
+  describe("readDroppedItems", () => {
+    const file = new File([""], "cells.csv");
+
+    it("reads the dropped files with their handles, if available", async () => {
+      const dataTransfer = {
+        items: [
+          {
+            kind: "file",
+            getAsFile: () => file,
+            getAsFileSystemHandle: () => Promise.resolve(dataFile),
+          },
+          { kind: "string", getAsFile: () => null },
+          { kind: "file", getAsFile: () => file },
+        ],
+      } as unknown as DataTransfer;
+      await expect(readDroppedItems(dataTransfer)).resolves.toEqual([
+        { handle: dataFile, file },
+        { handle: null, file },
+      ]);
+    });
+
+    it("reads an item whose handle cannot be obtained without one", async () => {
+      const dataTransfer = {
+        items: [
+          {
+            kind: "file",
+            getAsFile: () => file,
+            getAsFileSystemHandle: () =>
+              Promise.reject(new DOMException("Gone", "NotFoundError")),
+          },
+        ],
+      } as unknown as DataTransfer;
+      await expect(readDroppedItems(dataTransfer)).resolves.toEqual([
+        { handle: null, file },
+      ]);
     });
   });
 });

@@ -8,66 +8,85 @@ on:
       - main
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+permissions:
+  contents: read
 jobs:
   check-format:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-      - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/checkout@v7
+      - name: Set up pnpm and Node, and install dependencies
+        uses: pnpm/setup@v3
         with:
-          node-version: 24
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+          cache: true
+          require-lockfile: true
       - name: Check formatting
         run: pnpm run fmt:check
+  check-changesets:
+    if: github.event_name == 'pull_request' && github.head_ref != 'changeset-release/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Set up pnpm and Node, and install dependencies
+        uses: pnpm/setup@v3
+        with:
+          cache: true
+          require-lockfile: true
+      - name: Check for changesets
+        run: pnpm changeset status --since=origin/main
   lint:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-      - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/checkout@v7
+      - name: Set up pnpm and Node, and install dependencies
+        uses: pnpm/setup@v3
         with:
-          node-version: 24
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+          cache: true
+          require-lockfile: true
       - name: Type-check
         run: pnpm run typecheck
       - name: Run linter
         run: pnpm run lint
+  build:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Set up pnpm and Node, and install dependencies
+        uses: pnpm/setup@v3
+        with:
+          cache: true
+          require-lockfile: true
+      - name: Build the packages and the application
+        run: pnpm run build
+      - name: Build the documentation
+        run: pnpm run build:docs
   test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-      - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/checkout@v7
+      - name: Set up pnpm and Node, and install dependencies
+        uses: pnpm/setup@v3
         with:
-          node-version: 24
-          cache: pnpm
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Build packages
-        run: pnpm run build:packages
+          cache: true
+          require-lockfile: true
       - name: Run tests
         run: pnpm run test
       - name: Run release script tests
         run: pnpm run test:scripts
       - name: Upload coverage
-        uses: codecov/codecov-action@v5
+        if: github.repository == 'TissUUmaps/TissUUmaps'
+        uses: codecov/codecov-action@v7
         with:
           directory: coverage
           fail_ci_if_error: true

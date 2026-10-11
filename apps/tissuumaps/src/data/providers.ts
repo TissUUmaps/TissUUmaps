@@ -1,3 +1,4 @@
+import { SourceUtils } from "@tissuumaps/core";
 import {
   CSVTableDataProvider,
   GeoJSONShapesDataProvider,
@@ -25,7 +26,9 @@ import {
   zarrTableDataSourceType,
 } from "@tissuumaps/storage";
 
+import { addTableDataObject } from "@/data/io/dataObject";
 import { appStore } from "@/stores/app";
+import { projectStore } from "@/stores/project";
 
 /**
  * Registers the data providers shipped with TissUUmaps with the app store
@@ -62,7 +65,58 @@ export function enableBuiltInDataProviders(): void {
 
   appStoreState.registerPointsDataProvider(
     tablePointsDataSourceType,
-    new TablePointsDataProvider(),
+    new TablePointsDataProvider({
+      getTableDataProviders: () => appStore.getState().tableDataProviders,
+      addTable: async (dataSource, options) => {
+        const { signal } = options ?? {};
+        signal?.throwIfAborted();
+        const { tableDataProviders, workspace } = appStore.getState();
+        const tableDataProvider = tableDataProviders.get(dataSource.type);
+        if (tableDataProvider === undefined) {
+          throw new Error(
+            `No table data provider for type ${dataSource.type}.`,
+          );
+        }
+        const projectSource = projectStore.getState().source;
+        const normalizedSource =
+          dataSource.source !== undefined
+            ? SourceUtils.normalizeSource(
+                dataSource.source,
+                workspace,
+                projectSource,
+              )
+            : undefined;
+        let name: string | undefined;
+        if (normalizedSource !== undefined) {
+          if (tableDataProvider.readName !== undefined) {
+            try {
+              name = await tableDataProvider.readName(
+                normalizedSource,
+                workspace,
+                { signal },
+              );
+            } catch {
+              signal?.throwIfAborted();
+            }
+          }
+          name ??= SourceUtils.getStem(normalizedSource);
+        }
+        let preparedDataSource = dataSource;
+        if (tableDataProvider.prepareDataSource !== undefined) {
+          preparedDataSource = await tableDataProvider.prepareDataSource(
+            dataSource,
+            workspace,
+            projectSource,
+            { signal },
+          );
+        }
+        return addTableDataObject(
+          name?.trim() || "Untitled",
+          dataSource.source,
+          preparedDataSource,
+        );
+      },
+    }),
   );
 
   appStoreState.registerShapesDataProvider(

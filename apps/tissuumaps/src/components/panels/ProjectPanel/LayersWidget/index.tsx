@@ -5,12 +5,12 @@ import { type Layer, type TableColumnRef, createLayer } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
-import { ObjectKind, objectKindIcons } from "@/components/object-kind-icons";
-import { Button } from "@/components/ui/button";
 import {
   SortableObjectList,
   SortableObjectListItem,
-} from "@/components/widgets/ObjectList";
+} from "@/components/controls/ObjectList";
+import { ObjectKind, objectKindIcons } from "@/components/object-kind-icons";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 

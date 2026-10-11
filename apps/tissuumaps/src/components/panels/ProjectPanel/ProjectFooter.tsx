@@ -13,7 +13,7 @@ export function ProjectFooter({ className }: ProjectFooterProps) {
         className,
       )}
     >
-      <img src={logoUrl} alt="" className="h-7" />
+      <img src={logoUrl} alt="" className="h-7" draggable={false} />
       <span className="text-foreground text-sm font-semibold">TissUUmaps</span>
       <span>{__APP_VERSION__}</span>
       <nav className="ml-auto flex gap-3">

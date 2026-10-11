@@ -1,17 +1,17 @@
 import { useState } from "react";
 
-import { type Points, createPoints } from "@tissuumaps/core";
+import type { Points } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
-import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
-import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { AddDataObjectButton } from "@/components/controls/AddDataObjectButton";
 import {
   SortableObjectList,
   SortableObjectListItem,
-} from "@/components/widgets/ObjectList";
-import { usePointsData } from "@/hooks/useData";
-import { useExpandedPointsIds } from "@/hooks/useExpandedIds";
+} from "@/components/controls/ObjectList";
+import { useAddPointsDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
+import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { usePointsData } from "@/data/hooks/useData";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -21,18 +21,17 @@ import { PointsSettingsWidget } from "./PointsSettingsWidget";
 import type { PointsSettingsCategory } from "./category";
 
 export type PointsPanelProps = {
-  /** Brings the panel to the front */
-  onShow: () => void;
   className?: string;
 };
 
-export function PointsPanel({ onShow, className }: PointsPanelProps) {
-  const [expandedIds, setExpandedIds] = useExpandedPointsIds(onShow);
-  const pointsDataProviders = useAppStore((state) => state.pointsDataProviders);
+export function PointsPanel({ className }: PointsPanelProps) {
+  const expandedPointsIds = useAppStore((state) => state.expandedPointsIds);
+  const setExpandedPointsIds = useAppStore(
+    (state) => state.setExpandedPointsIds,
+  );
+  const addDialogParams = useAddPointsDialogParams();
 
-  const layers = useProjectStore((state) => state.layers);
   const points = useProjectStore((state) => state.points);
-  const addPoints = useProjectStore((state) => state.addPoints);
   const movePoints = useProjectStore((state) => state.movePoints);
 
   return (
@@ -40,8 +39,8 @@ export function PointsPanel({ onShow, className }: PointsPanelProps) {
       <SortableObjectList
         objects={points}
         onMove={movePoints}
-        expandedIds={expandedIds}
-        onExpandedIdsChange={setExpandedIds}
+        expandedIds={expandedPointsIds}
+        onExpandedIdsChange={setExpandedPointsIds}
       >
         {(currentPoints, index) => (
           <PointsAccordionItem
@@ -51,21 +50,7 @@ export function PointsPanel({ onShow, className }: PointsPanelProps) {
           />
         )}
       </SortableObjectList>
-      <AddDataObjectDialog
-        title="Add points"
-        layers={layers}
-        dataProviders={pointsDataProviders}
-        onAdd={(name, layerId, dataSource) => {
-          if (!layerId) return;
-          const newPoints = createPoints({
-            id: crypto.randomUUID(),
-            name,
-            dataSource,
-            layer: layerId,
-          });
-          addPoints(newPoints);
-        }}
-      />
+      <AddDataObjectButton {...addDialogParams} />
     </div>
   );
 }

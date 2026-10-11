@@ -12,10 +12,11 @@ import {
   type TIFFLabelsDataSource,
   tiffLabelsDataSourceDefaults,
 } from "./TIFFLabelsDataSource";
-import type { TIFFStructure } from "./TIFFParser";
+import { type TIFFStructure, findTIFFParser } from "./TIFFParser";
 import { TIFFUtils } from "./TIFFUtils";
 import { installTIFFTileSource } from "./installTIFFTileSource";
 import { openTIFF } from "./openTIFF";
+import { OMETIFFParser } from "./profiles/OMETIFFParser";
 
 /**
  * Data provider for label masks stored in TIFF files
@@ -33,6 +34,9 @@ export class TIFFLabelsDataProvider implements LabelsDataProvider<
   TIFFLabelsData,
   NormalizedTIFFLabelsDataSource
 > {
+  /** The file extensions of the sources this data provider supports */
+  private static readonly _extensions = new Set([".tif", ".tiff", ".qptiff"]);
+
   readonly name = "TIFF";
 
   readonly schema = {
@@ -59,11 +63,6 @@ export class TIFFLabelsDataProvider implements LabelsDataProvider<
   readonly uischema = {
     type: "VerticalLayout",
     elements: [
-      {
-        type: "Control",
-        scope: "#/properties/source",
-        label: "Source",
-      },
       {
         type: "HorizontalLayout",
         elements: [
@@ -113,10 +112,49 @@ export class TIFFLabelsDataProvider implements LabelsDataProvider<
   }
 
   /**
+   * Returns whether a source has a TIFF file extension (see
+   * {@link TIFFLabelsDataProvider._extensions})
+   *
+   * @param normalizedSource - The normalized source to check
+   * @returns A promise that resolves to whether the source is supported
+   */
+  supports(normalizedSource: string): Promise<boolean> {
+    return Promise.resolve(
+      TIFFLabelsDataProvider._extensions.has(
+        SourceUtils.getExtension(normalizedSource),
+      ),
+    );
+  }
+
+  /**
+   * Reads the image's own name for a data object backed by a source, which
+   * only OME-TIFF files have (see {@link OMETIFFParser.readImageName})
+   *
+   * @param normalizedSource - The normalized source
+   * @param workspace - The directory handle of the open workspace, if any
+   * @param options - Optional abort signal
+   * @returns A promise that resolves to the name, if any
+   * @throws Error if the source is workspace-relative while no workspace is
+   * open, or if the file cannot be read
+   */
+  async readName(
+    normalizedSource: string,
+    workspace: FileSystemDirectoryHandle | null,
+    options?: { signal?: AbortSignal },
+  ): Promise<string | undefined> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    const tiff = await openTIFF(normalizedSource, { workspace, signal });
+    return await OMETIFFParser.readImageName(tiff, { signal });
+  }
+
+  /**
    * Opens a TIFF labels data source and returns the loaded label mask
    *
-   * The file and its structure are read with {@link openTIFF}. The pixels are
-   * not read: the renderer resolves the labels as it draws them.
+   * The file is opened with {@link openTIFF}, and its structure read by the
+   * parser of its format (see {@link findTIFFParser}), with `z` and `t`
+   * selecting the plane. The pixels are not read: the renderer resolves the
+   * labels as it draws them.
    *
    * @param normalizedDataSource - The normalized data source to open
    * @param options - See `DataProviderLoadOptions`; `workspace` is required
@@ -130,15 +168,16 @@ export class TIFFLabelsDataProvider implements LabelsDataProvider<
     normalizedDataSource: NormalizedTIFFLabelsDataSource,
     options?: DataProviderLoadOptions,
   ): Promise<TIFFLabelsData> {
-    const { signal } = options ?? {};
+    const { signal, workspace } = options ?? {};
     signal?.throwIfAborted();
 
     const { z, t } = normalizedDataSource;
-    const { tiff, ...structure } = await openTIFF(normalizedDataSource.source, {
-      ...options,
-      z,
-      t,
+    const tiff = await openTIFF(normalizedDataSource.source, {
+      signal,
+      workspace,
     });
+    const parser = await findTIFFParser(tiff, { signal });
+    const structure = await parser.load(tiff, { z, t, signal });
     const levels = getLabelLevels(structure);
 
     const { GeoTIFFTileSource } = installTIFFTileSource();

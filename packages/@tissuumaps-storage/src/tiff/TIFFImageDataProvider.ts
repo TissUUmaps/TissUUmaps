@@ -15,9 +15,11 @@ import {
   type TIFFImageDataSource,
   tiffImageDataSourceDefaults,
 } from "./TIFFImageDataSource";
+import { findTIFFParser } from "./TIFFParser";
 import { TIFFUtils } from "./TIFFUtils";
 import { installTIFFTileSource } from "./installTIFFTileSource";
 import { openTIFF } from "./openTIFF";
+import { OMETIFFParser } from "./profiles/OMETIFFParser";
 
 /**
  * Data provider for images stored in TIFF files
@@ -34,6 +36,9 @@ export class TIFFImageDataProvider implements ImageDataProvider<
   TIFFImageData,
   NormalizedTIFFImageDataSource
 > {
+  /** The file extensions of the sources this data provider supports */
+  private static readonly _extensions = new Set([".tif", ".tiff", ".qptiff"]);
+
   /**
    * The pixels a histogram is built from (see
    * {@link TIFFImageDataProvider._computeChannelHistogram}); more do not make
@@ -66,11 +71,6 @@ export class TIFFImageDataProvider implements ImageDataProvider<
   readonly uischema = {
     type: "VerticalLayout",
     elements: [
-      {
-        type: "Control",
-        scope: "#/properties/source",
-        label: "Source",
-      },
       {
         type: "HorizontalLayout",
         elements: [
@@ -115,10 +115,49 @@ export class TIFFImageDataProvider implements ImageDataProvider<
   }
 
   /**
+   * Returns whether a source has a TIFF file extension (see
+   * {@link TIFFImageDataProvider._extensions})
+   *
+   * @param normalizedSource - The normalized source to check
+   * @returns A promise that resolves to whether the source is supported
+   */
+  supports(normalizedSource: string): Promise<boolean> {
+    return Promise.resolve(
+      TIFFImageDataProvider._extensions.has(
+        SourceUtils.getExtension(normalizedSource),
+      ),
+    );
+  }
+
+  /**
+   * Reads the image's own name for a data object backed by a source, which
+   * only OME-TIFF files have (see {@link OMETIFFParser.readImageName})
+   *
+   * @param normalizedSource - The normalized source
+   * @param workspace - The directory handle of the open workspace, if any
+   * @param options - Optional abort signal
+   * @returns A promise that resolves to the name, if any
+   * @throws Error if the source is workspace-relative while no workspace is
+   * open, or if the file cannot be read
+   */
+  async readName(
+    normalizedSource: string,
+    workspace: FileSystemDirectoryHandle | null,
+    options?: { signal?: AbortSignal },
+  ): Promise<string | undefined> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    const tiff = await openTIFF(normalizedSource, { workspace, signal });
+    return await OMETIFFParser.readImageName(tiff, { signal });
+  }
+
+  /**
    * Opens a TIFF image data source and returns the loaded image data
    *
-   * The file and its structure are read with {@link openTIFF}. The channel
-   * histograms are read afterwards, a few channels at a time (see
+   * The file is opened with {@link openTIFF}, and its structure read by the
+   * parser of its format (see {@link findTIFFParser}), with `z` and `t`
+   * selecting the plane. The channel histograms are read afterwards, a few
+   * channels at a time (see
    * {@link TIFFImageDataProvider._computeChannelHistograms}).
    *
    * @param normalizedDataSource - The normalized data source to open
@@ -132,14 +171,16 @@ export class TIFFImageDataProvider implements ImageDataProvider<
     normalizedDataSource: NormalizedTIFFImageDataSource,
     options?: DataProviderLoadOptions,
   ): Promise<TIFFImageData> {
-    const { signal } = options ?? {};
+    const { signal, workspace } = options ?? {};
     signal?.throwIfAborted();
 
     const { z, t } = normalizedDataSource;
-    const { tiff, pyramids, channels } = await openTIFF(
-      normalizedDataSource.source,
-      { ...options, z, t },
-    );
+    const tiff = await openTIFF(normalizedDataSource.source, {
+      signal,
+      workspace,
+    });
+    const parser = await findTIFFParser(tiff, { signal });
+    const { pyramids, channels } = await parser.load(tiff, { z, t, signal });
 
     const { GeoTIFFTileSource, pool, poolSize } = installTIFFTileSource();
     let channelsWithHistograms: TIFFChannel[] | undefined;

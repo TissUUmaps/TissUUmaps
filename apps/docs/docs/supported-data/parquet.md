@@ -42,7 +42,7 @@ A [GeoParquet](https://geoparquet.org/) file describes its geometry columns in i
 
 Polygons and multi-polygons are read as shapes. Rows holding another geometry are skipped.
 
-A geometry is not a value a table column can hold, and points are not shapes. A geometry column of points is therefore read as a **pair of coordinate columns** of the table: a `geometry` column adds `geometry[x]` and `geometry[y]`. They are used like any other numeric column, including as the coordinates of a [table](./table.md) point cloud. Their value range is read from the bounds in the `geo` metadata, without decoding the column.
+A geometry is not a value a table column can hold, and points are not shapes. A geometry column of points is therefore read as a **pair of coordinate columns** of the table: a `geometry` column adds `geometry[x]` and `geometry[y]`. They are used like any other numeric column, including as the coordinates of a [table](./table.md) point cloud. Their value range is read from the bounds in the `geo` metadata, without decoding the column, or computed from the decoded column if the metadata has no bounds.
 
 A [SpatialData](https://spatialdata.scverse.org/) shapes element is a GeoParquet file written by [GeoPandas](https://geopandas.org/), with WKB geometries. Its index is the key its tables refer to, so the [pandas index](#pandas) keys it without configuration. Polygons are read as shapes. Circles are points with a radius column, read as a table and drawn as a point cloud (see the [example](#example)).
 
@@ -105,6 +105,8 @@ A project showing the circles and the polygons of a [SpatialData](https://spatia
 ## Column types
 
 Numeric columns are read as typed arrays, with `NaN` for a null. Columns of 64-bit integers are read as doubles, and so are integer columns with nulls, or whose row groups lack null statistics; float columns keep their precision. String columns are read as they are. An `idColumn` has to hold integers or strings without nulls.
+
+The value range of a numeric column, e.g. for coloring by its values, is read from the minimum and maximum statistics of its row groups, without decoding the column. If a row group holding values lacks these statistics, the range is computed from the decoded column instead.
 
 ## Limitations
 

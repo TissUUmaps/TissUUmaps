@@ -15,10 +15,10 @@ import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 
 import {
-  useOpenProjectFile,
+  useOpenEmptyProject,
+  useOpenProjectFromFile,
   useOpenProjectFromURL,
   useOpenWorkspace,
-  useStartEmptyProject,
   workspaceUnsupportedMessage,
 } from "./hooks";
 
@@ -28,9 +28,9 @@ export type ProjectWelcomeViewProps = {
 
 export function ProjectWelcomeView({ className }: ProjectWelcomeViewProps) {
   const workspaceName = useAppStore((state) => state.workspace?.name ?? null);
-  const openProjectFile = useOpenProjectFile();
+  const openProjectFromFile = useOpenProjectFromFile();
   const openProjectFromURL = useOpenProjectFromURL();
-  const startEmptyProject = useStartEmptyProject();
+  const openEmptyProject = useOpenEmptyProject();
   const openWorkspace = useOpenWorkspace();
   const workspaceSupported = isWorkspaceSupported();
 
@@ -38,7 +38,7 @@ export function ProjectWelcomeView({ className }: ProjectWelcomeViewProps) {
     <Empty className={cn("flex-none justify-start px-6 py-8", className)}>
       <EmptyHeader>
         <EmptyMedia>
-          <img src={logoUrl} alt="" className="h-24" />
+          <img src={logoUrl} alt="" className="h-24" draggable={false} />
         </EmptyMedia>
         <EmptyTitle>Welcome to TissUUmaps</EmptyTitle>
         <EmptyDescription>
@@ -49,12 +49,12 @@ export function ProjectWelcomeView({ className }: ProjectWelcomeViewProps) {
       </EmptyHeader>
       {workspaceName !== null ? (
         <EmptyContent>
-          <Button className="w-full" onClick={openProjectFile}>
+          <Button className="w-full" onClick={openProjectFromFile}>
             <FileIcon />
             Open project from this folder…
           </Button>
           <div className="grid w-full grid-cols-2 gap-2">
-            <Button variant="outline" onClick={startEmptyProject}>
+            <Button variant="outline" onClick={openEmptyProject}>
               <FilePlusIcon />
               Start empty
             </Button>
@@ -66,7 +66,7 @@ export function ProjectWelcomeView({ className }: ProjectWelcomeViewProps) {
         </EmptyContent>
       ) : (
         <EmptyContent>
-          <Button className="w-full" onClick={openProjectFile}>
+          <Button className="w-full" onClick={openProjectFromFile}>
             <FileIcon />
             Open project file…
           </Button>
@@ -94,7 +94,7 @@ export function ProjectWelcomeView({ className }: ProjectWelcomeViewProps) {
             <Button
               variant="link"
               className="text-foreground h-auto p-0 underline"
-              onClick={startEmptyProject}
+              onClick={openEmptyProject}
             >
               Start empty
             </Button>{" "}

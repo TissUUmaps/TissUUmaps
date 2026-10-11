@@ -1,6 +1,6 @@
 {
   "name": "@tissuumaps/core",
-  "version": "0.1.0-beta.1",
+  "version": "0.1.0-beta.2",
   "description": "Core model, types and utilities shared by the TissUUmaps packages",
   "homepage": "https://tissuumaps.github.io/TissUUmaps/",
   "bugs": "https://github.com/TissUUmaps/TissUUmaps/issues",
@@ -38,16 +38,21 @@
     "@jsonforms/core": "^3.8.0",
     "@types/d3-color": "^3.1.3",
     "@types/d3-scale-chromatic": "^3.1.0",
+    "immer": "^11.1.8",
     "openseadragon": "^6.1.1",
     "zustand": "^5.0.15"
   },
   "peerDependencies": {
     "@jsonforms/core": "^3.8.0",
+    "immer": "^11.1.8",
     "openseadragon": "^6.1.1",
     "zustand": "^5.0.15"
   },
   "peerDependenciesMeta": {
     "@jsonforms/core": {
+      "optional": true
+    },
+    "immer": {
       "optional": true
     },
     "openseadragon": {

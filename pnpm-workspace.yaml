@@ -9,10 +9,5 @@ allowBuilds:
 
 minimumReleaseAge: 1440
 
-# Lets the release build install our just-published packages; a no-op in the
-# workspace, where they are linked (see scripts/prepare-registry-build.ts).
-minimumReleaseAgeExclude:
-  - "@tissuumaps/*"
-
 patchedDependencies:
   geotiff@3.0.5: patches/geotiff@3.0.5.patch

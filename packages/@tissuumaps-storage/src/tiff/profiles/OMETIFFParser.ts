@@ -43,17 +43,40 @@ const dimensionOrders = ["XYZCT", "XYZTC", "XYCTZ", "XYCZT", "XYTCZ", "XYTZC"];
  * the largest one.
  */
 export class OMETIFFParser implements TIFFParser {
+  /**
+   * Reads the name of the image a file shows (see {@link findLargestImage})
+   *
+   * @param tiff - The opened file
+   * @param options - An abort signal
+   * @returns The `Name` of the image, or `undefined` if the file has no
+   * OME-XML or the image has no name
+   */
+  static async readImageName(
+    tiff: GeoTIFF,
+    options?: { signal?: AbortSignal },
+  ): Promise<string | undefined> {
+    const root = await readOMEXML(tiff, options);
+    if (root === undefined) {
+      return undefined;
+    }
+    const largestImage = findLargestImage(root);
+    if (largestImage !== undefined) {
+      const name = largestImage.image.getAttribute("Name");
+      if (name !== null) {
+        return name.trim() || undefined;
+      }
+    }
+    return undefined;
+  }
+
   async supports(
     tiff: GeoTIFF,
     options?: { signal?: AbortSignal },
   ): Promise<boolean> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const description = await TIFFUtils.readFirstDescription(tiff, {
-      signal,
-    });
-    const root = XMLUtils.parse(description);
-    return root?.localName === rootElement;
+    const root = await readOMEXML(tiff, { signal });
+    return root !== undefined;
   }
 
   /**
@@ -67,11 +90,8 @@ export class OMETIFFParser implements TIFFParser {
   ): Promise<TIFFStructure> {
     const { z = 0, t = 0, signal } = options ?? {};
     signal?.throwIfAborted();
-    const description = await TIFFUtils.readFirstDescription(tiff, {
-      signal,
-    });
-    const root = XMLUtils.parse(description);
-    if (root?.localName !== rootElement) {
+    const root = await readOMEXML(tiff, { signal });
+    if (root === undefined) {
       throw new Error("The file has no OME-XML.");
     }
     const images = await TIFFUtils.readImages(tiff, { signal });
@@ -80,14 +100,11 @@ export class OMETIFFParser implements TIFFParser {
     const allPixels = XMLUtils.getChildren(root, "Image")
       .flatMap((image) => XMLUtils.getChildren(image, "Pixels").slice(0, 1))
       .map((pixels) => parsePixels(pixels, fileUUID));
-    if (allPixels.length === 0) {
+    const largestImage = findLargestImage(root);
+    if (largestImage === undefined) {
       throw new Error("The OME-XML describes no image.");
     }
-    const pixels = allPixels.reduce((largest, candidate) =>
-      candidate.sizeX * candidate.sizeY > largest.sizeX * largest.sizeY
-        ? candidate
-        : largest,
-    );
+    const pixels = parsePixels(largestImage.pixels, fileUUID);
     if (z < 0 || z >= pixels.sizeZ) {
       throw new Error(`z=${z} is out of bounds (SizeZ=${pixels.sizeZ}).`);
     }
@@ -124,6 +141,57 @@ export class OMETIFFParser implements TIFFParser {
       channels: TIFFUtils.hasOwnColors(pyramids) ? undefined : channels,
     };
   }
+}
+
+/**
+ * Reads the OME-XML of a file, from the `ImageDescription` of its first IFD
+ *
+ * @param tiff - The opened file
+ * @param options - An abort signal
+ * @returns The root element of the OME-XML, or `undefined` if the file has
+ * none
+ */
+async function readOMEXML(
+  tiff: GeoTIFF,
+  options?: { signal?: AbortSignal },
+): Promise<Element | undefined> {
+  const { signal } = options ?? {};
+  signal?.throwIfAborted();
+  const description = await TIFFUtils.readFirstDescription(tiff, { signal });
+  const root = XMLUtils.parse(description);
+  return root?.localName === rootElement ? root : undefined;
+}
+
+/**
+ * Finds the largest image the OME-XML describes, which is the one shown
+ *
+ * Images are compared by the `SizeX` and `SizeY` of their first `Pixels`; of
+ * equally large images, the first is taken. Images without `Pixels` are
+ * skipped.
+ *
+ * @param root - The root element of the OME-XML
+ * @returns The `Image` element and its first `Pixels` element, or `undefined`
+ * if the OME-XML describes no image
+ */
+function findLargestImage(
+  root: Element,
+): { image: Element; pixels: Element } | undefined {
+  let largest: { image: Element; pixels: Element } | undefined;
+  let largestSize = -1;
+  for (const image of XMLUtils.getChildren(root, "Image")) {
+    const pixels = XMLUtils.getChildren(image, "Pixels")[0];
+    if (pixels === undefined) {
+      continue;
+    }
+    const size =
+      XMLUtils.getIntAttribute(pixels, "SizeX", 0) *
+      XMLUtils.getIntAttribute(pixels, "SizeY", 0);
+    if (size > largestSize) {
+      largest = { image, pixels };
+      largestSize = size;
+    }
+  }
+  return largest;
 }
 
 function parsePixels(pixels: Element, fileUUID: string | null): Pixels {

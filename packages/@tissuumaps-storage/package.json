@@ -1,6 +1,6 @@
 {
   "name": "@tissuumaps/storage",
-  "version": "0.1.0-beta.1",
+  "version": "0.1.0-beta.3",
   "description": "Official data provider distribution for TissUUmaps",
   "homepage": "https://tissuumaps.github.io/TissUUmaps/",
   "bugs": "https://github.com/TissUUmaps/TissUUmaps/issues",
@@ -79,7 +79,7 @@
     "@types/papaparse": "^5.5.2",
     "geotiff": "3.0.5",
     "omezarr-tilesource": "^0.8.1",
-    "papaparse": "^5.5.4"
+    "papaparse": "5.6.0"
   },
   "devDependencies": {
     "@tissuumaps/core": "workspace:^",

@@ -15,6 +15,11 @@ declare global {
       types?: { description?: string; accept: Record<string, string[]> }[];
     }) => Promise<FileSystemFileHandle[]>;
   }
+
+  /** The drag and drop API missing from `lib.dom.d.ts` */
+  interface DataTransferItem {
+    getAsFileSystemHandle?: () => Promise<FileSystemHandle | null>;
+  }
 }
 
 /**
@@ -143,10 +148,27 @@ export async function pickWorkspacePath(
   if (handle === undefined) {
     return null;
   }
+  return await resolveWorkspacePath(handle, workspace);
+}
+
+/**
+ * Locates a file or directory within the workspace
+ *
+ * @param handle - The handle of the file or directory
+ * @param workspace - The directory handle of the open workspace
+ * @returns The workspace-relative path of the file or directory (with `/`
+ * prefix)
+ * @throws Error if it is the workspace itself or does not lie within the
+ * workspace
+ */
+export async function resolveWorkspacePath(
+  handle: FileSystemHandle,
+  workspace: FileSystemDirectoryHandle,
+): Promise<string> {
   const segments = await workspace.resolve(handle);
   if (segments === null) {
     throw new Error(
-      `The ${kind === "file" ? "file" : "folder"} is not in the connected folder`,
+      `The ${handle.kind === "file" ? "file" : "folder"} is not in the connected folder`,
     );
   }
   if (segments.length === 0) {
@@ -165,4 +187,42 @@ export async function pickWorkspacePath(
  */
 function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === "AbortError";
+}
+
+/**
+ * Reads the files and directories dropped in a drop event
+ *
+ * The items have to be read within the event, before the browser clears its
+ * data transfer; their handles are resolved afterwards. Handles are only
+ * available in browsers that support them (see {@link isWorkspaceSupported}).
+ *
+ * @param dataTransfer - The data transfer of the drop event
+ * @returns The dropped items, each as its handle (if available) and its file;
+ * without a handle, a directory cannot be told apart from a file
+ */
+export async function readDroppedItems(dataTransfer: DataTransfer): Promise<
+  {
+    handle: FileSystemHandle | null;
+    file: File | null;
+  }[]
+> {
+  const items = Array.from(dataTransfer.items)
+    .filter((item) => item.kind === "file")
+    .map((item) => ({
+      handlePromise: item.getAsFileSystemHandle?.(),
+      file: item.getAsFile(),
+    }));
+  return await Promise.all(
+    items.map(async ({ handlePromise, file }) => {
+      let handle: FileSystemHandle | null = null;
+      if (handlePromise !== undefined) {
+        try {
+          handle = await handlePromise;
+        } catch {
+          // an item whose handle cannot be obtained is read without one
+        }
+      }
+      return { handle, file };
+    }),
+  );
 }

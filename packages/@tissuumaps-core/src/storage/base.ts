@@ -139,7 +139,12 @@ export interface DataProvider<
   /** The JSON schema for the data source */
   readonly schema: JsonSchema;
 
-  /** The JSON Forms UI schema for the data source */
+  /**
+   * The JSON Forms UI schema for the data source
+   *
+   * It must not contain a control for the data source's `source`, which the
+   * application renders itself if the schema declares it, as a string.
+   */
   readonly uischema: UISchemaElement;
 
   /**
@@ -172,6 +177,70 @@ export interface DataProvider<
     workspace: FileSystemDirectoryHandle | null,
     projectSource: string | null,
   ): TNormalizedDataSource;
+
+  /**
+   * Returns whether this data provider can likely open a source
+   *
+   * Used to pick a data provider for a source the user entered or dropped,
+   * e.g. by its file extension or by cheaply reading its metadata. A data
+   * provider without this method is never picked automatically, but can
+   * still be chosen by the user. Callers treat a rejection as `false`.
+   *
+   * @param normalizedSource - The source, normalized with
+   * `SourceUtils.normalizeSource` like {@link DataProvider.normalize} does
+   * @param workspace - The directory handle of the open workspace, if any
+   * @param options - Optional abort signal
+   * @returns A promise that resolves to whether the source is supported
+   */
+  supports?(
+    normalizedSource: string,
+    workspace: FileSystemDirectoryHandle | null,
+    options?: { signal?: AbortSignal },
+  ): Promise<boolean>;
+
+  /**
+   * Reads the name a source stores in its metadata
+   *
+   * Used to name data objects added from a source the user entered or
+   * dropped. Only names stored in the source are returned, never names
+   * derived from the source itself, such as from its path. Without this
+   * method, or if it resolves to `undefined`, callers derive the name from the
+   * file name. Callers treat a rejection like `undefined`.
+   *
+   * @param normalizedSource - The source, normalized with
+   * `SourceUtils.normalizeSource` like {@link DataProvider.normalize} does
+   * @param workspace - The directory handle of the open workspace, if any
+   * @param options - Optional abort signal
+   * @returns A promise that resolves to the name, if any
+   */
+  readName?(
+    normalizedSource: string,
+    workspace: FileSystemDirectoryHandle | null,
+    options?: { signal?: AbortSignal },
+  ): Promise<string | undefined>;
+
+  /**
+   * Prepares a data source before a data object backed by it is added, or
+   * before it is saved with a changed source or type
+   *
+   * Called once per added data object, with the data source the user entered,
+   * and once per saved edit that changes the data source's `source` or `type`.
+   * May create the data objects the data source depends on, and returns the
+   * data source to add or save.
+   *
+   * @param dataSource - The data source to prepare, not normalized
+   * @param workspace - The directory handle of the open workspace, if any
+   * @param projectSource - Where the project was loaded from, if anywhere (see
+   * {@link DataProvider.normalize})
+   * @param options - Optional abort signal
+   * @returns A promise that resolves to the data source to add or save
+   */
+  prepareDataSource?(
+    dataSource: TDataSource,
+    workspace: FileSystemDirectoryHandle | null,
+    projectSource: string | null,
+    options?: { signal?: AbortSignal },
+  ): Promise<TDataSource>;
 
   /**
    * Opens a data source and returns the loaded data accessor

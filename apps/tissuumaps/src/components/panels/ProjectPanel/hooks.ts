@@ -7,6 +7,7 @@ import {
   loadProjectFromFile,
   loadProjectFromFileHandle,
   loadProjectFromURL,
+  resolveProjectSource,
   setProjectURLParam,
 } from "@/data/io/project";
 import { pickProjectFile, pickWorkspace } from "@/data/io/workspace";
@@ -18,117 +19,6 @@ import { pickProjectFileFromInput } from "./pickProjectFileFromInput";
 /** Why a folder cannot be opened, for browsers without the folder picker */
 export const workspaceUnsupportedMessage =
   "Opening a folder needs a Chromium-based browser, such as Chrome or Edge.";
-
-/**
- * Returns a callback that lets the user pick a project file, within the
- * workspace if one is open, and loads it
- *
- * Failures are logged, as the callback is called from event handlers.
- *
- * @returns The callback
- */
-export function useOpenProjectFile(): () => void {
-  const workspace = useAppStore((state) => state.workspace);
-  const setProjectOpen = useAppStore((state) => state.setProjectOpen);
-
-  // Only a file handle can be located within the workspace
-  return useCallback(() => {
-    const onLoaded = () => {
-      clearProjectURLParam();
-      setProjectOpen(true);
-    };
-    if (workspace === null) {
-      void pickProjectFileFromInput()
-        .then(async (file) => {
-          if (file !== null) {
-            await loadProjectFromFile(file);
-            onLoaded();
-          }
-        })
-        .catch((error) => {
-          console.error("Failed to load project from file", error);
-        });
-      return;
-    }
-    void pickProjectFile({ startIn: workspace })
-      .then(async (projectFile) => {
-        if (projectFile !== null) {
-          await loadProjectFromFileHandle(projectFile, workspace);
-          onLoaded();
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to load project from file", error);
-      });
-  }, [workspace, setProjectOpen]);
-}
-
-/**
- * Returns a callback that asks the user for a project URL, and loads the
- * project from it
- *
- * Failures are logged, as the callback is called from event handlers.
- *
- * @returns The callback
- */
-export function useOpenProjectFromURL(): () => void {
-  const prompt = usePromptDialog();
-
-  return useCallback(() => {
-    void prompt({ title: "Enter project URL to load" })
-      .then(async (value) => {
-        const projectUrl = value?.trim();
-        if (projectUrl) {
-          await loadProjectFromURL(projectUrl);
-          setProjectURLParam(projectUrl);
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to load project from URL", error);
-      });
-  }, [prompt]);
-}
-
-/**
- * Returns a callback that replaces the open project with an empty one, without
- * confirmation
- *
- * @returns The callback
- */
-export function useStartEmptyProject(): () => void {
-  const clearProject = useProjectStore((state) => state.clear);
-  const setProjectOpen = useAppStore((state) => state.setProjectOpen);
-
-  return useCallback(() => {
-    clearProject();
-    clearProjectURLParam();
-    setProjectOpen(true);
-  }, [clearProject, setProjectOpen]);
-}
-
-/**
- * Returns a callback that closes the open project, after confirmation
- *
- * @returns The callback
- */
-export function useCloseProject(): () => void {
-  const clearProject = useProjectStore((state) => state.clear);
-  const setProjectOpen = useAppStore((state) => state.setProjectOpen);
-  const confirm = useConfirmDialog();
-
-  return useCallback(() => {
-    void confirm({
-      title: "Close project",
-      body: "Are you sure you want to close the project? All unsaved changes will be lost.",
-    }).then((confirmed) => {
-      if (confirmed) {
-        clearProject();
-        clearProjectURLParam();
-        setProjectOpen(false);
-      }
-    });
-  }, [clearProject, confirm, setProjectOpen]);
-}
 
 /**
  * Returns a callback that lets the user pick the workspace
@@ -172,4 +62,148 @@ export function useCloseWorkspace(): () => void {
       }
     });
   }, [confirm, setWorkspace]);
+}
+
+/**
+ * Returns a callback that replaces the open project with an empty one, without
+ * confirmation
+ *
+ * @returns The callback
+ */
+export function useOpenEmptyProject(): () => void {
+  const clearProject = useProjectStore((state) => state.clear);
+  const setProjectOpen = useAppStore((state) => state.setProjectOpen);
+
+  return useCallback(() => {
+    clearProject();
+    clearProjectURLParam();
+    setProjectOpen(true);
+  }, [clearProject, setProjectOpen]);
+}
+
+/**
+ * Returns a callback that asks the user for a project URL, and loads the
+ * project from it
+ *
+ * Failures are logged, as the callback is called from event handlers.
+ *
+ * @returns The callback
+ */
+export function useOpenProjectFromURL(): () => void {
+  const prompt = usePromptDialog();
+
+  return useCallback(() => {
+    void prompt({ title: "Enter project URL to load" })
+      .then(async (value) => {
+        const projectUrl = value?.trim();
+        if (projectUrl) {
+          await loadProjectFromURL(projectUrl);
+          setProjectURLParam(projectUrl);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load project from URL", error);
+      });
+  }, [prompt]);
+}
+
+/**
+ * Returns a callback that lets the user pick a project file, within the
+ * workspace if one is open, and loads it
+ *
+ * A project file picked outside the open workspace is loaded only after
+ * confirmation, as its project-relative paths are then resolved against the
+ * workspace instead of the project file's directory (see
+ * `loadProjectFromFileHandle`). Failures are logged, as the callback is
+ * called from event handlers.
+ *
+ * @returns The callback
+ */
+export function useOpenProjectFromFile(): () => void {
+  const workspace = useAppStore((state) => state.workspace);
+  const loadProjectFile = useLoadProjectFile();
+  const confirm = useConfirmDialog();
+
+  return useCallback(() => {
+    const pickedProjectFile =
+      workspace === null
+        ? pickProjectFileFromInput()
+        : pickProjectFile({ startIn: workspace });
+    void pickedProjectFile
+      .then(async (projectFile) => {
+        if (projectFile === null) {
+          return;
+        }
+        if (
+          workspace !== null &&
+          (projectFile instanceof File ||
+            (await resolveProjectSource(projectFile, workspace)) === null) &&
+          !(await confirm({
+            title: "Open project from outside the folder",
+            body: `"${projectFile.name}" is not in the connected folder "${workspace.name}". Its relative paths will be looked up in "${workspace.name}" instead of next to the project file, so some of its data may fail to load. Open it anyway?`,
+            actionLabel: "Open",
+          }))
+        ) {
+          return;
+        }
+        await loadProjectFile(projectFile);
+      })
+      .catch((error) => {
+        console.error("Failed to load project from file", error);
+      });
+  }, [workspace, loadProjectFile, confirm]);
+}
+
+/**
+ * Returns a function that loads a project from a file and marks it open
+ *
+ * A file handle is loaded with its source if it lies within the workspace
+ * (see `loadProjectFromFileHandle`), a file without one. The project URL
+ * parameter is cleared, as it names another project.
+ *
+ * @returns The function, which rejects if the project cannot be read or
+ * parsed
+ */
+export function useLoadProjectFile(): (
+  projectFile: FileSystemFileHandle | File,
+) => Promise<void> {
+  const workspace = useAppStore((state) => state.workspace);
+  const setProjectOpen = useAppStore((state) => state.setProjectOpen);
+
+  return useCallback(
+    async (projectFile) => {
+      if (projectFile instanceof File) {
+        await loadProjectFromFile(projectFile);
+      } else {
+        await loadProjectFromFileHandle(projectFile, workspace);
+      }
+      clearProjectURLParam();
+      setProjectOpen(true);
+    },
+    [workspace, setProjectOpen],
+  );
+}
+
+/**
+ * Returns a callback that closes the open project, after confirmation
+ *
+ * @returns The callback
+ */
+export function useCloseProject(): () => void {
+  const clearProject = useProjectStore((state) => state.clear);
+  const setProjectOpen = useAppStore((state) => state.setProjectOpen);
+  const confirm = useConfirmDialog();
+
+  return useCallback(() => {
+    void confirm({
+      title: "Close project",
+      body: "Are you sure you want to close the project? All unsaved changes will be lost.",
+    }).then((confirmed) => {
+      if (confirmed) {
+        clearProject();
+        clearProjectURLParam();
+        setProjectOpen(false);
+      }
+    });
+  }, [clearProject, confirm, setProjectOpen]);
 }

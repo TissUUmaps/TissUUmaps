@@ -23,9 +23,6 @@ function createTable() {
         ? Promise.resolve(data)
         : Promise.reject(new Error(`No column "${query}"`));
     },
-    readRange() {
-      return Promise.resolve(undefined);
-    },
     close() {
       this.closeCalls++;
     },

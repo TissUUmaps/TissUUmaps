@@ -20,7 +20,7 @@ OME-Zarr data sources have the `type` `"ome-zarr"` and accept the following fiel
 | `t`      | `integer` | Timepoint to open (0-based), for images with a `t` axis. Defaults to the `defaultT` of the image's `omero` metadata, or to the middle of the axis if there is none. |
 | `table`  | `string`  | _Labels only._ ID of the table annotating the labels (see [Data model](../concepts/data-model.md)).                                                                 |
 
-A URL `source` refers to a remote OME-Zarr store, or to a remote zipped OME-Zarr file if it ends in `.ozx`. A `source` that resolves to a directory in the open workspace is opened as an OME-Zarr store, and one that resolves to a file as a zipped OME-Zarr file.
+A URL `source` refers to a remote OME-Zarr store, or to a remote zipped OME-Zarr file if its last path segment has the `.ozx` extension, in any case (e.g. `image.OZX`). A `source` that resolves to a directory in the open workspace is opened as an OME-Zarr store, and one that resolves to a file as a zipped OME-Zarr file.
 
 The `source` has to point to a **multiscales image**, i.e. the Zarr group holding the `multiscales` metadata. Plate (HCS) groups and `bioformats2raw.layout` groups are not opened directly; point to one of the images they contain instead.
 

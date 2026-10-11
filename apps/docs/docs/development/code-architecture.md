@@ -91,6 +91,8 @@ Data accessors hand their data out in fixed array types (see `types/arrays`): it
 
 A data provider first `normalize()`s a data source: it applies the defaults and normalizes the `source` with `SourceUtils.normalizeSource`, which resolves it against the project source and the open workspace into an absolute URL or a workspace-relative path. It then `load()`s the normalized data source into a `Data` accessor, resolving a workspace-relative path to a file or directory handle with `SourceUtils.resolveSource`. Data providers that accept only one kind use `SourceUtils.resolveSourceFile` or `SourceUtils.resolveSourceDirectory` instead. Accessor functions starting with `load...` are asynchronous; those starting with `get...` are synchronous. Concrete implementations live in `@tissuumaps/storage`.
 
+Data objects are added from a source, with optional help from the data providers: they can tell whether they support a source, read its name from its metadata, and prepare the data source before the data object is added, e.g. by adding a table that the data source then references. The app renders the `source` itself, so it is not part of any data provider's UI schema.
+
 ### Types
 
 The `types` module holds the contracts shared between packages and the application: the state and action types of the four application stores (`types/stores`), the plugin contract (`Plugin`, `PluginRegistry`, `PluginStores` in `types/plugins`), and the OpenSeadragon and WebGL option types, along with generic array, geometry, interaction and callback types. `palettes.ts` holds the built-in color palettes.
@@ -150,7 +152,7 @@ Each plugin has its own dedicated directory and is separately exported in the `p
 
 The TissUUmaps `Viewer` component uses an adapter pattern facilitated by the `ViewerAdapter` interface, which decouples rendering from any particular application state management. It makes use of custom hooks that each encapsulate one rendering backend from `@tissuumaps/render` (separation of concerns): `useOpenSeadragon` (image and labels renderers), `useWebGL` (points and shapes renderers, including WebGL context loss and restoration), and `useSVG` (interactive drawing overlay). The WebGL canvas element and the SVG overlay element are appended as children to the `viewer.canvas` div element (child of the `viewer.container` div element, parent of the `viewer.drawer.canvas` canvas element) to allow for proper compositioning, where `viewer` is the `OpenSeadragon.Viewer` instance. The WebGL renderers' bounds are fed back into the OpenSeadragon world bounds, so that points and shapes count towards the navigable area.
 
-The package exports `Viewer`, `ViewerAdapter`, and `ViewerControl`/`ViewerControlAnchor` for overlaying controls on the viewer. Internally, the active `OpenSeadragonContext` is exposed to descendant components via a React context (`OpenSeadragonContextProvider`), which is not part of the public API. The package is styling-agnostic and forwards `className` verbatim.
+The package exports `Viewer`, `ViewerAdapter`, and `ViewerControl`/`ViewerControlAnchor` for overlaying controls on the viewer. A `Viewer` ref exposes the active `OpenSeadragonContext` (`null` until the viewer is ready), e.g. to call `resetViewport()`. Internally, the active `OpenSeadragonContext` is exposed to descendant components via a React context (`OpenSeadragonContextProvider`), which is not part of the public API. The package is styling-agnostic and forwards `className` verbatim.
 
 ## TissUUmaps (tissuumaps)
 
@@ -158,9 +160,9 @@ In the TissUUmaps React app, absolute (`@/`) imports are used for imports across
 
 ### App
 
-`bootstrap` starts up the parts of the application that live outside of React, in this order: the built-in data providers are registered (`data/providers.ts`), the data caches are started, the plugin registry is started and exposed as `window.tissuumaps` (`plugins.ts`), the plugins shipped in `@tissuumaps/plugins` are registered (`enableBuiltInPlugins` in `plugins.ts`), the project is set to be marked open as soon as it has a source or data, loading of the project is _started_ — from the URL given in the `project` GET parameter, or from `project.tm4` if that parameter is absent or empty — and finally a `tissuumaps-loaded` event is dispatched on `window` (`events.ts`), after which other plugins register themselves (see [Plugins](./plugins.md)). `bootstrap` returns a teardown function that cancels the project load, stops watching whether the project is open, and stops the registry and the caches, in that order; it is invoked on hot module replacement.
+`bootstrap` starts up the parts of the application that live outside of React, in this order: the built-in data providers are registered (`data/providers.ts`), the data caches are started, the plugin registry is started and exposed as `window.tissuumaps` (`plugins.ts`), the plugins shipped in `@tissuumaps/plugins` are registered (`enableBuiltInPlugins` in `plugins.ts`), the project is set to be marked open as soon as it has a source or data, the expanded objects of the panels are set to be collapsed whenever another project is loaded or the project is closed (i.e. whenever the project store's `instanceId` changes), loading of the project is _started_ — from the URL given in the `project` GET parameter, or from `project.tm4` if that parameter is absent or empty — and finally a `tissuumaps-loaded` event is dispatched on `window` (`events.ts`), after which other plugins register themselves (see [Plugins](./plugins.md)). `bootstrap` returns a teardown function that cancels the project load, stops marking the project open and collapsing its expanded objects, and stops the registry and the caches, in that order; it is invoked on hot module replacement.
 
-`App` lays out the built-in panels and the plugin panels (`usePluginPanels`) with Dockview, wrapped in the `DialogProvider`.
+`App` lays out the built-in panels and the plugin panels (`usePluginPanels`) with Dockview, wrapped in the `DialogProvider`, and keeps Dockview's active panel in sync with the app store's `activePanelId` in both directions (`useActivePanelSync`).
 
 ### Project I/O
 
@@ -172,7 +174,7 @@ In the TissUUmaps React app, absolute (`@/`) imports are used for imports across
 
 ### Hooks
 
-Where possible and useful, React `useEffect` and `useCallback` hooks are encapsulated using custom hooks. Generic, feature-independent hooks live in `src/hooks` (e.g. `useControlled`, the per-type data hooks `useImageData`, `useTableData`, ... in `useData.ts`); feature-specific hooks are colocated in the feature folder they serve.
+Where possible and useful, React `useEffect` and `useCallback` hooks are encapsulated using custom hooks. Generic, feature-independent hooks live in `src/hooks` (e.g. `useControlled`, `useDraftState`); the hooks through which components and renderers access the data caches live in `src/data/hooks` (e.g. the per-type data hooks `useImageData`, `useTableData`, ... in `useData.ts`); feature-specific hooks are colocated in the feature folder they serve.
 
 ### Components
 
@@ -180,13 +182,16 @@ The user interface is built primarily using TailwindCSS, shadcn/ui, Base UI comp
 
 Components are structured as follows:
 
+- `app` - application-level components that are only used by `App` itself
 - `common` - custom low-level components that are commonly reused throughout the codebase
-- `dialogs` - the dialog provider and context, and the alert, confirm and prompt dialogs
+- `controls` - application-specific components ("controls") used across panels and widgets
+- `dialogs` - dialogs that are opened imperatively, e.g. alerts, and the provider that shows them
+- `jsonforms` - the JSON Forms renderer set of the data source configuration forms: `renderers.ts` and `cells.ts` register the controls, layouts and cells in the `controls`, `layouts` and `cells` folders, named after the JSON Forms concepts (unrelated to the `controls` category above)
 - `panels` - high-level UI building blocks (layout components) that are used as Dockview panels
 - `ui` - shadcn/ui components, adapted to the application as needed (be careful when updating!)
-- `widgets` - independent high-level components (e.g. configuration widgets) used across panels; the JSON Forms-based data source configuration forms live under `widgets/DataSourceWidget`
+- `widgets` - widgets used across panels (e.g. configuration widgets); a widget is a self-contained section of a panel that edits one aspect of an object, and widgets used by a single panel live in that panel's folder instead
 
-A feature component lives in a PascalCase folder named after the component (e.g. `components/panels/ImagesPanel`), with an `index.tsx` that _is_ the component (not a re-export). Everything that belongs to the feature sits next to it as flat files named by role, e.g. `hooks.ts`, `adapter.ts`, `category.ts`, sub-components such as `ImageSettingsWidget.tsx`, and feature hooks such as `useGroupColumn.tsx`; a sub-feature of its own (e.g. `ProjectPanel/LayersWidget`) is a nested PascalCase folder following the same rule. There are no `types.ts`/`utils.ts` grab-bags. Anything with behavior (dialogs, providers, widgets, panels) follows this rule, even if it sits right next to `ui`. Only `ui` and `common` consist of flat, kebab-case single files (e.g. `ui/button.tsx`), as they are shadcn-style wrappers over `@base-ui/react`.
+A feature component lives in a PascalCase folder named after the component (e.g. `components/panels/ImagesPanel`), with an `index.tsx` that _is_ the component (not a re-export). Everything that belongs to the feature sits next to it as flat files named by role, e.g. `hooks.ts`, `adapter.ts`, `category.ts`, sub-components such as `ImageSettingsWidget.tsx`, and feature hooks such as `useGroupColumn.tsx`; a sub-feature of its own (e.g. `ProjectPanel/LayersWidget`) is a nested PascalCase folder following the same rule. There are no `types.ts`/`utils.ts` grab-bags. Anything with behavior (dialogs, providers, widgets, panels) follows this rule, even if it sits right next to `ui`. Only `ui` and `common` consist of flat, kebab-case single files (e.g. `ui/button.tsx`), as they are shadcn-style wrappers over `@base-ui/react`. `jsonforms` is laid out by JSON Forms concept instead (see above), as its renderers and cells are registered as sets rather than imported individually.
 
 A React context is split into two files: `context.ts` holds the context object and its hook (`createContext`/`useContext` only), and `ContextProvider.tsx` holds the provider component, so that the hook can be imported without pulling in the provider's dependencies.
 
@@ -231,7 +236,20 @@ For deployment, `DOCUSAURUS_BASE_URL` sets the path the documentation is served 
 
 ## Release scripts (scripts)
 
-The dependency-free TypeScript scripts in `scripts/` are run directly by Node (`node scripts/<name>.ts`) by the release workflow (`.github/workflows/release.yaml`, see [Continuous delivery](./development-workflow.md#continuous-delivery)):
+`scripts/gha-assemble-pages.ts` assembles the GitHub Pages site from the release assets. It is a dependency-free TypeScript script that the release workflow (`.github/workflows/release.yaml`, see [Continuous delivery](./development-workflow.md#continuous-delivery)) runs directly with Node.
 
-- `prepare-registry-build.ts` prepares a checkout for building the application from the _published_ `@tissuumaps/*` packages instead of the workspace sources: it restricts the pnpm workspace to the application and pins the application's `workspace:` dependencies to the versions in the checkout. `verify-registry-deps.ts` then fails unless every package was installed from the registry with the expected version and manifest. Both read the packages through `lib/workspace.ts`. Neither result is ever committed.
-- `assemble-pages.ts` assembles the GitHub Pages site from the release assets: of every MAJOR.MINOR line it deploys the highest stable version under `<version>/`, plus the highest prerelease above it if there is one (or the highest prerelease alone while the line has no stable version); a prerelease is only deployed while no stable version above it exists at all, so abandoned prerelease lines do not accumulate; every other version redirects to the lowest deployed version at or above it (a stable one for a stable version, so that a prerelease never replaces a stable version for its users), or to the latest version when there is none, keeping the rest of the path. A release whose site asset is missing cannot be deployed and only gets a redirect, like a superseded version. The site root redirects to the latest stable version (or the latest prerelease while there is no stable one) and `docs/` to its documentation; while no version is deployed at all, it reports so to the workflow, which deploys the current branch instead. Custom HTML (the Matomo snippet) is inserted into the deployed application pages only, never into the release assets. The retention rules live in `lib/retention.ts`, the redirect rules in `lib/redirect.ts` (inlined into the generated redirect pages) and version precedence in `lib/semver.ts`; all three are covered by `pnpm run test:scripts`.
+The site has one directory per MAJOR.MINOR line, `<MAJOR.MINOR>/`, which holds one version of the application with its documentation under `docs/`:
+
+- A line deploys its highest stable version, or its highest prerelease while it has no stable version. A prerelease of a later patch (e.g. `4.0.1-rc.1` after `4.0.0`) is therefore never deployed.
+- A line of prereleases only is deployed only while no stable version above it exists, so abandoned prerelease lines do not accumulate.
+- A release without its site assets (e.g. after a failed upload) cannot be deployed; its line falls back to the highest version that can.
+
+Redirects:
+
+- The site root goes to the latest stable line (or the latest prerelease line while there is no stable one).
+- `docs/` goes to the latest line's documentation, keeping the rest of the path.
+- Any other path outside the deployed lines, including a line that is not deployed, goes to the latest line's root (through the script of `404.html`). A missing page inside a deployed line is a genuine 404.
+
+While no version can be deployed at all, the script fails, so that the deployed site is left as it is. Custom HTML (the Matomo snippet in `.github/pages/custom.html`) replaces the `<!-- GHA_CUSTOM_HTML -->` marker of the deployed application pages only, never of the release assets; a deployed page without the marker fails the script.
+
+All functions are exported, among them the rules for which versions to deploy (`selectVersionsToDeploy`), the redirect rules (`resolveRedirectTarget`) and version precedence (`compareVersions`), so that `scripts/gha-assemble-pages.test.ts` can import them without running the script (`pnpm run test:scripts`). The redirect pages run `resolveRedirectTarget` in the browser, inlined through its source text.

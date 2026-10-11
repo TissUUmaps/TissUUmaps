@@ -1,15 +1,15 @@
-import { type Image, createImage } from "@tissuumaps/core";
+import type { Image } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
-import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
-import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { AddDataObjectButton } from "@/components/controls/AddDataObjectButton";
 import {
   SortableObjectList,
   SortableObjectListItem,
-} from "@/components/widgets/ObjectList";
-import { useImageData } from "@/hooks/useData";
-import { useExpandedImageIds } from "@/hooks/useExpandedIds";
+} from "@/components/controls/ObjectList";
+import { useAddImageDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
+import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { useImageData } from "@/data/hooks/useData";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -18,18 +18,15 @@ import { ChannelSettingsWidget } from "./ChannelSettingsWidget";
 import { ImageSettingsWidget } from "./ImageSettingsWidget";
 
 export type ImagesPanelProps = {
-  /** Brings the panel to the front */
-  onShow: () => void;
   className?: string;
 };
 
-export function ImagesPanel({ onShow, className }: ImagesPanelProps) {
-  const [expandedIds, setExpandedIds] = useExpandedImageIds(onShow);
-  const imageDataProviders = useAppStore((state) => state.imageDataProviders);
+export function ImagesPanel({ className }: ImagesPanelProps) {
+  const expandedImageIds = useAppStore((state) => state.expandedImageIds);
+  const setExpandedImageIds = useAppStore((state) => state.setExpandedImageIds);
+  const addDialogParams = useAddImageDialogParams();
 
-  const layers = useProjectStore((state) => state.layers);
   const images = useProjectStore((state) => state.images);
-  const addImage = useProjectStore((state) => state.addImage);
   const moveImage = useProjectStore((state) => state.moveImage);
 
   return (
@@ -37,28 +34,14 @@ export function ImagesPanel({ onShow, className }: ImagesPanelProps) {
       <SortableObjectList
         objects={images}
         onMove={moveImage}
-        expandedIds={expandedIds}
-        onExpandedIdsChange={setExpandedIds}
+        expandedIds={expandedImageIds}
+        onExpandedIdsChange={setExpandedImageIds}
       >
         {(image, index) => (
           <ImageAccordionItem key={image.id} image={image} index={index} />
         )}
       </SortableObjectList>
-      <AddDataObjectDialog
-        title="Add image"
-        layers={layers}
-        dataProviders={imageDataProviders}
-        onAdd={(name, layerId, dataSource) => {
-          if (!layerId) return;
-          const image = createImage({
-            id: crypto.randomUUID(),
-            name,
-            dataSource,
-            layer: layerId,
-          });
-          addImage(image);
-        }}
-      />
+      <AddDataObjectButton {...addDialogParams} />
     </div>
   );
 }

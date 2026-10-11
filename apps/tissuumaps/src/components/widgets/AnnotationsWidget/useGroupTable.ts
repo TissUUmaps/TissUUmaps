@@ -6,9 +6,8 @@ import {
   type TableColumnRef,
 } from "@tissuumaps/core";
 
-import { useItemGroupCounts } from "@/hooks/useItemGroupCounts";
-
 import { getDominantGroupByColumn } from "./getDominantGroupByColumn";
+import { useItemGroupCounts } from "./useItemGroupCounts";
 
 /** A setting of an annotated object and its configuration */
 export type GroupTableSetting = {

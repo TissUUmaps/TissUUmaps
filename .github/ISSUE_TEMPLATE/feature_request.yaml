@@ -1,0 +1,57 @@
+name: Feature Request
+description: Request a feature.
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to request this feature!
+  - type: dropdown
+    id: app-or-package
+    attributes:
+      label: Application or package
+      description: Please select the application(s) or package(s) (if any) that the feature request relates to.
+      multiple: true
+      options:
+        - tissuumaps
+        - "@tissuumaps/core"
+        - "@tissuumaps/render"
+        - "@tissuumaps/storage"
+        - "@tissuumaps/plugins"
+        - "@tissuumaps/react"
+        - Other / not sure
+        - docs
+  - type: textarea
+    id: feature
+    attributes:
+      label: Feature
+      description: Please provide a clear and concise description of the feature proposal.
+      placeholder: What feature would you like to see?
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Please outline the motivation for the proposal. Is your feature request related to a problem? If this is related to another GitHub issue, please link it here too.
+      placeholder: Why is this feature needed?
+    validations:
+      required: true
+  - type: textarea
+    id: pitch
+    attributes:
+      label: Pitch
+      description: Please provide a clear and concise description of what you want to happen.
+      placeholder: What do you want to happen?
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Please provide a clear and concise description of any alternative solutions or features you've considered, if any.
+      placeholder: What alternatives have you considered?
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Please provide any additional information, context or screenshots regarding the feature request here.
+      placeholder: Add any other context about the feature request here.

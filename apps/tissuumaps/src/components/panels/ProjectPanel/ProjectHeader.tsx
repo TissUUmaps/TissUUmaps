@@ -13,23 +13,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { saveAndDownloadProjectToJSON } from "@/data/io/project";
 import { cn } from "@/lib/utils";
+import { PanelId } from "@/panels";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
-import { PanelId } from "../panelId";
 import { ProjectMenu } from "./ProjectMenu";
 import { formatProjectSource } from "./formatProjectSource";
 
 export type ProjectHeaderProps = {
-  onShowPanel: (panelId: PanelId) => void;
   className?: string;
 };
 
-export function ProjectHeader({ onShowPanel, className }: ProjectHeaderProps) {
+export function ProjectHeader({ className }: ProjectHeaderProps) {
   const name = useProjectStore((state) => state.name);
   const setName = useProjectStore((state) => state.setName);
   const source = useProjectStore((state) => state.source);
   const workspaceName = useAppStore((state) => state.workspace?.name ?? null);
+  const setActivePanelId = useAppStore((state) => state.setActivePanelId);
   const imageCount = useProjectStore((state) => state.images.length);
   const labelsCount = useProjectStore((state) => state.labels.length);
   const pointsCount = useProjectStore((state) => state.points.length);
@@ -122,7 +122,7 @@ export function ProjectHeader({ onShowPanel, className }: ProjectHeaderProps) {
                 variant="secondary"
                 size="xs"
                 className="font-normal"
-                onClick={() => onShowPanel(panelId)}
+                onClick={() => setActivePanelId(panelId)}
               >
                 <Icon className="text-muted-foreground" />
                 {count} {count === 1 ? singularLabel : pluralLabel}

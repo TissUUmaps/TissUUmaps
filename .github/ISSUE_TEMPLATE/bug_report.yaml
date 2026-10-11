@@ -6,12 +6,21 @@ body:
   - type: markdown
     attributes:
       value: Thanks for taking the time to report this bug!
-  - type: input
+  - type: dropdown
     id: app-or-package
     attributes:
       label: Application or package
-      description: Please specify the application or package (if any) where you encountered the bug.
-      placeholder: e.g., tissuumaps, docs, @tissuumaps/core, @tissuumaps/react, etc.
+      description: Please select the application(s) or package(s) (if any) where you encountered the bug.
+      multiple: true
+      options:
+        - tissuumaps
+        - "@tissuumaps/core"
+        - "@tissuumaps/render"
+        - "@tissuumaps/storage"
+        - "@tissuumaps/plugins"
+        - "@tissuumaps/react"
+        - Other / not sure
+        - docs
   - type: textarea
     id: bug-report
     attributes:

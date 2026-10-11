@@ -10,8 +10,8 @@ import type {
  * Starts serving one hierarchical table from the calling Web Worker
  *
  * Call once from a worker entry script. One `open` request opens the store,
- * `column` and `range` requests then read from it. Responses carry the id
- * and the operation of their request, so several can be in flight at once.
+ * `column` requests then read from it. Responses carry the id and the
+ * operation of their request, so several can be in flight at once.
  *
  * @param openStore - Opens the store of a file or URL
  * @returns A teardown callback that stops serving and closes the open table
@@ -68,13 +68,6 @@ export function startHierarchicalTableServer(
                 ? [data.buffer]
                 : undefined,
             );
-            break;
-          }
-          case "range": {
-            const range = await getTable().readRange(event.data.column, {
-              numRows: event.data.numRows,
-            });
-            ctx.postMessage({ id, op: "range", range });
             break;
           }
           default:

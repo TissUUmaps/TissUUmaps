@@ -1,4 +1,10 @@
-import { type ReactNode, useEffect, useState } from "react";
+import {
+  type ReactNode,
+  type Ref,
+  useEffect,
+  useImperativeHandle,
+  useState,
+} from "react";
 
 import { type Color, ColorUtils, type Dims, type Rect } from "@tissuumaps/core";
 import type { OpenSeadragonContext } from "@tissuumaps/render";
@@ -14,6 +20,7 @@ export type ViewerProps = {
   backgroundColor: Color;
   children?: ReactNode;
   className?: string;
+  ref?: Ref<OpenSeadragonContext>;
 };
 
 export function Viewer({
@@ -21,8 +28,15 @@ export function Viewer({
   backgroundColor,
   children,
   className,
+  ref,
 }: ViewerProps) {
   const [osContext, setOSContext] = useState<OpenSeadragonContext | null>(null);
+
+  useImperativeHandle<OpenSeadragonContext | null, OpenSeadragonContext | null>(
+    ref,
+    () => osContext,
+    [osContext],
+  );
 
   const { initOS, osRef, osReady, updateOSContentBounds } = useOpenSeadragon(
     adapter,

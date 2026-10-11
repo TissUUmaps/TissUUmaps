@@ -1,8 +1,9 @@
-import { type Table, createTable } from "@tissuumaps/core";
+import type { Table } from "@tissuumaps/core";
 
-import { AddDataObjectDialog } from "@/components/widgets/AddDataObjectDialog";
+import { AddDataObjectButton } from "@/components/controls/AddDataObjectButton";
+import { ObjectList, ObjectListItem } from "@/components/controls/ObjectList";
+import { useAddTableDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
-import { ObjectList, ObjectListItem } from "@/components/widgets/ObjectList";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
@@ -12,30 +13,23 @@ export type TablesPanelProps = {
 };
 
 export function TablesPanel({ className }: TablesPanelProps) {
-  const tableDataProviders = useAppStore((state) => state.tableDataProviders);
+  const expandedTableIds = useAppStore((state) => state.expandedTableIds);
+  const setExpandedTableIds = useAppStore((state) => state.setExpandedTableIds);
+  const addDialogParams = useAddTableDialogParams();
 
   const tables = useProjectStore((state) => state.tables);
-  const addTable = useProjectStore((state) => state.addTable);
 
   return (
     <div className={cn("flex flex-col gap-y-2", className)}>
-      <ObjectList>
+      <ObjectList
+        expandedIds={expandedTableIds}
+        onExpandedIdsChange={setExpandedTableIds}
+      >
         {tables.map((table) => (
           <TableAccordionItem key={table.id} table={table} />
         ))}
       </ObjectList>
-      <AddDataObjectDialog
-        title="Add table"
-        dataProviders={tableDataProviders}
-        onAdd={(name, _layerId, dataSource) => {
-          const table = createTable({
-            id: crypto.randomUUID(),
-            name,
-            dataSource,
-          });
-          addTable(table);
-        }}
-      />
+      <AddDataObjectButton {...addDialogParams} />
     </div>
   );
 }

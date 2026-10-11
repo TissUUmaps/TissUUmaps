@@ -95,13 +95,6 @@ describe("startHierarchicalTableServer", () => {
     expect(transfer).toEqual([(message as { data: Float64Array }).data.buffer]);
   });
 
-  it("responds with the range of a column", async () => {
-    const { request } = serve();
-    await request({ id: 0, op: "open", source: "a.h5" });
-    const { message } = await request({ id: 1, op: "range", column: "a" });
-    expect(message).toEqual({ id: 1, op: "range", range: [1, 3] });
-  });
-
   it("responds with the error of a failed request", async () => {
     const { request } = serve();
     expect(

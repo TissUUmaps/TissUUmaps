@@ -1,11 +1,9 @@
 import {
   type DockviewApi,
   DockviewDefaultTab,
-  type DockviewPanelApi,
   DockviewReact,
   type DockviewReadyEvent,
   type DockviewTheme,
-  type IDockviewHeaderActionsProps,
   type IDockviewPanelHeaderProps,
   type IDockviewPanelProps,
 } from "dockview-react";
@@ -14,9 +12,14 @@ import { type ReactNode, useLayoutEffect, useState } from "react";
 
 import { IconButton } from "@/components/common/icon-button";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { getPluginPanelId, usePluginPanels } from "@/hooks/usePluginPanels";
+import { useActivePanelSync } from "@/hooks/useActivePanelSync";
+import { useFileDragTracking } from "@/hooks/useFileDrag";
+import { usePluginPanels } from "@/hooks/usePluginPanels";
 
 import "./App.css";
+import { NotificationCenter } from "./components/app/NotificationCenter";
+import { PanelDropTarget } from "./components/app/PanelDropTarget";
+import { PluginMenu } from "./components/app/PluginMenu";
 import { DialogProvider } from "./components/dialogs/DialogProvider";
 import { ImagesPanel } from "./components/panels/ImagesPanel";
 import { LabelsPanel } from "./components/panels/LabelsPanel";
@@ -26,9 +29,7 @@ import { ProjectPanel } from "./components/panels/ProjectPanel";
 import { ShapesPanel } from "./components/panels/ShapesPanel";
 import { TablesPanel } from "./components/panels/TablesPanel";
 import { ViewerPanel } from "./components/panels/ViewerPanel";
-import { PanelId } from "./components/panels/panelId";
-import { NotificationCenter } from "./components/widgets/NotificationCenter";
-import { PluginMenu } from "./components/widgets/PluginMenu";
+import { PanelId } from "./panels";
 import { pluginRegistry } from "./plugins";
 import { useSettingsStore } from "./stores/settings";
 
@@ -54,51 +55,50 @@ function ScrollablePanelContent({ children }: { children: ReactNode }) {
   );
 }
 
-/** Brings a dockview panel to the front */
-function showPanel(api: DockviewPanelApi): void {
-  // dockview re-opens a panel that is activated while already active, which
-  // re-attaches its content and resets the scroll positions within
-  if (!api.isActive) {
-    api.setActive();
-  }
-}
-
 /** The panels that can be shown in the dockview layout, by component name */
 const dockviewComponents = {
   ViewerPanel: () => <ViewerPanel className="size-full" />,
-  ProjectPanel: (props: IDockviewPanelProps) => (
-    <ScrollablePanelContent>
-      <ProjectPanel
-        onShowPanel={(panelId) =>
-          props.containerApi.getPanel(panelId)?.api.setActive()
-        }
-      />
-    </ScrollablePanelContent>
+  ProjectPanel: () => (
+    <PanelDropTarget panelId={PanelId.project} variant="content">
+      <ScrollablePanelContent>
+        <ProjectPanel />
+      </ScrollablePanelContent>
+    </PanelDropTarget>
   ),
-  ImagesPanel: (props: IDockviewPanelProps) => (
-    <ScrollablePanelContent>
-      <ImagesPanel onShow={() => showPanel(props.api)} />
-    </ScrollablePanelContent>
+  ImagesPanel: () => (
+    <PanelDropTarget panelId={PanelId.images} variant="content">
+      <ScrollablePanelContent>
+        <ImagesPanel />
+      </ScrollablePanelContent>
+    </PanelDropTarget>
   ),
-  LabelsPanel: (props: IDockviewPanelProps) => (
-    <ScrollablePanelContent>
-      <LabelsPanel onShow={() => showPanel(props.api)} />
-    </ScrollablePanelContent>
+  LabelsPanel: () => (
+    <PanelDropTarget panelId={PanelId.labels} variant="content">
+      <ScrollablePanelContent>
+        <LabelsPanel />
+      </ScrollablePanelContent>
+    </PanelDropTarget>
   ),
-  PointsPanel: (props: IDockviewPanelProps) => (
-    <ScrollablePanelContent>
-      <PointsPanel onShow={() => showPanel(props.api)} />
-    </ScrollablePanelContent>
+  PointsPanel: () => (
+    <PanelDropTarget panelId={PanelId.points} variant="content">
+      <ScrollablePanelContent>
+        <PointsPanel />
+      </ScrollablePanelContent>
+    </PanelDropTarget>
   ),
-  ShapesPanel: (props: IDockviewPanelProps) => (
-    <ScrollablePanelContent>
-      <ShapesPanel onShow={() => showPanel(props.api)} />
-    </ScrollablePanelContent>
+  ShapesPanel: () => (
+    <PanelDropTarget panelId={PanelId.shapes} variant="content">
+      <ScrollablePanelContent>
+        <ShapesPanel />
+      </ScrollablePanelContent>
+    </PanelDropTarget>
   ),
   TablesPanel: () => (
-    <ScrollablePanelContent>
-      <TablesPanel />
-    </ScrollablePanelContent>
+    <PanelDropTarget panelId={PanelId.tables} variant="content">
+      <ScrollablePanelContent>
+        <TablesPanel />
+      </ScrollablePanelContent>
+    </PanelDropTarget>
   ),
   PluginPanel: (props: IDockviewPanelProps<{ pluginId: string }>) => (
     <ScrollablePanelContent>
@@ -117,7 +117,11 @@ const dockviewTabComponents = {
     return <DockviewDefaultTab hideClose={false} {...props} />;
   },
   PersistentPanelHeader: (props: IDockviewPanelHeaderProps) => {
-    return <DockviewDefaultTab hideClose={true} {...props} />;
+    return (
+      <PanelDropTarget panelId={props.api.id} variant="tab">
+        <DockviewDefaultTab hideClose={true} {...props} />
+      </PanelDropTarget>
+    );
   },
   PluginPanelHeader: (
     props: IDockviewPanelHeaderProps<{ pluginId: string }>,
@@ -138,20 +142,12 @@ const dockviewTabComponents = {
  * The plugins menu and the dark mode toggle shown at the right end of the
  * dockview tab bar
  */
-function DockviewRightHeaderActionsComponent(
-  props: IDockviewHeaderActionsProps,
-) {
+function DockviewRightHeaderActionsComponent() {
   const dark = useSettingsStore((state) => state.dark);
   const setDark = useSettingsStore((state) => state.setDark);
   return (
     <div className="flex">
-      <PluginMenu
-        onShowPlugin={(pluginId) =>
-          props.containerApi
-            .getPanel(getPluginPanelId(pluginId))
-            ?.api.setActive()
-        }
-      />
+      <PluginMenu />
       <IconButton
         label={dark ? "Light mode" : "Dark mode"}
         variant="default"
@@ -244,6 +240,8 @@ export function App() {
 
   // The panels contributed by plugins join the group of the project panel
   usePluginPanels(dockviewApi, PanelId.project);
+  useActivePanelSync(dockviewApi);
+  useFileDragTracking();
 
   // Before paint, so that React never renders a light frame in dark mode
   // https://tailwindcss.com/docs/dark-mode

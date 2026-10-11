@@ -94,15 +94,13 @@ describe("HierarchicalTableWorkerClient", () => {
         id: 1,
       });
     });
-  });
 
-  describe("readRange", () => {
     it("matches responses to requests by id", async () => {
       const { worker, client } = await openClient();
-      const first = client.readRange("a");
-      const second = client.readRange("b");
-      worker.respond({ id: 2, op: "range", range: [2, 3] });
-      worker.respond({ id: 1, op: "range", range: [0, 1] });
+      const first = client.readColumn("a");
+      const second = client.readColumn("b");
+      worker.respond({ id: 2, op: "column", data: [2, 3] });
+      worker.respond({ id: 1, op: "column", data: [0, 1] });
       await expect(first).resolves.toEqual([0, 1]);
       await expect(second).resolves.toEqual([2, 3]);
     });
@@ -110,7 +108,7 @@ describe("HierarchicalTableWorkerClient", () => {
     it("ignores a response without a pending request", async () => {
       const { worker } = await openClient();
       expect(() =>
-        worker.respond({ id: 7, op: "range", range: undefined }),
+        worker.respond({ id: 7, op: "column", data: [] }),
       ).not.toThrow();
     });
 
@@ -118,11 +116,11 @@ describe("HierarchicalTableWorkerClient", () => {
       const { worker, client } = await openClient();
       const controller = new AbortController();
       const reason = new Error("aborted");
-      const range = client.readRange("a", { signal: controller.signal });
+      const data = client.readColumn("a", { signal: controller.signal });
       controller.abort(reason);
-      await expect(range).rejects.toBe(reason);
+      await expect(data).rejects.toBe(reason);
       expect(() =>
-        worker.respond({ id: 1, op: "range", range: [0, 1] }),
+        worker.respond({ id: 1, op: "column", data: [0, 1] }),
       ).not.toThrow();
     });
 
@@ -130,7 +128,7 @@ describe("HierarchicalTableWorkerClient", () => {
       const { worker, client } = await openClient();
       const reason = new Error("aborted");
       await expect(
-        client.readRange("a", { signal: AbortSignal.abort(reason) }),
+        client.readColumn("a", { signal: AbortSignal.abort(reason) }),
       ).rejects.toBe(reason);
       expect(worker.messages).toHaveLength(1);
     });
@@ -138,16 +136,16 @@ describe("HierarchicalTableWorkerClient", () => {
     it("ignores an abort after the response", async () => {
       const { worker, client } = await openClient();
       const controller = new AbortController();
-      const range = client.readRange("a", { signal: controller.signal });
-      worker.respond({ id: 1, op: "range", range: [0, 1] });
+      const data = client.readColumn("a", { signal: controller.signal });
+      worker.respond({ id: 1, op: "column", data: [0, 1] });
       controller.abort();
-      await expect(range).resolves.toEqual([0, 1]);
+      await expect(data).resolves.toEqual([0, 1]);
     });
 
     it("rejects all pending requests when the worker fails", async () => {
       const { worker, client } = await openClient();
-      const first = client.readRange("a");
-      const second = client.readRange("b");
+      const first = client.readColumn("a");
+      const second = client.readColumn("b");
       worker.onerror!({ message: "Worker crashed" } as ErrorEvent);
       await expect(first).rejects.toThrow("Worker crashed");
       await expect(second).rejects.toThrow("Worker crashed");
@@ -156,42 +154,29 @@ describe("HierarchicalTableWorkerClient", () => {
 
     it("rejects all pending requests when a response cannot be read", async () => {
       const { worker, client } = await openClient();
-      const range = client.readRange("a");
+      const data = client.readColumn("a");
       worker.onmessageerror!({} as MessageEvent);
-      await expect(range).rejects.toThrow(
+      await expect(data).rejects.toThrow(
         "Failed to deserialize worker response.",
       );
       expect(worker.terminateCalls).toBe(1);
-    });
-
-    it("requests the range with the row count and returns it", async () => {
-      const { worker, client } = await openClient();
-      const range = client.readRange("obs/area", { numRows: 3 });
-      worker.respond({ id: 1, op: "range", range: [1, 3] });
-      await expect(range).resolves.toEqual([1, 3]);
-      expect(worker.messages[1]).toEqual({
-        op: "range",
-        column: "obs/area",
-        numRows: 3,
-        id: 1,
-      });
     });
   });
 
   describe("close", () => {
     it("rejects pending requests and terminates the worker once", async () => {
       const { worker, client } = await openClient();
-      const range = client.readRange("a");
+      const data = client.readColumn("a");
       client.close();
       client.close();
-      await expect(range).rejects.toThrow("Worker has been terminated");
+      await expect(data).rejects.toThrow("Worker has been terminated");
       expect(worker.terminateCalls).toBe(1);
     });
 
     it("rejects later requests without posting", async () => {
       const { worker, client } = await openClient();
       client.close();
-      await expect(client.readRange("a")).rejects.toThrow(
+      await expect(client.readColumn("a")).rejects.toThrow(
         "Worker has been terminated",
       );
       expect(worker.messages).toHaveLength(1);
