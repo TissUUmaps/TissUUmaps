@@ -64,7 +64,6 @@ export abstract class WebGLRendererBase<
 
   private _model?: { layers: Layer[]; objects: TObject[] };
   private _lastSyncState?: object;
-  private _hasUnreportedChanges = false;
   private readonly _renderedObjects = new Map<
     string,
     Map<string, TRenderedObject>
@@ -164,10 +163,10 @@ export abstract class WebGLRendererBase<
    *
    * Starts loading the objects of the model (see {@link loadObjects}), and
    * right away drops the rendered objects that none of them addresses. Each
-   * object is then synchronized on its own, as soon as its data has loaded: its
-   * rendered object is reused or dropped, the object is prepared (see
-   * {@link prepareRenderedObject}), and the preparation is uploaded in one
-   * synchronous block (see {@link createRenderedObject} and
+   * object is then synchronized on its own, as soon as its data has loaded: the
+   * object is prepared (see {@link prepareRenderedObject}), and the preparation
+   * is uploaded in one synchronous block, either into the reused rendered
+   * object or into one that replaces it (see {@link createRenderedObject} and
    * {@link updateRenderedObject}). A draw thus never sees a half-updated
    * object, and a slow or failing object never holds back the others.
    *
@@ -178,8 +177,7 @@ export abstract class WebGLRendererBase<
    *
    * An object whose data or preparation fails, or that has nothing to render,
    * is logged and dropped. A synchronization that fails or is aborted leaves
-   * the model unsynchronized (see {@link _discardSyncState}). The next one that
-   * completes reports the changes it made.
+   * the model unsynchronized (see {@link _discardSyncState}).
    *
    * @param syncContext - The inputs to synchronize with: the tables and
    * group-to-value maps that the objects resolve their properties from, and the
@@ -188,14 +186,13 @@ export abstract class WebGLRendererBase<
    * @param options - Optional abort signal, and a callback that is called
    * synchronously whenever a rendered object is added, updated or dropped, so
    * that the caller can draw each object as soon as it is ready
-   * @returns A promise that resolves to whether any rendered object changed
-   * since the last completed synchronization
+   * @returns A promise that resolves once all objects have been synchronized
    * @throws Error if no model has been set (see {@link setModel})
    */
   async synchronize(
     syncContext: TSyncContext,
     options?: { signal?: AbortSignal; onChange?: () => void },
-  ): Promise<boolean> {
+  ): Promise<void> {
     const { signal, onChange } = options ?? {};
     signal?.throwIfAborted();
     const syncState = this._recordSyncState();
@@ -226,9 +223,6 @@ export abstract class WebGLRendererBase<
       this._discardSyncState(syncState);
       throw error;
     }
-    const hasUnreportedChanges = this._hasUnreportedChanges;
-    this._hasUnreportedChanges = false;
-    return hasUnreportedChanges;
   }
 
   /**
@@ -553,7 +547,6 @@ export abstract class WebGLRendererBase<
       this._renderedObjects.set(layerId, renderedObjects);
     }
     renderedObjects.set(object.id, renderedObject);
-    this._hasUnreportedChanges = true;
   }
 
   /**
@@ -566,7 +559,6 @@ export abstract class WebGLRendererBase<
       .get(renderedObject.ref.layerId)
       ?.delete(renderedObject.ref.object.id);
     this.destroyRenderedObject(renderedObject);
-    this._hasUnreportedChanges = true;
   }
 
   /**
@@ -579,7 +571,6 @@ export abstract class WebGLRendererBase<
       }
     }
     this._renderedObjects.clear();
-    this._hasUnreportedChanges = true;
   }
 
   /**
@@ -873,11 +864,12 @@ export abstract class WebGLRendererBase<
    * Synchronizes the rendered object of one object and layer, once its data has loaded
    *
    * The rendered object kept under the layer and object is reused if its items
-   * and data source match the new reference, which it then adopts. Otherwise,
-   * it is dropped. The object is then prepared and uploaded (see
-   * {@link synchronize}). If the object's data failed to load, or it has no
-   * items on the layer, it is only dropped. So is it if its preparation fails or
-   * finds nothing to render, which is logged.
+   * and data source match the new reference, which it then adopts. The object
+   * is then prepared and uploaded (see {@link synchronize}). A rendered object
+   * that is not reused stays drawn until its replacement is uploaded, and is
+   * then dropped in the same synchronous block. If the object's data failed to
+   * load, or it has no items on the layer, it is only dropped. So is it if its
+   * preparation fails or finds nothing to render, which is logged.
    *
    * @param layerId - The ID of the layer
    * @param objectId - The ID of the object
@@ -905,26 +897,24 @@ export abstract class WebGLRendererBase<
     }
     let renderedObject;
     const oldRenderedObject = this._renderedObjects.get(layerId)?.get(objectId);
-    if (oldRenderedObject !== undefined) {
-      if (
-        newRef !== null &&
-        oldRenderedObject.ref.itemIds === newRef.itemIds &&
-        oldRenderedObject.ref.itemsMask === newRef.itemsMask &&
-        // check data source configuration instead of data
-        deepEqual(
-          oldRenderedObject.ref.object.dataSource,
-          newRef.object.dataSource,
-        )
-      ) {
-        oldRenderedObject.ref = newRef;
-        renderedObject = oldRenderedObject;
-      } else {
-        this.removeRenderedObject(oldRenderedObject);
-      }
+    if (
+      oldRenderedObject !== undefined &&
+      newRef !== null &&
+      oldRenderedObject.ref.itemIds === newRef.itemIds &&
+      oldRenderedObject.ref.itemsMask === newRef.itemsMask &&
+      // check data source configuration instead of data
+      deepEqual(
+        oldRenderedObject.ref.object.dataSource,
+        newRef.object.dataSource,
+      )
+    ) {
+      oldRenderedObject.ref = newRef;
+      renderedObject = oldRenderedObject;
     }
     if (newRef === null) {
-      if (oldRenderedObject !== undefined && onChange !== undefined) {
-        onChange();
+      if (oldRenderedObject !== undefined) {
+        this.removeRenderedObject(oldRenderedObject);
+        onChange?.();
       }
       return;
     }
@@ -949,20 +939,20 @@ export abstract class WebGLRendererBase<
       );
     }
     if (prepared === undefined || prepared === null) {
-      if (renderedObject !== undefined) {
-        this.removeRenderedObject(renderedObject);
-      }
-      if (oldRenderedObject !== undefined && onChange !== undefined) {
-        onChange();
+      if (oldRenderedObject !== undefined) {
+        this.removeRenderedObject(oldRenderedObject);
+        onChange?.();
       }
       return;
     }
-    // no awaits from here on, so that the object is uploaded atomically
+    // no awaits from here on, so that the object is swapped atomically
     if (renderedObject === undefined) {
+      if (oldRenderedObject !== undefined) {
+        this.removeRenderedObject(oldRenderedObject);
+      }
       this.addRenderedObject(this.createRenderedObject(newRef, prepared));
       onChange?.();
     } else if (this.updateRenderedObject(renderedObject, prepared)) {
-      this._hasUnreportedChanges = true;
       onChange?.();
     }
   }

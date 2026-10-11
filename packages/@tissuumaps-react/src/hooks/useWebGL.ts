@@ -348,18 +348,6 @@ export function useWebGL(adapter: ViewerAdapter) {
             },
           },
         )
-        .then((changed) => {
-          if (
-            changed &&
-            glRef.current !== null &&
-            !abortController.signal.aborted
-          ) {
-            const newPointsBounds =
-              glRef.current.pointsRenderer.getRenderedBounds();
-            setGLPointsBounds(updateBounds(newPointsBounds));
-            drawGL(glRef.current); // direct (async continuation in own task)
-          }
-        })
         .catch((error) => {
           if (!abortController.signal.aborted) {
             console.error("Error synchronizing WebGL points", error);
@@ -412,18 +400,6 @@ export function useWebGL(adapter: ViewerAdapter) {
             },
           },
         )
-        .then((changed) => {
-          if (
-            changed &&
-            glRef.current !== null &&
-            !abortController.signal.aborted
-          ) {
-            const newShapesBounds =
-              glRef.current.shapesRenderer.getRenderedBounds();
-            setGLShapesBounds(updateBounds(newShapesBounds));
-            drawGL(glRef.current); // direct (async continuation in own task)
-          }
-        })
         .catch((error) => {
           if (!abortController.signal.aborted) {
             console.error("Error synchronizing WebGL shapes", error);
