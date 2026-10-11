@@ -472,6 +472,14 @@ export type ProjectStoreActions = {
   setScaleBarVisible: (scaleBarVisible: Project["scaleBarVisible"]) => void;
 
   /**
+   * Shows or hides the colorbars
+   *
+   * @param colorbarsVisible - Whether the viewer shows the colorbars of colors
+   * taken from table columns
+   */
+  setColorbarsVisible: (colorbarsVisible: Project["colorbarsVisible"]) => void;
+
+  /**
    * Replaces the project with a new, empty one
    */
   clear: () => void;

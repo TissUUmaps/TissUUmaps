@@ -19,6 +19,10 @@ export function ViewMenu({ className }: ViewMenuProps) {
   const setScaleBarVisible = useProjectStore(
     (state) => state.setScaleBarVisible,
   );
+  const colorbarsVisible = useProjectStore((state) => state.colorbarsVisible);
+  const setColorbarsVisible = useProjectStore(
+    (state) => state.setColorbarsVisible,
+  );
 
   const navigatorVisible = osOptions.viewerOptions.showNavigator !== false;
   const scaleBarAvailable = worldUnitSize !== undefined && worldUnitSize > 0;
@@ -56,6 +60,13 @@ export function ViewMenu({ className }: ViewMenuProps) {
           onCheckedChange={setScaleBarVisible}
         >
           Scale bar
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem
+          checked={colorbarsVisible}
+          title="Shown only for colors taken from a table column"
+          onCheckedChange={setColorbarsVisible}
+        >
+          Colorbars
         </DropdownMenuCheckboxItem>
       </DropdownMenuContent>
     </DropdownMenu>
