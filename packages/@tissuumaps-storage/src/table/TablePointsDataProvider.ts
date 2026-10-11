@@ -30,7 +30,6 @@ export class TablePointsDataProvider implements PointsDataProvider<
       },
       table: {
         type: "string",
-        description: "Ignored if a source is given, which is added as a table",
       },
       x: {
         type: "string",
@@ -51,6 +50,14 @@ export class TablePointsDataProvider implements PointsDataProvider<
         type: "Control",
         scope: "#/properties/table",
         label: "Table",
+        // a source is added as a new table, which replaces the picked one
+        rule: {
+          effect: "HIDE",
+          condition: {
+            scope: "#/properties/source",
+            schema: { type: "string", minLength: 1 },
+          },
+        },
       },
       {
         type: "Control",

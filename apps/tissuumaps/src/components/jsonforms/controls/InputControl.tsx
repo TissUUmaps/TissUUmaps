@@ -16,6 +16,10 @@ import {
 export const InputControl = withJsonFormsControlProps((props: ControlProps) => {
   const [isFocused, setFocused] = useState<boolean>(false);
 
+  if (!props.visible) {
+    return null;
+  }
+
   // readonly mode
   if (!props.enabled) {
     return (
