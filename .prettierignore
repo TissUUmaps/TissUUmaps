@@ -1,4 +1,3 @@
 .all-contributorsrc
-apps/docs/.docusaurus/
-apps/docs/build/
-apps/docs/docs/api/
+docs/api/
+pnpm-lock.yaml

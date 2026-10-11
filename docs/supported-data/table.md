@@ -54,4 +54,4 @@ A project showing the cells of a CSV table as points, placed by two of its colum
 
 ## API
 
-The data provider is implemented in the [`@tissuumaps/storage`](/docs/api/@tissuumaps/storage) package as [`TablePointsDataProvider`](/docs/api/@tissuumaps/storage/classes/TablePointsDataProvider).
+The data provider is implemented in the [`@tissuumaps/storage`](../api/@tissuumaps/storage/index.md) package as [`TablePointsDataProvider`](../api/@tissuumaps/storage/classes/TablePointsDataProvider.md).

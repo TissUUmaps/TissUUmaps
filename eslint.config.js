@@ -8,12 +8,11 @@ import tseslint from "typescript-eslint";
 
 export default defineConfig([
   globalIgnores([
-    "**/.docusaurus",
     "**/build",
     "**/coverage",
     "**/dist",
     "**/node_modules",
-    "apps/docs/docs/api",
+    "docs/api",
   ]),
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
