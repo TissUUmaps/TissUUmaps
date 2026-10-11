@@ -73,7 +73,7 @@ export function PointSizePopover({ className }: PointSizePopoverProps) {
       <PopoverContent align="end" className="w-auto items-center gap-1 p-2">
         <Slider
           orientation="vertical"
-          className="h-32"
+          className="my-2 h-32"
           thumbLabels={["Global point size"]}
           min={-1}
           max={1}
