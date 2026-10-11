@@ -2,10 +2,14 @@ import { ChartScatterIcon } from "lucide-react";
 
 import { MathUtils } from "@tissuumaps/core";
 
-import { InputGroup, InputGroupAddon } from "@/components/ui/input-group";
+import { IconButton } from "@/components/common/icon-button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
 import { percentFormat } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
 const minPointSizeFactor = 0.01;
@@ -51,49 +55,44 @@ function pointSizeFactorToSliderPosition(pointSizeFactor: number): number {
     : MathUtils.remap(decades, upperDecades, upperPositions);
 }
 
-export type PointSizeViewerControlProps = { className?: string };
+export type PointSizePopoverProps = { className?: string };
 
-export function PointSizeViewerControl({
-  className,
-}: PointSizeViewerControlProps) {
+export function PointSizePopover({ className }: PointSizePopoverProps) {
   const glOptions = useProjectStore((state) => state.glOptions);
   const setGLOptions = useProjectStore((state) => state.setGLOptions);
 
   const { globalPointSizeFactor } = glOptions.pointsRenderOptions;
 
   return (
-    <InputGroup
-      className={cn(
-        "m-2 w-auto rounded-xl border-border bg-background shadow-lg",
-        className,
-      )}
-    >
-      <InputGroupAddon className="cursor-default">
-        <ChartScatterIcon />
-      </InputGroupAddon>
-      <Slider
-        className="mx-2 w-32"
-        thumbLabels={["Global point size"]}
-        min={-1}
-        max={1}
-        step={0.01}
-        value={pointSizeFactorToSliderPosition(globalPointSizeFactor)}
-        onValueChange={(value) => {
-          setGLOptions({
-            ...glOptions,
-            pointsRenderOptions: {
-              ...glOptions.pointsRenderOptions,
-              globalPointSizeFactor: sliderPositionToPointSizeFactor(value),
-            },
-          });
-        }}
-      />
-      <InputGroupAddon
-        align="inline-end"
-        className="w-11 cursor-default justify-end text-xs tabular-nums"
+    <Popover>
+      <PopoverTrigger
+        render={<IconButton label="Point size" className={className} />}
       >
-        {percentFormat.format(globalPointSizeFactor)}
-      </InputGroupAddon>
-    </InputGroup>
+        <ChartScatterIcon />
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-auto items-center gap-1 p-2">
+        <Slider
+          orientation="vertical"
+          className="h-32"
+          thumbLabels={["Global point size"]}
+          min={-1}
+          max={1}
+          step={0.01}
+          value={pointSizeFactorToSliderPosition(globalPointSizeFactor)}
+          onValueChange={(value) => {
+            setGLOptions({
+              ...glOptions,
+              pointsRenderOptions: {
+                ...glOptions.pointsRenderOptions,
+                globalPointSizeFactor: sliderPositionToPointSizeFactor(value),
+              },
+            });
+          }}
+        />
+        <span className="text-muted-foreground w-9 text-center text-xs tabular-nums">
+          {percentFormat.format(globalPointSizeFactor)}
+        </span>
+      </PopoverContent>
+    </Popover>
   );
 }
