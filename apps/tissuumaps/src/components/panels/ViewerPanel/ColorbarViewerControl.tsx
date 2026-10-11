@@ -1,6 +1,8 @@
 import {
   type Color,
   type ColorConfig,
+  type Layer,
+  type TableColumnRef,
   type VisibilityConfig,
   findColorPalette,
   getActiveConfigSource,
@@ -44,6 +46,18 @@ function isConstantlyHidden(visibilityConfig: VisibilityConfig): boolean {
     getActiveConfigSource(visibilityConfig) === "constant" &&
     isConstantConfig(visibilityConfig) &&
     !visibilityConfig.constant.value
+  );
+}
+
+// Only a layer ID is checked: with a layer per item, a colorbar is still useful
+// for the items on the visible layers.
+function isOnHiddenLayer(
+  layer: string | TableColumnRef,
+  layers: Layer[],
+): boolean {
+  return (
+    typeof layer === "string" &&
+    layers.find(({ id }) => id === layer)?.visibility === false
   );
 }
 
@@ -102,6 +116,7 @@ export type ColorbarViewerControlProps = { className?: string };
 export function ColorbarViewerControl({
   className,
 }: ColorbarViewerControlProps) {
+  const layers = useProjectStore((state) => state.layers);
   const labels = useProjectStore((state) => state.labels);
   const points = useProjectStore((state) => state.points);
   const shapes = useProjectStore((state) => state.shapes);
@@ -109,7 +124,9 @@ export function ColorbarViewerControl({
 
   const colorbars = [
     ...labels
-      .filter((labels) => labels.visibility)
+      .filter(
+        (labels) => labels.visibility && !isOnHiddenLayer(labels.layer, layers),
+      )
       .map((labels) => ({
         key: `labels-${labels.id}`,
         name: labels.name,
@@ -118,7 +135,9 @@ export function ColorbarViewerControl({
         tableId: labels.dataSource.table ?? null,
       })),
     ...points
-      .filter((points) => points.visibility)
+      .filter(
+        (points) => points.visibility && !isOnHiddenLayer(points.layer, layers),
+      )
       .map((points) => ({
         key: `points-${points.id}`,
         name: points.name,
@@ -129,7 +148,9 @@ export function ColorbarViewerControl({
     ...shapes
       .filter(
         (shapes) =>
-          shapes.visibility && !isConstantlyHidden(shapes.shapeVisibility),
+          shapes.visibility &&
+          !isOnHiddenLayer(shapes.layer, layers) &&
+          !isConstantlyHidden(shapes.shapeVisibility),
       )
       .flatMap((shapes) => [
         {
@@ -157,10 +178,12 @@ export function ColorbarViewerControl({
     return null;
   }
 
+  // the card hides while none of its colorbars can be drawn, e.g. while their
+  // value ranges load
   return (
     <div
       className={cn(
-        "mr-2 mb-2 flex w-80 flex-col gap-1.5 rounded-lg border border-border bg-background/75 px-2 py-1 text-xs shadow-lg",
+        "mr-2 mb-2 flex w-80 empty:hidden flex-col gap-1.5 rounded-lg border border-border bg-background/75 px-2 py-1 text-xs shadow-lg",
         className,
       )}
     >
