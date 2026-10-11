@@ -419,10 +419,6 @@ export abstract class OpenSeadragonRendererBase<
    * from the object, its data and the inputs of the synchronization, and to
    * keep it for as long as its outcome would not change.
    *
-   * Once the signal is aborted, it has to reject rather than resolve, as
-   * {@link synchronize} creates or updates the object's tiled images once it
-   * resolves.
-   *
    * @param _object - The object (image or labels) to resolve
    * @param _data - The loaded data of the object
    * @param _context - The inputs of the current synchronization
@@ -773,6 +769,7 @@ export abstract class OpenSeadragonRendererBase<
     let newRef;
     try {
       newRef = await newRefPromise;
+      signal?.throwIfAborted();
     } catch {
       signal?.throwIfAborted(); // an aborted loading rejects, too
       if (renderedObject !== undefined) {

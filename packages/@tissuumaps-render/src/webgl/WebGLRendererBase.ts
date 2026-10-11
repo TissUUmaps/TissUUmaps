@@ -581,9 +581,6 @@ export abstract class WebGLRendererBase<
    * {@link synchronize}). Decides, from the object's current rendered state,
    * which of its GPU resources have to be rebuilt, and resolves only those.
    *
-   * Once the signal is aborted, it has to reject rather than resolve, as
-   * {@link synchronize} uploads whatever it resolves to.
-   *
    * @param newRef - The object to prepare
    * @param renderedObject - The object's current rendered state, if it is
    * reused
@@ -891,6 +888,7 @@ export abstract class WebGLRendererBase<
     let newRef;
     try {
       newRef = await newRefPromise;
+      signal?.throwIfAborted();
     } catch {
       signal?.throwIfAborted(); // an aborted loading rejects, too
       newRef = null; // logged by loadObjects
@@ -926,6 +924,7 @@ export abstract class WebGLRendererBase<
         syncContext,
         { signal },
       );
+      signal?.throwIfAborted();
     } catch (error) {
       signal?.throwIfAborted(); // an aborted preparation rejects, too
       console.error(
