@@ -1,5 +1,6 @@
-import { hexToHsva, hsvaToHex } from "@uiw/color-convert";
+import { type HsvaColor, hexToHsva, hsvaToHex } from "@uiw/color-convert";
 import Chrome from "@uiw/react-color-chrome";
+import { useState } from "react";
 
 import { type Color, ColorUtils } from "@tissuumaps/core";
 
@@ -26,7 +27,12 @@ export function ColorPicker({
   children,
   className,
 }: ColorPickerProps) {
-  const hsva = hexToHsva(ColorUtils.toHex(color));
+  // the picked color, which keeps the hue of grays that the RGB color loses
+  const [draft, setDraft] = useState<HsvaColor | null>(null);
+  const hex = ColorUtils.toHex(color);
+  const hsva =
+    draft !== null && hsvaToHex(draft) === hex ? draft : hexToHsva(hex);
+
   return (
     <Popover>
       <PopoverTrigger
@@ -41,8 +47,8 @@ export function ColorPicker({
           showAlpha={false}
           showTriangle={false}
           onChange={(newColor) => {
-            const hex = hsvaToHex(newColor.hsva);
-            onColorChange(ColorUtils.fromHex(hex));
+            setDraft(newColor.hsva);
+            onColorChange(ColorUtils.fromHex(newColor.hex));
           }}
         />
       </PopoverContent>
