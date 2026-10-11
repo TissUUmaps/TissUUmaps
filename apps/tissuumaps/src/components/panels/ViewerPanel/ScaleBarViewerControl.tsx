@@ -13,7 +13,8 @@ import type { Dims, Rect } from "@tissuumaps/core";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
-import { formatScaleBarLength, getScaleBarLength } from "./scaleBarLength";
+import { formatScaleBarLength } from "./formatScaleBarLength";
+import { getScaleBarLength } from "./getScaleBarLength";
 
 /** Maximum width of the scale bar, in CSS pixels */
 const maxScaleBarWidth = 200;
