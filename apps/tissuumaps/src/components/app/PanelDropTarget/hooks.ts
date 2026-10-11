@@ -12,6 +12,7 @@ import {
 import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { useLoadProjectFile } from "@/components/panels/ProjectPanel/hooks";
+import { resolveProjectSource } from "@/data/io/project";
 import {
   isWorkspaceSupported,
   projectFileExtensions,
@@ -29,11 +30,11 @@ import { projectStore, useProjectStore } from "@/stores/project";
  * The project panel accepts a single project file, which it loads, or a
  * single directory, which it opens as the workspace, either after
  * confirmation. It rejects files without a project file extension before
- * asking. The data panels accept files and directories within the
- * workspace, and open one add data object dialog per item; they accept
- * nothing while no project or workspace is open, while no data provider of
- * their kind is registered, or while their data objects need a layer and
- * there is none.
+ * asking, and warns about project files outside the workspace when asking.
+ * The data panels accept files and directories within the workspace, and
+ * open one add data object dialog per item; they accept nothing while no
+ * project or workspace is open, while no data provider of their kind is
+ * registered, or while their data objects need a layer and there is none.
  *
  * @param panelId - The dockview ID of the panel
  * @returns The label of the drop target, the names of what it accepts, and
@@ -116,11 +117,18 @@ export function usePanelDrop(panelId: string): {
       });
       return;
     }
+    const question = isProjectOpen
+      ? `Open the project "${projectFile.name}"? It replaces the open project, and unsaved changes are lost.`
+      : `Open the project "${projectFile.name}"?`;
+    const isOutsideWorkspace =
+      workspace !== null &&
+      (projectFile instanceof File ||
+        (await resolveProjectSource(projectFile, workspace)) === null);
     const confirmed = await confirm({
       title: "Open project",
-      body: isProjectOpen
-        ? `Open the project "${projectFile.name}"? It replaces the open project, and unsaved changes are lost.`
-        : `Open the project "${projectFile.name}"?`,
+      body: isOutsideWorkspace
+        ? `"${projectFile.name}" is not in the connected folder "${workspace.name}". Its relative paths will be looked up in "${workspace.name}" instead of next to the project file, so some of its data may fail to load. ${question}`
+        : question,
       actionLabel: "Open",
     });
     if (!confirmed) {

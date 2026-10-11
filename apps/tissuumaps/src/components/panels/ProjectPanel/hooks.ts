@@ -7,6 +7,7 @@ import {
   loadProjectFromFile,
   loadProjectFromFileHandle,
   loadProjectFromURL,
+  resolveProjectSource,
   setProjectURLParam,
 } from "@/data/io/project";
 import { pickProjectFile, pickWorkspace } from "@/data/io/workspace";
@@ -110,13 +111,18 @@ export function useOpenProjectFromURL(): () => void {
  * Returns a callback that lets the user pick a project file, within the
  * workspace if one is open, and loads it
  *
- * Failures are logged, as the callback is called from event handlers.
+ * A project file picked outside the open workspace is loaded only after
+ * confirmation, as its project-relative paths are then resolved against the
+ * workspace instead of the project file's directory (see
+ * `loadProjectFromFileHandle`). Failures are logged, as the callback is
+ * called from event handlers.
  *
  * @returns The callback
  */
 export function useOpenProjectFromFile(): () => void {
   const workspace = useAppStore((state) => state.workspace);
   const loadProjectFile = useLoadProjectFile();
+  const confirm = useConfirmDialog();
 
   return useCallback(() => {
     const pickedProjectFile =
@@ -125,14 +131,27 @@ export function useOpenProjectFromFile(): () => void {
         : pickProjectFile({ startIn: workspace });
     void pickedProjectFile
       .then(async (projectFile) => {
-        if (projectFile !== null) {
-          await loadProjectFile(projectFile);
+        if (projectFile === null) {
+          return;
         }
+        if (
+          workspace !== null &&
+          (projectFile instanceof File ||
+            (await resolveProjectSource(projectFile, workspace)) === null) &&
+          !(await confirm({
+            title: "Open project from outside the folder",
+            body: `"${projectFile.name}" is not in the connected folder "${workspace.name}". Its relative paths will be looked up in "${workspace.name}" instead of next to the project file, so some of its data may fail to load. Open it anyway?`,
+            actionLabel: "Open",
+          }))
+        ) {
+          return;
+        }
+        await loadProjectFile(projectFile);
       })
       .catch((error) => {
         console.error("Failed to load project from file", error);
       });
-  }, [workspace, loadProjectFile]);
+  }, [workspace, loadProjectFile, confirm]);
 }
 
 /**
