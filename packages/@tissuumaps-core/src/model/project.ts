@@ -64,6 +64,7 @@ export const projectDefaults = {
     },
   },
   viewerBackgroundColor: { r: 0, g: 0, b: 0 },
+  scaleBarVisible: true,
 } as const satisfies Partial<RawProject>;
 
 /**
@@ -182,6 +183,13 @@ export interface RawProject extends RawModel {
    * The viewer shows a scale bar only if this is set to a positive value.
    */
   worldUnitSize?: number;
+
+  /**
+   * Whether the viewer shows the scale bar
+   *
+   * @defaultValue {@link projectDefaults.scaleBarVisible}
+   */
+  scaleBarVisible?: boolean;
 }
 
 /**

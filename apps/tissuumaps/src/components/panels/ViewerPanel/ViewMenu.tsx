@@ -14,8 +14,14 @@ export type ViewMenuProps = { className?: string };
 export function ViewMenu({ className }: ViewMenuProps) {
   const osOptions = useProjectStore((state) => state.osOptions);
   const setOSOptions = useProjectStore((state) => state.setOSOptions);
+  const worldUnitSize = useProjectStore((state) => state.worldUnitSize);
+  const scaleBarVisible = useProjectStore((state) => state.scaleBarVisible);
+  const setScaleBarVisible = useProjectStore(
+    (state) => state.setScaleBarVisible,
+  );
 
   const navigatorVisible = osOptions.viewerOptions.showNavigator !== false;
+  const scaleBarAvailable = worldUnitSize !== undefined && worldUnitSize > 0;
 
   return (
     // not modal: the viewer stays usable while the menu is open
@@ -39,6 +45,17 @@ export function ViewMenu({ className }: ViewMenuProps) {
           }}
         >
           Navigator
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem
+          checked={scaleBarVisible}
+          title={
+            scaleBarAvailable
+              ? undefined
+              : "Set the world unit size in the render settings"
+          }
+          onCheckedChange={setScaleBarVisible}
+        >
+          Scale bar
         </DropdownMenuCheckboxItem>
       </DropdownMenuContent>
     </DropdownMenu>

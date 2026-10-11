@@ -465,6 +465,13 @@ export type ProjectStoreActions = {
   setWorldUnitSize: (worldUnitSize: Project["worldUnitSize"]) => void;
 
   /**
+   * Shows or hides the scale bar
+   *
+   * @param scaleBarVisible - Whether the viewer shows the scale bar
+   */
+  setScaleBarVisible: (scaleBarVisible: Project["scaleBarVisible"]) => void;
+
+  /**
    * Replaces the project with a new, empty one
    */
   clear: () => void;

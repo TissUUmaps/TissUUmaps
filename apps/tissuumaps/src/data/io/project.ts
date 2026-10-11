@@ -41,6 +41,7 @@ function cleanProject(project: Project): Project {
     glOptions: structuredClone(project.glOptions),
     viewerBackgroundColor: structuredClone(project.viewerBackgroundColor),
     worldUnitSize: project.worldUnitSize,
+    scaleBarVisible: project.scaleBarVisible,
   };
 }
 

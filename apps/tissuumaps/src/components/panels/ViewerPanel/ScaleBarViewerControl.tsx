@@ -31,6 +31,7 @@ export function ScaleBarViewerControl({
   className,
 }: ScaleBarViewerControlProps) {
   const worldUnitSize = useProjectStore((state) => state.worldUnitSize);
+  const scaleBarVisible = useProjectStore((state) => state.scaleBarVisible);
   const barRef = useRef<HTMLDivElement>(null);
   // kept while the bar is hidden, so that it is drawn as soon as it shows
   const viewportRef = useRef<{ viewport: Rect; containerSize: Dims } | null>(
@@ -67,7 +68,7 @@ export function ScaleBarViewerControl({
     [updateScaleBar],
   );
 
-  if (worldUnitSize === undefined || worldUnitSize <= 0) {
+  if (!scaleBarVisible || worldUnitSize === undefined || worldUnitSize <= 0) {
     return null;
   }
   // An inline-block that hides its overflow has its baseline at its bottom
