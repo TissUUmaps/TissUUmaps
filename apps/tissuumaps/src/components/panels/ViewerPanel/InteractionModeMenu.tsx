@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAppStore } from "@/stores/app";
 
+/** The menu label of each interaction mode */
 const interactionModeLabels: Record<InteractionMode, string> = {
   pan: "Pan",
   drawRectangle: "Draw rectangle",
@@ -25,6 +26,7 @@ const interactionModeLabels: Record<InteractionMode, string> = {
   drawFreehand: "Draw freehand",
 };
 
+/** The icon of each interaction mode */
 const interactionModeIcons: Record<InteractionMode, LucideIcon> = {
   pan: HandIcon,
   drawRectangle: SquareIcon,
@@ -54,7 +56,7 @@ export function InteractionModeMenu({ className }: InteractionModeMenuProps) {
       <DropdownMenuTrigger
         render={
           <IconButton
-            label={interactionModeLabels[interactionMode]}
+            label={`Interaction mode: ${interactionModeLabels[interactionMode]}`}
             className={className}
           />
         }
