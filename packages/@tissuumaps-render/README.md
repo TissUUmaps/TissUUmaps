@@ -20,6 +20,6 @@ Content Security Policy, allow it with `img-src data:`.
 
 ## Documentation
 
-- [API reference](https://tissuumaps.github.io/TissUUmaps/docs/docs/api/@tissuumaps/render/)
-- [Rendering](https://tissuumaps.github.io/TissUUmaps/docs/docs/development/rendering/)
-- [Code architecture](https://tissuumaps.github.io/TissUUmaps/docs/docs/development/code-architecture/)
+- [API reference](https://tissuumaps.github.io/docs/api/@tissuumaps/render/)
+- [Rendering](https://tissuumaps.github.io/docs/development/rendering/)
+- [Code architecture](https://tissuumaps.github.io/docs/development/code-architecture/)

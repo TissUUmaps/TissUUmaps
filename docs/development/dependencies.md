@@ -14,7 +14,7 @@ sidebar_position: 5
 - Vitest + jsdom (testing with coverage)
 - API Extractor + unplugin-dts (type declaration rollups for packages)
 - vite-plugin-singlefile (single-file production build of the application)
-- Docusaurus + TypeDoc + GitHub Pages (documentation)
+- TypeDoc + remark (API documentation and link checks)
 - Husky + lint-staged (pre-commit hooks)
 - GitHub Actions (CI/CD)
 

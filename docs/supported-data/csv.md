@@ -32,4 +32,4 @@ A column whose cells all hold numbers is read as 32-bit floats, with blank cells
 
 ## API
 
-The data provider is implemented in the [`@tissuumaps/storage`](/docs/api/@tissuumaps/storage) package as [`CSVTableDataProvider`](/docs/api/@tissuumaps/storage/classes/CSVTableDataProvider). Parsing is delegated to [PapaParse](https://www.papaparse.com/) (see [Dependencies](../development/dependencies.md)).
+The data provider is implemented in the [`@tissuumaps/storage`](../api/@tissuumaps/storage/index.md) package as [`CSVTableDataProvider`](../api/@tissuumaps/storage/classes/CSVTableDataProvider.md). Parsing is delegated to [PapaParse](https://www.papaparse.com/) (see [Dependencies](../development/dependencies.md)).

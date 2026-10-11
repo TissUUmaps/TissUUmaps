@@ -336,20 +336,18 @@ export function useWebGL(adapter: ViewerAdapter) {
             loadObject: loadPoints,
             loadTable,
           },
-          { signal: abortController.signal },
+          {
+            signal: abortController.signal,
+            onChange: () => {
+              if (glRef.current !== null && !abortController.signal.aborted) {
+                const newPointsBounds =
+                  glRef.current.pointsRenderer.getRenderedBounds();
+                setGLPointsBounds(updateBounds(newPointsBounds));
+                dispatchRedraw();
+              }
+            },
+          },
         )
-        .then((changed) => {
-          if (
-            changed &&
-            glRef.current !== null &&
-            !abortController.signal.aborted
-          ) {
-            const newPointsBounds =
-              glRef.current.pointsRenderer.getRenderedBounds();
-            setGLPointsBounds(updateBounds(newPointsBounds));
-            drawGL(glRef.current); // direct (async continuation in own task)
-          }
-        })
         .catch((error) => {
           if (!abortController.signal.aborted) {
             console.error("Error synchronizing WebGL points", error);
@@ -390,20 +388,18 @@ export function useWebGL(adapter: ViewerAdapter) {
             loadObject: loadShapes,
             loadTable,
           },
-          { signal: abortController.signal },
+          {
+            signal: abortController.signal,
+            onChange: () => {
+              if (glRef.current !== null && !abortController.signal.aborted) {
+                const newShapesBounds =
+                  glRef.current.shapesRenderer.getRenderedBounds();
+                setGLShapesBounds(updateBounds(newShapesBounds));
+                dispatchRedraw();
+              }
+            },
+          },
         )
-        .then((changed) => {
-          if (
-            changed &&
-            glRef.current !== null &&
-            !abortController.signal.aborted
-          ) {
-            const newShapesBounds =
-              glRef.current.shapesRenderer.getRenderedBounds();
-            setGLShapesBounds(updateBounds(newShapesBounds));
-            drawGL(glRef.current); // direct (async continuation in own task)
-          }
-        })
         .catch((error) => {
           if (!abortController.signal.aborted) {
             console.error("Error synchronizing WebGL shapes", error);

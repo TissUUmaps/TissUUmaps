@@ -6,7 +6,6 @@
 [![Continuous integration](https://img.shields.io/github/actions/workflow/status/TissUUmaps/TissUUmaps/ci.yaml?label=ci)](https://github.com/TissUUmaps/TissUUmaps/actions/workflows/ci.yaml)
 [![Release](https://img.shields.io/github/actions/workflow/status/TissUUmaps/TissUUmaps/release.yaml?label=release)](https://github.com/TissUUmaps/TissUUmaps/actions/workflows/release.yaml)
 [![Coverage](https://img.shields.io/codecov/c/github/TissUUmaps/TissUUmaps?label=coverage)](https://app.codecov.io/gh/TissUUmaps/TissUUmaps)
-[![Deployment](https://img.shields.io/github/deployments/TissUUmaps/TissUUmaps/github-pages?label=deployment)](https://tissuumaps.github.io/TissUUmaps/docs/)
 [![Contributors](https://img.shields.io/github/all-contributors/TissUUmaps/TissUUmaps?label=contributors)](CONTRIBUTORS.md)
 [![License](https://img.shields.io/github/license/TissUUmaps/TissUUmaps?label=license)](LICENSE)
 
@@ -15,7 +14,7 @@
 
 TissUUmaps is a GPU-accelerated web application for visualizing, annotating and sharing spatial biology data.
 
-Open TissUUmaps at https://tissuumaps.github.io/TissUUmaps/ in a modern web browser with WebGL 2 support, or read the documentation at https://tissuumaps.github.io/TissUUmaps/docs/ to get started.
+Open TissUUmaps at https://tissuumaps.github.io/app/ in a modern web browser with WebGL 2 support, or read the documentation at https://tissuumaps.github.io/docs/ to get started.
 
 <!-- During the beta phase, an example gallery is available at https://tissuumaps4.serve.scilifelab.se. It is primarily used for testing, so the linked examples are not guaranteed to work. -->
 
