@@ -1,5 +1,4 @@
 import {
-  type Color,
   type ColorConfig,
   type Layer,
   type TableColumnRef,
@@ -19,16 +18,6 @@ import { useProjectStore } from "@/stores/project";
 const colorbarValueFormat = new Intl.NumberFormat(undefined, {
   maximumSignificantDigits: 6,
 });
-
-// Every palette color is a stop of its own, so that the gradient blends the
-// colors linearly like the renderers do.
-function createColorbarGradient(colors: Color[]): string {
-  const stops = colors.map(
-    ({ r, g, b }, i) =>
-      `rgb(${r}, ${g}, ${b}) ${(100 * i) / (colors.length - 1)}%`,
-  );
-  return `linear-gradient(to right, ${stops.join(", ")})`;
-}
 
 // The color settings keep the inactive sources as drafts, so a "from" source
 // only gets a colorbar while it is the active one.
@@ -86,21 +75,28 @@ function Colorbar({ name, colorConfig, tableId, className }: ColorbarProps) {
     return null;
   }
 
+  const columnLabel = formatTableColumn(from, tables);
+  // every palette color is a stop of its own, so that the gradient blends the
+  // colors linearly like the renderers do
+  const gradientStops = colorPalette.colors.map(
+    ({ r, g, b }, i) =>
+      `rgb(${r}, ${g}, ${b}) ${(100 * i) / (colorPalette.colors.length - 1)}%`,
+  );
+
   return (
     <div className={className}>
       <div className="flex justify-between gap-2">
-        <span className="max-w-1/2 truncate font-medium">{name}</span>
-        <span className="max-w-1/2 truncate">
-          {/* the object's own table goes without saying */}
-          {from.table === tableId
-            ? from.column
-            : formatTableColumn(from, tables)}
+        <span title={name} className="max-w-1/2 truncate font-medium">
+          {name}
+        </span>
+        <span title={columnLabel} className="max-w-1/2 truncate">
+          {columnLabel}
         </span>
       </div>
       <div
         className="mt-0.5 h-2 rounded-xs border border-input bg-origin-border"
         style={{
-          backgroundImage: createColorbarGradient(colorPalette.colors),
+          backgroundImage: `linear-gradient(to right, ${gradientStops.join(", ")})`,
         }}
       />
       <div className="flex justify-between tabular-nums">
