@@ -33,6 +33,11 @@ export type ViewerPanelProps = {
 
 export function ViewerPanel({ className }: ViewerPanelProps) {
   const viewerRef = useRef<OpenSeadragonContext>(null);
+  // kept here, as the scale bar mounts after the viewer reports its first
+  // viewport, and draws from it again whenever it shows
+  const viewportRef = useRef<{ viewport: Rect; containerSize: Dims } | null>(
+    null,
+  );
   const scaleBarRef = useRef<ScaleBarViewerControlHandle>(null);
   const interactionMode = useAppStore((state) => state.interactionMode);
   const imageChannelPreview = useAppStore((state) => state.imageChannelPreview);
@@ -125,7 +130,8 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
 
   const onViewportChange = useCallback(
     (viewport: Rect, containerSize: Dims) => {
-      scaleBarRef.current?.setViewport(viewport, containerSize);
+      viewportRef.current = { viewport, containerSize };
+      scaleBarRef.current?.update();
     },
     [],
   );
@@ -148,7 +154,7 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
       </ViewerControl>
       {/* lines up to the right of the navigator, which is mounted first */}
       <ViewerControl anchor={ViewerControlAnchor.BOTTOM_LEFT} autoFade={false}>
-        <ScaleBarViewerControl ref={scaleBarRef} />
+        <ScaleBarViewerControl ref={scaleBarRef} viewportRef={viewportRef} />
       </ViewerControl>
     </Viewer>
   );

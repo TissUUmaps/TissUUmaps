@@ -1,5 +1,6 @@
 import {
   type Ref,
+  type RefObject,
   useCallback,
   useImperativeHandle,
   useLayoutEffect,
@@ -18,31 +19,30 @@ import { formatScaleBarLength, getScaleBarLength } from "./scaleBarLength";
 const maxScaleBarWidth = 200;
 
 export type ScaleBarViewerControlHandle = {
-  setViewport: (viewport: Rect, containerSize: Dims) => void;
+  update: () => void;
 };
 
 export type ScaleBarViewerControlProps = {
+  viewportRef: RefObject<{ viewport: Rect; containerSize: Dims } | null>;
   ref?: Ref<ScaleBarViewerControlHandle>;
   className?: string;
 };
 
 export function ScaleBarViewerControl({
+  viewportRef,
   ref,
   className,
 }: ScaleBarViewerControlProps) {
   const worldUnitSize = useProjectStore((state) => state.worldUnitSize);
   const scaleBarVisible = useProjectStore((state) => state.scaleBarVisible);
   const barRef = useRef<HTMLDivElement>(null);
-  // kept while the bar is hidden, so that it is drawn as soon as it shows
-  const viewportRef = useRef<{ viewport: Rect; containerSize: Dims } | null>(
-    null,
-  );
   const [lengthLabel, setLengthLabel] = useState("");
 
   // The bar width changes in every frame of a zoom, so it is written to the
   // DOM directly; the label only re-renders when its text changes.
   const updateScaleBar = useCallback(() => {
     if (
+      !scaleBarVisible ||
       worldUnitSize === undefined ||
       viewportRef.current === null ||
       barRef.current === null
@@ -54,19 +54,12 @@ export function ScaleBarViewerControl({
     const length = getScaleBarLength(pixelSize * maxScaleBarWidth);
     barRef.current.style.width = `${length / pixelSize}px`;
     setLengthLabel(formatScaleBarLength(length));
-  }, [worldUnitSize]);
+  }, [viewportRef, scaleBarVisible, worldUnitSize]);
   useLayoutEffect(updateScaleBar, [updateScaleBar]);
 
-  useImperativeHandle(
-    ref,
-    () => ({
-      setViewport: (viewport, containerSize) => {
-        viewportRef.current = { viewport, containerSize };
-        updateScaleBar();
-      },
-    }),
-    [updateScaleBar],
-  );
+  useImperativeHandle(ref, () => ({ update: updateScaleBar }), [
+    updateScaleBar,
+  ]);
 
   if (!scaleBarVisible || worldUnitSize === undefined || worldUnitSize <= 0) {
     return null;
