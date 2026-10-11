@@ -48,6 +48,7 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
         <ColorPicker
           color={viewerBackgroundColor}
           onColorChange={setViewerBackgroundColor}
+          className="font-mono"
         >
           <span className="sr-only">Viewer background color</span>
           <SquareIcon fill={viewerBackgroundColorHex} />

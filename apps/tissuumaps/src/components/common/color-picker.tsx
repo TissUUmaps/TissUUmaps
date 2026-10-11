@@ -1,5 +1,5 @@
 import { type HsvaColor, hexToHsva, hsvaToHex } from "@uiw/color-convert";
-import Chrome from "@uiw/react-color-chrome";
+import Chrome, { ChromeInputType } from "@uiw/react-color-chrome";
 import { useState } from "react";
 
 import { type Color, ColorUtils } from "@tissuumaps/core";
@@ -41,9 +41,10 @@ export function ColorPicker({
       >
         {children}
       </PopoverTrigger>
-      <PopoverContent>
+      <PopoverContent className="w-auto overflow-hidden p-0">
         <Chrome
           color={hsva}
+          inputType={ChromeInputType.HEXA}
           showAlpha={false}
           showTriangle={false}
           onChange={(newColor) => {
