@@ -12,13 +12,17 @@ import {
   FieldError,
   FieldLabel,
 } from "@/components/common/field";
+import { cn } from "@/lib/utils";
 
 export const InputControl = withJsonFormsControlProps((props: ControlProps) => {
   const [isFocused, setFocused] = useState<boolean>(false);
 
   // readonly mode
   if (!props.enabled) {
-    if (props.data === undefined || props.data === null || props.data === "") {
+    const isUnset =
+      props.data === undefined || props.data === null || props.data === "";
+    // an unset field shows its default, if any, as that is what is used
+    if (isUnset && props.schema.default === undefined) {
       return null;
     }
     return (
@@ -26,13 +30,17 @@ export const InputControl = withJsonFormsControlProps((props: ControlProps) => {
         <dt className="text-muted-foreground">
           {computeLabel(props.label, props.required ?? false, true)}
         </dt>
-        <dd className="wrap-anywhere">
-          <DispatchCell
-            uischema={props.uischema}
-            schema={props.schema}
-            path={props.path}
-            enabled={props.enabled}
-          />
+        <dd className={cn("wrap-anywhere", isUnset && "text-muted-foreground")}>
+          {isUnset ? (
+            String(props.schema.default)
+          ) : (
+            <DispatchCell
+              uischema={props.uischema}
+              schema={props.schema}
+              path={props.path}
+              enabled={props.enabled}
+            />
+          )}
         </dd>
       </div>
     );
