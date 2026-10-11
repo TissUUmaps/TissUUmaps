@@ -51,9 +51,10 @@ type ColorbarProps = {
   name: string;
   colorConfig: ColorConfig;
   tableId: string | null;
+  className?: string;
 };
 
-function Colorbar({ name, colorConfig, tableId }: ColorbarProps) {
+function Colorbar({ name, colorConfig, tableId, className }: ColorbarProps) {
   const tables = useProjectStore((state) => state.tables);
 
   const from = getActiveFrom(colorConfig);
@@ -72,14 +73,18 @@ function Colorbar({ name, colorConfig, tableId }: ColorbarProps) {
   }
 
   return (
-    <div className="mr-2 mb-2 w-72 rounded-lg border border-border bg-background/75 px-2 py-1 text-xs shadow-lg">
-      <div className="truncate font-medium">{name}</div>
-      <div className="truncate">
-        {/* the object's own table goes without saying */}
-        {from.table === tableId ? from.column : formatTableColumn(from, tables)}
+    <div className={className}>
+      <div className="flex justify-between gap-2">
+        <span className="max-w-1/2 truncate font-medium">{name}</span>
+        <span className="max-w-1/2 truncate">
+          {/* the object's own table goes without saying */}
+          {from.table === tableId
+            ? from.column
+            : formatTableColumn(from, tables)}
+        </span>
       </div>
       <div
-        className="mt-1 h-4 rounded-xs border border-input bg-origin-border"
+        className="mt-0.5 h-2 rounded-xs border border-input bg-origin-border"
         style={{
           backgroundImage: createColorbarGradient(colorPalette.colors),
         }}
@@ -153,7 +158,12 @@ export function ColorbarViewerControl({
   }
 
   return (
-    <div className={cn("flex flex-col", className)}>
+    <div
+      className={cn(
+        "mr-2 mb-2 flex w-80 flex-col gap-1.5 rounded-lg border border-border bg-background/75 px-2 py-1 text-xs shadow-lg",
+        className,
+      )}
+    >
       {colorbars.map(({ key, name, colorConfig, tableId }) => (
         <Colorbar
           key={key}
