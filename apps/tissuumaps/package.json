@@ -37,7 +37,6 @@
     "ome-zarr.js": "^0.0.20",
     "openseadragon": "^6.1.1",
     "react": "^19.2.7",
-    "react-colorful": "^5.7.0",
     "react-dom": "^19.2.7",
     "tailwind-merge": "^3.6.0",
     "zarrita": "^0.7.5",

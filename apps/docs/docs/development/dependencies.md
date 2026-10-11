@@ -28,7 +28,7 @@ sidebar_position: 5
 - OpenSeadragon (zoomable image and labels rendering)
 - JSON Forms (JSON Schema-based form renderer)
 - TanStack Table + TanStack Virtual (virtualized data tables)
-- react-colorful (color picker)
+- @uiw/react-color (color picker)
 
 ## Data loading
 
