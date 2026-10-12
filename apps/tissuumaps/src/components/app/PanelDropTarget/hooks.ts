@@ -32,9 +32,10 @@ import { projectStore, useProjectStore } from "@/stores/project";
  * confirmation. It rejects files without a project file extension before
  * asking, and warns about project files outside the workspace when asking.
  * The data panels accept files and directories within the workspace, and
- * open one add data object dialog per item; they accept nothing while no
- * project or workspace is open, while no data provider of their kind is
- * registered, or while their data objects need a layer and there is none.
+ * open one add data object dialog per item, also while no project is open,
+ * which then opens once a data object is added. They accept nothing while no
+ * workspace is open, while no data provider of their kind is registered, or
+ * while their data objects need a layer and there is none.
  *
  * @param panelId - The dockview ID of the panel
  * @returns The label of the drop target, the names of what it accepts, and
@@ -149,7 +150,6 @@ export function usePanelDrop(panelId: string): {
     params: AddDataObjectDialogParams<TDataSource>,
   ) => {
     if (
-      !isProjectOpen ||
       workspace === null ||
       params.dataProviders.size === 0 ||
       (params.withLayer === true && !hasLayers)
