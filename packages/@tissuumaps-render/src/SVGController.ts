@@ -1,5 +1,4 @@
 import {
-  type Dims,
   GeometryUtils,
   type InteractionMode,
   type MultiPolygon,
@@ -36,7 +35,6 @@ type FreehandDrawingState = {
  */
 export class SVGController {
   public readonly container: SVGSVGElement;
-  public readonly transformNode: SVGGElement;
   public readonly shapeCompleteHandler?: (shape: MultiPolygon) => void;
   private static readonly _previewFillColor = "rgba(255, 0, 0, 0.2)";
   private static readonly _previewStrokeColor = "#FF0000";
@@ -44,7 +42,6 @@ export class SVGController {
   private static readonly _minShapeSizeFactor = 0.001;
   private static readonly _closeShapeThresholdFactor = 0.01;
   private static readonly _vertexMarkerRadiusFactor = 0.0015;
-  private _containerSize: Dims;
   private _viewport: Rect;
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore currently not used, but will be needed in the future
@@ -64,12 +61,12 @@ export class SVGController {
     container.style.left = "0";
     container.style.width = "100%";
     container.style.height = "100%";
+    container.setAttribute("preserveAspectRatio", "none");
     return container;
   }
 
   /**
-   * Creates the transform node inside the given container and registers the
-   * shape drawing event handlers
+   * Clears the given container and registers the shape drawing event handlers
    *
    * The viewport starts out as the unit square; {@link setViewport} is the only
    * way to change it.
@@ -82,12 +79,10 @@ export class SVGController {
     options?: { onShapeComplete?: (shape: MultiPolygon) => void },
   ) {
     this.container = container;
-    this.transformNode = document.createElementNS(SVG_NAMESPACE, "g");
     this.shapeCompleteHandler = options?.onShapeComplete;
-    container.replaceChildren(this.transformNode);
-    this._containerSize = container.getBoundingClientRect();
+    container.replaceChildren();
     this._viewport = { x: 0, y: 0, width: 1, height: 1 };
-    this._updateTransformNode();
+    this._updateViewBox();
 
     this._registerEventHandlers();
   }
@@ -101,7 +96,7 @@ export class SVGController {
   setViewport(viewport: Rect): boolean {
     if (!GeometryUtils.rectEquals(viewport, this._viewport)) {
       this._viewport = viewport;
-      this._updateTransformNode();
+      this._updateViewBox();
       return true;
     }
     return false;
@@ -120,34 +115,6 @@ export class SVGController {
       this._cancelPolygon();
     }
     this._interactionMode = newInteractionMode;
-  }
-
-  /**
-   * Resizes the SVG container to match the given screen-space dimensions,
-   * accounting for `devicePixelRatio`
-   *
-   * @param newContainerSize - Desired container size in screen-space pixels
-   * @returns `true` if the container size actually changed, `false` otherwise
-   */
-  resizeContainer(newContainerSize: Dims): boolean {
-    let { width, height } = newContainerSize;
-    width *= window.devicePixelRatio;
-    height *= window.devicePixelRatio;
-    if (width <= 0 || height <= 0) {
-      width = 1;
-      height = 1;
-    }
-    if (
-      this._containerSize.width !== width ||
-      this._containerSize.height !== height
-    ) {
-      this._containerSize = { width, height };
-      this.container.setAttribute("width", width.toString());
-      this.container.setAttribute("height", height.toString());
-      this._updateTransformNode();
-      return true;
-    }
-    return false;
   }
 
   destroy(): void {
@@ -471,7 +438,7 @@ export class SVGController {
       ).toString(),
     );
 
-    this.transformNode.appendChild(rect);
+    this.container.appendChild(rect);
     return rect;
   }
 
@@ -589,7 +556,7 @@ export class SVGController {
       ).toString(),
     );
 
-    this.transformNode.appendChild(polyline);
+    this.container.appendChild(polyline);
     return polyline;
   }
 
@@ -602,7 +569,7 @@ export class SVGController {
     circle.setAttribute("r", radius.toString());
     circle.setAttribute("fill", SVGController._previewStrokeColor);
 
-    this.transformNode.appendChild(circle);
+    this.container.appendChild(circle);
     return circle;
   }
 
@@ -656,7 +623,7 @@ export class SVGController {
   // ─────────────────────────────────────────────────────────────
 
   private _screenToWorld(screenX: number, screenY: number): Vertex {
-    const ctm = this.transformNode.getScreenCTM();
+    const ctm = this.container.getScreenCTM();
     if (!ctm) {
       throw new Error("Could not get screen CTM");
     }
@@ -670,18 +637,9 @@ export class SVGController {
     return { x: worldPoint.x, y: worldPoint.y };
   }
 
-  /**
-   * Updates the world-to-viewport transform based on the current container size
-   * (in screen coordinates) and the current viewport (in world coordinates)
-   */
-  private _updateTransformNode() {
-    const sx = this._containerSize.width / this._viewport.width;
-    const sy = this._containerSize.height / this._viewport.height;
-    const tx = -this._viewport.x * sx;
-    const ty = -this._viewport.y * sy;
-    this.transformNode.setAttribute(
-      "transform",
-      `translate(${tx} ${ty}) scale(${sx} ${sy})`,
-    );
+  /** Maps the current viewport (in world coordinates) to the whole container */
+  private _updateViewBox() {
+    const { x, y, width, height } = this._viewport;
+    this.container.setAttribute("viewBox", `${x} ${y} ${width} ${height}`);
   }
 }
