@@ -1,7 +1,9 @@
 import { IconToggle } from "@/components/common/icon-toggle";
 import { useProjectStore } from "@/stores/project";
 
-function ScaleBarIcon() {
+type ScaleBarIconProps = { filled: boolean };
+
+function ScaleBarIcon({ filled }: ScaleBarIconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -13,7 +15,14 @@ function ScaleBarIcon() {
       aria-hidden
     >
       <g transform="rotate(-45 12 12)">
-        <rect x="1.5" y="8" width="21" height="8" rx="1.5" />
+        <rect
+          x="1.5"
+          y="8"
+          width="21"
+          height="8"
+          rx="1.5"
+          className={filled ? "fill-amber-300" : undefined}
+        />
         <path d="M7 8v2.5M12 8v4M17 8v2.5" />
       </g>
     </svg>
@@ -35,7 +44,7 @@ export function ScaleBarToggle({ className }: ScaleBarToggleProps) {
       pressed={scaleBarVisible}
       onPressedChange={setScaleBarVisible}
     >
-      <ScaleBarIcon />
+      <ScaleBarIcon filled={scaleBarVisible} />
     </IconToggle>
   );
 }
