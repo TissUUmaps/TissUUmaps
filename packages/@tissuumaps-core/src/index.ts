@@ -190,7 +190,7 @@ export {
   type Polygon,
   type Vertex,
 } from "./types/geometry";
-export { type InteractionMode } from "./types/interaction";
+export { InteractionMode } from "./types/interaction";
 export {
   type CustomTileSource,
   type OpenSeadragonOptions,

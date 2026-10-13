@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { formatScaleBarLength } from "./formatScaleBarLength";
 
+// the formatter follows the runtime locale, e.g. "0,5" in Swedish
+const half = (0.5).toLocaleString();
+
 describe("formatScaleBarLength", () => {
   it("formats in the largest unit that keeps the value at least 1", () => {
     expect(formatScaleBarLength(5e-10, "m")).toBe("500 pm");
@@ -19,11 +22,11 @@ describe("formatScaleBarLength", () => {
   });
 
   it("falls back to picometers below one picometer", () => {
-    expect(formatScaleBarLength(5e-13, "m")).toBe("0.5 pm");
+    expect(formatScaleBarLength(5e-13, "m")).toBe(`${half} pm`);
   });
 
   it("formats pixels without converting them", () => {
     expect(formatScaleBarLength(200, "px")).toBe("200 px");
-    expect(formatScaleBarLength(0.5, "px")).toBe("0.5 px");
+    expect(formatScaleBarLength(0.5, "px")).toBe(`${half} px`);
   });
 });
