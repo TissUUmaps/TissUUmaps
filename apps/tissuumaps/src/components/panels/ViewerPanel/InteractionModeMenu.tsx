@@ -1,9 +1,9 @@
 import {
   HandIcon,
   type LucideIcon,
-  PencilIcon,
-  PentagonIcon,
-  SquareIcon,
+  PenToolIcon,
+  PencilLineIcon,
+  SquareDashedMousePointerIcon,
 } from "lucide-react";
 
 import type { InteractionMode } from "@tissuumaps/core";
@@ -29,9 +29,9 @@ const interactionModeLabels: Record<InteractionMode, string> = {
 /** The icon of each interaction mode */
 const interactionModeIcons: Record<InteractionMode, LucideIcon> = {
   pan: HandIcon,
-  drawRectangle: SquareIcon,
-  drawPolygon: PentagonIcon,
-  drawFreehand: PencilIcon,
+  drawRectangle: SquareDashedMousePointerIcon,
+  drawPolygon: PenToolIcon,
+  drawFreehand: PencilLineIcon,
 };
 
 /** The interaction modes in menu order */
