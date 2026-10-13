@@ -120,8 +120,12 @@ export function ColorbarViewerControl({
 
   const colorbars = [
     ...labels
+      // the renderer resolves colors from a table only through the labels' own
       .filter(
-        (labels) => labels.visibility && !isOnHiddenLayer(labels.layer, layers),
+        (labels) =>
+          labels.visibility &&
+          !isOnHiddenLayer(labels.layer, layers) &&
+          labels.dataSource.table !== undefined,
       )
       .map((labels) => ({
         key: `labels-${labels.id}`,
