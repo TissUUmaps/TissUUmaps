@@ -81,7 +81,7 @@ export const projectDefaults = {
   viewerBackgroundColor: { r: 0, g: 0, b: 0 },
   lengthUnit: LengthUnit.micrometer,
   scaleBarVisibility: true,
-  colorbarsVisible: true,
+  colorbarsVisibility: true,
 } as const satisfies Partial<RawProject>;
 
 /**
@@ -219,9 +219,9 @@ export interface RawProject extends RawModel {
   /**
    * Whether the viewer shows the colorbars of colors taken from table columns
    *
-   * @defaultValue {@link projectDefaults.colorbarsVisible}
+   * @defaultValue {@link projectDefaults.colorbarsVisibility}
    */
-  colorbarsVisible?: boolean;
+  colorbarsVisibility?: boolean;
 }
 
 /**

@@ -116,7 +116,9 @@ export function ColorbarViewerControl({
   const labels = useProjectStore((state) => state.labels);
   const points = useProjectStore((state) => state.points);
   const shapes = useProjectStore((state) => state.shapes);
-  const colorbarsVisible = useProjectStore((state) => state.colorbarsVisible);
+  const colorbarsVisibility = useProjectStore(
+    (state) => state.colorbarsVisibility,
+  );
 
   const colorbars = [
     ...labels
@@ -174,7 +176,7 @@ export function ColorbarViewerControl({
       !isConstantlyHidden(visibilityConfig),
   );
 
-  if (!colorbarsVisible || colorbars.length === 0) {
+  if (!colorbarsVisibility || colorbars.length === 0) {
     return null;
   }
 

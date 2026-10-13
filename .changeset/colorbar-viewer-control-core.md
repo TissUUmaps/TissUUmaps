@@ -2,4 +2,4 @@
 "@tissuumaps/core": minor
 ---
 
-Projects get `colorbarsVisible`, set with the `setColorbarsVisible` store action.
+Projects get `colorbarsVisibility`, set with the `setColorbarsVisibility` store action.

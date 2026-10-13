@@ -44,19 +44,21 @@ function ColorbarIcon({ filled }: ColorbarIconProps) {
 export type ColorbarsToggleProps = { className?: string };
 
 export function ColorbarsToggle({ className }: ColorbarsToggleProps) {
-  const colorbarsVisible = useProjectStore((state) => state.colorbarsVisible);
-  const setColorbarsVisible = useProjectStore(
-    (state) => state.setColorbarsVisible,
+  const colorbarsVisibility = useProjectStore(
+    (state) => state.colorbarsVisibility,
+  );
+  const setColorbarsVisibility = useProjectStore(
+    (state) => state.setColorbarsVisibility,
   );
 
   return (
     <IconToggle
       label="Colorbars"
       className={className}
-      pressed={colorbarsVisible}
-      onPressedChange={setColorbarsVisible}
+      pressed={colorbarsVisibility}
+      onPressedChange={setColorbarsVisibility}
     >
-      <ColorbarIcon filled={colorbarsVisible} />
+      <ColorbarIcon filled={colorbarsVisibility} />
     </IconToggle>
   );
 }
