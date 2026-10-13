@@ -45,7 +45,10 @@ export function useValueRange(
       })
       .catch((error) => {
         if (!abortController.signal.aborted) {
-          console.error("Error loading table value range", error);
+          console.error(
+            `Failed to load the value range of column '${column}'`,
+            error,
+          );
         }
       });
     return () => abortController.abort();
