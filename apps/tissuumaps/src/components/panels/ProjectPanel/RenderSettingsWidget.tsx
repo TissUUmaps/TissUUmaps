@@ -105,6 +105,8 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
           render={
             <Input
               type="number"
+              inputMode="decimal"
+              step={0.1}
               min={0}
               value={glOptions.shapesRenderOptions.strokeWidth}
               onChange={(event) => {
@@ -114,7 +116,7 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
                     ...glOptions,
                     shapesRenderOptions: {
                       ...glOptions.shapesRenderOptions,
-                      strokeWidth: Math.max(0, Math.trunc(newValue)),
+                      strokeWidth: Math.max(0, newValue),
                     },
                   });
                 }
