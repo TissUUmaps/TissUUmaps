@@ -23,7 +23,7 @@ const lowerDecades: [number, number] = [Math.log10(minPointSizeFactor), 0];
 const upperPositions: [number, number] = [snapZoneWidth, 1];
 const upperDecades: [number, number] = [0, Math.log10(maxPointSizeFactor)];
 
-// Maps a slider position in [-1, 1] to a point size factor: the far left is 0,
+// Maps a slider position in [-1, 1] to a point size factor: the bottom is 0,
 // the centre snaps to 1, and each side scales logarithmically to its end.
 function sliderPositionToPointSizeFactor(position: number): number {
   if (position < lowerPositions[0]) {
