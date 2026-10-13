@@ -9,7 +9,8 @@ export type IconToggleProps = Omit<IconButtonProps, "onClick"> & {
   onPressedChange: (pressed: boolean) => void;
 };
 
-// The label names what the toggle switches, as aria-pressed tells its state
+// The label names what the toggle switches, as aria-pressed tells its state.
+// The icon shows the state too: a pressed background would look like hover.
 export function IconToggle({
   pressed,
   onPressedChange,
@@ -19,10 +20,7 @@ export function IconToggle({
   return (
     <IconButton
       aria-pressed={pressed}
-      className={cn(
-        "aria-pressed:bg-muted aria-pressed:text-foreground",
-        className,
-      )}
+      className={cn("aria-pressed:text-foreground", className)}
       onClick={() => onPressedChange(!pressed)}
       {...props}
     />
