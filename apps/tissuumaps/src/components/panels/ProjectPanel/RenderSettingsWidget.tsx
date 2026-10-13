@@ -73,7 +73,8 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
           }
         />
         <FieldDescription className="text-muted-foreground text-xs">
-          Shows a scale bar; a world unit is an image pixel, unless transformed
+          Sets the scale bar unit; a world unit is an image pixel, unless
+          transformed
         </FieldDescription>
       </Field>
       <Field>

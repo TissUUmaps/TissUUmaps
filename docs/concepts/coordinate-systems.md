@@ -27,4 +27,4 @@ User-configurable variables are highlighted in bold.
 
 ## Physical units
 
-The project's world unit size is the physical size of one world unit, in micrometers. If it is set, the viewer shows a scale bar.
+The project's world unit size is the physical size of one world unit, in micrometers. The scale bar uses it; without it, the scale bar is in pixels.

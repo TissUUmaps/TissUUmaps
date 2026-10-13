@@ -12,13 +12,20 @@ const lengthValueFormat = new Intl.NumberFormat(undefined, {
 });
 
 /**
- * Formats a scale bar length in the largest unit that keeps its value at
- * least 1, from nanometers to meters
+ * Formats a scale bar length in pixels, or in micrometers converted to the
+ * largest unit that keeps its value at least 1, from nanometers to meters
  *
- * @param length - The length, in micrometers (µm)
- * @returns The formatted length, e.g. "500 nm" or "2 mm"
+ * @param length - The length, in `lengthUnit`
+ * @param lengthUnit - The unit of `length`: micrometers (µm) or pixels (px)
+ * @returns The formatted length, e.g. "500 nm", "2 mm" or "50 px"
  */
-export function formatScaleBarLength(length: number): string {
+export function formatScaleBarLength(
+  length: number,
+  lengthUnit: "µm" | "px",
+): string {
+  if (lengthUnit === "px") {
+    return `${lengthValueFormat.format(length)} px`;
+  }
   const unit =
     lengthUnits.findLast((unit) => unit.size <= length) ?? lengthUnits[0];
   return `${lengthValueFormat.format(length / unit.size)} ${unit.symbol}`;
