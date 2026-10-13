@@ -6,7 +6,7 @@ import {
   SquareDashedMousePointerIcon,
 } from "lucide-react";
 
-import type { InteractionMode } from "@tissuumaps/core";
+import { InteractionMode } from "@tissuumaps/core";
 
 import { IconButton } from "@/components/common/icon-button";
 import {
@@ -20,27 +20,19 @@ import { useAppStore } from "@/stores/app";
 
 /** The menu label of each interaction mode */
 const interactionModeLabels: Record<InteractionMode, string> = {
-  pan: "Pan",
-  drawRectangle: "Draw rectangle",
-  drawPolygon: "Draw polygon",
-  drawFreehand: "Draw freehand",
+  [InteractionMode.pan]: "Pan",
+  [InteractionMode.drawRectangle]: "Draw rectangle",
+  [InteractionMode.drawPolygon]: "Draw polygon",
+  [InteractionMode.drawFreehand]: "Draw freehand",
 };
 
 /** The icon of each interaction mode */
 const interactionModeIcons: Record<InteractionMode, LucideIcon> = {
-  pan: HandIcon,
-  drawRectangle: SquareDashedMousePointerIcon,
-  drawPolygon: PenToolIcon,
-  drawFreehand: PencilLineIcon,
+  [InteractionMode.pan]: HandIcon,
+  [InteractionMode.drawRectangle]: SquareDashedMousePointerIcon,
+  [InteractionMode.drawPolygon]: PenToolIcon,
+  [InteractionMode.drawFreehand]: PencilLineIcon,
 };
-
-/** The interaction modes in menu order */
-const interactionModes: InteractionMode[] = [
-  "pan",
-  "drawRectangle",
-  "drawPolygon",
-  "drawFreehand",
-];
 
 export type InteractionModeMenuProps = { className?: string };
 
@@ -70,7 +62,7 @@ export function InteractionModeMenu({ className }: InteractionModeMenuProps) {
             setInteractionMode(value as InteractionMode)
           }
         >
-          {interactionModes.map((mode) => {
+          {Object.values(InteractionMode).map((mode) => {
             const Icon = interactionModeIcons[mode];
             return (
               <DropdownMenuRadioItem key={mode} value={mode}>
