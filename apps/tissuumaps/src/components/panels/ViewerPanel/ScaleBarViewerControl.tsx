@@ -37,7 +37,9 @@ export function ScaleBarViewerControl({
 }: ScaleBarViewerControlProps) {
   const worldUnitSize = useProjectStore((state) => state.worldUnitSize);
   const lengthUnit = useProjectStore((state) => state.lengthUnit);
-  const scaleBarVisible = useProjectStore((state) => state.scaleBarVisible);
+  const scaleBarVisibility = useProjectStore(
+    (state) => state.scaleBarVisibility,
+  );
   const barRef = useRef<HTMLDivElement>(null);
   const [lengthLabel, setLengthLabel] = useState("");
 
@@ -45,7 +47,7 @@ export function ScaleBarViewerControl({
   // DOM directly; the label only re-renders when its text changes.
   const updateScaleBar = useCallback(() => {
     if (
-      !scaleBarVisible ||
+      !scaleBarVisibility ||
       viewportRef.current === null ||
       barRef.current === null
     ) {
@@ -60,14 +62,14 @@ export function ScaleBarViewerControl({
     const length = getScaleBarLength(pixelSize * maxScaleBarWidth);
     barRef.current.style.width = `${length / pixelSize}px`;
     setLengthLabel(formatScaleBarLength(length, physical ? "m" : "px"));
-  }, [viewportRef, scaleBarVisible, worldUnitSize, lengthUnit]);
+  }, [viewportRef, scaleBarVisibility, worldUnitSize, lengthUnit]);
   useLayoutEffect(updateScaleBar, [updateScaleBar]);
 
   useImperativeHandle(ref, () => ({ update: updateScaleBar }), [
     updateScaleBar,
   ]);
 
-  if (!scaleBarVisible) {
+  if (!scaleBarVisibility) {
     return null;
   }
   // An inline-block that hides its overflow has its baseline at its bottom

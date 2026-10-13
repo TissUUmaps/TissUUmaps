@@ -474,9 +474,11 @@ export type ProjectStoreActions = {
   /**
    * Shows or hides the scale bar
    *
-   * @param scaleBarVisible - Whether the viewer shows the scale bar
+   * @param scaleBarVisibility - Whether the viewer shows the scale bar
    */
-  setScaleBarVisible: (scaleBarVisible: Project["scaleBarVisible"]) => void;
+  setScaleBarVisibility: (
+    scaleBarVisibility: Project["scaleBarVisibility"],
+  ) => void;
 
   /**
    * Shows or hides the colorbars
