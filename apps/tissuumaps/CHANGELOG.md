@@ -1,5 +1,11 @@
 # tissuumaps
 
+## 4.0.0-beta.4
+
+### Patch Changes
+
+- [#316](https://github.com/TissUUmaps/TissUUmaps/pull/316) [`4c665b6`](https://github.com/TissUUmaps/TissUUmaps/commit/4c665b64b3b224abf3b7fe9eb1475289a730666d) Thanks [@cavenel](https://github.com/cavenel)! - Files and folders can be dropped on data panels before a project is started.
+
 ## 4.0.0-beta.3
 
 ### Minor Changes
