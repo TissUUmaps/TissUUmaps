@@ -457,6 +457,30 @@ export type ProjectStoreActions = {
   ) => void;
 
   /**
+   * Sets the project's world unit size
+   *
+   * @param worldUnitSize - The physical size of one world unit, in the length
+   * unit, or `undefined` if it is unknown
+   */
+  setWorldUnitSize: (worldUnitSize: Project["worldUnitSize"]) => void;
+
+  /**
+   * Sets the unit of the project's world unit size
+   *
+   * @param lengthUnit - The length unit
+   */
+  setLengthUnit: (lengthUnit: Project["lengthUnit"]) => void;
+
+  /**
+   * Shows or hides the scale bar
+   *
+   * @param scaleBarVisibility - Whether the viewer shows the scale bar
+   */
+  setScaleBarVisibility: (
+    scaleBarVisibility: Project["scaleBarVisibility"],
+  ) => void;
+
+  /**
    * Replaces the project with a new, empty one
    */
   clear: () => void;
