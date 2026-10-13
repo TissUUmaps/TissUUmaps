@@ -5,8 +5,9 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
 import { InteractionModeMenu } from "./InteractionModeMenu";
+import { NavigatorToggle } from "./NavigatorToggle";
 import { PointSizePopover } from "./PointSizePopover";
-import { ViewMenu } from "./ViewMenu";
+import { ScaleBarToggle } from "./ScaleBarToggle";
 
 /**
  * Whether the toolbar shows the interaction mode menu
@@ -43,7 +44,9 @@ export function ViewerToolbar({
         <HouseIcon />
       </IconButton>
       <PointSizePopover />
-      <ViewMenu />
+      <Separator orientation="vertical" className="mx-0.5" />
+      <NavigatorToggle />
+      <ScaleBarToggle />
     </div>
   );
 }
