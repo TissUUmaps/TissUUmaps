@@ -4,6 +4,7 @@ import { formatScaleBarLength } from "./formatScaleBarLength";
 
 describe("formatScaleBarLength", () => {
   it("formats in the largest unit that keeps the value at least 1", () => {
+    expect(formatScaleBarLength(5e-10, "m")).toBe("500 pm");
     expect(formatScaleBarLength(2e-7, "m")).toBe("200 nm");
     expect(formatScaleBarLength(1e-6, "m")).toBe("1 µm");
     expect(formatScaleBarLength(5e-4, "m")).toBe("500 µm");
@@ -17,8 +18,8 @@ describe("formatScaleBarLength", () => {
     expect(formatScaleBarLength((0.1 + 0.2) * 1e-6, "m")).toBe("300 nm");
   });
 
-  it("falls back to nanometers below one nanometer", () => {
-    expect(formatScaleBarLength(5e-10, "m")).toBe("0.5 nm");
+  it("falls back to picometers below one picometer", () => {
+    expect(formatScaleBarLength(5e-13, "m")).toBe("0.5 pm");
   });
 
   it("formats pixels without converting them", () => {
