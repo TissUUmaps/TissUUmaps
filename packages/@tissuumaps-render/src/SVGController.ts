@@ -1,7 +1,7 @@
 import {
   type Dims,
   GeometryUtils,
-  type InteractionMode,
+  InteractionMode,
   type MultiPolygon,
   type Rect,
   type Vertex,
@@ -113,10 +113,16 @@ export class SVGController {
    * @param newInteractionMode - New interaction mode
    */
   setInteractionMode(newInteractionMode: InteractionMode) {
-    if (this._freehandDrawingState && newInteractionMode !== "drawFreehand") {
+    if (
+      this._freehandDrawingState &&
+      newInteractionMode !== InteractionMode.drawFreehand
+    ) {
       this._cancelFreehand();
     }
-    if (this._polygonDrawingState && newInteractionMode !== "drawPolygon") {
+    if (
+      this._polygonDrawingState &&
+      newInteractionMode !== InteractionMode.drawPolygon
+    ) {
       this._cancelPolygon();
     }
     this._interactionMode = newInteractionMode;
@@ -173,13 +179,13 @@ export class SVGController {
     if (event.shiftKey || event.button !== 0) return;
 
     switch (this._interactionMode) {
-      case "drawRectangle":
+      case InteractionMode.drawRectangle:
         this._handleRectanglePointerDown(event);
         break;
-      case "drawPolygon":
+      case InteractionMode.drawPolygon:
         this._handlePolygonPointerDown(event);
         break;
-      case "drawFreehand":
+      case InteractionMode.drawFreehand:
         this._handleFreehandPointerDown(event);
         break;
     }
