@@ -32,19 +32,21 @@ function ScaleBarIcon({ filled }: ScaleBarIconProps) {
 export type ScaleBarToggleProps = { className?: string };
 
 export function ScaleBarToggle({ className }: ScaleBarToggleProps) {
-  const scaleBarVisible = useProjectStore((state) => state.scaleBarVisible);
-  const setScaleBarVisible = useProjectStore(
-    (state) => state.setScaleBarVisible,
+  const scaleBarVisibility = useProjectStore(
+    (state) => state.scaleBarVisibility,
+  );
+  const setScaleBarVisibility = useProjectStore(
+    (state) => state.setScaleBarVisibility,
   );
 
   return (
     <IconToggle
       label="Scale bar"
       className={className}
-      pressed={scaleBarVisible}
-      onPressedChange={setScaleBarVisible}
+      pressed={scaleBarVisibility}
+      onPressedChange={setScaleBarVisibility}
     >
-      <ScaleBarIcon filled={scaleBarVisible} />
+      <ScaleBarIcon filled={scaleBarVisibility} />
     </IconToggle>
   );
 }

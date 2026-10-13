@@ -80,7 +80,7 @@ export const projectDefaults = {
   },
   viewerBackgroundColor: { r: 0, g: 0, b: 0 },
   lengthUnit: LengthUnit.micrometer,
-  scaleBarVisible: true,
+  scaleBarVisibility: true,
 } as const satisfies Partial<RawProject>;
 
 /**
@@ -211,9 +211,9 @@ export interface RawProject extends RawModel {
   /**
    * Whether the viewer shows the scale bar
    *
-   * @defaultValue {@link projectDefaults.scaleBarVisible}
+   * @defaultValue {@link projectDefaults.scaleBarVisibility}
    */
-  scaleBarVisible?: boolean;
+  scaleBarVisibility?: boolean;
 }
 
 /**

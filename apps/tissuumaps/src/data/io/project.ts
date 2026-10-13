@@ -42,7 +42,7 @@ function cleanProject(project: Project): Project {
     viewerBackgroundColor: structuredClone(project.viewerBackgroundColor),
     worldUnitSize: project.worldUnitSize,
     lengthUnit: project.lengthUnit,
-    scaleBarVisible: project.scaleBarVisible,
+    scaleBarVisibility: project.scaleBarVisibility,
   };
 }
 
