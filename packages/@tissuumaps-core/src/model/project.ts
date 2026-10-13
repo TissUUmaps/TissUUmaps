@@ -10,6 +10,21 @@ import { type RawShapes, type Shapes, createShapes } from "./shapes";
 import { type RawTable, type Table, createTable } from "./table";
 
 /**
+ * Units of physical length, named as in OME-NGFF
+ */
+export const LengthUnit = {
+  nanometer: "nanometer",
+  micrometer: "micrometer",
+  millimeter: "millimeter",
+  centimeter: "centimeter",
+  meter: "meter",
+  kilometer: "kilometer",
+} as const;
+
+/** One of the length units of the {@link LengthUnit} object */
+export type LengthUnit = (typeof LengthUnit)[keyof typeof LengthUnit];
+
+/**
  * Default values for {@link RawProject}
  */
 export const projectDefaults = {
@@ -64,6 +79,7 @@ export const projectDefaults = {
     },
   },
   viewerBackgroundColor: { r: 0, g: 0, b: 0 },
+  lengthUnit: LengthUnit.micrometer,
   scaleBarVisible: true,
 } as const satisfies Partial<RawProject>;
 
@@ -178,12 +194,19 @@ export interface RawProject extends RawModel {
   viewerBackgroundColor?: Color;
 
   /**
-   * Physical size of one world unit, in micrometers (µm)
+   * Physical size of one world unit, in the length unit
    *
    * The scale bar shows world units as pixels unless this is set to a
    * positive value.
    */
   worldUnitSize?: number;
+
+  /**
+   * Unit of the world unit size
+   *
+   * @defaultValue {@link projectDefaults.lengthUnit}
+   */
+  lengthUnit?: LengthUnit;
 
   /**
    * Whether the viewer shows the scale bar
