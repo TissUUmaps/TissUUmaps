@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react";
 
-import { TableUtils } from "@tissuumaps/core";
+import { type TableData, TableUtils } from "@tissuumaps/core";
 
 import { useTableData } from "./useData";
+
+type LoadedValueRange = {
+  tableData: TableData;
+  column: string;
+  valueRange: [number, number] | undefined;
+};
 
 /**
  * Loads the range of the values of a numerical table column
@@ -21,14 +27,11 @@ export function useValueRange(
 
   // the range is kept with what it was loaded from, so that the one of a
   // previous table or column is not returned as the current one
-  const [loadedValueRange, setLoadedValueRange] = useState<{
-    tableId: string;
-    column: string;
-    valueRange: [number, number] | undefined;
-  } | null>(null);
+  const [loadedValueRange, setLoadedValueRange] =
+    useState<LoadedValueRange | null>(null);
 
   useEffect(() => {
-    if (tableId === null || tableData === null || column === null) {
+    if (tableData === null || column === null) {
       return;
     }
     const abortController = new AbortController();
@@ -37,7 +40,7 @@ export function useValueRange(
     })
       .then((valueRange) => {
         if (!abortController.signal.aborted) {
-          setLoadedValueRange({ tableId, column, valueRange });
+          setLoadedValueRange({ tableData, column, valueRange });
         }
       })
       .catch((error) => {
@@ -46,10 +49,9 @@ export function useValueRange(
         }
       });
     return () => abortController.abort();
-  }, [tableId, tableData, column]);
+  }, [tableData, column]);
 
-  return tableData !== null &&
-    loadedValueRange?.tableId === tableId &&
+  return loadedValueRange?.tableData === tableData &&
     loadedValueRange.column === column
     ? (loadedValueRange.valueRange ?? null)
     : null;
