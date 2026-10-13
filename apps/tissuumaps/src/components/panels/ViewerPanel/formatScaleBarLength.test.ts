@@ -8,7 +8,7 @@ describe("formatScaleBarLength", () => {
     expect(formatScaleBarLength(1e-6, "m")).toBe("1 µm");
     expect(formatScaleBarLength(5e-4, "m")).toBe("500 µm");
     expect(formatScaleBarLength(1e-3, "m")).toBe("1 mm");
-    expect(formatScaleBarLength(0.02, "m")).toBe("2 cm");
+    expect(formatScaleBarLength(0.02, "m")).toBe("20 mm");
     expect(formatScaleBarLength(2, "m")).toBe("2 m");
     expect(formatScaleBarLength(5000, "m")).toBe("5 km");
   });

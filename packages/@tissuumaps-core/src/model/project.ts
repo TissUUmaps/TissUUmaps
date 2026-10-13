@@ -16,7 +16,6 @@ export const LengthUnit = {
   nanometer: "nanometer",
   micrometer: "micrometer",
   millimeter: "millimeter",
-  centimeter: "centimeter",
   meter: "meter",
   kilometer: "kilometer",
 } as const;
