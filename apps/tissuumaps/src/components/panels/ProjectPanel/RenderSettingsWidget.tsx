@@ -82,6 +82,7 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
               type="number"
               inputMode="decimal"
               min={0}
+              step="any"
               placeholder="Unknown"
               value={worldUnitSize ?? ""}
               onChange={(event) => {
@@ -94,8 +95,8 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
           }
         />
         <FieldDescription className="text-muted-foreground text-xs">
-          Sets the scale bar unit; a world unit is an image pixel, unless
-          transformed
+          Physical size of one world unit, for the scale bar; a world unit is an
+          image pixel, unless transformed
         </FieldDescription>
       </Field>
       <Field>
