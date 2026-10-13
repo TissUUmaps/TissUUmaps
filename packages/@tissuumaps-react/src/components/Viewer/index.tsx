@@ -26,8 +26,10 @@ export type ViewerProps = {
    * Called once the viewer is ready, and then whenever the viewport or the
    * container size changes, before the viewer draws the new viewport
    *
-   * Receives the visible viewport, in world coordinates, and the container
-   * size, in CSS pixels. A new identity resubscribes and calls it again.
+   * A new identity resubscribes and calls it again.
+   *
+   * @param viewport - Visible viewport, in world coordinates
+   * @param containerSize - Container size, in CSS pixels
    */
   onViewportChange?: (viewport: Rect, containerSize: Dims) => void;
 };
