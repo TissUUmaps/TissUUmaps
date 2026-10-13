@@ -13,6 +13,7 @@ import { type RawTable, type Table, createTable } from "./table";
  * Units of physical length, named as in OME-NGFF
  */
 export const LengthUnit = {
+  picometer: "picometer",
   nanometer: "nanometer",
   micrometer: "micrometer",
   millimeter: "millimeter",
