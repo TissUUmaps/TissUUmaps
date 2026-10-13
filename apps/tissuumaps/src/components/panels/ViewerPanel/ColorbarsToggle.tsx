@@ -3,9 +3,9 @@ import { useId } from "react";
 import { IconToggle } from "@/components/common/icon-toggle";
 import { useProjectStore } from "@/stores/project";
 
-type ColorbarIconProps = { className?: string };
+type ColorbarIconProps = { filled: boolean };
 
-function ColorbarIcon({ className }: ColorbarIconProps) {
+function ColorbarIcon({ filled }: ColorbarIconProps) {
   const gradientId = useId();
   return (
     <svg
@@ -16,7 +16,6 @@ function ColorbarIcon({ className }: ColorbarIconProps) {
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden
-      className={className}
     >
       <defs>
         <linearGradient id={gradientId}>
@@ -34,7 +33,7 @@ function ColorbarIcon({ className }: ColorbarIconProps) {
           width="23"
           height="8"
           rx="1.5"
-          fill={`url(#${gradientId})`}
+          fill={filled ? `url(#${gradientId})` : "none"}
         />
         <path d="M6 16v3M12 16v3M18 16v3" />
       </g>
@@ -57,7 +56,7 @@ export function ColorbarsToggle({ className }: ColorbarsToggleProps) {
       pressed={colorbarsVisible}
       onPressedChange={setColorbarsVisible}
     >
-      <ColorbarIcon className={colorbarsVisible ? undefined : "grayscale"} />
+      <ColorbarIcon filled={colorbarsVisible} />
     </IconToggle>
   );
 }
