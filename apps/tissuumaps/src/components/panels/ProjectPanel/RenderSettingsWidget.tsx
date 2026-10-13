@@ -1,6 +1,6 @@
 import { RotateCcwIcon, SquareIcon } from "lucide-react";
 
-import { ColorUtils, projectDefaults } from "@tissuumaps/core";
+import { ColorUtils, LengthUnit, projectDefaults } from "@tissuumaps/core";
 
 import {
   Collapsible,
@@ -15,8 +15,10 @@ import {
   FieldDescription,
   FieldLabel,
 } from "@/components/common/field";
+import { SimpleSelect } from "@/components/common/simple-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { lengthUnits } from "@/lib/lengthUnits";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
@@ -35,6 +37,8 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
   );
   const worldUnitSize = useProjectStore((state) => state.worldUnitSize);
   const setWorldUnitSize = useProjectStore((state) => state.setWorldUnitSize);
+  const lengthUnit = useProjectStore((state) => state.lengthUnit);
+  const setLengthUnit = useProjectStore((state) => state.setLengthUnit);
 
   const { globalPointSizeFactor } = glOptions.pointsRenderOptions;
   const viewerBackgroundColorHex = ColorUtils.toHex(viewerBackgroundColor);
@@ -54,7 +58,24 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
         </ColorPicker>
       </Field>
       <Field>
-        <FieldLabel>World unit size (µm)</FieldLabel>
+        <div className="flex flex-row items-center gap-x-1">
+          <FieldLabel className="shrink-0">World unit size in</FieldLabel>
+          <Field className="flex min-w-0">
+            <SimpleSelect
+              aria-label="Length unit"
+              items={Object.values(LengthUnit)}
+              itemLabel={(unit) => lengthUnits[unit].symbol}
+              itemValue={(unit) => unit}
+              variant="inline"
+              value={lengthUnit}
+              onValueChange={(unit) => {
+                if (unit !== null) {
+                  setLengthUnit(unit);
+                }
+              }}
+            />
+          </Field>
+        </div>
         <FieldControl
           render={
             <Input

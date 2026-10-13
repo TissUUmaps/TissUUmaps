@@ -459,10 +459,17 @@ export type ProjectStoreActions = {
   /**
    * Sets the project's world unit size
    *
-   * @param worldUnitSize - The physical size of one world unit, in micrometers
-   * (µm), or `undefined` if it is unknown
+   * @param worldUnitSize - The physical size of one world unit, in the length
+   * unit, or `undefined` if it is unknown
    */
   setWorldUnitSize: (worldUnitSize: Project["worldUnitSize"]) => void;
+
+  /**
+   * Sets the unit of the project's world unit size
+   *
+   * @param lengthUnit - The length unit
+   */
+  setLengthUnit: (lengthUnit: Project["lengthUnit"]) => void;
 
   /**
    * Shows or hides the scale bar

@@ -2,4 +2,4 @@
 "@tissuumaps/core": minor
 ---
 
-Projects get the optional `worldUnitSize` (the size of one world unit, in micrometers) and `scaleBarVisible`, set with the `setWorldUnitSize` and `setScaleBarVisible` store actions.
+Projects get the optional `worldUnitSize` (the size of one world unit, in `lengthUnit`), `lengthUnit` and `scaleBarVisible`, set with the `setWorldUnitSize`, `setLengthUnit` and `setScaleBarVisible` store actions. `LengthUnit` lists the units, from nanometers to kilometers, named as in OME-NGFF.

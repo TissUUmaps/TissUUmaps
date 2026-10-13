@@ -10,6 +10,7 @@ import {
 
 import type { Dims, Rect } from "@tissuumaps/core";
 
+import { lengthUnits } from "@/lib/lengthUnits";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
@@ -35,6 +36,7 @@ export function ScaleBarViewerControl({
   className,
 }: ScaleBarViewerControlProps) {
   const worldUnitSize = useProjectStore((state) => state.worldUnitSize);
+  const lengthUnit = useProjectStore((state) => state.lengthUnit);
   const scaleBarVisible = useProjectStore((state) => state.scaleBarVisible);
   const barRef = useRef<HTMLDivElement>(null);
   const [lengthLabel, setLengthLabel] = useState("");
@@ -51,12 +53,14 @@ export function ScaleBarViewerControl({
     }
     const { viewport, containerSize } = viewportRef.current;
     const physical = worldUnitSize !== undefined && worldUnitSize > 0;
-    const pixelSize =
-      ((physical ? worldUnitSize : 1) * viewport.width) / containerSize.width;
+    const worldUnitLength = physical
+      ? worldUnitSize * lengthUnits[lengthUnit].size
+      : 1;
+    const pixelSize = (worldUnitLength * viewport.width) / containerSize.width;
     const length = getScaleBarLength(pixelSize * maxScaleBarWidth);
     barRef.current.style.width = `${length / pixelSize}px`;
-    setLengthLabel(formatScaleBarLength(length, physical ? "µm" : "px"));
-  }, [viewportRef, scaleBarVisible, worldUnitSize]);
+    setLengthLabel(formatScaleBarLength(length, physical ? "m" : "px"));
+  }, [viewportRef, scaleBarVisible, worldUnitSize, lengthUnit]);
   useLayoutEffect(updateScaleBar, [updateScaleBar]);
 
   useImperativeHandle(ref, () => ({ update: updateScaleBar }), [

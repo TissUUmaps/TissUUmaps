@@ -193,6 +193,7 @@ export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
       setViewerBackgroundColor: (viewerBackgroundColor) =>
         set({ viewerBackgroundColor }),
       setWorldUnitSize: (worldUnitSize) => set({ worldUnitSize }),
+      setLengthUnit: (lengthUnit) => set({ lengthUnit }),
       setScaleBarVisible: (scaleBarVisible) => set({ scaleBarVisible }),
       setColorbarsVisible: (colorbarsVisible) => set({ colorbarsVisible }),
       clear: () => set(createInitialProjectStoreState()),
