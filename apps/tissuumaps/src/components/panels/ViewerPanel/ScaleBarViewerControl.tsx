@@ -44,17 +44,18 @@ export function ScaleBarViewerControl({
   const updateScaleBar = useCallback(() => {
     if (
       !scaleBarVisible ||
-      worldUnitSize === undefined ||
       viewportRef.current === null ||
       barRef.current === null
     ) {
       return;
     }
     const { viewport, containerSize } = viewportRef.current;
-    const pixelSize = (worldUnitSize * viewport.width) / containerSize.width;
+    const physical = worldUnitSize !== undefined && worldUnitSize > 0;
+    const pixelSize =
+      ((physical ? worldUnitSize : 1) * viewport.width) / containerSize.width;
     const length = getScaleBarLength(pixelSize * maxScaleBarWidth);
     barRef.current.style.width = `${length / pixelSize}px`;
-    setLengthLabel(formatScaleBarLength(length));
+    setLengthLabel(formatScaleBarLength(length, physical ? "µm" : "px"));
   }, [viewportRef, scaleBarVisible, worldUnitSize]);
   useLayoutEffect(updateScaleBar, [updateScaleBar]);
 
@@ -62,7 +63,7 @@ export function ScaleBarViewerControl({
     updateScaleBar,
   ]);
 
-  if (!scaleBarVisible || worldUnitSize === undefined || worldUnitSize <= 0) {
+  if (!scaleBarVisible) {
     return null;
   }
   // An inline-block that hides its overflow has its baseline at its bottom

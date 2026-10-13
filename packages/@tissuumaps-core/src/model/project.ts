@@ -181,7 +181,8 @@ export interface RawProject extends RawModel {
   /**
    * Physical size of one world unit, in micrometers (µm)
    *
-   * The viewer shows a scale bar only if this is set to a positive value.
+   * The scale bar shows world units as pixels unless this is set to a
+   * positive value.
    */
   worldUnitSize?: number;
 

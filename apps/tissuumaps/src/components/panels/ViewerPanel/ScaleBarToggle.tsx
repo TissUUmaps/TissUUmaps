@@ -23,22 +23,14 @@ function ScaleBarIcon() {
 export type ScaleBarToggleProps = { className?: string };
 
 export function ScaleBarToggle({ className }: ScaleBarToggleProps) {
-  const worldUnitSize = useProjectStore((state) => state.worldUnitSize);
   const scaleBarVisible = useProjectStore((state) => state.scaleBarVisible);
   const setScaleBarVisible = useProjectStore(
     (state) => state.setScaleBarVisible,
   );
 
-  const scaleBarAvailable = worldUnitSize !== undefined && worldUnitSize > 0;
-
   return (
     <IconToggle
-      label={
-        scaleBarAvailable
-          ? "Scale bar"
-          : "Scale bar (set the world unit size in the render settings)"
-      }
-      disabled={!scaleBarAvailable}
+      label="Scale bar"
       className={className}
       pressed={scaleBarVisible}
       onPressedChange={setScaleBarVisible}
