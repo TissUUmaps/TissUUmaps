@@ -97,7 +97,7 @@ jobs:
       - name: Checkout the website
         uses: actions/checkout@v7
         with:
-          repository: TissUUmaps/website
+          repository: TissUUmaps/TissUUmaps.github.io
           ssh-key: ${{ secrets.WEBSITE_DEPLOY_KEY }}
           path: website
       - name: Publish the documentation

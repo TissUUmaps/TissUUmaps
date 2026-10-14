@@ -17,7 +17,7 @@ pnpm run build:packages # packages only
 pnpm run build:apidocs  # API documentation in docs/api (requires `pnpm run build:packages` first)
 ```
 
-The documentation is rendered by the [website](https://github.com/TissUUmaps/website). To preview it, clone the website next to this repository and follow its README.
+The documentation is rendered by the [website](https://github.com/TissUUmaps/TissUUmaps.github.io). To preview it, clone the website next to this repository and follow its README.
 
 Type checking is part of each package's `build` (`tsc -b`); `pnpm run typecheck` type-checks all projects (emitting only the packages' declaration files into `build/`), including the configuration files and the release scripts.
 
@@ -58,7 +58,7 @@ This is an academic project. As such, we encourage rigorous testing, but loosely
 
 ## Documentation
 
-User and developer documentation is written in markdown and rendered by the [website](https://github.com/TissUUmaps/website), versioned with the application (see below).
+User and developer documentation is written in markdown and rendered by the [website](https://github.com/TissUUmaps/TissUUmaps.github.io), versioned with the application (see below).
 
 API documentation for packages can be auto-generated from TSDoc code comments.
 
@@ -132,6 +132,6 @@ Further details:
 
 ## Continuous deployment
 
-The [website](https://github.com/TissUUmaps/website) hosts the application and its documentation, one MAJOR.MINOR line at a time. On every application release, the release workflow publishes the documentation to the website's `releases/<MAJOR.MINOR>/` (see [Release scripts](./code-architecture.md#release-scripts-scripts)), using the `WEBSITE_DEPLOY_KEY` deploy key. The website then deploys itself, with the application downloaded from the release. It inserts its analytics snippet at the `<!-- GHA_CUSTOM_HTML -->` marker of the application page (`apps/tissuumaps/index.html`), so the marker must stay.
+The [website](https://github.com/TissUUmaps/TissUUmaps.github.io) hosts the application and its documentation, one MAJOR.MINOR line at a time. On every application release, the release workflow publishes the documentation to the website's `releases/<MAJOR.MINOR>/` (see [Release scripts](./code-architecture.md#release-scripts-scripts)), using the `WEBSITE_DEPLOY_KEY` deploy key. The website then deploys itself, with the application downloaded from the release. It inserts its analytics snippet at the `<!-- GHA_CUSTOM_HTML -->` marker of the application page (`apps/tissuumaps/index.html`), so the marker must stay.
 
 This repository's GitHub Pages site only mirrors the TissUUmaps 3 plugin index under `plugins/`, since TissUUmaps 3 loads its plugins from there. It is deployed by a manual run of `.github/workflows/v3-plugins.yaml`, which copies the index from the given repository.

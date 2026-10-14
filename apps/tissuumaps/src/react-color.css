@@ -1,0 +1,19 @@
+/*
+ * TailwindCSS-styled theme for the @uiw/react-color Chrome color picker
+ *
+ * The picker sets its default variables as inline styles, so they are overridden with !important.
+ */
+
+.w-color-chrome {
+  --github-background-color: transparent !important;
+  --github-border: none !important;
+  --github-box-shadow: none !important;
+  --chrome-arrow-fill: var(--muted-foreground) !important;
+  --chrome-arrow-background-color: var(--muted) !important;
+}
+
+.w-color-chrome .w-color-editable-input {
+  --editable-input-color: var(--foreground) !important;
+  --editable-input-label-color: var(--muted-foreground) !important;
+  --editable-input-box-shadow: inset 0 0 0 1px var(--input) !important;
+}

@@ -232,7 +232,7 @@ The caches are implemented as follows:
 
 ## Documentation (docs)
 
-The documentation is written in markdown for [Docusaurus](https://docusaurus.io/), which the [website](https://github.com/TissUUmaps/website) uses to render it. Diagrams are powered by Mermaid.
+The documentation is written in markdown for [Docusaurus](https://docusaurus.io/), which the [website](https://github.com/TissUUmaps/TissUUmaps.github.io) uses to render it. Diagrams are powered by Mermaid.
 
 The API documentation for packages is generated into `docs/api/` by TypeDoc (`typedoc.json`), using `typedoc-plugin-markdown` and `typedoc-docusaurus-theme`. Links between pages are relative links to markdown files, so that they stay within the documentation's version on the website.
 
