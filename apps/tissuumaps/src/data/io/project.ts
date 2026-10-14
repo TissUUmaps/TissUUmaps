@@ -454,6 +454,8 @@ export async function saveProjectAs(
  * current project file, become relative to the new project file. URLs and
  * app-relative paths stay as they are, and paths relative to a project loaded
  * from a URL become absolute URLs, as the new file cannot reach them relatively.
+ * Only `source` is rewritten, as no other field of a data source is resolved as
+ * a path (see `RawDataSource.source`).
  *
  * @param project - The project whose sources to rewrite
  * @param workspace - The directory handle of the open workspace
