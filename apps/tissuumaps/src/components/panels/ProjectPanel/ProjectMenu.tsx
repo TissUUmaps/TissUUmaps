@@ -42,8 +42,7 @@ export function ProjectMenu({ className }: ProjectMenuProps) {
   const openProjectFromURL = useOpenProjectFromURL();
   const saveProjectToFolder = useSaveProjectToFolder();
   const saveProjectToFolderAs = useSaveProjectToFolderAs();
-  const { copyProjectLink, unavailableReason: copyLinkUnavailableReason } =
-    useCopyProjectLink();
+  const copyProjectLink = useCopyProjectLink();
   const closeProject = useCloseProject();
   const openWorkspace = useOpenWorkspace();
   const workspaceSupported = isWorkspaceSupported();
@@ -106,15 +105,21 @@ export function ProjectMenu({ className }: ProjectMenuProps) {
           Download project
         </DropdownMenuItem>
         <DropdownMenuItem
-          disabled={copyLinkUnavailableReason !== null}
-          onClick={copyProjectLink}
+          disabled={copyProjectLink === null || !window.isSecureContext}
+          onClick={copyProjectLink ?? undefined}
         >
           <CopyIcon />
           Copy share link
-          {copyLinkUnavailableReason !== null && (
+          {copyProjectLink === null ? (
             <DropdownMenuItemDescription>
-              {copyLinkUnavailableReason}
+              Only for projects opened from a URL
             </DropdownMenuItemDescription>
+          ) : (
+            !window.isSecureContext && (
+              <DropdownMenuItemDescription>
+                Copying needs a secure (https) connection
+              </DropdownMenuItemDescription>
+            )
           )}
         </DropdownMenuItem>
         <DropdownMenuSeparator />

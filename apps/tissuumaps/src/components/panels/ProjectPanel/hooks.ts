@@ -169,17 +169,15 @@ export function useSaveProjectToFolderAs(): (() => void) | null {
 /**
  * Returns a callback that copies a link that opens the project, and shows it
  *
- * @returns The callback, and why no link to the open project can be copied, or
- * `null` if it can
+ * Copying needs a secure context, where the clipboard is available.
+ *
+ * @returns The callback, or `null` if the open project was not loaded from a
+ * URL, so that no link can open it
  */
-export function useCopyProjectLink(): {
-  copyProjectLink: () => void;
-  unavailableReason: string | null;
-} {
+export function useCopyProjectLink(): (() => void) | null {
   const source = useProjectStore((state) => state.source);
   const alert = useAlertDialog();
 
-  // Only a project loaded from a URL can be opened by a link
   const shareableProjectUrl =
     source !== null && !SourceUtils.isWorkspacePath(source) ? source : null;
 
@@ -196,14 +194,7 @@ export function useCopyProjectLink(): {
         void alert({ title: "Cannot copy the link", body: link });
       });
   }, [shareableProjectUrl, alert]);
-
-  const unavailableReason =
-    shareableProjectUrl === null
-      ? "Only for projects opened from a URL"
-      : !window.isSecureContext
-        ? "Copying needs a secure (https) connection"
-        : null;
-  return { copyProjectLink, unavailableReason };
+  return shareableProjectUrl !== null ? copyProjectLink : null;
 }
 
 /**
