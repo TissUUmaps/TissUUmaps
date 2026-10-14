@@ -3,6 +3,7 @@ import { useCallback } from "react";
 import { SourceUtils } from "@tissuumaps/core";
 
 import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
+import type { ConfirmDialogParams } from "@/components/dialogs/ConfirmDialog";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { usePromptDialog } from "@/components/dialogs/PromptDialog/hooks";
 import {
@@ -84,15 +85,14 @@ export function useCloseWorkspace(): () => void {
  * nothing unsaved to lose
  */
 function useConfirmDiscard(): (
-  title: string,
-  body: string,
+  params: ConfirmDialogParams,
 ) => Promise<boolean> {
   const confirm = useConfirmDialog();
 
   return useCallback(
-    (title: string, body: string) =>
+    (params: ConfirmDialogParams) =>
       hasUnsavedChanges(projectStore.getState())
-        ? confirm({ title, body })
+        ? confirm(params)
         : Promise.resolve(true),
     [confirm],
   );
@@ -241,10 +241,11 @@ export function useOpenProjectFromURL(): () => void {
         const projectUrl = value?.trim();
         if (
           projectUrl &&
-          (await confirmDiscard(
-            "Open project",
-            "Are you sure you want to open another project? All unsaved changes will be lost.",
-          ))
+          (await confirmDiscard({
+            title: "Open project",
+            body: `Open the project "${projectUrl}"? It replaces the open project, and unsaved changes are lost.`,
+            actionLabel: "Open",
+          }))
         ) {
           await loadProjectFromURL(projectUrl);
           setProjectURLParam(projectUrl);
@@ -258,20 +259,17 @@ export function useOpenProjectFromURL(): () => void {
 
 /**
  * Returns a callback that lets the user pick a project file, within the
- * workspace if one is open, and loads it
+ * workspace if one is open, and loads it, after confirmation if needed (see
+ * {@link useConfirmOpenProjectFile})
  *
- * The project is loaded only after confirmation if the open project has
- * unsaved changes, or if the file was picked outside the open workspace, as
- * its project-relative paths are then resolved against the workspace instead
- * of the project file's directory (see `loadProjectFromFileHandle`). Failures
- * are logged, as the callback is called from event handlers.
+ * Failures are logged, as the callback is called from event handlers.
  *
  * @returns The callback
  */
 export function useOpenProjectFromFile(): () => void {
   const workspace = useAppStore((state) => state.workspace);
+  const confirmOpenProjectFile = useConfirmOpenProjectFile();
   const loadProjectFile = useLoadProjectFile();
-  const confirm = useConfirmDialog();
 
   return useCallback(() => {
     const pickedProjectFile =
@@ -280,35 +278,58 @@ export function useOpenProjectFromFile(): () => void {
         : pickProjectFile({ startIn: workspace });
     void pickedProjectFile
       .then(async (projectFile) => {
-        if (projectFile === null) {
-          return;
+        if (
+          projectFile !== null &&
+          (await confirmOpenProjectFile(projectFile))
+        ) {
+          await loadProjectFile(projectFile);
         }
-        const unsavedChanges = hasUnsavedChanges(projectStore.getState());
-        const isOutsideWorkspace =
-          workspace !== null &&
-          (projectFile instanceof File ||
-            (await resolveProjectSource(projectFile, workspace)) === null);
-        if (unsavedChanges || isOutsideWorkspace) {
-          const question = unsavedChanges
-            ? `Open the project "${projectFile.name}"? It replaces the open project, and unsaved changes are lost.`
-            : `Open the project "${projectFile.name}"?`;
-          const confirmed = await confirm({
-            title: "Open project",
-            body: isOutsideWorkspace
-              ? `"${projectFile.name}" is not in the connected folder "${workspace.name}". Its relative paths will be looked up in "${workspace.name}" instead of next to the project file, so some of its data may fail to load. ${question}`
-              : question,
-            actionLabel: "Open",
-          });
-          if (!confirmed) {
-            return;
-          }
-        }
-        await loadProjectFile(projectFile);
       })
       .catch((error) => {
         console.error("Failed to load project from file", error);
       });
-  }, [workspace, loadProjectFile, confirm]);
+  }, [workspace, confirmOpenProjectFile, loadProjectFile]);
+}
+
+/**
+ * Returns a callback that asks the user to confirm opening a project file
+ *
+ * It asks only if the open project has unsaved changes, or if the file lies
+ * outside the open workspace, as its project-relative paths are then resolved
+ * against the workspace instead of the file's directory (see
+ * `loadProjectFromFileHandle`).
+ *
+ * @returns The callback, which resolves to whether to open the file
+ */
+export function useConfirmOpenProjectFile(): (
+  projectFile: FileSystemFileHandle | File,
+) => Promise<boolean> {
+  const workspace = useAppStore((state) => state.workspace);
+  const confirm = useConfirmDialog();
+
+  return useCallback(
+    async (projectFile) => {
+      const unsavedChanges = hasUnsavedChanges(projectStore.getState());
+      const isOutsideWorkspace =
+        workspace !== null &&
+        (projectFile instanceof File ||
+          (await resolveProjectSource(projectFile, workspace)) === null);
+      if (!unsavedChanges && !isOutsideWorkspace) {
+        return true;
+      }
+      const question = unsavedChanges
+        ? `Open the project "${projectFile.name}"? It replaces the open project, and unsaved changes are lost.`
+        : `Open the project "${projectFile.name}"?`;
+      return await confirm({
+        title: "Open project",
+        body: isOutsideWorkspace
+          ? `"${projectFile.name}" is not in the connected folder "${workspace.name}". Its relative paths will be looked up in "${workspace.name}" instead of next to the project file, so some of its data may fail to load. ${question}`
+          : question,
+        actionLabel: "Open",
+      });
+    },
+    [workspace, confirm],
+  );
 }
 
 /**
@@ -353,10 +374,10 @@ export function useCloseProject(): () => void {
   const confirmDiscard = useConfirmDiscard();
 
   return useCallback(() => {
-    void confirmDiscard(
-      "Close project",
-      "Are you sure you want to close the project? All unsaved changes will be lost.",
-    ).then((confirmed) => {
+    void confirmDiscard({
+      title: "Close project",
+      body: "Are you sure you want to close the project? All unsaved changes will be lost.",
+    }).then((confirmed) => {
       if (confirmed) {
         clearProject();
         clearProjectURLParam();

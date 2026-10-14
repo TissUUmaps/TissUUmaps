@@ -11,8 +11,10 @@ import {
 } from "@/components/dialogs/AddDataObjectDialog/hooks";
 import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
-import { useLoadProjectFile } from "@/components/panels/ProjectPanel/hooks";
-import { hasUnsavedChanges, resolveProjectSource } from "@/data/io/project";
+import {
+  useConfirmOpenProjectFile,
+  useLoadProjectFile,
+} from "@/components/panels/ProjectPanel/hooks";
 import {
   isWorkspaceSupported,
   projectFileExtensions,
@@ -50,6 +52,7 @@ export function usePanelDrop(panelId: string): {
 } | null {
   const workspace = useAppStore((state) => state.workspace);
   const setWorkspace = useAppStore((state) => state.setWorkspace);
+  const confirmOpenProjectFile = useConfirmOpenProjectFile();
   const loadProjectFile = useLoadProjectFile();
   const hasLayers = useProjectStore((state) => state.layers.length > 0);
   const alert = useAlertDialog();
@@ -118,25 +121,8 @@ export function usePanelDrop(panelId: string): {
       });
       return;
     }
-    const unsavedChanges = hasUnsavedChanges(projectStore.getState());
-    const isOutsideWorkspace =
-      workspace !== null &&
-      (projectFile instanceof File ||
-        (await resolveProjectSource(projectFile, workspace)) === null);
-    if (unsavedChanges || isOutsideWorkspace) {
-      const question = unsavedChanges
-        ? `Open the project "${projectFile.name}"? It replaces the open project, and unsaved changes are lost.`
-        : `Open the project "${projectFile.name}"?`;
-      const confirmed = await confirm({
-        title: "Open project",
-        body: isOutsideWorkspace
-          ? `"${projectFile.name}" is not in the connected folder "${workspace.name}". Its relative paths will be looked up in "${workspace.name}" instead of next to the project file, so some of its data may fail to load. ${question}`
-          : question,
-        actionLabel: "Open",
-      });
-      if (!confirmed) {
-        return;
-      }
+    if (!(await confirmOpenProjectFile(projectFile))) {
+      return;
     }
     try {
       await loadProjectFile(projectFile);
