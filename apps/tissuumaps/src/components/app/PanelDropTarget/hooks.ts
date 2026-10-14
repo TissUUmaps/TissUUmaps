@@ -12,7 +12,7 @@ import {
 import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { useLoadProjectFile } from "@/components/panels/ProjectPanel/hooks";
-import { resolveProjectSource } from "@/data/io/project";
+import { hasUnsavedChanges, resolveProjectSource } from "@/data/io/project";
 import {
   isWorkspaceSupported,
   projectFileExtensions,
@@ -28,9 +28,10 @@ import { projectStore, useProjectStore } from "@/stores/project";
  * and handles the drop
  *
  * The project panel accepts a single project file, which it loads, or a
- * single directory, which it opens as the workspace, either after
- * confirmation. It rejects files without a project file extension before
- * asking, and warns about project files outside the workspace when asking.
+ * single directory, which it opens as the workspace after confirmation. It
+ * rejects files without a project file extension, and asks before loading a
+ * project file only if the open project has unsaved changes or the file lies
+ * outside the workspace, which it then warns about.
  * The data panels accept files and directories within the workspace, and
  * open one add data object dialog per item, also while no project is open,
  * which then opens once a data object is added. They accept nothing while no
@@ -48,7 +49,6 @@ export function usePanelDrop(panelId: string): {
   onDrop: (dataTransfer: DataTransfer) => Promise<void>;
 } | null {
   const workspace = useAppStore((state) => state.workspace);
-  const isProjectOpen = useAppStore((state) => state.projectOpen);
   const setWorkspace = useAppStore((state) => state.setWorkspace);
   const loadProjectFile = useLoadProjectFile();
   const hasLayers = useProjectStore((state) => state.layers.length > 0);
@@ -118,22 +118,25 @@ export function usePanelDrop(panelId: string): {
       });
       return;
     }
-    const question = isProjectOpen
-      ? `Open the project "${projectFile.name}"? It replaces the open project, and unsaved changes are lost.`
-      : `Open the project "${projectFile.name}"?`;
+    const unsavedChanges = hasUnsavedChanges(projectStore.getState());
     const isOutsideWorkspace =
       workspace !== null &&
       (projectFile instanceof File ||
         (await resolveProjectSource(projectFile, workspace)) === null);
-    const confirmed = await confirm({
-      title: "Open project",
-      body: isOutsideWorkspace
-        ? `"${projectFile.name}" is not in the connected folder "${workspace.name}". Its relative paths will be looked up in "${workspace.name}" instead of next to the project file, so some of its data may fail to load. ${question}`
-        : question,
-      actionLabel: "Open",
-    });
-    if (!confirmed) {
-      return;
+    if (unsavedChanges || isOutsideWorkspace) {
+      const question = unsavedChanges
+        ? `Open the project "${projectFile.name}"? It replaces the open project, and unsaved changes are lost.`
+        : `Open the project "${projectFile.name}"?`;
+      const confirmed = await confirm({
+        title: "Open project",
+        body: isOutsideWorkspace
+          ? `"${projectFile.name}" is not in the connected folder "${workspace.name}". Its relative paths will be looked up in "${workspace.name}" instead of next to the project file, so some of its data may fail to load. ${question}`
+          : question,
+        actionLabel: "Open",
+      });
+      if (!confirmed) {
+        return;
+      }
     }
     try {
       await loadProjectFile(projectFile);
