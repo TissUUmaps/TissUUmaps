@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # AI chat
 
-The **AI chat** plugin adds a chat panel in which you can ask questions about the open project and change how it is shown, in plain words: _"show only the cell labels"_, _"color the cells by leiden"_, _"cluster 3 in red, the others grey"_. The answers come from a language model that runs through [Ollama](https://ollama.com), either on your own computer or online.
+The **AI chat** plugin adds a chat panel in which you can ask questions about the open project and change how it is shown, in plain words: _"show only the cell labels"_, _"color the cells by leiden"_, _"cluster 3 in red, the others grey"_. The answers come from a language model of [OpenAI](https://platform.openai.com) or [Anthropic](https://platform.claude.com), with your own API key, or from a model that runs through [Ollama](https://ollama.com), on your own computer or online.
 
 Open the panel from the plugins menu (the kebab button in the tab bar), by picking _AI chat_.
 
@@ -33,27 +33,65 @@ Language models make mistakes, especially small ones running on a laptop. Check 
 
 :::
 
+## Choosing a service
+
+The first menu at the top of the panel chooses the service that answers, the second one its model. The panel remembers both in the browser for the next session.
+
+| Service            | Runs on                                           | Needs                        | Cost                      |
+| ------------------ | ------------------------------------------------- | ---------------------------- | ------------------------- |
+| **OpenAI**         | OpenAI's servers                                  | your own OpenAI API key      | billed to your account    |
+| **Anthropic**      | Anthropic's servers                               | your own Anthropic API key   | billed to your account    |
+| **Ollama (local)** | your computer                                     | Ollama installed             | free                      |
+| **Ollama (cloud)** | Ollama's servers, through Ollama on your computer | Ollama installed, an account | free plan for some models |
+
+With OpenAI, Anthropic and Ollama (cloud), your messages and the project summary are sent to that service. OpenAI and Anthropic are fast on any computer and also work when TissUUmaps is opened from a website; a local model is free, private and works offline, but can be slow on a computer without a good graphics card.
+
+## Using OpenAI or Anthropic
+
+TissUUmaps does not provide API keys: everyone uses their own. An API key is a secret code that lets the chat use your account, and every request is billed to that account, so first add a payment method or buy credit there. With the first model in the menu (`gpt-6-luna` or `claude-haiku-5-5`), a request usually costs well under one cent; the other models cost more.
+
+### Getting a key
+
+- **OpenAI**: sign in at [platform.openai.com](https://platform.openai.com), open the [API keys](https://platform.openai.com/api-keys) page and click _Create new secret key_.
+- **Anthropic**: sign in at [platform.claude.com](https://platform.claude.com), open the [API keys](https://platform.claude.com/settings/keys) page and click _Create key_. Choose one workspace for the key (e.g. the _Default Workspace_), otherwise every request would need to name the workspace, and choose when the key expires.
+
+Copy the key (the website shows it only once: if you lose it, make a new one), choose the service in the panel and paste the key into the _API key_ field. The panel checks the key with a request that costs nothing, and the status line says whether it was accepted.
+
+### Keeping your key safe
+
+- Treat the key like a password: do not share it, and do not put it in e-mails, files or screenshots.
+- Make a key just for TissUUmaps, and set a monthly spending limit in your account (under _Limits_), so that a stolen key cannot cost much. With Anthropic, you can also make the key expire.
+- If someone else may have your key, delete it on the page where you made it: it stops working at once. Then click _Forget key_ in the panel.
+
+The key is sent only to the service it belongs to, and never shown in the panel, in _Show context_ or in error messages.
+
+Without _Remember key on this computer_, the key is forgotten when the page is closed. With it, the key is saved in the browser's storage for TissUUmaps, where anyone who uses this browser on this computer, and any browser extension or script that can read the page, could find it. Do not use it on a shared computer. _Forget key_ removes the key from the panel and from the browser.
+
+:::caution
+
+OpenAI advises against using API keys in code that runs in a browser, and Anthropic calls the header that allows it "dangerous", for the same reason: a key in a browser can be read by others. This is why the plugin never comes with a key, and why your own key should have a spending limit.
+
+:::
+
 ## Installing Ollama
 
 Download Ollama from [ollama.com/download](https://ollama.com/download) and install it like any other program. It then runs in the background. If the status line of the panel says that Ollama is not running, start it from the Start menu (Windows) or the Applications folder (Mac), then click _Check again_.
 
-## Choosing a model
+## Choosing an Ollama model
 
-The menu at the top of the panel lists the models installed in Ollama and a few suggested ones:
+With _Ollama (local)_ and _Ollama (cloud)_, the model menu lists the models installed in Ollama and a few suggested ones:
 
 - **local** models run on your computer. They are free, private and work offline, but can be slow on a computer without a good graphics card. `gemma4:e2b` is a small model that runs on most laptops.
 - **not downloaded** models are local models that are not on your computer yet: choose one and click _Download_. This happens only once and takes a few GB of disk space.
-- **online** models (their names end in `cloud`, e.g. `gemma4:cloud`) run on Ollama's servers. They are fast on any computer and make fewer mistakes, but your messages and the project summary are sent to Ollama. `gemma4:cloud` is included in Ollama's free plan.
-
-The panel remembers the chosen model in the browser for the next session.
+- **online** models (with _Ollama (cloud)_; their names end in `cloud`, e.g. `gemma4:cloud`) run on Ollama's servers. They are fast on any computer and make fewer mistakes, but your messages and the project summary are sent to Ollama. `gemma4:cloud` is included in Ollama's free plan.
 
 ### Online models
 
 Online models need you to be signed in to Ollama: open the Ollama app, go to _Settings_ and sign in, or create a free account there. In a terminal, `ollama signin` does the same.
 
-## Using TissUUmaps from a website
+## Using Ollama when TissUUmaps is opened from a website
 
-For safety, Ollama only accepts requests from pages opened from your own computer, such as a TissUUmaps started with `pnpm run dev`. When TissUUmaps is opened from a website, for example [tissuumaps.github.io](https://tissuumaps.github.io), Ollama blocks it, and the status line says so: _"Ollama is running, but it blocks this website"_. This applies to online models too, since they are also reached through Ollama on your computer.
+OpenAI and Anthropic need nothing for this. For safety, Ollama only accepts requests from pages opened from your own computer, such as a TissUUmaps started with `pnpm run dev`. When TissUUmaps is opened from a website, for example [tissuumaps.github.io](https://tissuumaps.github.io), Ollama blocks it, and the status line says so: _"Ollama is running, but it blocks this website"_. This applies to online models too, since they are also reached through Ollama on your computer.
 
 To allow the website, give its address to Ollama with the `OLLAMA_ORIGINS` setting, then restart Ollama:
 
@@ -86,4 +124,10 @@ See also [Ollama's FAQ](https://docs.ollama.com/faq) on `OLLAMA_ORIGINS`.
 
 ## API
 
-The plugin is implemented in the [`@tissuumaps/plugins`](../api/@tissuumaps/plugins/index.md) package as `aiChatPlugin`, and registered by the application on startup (see [Plugins](../development/plugins.md)). It talks to Ollama's [chat API](https://docs.ollama.com/api) at `http://localhost:11434`.
+The plugin is implemented in the [`@tissuumaps/plugins`](../api/@tissuumaps/plugins/index.md) package as `aiChatPlugin`, and registered by the application on startup (see [Plugins](../development/plugins.md)). It talks directly from the browser to:
+
+- OpenAI's [Responses API](https://developers.openai.com/api/docs/guides/function-calling) at `https://api.openai.com/v1/responses`, with `store: false`, so that OpenAI keeps nothing between requests;
+- Anthropic's [Messages API](https://platform.claude.com/docs/en/build-with-claude/working-with-messages) at `https://api.anthropic.com/v1/messages`, with the `anthropic-dangerous-direct-browser-access` header, without which Anthropic does not answer pages in a browser;
+- Ollama's [chat API](https://docs.ollama.com/api) at `http://localhost:11434`.
+
+The conversation is kept in one format of the plugin's own, and each service's part of the plugin turns it into the format of that API, so that the tools work the same with all of them.

@@ -357,11 +357,186 @@ function streamOf(text: string): Response {
   );
 }
 
-/** The fake Ollama server */
+/** Fake API keys, which only look like real ones */
+const openAiKey = "sk-test-openai-not-a-real-key-0001";
+const anthropicKey = "sk-ant-test-not-a-real-key-0002";
+
+/** The parts of a chat request to OpenAI or Anthropic that the tests look at */
+type ServiceRequestBody = {
+  model: string;
+  instructions?: string;
+  system?: string;
+  store?: boolean;
+  max_tokens?: number;
+  tools: Record<string, unknown>[];
+  input?: Record<string, unknown>[];
+  messages?: { role: string; content: Record<string, unknown>[] }[];
+};
+
+/** What the fake OpenAI and Anthropic do, and what they were asked */
+const services = {
+  online: true,
+  /** The next answers of the model, in order */
+  answers: [] as {
+    content?: string;
+    toolCalls?: [string, Record<string, unknown>][];
+  }[],
+  /** An error answer for every request, instead of the model's answer */
+  error: undefined as { status: number; body: unknown } | undefined,
+  /** The chat requests */
+  requests: [] as { url: string; headers: Headers; body: ServiceRequestBody }[],
+};
+
+/** Every request made by the panel, to find where a key was sent */
+const network: { url: string; headers: Headers; body: string }[] = [];
+
+/** An answer as server-sent events, each with its type, like OpenAI and Anthropic send */
+function eventStreamOf(events: { type: string }[]): Response {
+  return streamOf(
+    events
+      .map(
+        (event) => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`,
+      )
+      .join(""),
+  );
+}
+
+/** The fake OpenAI Responses API, which also sends back a reasoning item */
+function fakeOpenAi(): Response {
+  const answer = services.answers.shift() ?? { content: "ok" };
+  const output: object[] = [
+    { type: "reasoning", id: "rs_1", encrypted_content: "thinking-1" },
+  ];
+  if (answer.content !== undefined) {
+    output.push({
+      type: "message",
+      role: "assistant",
+      content: [{ type: "output_text", text: answer.content }],
+    });
+  }
+  for (const [name, args] of answer.toolCalls ?? []) {
+    output.push({
+      type: "function_call",
+      call_id: `call_${services.requests.length - 1}_${name}`,
+      name,
+      arguments: JSON.stringify(args),
+    });
+  }
+  return eventStreamOf([
+    { type: "response.created" },
+    ...(answer.content?.match(/.{1,6}/gs) ?? []).map((delta) => ({
+      type: "response.output_text.delta",
+      delta,
+    })),
+    { type: "response.completed", response: { output } } as { type: string },
+  ]);
+}
+
+/** The fake Anthropic Messages API, which also sends the model's thinking */
+function fakeAnthropic(): Response {
+  const answer = services.answers.shift() ?? { content: "ok" };
+  const events: object[] = [
+    { type: "message_start", message: { role: "assistant", content: [] } },
+    {
+      type: "content_block_start",
+      index: 0,
+      content_block: { type: "thinking", thinking: "" },
+    },
+    {
+      type: "content_block_delta",
+      index: 0,
+      delta: { type: "thinking_delta", thinking: "Let me see." },
+    },
+    {
+      type: "content_block_delta",
+      index: 0,
+      delta: { type: "signature_delta", signature: "signature-1" },
+    },
+    { type: "content_block_stop", index: 0 },
+  ];
+  let index = 1;
+  if (answer.content !== undefined) {
+    events.push({
+      type: "content_block_start",
+      index,
+      content_block: { type: "text", text: "" },
+    });
+    for (const text of answer.content.match(/.{1,6}/gs) ?? []) {
+      events.push({
+        type: "content_block_delta",
+        index,
+        delta: { type: "text_delta", text },
+      });
+    }
+    events.push({ type: "content_block_stop", index });
+    index++;
+  }
+  for (const [name, args] of answer.toolCalls ?? []) {
+    events.push({
+      type: "content_block_start",
+      index,
+      content_block: {
+        type: "tool_use",
+        id: `toolu_${services.requests.length - 1}_${name}`,
+        name,
+        input: {},
+      },
+    });
+    // the arguments arrive in pieces of JSON
+    for (const piece of JSON.stringify(args).match(/.{1,10}/gs) ?? []) {
+      events.push({
+        type: "content_block_delta",
+        index,
+        delta: { type: "input_json_delta", partial_json: piece },
+      });
+    }
+    events.push({ type: "content_block_stop", index });
+    index++;
+  }
+  events.push(
+    { type: "message_delta", delta: { stop_reason: "end_turn" } },
+    { type: "message_stop" },
+  );
+  return eventStreamOf(events as { type: string }[]);
+}
+
+/** The fake OpenAI and Anthropic */
+function fakeService(url: URL, options?: RequestInit): Promise<Response> {
+  if (!services.online) {
+    return Promise.reject(new TypeError("Failed to fetch"));
+  }
+  if (services.error !== undefined) {
+    return Promise.resolve(
+      Response.json(services.error.body, { status: services.error.status }),
+    );
+  }
+  if (url.pathname === "/v1/models") {
+    return Promise.resolve(Response.json({ data: [] }));
+  }
+  services.requests.push({
+    url: url.href,
+    headers: new Headers(options?.headers),
+    body: JSON.parse(options?.body as string) as ServiceRequestBody,
+  });
+  return Promise.resolve(
+    url.host === "api.openai.com" ? fakeOpenAi() : fakeAnthropic(),
+  );
+}
+
+/** The fake services: OpenAI, Anthropic and the Ollama server */
 function fakeFetch(
   url: string | URL,
   options?: RequestInit,
 ): Promise<Response> {
+  const address = new URL(url);
+  network.push({
+    url: address.href,
+    headers: new Headers(options?.headers),
+    body: typeof options?.body === "string" ? options.body : "",
+  });
+  if (["api.openai.com", "api.anthropic.com"].includes(address.host)) {
+    return fakeService(address, options);
+  }
   if (!ollama.running) {
     return Promise.reject(new TypeError("Failed to fetch"));
   }
@@ -424,10 +599,20 @@ function modelCalls(...toolCalls: [string, Record<string, unknown>][]): void {
   ollama.answers = [{ toolCalls }, { content: "ok" }];
 }
 
-/** Opens the chat panel and gives helpers to use it like a researcher would */
+/** Waits until the status line no longer says that something is being checked */
+async function checked(status: HTMLElement): Promise<void> {
+  await vi.waitFor(() => expect(status.textContent).not.toMatch(/checking/));
+}
+
+/**
+ * Opens the chat panel and gives helpers to use it like a researcher would;
+ * chooses the local Ollama, unless told another service, or `null` to keep
+ * the one the panel starts with
+ */
 async function openPanel(
   projectStore = makeProjectStore(),
   dataStore = makeDataStore(makeTables()),
+  { provider = "ollama" }: { provider?: string | null } = {},
 ) {
   const container = document.createElement("div");
   const unmount = aiChatPlugin.mount?.(container, {
@@ -441,12 +626,29 @@ async function openPanel(
       (b) => b.textContent === text,
     ) as HTMLButtonElement;
   const status = container.querySelector("span") as HTMLSpanElement;
-  const select = container.querySelector("select") as HTMLSelectElement;
-  const history = container.children[2] as HTMLElement;
-  const examplesRow = container.children[3] as HTMLElement;
-  await vi.waitFor(() =>
-    expect(status.textContent).not.toBe("Ollama: checking..."),
-  );
+  const providerSelect = container.querySelector(
+    'select[title="Service"]',
+  ) as HTMLSelectElement;
+  const select = container.querySelector(
+    'select[title="Model"]',
+  ) as HTMLSelectElement;
+  const keyInput = container.querySelector(
+    'input[type="password"]',
+  ) as HTMLInputElement;
+  const rememberBox = container.querySelector(
+    'input[type="checkbox"]',
+  ) as HTMLInputElement;
+  const history = container.children[3] as HTMLElement;
+  const examplesRow = container.children[4] as HTMLElement;
+  const chooseProvider = async (id: string) => {
+    providerSelect.value = id;
+    providerSelect.dispatchEvent(new Event("change"));
+    await checked(status);
+  };
+  await checked(status);
+  if (provider !== null) {
+    await chooseProvider(provider);
+  }
   // the tables are read
   await new Promise((resolve) => setTimeout(resolve, 20));
   const messages = () =>
@@ -460,10 +662,27 @@ async function openPanel(
     container,
     unmount,
     status: () => status.textContent,
+    provider: () => providerSelect.value,
+    providers: () =>
+      [...providerSelect.options].map((option) => option.textContent),
+    chooseProvider,
     model: () => select.value,
     chooseModel: (name: string) => {
       select.value = name;
       select.dispatchEvent(new Event("change"));
+    },
+    keyInput,
+    rememberBox,
+    /** Pastes a key, leaves the field, and waits for the check of the key */
+    pasteKey: async (key: string) => {
+      keyInput.value = key;
+      keyInput.dispatchEvent(new Event("input"));
+      keyInput.dispatchEvent(new Event("change"));
+      await checked(status);
+    },
+    remember: (on: boolean) => {
+      rememberBox.checked = on;
+      rememberBox.dispatchEvent(new Event("change"));
     },
     button,
     messages,
@@ -506,6 +725,13 @@ beforeEach(() => {
     answers: [],
     requests: [],
   });
+  Object.assign(services, {
+    online: true,
+    answers: [],
+    error: undefined,
+    requests: [],
+  });
+  network.length = 0;
   vi.stubGlobal("fetch", fakeFetch);
   vi.stubGlobal(
     "ResizeObserver",
@@ -1153,12 +1379,15 @@ describe("aiChatPlugin", () => {
       ]);
     });
 
-    it("remembers the chosen model for the next session", async () => {
-      const first = await openPanel();
-      expect(first.model()).toBe("gemma4:e2b");
-      first.chooseModel("gemma4:cloud");
-      const next = await openPanel();
-      expect(next.model()).toBe("gemma4:cloud");
+    it("remembers the chosen service and model for the next session", async () => {
+      const first = await openPanel(undefined, undefined, { provider: null });
+      expect(first.model()).toBe("gpt-6-luna");
+      await first.chooseProvider("anthropic");
+      expect(first.model()).toBe("claude-haiku-5-5");
+      first.chooseModel("claude-sonnet-5-5");
+      const next = await openPanel(undefined, undefined, { provider: null });
+      expect(next.provider()).toBe("anthropic");
+      expect(next.model()).toBe("claude-sonnet-5-5");
     });
 
     it("downloads a missing model and shows the progress", async () => {
@@ -1191,6 +1420,303 @@ describe("aiChatPlugin", () => {
       expect(panel.status()).toContain(
         "Ollama is running, but it blocks this website (https://tissuumaps.github.io): by default it only accepts pages opened from this computer. To allow it, set OLLAMA_ORIGINS to https://tissuumaps.github.io",
       );
+    });
+  });
+
+  describe("OpenAI and Anthropic", () => {
+    it("offers OpenAI and Anthropic first, and asks for a key before sending", async () => {
+      const panel = await openPanel(undefined, undefined, { provider: null });
+      expect(panel.providers()).toEqual([
+        "OpenAI",
+        "Anthropic",
+        "Ollama (local)",
+        "Ollama (cloud)",
+      ]);
+      expect(panel.provider()).toBe("openai");
+      expect(panel.model()).toBe("gpt-6-luna");
+      expect(panel.keyInput.type).toBe("password");
+      expect(panel.status()).toBe(
+        'OpenAI: paste your API key below. No key yet? Click "Help".',
+      );
+      await panel.say("Hello");
+      expect(panel.texts("Error")).toEqual([
+        'Paste your OpenAI API key into the "API key" field first. No key yet? Click "Help".',
+      ]);
+      expect(network).toEqual([]);
+    });
+
+    it("runs the tools with OpenAI, and sends back the results and the model's thinking", async () => {
+      const panel = await openPanel(undefined, undefined, { provider: null });
+      await panel.pasteKey(openAiKey);
+      expect(panel.status()).toMatch(/^OpenAI: key accepted\./);
+      services.answers = [
+        {
+          toolCalls: [
+            ["set_visibility", { ids: [transcripts], visible: true }],
+          ],
+        },
+        { content: "The transcripts are **visible** now." },
+      ];
+      await panel.say("Show the transcripts.");
+      expect(objectOf(panel.projectStore, transcripts).visibility).toBe(true);
+      expect(panel.texts("gpt-6-luna")).toEqual([
+        "The transcripts are visible now.",
+      ]);
+      const [first, second] = services.requests;
+      expect(first?.url).toBe("https://api.openai.com/v1/responses");
+      expect(first?.headers.get("Authorization")).toBe(`Bearer ${openAiKey}`);
+      expect(first?.body.model).toBe("gpt-6-luna");
+      expect(first?.body.store).toBe(false);
+      expect(first?.body.instructions).toContain(
+        "You are an assistant inside TissUUmaps",
+      );
+      expect(first?.body.tools[0]).toMatchObject({
+        type: "function",
+        name: "set_visibility",
+        strict: false,
+      });
+      expect(second?.body.input).toEqual(
+        expect.arrayContaining([
+          { type: "reasoning", id: "rs_1", encrypted_content: "thinking-1" },
+          expect.objectContaining({
+            type: "function_call",
+            call_id: "call_0_set_visibility",
+          }),
+          {
+            type: "function_call_output",
+            call_id: "call_0_set_visibility",
+            output: expect.stringContaining("Done") as string,
+          },
+        ]),
+      );
+    });
+
+    it("runs the tools with Anthropic, with the header that lets a browser page use it", async () => {
+      const panel = await openPanel(undefined, undefined, {
+        provider: "anthropic",
+      });
+      await panel.pasteKey(anthropicKey);
+      services.answers = [
+        { toolCalls: [["set_opacity", { ids: [heImage], opacity: 0.5 }]] },
+        { content: "The H&E image is 50% transparent now." },
+      ];
+      await panel.say("Make the H&E image 50% transparent.");
+      expect(panel.projectStore.getState().images[0]?.opacity).toBe(0.5);
+      expect(panel.texts("claude-haiku-5-5")).toEqual([
+        "The H&E image is 50% transparent now.",
+      ]);
+      const [first, second] = services.requests;
+      expect(first?.url).toBe("https://api.anthropic.com/v1/messages");
+      expect(first?.headers.get("Authorization")).toBe(
+        `Bearer ${anthropicKey}`,
+      );
+      expect(
+        first?.headers.get("anthropic-dangerous-direct-browser-access"),
+      ).toBe("true");
+      expect(first?.headers.get("anthropic-version")).toBe("2023-06-01");
+      expect(first?.body.system).toContain(
+        "You are an assistant inside TissUUmaps",
+      );
+      expect(first?.body.max_tokens).toBeGreaterThan(0);
+      expect(first?.body.tools[0]).toMatchObject({
+        name: "set_visibility",
+        input_schema: { type: "object" },
+      });
+      // the thinking goes back as it came, and the results go in a user message
+      expect(second?.body.messages?.slice(1)).toEqual([
+        {
+          role: "assistant",
+          content: [
+            {
+              type: "thinking",
+              thinking: "Let me see.",
+              signature: "signature-1",
+            },
+            {
+              type: "tool_use",
+              id: "toolu_0_set_opacity",
+              name: "set_opacity",
+              input: { ids: [heImage], opacity: 0.5 },
+            },
+          ],
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "tool_result",
+              tool_use_id: "toolu_0_set_opacity",
+              content: expect.stringContaining("Done") as string,
+            },
+          ],
+        },
+      ]);
+    });
+
+    it("keeps the conversation when the user switches to another service", async () => {
+      const panel = await openPanel(undefined, undefined, { provider: null });
+      await panel.pasteKey(openAiKey);
+      services.answers = [
+        {
+          toolCalls: [
+            ["set_visibility", { ids: [transcripts], visible: true }],
+          ],
+        },
+        { content: "ok" },
+      ];
+      await panel.say("Show the transcripts.");
+      await panel.chooseProvider("anthropic");
+      await panel.pasteKey(anthropicKey);
+      await panel.say("And now?");
+      const { messages } = services.requests.at(-1)?.body ?? {};
+      expect(messages?.map((message) => message.role)).toEqual([
+        "user",
+        "assistant",
+        "user",
+        "assistant",
+        "user",
+      ]);
+      expect(messages?.[1]?.content).toEqual([
+        {
+          type: "tool_use",
+          id: "call_0_set_visibility",
+          name: "set_visibility",
+          input: { ids: [transcripts], visible: true },
+        },
+      ]);
+      expect(messages?.[2]?.content[0]).toMatchObject({
+        type: "tool_result",
+        tool_use_id: "call_0_set_visibility",
+      });
+    });
+
+    it("remembers the key only when asked, and forgets it", async () => {
+      const { localStorage } = window;
+      const stored = () =>
+        Array.from({ length: localStorage.length }, (_, i) =>
+          localStorage.getItem(localStorage.key(i) ?? ""),
+        );
+      const panel = await openPanel(undefined, undefined, { provider: null });
+      await panel.pasteKey(openAiKey);
+      expect(stored()).not.toContain(openAiKey);
+      panel.remember(true);
+      expect(stored()).toContain(openAiKey);
+      const next = await openPanel(undefined, undefined, { provider: null });
+      expect(next.keyInput.value).toBe(openAiKey);
+      expect(next.rememberBox.checked).toBe(true);
+      // Anthropic does not get the OpenAI key
+      await next.chooseProvider("anthropic");
+      expect(next.keyInput.value).toBe("");
+      await next.chooseProvider("openai");
+      next.button("Forget key").click();
+      expect(next.keyInput.value).toBe("");
+      expect(next.rememberBox.checked).toBe(false);
+      expect(stored()).not.toContain(openAiKey);
+      expect(next.status()).toBe(
+        'OpenAI: paste your API key below. No key yet? Click "Help".',
+      );
+    });
+
+    it("never shows or logs the key, and sends it only to its own service", async () => {
+      const logged = vi.fn();
+      for (const method of ["log", "info", "warn", "error", "debug"] as const) {
+        vi.spyOn(console, method).mockImplementation(logged);
+      }
+      const panel = await openPanel(undefined, undefined, { provider: null });
+      await panel.pasteKey(openAiKey);
+      await panel.say("Hello");
+      await panel.chooseProvider("anthropic");
+      await panel.pasteKey(anthropicKey);
+      await panel.say("Hello");
+      // an error that repeats the key
+      services.error = {
+        status: 429,
+        body: {
+          error: {
+            type: "rate_limit_error",
+            message: `Rate limit reached for ${anthropicKey}`,
+          },
+        },
+      };
+      await panel.say("Hello");
+      await panel.chooseProvider("ollama");
+      await panel.say("Hello");
+      panel.context();
+      panel.button("Help").click();
+      expect(panel.texts("Error")).toEqual([
+        "Anthropic: too many requests, or no credit left. Wait a moment and try again, or check the billing of your Anthropic account. (Rate limit reached for [key hidden])",
+      ]);
+      for (const key of [openAiKey, anthropicKey]) {
+        expect(panel.container.textContent).not.toContain(key);
+        expect(panel.container.innerHTML).not.toContain(key);
+        expect(JSON.stringify(logged.mock.calls)).not.toContain(key);
+      }
+      for (const { url, headers, body } of network) {
+        const sent = JSON.stringify([...headers]) + body;
+        if (sent.includes(openAiKey)) {
+          expect(url).toMatch(/^https:\/\/api\.openai\.com\//);
+        }
+        if (sent.includes(anthropicKey)) {
+          expect(url).toMatch(/^https:\/\/api\.anthropic\.com\//);
+        }
+        expect(sent.includes(openAiKey) && sent.includes(anthropicKey)).toBe(
+          false,
+        );
+      }
+      expect(
+        network.some(({ url }) => url.startsWith("http://localhost:11434/")),
+      ).toBe(true);
+    });
+
+    it("explains a key that is not accepted, without showing any part of it", async () => {
+      services.error = {
+        status: 401,
+        body: {
+          error: {
+            code: "invalid_api_key",
+            message: `Incorrect API key provided: ${openAiKey.slice(0, 8)}****${openAiKey.slice(-4)}.`,
+          },
+        },
+      };
+      const panel = await openPanel(undefined, undefined, { provider: null });
+      await panel.pasteKey(openAiKey);
+      const explanation =
+        'OpenAI did not accept the API key. Check that you copied all of it and that it has not expired or been deleted, or make a new key (see "Help").';
+      expect(panel.status()).toBe(explanation);
+      await panel.say("Hello");
+      expect(panel.texts("Error")).toEqual([explanation]);
+      expect(panel.container.textContent).not.toContain(openAiKey.slice(-4));
+    });
+
+    it("explains an Anthropic key that is not tied to one workspace", async () => {
+      services.error = {
+        status: 400,
+        body: {
+          error: {
+            type: "invalid_request_error",
+            message:
+              "This API key is not scoped to a workspace, so this request must include the anthropic-workspace-id header with the ID of the workspace to use.",
+          },
+        },
+      };
+      const panel = await openPanel(undefined, undefined, {
+        provider: "anthropic",
+      });
+      await panel.pasteKey(anthropicKey);
+      expect(panel.status()).toMatch(
+        /^This Anthropic key is not tied to one workspace/,
+      );
+    });
+
+    it("says when the service cannot be reached", async () => {
+      const panel = await openPanel(undefined, undefined, { provider: null });
+      await panel.pasteKey(openAiKey);
+      services.online = false;
+      await panel.say("Hello");
+      expect(panel.texts("Error")).toEqual([
+        'OpenAI does not answer. Check the internet connection, then click "Check again".',
+      ]);
+      expect(panel.texts("You")).toEqual(["Hello"]);
     });
   });
 });

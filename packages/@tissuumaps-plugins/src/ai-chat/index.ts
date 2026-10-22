@@ -30,73 +30,131 @@ import {
   isRandomConfig,
 } from "@tissuumaps/core";
 
-// --- Ollama ---
+import {
+  type ChatAnswer,
+  type ChatMessage,
+  type OllamaPullUpdate,
+  type Provider,
+  type ProviderId,
+  explainNotReachable,
+  hideKey,
+  notRunningMessage,
+  ollamaUrl,
+  providers,
+  readJsonLines,
+} from "./providers";
 
-/** The address of the Ollama server running on the user's computer */
-const ollamaUrl = "http://localhost:11434";
-
-/**
- * Models always offered in the menu, even when they are not installed; names
- * ending in "cloud" run on Ollama's servers
- */
-const suggestedModels = ["gemma4:e2b", "gemma4:cloud"];
+// --- Settings and help ---
 
 /** How many times in a row the model may call tools before it is stopped */
 const maxSteps = 5;
 
+/** The start of the localStorage keys under which the panel remembers settings */
+const storagePrefix = "tissuumaps.ai-chat.";
+
 /**
- * The context window requested from Ollama, in tokens
+ * Reads a setting remembered in an earlier session, e.g. the chosen service
  *
- * The instructions, the project summary and the tools alone take about 3000 to
- * 5500 tokens, while Ollama's default on many computers is 4096 tokens, which
- * would cut the text.
+ * @param name - The name of the setting, e.g. "provider" or "model.openai"
+ * @returns The value, or `null` if none was remembered or the browser does
+ * not allow storage (e.g. in a private window)
  */
-const contextTokens = 16384;
+function loadSetting(name: string): string | null {
+  try {
+    return window.localStorage.getItem(storagePrefix + name);
+  } catch {
+    return null;
+  }
+}
 
-/** The localStorage key under which the chosen model is remembered */
-const modelStorageKey = "tissuumaps.ai-chat.model";
-
-/** The status message when nothing answers on a page opened from this computer */
-const notRunningMessage =
-  'Ollama is not running. Start it from the Start menu (Windows) or the Applications folder (Mac), then click "Check again". Not installed yet? Click "Help".';
-
-/** The message for Ollama's "unauthorized" error */
-const notSignedInMessage =
-  "Online models need you to be signed in to Ollama. Open the Ollama app, go to Settings and sign in (a free account is enough for gemma4:cloud). Then try again.";
-
-/** The message for Ollama's "not found" error */
-const notDownloadedMessage =
-  'This model is not downloaded yet. Click "Download" next to the model menu.';
+/**
+ * Remembers a setting for the next session, or forgets it, if the browser
+ * allows it
+ *
+ * @param name - The name of the setting
+ * @param value - The value, or `null` to forget it
+ */
+function saveSetting(name: string, value: string | null): void {
+  try {
+    if (value === null) {
+      window.localStorage.removeItem(storagePrefix + name);
+    } else {
+      window.localStorage.setItem(storagePrefix + name, value);
+    }
+  } catch {
+    // not remembered: the default is used next time
+  }
+}
 
 /** The text shown by the "Help" button */
 const helpText = `How to use this chat
 
-1. Install Ollama
+1. Choose a service
+   - OpenAI or Anthropic: fast and good at following requests, on any computer,
+     also when TissUUmaps is opened from a website. You need your own API key
+     (see 2), and every request is billed to your account.
+   - Ollama (local): runs on this computer. Free, private and works offline,
+     but it can be slow on a computer without a good graphics card (see 4 and 5).
+   - Ollama (cloud): runs on Ollama's servers, through the Ollama app on this
+     computer. Free with an Ollama account (see 6).
+   With OpenAI, Anthropic and Ollama (cloud), your messages and a summary of the
+   open project are sent to that service.
+
+2. OpenAI and Anthropic: your own API key
+   An API key is a secret code that lets this chat use your account. TissUUmaps
+   does not provide keys: everyone uses their own. Using the models costs money,
+   so first add a payment method or buy credit in your account. With the first
+   model in the menu, a request usually costs well under one cent; the other
+   models cost more.
+   - OpenAI: sign in at https://platform.openai.com, open
+     https://platform.openai.com/api-keys and click "Create new secret key".
+   - Anthropic: sign in at https://platform.claude.com, open
+     https://platform.claude.com/settings/keys and click "Create key". Choose one
+     workspace for the key (e.g. the Default Workspace) and when it expires.
+   Copy the key, choose the service in the menu and paste the key into the
+   "API key" field. The website shows the key only once: if you lose it, make a
+   new one.
+
+3. Keeping your key safe
+   - Treat the key like a password: do not share it, and do not put it in
+     e-mails, files or screenshots.
+   - Make a key just for TissUUmaps, and set a monthly spending limit in your
+     account (under Limits), so that a stolen key cannot cost much.
+   - If someone else may have your key, delete it on the page where you made it:
+     it stops working at once. Then click "Forget key" here.
+   - The key is only sent to the service you chose. Without "Remember key on this
+     computer", it is forgotten when you close the page. With it, the key is
+     saved in this browser, where anyone who uses this browser on this computer,
+     and any browser extension or script that can read this page, could find it:
+     do not use it on a shared computer. "Forget key" removes the key.
+
+4. Install Ollama
    Download it from https://ollama.com/download and install it like any other program.
    It then runs in the background. If the status line says "not running", start Ollama
    from the Start menu (Windows) or the Applications folder (Mac), then click "Check again".
 
-2. Choose a model
-   - "(local)": runs on this computer. Free, private and works offline,
-     but it can be slow on a computer without a good graphics card.
+5. Choose an Ollama model
+   - "(local)": runs on this computer.
    - "(not downloaded)": choose it and click "Download". This happens only once
      and takes a few GB of disk space.
-   - "(online)": runs on Ollama's servers. Fast on any computer, but your messages
-     and the project summary are sent to Ollama. gemma4:cloud is included in the free plan.
+   - "(online)", with "Ollama (cloud)": runs on Ollama's servers. Fast on any
+     computer, but your messages and the project summary are sent to Ollama.
+     gemma4:cloud is included in the free plan.
 
-3. Turn on online models
+6. Turn on Ollama's online models
    Open the Ollama app, go to Settings and sign in. You can create a free account there.
    (If you use the terminal, "ollama signin" does the same.)
 
-4. Undo
+7. Undo
    "Undo" takes back the changes of your last request; click it again to go further back.
    "Undo all" takes back every change made by the chat. Changes you made by hand
    to other settings stay as they are.
 
-5. Using TissUUmaps from a website (e.g. https://tissuumaps.github.io)
-   For safety, Ollama only accepts pages opened from this computer (localhost).
-   If the status line says that Ollama is running but blocks this website,
-   give the website's address to Ollama with the setting OLLAMA_ORIGINS:
+8. Using Ollama when TissUUmaps is opened from a website (e.g. https://tissuumaps.github.io)
+   OpenAI and Anthropic need nothing for this. For safety, Ollama only accepts
+   pages opened from this computer (localhost). If the status line says that
+   Ollama is running but blocks this website, give the website's address to
+   Ollama with the setting OLLAMA_ORIGINS:
    - Windows: quit Ollama (right-click its icon next to the clock, then Quit).
      Open Settings, search for "environment variables" and choose "Edit environment
      variables for your account". Click "New", enter the name OLLAMA_ORIGINS and the
@@ -109,7 +167,7 @@ const helpText = `How to use this chat
    Then click "Check again". If the browser asks whether the page may access devices
    on your local network, allow it: otherwise the browser itself blocks the page.
 
-6. New chat and examples
+9. New chat and examples
    "New chat" starts a new conversation: the model forgets the earlier messages.
    Undo still works for the changes made before. While the chat is empty, a few
    example requests for the open project are shown: click one to send it.
@@ -121,161 +179,6 @@ points bigger or smaller, color labels and points by a column of their table
 give them one color (e.g. "color the cell circles green"),
 and show only some groups (e.g. "show only clusters 1 and 3", then "show all the
 cells again"). It cannot change or delete anything else.`;
-
-/** A tool call requested by the model */
-type OllamaToolCall = {
-  function: { name: string; arguments: ToolArguments };
-};
-
-/** A message of the conversation, in the format of Ollama's chat API */
-type OllamaMessage = {
-  role: "system" | "user" | "assistant" | "tool";
-  content: string;
-  thinking?: string;
-  tool_calls?: OllamaToolCall[];
-  tool_name?: string;
-};
-
-/** One line of a streamed chat answer */
-type OllamaChatPiece = { message?: Partial<OllamaMessage>; error?: string };
-
-/** One line of the progress of a model download */
-type OllamaPullUpdate = {
-  status?: string;
-  total?: number;
-  completed?: number;
-  error?: string;
-};
-
-/**
- * Whether TissUUmaps is open from this computer, whose pages Ollama accepts by
- * default
- *
- * @returns Whether the page is served from the local computer
- */
-function isLocalPage(): boolean {
-  return ["localhost", "127.0.0.1", "[::1]", ""].includes(
-    window.location.hostname,
-  );
-}
-
-/**
- * Explains why nothing answers at the Ollama address
- *
- * On a website, a second request with mode "no-cors" tells a blocked website
- * from a stopped Ollama: Ollama cannot block such a request, whose answer just
- * cannot be read.
- *
- * @param options - Optional abort signal
- * @returns The message for the user
- */
-async function explainNotReachable(options?: {
-  signal?: AbortSignal;
-}): Promise<string> {
-  const { signal } = options ?? {};
-  signal?.throwIfAborted();
-  if (isLocalPage()) {
-    return notRunningMessage;
-  }
-  const origin = window.location.origin;
-  try {
-    await fetch(ollamaUrl, { mode: "no-cors", signal });
-    return (
-      `Ollama is running, but it blocks this website (${origin}): by default it only accepts pages ` +
-      `opened from this computer. To allow it, set OLLAMA_ORIGINS to ${origin} and restart Ollama ` +
-      '(see "Help", section 5). Then click "Check again".'
-    );
-  } catch {
-    signal?.throwIfAborted();
-    return (
-      "Ollama does not answer. If it is not running, start it. If it is running, the browser may " +
-      "block this page from reaching it: if the browser asks whether the page may access devices " +
-      'on your local network, allow it, and see "Help", section 5. Then click "Check again".'
-    );
-  }
-}
-
-/**
- * Turns an error of Ollama into an instruction the user can follow
- *
- * @param error - The error message of Ollama
- * @returns The message for the user
- */
-function explainOllamaError(error: string): string {
-  if (/unauthorized/i.test(error)) {
-    return notSignedInMessage;
-  }
-  if (/not found/i.test(error)) {
-    return notDownloadedMessage;
-  }
-  return error;
-}
-
-/**
- * Reads an answer of Ollama that arrives as one line of JSON per update (the
- * progress of a download, or a chat answer piece by piece)
- *
- * @typeParam TLine - The type of each line
- * @param response - The response to read
- * @param onLine - Called with each line while the answer arrives
- * @param options - Optional abort signal, which is also the signal of the
- * request: aborting it ends the stream
- */
-async function readJsonLines<TLine>(
-  response: Response,
-  onLine: (line: TLine) => void,
-  options?: { signal?: AbortSignal },
-): Promise<void> {
-  const { signal } = options ?? {};
-  signal?.throwIfAborted();
-  if (response.body === null) {
-    throw new Error("Ollama sent an empty answer");
-  }
-  const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
-  let text = "";
-  while (true) {
-    const { done, value } = await reader.read();
-    text += done ? "\n" : value;
-    const lines = text.split("\n");
-    // the last line may not be complete yet
-    text = lines.pop() ?? "";
-    for (const line of lines) {
-      if (line.trim() !== "") {
-        onLine(JSON.parse(line) as TLine);
-      }
-    }
-    if (done) {
-      return;
-    }
-  }
-}
-
-/**
- * Reads the model chosen in an earlier session
- *
- * @returns The model name, or `null` if none was remembered or the browser
- * does not allow storage (e.g. in a private window)
- */
-function loadModel(): string | null {
-  try {
-    return window.localStorage.getItem(modelStorageKey);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Remembers the chosen model for the next session, if the browser allows it
- *
- * @param name - The model name
- */
-function saveModel(name: string): void {
-  try {
-    window.localStorage.setItem(modelStorageKey, name);
-  } catch {
-    // not remembered: the default model is used next time
-  }
-}
 
 // --- Tools ---
 
@@ -3155,6 +3058,27 @@ function describeCall(name: string, args: ToolArguments): string {
 }
 
 /**
+ * Whether a service is reached through Ollama on the user's computer, which
+ * needs no key but has to be running
+ *
+ * @param provider - The service
+ * @returns Whether it is one of the Ollama services
+ */
+function usesOllama(provider: Provider): boolean {
+  return !provider.needsKey;
+}
+
+/**
+ * The message when OpenAI or Anthropic cannot be reached
+ *
+ * @param provider - The service
+ * @returns The message
+ */
+function notReachable(provider: Provider): string {
+  return `${provider.name} does not answer. Check the internet connection, then click "Check again".`;
+}
+
+/**
  * Mounts the chat panel
  *
  * @param container - The element to mount the panel into
@@ -3165,12 +3089,12 @@ function mountAiChat(
   container: HTMLElement,
   { projectStore, dataStore }: PluginStores,
 ): () => void {
-  // aborted on unmount, which stops the requests to Ollama and the table reads
+  // aborted on unmount, which stops the requests to the model and the table reads
   const abortController = new AbortController();
   const { signal } = abortController;
 
   /** The conversation so far, without the system message; sent in full each time */
-  const messages: OllamaMessage[] = [];
+  const messages: ChatMessage[] = [];
 
   /** The changes made by the chat, one list per request, the newest last */
   const undoStack: Change[][] = [];
@@ -3179,12 +3103,41 @@ function mountAiChat(
   // tables are read one after the other, not all at once
   let readingQueue = Promise.resolve();
 
+  // what Ollama said when it was last asked
   let connected = false;
   let installed: string[] = [];
   let unreachable = notRunningMessage;
-  let preferred = loadModel();
 
+  /**
+   * The API keys of OpenAI and Anthropic, by service: typed in this session or
+   * remembered in the browser. They are only sent to their own service, and
+   * never shown or logged.
+   */
+  const keys = new Map<ProviderId, string>();
+  for (const provider of providers) {
+    const key = loadSetting(`key.${provider.id}`);
+    if (key !== null) {
+      keys.set(provider.id, key);
+    }
+  }
+  /** What the last check of each service's key found, for the status line */
+  const keyStatus = new Map<ProviderId, string>();
+
+  const providerSelect = document.createElement("select");
+  providerSelect.title = "Service";
+  providerSelect.style.cssText = controlStyle;
+  for (const provider of providers) {
+    const option = document.createElement("option");
+    option.value = provider.id;
+    option.textContent = provider.name;
+    providerSelect.append(option);
+  }
+  const savedProvider = loadSetting("provider");
+  if (providers.some((provider) => provider.id === savedProvider)) {
+    providerSelect.value = savedProvider ?? "";
+  }
   const modelSelect = document.createElement("select");
+  modelSelect.title = "Model";
   modelSelect.style.cssText = controlStyle;
   const downloadButton = makeButton("Download", () => void download());
   const newChatButton = makeButton("New chat", newChat);
@@ -3202,6 +3155,7 @@ function mountAiChat(
   const topRow = document.createElement("div");
   topRow.style.cssText = "display: flex; flex-wrap: wrap; gap: 8px;";
   topRow.append(
+    providerSelect,
     modelSelect,
     downloadButton,
     newChatButton,
@@ -3211,9 +3165,29 @@ function mountAiChat(
     undoAllButton,
   );
 
+  // a password field, so that the key is not shown on the screen
+  const keyInput = document.createElement("input");
+  keyInput.type = "password";
+  keyInput.autocomplete = "off";
+  keyInput.spellcheck = false;
+  keyInput.style.cssText = `${controlStyle}flex: 1; min-width: 12em;`;
+  const keyLabel = document.createElement("label");
+  keyLabel.style.cssText =
+    "display: flex; flex: 1; gap: 6px; align-items: center;";
+  keyLabel.append("API key", keyInput);
+  const rememberBox = document.createElement("input");
+  rememberBox.type = "checkbox";
+  const rememberLabel = document.createElement("label");
+  rememberLabel.append(rememberBox, " Remember key on this computer");
+  const forgetButton = makeButton("Forget key", forgetKey);
+  const keyRow = document.createElement("div");
+  keyRow.style.cssText =
+    "display: flex; flex-wrap: wrap; gap: 8px; align-items: center;";
+  keyRow.append(keyLabel, rememberLabel, forgetButton);
+
   const status = document.createElement("span");
   status.style.cssText = "flex: 1;";
-  const checkButton = makeButton("Check again", () => void checkOllama());
+  const checkButton = makeButton("Check again", () => void check());
   const statusRow = document.createElement("div");
   statusRow.style.cssText = "display: flex; gap: 8px; align-items: center;";
   statusRow.append(status, checkButton);
@@ -3468,7 +3442,7 @@ function mountAiChat(
   function tellModel(text: string): void {
     messages.push({
       role: "user",
-      content: `(Note from the chat panel, not typed by the user: ${text} The project summary shows the current state.)`,
+      text: `(Note from the chat panel, not typed by the user: ${text} The project summary shows the current state.)`,
     });
   }
 
@@ -3588,35 +3562,71 @@ function mountAiChat(
     }, 0);
   }
 
-  /** Fills the model menu: installed models first, then the suggested ones */
+  /** Fills the model menu with the models of the chosen service */
   function fillModelMenu(): void {
-    const chosen = preferred ?? modelSelect.value;
-    const names = [...new Set([...installed, ...suggestedModels])];
+    const provider = currentProvider();
+    const chosen = loadSetting(`model.${provider.id}`) ?? modelSelect.value;
+    const models = usesOllama(provider)
+      ? ollamaModels(provider)
+      : provider.models;
     modelSelect.replaceChildren();
-    for (const name of names) {
-      let where = connected ? "not downloaded" : "local";
-      if (name.endsWith("cloud")) {
-        where = "online";
-      } else if (installed.includes(name)) {
-        where = "local";
-      }
+    for (const { name, note } of models) {
       const option = document.createElement("option");
       option.value = name;
-      option.textContent = `${name} (${where})`;
+      option.textContent = `${name} (${note})`;
       modelSelect.append(option);
     }
-    if (names.includes(chosen)) {
+    if (models.some(({ name }) => name === chosen)) {
       modelSelect.value = chosen;
     }
   }
 
-  /** Writes the status line, and shows "Download" only when it is needed */
+  /**
+   * The models of an Ollama service: the installed ones of that kind (local or
+   * online) first, then the suggested ones
+   */
+  function ollamaModels(provider: Provider): { name: string; note: string }[] {
+    const online = provider.id === "ollama-cloud";
+    const names = [
+      ...installed.filter((name) => name.endsWith("cloud") === online),
+      ...provider.models.map(({ name }) => name),
+    ];
+    return [...new Set(names)].map((name) => {
+      let note = connected ? "not downloaded" : "local";
+      if (online) {
+        note = "online";
+      } else if (installed.includes(name)) {
+        note = "local";
+      }
+      return { name, note };
+    });
+  }
+
+  /** The service chosen in the menu */
+  function currentProvider(): Provider {
+    return providers.find(
+      (provider) => provider.id === providerSelect.value,
+    ) as Provider;
+  }
+
+  /**
+   * Writes the status line, and shows the key field and "Download" only when
+   * they are needed
+   */
   function updateStatus(): void {
+    const provider = currentProvider();
     const name = modelSelect.value;
     downloadButton.style.display = "none";
-    if (!connected) {
+    keyRow.style.display = provider.needsKey ? "flex" : "none";
+    if (provider.needsKey) {
+      status.textContent =
+        keyStatus.get(provider.id) ??
+        (keys.has(provider.id)
+          ? `${provider.name}: the key is not checked yet. Click "Check again".`
+          : `${provider.name}: paste your API key below. No key yet? Click "Help".`);
+    } else if (!connected) {
       status.textContent = unreachable;
-    } else if (name.endsWith("cloud")) {
+    } else if (provider.id === "ollama-cloud") {
       status.textContent = `Ollama: connected. ${name} runs online: you need to be signed in (see Help).`;
     } else if (installed.includes(name)) {
       status.textContent = `Ollama: connected. ${name} is ready.`;
@@ -3624,6 +3634,85 @@ function mountAiChat(
       status.textContent = `Ollama: connected. ${name} is not downloaded yet.`;
       downloadButton.style.display = "";
     }
+  }
+
+  /** Shows the key of the chosen service, and whether it is remembered */
+  function showKey(): void {
+    const provider = currentProvider();
+    keyInput.value = keys.get(provider.id) ?? "";
+    keyInput.placeholder = `Paste your ${provider.name} API key`;
+    rememberBox.checked = loadSetting(`key.${provider.id}`) !== null;
+  }
+
+  /** Keeps the key as it is typed, and remembers it if the user wants */
+  function onKeyInput(): void {
+    const provider = currentProvider();
+    const key = keyInput.value.trim();
+    if (key === "") {
+      keys.delete(provider.id);
+    } else {
+      keys.set(provider.id, key);
+    }
+    if (rememberBox.checked) {
+      saveSetting(`key.${provider.id}`, key === "" ? null : key);
+    }
+    keyStatus.delete(provider.id);
+    updateStatus();
+  }
+
+  /** Remembers the key in the browser, or forgets it there */
+  function onRememberChange(): void {
+    const provider = currentProvider();
+    saveSetting(
+      `key.${provider.id}`,
+      rememberBox.checked ? (keys.get(provider.id) ?? null) : null,
+    );
+  }
+
+  /** Forgets the key of the chosen service, also in the browser */
+  function forgetKey(): void {
+    const provider = currentProvider();
+    keys.delete(provider.id);
+    keyStatus.delete(provider.id);
+    saveSetting(`key.${provider.id}`, null);
+    keyInput.value = "";
+    rememberBox.checked = false;
+    updateStatus();
+  }
+
+  /** Checks the key of the chosen service, with a request that costs nothing */
+  async function checkKey(): Promise<void> {
+    const provider = currentProvider();
+    const key = keys.get(provider.id);
+    keyStatus.delete(provider.id);
+    if (key === undefined || provider.checkKey === undefined) {
+      updateStatus();
+      return;
+    }
+    keyStatus.set(provider.id, `${provider.name}: checking the key...`);
+    updateStatus();
+    let text: string;
+    try {
+      const error = await provider.checkKey(key, { signal });
+      text =
+        error ??
+        `${provider.name}: key accepted. Each request is billed to your ${provider.name} account, and your messages and the project summary are sent to ${provider.name}.`;
+    } catch {
+      if (signal.aborted) {
+        return;
+      }
+      text = notReachable(provider);
+    }
+    // the key may have been changed in the meantime
+    if (keys.get(provider.id) === key) {
+      keyStatus.set(provider.id, text);
+      updateStatus();
+    }
+  }
+
+  /** "Check again": asks Ollama for its models, or checks the key */
+  async function check(): Promise<void> {
+    await (usesOllama(currentProvider()) ? checkOllama() : checkKey());
   }
 
   /** Nothing answers at the Ollama address: finds out why, for the status line */
@@ -3694,62 +3783,39 @@ function mountAiChat(
   }
 
   /**
-   * Sends the system message, the conversation and the tools to Ollama; the
-   * summary is built again each time, so that the model sees its own changes
+   * Sends the instructions with the project summary, the conversation and the
+   * tools to the model; the summary is built again each time, so that the
+   * model sees its own changes
    *
+   * @param provider - The service
+   * @param model - The model
+   * @param key - The API key of the service, or ""
    * @param onText - Called with the text so far, each time a piece arrives
-   * @returns The answer, or the error of Ollama
+   * @returns The answer, or an error message
    */
-  async function askOllama(
+  async function askModel(
+    provider: Provider,
+    model: string,
+    key: string,
     onText: (text: string) => void,
-  ): Promise<{ message: OllamaMessage } | { error: string }> {
+  ): Promise<ChatAnswer> {
     // the summary should show the current columns: wait for the table reads,
     // but not for more than 5 seconds
     await Promise.race([
       readingQueue,
       new Promise((resolve) => setTimeout(resolve, 5000)),
     ]);
-    const response = await fetch(`${ollamaUrl}/api/chat`, {
-      method: "POST",
-      body: JSON.stringify({
-        model: modelSelect.value,
-        messages: [
-          {
-            role: "system",
-            content: buildContext(projectStore.getState(), tables),
-          },
-          ...messages,
-        ],
-        tools: toolDefinitions,
-        stream: true,
-        options: { num_ctx: contextTokens },
-      }),
-      signal,
-    });
-    const message: OllamaMessage = { role: "assistant", content: "" };
-    let error: string | undefined;
-    await readJsonLines<OllamaChatPiece>(
-      response,
-      (piece) => {
-        error ??= piece.error;
-        const part = piece.message ?? {};
-        if (part.thinking !== undefined) {
-          message.thinking = (message.thinking ?? "") + part.thinking;
-        }
-        if (part.tool_calls !== undefined) {
-          message.tool_calls = [
-            ...(message.tool_calls ?? []),
-            ...part.tool_calls,
-          ];
-        }
-        if (part.content) {
-          message.content += part.content;
-          onText(message.content);
-        }
+    return provider.chat(
+      {
+        model,
+        key,
+        system: buildContext(projectStore.getState(), tables),
+        messages,
+        tools: toolDefinitions.map((definition) => definition.function),
       },
+      onText,
       { signal },
     );
-    return error === undefined ? { message } : { error };
   }
 
   /**
@@ -3801,11 +3867,23 @@ function mountAiChat(
     if (text === "" || sendButton.disabled) {
       return;
     }
+    // the service, model and key of this request, even if the menus change
+    // while the model works
+    const provider = currentProvider();
+    const model = modelSelect.value;
+    const key = keys.get(provider.id) ?? "";
+    if (provider.needsKey && key === "") {
+      show(
+        "Error",
+        `Paste your ${provider.name} API key into the "API key" field first. No key yet? Click "Help".`,
+      );
+      return;
+    }
     input.value = "";
     show("You", text, "var(--muted)");
     // to forget this turn if it fails
     const start = messages.length;
-    messages.push({ role: "user", content: text });
+    messages.push({ role: "user", text });
     updateExamples();
     sendButton.disabled = true;
     sendButton.textContent = "Waiting...";
@@ -3818,27 +3896,27 @@ function mountAiChat(
         // the answer is shown while it arrives, in a message made when the
         // first piece of text comes
         let setText: ((text: string) => void) | null = null;
-        const answer = await askOllama((textSoFar) => {
-          setText ??= addMessage(modelSelect.value, "transparent", true);
+        const answer = await askModel(provider, model, key, (textSoFar) => {
+          setText ??= addMessage(model, "transparent", true);
           setText(textSoFar);
         });
         if ("error" in answer) {
-          show("Error", explainOllamaError(answer.error));
+          show("Error", answer.error);
           messages.length = start;
           break;
         }
         messages.push(answer.message);
-        const toolCalls = answer.message.tool_calls ?? [];
+        const toolCalls = answer.message.toolCalls;
         if (toolCalls.length === 0) {
           // small models sometimes answer with an empty text
           if (setText === null) {
-            show(modelSelect.value, "(no text answer)", "transparent", true);
+            show(model, "(no text answer)", "transparent", true);
           }
           break;
         }
         let repeated = false;
         for (const call of toolCalls) {
-          const { name, arguments: args } = call.function;
+          const { name, arguments: args } = call;
           const callText = describeCall(name, args);
           let outcome = {
             result: "Error: this exact call already failed.",
@@ -3858,8 +3936,9 @@ function mountAiChat(
           }
           messages.push({
             role: "tool",
-            tool_name: name,
-            content: outcome.result,
+            callId: call.id,
+            name,
+            result: outcome.result,
           });
         }
         if (repeated) {
@@ -3876,13 +3955,21 @@ function mountAiChat(
           );
         }
       }
-    } catch {
+    } catch (error) {
       if (signal.aborted) {
         return;
       }
-      // fetch fails when nothing answers: Ollama is not running, or blocks the page
-      show("Error", await lostOllama());
       messages.length = start;
+      if (usesOllama(provider)) {
+        // fetch fails when nothing answers: Ollama is not running, or blocks the page
+        show("Error", await lostOllama());
+      } else if (error instanceof TypeError) {
+        // fetch fails with a TypeError when nothing answers
+        show("Error", notReachable(provider));
+      } else {
+        const message = error instanceof Error ? error.message : String(error);
+        show("Error", `Something went wrong: ${hideKey(message, key)}`);
+      }
     }
     // kept even if something failed later on, but not if another project
     // was opened in the meantime
@@ -3903,15 +3990,30 @@ function mountAiChat(
       void send();
     }
   });
+  providerSelect.addEventListener("change", () => {
+    const provider = currentProvider();
+    saveSetting("provider", provider.id);
+    showKey();
+    fillModelMenu();
+    updateStatus();
+    if (usesOllama(provider)) {
+      void checkOllama();
+    } else if (!keyStatus.has(provider.id)) {
+      void checkKey();
+    }
+  });
   modelSelect.addEventListener("change", () => {
-    preferred = modelSelect.value;
-    saveModel(preferred);
+    saveSetting(`model.${currentProvider().id}`, modelSelect.value);
     updateStatus();
   });
+  keyInput.addEventListener("input", onKeyInput);
+  // when the key is pasted or typed and the field is left
+  keyInput.addEventListener("change", () => void checkKey());
+  rememberBox.addEventListener("change", onRememberChange);
 
   container.style.cssText =
     "display: flex; flex-direction: column; gap: 8px; height: 100%;";
-  container.append(topRow, statusRow, history, examplesRow, bottomRow);
+  container.append(topRow, keyRow, statusRow, history, examplesRow, bottomRow);
 
   // the container is attached to the panel only after mount, and its parent
   // has to fill the panel for "height: 100%" to work
@@ -3925,8 +4027,10 @@ function mountAiChat(
   const unsubscribeData = dataStore.subscribe(readTables);
   const unsubscribeProject = projectStore.subscribe(onProjectChange);
   readTables();
+  showKey();
   fillModelMenu();
-  void checkOllama();
+  updateStatus();
+  void check();
   updateUndoButtons();
   updateExamples();
 
@@ -3939,13 +4043,15 @@ function mountAiChat(
 }
 
 /**
- * A chat panel that lets the user ask a local or online model, through
- * Ollama, about the open project and change how its objects are shown: show
- * and hide objects, change their opacity and point size, and color and filter
- * labels and points by the columns of their tables
+ * A chat panel that lets the user ask a model about the open project and
+ * change how its objects are shown: show and hide objects, change their
+ * opacity and point size, and color and filter labels and points by the
+ * columns of their tables
  *
- * Each request sends the model a summary of the project. The changes go
- * through the project store, and "Undo" takes them back.
+ * The model runs at OpenAI or Anthropic, with the user's own API key, or
+ * through Ollama, on the user's computer or online. Each request sends the
+ * model a summary of the project. The changes go through the project store,
+ * and "Undo" takes them back.
  */
 export const aiChatPlugin: Plugin = {
   id: "ai-chat",
