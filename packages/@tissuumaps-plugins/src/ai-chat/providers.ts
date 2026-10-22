@@ -7,6 +7,16 @@
 // has to be sent back as it came, is kept with the answer and sent back only
 // to that kind of API.
 //
+// OpenAI and Anthropic only accept the model's thinking back while everything
+// sent before it is unchanged, and they bill less for a beginning they have
+// seen before. So for them the beginning of each request stays the same: the
+// fixed instructions, the tools, then the conversation, to which only new
+// messages are added. What changes (the project summary and the personality)
+// goes with the user's message that started the current turn, and the
+// thinking goes back only within that turn, while the model calls tools.
+// If a service still refuses the thinking, the request is sent again once
+// without it.
+//
 // An API key is sent only to the API of its own provider, and never shown:
 // error messages that could contain it go through hideKey.
 
@@ -55,8 +65,13 @@ export type ChatRequest = {
   model: string;
   /** The API key, or "" for the providers that need none */
   key: string;
-  /** The instructions and the project summary */
-  system: string;
+  /** The instructions, which are the same for every request */
+  instructions: string;
+  /**
+   * What changes between requests: the personality and the project summary,
+   * the same for all the requests of one turn
+   */
+  context: string;
   messages: ChatMessage[];
   tools: ToolSpec[];
 };
@@ -116,6 +131,53 @@ export function hideKey(text: string, key: string): string {
   const withoutKey = key.length >= 8 ? text.split(key).join(hiddenKey) : text;
   // keys of OpenAI and Anthropic start with "sk-", e.g. "sk-proj-..." or "sk-ant-..."
   return withoutKey.replace(/\bsk-[\w*.-]{4,}/g, hiddenKey);
+}
+
+/**
+ * Where the current turn starts: the last message of the user, after which
+ * there are only the model's answers and tool results of this turn
+ *
+ * @param messages - The conversation
+ * @returns The index of that message, or -1 if there is none
+ */
+function turnStart(messages: ChatMessage[]): number {
+  return messages.findLastIndex((message) => message.role === "user");
+}
+
+/**
+ * The user's message that starts the turn, with the context of the turn
+ *
+ * @param text - The user's message
+ * @param context - The personality and the project summary
+ * @returns The text sent to the model
+ */
+function withContext(text: string, context: string): string {
+  return `[Context from the TissUUmaps chat panel, not typed by the user]\n${context}\n[End of the context]\n\n${text}`;
+}
+
+/**
+ * Whether an answer of the model, at a place in the conversation, can be sent
+ * back as the API sent it, thinking included: only within the current turn,
+ * since the thinking of earlier turns belongs to their own context
+ *
+ * @param message - The answer
+ * @param index - Its place in the conversation
+ * @param start - Where the current turn starts, see {@link turnStart}
+ * @param api - The kind of API the request goes to
+ * @param keepThinking - Whether thinking can be sent at all
+ * @returns The answer as the API sent it, or `undefined` to send it as text
+ * and tool calls only
+ */
+function originalItems(
+  message: AssistantMessage,
+  index: number,
+  start: number,
+  api: ApiFormat,
+  keepThinking: boolean,
+): unknown[] | undefined {
+  return keepThinking && index > start && message.original?.api === api
+    ? message.original.items
+    : undefined;
 }
 
 /**
@@ -327,14 +389,32 @@ type OpenAiEvent = {
 /**
  * Turns the conversation into the input of OpenAI's Responses API
  *
+ * The answers of earlier turns go without their reasoning and without the IDs
+ * that would ask for it.
+ *
  * @param messages - The conversation
+ * @param context - The context of the current turn
+ * @param keepThinking - Whether the reasoning of the current turn is sent back
  * @returns The input items
  */
-function toOpenAiInput(messages: ChatMessage[]): unknown[] {
-  return messages.flatMap((message): unknown[] => {
+function toOpenAiInput(
+  messages: ChatMessage[],
+  context: string,
+  keepThinking: boolean,
+): unknown[] {
+  const start = turnStart(messages);
+  return messages.flatMap((message, index): unknown[] => {
     switch (message.role) {
       case "user":
-        return [{ role: "user", content: message.text }];
+        return [
+          {
+            role: "user",
+            content:
+              index === start
+                ? withContext(message.text, context)
+                : message.text,
+          },
+        ];
       case "tool":
         return [
           {
@@ -344,37 +424,62 @@ function toOpenAiInput(messages: ChatMessage[]): unknown[] {
           },
         ];
       case "assistant":
-        if (message.original?.api === "openai") {
-          return message.original.items;
-        }
-        return [
-          ...(message.text === ""
-            ? []
-            : [{ role: "assistant", content: message.text }]),
-          ...message.toolCalls.map((call) => ({
-            type: "function_call",
-            call_id: call.id,
-            name: call.name,
-            arguments: JSON.stringify(call.arguments),
-          })),
-        ];
+        return (
+          originalItems(message, index, start, "openai", keepThinking) ?? [
+            ...(message.text === ""
+              ? []
+              : [{ role: "assistant", content: message.text }]),
+            ...message.toolCalls.map((call) => ({
+              type: "function_call",
+              call_id: call.id,
+              name: call.name,
+              arguments: JSON.stringify(call.arguments),
+            })),
+          ]
+        );
     }
   });
 }
 
+/** What a sending function returns when the service refused the thinking */
+const thinkingRefused = "thinking refused";
+
 /**
  * Asks a model of OpenAI, with the Responses API, which OpenAI recommends for
- * tools with its current models
- *
- * Nothing is stored by OpenAI between requests (`store: false`): the whole
- * conversation is sent each time, with the model's thinking in the encrypted
- * form that OpenAI gives back for that.
+ * tools with its current models; sends the request again once without the
+ * reasoning if OpenAI refuses it
  */
 async function chatWithOpenAi(
-  { model, key, system, messages, tools }: ChatRequest,
+  request: ChatRequest,
   onText: (text: string) => void,
   options?: { signal?: AbortSignal },
 ): Promise<ChatAnswer> {
+  const answer = await sendToOpenAi(request, true, onText, options);
+  return answer === thinkingRefused
+    ? ((await sendToOpenAi(request, false, onText, options)) as ChatAnswer)
+    : answer;
+}
+
+/**
+ * Sends one request to OpenAI
+ *
+ * Nothing is stored by OpenAI between requests (`store: false`): the whole
+ * conversation is sent each time, with the model's reasoning of the current
+ * turn in the encrypted form that OpenAI gives back for that.
+ *
+ * @param request - The request
+ * @param keepThinking - Whether to send the reasoning of the current turn
+ * @param onText - Called with the text so far
+ * @param options - Optional abort signal
+ * @returns The answer, or {@link thinkingRefused} if OpenAI refused the
+ * reasoning that was sent
+ */
+async function sendToOpenAi(
+  { model, key, instructions, context, messages, tools }: ChatRequest,
+  keepThinking: boolean,
+  onText: (text: string) => void,
+  options?: { signal?: AbortSignal },
+): Promise<ChatAnswer | typeof thinkingRefused> {
   const { signal } = options ?? {};
   const response = await fetch(`${openAiUrl}/responses`, {
     method: "POST",
@@ -384,8 +489,8 @@ async function chatWithOpenAi(
     },
     body: JSON.stringify({
       model,
-      instructions: system,
-      input: toOpenAiInput(messages),
+      instructions,
+      input: toOpenAiInput(messages, context, keepThinking),
       tools: tools.map((tool) => ({
         type: "function",
         ...tool,
@@ -398,14 +503,16 @@ async function chatWithOpenAi(
     signal,
   });
   if (!response.ok) {
+    const error = await readError(response);
+    if (
+      keepThinking &&
+      response.status === 400 &&
+      /reasoning|encrypted/i.test(error.message)
+    ) {
+      return thinkingRefused;
+    }
     return {
-      error: explainApiError(
-        "OpenAI",
-        response.status,
-        await readError(response),
-        key,
-        model,
-      ),
+      error: explainApiError("OpenAI", response.status, error, key, model),
     };
   }
   let text = "";
@@ -543,11 +650,19 @@ function anthropicHeaders(key: string): Record<string, string> {
  *
  * Tool results go in a "user" message; messages that follow one another with
  * the same role are joined, since Anthropic expects the roles to alternate.
+ * The answers of earlier turns go without their thinking.
  *
  * @param messages - The conversation
+ * @param context - The context of the current turn
+ * @param keepThinking - Whether the thinking of the current turn is sent back
  * @returns The messages
  */
-function toAnthropicMessages(messages: ChatMessage[]): AnthropicMessage[] {
+function toAnthropicMessages(
+  messages: ChatMessage[],
+  context: string,
+  keepThinking: boolean,
+): AnthropicMessage[] {
+  const start = turnStart(messages);
   const result: AnthropicMessage[] = [];
   function add(role: AnthropicMessage["role"], blocks: AnthropicBlock[]) {
     const last = result.at(-1);
@@ -557,10 +672,18 @@ function toAnthropicMessages(messages: ChatMessage[]): AnthropicMessage[] {
       result.push({ role, content: blocks });
     }
   }
-  for (const message of messages) {
+  for (const [index, message] of messages.entries()) {
     switch (message.role) {
       case "user":
-        add("user", [{ type: "text", text: message.text }]);
+        add("user", [
+          {
+            type: "text",
+            text:
+              index === start
+                ? withContext(message.text, context)
+                : message.text,
+          },
+        ]);
         break;
       case "tool":
         add("user", [
@@ -574,17 +697,16 @@ function toAnthropicMessages(messages: ChatMessage[]): AnthropicMessage[] {
       case "assistant":
         add(
           "assistant",
-          message.original?.api === "anthropic"
-            ? (message.original.items as AnthropicBlock[])
-            : [
-                { type: "text", text: message.text },
-                ...message.toolCalls.map((call) => ({
-                  type: "tool_use",
-                  id: call.id,
-                  name: call.name,
-                  input: call.arguments,
-                })),
-              ],
+          (originalItems(message, index, start, "anthropic", keepThinking) as
+            AnthropicBlock[] | undefined) ?? [
+            { type: "text", text: message.text },
+            ...message.toolCalls.map((call) => ({
+              type: "tool_use",
+              id: call.id,
+              name: call.name,
+              input: call.arguments,
+            })),
+          ],
         );
         break;
     }
@@ -599,17 +721,42 @@ function toAnthropicMessages(messages: ChatMessage[]): AnthropicMessage[] {
 }
 
 /**
- * Asks a model of Anthropic, with the Messages API
- *
- * The answer arrives in content blocks: text, tool calls (whose arguments
- * arrive as pieces of JSON) and the model's thinking, which is kept to be sent
- * back as it came.
+ * Asks a model of Anthropic, with the Messages API; sends the request again
+ * once without the thinking if Anthropic refuses it
  */
 async function chatWithAnthropic(
-  { model, key, system, messages, tools }: ChatRequest,
+  request: ChatRequest,
   onText: (text: string) => void,
   options?: { signal?: AbortSignal },
 ): Promise<ChatAnswer> {
+  const answer = await sendToAnthropic(request, true, onText, options);
+  return answer === thinkingRefused
+    ? ((await sendToAnthropic(request, false, onText, options)) as ChatAnswer)
+    : answer;
+}
+
+/**
+ * Sends one request to Anthropic
+ *
+ * The answer arrives in content blocks: text, tool calls (whose arguments
+ * arrive as pieces of JSON) and the model's thinking, which is kept to be sent
+ * back as it came within the turn. The fixed beginning (the tools and the
+ * instructions) is marked for prompt caching, so that later requests pay less
+ * for it.
+ *
+ * @param request - The request
+ * @param keepThinking - Whether to send the thinking of the current turn
+ * @param onText - Called with the text so far
+ * @param options - Optional abort signal
+ * @returns The answer, or {@link thinkingRefused} if Anthropic refused the
+ * thinking that was sent
+ */
+async function sendToAnthropic(
+  { model, key, instructions, context, messages, tools }: ChatRequest,
+  keepThinking: boolean,
+  onText: (text: string) => void,
+  options?: { signal?: AbortSignal },
+): Promise<ChatAnswer | typeof thinkingRefused> {
   const { signal } = options ?? {};
   const response = await fetch(`${anthropicUrl}/messages`, {
     method: "POST",
@@ -617,8 +764,14 @@ async function chatWithAnthropic(
     body: JSON.stringify({
       model,
       max_tokens: anthropicMaxTokens,
-      system,
-      messages: toAnthropicMessages(messages),
+      system: [
+        {
+          type: "text",
+          text: instructions,
+          cache_control: { type: "ephemeral" },
+        },
+      ],
+      messages: toAnthropicMessages(messages, context, keepThinking),
       tools: tools.map(({ name, description, parameters }) => ({
         name,
         description,
@@ -629,14 +782,18 @@ async function chatWithAnthropic(
     signal,
   });
   if (!response.ok) {
+    const error = await readError(response);
+    // e.g. "Invalid `signature` in `thinking` block. The block is bound to a
+    // different conversation."
+    if (
+      keepThinking &&
+      response.status === 400 &&
+      /signature|thinking/i.test(error.message)
+    ) {
+      return thinkingRefused;
+    }
     return {
-      error: explainApiError(
-        "Anthropic",
-        response.status,
-        await readError(response),
-        key,
-        model,
-      ),
+      error: explainApiError("Anthropic", response.status, error, key, model),
     };
   }
   const blocks: AnthropicBlock[] = [];
@@ -885,7 +1042,7 @@ function toOllamaMessages(messages: ChatMessage[]): OllamaMessage[] {
  * for the online models, on Ollama's servers
  */
 async function chatWithOllama(
-  { model, system, messages, tools }: ChatRequest,
+  { model, instructions, context, messages, tools }: ChatRequest,
   onText: (text: string) => void,
   options?: { signal?: AbortSignal },
 ): Promise<ChatAnswer> {
@@ -894,8 +1051,10 @@ async function chatWithOllama(
     method: "POST",
     body: JSON.stringify({
       model,
+      // Ollama checks no thinking, so the context stays in the system message,
+      // where the small local models were tested with it
       messages: [
-        { role: "system", content: system },
+        { role: "system", content: `${instructions}\n\n${context}` },
         ...toOllamaMessages(messages),
       ],
       tools: tools.map((tool) => ({ type: "function", function: tool })),

@@ -30,6 +30,7 @@ import {
   isRandomConfig,
 } from "@tissuumaps/core";
 
+import { type Persona, personaFor, thinkingWords } from "./persona";
 import {
   type ChatAnswer,
   type ChatMessage,
@@ -113,7 +114,11 @@ const helpText = `How to use this chat
      workspace for the key (e.g. the Default Workspace) and when it expires.
    Copy the key, choose the service in the menu and paste the key into the
    "API key" field. The website shows the key only once: if you lose it, make a
-   new one.
+   new one. When the key is accepted, the settings fold into one short line;
+   ⚙ opens them again, to change, forget or check the key. They also open by
+   themselves when something goes wrong.
+   Each request is billed to your account, and your messages and the project
+   summary are sent to the service you chose.
 
 3. Keeping your key safe
    - Treat the key like a password: do not share it, and do not put it in
@@ -167,10 +172,22 @@ const helpText = `How to use this chat
    Then click "Check again". If the browser asks whether the page may access devices
    on your local network, allow it: otherwise the browser itself blocks the page.
 
-9. New chat and examples
+9. New chat, suggestions and shortcuts
    "New chat" starts a new conversation: the model forgets the earlier messages.
-   Undo still works for the changes made before. While the chat is empty, a few
-   example requests for the open project are shown: click one to send it.
+   Undo still works for the changes made before.
+   Above the text box, a few suggested requests for the open project are shown:
+   click one to send it. What you are typing stays as it is.
+   In the text box, the up and down arrows go through the messages you sent
+   before, like in a terminal.
+   Select a part of an answer and click "Quote" to quote it in your next message.
+   While the model thinks, a word in Italian changes every few seconds: point
+   at it to see what it means in English.
+
+10. Dia and Aid
+   With the light theme of TissUUmaps, the assistant is Dia: gentle and kind.
+   With the dark theme, it is Aid: serious and a little mysterious. Only the
+   tone changes, at once when you switch the theme: what the assistant can do,
+   and its rules (such as telling the truth about what it changed), stay the same.
 
 What the assistant can do: answer questions about the open project, show or hide
 images, labels, points and shapes, make them more or less transparent, make
@@ -2713,7 +2730,7 @@ function describeItemsObjects(
 const instructions = [
   "You are an assistant inside TissUUmaps, a viewer for tissue images and spatial data.",
   "Always answer in the language the user writes in (e.g. Italian if the user writes Italian).",
-  "Answer questions about the project that is open right now, using the summary below.",
+  "Answer questions about the project that is open right now, using the project summary.",
   "You can change how images, labels, points and shapes are shown with these tools.",
   "Every tool takes either ids (a list of ids from the summary; put several objects in",
   'ONE call) or category ("images", "labels", "points" or "shapes") for all the objects',
@@ -2768,9 +2785,11 @@ const instructions = [
   "When the user asks for a change, always call the tool, even if the summary says",
   "it is already like that: the tool result tells you what really happened.",
   'Never say that you changed something unless a tool result for it starts with "Done".',
-  "The project summary below is always the truth about the current state: check it",
-  "before saying what is visible. Earlier messages and tool results in the conversation",
-  "can be out of date, because the user may have clicked Undo or changed things by hand.",
+  "The project summary always shows the project as it was when the user wrote the latest",
+  "message, and the tool results after that message say what changed since then: check",
+  "them before saying what is visible. Older messages, summaries and tool results in the",
+  "conversation can be out of date, because the user may have clicked Undo or changed",
+  "things by hand.",
   "You cannot change anything else (for example deleting or renaming, or the colors of",
   "images and shapes).",
   "If a request has parts you can do and parts you can't, do the parts you can",
@@ -2782,19 +2801,38 @@ const instructions = [
   'If a tool result says "Nothing changed" or "Already", tell the user that those',
   "objects were already in that state, instead of saying that you changed them.",
   "If the answer is not in the summary, say that you don't know.",
+  'Lines that start with "> " in a message of the user quote one of your earlier answers.',
 ].join("\n");
 
 /**
- * Builds the system message for the model: the instructions and a summary of
- * the open project
+ * The rules that keep a personality to the tone, after its description
+ */
+const personaRules = [
+  "The personality only changes your tone. Every rule of your instructions still applies",
+  "in full: tell the truth about what the tools did, ask when a request is ambiguous, keep",
+  "answers short, and never be rude to the user. If earlier answers in this conversation",
+  "used another name or tone, use this name and tone from now on.",
+].join("\n");
+
+/**
+ * Builds what changes between the requests to the model: the personality and
+ * a summary of the open project. The instructions, which never change, are
+ * sent apart from it (see `providers.ts`).
  *
  * @param project - The project
  * @param tables - What the panel knows about the tables
+ * @param persona - The personality of the assistant
  * @returns The text
  */
-function buildContext(project: ProjectStore, tables: TableKnowledge): string {
+function buildContext(
+  project: ProjectStore,
+  tables: TableKnowledge,
+  persona: Persona,
+): string {
   return [
-    instructions,
+    "# Your personality",
+    persona.tone,
+    personaRules,
     "",
     `# Project "${project.name}"`,
     describeObjects("Layers", project.layers, project.colorMaps),
@@ -2809,8 +2847,8 @@ function buildContext(project: ProjectStore, tables: TableKnowledge): string {
 }
 
 /**
- * Example requests for the open project, shown while the chat is empty; each
- * one names an object of the project and only columns and groups of that
+ * Example requests for the open project, shown above the text box; each one
+ * names an object of the project and only columns and groups of that
  * object's tables
  *
  * @param project - The project
@@ -3016,24 +3054,182 @@ function describeValueChange(
 }
 
 // --- User interface ---
+// All the colors are TissUUmaps' theme variables, which change with the light
+// and the dark theme, so that the panel stays readable with both.
 
-/** The shared look of the buttons, the drop-down menu and the text box */
+/** The shared look of the menus, the text fields and the buttons */
 const controlStyle =
-  "padding: 4px 8px; border: 1px solid var(--input); border-radius: 6px;";
+  "padding: 4px 8px; border: 1px solid var(--input); border-radius: 6px;" +
+  "background: var(--background); color: var(--foreground); font: inherit;";
+
+/** The look of the small buttons, e.g. "Undo" and the suggestions */
+const smallButtonStyle = `${controlStyle}padding: 2px 8px; font-size: 12px;`;
+
+/** The look of small, quieter text, e.g. the thinking word and "Made by" */
+const quietTextStyle = "color: var(--muted-foreground); font-size: 12px;";
+
+/** The kinds of messages in the chat, each with its own look */
+type MessageKind = "user" | "assistant" | "tool" | "note" | "error" | "info";
+
+/** The look of each kind of message */
+const messageStyles: Record<MessageKind, string> = {
+  user: "background: var(--secondary); color: var(--secondary-foreground); border-color: var(--border);",
+  assistant: "background: transparent; border-color: var(--border);",
+  tool:
+    "background: transparent; color: var(--muted-foreground); border-color: var(--border);" +
+    "border-style: dashed; font-size: 12px;",
+  note: "background: var(--accent); color: var(--accent-foreground); border-color: var(--ring);",
+  error:
+    "background: color-mix(in oklch, var(--destructive) 12%, transparent);" +
+    "border-color: var(--destructive);",
+  info: "background: transparent; border-color: var(--border);",
+};
+
+/** How long each word is shown while the model thinks, in milliseconds */
+const thinkingWordTime = 2000;
+
+/** The line at the bottom of the panel */
+const credits = "Made by Alessia Giustolisi";
 
 /**
  * Creates a button
  *
  * @param text - The button text
  * @param onClick - The click action
+ * @param style - The look of the button
  * @returns The button
  */
-function makeButton(text: string, onClick: () => void): HTMLButtonElement {
+function makeButton(
+  text: string,
+  onClick: () => void,
+  style = controlStyle,
+): HTMLButtonElement {
   const button = document.createElement("button");
-  button.style.cssText = controlStyle;
+  button.style.cssText = style;
   button.textContent = text;
   button.addEventListener("click", onClick);
   return button;
+}
+
+/**
+ * Creates the avatar shown next to the assistant's name: the image of the
+ * personality, or an empty round placeholder until there is one
+ *
+ * @param persona - The personality
+ * @returns The element
+ */
+function makeAvatar(persona: Persona): HTMLElement {
+  const style =
+    "width: 20px; height: 20px; border-radius: 50%; flex: none; object-fit: cover;";
+  if (persona.avatar !== undefined) {
+    const image = document.createElement("img");
+    image.src = persona.avatar;
+    // the name is next to it
+    image.alt = "";
+    image.style.cssText = style;
+    return image;
+  }
+  const placeholder = document.createElement("span");
+  placeholder.setAttribute("aria-hidden", "true");
+  placeholder.style.cssText = `${style}background: var(--muted); border: 1px solid var(--border);`;
+  return placeholder;
+}
+
+/**
+ * Picks a word to show while the model thinks, at random
+ *
+ * @param previous - The word shown until now, which is not picked again
+ * @returns The word with its translation
+ */
+function randomThinkingWord(
+  previous?: (typeof thinkingWords)[number],
+): (typeof thinkingWords)[number] {
+  const others = thinkingWords.filter((entry) => entry !== previous);
+  return others[Math.floor(Math.random() * others.length)] as {
+    word: string;
+    translation: string;
+  };
+}
+
+/**
+ * Makes a dot blink, unless the user asked the system for less motion or the
+ * browser cannot animate
+ *
+ * @param dot - The dot
+ * @param index - Its position, so that the dots blink one after the other
+ */
+function blink(dot: HTMLElement, index: number): void {
+  const lessMotion =
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (lessMotion || typeof dot.animate !== "function") {
+    return;
+  }
+  dot.animate([{ opacity: 0.25 }, { opacity: 1 }, { opacity: 0.25 }], {
+    duration: 1200,
+    delay: index * 200,
+    iterations: Infinity,
+  });
+}
+
+/**
+ * Creates the indicator shown while the model thinks: three blinking dots and
+ * an Italian word that changes every two seconds, in random order. With the
+ * mouse over the word, or the keyboard focus on it, its English translation
+ * is shown and the word stays.
+ *
+ * @returns The element, and a function that stops the changes
+ */
+function makeThinkingIndicator(): { element: HTMLElement; stop: () => void } {
+  const element = document.createElement("div");
+  element.style.cssText = `display: flex; align-items: center; gap: 6px; ${quietTextStyle}`;
+  const dots = document.createElement("span");
+  dots.setAttribute("aria-hidden", "true");
+  for (let index = 0; index < 3; index++) {
+    const dot = document.createElement("span");
+    dot.textContent = "•";
+    dot.style.margin = "0 1px";
+    dots.append(dot);
+    blink(dot, index);
+  }
+  const word = document.createElement("span");
+  word.tabIndex = 0;
+  word.style.cssText =
+    "font-style: italic; cursor: help; border-bottom: 1px dotted var(--muted-foreground);";
+  const translation = document.createElement("span");
+  translation.setAttribute("role", "tooltip");
+  translation.style.cssText =
+    "position: absolute; left: calc(100% + 6px); top: 50%; transform: translateY(-50%);" +
+    "display: none; z-index: 1; white-space: nowrap; padding: 2px 6px; font-size: 12px;" +
+    "border: 1px solid var(--border); border-radius: 6px; background: var(--popover);" +
+    "color: var(--popover-foreground); box-shadow: 0 1px 3px rgb(0 0 0 / 20%);";
+  const wordBox = document.createElement("span");
+  wordBox.style.position = "relative";
+  wordBox.append(word, translation);
+  element.append(dots, wordBox);
+
+  let current = randomThinkingWord();
+  let paused = false;
+  function showWord(): void {
+    word.textContent = current.word;
+    translation.textContent = current.translation;
+  }
+  function pause(on: boolean): void {
+    paused = on;
+    translation.style.display = on ? "" : "none";
+  }
+  showWord();
+  word.addEventListener("mouseenter", () => pause(true));
+  word.addEventListener("mouseleave", () => pause(false));
+  word.addEventListener("focus", () => pause(true));
+  word.addEventListener("blur", () => pause(false));
+  const timer = setInterval(() => {
+    if (!paused) {
+      current = randomThinkingWord(current);
+      showWord();
+    }
+  }, thinkingWordTime);
+  return { element, stop: () => clearInterval(timer) };
 }
 
 /**
@@ -3087,7 +3283,7 @@ function notReachable(provider: Provider): string {
  */
 function mountAiChat(
   container: HTMLElement,
-  { projectStore, dataStore }: PluginStores,
+  { projectStore, dataStore, settingsStore }: PluginStores,
 ): () => void {
   // aborted on unmount, which stops the requests to the model and the table reads
   const abortController = new AbortController();
@@ -3122,6 +3318,24 @@ function mountAiChat(
   }
   /** What the last check of each service's key found, for the status line */
   const keyStatus = new Map<ProviderId, string>();
+  /** The services whose key was accepted by the last check */
+  const acceptedKeys = new Set<ProviderId>();
+  /** The services for which the chat already said what a key means */
+  const announcedKeys = new Set<ProviderId>();
+  /** Whether the settings are shown although the key works */
+  let settingsOpen = false;
+
+  /** The personality of the assistant, which follows the theme */
+  let persona = personaFor(settingsStore.getState().dark);
+  /** The indicator shown in the chat while the model thinks */
+  let thinking: { element: HTMLElement; stop: () => void } | null = null;
+
+  /** The messages sent so far, for the up and down arrows */
+  const sent: string[] = [];
+  /** Which sent message the text box shows; `sent.length` for the new text */
+  let sentIndex = 0;
+  /** The new text, kept while the arrows show sent messages */
+  let draft = "";
 
   const providerSelect = document.createElement("select");
   providerSelect.title = "Service";
@@ -3140,30 +3354,49 @@ function mountAiChat(
   modelSelect.title = "Model";
   modelSelect.style.cssText = controlStyle;
   const downloadButton = makeButton("Download", () => void download());
-  const newChatButton = makeButton("New chat", newChat);
-  const contextButton = makeButton("Show context", () =>
-    show(
-      "Context sent to the model",
-      buildContext(projectStore.getState(), tables),
-      "transparent",
-      true,
-    ),
+  const serviceRow = document.createElement("div");
+  serviceRow.style.cssText = "display: flex; flex-wrap: wrap; gap: 8px;";
+  serviceRow.append(providerSelect, modelSelect, downloadButton);
+
+  // small buttons, so that they fit in one row of a narrow panel
+  const newChatButton = makeButton("New chat", newChat, smallButtonStyle);
+  const contextButton = makeButton(
+    "Show context",
+    () =>
+      show(
+        "Context sent to the model",
+        `${instructions}\n\n${buildContext(projectStore.getState(), tables, persona)}`,
+        "info",
+        true,
+      ),
+    smallButtonStyle,
   );
-  const helpButton = makeButton("Help", () => show("Help", helpText));
-  const undoButton = makeButton("Undo", undo);
-  const undoAllButton = makeButton("Undo all", undoAll);
+  const helpButton = makeButton(
+    "Help",
+    () => show("Help", helpText),
+    smallButtonStyle,
+  );
+  const undoButton = makeButton("Undo", undo, smallButtonStyle);
+  const undoAllButton = makeButton("Undo all", undoAll, smallButtonStyle);
+  const settingsButton = makeButton("⚙", toggleSettings, smallButtonStyle);
+  settingsButton.title = "Settings";
+  settingsButton.setAttribute("aria-label", "Settings");
+  settingsButton.style.marginLeft = "auto";
   const topRow = document.createElement("div");
-  topRow.style.cssText = "display: flex; flex-wrap: wrap; gap: 8px;";
+  topRow.style.cssText =
+    "display: flex; flex-wrap: wrap; gap: 6px; align-items: center;";
   topRow.append(
-    providerSelect,
-    modelSelect,
-    downloadButton,
     newChatButton,
     contextButton,
     helpButton,
     undoButton,
     undoAllButton,
+    settingsButton,
   );
+
+  // the short line shown instead of the settings, while the key works
+  const summary = document.createElement("div");
+  summary.style.cssText = quietTextStyle;
 
   // a password field, so that the key is not shown on the screen
   const keyInput = document.createElement("input");
@@ -3177,6 +3410,7 @@ function mountAiChat(
   keyLabel.append("API key", keyInput);
   const rememberBox = document.createElement("input");
   rememberBox.type = "checkbox";
+  rememberBox.style.accentColor = "var(--primary)";
   const rememberLabel = document.createElement("label");
   rememberLabel.append(rememberBox, " Remember key on this computer");
   const forgetButton = makeButton("Forget key", forgetKey);
@@ -3186,31 +3420,55 @@ function mountAiChat(
   keyRow.append(keyLabel, rememberLabel, forgetButton);
 
   const status = document.createElement("span");
+  status.setAttribute("role", "status");
   status.style.cssText = "flex: 1;";
-  const checkButton = makeButton("Check again", () => void check());
+  const checkButton = makeButton(
+    "Check again",
+    () => void check(),
+    smallButtonStyle,
+  );
   const statusRow = document.createElement("div");
   statusRow.style.cssText = "display: flex; gap: 8px; align-items: center;";
   statusRow.append(status, checkButton);
+
+  const settingsBox = document.createElement("div");
+  settingsBox.style.cssText =
+    "display: flex; flex-direction: column; gap: 8px;";
+  settingsBox.append(serviceRow, keyRow, statusRow);
 
   const history = document.createElement("div");
   history.style.cssText =
     "flex: 1; min-height: 100px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;" +
     "padding: 8px; border: 1px solid var(--border); border-radius: 6px;";
 
+  // one row above the text box, which scrolls sideways if it is too long
   const examplesRow = document.createElement("div");
-  examplesRow.style.cssText = "display: flex; flex-wrap: wrap; gap: 8px;";
+  examplesRow.style.cssText =
+    "display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px;";
 
   const input = document.createElement("textarea");
   input.rows = 3;
   input.placeholder =
-    "Type a message... (Enter to send, Shift+Enter for a new line)";
+    "Type a message... (Enter to send, Shift+Enter for a new line, ↑ ↓ for the messages sent before)";
   input.style.cssText = `${controlStyle}flex: 1; resize: none;`;
   const sendButton = makeButton("Send", () => void send());
   sendButton.style.cssText +=
-    "background: var(--primary); color: var(--primary-foreground);";
+    "background: var(--primary); color: var(--primary-foreground); border-color: var(--primary);";
   const bottomRow = document.createElement("div");
   bottomRow.style.cssText = "display: flex; gap: 8px;";
   bottomRow.append(input, sendButton);
+
+  const footer = document.createElement("div");
+  footer.textContent = credits;
+  footer.style.cssText = `${quietTextStyle}font-size: 11px; text-align: right;`;
+
+  // shown under a part of an answer that the user selects
+  const quoteButton = makeButton("Quote", quoteSelection, smallButtonStyle);
+  quoteButton.style.cssText +=
+    "position: absolute; display: none; z-index: 2;" +
+    "background: var(--primary); color: var(--primary-foreground); border-color: var(--primary);";
+  // a click on the button would otherwise end the selection first
+  quoteButton.addEventListener("mousedown", (event) => event.preventDefault());
 
   /**
    * Finds the useful columns of one table: groups (e.g. clusters), numbers and
@@ -3321,20 +3579,52 @@ function mountAiChat(
     readTables();
   }
 
-  /** Shows example requests while the chat is empty; a click sends one */
+  /**
+   * Shows example requests above the text box, also while the user types; a
+   * click sends one, and leaves the text being typed as it is
+   */
   function updateExamples(): void {
-    examplesRow.replaceChildren();
-    if (messages.length > 0) {
-      return;
+    const examples = exampleRequests(projectStore.getState(), tables);
+    examplesRow.replaceChildren(
+      ...examples.map((text) => {
+        const button = makeButton(
+          text,
+          () => void send(text),
+          `${smallButtonStyle}flex: none; white-space: nowrap;`,
+        );
+        button.title = "Send this request";
+        return button;
+      }),
+    );
+    examplesRow.style.display = examples.length > 0 ? "flex" : "none";
+  }
+
+  /**
+   * Adds the frame of a message to the history: a name, with the avatar for
+   * the assistant, and an empty body
+   */
+  function addFrame(who: string, kind: MessageKind): HTMLElement {
+    const message = document.createElement("div");
+    message.style.cssText =
+      "padding: 6px 8px; border: 1px solid; border-radius: 6px; white-space: pre-wrap;" +
+      messageStyles[kind];
+    const header = document.createElement("div");
+    header.style.cssText =
+      "display: flex; align-items: center; gap: 6px; font-weight: bold;";
+    if (kind === "error") {
+      // the red alone is too light on the light theme's error background
+      header.style.color =
+        "color-mix(in oklch, var(--destructive) 70%, var(--foreground))";
     }
-    for (const text of exampleRequests(projectStore.getState(), tables)) {
-      const button = makeButton(text, () => {
-        input.value = text;
-        void send();
-      });
-      button.style.cssText += "font-size: smaller; opacity: 0.85;";
-      examplesRow.append(button);
+    if (kind === "assistant") {
+      header.append(makeAvatar(persona));
     }
+    header.append(who);
+    const body = document.createElement("div");
+    message.append(header, body);
+    history.append(message);
+    history.scrollTop = history.scrollHeight;
+    return body;
   }
 
   /**
@@ -3343,32 +3633,140 @@ function mountAiChat(
    */
   function addMessage(
     who: string,
-    background = "transparent",
+    kind: MessageKind = "info",
     markdown = false,
   ): (text: string) => void {
-    const message = document.createElement("div");
-    message.style.cssText =
-      "padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px;" +
-      `white-space: pre-wrap; background: ${background};`;
-    const name = document.createElement("b");
-    name.textContent = who;
-    const body = document.createElement("div");
-    message.append(name, body);
-    history.append(message);
+    const body = addFrame(who, kind);
+    if (kind === "assistant") {
+      // a part of the answers can be quoted
+      body.dataset.quotable = "true";
+    }
     return (text) => {
       body.replaceChildren(markdown ? renderMarkdown(text) : text);
       history.scrollTop = history.scrollHeight;
     };
   }
 
-  /** Adds a message with its final text to the history */
+  /**
+   * Adds a message with its final text to the history; without a kind, it
+   * follows from the name ("You", "Tool", "Note", "Error")
+   */
   function show(
     who: string,
     text: string,
-    background?: string,
+    kind?: MessageKind,
     markdown?: boolean,
   ): void {
-    addMessage(who, background, markdown)(text);
+    const kinds: Record<string, MessageKind> = {
+      You: "user",
+      Tool: "tool",
+      Note: "note",
+      Error: "error",
+    };
+    addMessage(who, kind ?? kinds[who] ?? "info", markdown)(text);
+  }
+
+  /** Shows that the model is thinking, at the end of the history */
+  function startThinking(): void {
+    stopThinking();
+    const indicator = makeThinkingIndicator();
+    const body = addFrame(persona.name, "assistant");
+    body.append(indicator.element);
+    thinking = {
+      element: body.parentElement ?? body,
+      stop: indicator.stop,
+    };
+  }
+
+  /** Removes the indicator that the model is thinking, if it is shown */
+  function stopThinking(): void {
+    thinking?.stop();
+    thinking?.element.remove();
+    thinking = null;
+  }
+
+  /**
+   * The text the user selected in one answer of the model, or "" if nothing
+   * or something else is selected
+   */
+  function selectedAnswerText(): { text: string; range?: Range } {
+    const selection = window.getSelection();
+    if (
+      selection === null ||
+      selection.isCollapsed ||
+      selection.rangeCount === 0
+    ) {
+      return { text: "" };
+    }
+    const range = selection.getRangeAt(0);
+    const node = range.commonAncestorContainer;
+    const element = node instanceof Element ? node : node.parentElement;
+    const answer = element?.closest("[data-quotable]");
+    if (answer === null || answer === undefined || !history.contains(answer)) {
+      return { text: "" };
+    }
+    return { text: selection.toString().trim(), range };
+  }
+
+  /** Shows "Quote" under the selected part of an answer, or hides it */
+  function updateQuoteButton(): void {
+    const { text, range } = selectedAnswerText();
+    if (text === "" || range === undefined) {
+      quoteButton.style.display = "none";
+      return;
+    }
+    // not every browser engine can measure a selection (e.g. in tests)
+    if (typeof range.getBoundingClientRect === "function") {
+      const selected = range.getBoundingClientRect();
+      const panel = container.getBoundingClientRect();
+      quoteButton.style.left = `${Math.max(0, selected.left - panel.left)}px`;
+      quoteButton.style.top = `${Math.max(0, selected.bottom - panel.top + 4)}px`;
+    }
+    quoteButton.style.display = "";
+  }
+
+  /** Puts the selected part of an answer as a quote into the text box */
+  function quoteSelection(): void {
+    const { text } = selectedAnswerText();
+    if (text === "") {
+      return;
+    }
+    const quote = text
+      .split("\n")
+      .map((line) => `> ${line}`)
+      .join("\n");
+    input.value = `${quote}\n\n${input.value}`;
+    window.getSelection()?.removeAllRanges();
+    quoteButton.style.display = "none";
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+  }
+
+  /**
+   * Up and down arrows in the text box: shows the messages sent before, like a
+   * terminal. Only on the first or the last line of the text, so that in a
+   * longer text the arrows still move between its lines.
+   */
+  function browseSent(event: KeyboardEvent): void {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+      return;
+    }
+    const up = event.key === "ArrowUp";
+    const { value, selectionStart, selectionEnd } = input;
+    const onEdge = up
+      ? !value.slice(0, selectionStart).includes("\n")
+      : !value.slice(selectionEnd).includes("\n");
+    const next = sentIndex + (up ? -1 : 1);
+    if (!onEdge || next < 0 || next > sent.length) {
+      return;
+    }
+    event.preventDefault();
+    if (sentIndex === sent.length) {
+      draft = value;
+    }
+    sentIndex = next;
+    input.value = next === sent.length ? draft : (sent[next] ?? "");
+    input.setSelectionRange(input.value.length, input.value.length);
   }
 
   /** Starts a new conversation, after asking; the undo list stays, since it is about the project */
@@ -3517,7 +3915,7 @@ function mountAiChat(
       state.images !== previousState.images ||
       state.labels !== previousState.labels ||
       state.points !== previousState.points;
-    if (objectsChanged && messages.length === 0) {
+    if (objectsChanged) {
       updateExamples();
     }
     if (state.instanceId === previousState.instanceId) {
@@ -3634,6 +4032,42 @@ function mountAiChat(
       status.textContent = `Ollama: connected. ${name} is not downloaded yet.`;
       downloadButton.style.display = "";
     }
+    updateLayout();
+  }
+
+  /**
+   * Folds the settings into one short line while the key of the chosen
+   * service works, unless the user opened them with ⚙
+   */
+  function updateLayout(): void {
+    const provider = currentProvider();
+    const accepted = acceptedKeys.has(provider.id);
+    const folded = accepted && !settingsOpen;
+    settingsBox.style.display = folded ? "none" : "flex";
+    summary.style.display = folded ? "" : "none";
+    summary.textContent = `${provider.name} · ${modelSelect.value} · key ✓`;
+    settingsButton.style.display = accepted ? "" : "none";
+    settingsButton.setAttribute("aria-expanded", String(!folded));
+  }
+
+  /** ⚙: shows or hides the settings */
+  function toggleSettings(): void {
+    settingsOpen = !settingsOpen;
+    updateLayout();
+  }
+
+  /**
+   * Something went wrong with OpenAI or Anthropic: the status line says what,
+   * and the settings open, so that the key can be checked or changed
+   */
+  function showServiceProblem(provider: Provider, text: string): void {
+    if (usesOllama(provider)) {
+      return;
+    }
+    acceptedKeys.delete(provider.id);
+    keyStatus.set(provider.id, text);
+    settingsOpen = true;
+    updateStatus();
   }
 
   /** Shows the key of the chosen service, and whether it is remembered */
@@ -3657,6 +4091,7 @@ function mountAiChat(
       saveSetting(`key.${provider.id}`, key === "" ? null : key);
     }
     keyStatus.delete(provider.id);
+    acceptedKeys.delete(provider.id);
     updateStatus();
   }
 
@@ -3674,39 +4109,56 @@ function mountAiChat(
     const provider = currentProvider();
     keys.delete(provider.id);
     keyStatus.delete(provider.id);
+    acceptedKeys.delete(provider.id);
     saveSetting(`key.${provider.id}`, null);
     keyInput.value = "";
     rememberBox.checked = false;
     updateStatus();
   }
 
-  /** Checks the key of the chosen service, with a request that costs nothing */
-  async function checkKey(): Promise<void> {
+  /**
+   * Checks the key of the chosen service, with a request that costs nothing.
+   * A working key folds the settings; the first time a pasted key works, the
+   * chat also says what using it means.
+   *
+   * @param pasted - Whether the user has just pasted the key
+   */
+  async function checkKey(pasted = false): Promise<void> {
     const provider = currentProvider();
     const key = keys.get(provider.id);
     keyStatus.delete(provider.id);
+    acceptedKeys.delete(provider.id);
     if (key === undefined || provider.checkKey === undefined) {
       updateStatus();
       return;
     }
     keyStatus.set(provider.id, `${provider.name}: checking the key...`);
     updateStatus();
-    let text: string;
+    let error: string | undefined;
     try {
-      const error = await provider.checkKey(key, { signal });
-      text =
-        error ??
-        `${provider.name}: key accepted. Each request is billed to your ${provider.name} account, and your messages and the project summary are sent to ${provider.name}.`;
+      error = await provider.checkKey(key, { signal });
     } catch {
       if (signal.aborted) {
         return;
       }
-      text = notReachable(provider);
+      error = notReachable(provider);
     }
     // the key may have been changed in the meantime
-    if (keys.get(provider.id) === key) {
-      keyStatus.set(provider.id, text);
-      updateStatus();
+    if (keys.get(provider.id) !== key) {
+      return;
+    }
+    if (error !== undefined) {
+      showServiceProblem(provider, error);
+      return;
+    }
+    const text = `${provider.name}: key accepted. Each request is billed to your ${provider.name} account, and your messages and the project summary are sent to ${provider.name}.`;
+    keyStatus.set(provider.id, text);
+    acceptedKeys.add(provider.id);
+    settingsOpen = false;
+    updateStatus();
+    if (pasted && !announcedKeys.has(provider.id)) {
+      announcedKeys.add(provider.id);
+      show(provider.name, `${text} The key settings are under ⚙.`, "note");
     }
   }
 
@@ -3783,13 +4235,32 @@ function mountAiChat(
   }
 
   /**
-   * Sends the instructions with the project summary, the conversation and the
-   * tools to the model; the summary is built again each time, so that the
-   * model sees its own changes
+   * The context of a new turn: the personality of now (a new theme changes
+   * the tone at once) and the summary of the project as it is now
+   *
+   * It stays the same for all the requests of the turn, while the model calls
+   * tools: OpenAI and Anthropic only take the model's thinking back while
+   * everything before it is unchanged. The tool results tell the model what
+   * changed during the turn.
+   */
+  async function turnContext(): Promise<string> {
+    // the summary should show the current columns: wait for the table reads,
+    // but not for more than 5 seconds
+    await Promise.race([
+      readingQueue,
+      new Promise((resolve) => setTimeout(resolve, 5000)),
+    ]);
+    return buildContext(projectStore.getState(), tables, persona);
+  }
+
+  /**
+   * Sends the instructions, the context of the turn, the conversation and the
+   * tools to the model
    *
    * @param provider - The service
    * @param model - The model
    * @param key - The API key of the service, or ""
+   * @param context - The context of the turn, see {@link turnContext}
    * @param onText - Called with the text so far, each time a piece arrives
    * @returns The answer, or an error message
    */
@@ -3797,19 +4268,15 @@ function mountAiChat(
     provider: Provider,
     model: string,
     key: string,
+    context: string,
     onText: (text: string) => void,
   ): Promise<ChatAnswer> {
-    // the summary should show the current columns: wait for the table reads,
-    // but not for more than 5 seconds
-    await Promise.race([
-      readingQueue,
-      new Promise((resolve) => setTimeout(resolve, 5000)),
-    ]);
     return provider.chat(
       {
         model,
         key,
-        system: buildContext(projectStore.getState(), tables),
+        instructions,
+        context,
         messages,
         tools: toolDefinitions.map((definition) => definition.function),
       },
@@ -3861,9 +4328,14 @@ function mountAiChat(
     return { result, warning };
   }
 
-  /** Sends the text in the text box to the model, and runs the tools it calls */
-  async function send(): Promise<void> {
-    const text = input.value.trim();
+  /**
+   * Sends a request to the model, and runs the tools it calls
+   *
+   * @param example - A suggested request to send; without it, the text in the
+   * text box
+   */
+  async function send(example?: string): Promise<void> {
+    const text = (example ?? input.value).trim();
     if (text === "" || sendButton.disabled) {
       return;
     }
@@ -3879,8 +4351,15 @@ function mountAiChat(
       );
       return;
     }
-    input.value = "";
-    show("You", text, "var(--muted)");
+    if (example === undefined) {
+      input.value = "";
+    }
+    // for the up and down arrows
+    if (sent.at(-1) !== text) {
+      sent.push(text);
+    }
+    sentIndex = sent.length;
+    show("You", text);
     // to forget this turn if it fails
     const start = messages.length;
     messages.push({ role: "user", text });
@@ -3892,16 +4371,37 @@ function mountAiChat(
     const changes: Change[] = [];
     const projectAtStart = projectStore.getState().instanceId;
     try {
+      startThinking();
+      // the same for every step of this turn
+      const context = await turnContext();
       for (let step = 1; step <= maxSteps; step++) {
         // the answer is shown while it arrives, in a message made when the
         // first piece of text comes
         let setText: ((text: string) => void) | null = null;
-        const answer = await askModel(provider, model, key, (textSoFar) => {
-          setText ??= addMessage(model, "transparent", true);
-          setText(textSoFar);
-        });
+        if (thinking === null) {
+          startThinking();
+        }
+        let answer: ChatAnswer;
+        try {
+          answer = await askModel(
+            provider,
+            model,
+            key,
+            context,
+            (textSoFar) => {
+              if (setText === null) {
+                stopThinking();
+                setText = addMessage(persona.name, "assistant", true);
+              }
+              setText(textSoFar);
+            },
+          );
+        } finally {
+          stopThinking();
+        }
         if ("error" in answer) {
           show("Error", answer.error);
+          showServiceProblem(provider, answer.error);
           messages.length = start;
           break;
         }
@@ -3910,7 +4410,7 @@ function mountAiChat(
         if (toolCalls.length === 0) {
           // small models sometimes answer with an empty text
           if (setText === null) {
-            show(model, "(no text answer)", "transparent", true);
+            show(persona.name, "(no text answer)", "assistant", true);
           }
           break;
         }
@@ -3963,12 +4463,14 @@ function mountAiChat(
       if (usesOllama(provider)) {
         // fetch fails when nothing answers: Ollama is not running, or blocks the page
         show("Error", await lostOllama());
-      } else if (error instanceof TypeError) {
-        // fetch fails with a TypeError when nothing answers
-        show("Error", notReachable(provider));
       } else {
-        const message = error instanceof Error ? error.message : String(error);
-        show("Error", `Something went wrong: ${hideKey(message, key)}`);
+        // fetch fails with a TypeError when nothing answers
+        const message =
+          error instanceof TypeError
+            ? notReachable(provider)
+            : `Something went wrong: ${hideKey(error instanceof Error ? error.message : String(error), key)}`;
+        show("Error", message);
+        showServiceProblem(provider, message);
       }
     }
     // kept even if something failed later on, but not if another project
@@ -3988,11 +4490,14 @@ function mountAiChat(
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       void send();
+    } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+      browseSent(event);
     }
   });
   providerSelect.addEventListener("change", () => {
     const provider = currentProvider();
     saveSetting("provider", provider.id);
+    settingsOpen = false;
     showKey();
     fillModelMenu();
     updateStatus();
@@ -4008,12 +4513,29 @@ function mountAiChat(
   });
   keyInput.addEventListener("input", onKeyInput);
   // when the key is pasted or typed and the field is left
-  keyInput.addEventListener("change", () => void checkKey());
+  keyInput.addEventListener("change", () => void checkKey(true));
   rememberBox.addEventListener("change", onRememberChange);
+  // the selection changes on the whole page, and the answers can scroll
+  document.addEventListener("selectionchange", updateQuoteButton);
+  history.addEventListener("scroll", updateQuoteButton);
+  // a new theme gives the assistant another personality
+  const unsubscribeSettings = settingsStore.subscribe((state) => {
+    persona = personaFor(state.dark);
+  });
 
   container.style.cssText =
-    "display: flex; flex-direction: column; gap: 8px; height: 100%;";
-  container.append(topRow, keyRow, statusRow, history, examplesRow, bottomRow);
+    "display: flex; flex-direction: column; gap: 8px; height: 100%;" +
+    "position: relative; color: var(--foreground);";
+  container.append(
+    topRow,
+    summary,
+    settingsBox,
+    history,
+    examplesRow,
+    bottomRow,
+    footer,
+    quoteButton,
+  );
 
   // the container is attached to the panel only after mount, and its parent
   // has to fill the panel for "height: 100%" to work
@@ -4036,9 +4558,12 @@ function mountAiChat(
 
   return () => {
     abortController.abort();
+    stopThinking();
     observer.disconnect();
     unsubscribeData();
     unsubscribeProject();
+    unsubscribeSettings();
+    document.removeEventListener("selectionchange", updateQuoteButton);
   };
 }
 

@@ -25,7 +25,13 @@ Every request sends the model a summary of the project: the objects, how they ar
 
 All changes go through the project, like changes made by hand. _Undo_ takes back the changes of the last request, and _Undo all_ takes back every change made by the chat; settings changed by hand in the meantime are left as they are. _New chat_ starts a new conversation; Undo keeps working for the earlier changes.
 
-While the chat is empty, a few example requests for the open project are shown; click one to send it.
+A few suggested requests for the open project are shown above the text box; click one to send it, without losing what you are typing. In the text box, the up and down arrows go through the messages you sent before, like in a terminal. To refer to a part of an answer, select it and click _Quote_: it is quoted in your next message.
+
+While the model thinks, three dots blink next to an Italian word that changes every few seconds (_pensando_, _impastando_, _sbirciando nelle cellule_...); point at the word to see what it means in English.
+
+### Dia and Aid
+
+The assistant follows the theme of TissUUmaps. With the light theme it is **Dia**, gentle and kind; with the dark theme it is **Aid**, serious and a little mysterious. The name is shown in the chat instead of the model's, and the tone changes as soon as you switch the theme. Only the tone changes: what the assistant can do, and its rules (such as telling the truth about what it changed, or asking when a request is not clear), stay the same.
 
 :::caution
 
@@ -35,7 +41,7 @@ Language models make mistakes, especially small ones running on a laptop. Check 
 
 ## Choosing a service
 
-The first menu at the top of the panel chooses the service that answers, the second one its model. The panel remembers both in the browser for the next session.
+The settings at the top of the panel choose the service that answers and its model. The panel remembers both in the browser for the next session.
 
 | Service            | Runs on                                           | Needs                        | Cost                      |
 | ------------------ | ------------------------------------------------- | ---------------------------- | ------------------------- |
@@ -56,6 +62,8 @@ TissUUmaps does not provide API keys: everyone uses their own. An API key is a s
 - **Anthropic**: sign in at [platform.claude.com](https://platform.claude.com), open the [API keys](https://platform.claude.com/settings/keys) page and click _Create key_. Choose one workspace for the key (e.g. the _Default Workspace_), otherwise every request would need to name the workspace, and choose when the key expires.
 
 Copy the key (the website shows it only once: if you lose it, make a new one), choose the service in the panel and paste the key into the _API key_ field. The panel checks the key with a request that costs nothing, and the status line says whether it was accepted.
+
+When the key is accepted, the settings fold into one short line, e.g. _Anthropic · claude-haiku-5-5 · key ✓_, and the chat says once what using the key means. The ⚙ button opens the settings again, to change, forget or check the key; they also open by themselves when the key stops working or something goes wrong.
 
 ### Keeping your key safe
 
@@ -131,3 +139,11 @@ The plugin is implemented in the [`@tissuumaps/plugins`](../api/@tissuumaps/plug
 - Ollama's [chat API](https://docs.ollama.com/api) at `http://localhost:11434`.
 
 The conversation is kept in one format of the plugin's own, and each service's part of the plugin turns it into the format of that API, so that the tools work the same with all of them.
+
+OpenAI and Anthropic only take the model's thinking back while everything sent before it is unchanged, and bill less for a beginning they have already seen ([prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)). So with them the beginning of every request stays the same: the fixed instructions, the tools, and the conversation, to which messages are only added. The project summary and the personality, which change, go with the user's message that starts each turn, and stay the same while the model calls tools in that turn. The thinking is sent back only within the turn; if a service still refuses it, the plugin sends the request once more without it.
+
+The names, tones and avatars of Dia and Aid, and the words shown while the model thinks, are in `persona.ts`, next to the plugin. The panel uses TissUUmaps' theme colors (CSS variables such as `--foreground` and `--muted`), so that it stays readable with the light and the dark theme.
+
+---
+
+_Made by Alessia Giustolisi_
