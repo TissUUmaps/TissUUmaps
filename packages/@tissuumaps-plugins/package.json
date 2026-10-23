@@ -37,6 +37,7 @@
   "scripts": {
     "build": "tsc -b tsconfig.src.json && vite build",
     "clean": "rm -rf build dist node_modules",
+    "generate:store-types": "node scripts/generate-store-types.ts",
     "test": "vitest run --passWithNoTests"
   },
   "devDependencies": {

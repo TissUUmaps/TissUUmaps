@@ -54,7 +54,9 @@ With OpenAI, Anthropic and Ollama (cloud), your messages and the project summary
 
 ## Using OpenAI or Anthropic
 
-TissUUmaps does not provide API keys: everyone uses their own. An API key is a secret code that lets the chat use your account, and every request is billed to that account, so first add a payment method or buy credit there. With the first model in the menu (`gpt-6-luna` or `claude-haiku-5-5`), a request usually costs well under one cent; the other models cost more.
+TissUUmaps does not provide API keys: everyone uses their own. An API key is a secret code that lets the chat use your account, and every request is billed to that account, so first add a payment method or buy credit there. With the first model in the menu (`gpt-6-luna` or `claude-haiku-5-5`), a request usually costs well under one cent; the other models cost more. Under each answer, a small line shows the tokens used (input, read from and written to the service's prompt cache, output) and about how much they cost, also in total since the panel was opened. These are estimates from the published prices: the bill of the service counts.
+
+These models also get the types and the current state of the whole app (see [API](#api)), so they can answer detailed questions about the settings of each object, e.g. _"which properties of the labels can I change?"_, and explain how to change what the chat cannot change by itself, such as the color of an image channel. For now they only answer: the changes are still made by the same tools as with Ollama.
 
 ### Getting a key
 
@@ -141,6 +143,8 @@ The plugin is implemented in the [`@tissuumaps/plugins`](../api/@tissuumaps/plug
 The conversation is kept in one format of the plugin's own, and each service's part of the plugin turns it into the format of that API, so that the tools work the same with all of them.
 
 OpenAI and Anthropic only take the model's thinking back while everything sent before it is unchanged, and bill less for a beginning they have already seen ([prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)). So with them the beginning of every request stays the same: the fixed instructions, the tools, and the conversation, to which messages are only added. The project summary and the personality, which change, go with the user's message that starts each turn, and stay the same while the model calls tools in that turn. The thinking is sent back only within the turn; if a service still refuses it, the plugin sends the request once more without it.
+
+With OpenAI and Anthropic, the fixed instructions also contain the types of the app state, as plugins see it: the project store, the model of the project, and the parts of the app store that only change the view. They are generated from the types of `@tissuumaps/core` by `scripts/generate-store-types.ts` in `@tissuumaps/plugins`, which lets the TypeScript compiler resolve them into plain property lists with the first sentence of each comment, and writes them to `src/ai-chat/store-types.generated.ts`. After changing those types, run `pnpm run generate:store-types` in `packages/@tissuumaps-plugins`; a test fails until the generated file is up to date. Each turn then comes with the current state as JSON, after the project summary. Ollama's models get only the summary, which suits their shorter context.
 
 The names, tones and avatars of Dia and Aid, and the words shown while the model thinks, are in `persona.ts`, next to the plugin. The panel uses TissUUmaps' theme colors (CSS variables such as `--foreground` and `--muted`), so that it stays readable with the light and the dark theme.
 

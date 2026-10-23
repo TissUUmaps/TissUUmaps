@@ -4,6 +4,7 @@ import { createStore } from "zustand";
 import { immer } from "zustand/middleware/immer";
 
 import {
+  type AppStoreApi,
   type Color,
   type DataStoreApi,
   type GroupValueMap,
@@ -24,6 +25,7 @@ import {
 
 import { aiChatPlugin } from ".";
 import { thinkingWords } from "./persona";
+import { storeTypes } from "./store-types.generated";
 
 /** The ids of the objects of the fake project */
 const cellLabels = "labels/cell_labels@global";
@@ -511,7 +513,18 @@ function fakeOpenAi(): Response {
       type: "response.output_text.delta",
       delta,
     })),
-    { type: "response.completed", response: { output } } as { type: string },
+    {
+      type: "response.completed",
+      response: {
+        output,
+        // OpenAI counts the cached tokens also in input_tokens
+        usage: {
+          input_tokens: 9000,
+          input_tokens_details: { cached_tokens: 6000, cache_write_tokens: 0 },
+          output_tokens: 80,
+        },
+      },
+    } as { type: string },
   ]);
 }
 
@@ -523,7 +536,19 @@ function fakeAnthropic(body: ServiceRequestBody): Response {
   const answer = services.answers.shift() ?? { content: "ok" };
   const signature = binding(body, body.messages?.length ?? 0);
   const events: object[] = [
-    { type: "message_start", message: { role: "assistant", content: [] } },
+    {
+      type: "message_start",
+      message: {
+        role: "assistant",
+        content: [],
+        usage: {
+          input_tokens: 3000,
+          cache_read_input_tokens: 6000,
+          cache_creation_input_tokens: 0,
+          output_tokens: 1,
+        },
+      },
+    },
     {
       type: "content_block_start",
       index: 0,
@@ -581,7 +606,12 @@ function fakeAnthropic(body: ServiceRequestBody): Response {
     index++;
   }
   events.push(
-    { type: "message_delta", delta: { stop_reason: "end_turn" } },
+    {
+      type: "message_delta",
+      delta: { stop_reason: "end_turn" },
+      // the output tokens so far, which replace the earlier number
+      usage: { output_tokens: 80 },
+    },
     { type: "message_stop" },
   );
   return eventStreamOf(events as { type: string }[]);
@@ -676,7 +706,11 @@ function fakeFetch(
         },
       } as (typeof lines)[number]);
     }
-    lines.push({ message: { role: "assistant", content: "" } });
+    lines.push({
+      message: { role: "assistant", content: "" },
+      prompt_eval_count: 5000,
+      eval_count: 40,
+    } as (typeof lines)[number]);
     return Promise.resolve(
       streamOf(lines.map((line) => JSON.stringify(line)).join("\n")),
     );
@@ -699,6 +733,21 @@ function fakeFetch(
 /** The model calls these tools, then answers "ok" */
 function modelCalls(...toolCalls: [string, Record<string, unknown>][]): void {
   ollama.answers = [{ toolCalls }, { content: "ok" }];
+}
+
+/** An app store with the state that only changes the view */
+function makeAppStore(): AppStoreApi {
+  return createStore(() => ({
+    interactionMode: "pan",
+    imageChannelPreview: null,
+    highlightedItemGroup: null,
+    activePanelId: "plugin-ai-chat",
+    expandedImageIds: [],
+    expandedLabelsIds: [cellLabels],
+    expandedPointsIds: [],
+    expandedShapesIds: [],
+    expandedTableIds: [],
+  })) as unknown as AppStoreApi;
 }
 
 /** A settings store like the application's, with the theme */
@@ -730,7 +779,7 @@ async function openPanel(
   const unmount = aiChatPlugin.mount?.(container, {
     projectStore,
     dataStore,
-    appStore: {} as never,
+    appStore: makeAppStore(),
     settingsStore,
   });
   const button = (text: string) =>
@@ -1558,6 +1607,99 @@ describe("aiChatPlugin", () => {
     });
   });
 
+  describe("the whole app for OpenAI and Anthropic", () => {
+    /** The text of the user's message that starts the turn of a request */
+    function turnText(provider: string, body?: ServiceRequestBody): string {
+      const first =
+        provider === "openai"
+          ? body?.input?.[0]?.content
+          : body?.messages?.[0]?.content[0]?.text;
+      return typeof first === "string" ? first : "";
+    }
+
+    it.each(["openai", "anthropic"])(
+      "tells %s the types with the fixed instructions, and the state with each turn",
+      async (provider) => {
+        const panel = await openPanel(undefined, undefined, { provider });
+        await panel.pasteKey(provider === "openai" ? openAiKey : anthropicKey);
+        await panel.say("What is the opacity of cell_labels?");
+        const body = services.requests[0]?.body;
+        const fixed =
+          provider === "openai" ? body?.instructions : body?.system?.[0]?.text;
+        expect(fixed).toContain("# The app state of TissUUmaps");
+        expect(fixed).toContain(storeTypes);
+        // "what can I change" is about TissUUmaps, and no made-up controls
+        expect(fixed).toContain(
+          "answer about TissUUmaps: list all the settings in the types",
+        );
+        expect(fixed).toContain("do not describe buttons");
+        const [, json = ""] =
+          turnText(provider, body)
+            .split("[End of the context]")[0]
+            ?.split("# The current app state, as JSON\n") ?? [];
+        const state = JSON.parse(json) as {
+          projectStore: ProjectStore;
+          appStore: { expandedLabelsIds: string[] };
+        };
+        expect(state.projectStore.name).toBe("xenium");
+        expect(state.projectStore.labels[1]).toMatchObject({
+          id: cellLabels,
+          opacity: 1,
+        });
+        expect(state.appStore.expandedLabelsIds).toEqual([cellLabels]);
+        // without the actions and the long viewer options
+        expect(json).not.toContain("updateLabels");
+        expect(json).not.toContain("osOptions");
+      },
+    );
+
+    it("tells Ollama no more than before", async () => {
+      const panel = await openPanel();
+      await panel.say("Hello");
+      const system = ollama.requests[0]?.messages[0]?.content ?? "";
+      expect(system).not.toContain("# The app state of TissUUmaps");
+      expect(system).not.toContain("type Labels=");
+    });
+
+    it.each(["openai", "anthropic"])(
+      "shows the tokens and about how much each turn with %s costs",
+      async (provider) => {
+        const panel = await openPanel(undefined, undefined, { provider });
+        await panel.pasteKey(provider === "openai" ? openAiKey : anthropicKey);
+        services.answers = [
+          {
+            toolCalls: [
+              ["set_visibility", { ids: [transcripts], visible: true }],
+            ],
+          },
+          { content: "The transcripts are visible." },
+        ];
+        await panel.say("Show the transcripts.");
+        await panel.say("Thanks!");
+        const lines = [...panel.container.querySelectorAll("[data-usage]")].map(
+          (line) => line.textContent,
+        );
+        expect(lines).toEqual([
+          "Tokens (2 requests): 6,000 input · 12,000 from cache · 0 written to cache · 160 output · ≈ $0.0008 · this session ≈ $0.0008",
+          "Tokens: 3,000 input · 6,000 from cache · 0 written to cache · 80 output · ≈ $0.0004 · this session ≈ $0.0012",
+        ]);
+        // under the answers, not in their text
+        expect(panel.texts("Dia")).toEqual([
+          "The transcripts are visible.",
+          "ok",
+        ]);
+      },
+    );
+
+    it("shows the tokens of Ollama, which are free", async () => {
+      const panel = await openPanel();
+      await panel.say("Hello");
+      expect(panel.container.querySelector("[data-usage]")?.textContent).toBe(
+        "Tokens: 5,000 input · 40 output · free",
+      );
+    });
+  });
+
   describe("the model's thinking with OpenAI and Anthropic", () => {
     /** The user's message that starts the turn of a request, and its context */
     function turnOf(provider: string, body: ServiceRequestBody) {
@@ -1573,6 +1715,7 @@ describe("aiChatPlugin", () => {
 
     it("the fake Anthropic refuses thinking whose conversation changed, as Anthropic does", async () => {
       const request = (system: string): ServiceRequestBody => ({
+        model: "claude-haiku-5-5",
         system: [{ type: "text", text: system }],
         tools: [],
         messages: [{ role: "user", content: [{ type: "text", text: "Hi" }] }],
@@ -1837,6 +1980,9 @@ describe("aiChatPlugin", () => {
         "The personality only changes your tone. Every rule of your instructions still applies",
       );
       expect(panel.context()).toContain("Your name is Aid.");
+      expect(system).toContain(
+        'Speak of yourself as\n"I", never by your name in the third person.',
+      );
     });
 
     it("says who made it", async () => {

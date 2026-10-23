@@ -2,6 +2,7 @@
 import type {} from "zustand/middleware/immer";
 
 import {
+  type AppStore,
   type Color,
   type ColorConfig,
   type Config,
@@ -37,6 +38,7 @@ import {
   type OllamaPullUpdate,
   type Provider,
   type ProviderId,
+  type Usage,
   explainNotReachable,
   hideKey,
   notRunningMessage,
@@ -44,6 +46,7 @@ import {
   providers,
   readJsonLines,
 } from "./providers";
+import { storeTypes } from "./store-types.generated";
 
 // --- Settings and help ---
 
@@ -118,7 +121,12 @@ const helpText = `How to use this chat
    ⚙ opens them again, to change, forget or check the key. They also open by
    themselves when something goes wrong.
    Each request is billed to your account, and your messages and the project
-   summary are sent to the service you chose.
+   summary are sent to the service you chose. Under each answer, a small line
+   shows the tokens used (input, read from and written to the service's cache,
+   output) and about how much they cost; the bill of the service counts.
+   These models also get the types and the current state of the whole app,
+   so they can answer detailed questions about the settings of each object
+   and say how to change what the chat cannot change by itself.
 
 3. Keeping your key safe
    - Treat the key like a password: do not share it, and do not put it in
@@ -2811,8 +2819,67 @@ const personaRules = [
   "The personality only changes your tone. Every rule of your instructions still applies",
   "in full: tell the truth about what the tools did, ask when a request is ambiguous, keep",
   "answers short, and never be rude to the user. If earlier answers in this conversation",
-  "used another name or tone, use this name and tone from now on.",
+  "used another name or tone, use this name and tone from now on. Speak of yourself as",
+  '"I", never by your name in the third person.',
 ].join("\n");
+
+/**
+ * What the strong models are told besides the instructions: the types of the
+ * app state, which never change between requests, so that the services keep
+ * them in their prompt cache
+ */
+const wholeAppInstructions = [
+  "# The app state of TissUUmaps",
+  "Below are the TypeScript types of the app state of TissUUmaps, as its plugins see it:",
+  "the project store (the open project and its actions), the model of the project, and",
+  "the parts of the app store that only change the view. They are resolved into plain",
+  "property lists, with the first sentence of each comment. Each turn comes with the",
+  "current values of this state, as JSON, after the project summary.",
+  "Use them to answer questions about the project: its objects and their settings, what",
+  "can be changed, and how. You cannot call these actions: only your tools change the",
+  "project. When the user asks for a change that no tool can make, do not pretend to make",
+  "it: say which setting would do it (which property of which object, with which value),",
+  "so that the user can change it in the panels of TissUUmaps.",
+  'When the user asks what can be changed (e.g. "which properties of the labels can I',
+  'change?"), answer about TissUUmaps: list all the settings in the types, then say which',
+  "of them you can change yourself with your tools.",
+  "You know the settings, not the controls of the panels: name the panel (Images, Labels,",
+  "Points, Shapes, or Project for the layers) and the setting, but do not describe buttons,",
+  "fields or menus that you do not know.",
+  "```ts",
+  storeTypes,
+  "```",
+].join("\n");
+
+/**
+ * The app state as JSON, for the strong models: the project store and the
+ * parts of the app store that only change the view, without the actions
+ *
+ * The OpenSeadragon options are left out: they are long and say nothing about
+ * the project.
+ *
+ * @param project - The project store
+ * @param app - The app store
+ * @returns The JSON text
+ */
+function stateJson(project: ProjectStore, app: AppStore): string {
+  const view = {
+    interactionMode: app.interactionMode,
+    imageChannelPreview: app.imageChannelPreview,
+    highlightedItemGroup: app.highlightedItemGroup,
+    activePanelId: app.activePanelId,
+    expandedImageIds: app.expandedImageIds,
+    expandedLabelsIds: app.expandedLabelsIds,
+    expandedPointsIds: app.expandedPointsIds,
+    expandedShapesIds: app.expandedShapesIds,
+    expandedTableIds: app.expandedTableIds,
+  };
+  return JSON.stringify(
+    { projectStore: project, appStore: view },
+    (key, value: unknown) =>
+      typeof value === "function" || key === "osOptions" ? undefined : value,
+  );
+}
 
 /**
  * Builds what changes between the requests to the model: the personality and
@@ -3254,6 +3321,16 @@ function describeCall(name: string, args: ToolArguments): string {
 }
 
 /**
+ * Writes an amount in dollars, with enough digits for fractions of a cent
+ *
+ * @param amount - The amount
+ * @returns E.g. "$0.0004" or "$0.012"
+ */
+function dollars(amount: number): string {
+  return `$${amount.toFixed(amount < 0.01 ? 4 : 3)}`;
+}
+
+/**
  * Whether a service is reached through Ollama on the user's computer, which
  * needs no key but has to be running
  *
@@ -3283,7 +3360,7 @@ function notReachable(provider: Provider): string {
  */
 function mountAiChat(
   container: HTMLElement,
-  { projectStore, dataStore, settingsStore }: PluginStores,
+  { projectStore, dataStore, settingsStore, appStore }: PluginStores,
 ): () => void {
   // aborted on unmount, which stops the requests to the model and the table reads
   const abortController = new AbortController();
@@ -3330,6 +3407,9 @@ function mountAiChat(
   /** The indicator shown in the chat while the model thinks */
   let thinking: { element: HTMLElement; stop: () => void } | null = null;
 
+  /** About how much the answers cost since the panel was opened, in dollars */
+  let sessionCost = 0;
+
   /** The messages sent so far, for the up and down arrows */
   const sent: string[] = [];
   /** Which sent message the text box shows; `sent.length` for the new text */
@@ -3365,7 +3445,7 @@ function mountAiChat(
     () =>
       show(
         "Context sent to the model",
-        `${instructions}\n\n${buildContext(projectStore.getState(), tables, persona)}`,
+        `${instructionsFor(currentProvider())}\n\n${contextFor(currentProvider())}`,
         "info",
         true,
       ),
@@ -4243,14 +4323,37 @@ function mountAiChat(
    * everything before it is unchanged. The tool results tell the model what
    * changed during the turn.
    */
-  async function turnContext(): Promise<string> {
+  async function turnContext(provider: Provider): Promise<string> {
     // the summary should show the current columns: wait for the table reads,
     // but not for more than 5 seconds
     await Promise.race([
       readingQueue,
       new Promise((resolve) => setTimeout(resolve, 5000)),
     ]);
-    return buildContext(projectStore.getState(), tables, persona);
+    return contextFor(provider);
+  }
+
+  /**
+   * The instructions for a service: for the strong models, with the types of
+   * the app state, which never change
+   */
+  function instructionsFor(provider: Provider): string {
+    return provider.wholeApp
+      ? `${instructions}\n\n${wholeAppInstructions}`
+      : instructions;
+  }
+
+  /**
+   * The context as it is now: for the strong models, with the app state as
+   * JSON after the summary
+   */
+  function contextFor(provider: Provider): string {
+    const summary = buildContext(projectStore.getState(), tables, persona);
+    if (!provider.wholeApp) {
+      return summary;
+    }
+    const state = stateJson(projectStore.getState(), appStore.getState());
+    return `${summary}\n\n# The current app state, as JSON\n${state}`;
   }
 
   /**
@@ -4275,7 +4378,7 @@ function mountAiChat(
       {
         model,
         key,
-        instructions,
+        instructions: instructionsFor(provider),
         context,
         messages,
         tools: toolDefinitions.map((definition) => definition.function),
@@ -4283,6 +4386,53 @@ function mountAiChat(
       onText,
       { signal },
     );
+  }
+
+  /**
+   * Shows under the last message of a turn the tokens of its requests, and
+   * for the services that bill them, about how much they cost, also in total
+   * since the panel was opened
+   */
+  function showUsage(
+    provider: Provider,
+    model: string,
+    usage: Usage,
+    requests: number,
+  ): void {
+    const message = history.lastElementChild;
+    if (requests === 0 || message === null) {
+      return;
+    }
+    const count = (tokens: number) => tokens.toLocaleString("en-US");
+    const parts = [`${count(usage.input)} input`];
+    if (provider.needsKey) {
+      parts.push(
+        `${count(usage.cacheRead)} from cache`,
+        `${count(usage.cacheWrite)} written to cache`,
+      );
+    }
+    parts.push(`${count(usage.output)} output`);
+    const prices = provider.models.find(({ name }) => name === model)?.prices;
+    if (prices === undefined) {
+      parts.push("free");
+    } else {
+      const cost =
+        (usage.input * prices.input +
+          usage.cacheRead * prices.cacheRead +
+          usage.cacheWrite * prices.cacheWrite +
+          usage.output * prices.output) /
+        1_000_000;
+      sessionCost += cost;
+      parts.push(
+        `≈ ${dollars(cost)}`,
+        `this session ≈ ${dollars(sessionCost)}`,
+      );
+    }
+    const line = document.createElement("div");
+    line.dataset.usage = "true";
+    line.style.cssText = `${quietTextStyle}font-size: 11px; margin-top: 4px;`;
+    line.textContent = `Tokens${requests > 1 ? ` (${requests} requests)` : ""}: ${parts.join(" · ")}`;
+    message.append(line);
   }
 
   /**
@@ -4370,10 +4520,13 @@ function mountAiChat(
     const failedCalls: string[] = [];
     const changes: Change[] = [];
     const projectAtStart = projectStore.getState().instanceId;
+    // the tokens of all the requests of this turn
+    const usage: Usage = { input: 0, cacheRead: 0, cacheWrite: 0, output: 0 };
+    let requests = 0;
     try {
       startThinking();
       // the same for every step of this turn
-      const context = await turnContext();
+      const context = await turnContext(provider);
       for (let step = 1; step <= maxSteps; step++) {
         // the answer is shown while it arrives, in a message made when the
         // first piece of text comes
@@ -4406,6 +4559,15 @@ function mountAiChat(
           break;
         }
         messages.push(answer.message);
+        requests++;
+        for (const kind of [
+          "input",
+          "cacheRead",
+          "cacheWrite",
+          "output",
+        ] as const) {
+          usage[kind] += answer.message.usage?.[kind] ?? 0;
+        }
         const toolCalls = answer.message.toolCalls;
         if (toolCalls.length === 0) {
           // small models sometimes answer with an empty text
@@ -4473,6 +4635,7 @@ function mountAiChat(
         showServiceProblem(provider, message);
       }
     }
+    showUsage(provider, model, usage, requests);
     // kept even if something failed later on, but not if another project
     // was opened in the meantime
     if (

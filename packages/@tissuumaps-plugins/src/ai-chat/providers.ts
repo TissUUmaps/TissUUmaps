@@ -52,7 +52,25 @@ export type AssistantMessage = {
    * the model's thinking); sent back as it is to the same kind of API
    */
   original?: { api: ApiFormat; items: unknown[] };
+  /** The tokens of the request and of the answer, if the API said */
+  usage?: Usage;
 };
+
+/**
+ * The tokens of one or more requests, as the services bill them
+ *
+ * `input` counts only the tokens billed at the full price: those read from or
+ * written to the prompt cache are counted apart.
+ */
+export type Usage = {
+  input: number;
+  cacheRead: number;
+  cacheWrite: number;
+  output: number;
+};
+
+/** The price of a model, in dollars per million tokens of each kind */
+export type Prices = Usage;
 
 /** A message of the conversation, in the panel's own format */
 export type ChatMessage =
@@ -84,10 +102,18 @@ export type Provider = {
   id: ProviderId;
   /** The name shown to the user, e.g. "OpenAI" */
   name: string;
-  /** The models offered in the menu, the default first */
-  models: { name: string; note: string }[];
+  /**
+   * The models offered in the menu, the default first, with their prices for
+   * the services that bill them
+   */
+  models: { name: string; note: string; prices?: Prices }[];
   /** Whether the user has to give an API key */
   needsKey: boolean;
+  /**
+   * Whether the models are strong enough, with a long enough context, to be
+   * told the types and the state of the whole app, besides the summary
+   */
+  wholeApp: boolean;
   /**
    * Sends the conversation to the model
    *
@@ -383,7 +409,18 @@ type OpenAiEvent = {
   type: string;
   delta?: string;
   message?: string;
-  response?: { output?: OpenAiItem[]; error?: { message?: string } | null };
+  response?: {
+    output?: OpenAiItem[];
+    error?: { message?: string } | null;
+    usage?: {
+      input_tokens?: number;
+      input_tokens_details?: {
+        cached_tokens?: number;
+        cache_write_tokens?: number;
+      };
+      output_tokens?: number;
+    };
+  };
 };
 
 /**
@@ -517,6 +554,7 @@ async function sendToOpenAi(
   }
   let text = "";
   let output: OpenAiItem[] = [];
+  let usage: Usage | undefined;
   let error: string | undefined;
   await readServerEvents<OpenAiEvent>(
     response,
@@ -527,9 +565,23 @@ async function sendToOpenAi(
           onText(text);
           break;
         case "response.completed":
-        case "response.incomplete":
+        case "response.incomplete": {
           output = event.response?.output ?? [];
+          const tokens = event.response?.usage;
+          if (tokens !== undefined) {
+            // OpenAI counts the cached tokens also in input_tokens
+            const cacheRead = tokens.input_tokens_details?.cached_tokens ?? 0;
+            const cacheWrite =
+              tokens.input_tokens_details?.cache_write_tokens ?? 0;
+            usage = {
+              input: (tokens.input_tokens ?? 0) - cacheRead - cacheWrite,
+              cacheRead,
+              cacheWrite,
+              output: tokens.output_tokens ?? 0,
+            };
+          }
           break;
+        }
         case "response.failed":
           error ??= event.response?.error?.message ?? "the answer failed";
           break;
@@ -560,6 +612,7 @@ async function sendToOpenAi(
           arguments: parseArguments(item.arguments),
         })),
       original: { api: "openai", items: output },
+      usage,
     },
   };
 }
@@ -621,6 +674,18 @@ type AnthropicEvent = {
     partial_json?: string;
   };
   error?: { message?: string };
+  /** In "message_start": the usage so far */
+  message?: { usage?: AnthropicUsage };
+  /** In "message_delta": the usage so far, which replaces the earlier one */
+  usage?: AnthropicUsage;
+};
+
+/** The tokens of a request to Anthropic and of its answer */
+type AnthropicUsage = {
+  input_tokens?: number;
+  cache_read_input_tokens?: number | null;
+  cache_creation_input_tokens?: number | null;
+  output_tokens?: number;
 };
 
 /** A message of Anthropic's Messages API */
@@ -800,17 +865,27 @@ async function sendToAnthropic(
   // the arguments of tool calls, which arrive as pieces of JSON
   const json = new Map<number, string>();
   let error: string | undefined;
+  const usage: Usage = { input: 0, cacheRead: 0, cacheWrite: 0, output: 0 };
   function textSoFar(): string {
     return blocks
       .filter((block) => block.type === "text")
       .map((block) => block.text ?? "")
       .join("\n\n");
   }
+  /** Keeps the numbers that Anthropic sends, which are totals so far */
+  function countTokens(tokens: AnthropicUsage | undefined): void {
+    usage.input = tokens?.input_tokens ?? usage.input;
+    usage.cacheRead = tokens?.cache_read_input_tokens ?? usage.cacheRead;
+    usage.cacheWrite = tokens?.cache_creation_input_tokens ?? usage.cacheWrite;
+    usage.output = tokens?.output_tokens ?? usage.output;
+  }
   await readServerEvents<AnthropicEvent>(
     response,
     (event) => {
       const index = event.index ?? 0;
       const block = blocks[index];
+      countTokens(event.message?.usage);
+      countTokens(event.usage);
       switch (event.type) {
         case "content_block_start":
           if (event.content_block !== undefined) {
@@ -863,6 +938,7 @@ async function sendToAnthropic(
           arguments: (block.input ?? {}) as Record<string, unknown>,
         })),
       original: { api: "anthropic", items },
+      usage,
     },
   };
 }
@@ -927,7 +1003,14 @@ type OllamaMessage = {
 };
 
 /** One line of a streamed chat answer */
-type OllamaChatPiece = { message?: Partial<OllamaMessage>; error?: string };
+type OllamaChatPiece = {
+  message?: Partial<OllamaMessage>;
+  error?: string;
+  /** In the last line: the tokens of the request */
+  prompt_eval_count?: number;
+  /** In the last line: the tokens of the answer */
+  eval_count?: number;
+};
 
 /** One line of the progress of a model download */
 export type OllamaPullUpdate = {
@@ -1065,10 +1148,13 @@ async function chatWithOllama(
   });
   const message: OllamaMessage = { role: "assistant", content: "" };
   let error: string | undefined;
+  const usage: Usage = { input: 0, cacheRead: 0, cacheWrite: 0, output: 0 };
   await readJsonLines<OllamaChatPiece>(
     response,
     (piece) => {
       error ??= piece.error;
+      usage.input = piece.prompt_eval_count ?? usage.input;
+      usage.output = piece.eval_count ?? usage.output;
       const part = piece.message ?? {};
       if (part.thinking !== undefined) {
         message.thinking = (message.thinking ?? "") + part.thinking;
@@ -1099,23 +1185,42 @@ async function chatWithOllama(
         arguments: call.function.arguments ?? {},
       })),
       original: { api: "ollama", items: [message] },
+      usage,
     },
   };
 }
 
 // --- The providers ---
 
-/** The services the chat can use, in menu order: the first is the default */
+/**
+ * The services the chat can use, in menu order: the first is the default
+ *
+ * The prices are those published by OpenAI and Anthropic in October 2026,
+ * only to estimate the cost of the answers: the bill of the service counts.
+ */
 export const providers: Provider[] = [
   {
     id: "openai",
     name: "OpenAI",
     models: [
-      { name: "gpt-6-luna", note: "fast, lowest cost" },
-      { name: "gpt-6.1-sol", note: "more capable, costs more" },
-      { name: "gpt-6-astra", note: "most capable, costs the most" },
+      {
+        name: "gpt-6-luna",
+        note: "fast, lowest cost",
+        prices: { input: 0.1, cacheRead: 0.01, cacheWrite: 0.125, output: 0.5 },
+      },
+      {
+        name: "gpt-6.1-sol",
+        note: "more capable, costs more",
+        prices: { input: 2, cacheRead: 0.1, cacheWrite: 2.5, output: 10 },
+      },
+      {
+        name: "gpt-6-astra",
+        note: "most capable, costs the most",
+        prices: { input: 10, cacheRead: 1, cacheWrite: 12.5, output: 50 },
+      },
     ],
     needsKey: true,
+    wholeApp: true,
     chat: chatWithOpenAi,
     checkKey: checkOpenAiKey,
   },
@@ -1123,11 +1228,24 @@ export const providers: Provider[] = [
     id: "anthropic",
     name: "Anthropic",
     models: [
-      { name: "claude-haiku-5-5", note: "fast, lowest cost" },
-      { name: "claude-sonnet-5-5", note: "more capable, costs more" },
-      { name: "claude-opus-5-5", note: "most capable, costs the most" },
+      {
+        name: "claude-haiku-5-5",
+        note: "fast, lowest cost",
+        prices: { input: 0.1, cacheRead: 0.01, cacheWrite: 0.125, output: 0.5 },
+      },
+      {
+        name: "claude-sonnet-5-5",
+        note: "more capable, costs more",
+        prices: { input: 2, cacheRead: 0.1, cacheWrite: 2.5, output: 10 },
+      },
+      {
+        name: "claude-opus-5-5",
+        note: "most capable, costs the most",
+        prices: { input: 4, cacheRead: 0.2, cacheWrite: 5, output: 20 },
+      },
     ],
     needsKey: true,
+    wholeApp: true,
     chat: chatWithAnthropic,
     checkKey: checkAnthropicKey,
   },
@@ -1136,6 +1254,7 @@ export const providers: Provider[] = [
     name: "Ollama (local)",
     models: [{ name: "gemma4:e2b", note: "local" }],
     needsKey: false,
+    wholeApp: false,
     chat: chatWithOllama,
   },
   {
@@ -1143,6 +1262,7 @@ export const providers: Provider[] = [
     name: "Ollama (cloud)",
     models: [{ name: "gemma4:cloud", note: "online" }],
     needsKey: false,
+    wholeApp: false,
     chat: chatWithOllama,
   },
 ];
