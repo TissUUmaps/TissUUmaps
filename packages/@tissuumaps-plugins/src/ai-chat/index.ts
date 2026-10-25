@@ -3,14 +3,19 @@ import type {} from "zustand/middleware/immer";
 
 import {
   type AppStore,
+  type AppStoreApi,
   type Color,
   type ColorConfig,
   type Config,
   type DataStoreApi,
   type GroupValueMap,
   type Image,
+  ImageChannelViewMode,
+  type ImageData,
+  ImageUtils,
   type Labels,
   type Layer,
+  Marker,
   type Plugin,
   type PluginStores,
   type Points,
@@ -46,7 +51,7 @@ import {
   providers,
   readJsonLines,
 } from "./providers";
-import { storeTypes } from "./store-types.generated";
+import { storeProperties, storeTypes } from "./store-types.generated";
 
 // --- Settings and help ---
 
@@ -125,8 +130,11 @@ const helpText = `How to use this chat
    shows the tokens used (input, read from and written to the service's cache,
    output) and about how much they cost; the bill of the service counts.
    These models also get the types and the current state of the whole app,
-   so they can answer detailed questions about the settings of each object
-   and say how to change what the chat cannot change by itself.
+   so they can answer detailed questions about the settings of each object,
+   and change most of them: e.g. the color of an image channel, the shape of
+   the points, a rotation, the order of the objects, a highlighted group.
+   Every change can be undone. They never delete or add objects, and they
+   rename something only when you ask.
 
 3. Keeping your key safe
    - Treat the key like a password: do not share it, and do not put it in
@@ -216,8 +224,15 @@ type ObjectKind = "images" | "labels" | "points" | "shapes";
 /** The sections whose items can be colored and filtered by a table column */
 type ItemsKind = "labels" | "points";
 
-/** The project maps that the color and filter tools write */
-type MapKind = "colorMaps" | "visibilityMaps";
+/**
+ * The lists of maps of the project: the color and filter tools write color
+ * and visibility maps, call_action all of them
+ */
+type MapKind =
+  "markerMaps" | "sizeMaps" | "colorMaps" | "visibilityMaps" | "opacityMaps";
+
+/** The lists of the project whose entries can be changed */
+type ListKind = ObjectKind | "layers" | MapKind;
 
 /** An object of the project that the tools can change */
 type ProjectObject = Image | Labels | Points | Shapes;
@@ -233,9 +248,20 @@ type ItemsTarget = { kind: ItemsKind; object: ItemsObject };
 
 /** One change made by a tool, remembered so that "Undo" can take it back */
 type Change = {
-  kind: ObjectKind | MapKind;
+  /**
+   * Without it, one property changed; "added": a map was added, which Undo
+   * deletes; "moved": an entry was moved to another index
+   */
+  type?: "added" | "moved";
+  /**
+   * The list of the changed entry; "project" for a setting of the project
+   * itself, "app" for a setting of the view in the app store
+   */
+  kind: ListKind | "project" | "app";
+  /** The ID of the entry, or "" for the project and the app */
   id: string;
   name: string;
+  /** The property, or "index" for a move, or "" for an added map */
   property: string;
   before: unknown;
   after: unknown;
@@ -245,6 +271,8 @@ type Change = {
 type ToolContext = {
   projectStore: ProjectStoreApi;
   dataStore: DataStoreApi;
+  /** For call_action, which sets the view */
+  appStore: AppStoreApi;
   tables: TableKnowledge;
   /** The changes of the current request, which the tool adds to */
   changes: Change[];
@@ -527,6 +555,8 @@ const tools: Record<string, Tool> = {
   set_color: setColor,
   show_only_groups: showOnlyGroups,
   show_all_groups: showAllGroups,
+  // only offered to OpenAI and Anthropic, see runTool
+  call_action: callAction,
 };
 
 /**
@@ -535,10 +565,25 @@ const tools: Record<string, Tool> = {
  *
  * @param a - The first value
  * @param b - The second value
- * @returns Whether their JSON is the same
+ * @returns Whether their JSON is the same, whatever the order of the keys
  */
 function same(a: unknown, b: unknown): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
+  return JSON.stringify(sortedKeys(a)) === JSON.stringify(sortedKeys(b));
+}
+
+/** A value with the keys of its objects in order, to compare it as JSON */
+function sortedKeys(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(sortedKeys);
+  }
+  if (isRecord(value)) {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, sortedKeys(value[key])]),
+    );
+  }
+  return value;
 }
 
 /**
@@ -583,7 +628,7 @@ function toObjectKind(text: unknown): ObjectKind | undefined {
  */
 function findById(
   project: ProjectStore,
-  kind: ObjectKind | MapKind,
+  kind: ListKind,
   id: string,
 ): { id: string; name: string } | undefined {
   const objects: readonly { id: string; name: string }[] = project[kind];
@@ -643,7 +688,7 @@ function findKind(
  */
 function applyUpdate(
   project: ProjectStore,
-  kind: ObjectKind | MapKind,
+  kind: ListKind,
   id: string,
   updates: Record<string, unknown>,
 ): void {
@@ -660,13 +705,30 @@ function applyUpdate(
     case "shapes":
       project.updateShapes(id, updates);
       break;
+    case "layers":
+      project.updateLayer(id, updates);
+      break;
+    case "markerMaps":
+      project.updateMarkerMap(id, updates);
+      break;
+    case "sizeMaps":
+      project.updateSizeMap(id, updates);
+      break;
     case "colorMaps":
       project.updateColorMap(id, updates);
       break;
     case "visibilityMaps":
       project.updateVisibilityMap(id, updates);
       break;
+    case "opacityMaps":
+      project.updateOpacityMap(id, updates);
+      break;
   }
+}
+
+/** Whether a list is one of the lists of maps */
+function isMapKind(kind: Change["kind"]): kind is MapKind {
+  return kind.endsWith("Maps");
 }
 
 /**
@@ -685,7 +747,7 @@ function applyUpdate(
 function change(
   project: ProjectStore,
   changes: Change[],
-  kind: ObjectKind | MapKind,
+  kind: ListKind,
   id: string,
   property: string,
   value: unknown,
@@ -1788,7 +1850,8 @@ function someGroups(groups: string[]): string {
  *
  * There is one map per object, reused every time, so that the project does
  * not fill up with maps. Changes to an existing map go through
- * {@link change}, so that "Undo" puts them back.
+ * {@link change}, so that "Undo" puts them back; a new map is remembered as
+ * added, so that "Undo" deletes it.
  *
  * @typeParam TValue - The type of the map values
  * @param project - The project
@@ -1808,6 +1871,16 @@ function setChatMap<TValue extends Color | boolean>(
     } else {
       project.addVisibilityMap(map as GroupValueMap<boolean>);
     }
+    // so that Undo deletes it again
+    changes.push({
+      type: "added",
+      kind: mapKind,
+      id: map.id,
+      name: map.name,
+      property: "",
+      before: undefined,
+      after: map,
+    });
     return;
   }
   change(project, changes, mapKind, map.id, "values", map.values);
@@ -2417,6 +2490,1396 @@ function overlapWarning(project: ProjectStore, someChanges: Change[]): string {
   return [...warnings].join(" ");
 }
 
+// --- Actions of the app state, for OpenAI and Anthropic ---
+// call_action lets the strong models call the actions of the stores, which
+// they know from the types (store-types.generated.ts). Only actions that can
+// be taken back are allowed, and every argument is checked first: if anything
+// is wrong, nothing changes and the model is told why.
+
+/** The actions that update an entry of a list, with the entry's type */
+const updateActions: Record<
+  string,
+  { kind: ObjectKind | "layers"; type: string }
+> = {
+  updateLayer: { kind: "layers", type: "Layer" },
+  updateImage: { kind: "images", type: "Image" },
+  updateLabels: { kind: "labels", type: "Labels" },
+  updatePoints: { kind: "points", type: "Points" },
+  updateShapes: { kind: "shapes", type: "Shapes" },
+};
+
+/** The kinds of values that settings and maps hold */
+type ValueKind = "color" | "boolean" | "opacity" | "size" | "marker";
+
+/** The lists of maps, with their name in the actions and their values */
+const mapLists: Record<MapKind, { name: string; value: ValueKind }> = {
+  markerMaps: { name: "MarkerMap", value: "marker" },
+  sizeMaps: { name: "SizeMap", value: "size" },
+  colorMaps: { name: "ColorMap", value: "color" },
+  visibilityMaps: { name: "VisibilityMap", value: "boolean" },
+  opacityMaps: { name: "OpacityMap", value: "opacity" },
+};
+
+/** The actions that move an entry to another index, by list */
+const moveActions: Record<string, ObjectKind | "layers"> = {
+  moveLayer: "layers",
+  moveImage: "images",
+  moveLabels: "labels",
+  movePoints: "points",
+  moveShapes: "shapes",
+};
+
+/** The settings of the view in the app store that call_action can set */
+type ViewSetting =
+  | "highlightedItemGroup"
+  | "expandedImageIds"
+  | "expandedLabelsIds"
+  | "expandedPointsIds"
+  | "expandedShapesIds"
+  | "expandedTableIds";
+
+/**
+ * The actions of the app store that only change the view, with the setting
+ * they set and, for the expanded entries, the list of the IDs they take
+ */
+const viewActions: Record<
+  string,
+  { setting: ViewSetting; list?: ObjectKind | "tables" }
+> = {
+  setHighlightedItemGroup: { setting: "highlightedItemGroup" },
+  setExpandedImageIds: { setting: "expandedImageIds", list: "images" },
+  setExpandedLabelsIds: { setting: "expandedLabelsIds", list: "labels" },
+  setExpandedPointsIds: { setting: "expandedPointsIds", list: "points" },
+  setExpandedShapesIds: { setting: "expandedShapesIds", list: "shapes" },
+  setExpandedTableIds: { setting: "expandedTableIds", list: "tables" },
+};
+
+/** The settings of the project itself that call_action can set */
+const projectActions: Record<string, "name" | "viewerBackgroundColor"> = {
+  setName: "name",
+  setViewerBackgroundColor: "viewerBackgroundColor",
+};
+
+/** The actions the model may not call, with the reason it is told */
+const refusedActions: [RegExp, string][] = [
+  [/^(delete|clear)/, "deleting cannot be taken back safely"],
+  [
+    /^add(Layer|Image|Labels|Points|Shapes|Table)$/,
+    "new objects would need their data from a file",
+  ],
+  [
+    /^updateTable$/,
+    "a table only has a name and the source of its data, which cannot be changed",
+  ],
+  [/^set(OS|GL)Options$/, "the viewer options are not described in the types"],
+  [
+    /^setInteractionMode$/,
+    "the drawing modes are not finished, and the viewer could not be panned any more",
+  ],
+  [/^setActivePanelId$/, "another panel could hide the chat"],
+  [
+    /^setImageChannelPreview$/,
+    "to show one channel, call updateImage with channelViewMode and activeChannel",
+  ],
+  [
+    /^(setWorkspace|setProjectOpen|register\w*DataProvider|setDark)$/,
+    "it changes how TissUUmaps opens and loads data, or its settings",
+  ],
+];
+
+/** The names of the actions the model may call, for its instructions */
+const allowedActionNames = [
+  ...Object.keys(updateActions),
+  ...Object.values(mapLists).flatMap(({ name }) => [
+    `add${name}`,
+    `update${name}`,
+  ]),
+  ...Object.keys(moveActions),
+  ...Object.keys(projectActions),
+  ...Object.keys(viewActions),
+];
+
+/** What a setting that is a configuration (e.g. labelColor) can hold */
+type ConfigRule = {
+  value: ValueKind;
+  maps: MapKind;
+  /** Whether groupBy needs a map, which colors and markers do not */
+  mapRequired: boolean;
+  /** Colors take palettes, a range, and random colors */
+  color?: boolean;
+  /** Sizes take a unit */
+  unit?: boolean;
+};
+
+/** The rule of the color settings */
+const colorRule: ConfigRule = {
+  value: "color",
+  maps: "colorMaps",
+  mapRequired: false,
+  color: true,
+};
+
+/** The rule of the visibility settings */
+const visibilityRule: ConfigRule = {
+  value: "boolean",
+  maps: "visibilityMaps",
+  mapRequired: true,
+};
+
+/** The rule of the opacity settings */
+const opacityRule: ConfigRule = {
+  value: "opacity",
+  maps: "opacityMaps",
+  mapRequired: true,
+};
+
+/** The settings of objects that are configurations, with their rules */
+const configSettings: Record<string, ConfigRule> = {
+  labelColor: colorRule,
+  pointColor: colorRule,
+  shapeFillColor: colorRule,
+  shapeStrokeColor: colorRule,
+  labelVisibility: visibilityRule,
+  pointVisibility: visibilityRule,
+  shapeVisibility: visibilityRule,
+  shapeFillVisibility: visibilityRule,
+  shapeStrokeVisibility: visibilityRule,
+  labelOpacity: opacityRule,
+  pointOpacity: opacityRule,
+  shapeOpacity: opacityRule,
+  shapeFillOpacity: opacityRule,
+  shapeStrokeOpacity: opacityRule,
+  pointSize: {
+    value: "size",
+    maps: "sizeMaps",
+    mapRequired: true,
+    unit: true,
+  },
+  pointMarker: { value: "marker", maps: "markerMaps", mapRequired: false },
+};
+
+/** The marker shapes, as their numbers */
+const markerValues: number[] = Object.values(Marker);
+
+/** The ways the channels of an image can be shown */
+const channelViewModes: string[] = Object.values(ImageChannelViewMode);
+
+/** The units of sizes */
+const coordinateSpaces = ["layer", "data", "world"];
+
+/** The tool that calls an action, only offered to OpenAI and Anthropic */
+const callActionDefinition = {
+  type: "function",
+  function: {
+    name: "call_action",
+    description:
+      "Call an action of the app state (see its types) for a change that the other tools cannot make, " +
+      "e.g. the color of an image channel, the marker of points, a transform, the order of objects. " +
+      `Allowed actions: ${allowedActionNames.join(", ")}.`,
+    parameters: {
+      type: "object",
+      required: ["store", "action", "args"],
+      properties: {
+        store: {
+          type: "string",
+          enum: ["projectStore", "appStore"],
+          description:
+            "The store of the action: appStore for setHighlightedItemGroup and setExpanded*.",
+        },
+        action: {
+          type: "string",
+          description: 'The name of the action, e.g. "updateImage".',
+        },
+        args: {
+          type: "array",
+          items: {},
+          description:
+            'The arguments of the action, in order, e.g. ["images/he_image@global", {"transform": {"rotation": 90}}]. ' +
+            "For transform and channels, give only what changes; channels is a list with one entry per channel, " +
+            '{} for the channels that stay. Colors are {"r":0-255,"g":0-255,"b":0-255}. Use ids from the app state.',
+        },
+      },
+    },
+  },
+};
+
+/** Whether a value is one of some texts */
+function isOneOf(value: unknown, texts: string[]): boolean {
+  return typeof value === "string" && texts.includes(value);
+}
+
+/** Whether a value is a plain object, e.g. the changes of an update */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Whether a value is a color, e.g. {"r": 255, "g": 0, "b": 0} */
+function isRgb(value: unknown): value is Color {
+  return (
+    isRecord(value) &&
+    Object.keys(value).length === 3 &&
+    ["r", "g", "b"].every((key) => {
+      const component = value[key];
+      return (
+        typeof component === "number" &&
+        Number.isInteger(component) &&
+        component >= 0 &&
+        component <= 255
+      );
+    })
+  );
+}
+
+/**
+ * Checks a value of a setting or a map
+ *
+ * @param kind - The kind of value it should be
+ * @param value - The value
+ * @param what - Where the value is, for the message
+ * @returns What is wrong, or "" if nothing is
+ */
+function checkValue(kind: ValueKind, value: unknown, what: string): string {
+  switch (kind) {
+    case "color":
+      return isRgb(value)
+        ? ""
+        : `${what} must be a color {"r":0-255,"g":0-255,"b":0-255}`;
+    case "boolean":
+      return typeof value === "boolean" ? "" : `${what} must be true or false`;
+    case "opacity":
+      return typeof value === "number" && value >= 0 && value <= 1
+        ? ""
+        : `${what} must be a number from 0 to 1`;
+    case "size":
+      return typeof value === "number" && value > 0
+        ? ""
+        : `${what} must be a number above 0`;
+    case "marker":
+      return typeof value === "number" && markerValues.includes(value)
+        ? ""
+        : `${what} must be a marker number from 0 to 14 (e.g. 2 Square, 6 Disc)`;
+  }
+}
+
+/**
+ * Checks that a column of a setting exists, in the object's own table or in
+ * the table the setting names
+ *
+ * @param context - What the tool works with
+ * @param object - The object
+ * @param ref - The column, as {table?, column}
+ * @param what - Where the column is, for the message
+ * @param options - Optional abort signal
+ * @returns What is wrong, or "" if nothing is
+ */
+async function checkColumn(
+  context: ToolContext,
+  object: ProjectObject,
+  ref: unknown,
+  what: string,
+  options?: { signal?: AbortSignal },
+): Promise<string> {
+  if (
+    !isRecord(ref) ||
+    typeof ref.column !== "string" ||
+    (ref.table !== undefined && typeof ref.table !== "string")
+  ) {
+    return `${what} needs "column", and "table" if it is in another table`;
+  }
+  const column = ref.column;
+  const tableId =
+    typeof ref.table === "string" ? ref.table : annotatingTable(object);
+  if (tableId === undefined) {
+    return `${object.name} has no table of its own: give "table" in ${what}`;
+  }
+  const tableRef = context.dataStore.getState().tableDataRefs.get(tableId);
+  if (tableRef === undefined) {
+    return `the table "${tableId}" is not loaded`;
+  }
+  const data = await tableRef.promise;
+  for (const { name, matrix } of await listColumns(data, options)) {
+    if (name === column) {
+      return "";
+    }
+    if (
+      matrix &&
+      column.startsWith(`${name}[`) &&
+      (await matrixColumns(data, name, options)).includes(column)
+    ) {
+      return "";
+    }
+  }
+  return `the table "${tableId}" has no column "${column}": give its exact name, e.g. "obs/leiden"`;
+}
+
+/**
+ * Checks a setting that is a configuration, e.g. labelColor
+ *
+ * @param setting - The name of the setting
+ * @param rule - What it can hold
+ * @param config - The new configuration
+ * @param object - The object
+ * @param context - What the tool works with
+ * @param options - Optional abort signal
+ * @returns What is wrong, or "" if nothing is
+ */
+async function checkConfig(
+  setting: string,
+  rule: ConfigRule,
+  config: unknown,
+  object: ProjectObject,
+  context: ToolContext,
+  options?: { signal?: AbortSignal },
+): Promise<string> {
+  if (!isRecord(config)) {
+    return `${setting} must be an object, e.g. {"constant":{"value":...}}`;
+  }
+  const sources = [
+    "constant",
+    "from",
+    "groupBy",
+    ...(rule.color === true ? ["random"] : []),
+  ];
+  const parts = Object.keys(config).filter((key) => key !== "source");
+  const unknown = parts.filter((key) => !sources.includes(key));
+  if (unknown.length > 0 || parts.length === 0) {
+    return `${setting} takes one of ${list(sources)}${unknown.length > 0 ? `, not ${list(unknown)}` : ""}`;
+  }
+  if (config.source !== undefined && !isOneOf(config.source, parts)) {
+    return `${setting}.source must name one of its parts: ${list(parts)}`;
+  }
+  const project = context.projectStore.getState();
+  const problems: string[] = [];
+  const checkUnit = (part: Record<string, unknown>, where: string) => {
+    if (part.unit !== undefined && !isOneOf(part.unit, coordinateSpaces)) {
+      problems.push(`${where}.unit must be one of ${list(coordinateSpaces)}`);
+    }
+  };
+  if (isConstantConfig(config)) {
+    const constant: unknown = config.constant;
+    if (isRecord(constant)) {
+      const problem = checkValue(
+        rule.value,
+        constant.value,
+        `${setting}.constant.value`,
+      );
+      if (problem !== "") {
+        problems.push(problem);
+      }
+      checkUnit(constant, `${setting}.constant`);
+    } else {
+      problems.push(`${setting}.constant must be {"value":...}`);
+    }
+  }
+  if (isFromConfig(config)) {
+    const from: unknown = config.from;
+    const problem = await checkColumn(
+      context,
+      object,
+      from,
+      `${setting}.from`,
+      options,
+    );
+    if (problem !== "") {
+      problems.push(problem);
+    }
+    if (isRecord(from)) {
+      if (rule.color === true && !isOneOf(from.palette, numberPalettes)) {
+        problems.push(
+          `${setting}.from.palette must be one of ${list(numberPalettes)}`,
+        );
+      }
+      const range = from.range;
+      if (
+        range !== undefined &&
+        !(
+          Array.isArray(range) &&
+          range.length === 2 &&
+          typeof range[0] === "number" &&
+          typeof range[1] === "number" &&
+          range[0] < range[1]
+        )
+      ) {
+        problems.push(`${setting}.from.range must be [lowest, highest]`);
+      }
+      checkUnit(from, `${setting}.from`);
+    }
+  }
+  if (isGroupByConfig(config)) {
+    const groupBy: unknown = config.groupBy;
+    const problem = await checkColumn(
+      context,
+      object,
+      groupBy,
+      `${setting}.groupBy`,
+      options,
+    );
+    if (problem !== "") {
+      problems.push(problem);
+    }
+    if (isRecord(groupBy)) {
+      if (groupBy.map === undefined) {
+        if (rule.mapRequired) {
+          problems.push(
+            `${setting}.groupBy needs "map": the id of a map of ${rule.maps}`,
+          );
+        }
+      } else if (
+        typeof groupBy.map !== "string" ||
+        findById(project, rule.maps, groupBy.map) === undefined
+      ) {
+        problems.push(
+          `${setting}.groupBy.map must be the id of a map of ${rule.maps}`,
+        );
+      }
+      if (
+        groupBy.palette !== undefined &&
+        !(rule.color === true && isOneOf(groupBy.palette, groupPalettes))
+      ) {
+        problems.push(
+          `${setting}.groupBy.palette must be one of ${list(groupPalettes)}`,
+        );
+      }
+      checkUnit(groupBy, `${setting}.groupBy`);
+    }
+  }
+  if (isRandomConfig(config)) {
+    const random: unknown = config.random;
+    if (!isRecord(random) || !isOneOf(random.palette, groupPalettes)) {
+      problems.push(
+        `${setting}.random needs "palette", one of ${list(groupPalettes)}`,
+      );
+    }
+  }
+  return problems.join("; ");
+}
+
+/**
+ * The data of an image, if it is loaded
+ *
+ * @param dataStore - The data store
+ * @param image - The image
+ * @returns The data, or `undefined` while it is not loaded
+ */
+function loadedImageData(
+  dataStore: DataStoreApi,
+  image: Image,
+): ImageData | undefined {
+  const ref = dataStore.getState().imageDataRefs.get(image.id);
+  return ref?.status === "loaded" ? ref.data : undefined;
+}
+
+/** A channel of an image, as the Images panel shows it */
+type ShownChannel = {
+  name: string;
+  visibility: boolean;
+  opacity: number;
+  color: Color;
+  contrastLimits?: [number, number];
+};
+
+/**
+ * The channels of an image as the Images panel shows them: as many as its
+ * data has, even when the image's channels list is shorter, each with the
+ * settings of the image, or else those of its data
+ *
+ * @param image - The image
+ * @param data - The data of the image, if it is loaded
+ * @returns The channels; without the data, those the image lists
+ */
+function shownChannels(
+  image: Image,
+  data: ImageData | undefined,
+): ShownChannel[] {
+  const sizeC = data?.getSizeC();
+  if (data === undefined || sizeC === undefined) {
+    return (image.channels ?? []).map((channel, c) => ({
+      name: channel.name ?? `Channel ${c}`,
+      visibility: channel.visibility ?? true,
+      opacity: channel.opacity ?? 1,
+      color: channel.color ?? ImageUtils.getDefaultChannelColor(c),
+      contrastLimits: channel.contrastLimits,
+    }));
+  }
+  return Array.from({ length: sizeC }, (_, c) => ({
+    name:
+      image.channels?.[c]?.name ?? data.getChannelName?.(c) ?? `Channel ${c}`,
+    visibility: ImageUtils.getChannelVisibility(image, data, c),
+    opacity: ImageUtils.getChannelOpacity(image, data, c),
+    color: ImageUtils.getChannelColor(image, data, c),
+    contrastLimits: ImageUtils.getChannelContrastLimits(image, data, c),
+  }));
+}
+
+/**
+ * Checks the channels of an image, and fills each entry in with the channel
+ * as it is now
+ *
+ * Like the Images panel, it counts the channels of the image's data, and
+ * lengthens the image's channels list when it is shorter, with {} for the
+ * channels it does not list yet.
+ *
+ * @param image - The image
+ * @param value - The channels the model gave, one entry per channel
+ * @param data - The data of the image, if it is loaded
+ * @returns What is wrong, or the channels as they will be
+ */
+function checkChannels(
+  image: Image,
+  value: unknown,
+  data: ImageData | undefined,
+): { problem: string } | { channels: unknown[] } {
+  const current = image.channels ?? [];
+  if (!Array.isArray(value)) {
+    return {
+      problem:
+        "channels must be a list with one entry per channel, {} for the channels that stay",
+    };
+  }
+  const shown = shownChannels(image, data);
+  if (shown.length > 0 && value.length !== shown.length) {
+    const names = shown.map(({ name }, c) => `${c} ${name}`);
+    return {
+      problem: `${image.name} has ${shown.length} channels (${names.join(", ")}): give ${shown.length} entries, {} for the channels that stay`,
+    };
+  }
+  const known = storeProperties.ImageChannel ?? [];
+  const problems: string[] = [];
+  const length = Math.max(value.length, current.length);
+  const channels = Array.from({ length }, (_, index) => {
+    const entry: unknown = value[index] ?? {};
+    const what = `channels[${index}]`;
+    if (!isRecord(entry)) {
+      problems.push(`${what} must be an object`);
+      return entry;
+    }
+    for (const [key, setting] of Object.entries(entry)) {
+      let problem = "";
+      if (!known.includes(key)) {
+        problem = `a channel has no "${key}"; it has ${list(known)}`;
+      } else if (key === "name" && typeof setting !== "string") {
+        problem = `${what}.name must be a text`;
+      } else if (key === "visibility") {
+        problem = checkValue("boolean", setting, `${what}.visibility`);
+      } else if (key === "opacity") {
+        problem = checkValue("opacity", setting, `${what}.opacity`);
+      } else if (key === "color") {
+        problem = checkValue("color", setting, `${what}.color`);
+      } else if (
+        key === "contrastLimits" &&
+        !(
+          Array.isArray(setting) &&
+          setting.length === 2 &&
+          typeof setting[0] === "number" &&
+          typeof setting[1] === "number" &&
+          setting[0] < setting[1]
+        )
+      ) {
+        problem = `${what}.contrastLimits must be [lowest, highest]`;
+      }
+      if (problem !== "") {
+        problems.push(problem);
+      }
+    }
+    return { ...current[index], ...entry };
+  });
+  return problems.length > 0 ? { problem: problems.join("; ") } : { channels };
+}
+
+/**
+ * Checks the changes of an update action, and fills in what the model may
+ * give in part (the transform and the channels)
+ *
+ * @param type - The type of the entry, e.g. "Image"
+ * @param object - The entry
+ * @param updates - The changes the model gave
+ * @param context - What the tool works with
+ * @param options - Optional abort signal
+ * @returns What is wrong, and the changes as they will be made
+ */
+async function checkUpdates(
+  type: string,
+  object: ProjectObject | Layer,
+  updates: Record<string, unknown>,
+  context: ToolContext,
+  options?: { signal?: AbortSignal },
+): Promise<{ problems: string[]; values: Record<string, unknown> }> {
+  const project = context.projectStore.getState();
+  const known = storeProperties[type] ?? [];
+  const problems: string[] = [];
+  const values: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(updates)) {
+    values[key] = value;
+    if (key === "id" || key === "dataSource") {
+      problems.push(`${key} cannot be changed`);
+      continue;
+    }
+    if (!known.includes(key)) {
+      const changeable = known.filter(
+        (name) => name !== "id" && name !== "dataSource",
+      );
+      problems.push(`${type} has no "${key}"; it has ${list(changeable)}`);
+      continue;
+    }
+    const rule = configSettings[key];
+    let problem = "";
+    if (rule !== undefined && "dataSource" in object) {
+      problem = await checkConfig(key, rule, value, object, context, options);
+    } else if (key === "name") {
+      problem =
+        typeof value === "string" && value.trim() !== ""
+          ? ""
+          : "name must be a text that is not empty";
+    } else if (key === "visibility") {
+      problem = checkValue("boolean", value, key);
+    } else if (key === "opacity") {
+      problem = checkValue("opacity", value, key);
+    } else if (key === "pointSizeFactor") {
+      problem = checkValue("size", value, key);
+    } else if (key === "layer") {
+      problem =
+        typeof value === "string" &&
+        findById(project, "layers", value) !== undefined
+          ? ""
+          : `layer must be the id of a layer: ${list(project.layers.map(({ id }) => id))}`;
+    } else if (key === "transform") {
+      const transform = object.transform;
+      if (isRecord(value)) {
+        const merged = {
+          ...transform,
+          ...value,
+          translation: {
+            ...transform.translation,
+            ...(isRecord(value.translation) ? value.translation : {}),
+          },
+        };
+        values[key] = merged;
+        const valid =
+          typeof merged.flip === "boolean" &&
+          typeof merged.scale === "number" &&
+          merged.scale > 0 &&
+          typeof merged.rotation === "number" &&
+          Number.isFinite(merged.rotation) &&
+          Number.isFinite(merged.translation.x) &&
+          Number.isFinite(merged.translation.y);
+        problem = valid
+          ? ""
+          : "transform takes flip (true or false), scale (above 0), rotation (in degrees) and translation {x, y}";
+      } else {
+        problem = 'transform must be an object, e.g. {"rotation": 90}';
+      }
+    } else if (key === "channelViewMode") {
+      problem = isOneOf(value, channelViewModes)
+        ? ""
+        : `channelViewMode must be one of ${list(channelViewModes)}`;
+    } else if (key === "activeChannel") {
+      const image = object as Image;
+      const count = shownChannels(
+        image,
+        loadedImageData(context.dataStore, image),
+      ).length;
+      problem =
+        typeof value === "number" &&
+        Number.isInteger(value) &&
+        value >= 0 &&
+        (count === 0 || value < count)
+          ? ""
+          : `activeChannel must be the number of a channel, from 0${count === 0 ? "" : ` to ${count - 1}`}`;
+    } else if (key === "channels") {
+      const image = object as Image;
+      const checked = checkChannels(
+        image,
+        value,
+        loadedImageData(context.dataStore, image),
+      );
+      if ("problem" in checked) {
+        problem = checked.problem;
+      } else {
+        values[key] = checked.channels;
+      }
+    } else {
+      problem = `${key} cannot be changed with call_action`;
+    }
+    if (problem !== "") {
+      problems.push(problem);
+    }
+  }
+  return { problems, values };
+}
+
+/**
+ * Checks the values of a map
+ *
+ * @param kind - The list of the map
+ * @param map - The map, or the changes of a map
+ * @returns What is wrong, or "" if nothing is
+ */
+function checkMap(kind: MapKind, map: Record<string, unknown>): string {
+  const { value } = mapLists[kind];
+  const problems: string[] = [];
+  for (const [key, entry] of Object.entries(map)) {
+    if (key === "name") {
+      if (typeof entry !== "string" || entry.trim() === "") {
+        problems.push("name must be a text that is not empty");
+      }
+    } else if (key === "values") {
+      if (isRecord(entry)) {
+        for (const [group, setting] of Object.entries(entry)) {
+          const problem = checkValue(value, setting, `values["${group}"]`);
+          if (problem !== "") {
+            problems.push(problem);
+          }
+        }
+      } else {
+        problems.push(
+          'values must be an object of group → value, e.g. {"3": ...}',
+        );
+      }
+    } else if (key === "default") {
+      const problem =
+        entry === undefined ? "" : checkValue(value, entry, "default");
+      if (problem !== "") {
+        problems.push(problem);
+      }
+    } else if (key !== "id") {
+      problems.push(
+        `a map has no "${key}"; it has id, name, values and default`,
+      );
+    }
+  }
+  return problems.join("; ");
+}
+
+/** Moves an entry of a list to another index, with its project store action */
+function applyMove(
+  project: ProjectStore,
+  kind: ObjectKind | "layers",
+  id: string,
+  index: number,
+): void {
+  switch (kind) {
+    case "layers":
+      project.moveLayer(id, index);
+      break;
+    case "images":
+      project.moveImage(id, index);
+      break;
+    case "labels":
+      project.moveLabels(id, index);
+      break;
+    case "points":
+      project.movePoints(id, index);
+      break;
+    case "shapes":
+      project.moveShapes(id, index);
+      break;
+  }
+}
+
+/** Adds a map, with its project store action */
+function applyAddMap(
+  project: ProjectStore,
+  kind: MapKind,
+  map: GroupValueMap<unknown>,
+): void {
+  switch (kind) {
+    case "markerMaps":
+      project.addMarkerMap(map as GroupValueMap<Marker>);
+      break;
+    case "sizeMaps":
+      project.addSizeMap(map as GroupValueMap<number>);
+      break;
+    case "colorMaps":
+      project.addColorMap(map as GroupValueMap<Color>);
+      break;
+    case "visibilityMaps":
+      project.addVisibilityMap(map as GroupValueMap<boolean>);
+      break;
+    case "opacityMaps":
+      project.addOpacityMap(map as GroupValueMap<number>);
+      break;
+  }
+}
+
+/** Deletes a map, with its project store action, for "Undo" */
+function deleteMap(project: ProjectStore, kind: MapKind, id: string): void {
+  switch (kind) {
+    case "markerMaps":
+      project.deleteMarkerMap(id);
+      break;
+    case "sizeMaps":
+      project.deleteSizeMap(id);
+      break;
+    case "colorMaps":
+      project.deleteColorMap(id);
+      break;
+    case "visibilityMaps":
+      project.deleteVisibilityMap(id);
+      break;
+    case "opacityMaps":
+      project.deleteOpacityMap(id);
+      break;
+  }
+}
+
+/** Sets a setting of the project itself, with its project store action */
+function setProjectSetting(
+  project: ProjectStore,
+  property: string,
+  value: unknown,
+): void {
+  if (property === "name") {
+    project.setName(value as string);
+  } else if (property === "viewerBackgroundColor") {
+    project.setViewerBackgroundColor(value as Color);
+  }
+}
+
+/** Sets a setting of the view, with its app store action */
+function setView(app: AppStore, setting: string, value: unknown): void {
+  switch (setting) {
+    case "highlightedItemGroup":
+      app.setHighlightedItemGroup(
+        value as Parameters<AppStore["setHighlightedItemGroup"]>[0],
+      );
+      break;
+    case "expandedImageIds":
+      app.setExpandedImageIds(value as string[]);
+      break;
+    case "expandedLabelsIds":
+      app.setExpandedLabelsIds(value as string[]);
+      break;
+    case "expandedPointsIds":
+      app.setExpandedPointsIds(value as string[]);
+      break;
+    case "expandedShapesIds":
+      app.setExpandedShapesIds(value as string[]);
+      break;
+    case "expandedTableIds":
+      app.setExpandedTableIds(value as string[]);
+      break;
+  }
+}
+
+/**
+ * The name of an entry of the project by its ID, to show actions readably
+ *
+ * @param project - The project
+ * @param id - The ID
+ * @returns The name, or `undefined` if no entry has that ID
+ */
+function nameById(project: ProjectStore, id: string): string | undefined {
+  const lists: ListKind[] = [
+    ...objectKinds,
+    "layers",
+    ...(Object.keys(mapLists) as MapKind[]),
+  ];
+  for (const kind of lists) {
+    const entry = findById(project, kind, id);
+    if (entry !== undefined) {
+      return entry.name;
+    }
+  }
+  return project.tables.find((table) => table.id === id)?.name;
+}
+
+/** The parts of a configuration, e.g. the "groupBy" of {"groupBy": ...} */
+const configParts = ["source", "constant", "from", "groupBy", "random"];
+
+/**
+ * Whether a value is shown whole rather than part by part: a color, or a
+ * configuration like {"groupBy": ...}, but not an object that only has a
+ * part with such a name, like the group of setHighlightedItemGroup
+ *
+ * @param value - The value
+ * @returns Whether it is shown whole
+ */
+function isWhole(value: unknown): boolean {
+  return (
+    isRgb(value) ||
+    (isRecord(value) &&
+      Object.keys(value).length > 0 &&
+      Object.keys(value).every((key) => configParts.includes(key)))
+  );
+}
+
+/**
+ * The parts of a value that are set, one per line of the Tool row: e.g.
+ * "channels[1].color: {...}"; empty entries ({} for a channel that stays)
+ * are left out, colors and configurations are shown whole, and the IDs of
+ * entries of the project by their names
+ *
+ * @param value - The value
+ * @param path - Where it is
+ * @param name - The name of an entry by its ID, if it has one
+ * @returns The parts
+ */
+function setParts(
+  value: unknown,
+  path: string,
+  name: (id: string) => string | undefined,
+): string[] {
+  if (Array.isArray(value) && value.some(isRecord)) {
+    return value.flatMap((entry, index) =>
+      setParts(entry, `${path}[${index}]`, name),
+    );
+  }
+  if (isRecord(value) && !isWhole(value)) {
+    return Object.entries(value).flatMap(([key, entry]) =>
+      setParts(entry, path === "" ? key : `${path}.${key}`, name),
+    );
+  }
+  const show = (entry: unknown) =>
+    (typeof entry === "string" ? name(entry) : undefined) ??
+    JSON.stringify(entry);
+  const shown =
+    Array.isArray(value) && value.every((entry) => typeof entry === "string")
+      ? `[${value.map(show).join(", ")}]`
+      : show(value);
+  return [path === "" ? shown : `${path}: ${shown}`];
+}
+
+/**
+ * Shows an action readably, with names instead of IDs, e.g.
+ * 'updateImage(morphology_focus, {channels[1].color: {"r":255,"g":0,"b":0}})'
+ * or 'setHighlightedItemGroup({annotatedObject.labelsId: cell_labels,
+ * groupBy.column: "obs/leiden", group: "3"})'
+ *
+ * @param project - The project
+ * @param args - The arguments of call_action
+ * @returns The text
+ */
+function describeAction(project: ProjectStore, args: ToolArguments): string {
+  const actionArgs = Array.isArray(args.args) ? (args.args as unknown[]) : [];
+  const name = (id: string) => nameById(project, id);
+  const parts = actionArgs.map((arg) => {
+    const shown = setParts(arg, "", name);
+    return isRecord(arg) && !isWhole(arg)
+      ? `{${shown.join(", ")}}`
+      : shown.join(", ");
+  });
+  return `${String(args.action)}(${parts.join(", ")})`;
+}
+
+/** What an action changed, and what it left as it already was */
+type Outcome = { changed: string[]; already: string[] };
+
+/**
+ * Shows a value in a tool result, e.g. red, 0.5, "DAPI" or true
+ *
+ * @param value - The value
+ * @returns The text, cut after 150 characters
+ */
+function showValue(value: unknown): string {
+  if (isRgb(value)) {
+    return colorName(value);
+  }
+  if (typeof value === "number") {
+    return String(round(value));
+  }
+  if (value === undefined) {
+    return "not set";
+  }
+  const text = JSON.stringify(value);
+  return text.length > 150 ? `${text.slice(0, 150)}...` : text;
+}
+
+/**
+ * Compares what an action sets with the values from before, part by part like
+ * {@link setParts}, e.g. "transform.rotation 0 → 90", or
+ * "transform.rotation = 90" when it already was 90
+ *
+ * @param before - The value from before
+ * @param after - What the action sets
+ * @param path - Where it is
+ * @param outcome - What changed and what did not, which this adds to
+ */
+function compareParts(
+  before: unknown,
+  after: unknown,
+  path: string,
+  outcome: Outcome,
+): void {
+  if (Array.isArray(after) && after.some(isRecord)) {
+    const old: unknown[] = Array.isArray(before) ? before : [];
+    after.forEach((entry: unknown, index) => {
+      compareParts(old[index], entry, `${path}[${index}]`, outcome);
+    });
+    return;
+  }
+  if (isRecord(after) && !isWhole(after)) {
+    for (const [key, entry] of Object.entries(after)) {
+      const old = isRecord(before) ? before[key] : undefined;
+      compareParts(old, entry, path === "" ? key : `${path}.${key}`, outcome);
+    }
+    return;
+  }
+  if (same(before, after)) {
+    outcome.already.push(`${path} = ${showValue(after)}`);
+  } else {
+    outcome.changed.push(`${path} ${showValue(before)} → ${showValue(after)}`);
+  }
+}
+
+/**
+ * The result of an action for the model, which lists exactly what changed and
+ * what already was so, so that the model cannot claim more, e.g. "Done.
+ * Changed in he_image: opacity 1 → 0.5. Already so: visibility = true."
+ *
+ * @param name - What the action changed, e.g. the name of an object
+ * @param outcome - What changed and what did not
+ * @returns The text
+ */
+function outcomeText(name: string, outcome: Outcome): string {
+  const already = outcome.already.join("; ");
+  if (outcome.changed.length === 0) {
+    return already === ""
+      ? `Nothing changed: no change for ${name} was given.`
+      : `Nothing changed: in ${name} already ${already}.`;
+  }
+  return (
+    `Done. Changed in ${name}: ${outcome.changed.join("; ")}.` +
+    (already === "" ? "" : ` Already so: ${already}.`)
+  );
+}
+
+/**
+ * Describes a highlighted group, e.g. 'group "3" of column "obs/leiden" of
+ * cell_labels', or "none"
+ *
+ * @param project - The project
+ * @param value - The group, as setHighlightedItemGroup takes it
+ * @returns The text
+ */
+function describeHighlight(project: ProjectStore, value: unknown): string {
+  if (!isRecord(value)) {
+    return "none";
+  }
+  const id = isRecord(value.annotatedObject)
+    ? Object.values(value.annotatedObject)[0]
+    : undefined;
+  const object =
+    typeof id === "string" ? (nameById(project, id) ?? id) : "an object";
+  const column = isRecord(value.groupBy) ? value.groupBy.column : undefined;
+  return `group ${showValue(value.group)} of column ${showValue(column)} of ${object}`;
+}
+
+/**
+ * The tool call_action: calls one allowed action of the app state, after
+ * checking all its arguments, through {@link change} and the like, so that
+ * "Undo" takes it back
+ */
+async function callAction(
+  args: ToolArguments,
+  context: ToolContext,
+  options?: { signal?: AbortSignal },
+): Promise<string> {
+  const { action, store } = args;
+  const actionArgs = Array.isArray(args.args) ? (args.args as unknown[]) : [];
+  if (typeof action !== "string" || action === "") {
+    return 'Error: give action, e.g. "updateImage".';
+  }
+  const refusal = refusedActions.find(([pattern]) => pattern.test(action));
+  if (refusal !== undefined) {
+    return `Error: ${action} is not allowed: ${refusal[1]}. Nothing changed.`;
+  }
+  const mapAction = /^(add|update)(\w+Map)$/.exec(action);
+  const mapKind = (Object.keys(mapLists) as MapKind[]).find(
+    (kind) => mapLists[kind].name === mapAction?.[2],
+  );
+  if (
+    !allowedActionNames.includes(action) ||
+    (mapAction !== null && mapKind === undefined)
+  ) {
+    return `Error: there is no action "${action}" that you can call. You can call: ${allowedActionNames.join(", ")}.`;
+  }
+  const storeName = action in viewActions ? "appStore" : "projectStore";
+  if (store !== storeName) {
+    return `Error: ${action} is an action of ${storeName}: call it with store "${storeName}".`;
+  }
+  const project = context.projectStore.getState();
+  const { changes } = context;
+  const [first, second] = actionArgs;
+
+  const update = updateActions[action];
+  if (update !== undefined) {
+    const object =
+      typeof first === "string"
+        ? (findById(project, update.kind, first) as
+            ProjectObject | Layer | undefined)
+        : undefined;
+    if (object === undefined) {
+      return `Error: there is no entry of ${update.kind} with id ${JSON.stringify(first)}. Use an id from the app state.`;
+    }
+    if (!isRecord(second) || Object.keys(second).length === 0) {
+      return 'Error: give the changes as the second argument, e.g. {"opacity": 0.5}.';
+    }
+    const { problems, values } = await checkUpdates(
+      update.type,
+      object,
+      second,
+      context,
+      options,
+    );
+    if (problems.length > 0) {
+      return `Error: nothing changed: ${problems.join("; ")}.`;
+    }
+    const current = object as unknown as Record<string, unknown>;
+    const image = update.kind === "images" ? (object as Image) : undefined;
+    const channels =
+      image === undefined
+        ? []
+        : shownChannels(image, loadedImageData(context.dataStore, image));
+    const outcome: Outcome = { changed: [], already: [] };
+    for (const [key, value] of Object.entries(values)) {
+      const part: Outcome = { changed: [], already: [] };
+      if (key === "channels" && Array.isArray(second.channels)) {
+        // each channel as the panel shows it, with its name
+        second.channels.forEach((entry: unknown, c) => {
+          const name = channels[c]?.name ?? `Channel ${c}`;
+          compareParts(channels[c], entry, `channels[${c}] (${name})`, part);
+        });
+      } else {
+        // the transform as the model gave it: only what changes
+        const after = key === "transform" ? second.transform : value;
+        compareParts(current[key], after, key, part);
+      }
+      // only what changes is changed, and taken back by "Undo"
+      if (part.changed.length > 0) {
+        change(project, changes, update.kind, object.id, key, value);
+      }
+      outcome.changed.push(...part.changed);
+      outcome.already.push(...part.already);
+    }
+    let notes = "";
+    const aboutChannels = ["channels", "channelViewMode", "activeChannel"].some(
+      (key) => key in values,
+    );
+    if (outcome.changed.length > 0 && image !== undefined && aboutChannels) {
+      // checked above: a view mode and a channel number
+      const mode = (values.channelViewMode ?? image.channelViewMode) as
+        string | undefined;
+      const active = Number(values.activeChannel ?? image.activeChannel ?? 0);
+      if (mode !== undefined && mode !== ImageChannelViewMode.composite) {
+        const name = channels[active]?.name ?? `Channel ${active}`;
+        notes += ` In the ${mode} view mode, only channel ${active} (${name}) is shown, whatever the visibility of the channels.`;
+      }
+    }
+    if (
+      outcome.changed.length > 0 &&
+      !object.visibility &&
+      values.visibility !== true
+    ) {
+      notes += ` ${object.name} is hidden: show it to see the change.`;
+    }
+    return `${outcomeText(object.name, outcome)}${notes}`;
+  }
+
+  if (mapKind !== undefined && mapAction?.[1] === "add") {
+    if (!isRecord(first) || typeof first.id !== "string" || first.id === "") {
+      return 'Error: give the map as the argument: {"id": ..., "name": ..., "values": {...}}.';
+    }
+    if (findById(project, mapKind, first.id) !== undefined) {
+      return `Error: a map of ${mapKind} with id "${first.id}" already exists: call update${mapLists[mapKind].name}.`;
+    }
+    // name and values are checked also when they are missing
+    const problem = checkMap(mapKind, {
+      ...first,
+      name: first.name,
+      values: first.values,
+    });
+    if (problem !== "") {
+      return `Error: nothing changed: ${problem}.`;
+    }
+    const map = first as GroupValueMap<unknown>;
+    applyAddMap(project, mapKind, map);
+    changes.push({
+      type: "added",
+      kind: mapKind,
+      id: map.id,
+      name: map.name,
+      property: "",
+      before: undefined,
+      after: map,
+    });
+    const groups = Object.keys(map.values);
+    return `Done. Added to ${mapKind} the map "${map.name}" (id ${map.id}), with ${groups.length} group${groups.length === 1 ? "" : "s"}: ${list(groups)}.`;
+  }
+
+  if (mapKind !== undefined) {
+    const map =
+      typeof first === "string" ? findById(project, mapKind, first) : undefined;
+    if (map === undefined) {
+      return `Error: there is no map of ${mapKind} with id ${JSON.stringify(first)}.`;
+    }
+    if (!isRecord(second) || Object.keys(second).length === 0) {
+      return 'Error: give the changes as the second argument, e.g. {"values": {...}}.';
+    }
+    const problem = checkMap(mapKind, second);
+    if (problem !== "") {
+      return `Error: nothing changed: ${problem}.`;
+    }
+    const current = map as Record<string, unknown>;
+    const outcome: Outcome = { changed: [], already: [] };
+    for (const [key, value] of Object.entries(second)) {
+      const part: Outcome = { changed: [], already: [] };
+      compareParts(current[key], value, key, part);
+      // new values replace the old ones: the groups left out are removed
+      if (key === "values" && isRecord(value) && isRecord(current.values)) {
+        for (const [group, old] of Object.entries(current.values)) {
+          if (!(group in value)) {
+            part.changed.push(`values.${group} ${showValue(old)} → not set`);
+          }
+        }
+      }
+      if (part.changed.length > 0) {
+        change(project, changes, mapKind, map.id, key, value);
+      }
+      outcome.changed.push(...part.changed);
+      outcome.already.push(...part.already);
+    }
+    return outcomeText(`the map "${map.name}"`, outcome);
+  }
+
+  const move = moveActions[action];
+  if (move !== undefined) {
+    const list: readonly { id: string; name: string }[] = project[move];
+    const from = list.findIndex((entry) => entry.id === first);
+    const entry = list[from];
+    if (entry === undefined) {
+      return `Error: there is no entry of ${move} with id ${JSON.stringify(first)}.`;
+    }
+    if (
+      typeof second !== "number" ||
+      !Number.isInteger(second) ||
+      second < 0 ||
+      second >= list.length
+    ) {
+      return `Error: the new index must be a number from 0 to ${list.length - 1}.`;
+    }
+    if (second === from) {
+      return `Nothing changed: ${entry.name} is already at index ${from}.`;
+    }
+    applyMove(project, move, entry.id, second);
+    changes.push({
+      type: "moved",
+      kind: move,
+      id: entry.id,
+      name: entry.name,
+      property: "index",
+      before: from,
+      after: second,
+    });
+    return `Done. Moved ${entry.name} from index ${from} to ${second}.`;
+  }
+
+  const projectSetting = projectActions[action];
+  if (projectSetting !== undefined) {
+    const problem =
+      projectSetting === "name"
+        ? typeof first === "string" && first.trim() !== ""
+          ? ""
+          : "the name must be a text that is not empty"
+        : checkValue("color", first, "the color");
+    if (problem !== "") {
+      return `Error: nothing changed: ${problem}.`;
+    }
+    const before = project[projectSetting];
+    if (same(before, first)) {
+      return `Nothing changed: the project ${projectSetting} already is ${showValue(first)}.`;
+    }
+    changes.push({
+      kind: "project",
+      id: "",
+      name: "the project",
+      property: projectSetting,
+      before,
+      after: first,
+    });
+    setProjectSetting(project, projectSetting, first);
+    return `Done. Changed in the project: ${projectSetting} ${showValue(before)} → ${showValue(first)}.`;
+  }
+
+  const view = viewActions[action];
+  if (view !== undefined) {
+    const app = context.appStore.getState();
+    let problem = "";
+    if (view.list !== undefined) {
+      const ids: readonly { id: string }[] = project[view.list];
+      problem =
+        Array.isArray(first) &&
+        first.every((id) => ids.some((entry) => entry.id === id))
+          ? ""
+          : `give a list of ids of ${view.list}`;
+    } else if (first !== null) {
+      problem = await checkHighlight(project, context, first, options);
+    }
+    if (problem !== "") {
+      return `Error: nothing changed: ${problem}.`;
+    }
+    const before = app[view.setting];
+    const show = (value: unknown): string =>
+      view.list === undefined
+        ? describeHighlight(project, value)
+        : `[${list((value as string[]).map((id) => nameById(project, id) ?? id))}]`;
+    if (same(before, first)) {
+      return `Nothing changed: ${view.setting} already is ${show(first)}.`;
+    }
+    changes.push({
+      kind: "app",
+      id: "",
+      name: "the view",
+      property: view.setting,
+      before,
+      after: first,
+    });
+    setView(app, view.setting, first);
+    return `Done. Changed in the view: ${view.setting} ${show(before)} → ${show(first)}.`;
+  }
+  return `Error: there is no action "${action}" that you can call.`;
+}
+
+/**
+ * Checks a group to highlight: its object, column and group
+ *
+ * @param project - The project
+ * @param context - What the tool works with
+ * @param value - The group, as setHighlightedItemGroup takes it
+ * @param options - Optional abort signal
+ * @returns What is wrong, or "" if nothing is
+ */
+async function checkHighlight(
+  project: ProjectStore,
+  context: ToolContext,
+  value: unknown,
+  options?: { signal?: AbortSignal },
+): Promise<string> {
+  const shape =
+    'give {"annotatedObject": {"labelsId": ...} (or pointsId, shapesId), "groupBy": {"column": ...}, "group": "..."}, or null for none';
+  if (
+    !isRecord(value) ||
+    !isRecord(value.annotatedObject) ||
+    typeof value.group !== "string"
+  ) {
+    return shape;
+  }
+  const kinds: Record<string, ObjectKind> = {
+    labelsId: "labels",
+    pointsId: "points",
+    shapesId: "shapes",
+  };
+  const [key, id] = Object.entries(value.annotatedObject)[0] ?? [];
+  const kind = key === undefined ? undefined : kinds[key];
+  const object =
+    kind === undefined || typeof id !== "string"
+      ? undefined
+      : (findById(project, kind, id) as ProjectObject | undefined);
+  if (object === undefined) {
+    return `there is no object ${JSON.stringify(value.annotatedObject)}: ${shape}`;
+  }
+  return checkColumn(context, object, value.groupBy, "groupBy", options);
+}
+
 // --- Project summary ---
 
 /**
@@ -2562,12 +4025,14 @@ function describePointSize(pointSize: SizeConfig): string {
  * @param title - The section title
  * @param objects - The objects
  * @param colorMaps - The project's color maps
+ * @param channelsOf - For images, the line about their channels, if any
  * @returns The text
  */
 function describeObjects(
   title: string,
   objects: readonly (Layer | Image | Shapes)[],
   colorMaps: GroupValueMap<Color>[],
+  channelsOf?: (image: Image) => string | undefined,
 ): string {
   if (objects.length === 0) {
     return `## ${title}\nnone`;
@@ -2584,9 +4049,50 @@ function describeObjects(
     if (table !== undefined) {
       line += `, annotated by table: ${table}`;
     }
-    return line;
+    const channels =
+      channelsOf !== undefined && "dataSource" in object
+        ? channelsOf(object as Image)
+        : undefined;
+    return channels === undefined ? line : `${line}\n${channels}`;
   });
   return `## ${title}\n${lines.join("\n")}`;
+}
+
+/**
+ * Describes the channels of an image as the Images panel shows them, with
+ * their indices, e.g. "  - 4 channels, composite (the visible channels
+ * blended): 0 DAPI (visible, white), 1 ATP1A1 (hidden, red), ..."
+ *
+ * @param image - The image
+ * @param data - The data of the image, if it is loaded
+ * @returns The line, or `undefined` for an image without channels
+ */
+function describeChannels(
+  image: Image,
+  data: ImageData | undefined,
+): string | undefined {
+  const channels = shownChannels(image, data);
+  if (channels.length === 0) {
+    return undefined;
+  }
+  const mode = image.channelViewMode ?? ImageChannelViewMode.composite;
+  const active = ImageUtils.getActiveChannel(image, channels.length);
+  const how =
+    mode === ImageChannelViewMode.composite
+      ? "composite (the visible channels blended)"
+      : `${mode} (only channel ${active}, ${channels[active]?.name ?? ""}, is shown)`;
+  const shown = channels.slice(0, 30).map((channel, c) => {
+    const settings = [channel.visibility ? "visible" : "hidden"];
+    settings.push(colorName(channel.color));
+    if (channel.opacity !== 1) {
+      settings.push(`opacity ${round(channel.opacity)}`);
+    }
+    return `${c} ${channel.name} (${settings.join(", ")})`;
+  });
+  if (channels.length > 30) {
+    shown.push("...");
+  }
+  return `  - ${channels.length} channel${channels.length === 1 ? "" : "s"}, ${how}: ${shown.join(", ")}`;
 }
 
 /**
@@ -2733,6 +4239,21 @@ function describeItemsObjects(
 }
 
 /**
+ * What the model cannot change with the tools; the strong models are told
+ * {@link actionLimits} instead
+ */
+const toolLimits =
+  "You cannot change anything else (for example deleting or renaming, or the colors of\nimages and shapes).";
+
+/** What the strong models cannot change, also with call_action */
+const actionLimits = [
+  "With call_action you can also change the other settings that its allowed actions",
+  "change (e.g. the colors of image channels, the markers of points, transforms, the order",
+  "of objects). You cannot delete or add objects, or change their data. Rename something",
+  "(setName, or the name of an object) only when the user asks to rename it.",
+].join("\n");
+
+/**
  * The instructions for the model, before the project summary
  */
 const instructions = [
@@ -2798,8 +4319,11 @@ const instructions = [
   "them before saying what is visible. Older messages, summaries and tool results in the",
   "conversation can be out of date, because the user may have clicked Undo or changed",
   "things by hand.",
-  "You cannot change anything else (for example deleting or renaming, or the colors of",
-  "images and shapes).",
+  toolLimits,
+  "You cannot zoom or move the view yet. If the user asks to zoom in or out, to move,",
+  "center or fit the view, say that you can't do it yet, and how to do it by hand: the",
+  "mouse wheel zooms, dragging the image moves it, and the button with the house at the",
+  'top right of the viewer ("Reset view") goes back to the whole view.',
   "If a request has parts you can do and parts you can't, do the parts you can",
   "with the tools, then say clearly which parts you couldn't do",
   '(e.g. "I showed the points, but I can\'t rename them").',
@@ -2836,10 +4360,19 @@ const wholeAppInstructions = [
   "property lists, with the first sentence of each comment. Each turn comes with the",
   "current values of this state, as JSON, after the project summary.",
   "Use them to answer questions about the project: its objects and their settings, what",
-  "can be changed, and how. You cannot call these actions: only your tools change the",
-  "project. When the user asks for a change that no tool can make, do not pretend to make",
-  "it: say which setting would do it (which property of which object, with which value),",
-  "so that the user can change it in the panels of TissUUmaps.",
+  "can be changed, and how. To change something, use the specific tools when they can do",
+  "it (showing, hiding, opacity, point size, colors and filters by a column), and",
+  "call_action for every other change that its allowed actions can make, with the",
+  "arguments of the action as in the types and the ids from the app state. For transform",
+  "and channels, give only what changes. The summary lists the channels of each image,",
+  "with their indices. To show only one channel of an image, set channelViewMode to",
+  '"color" and activeChannel to its index; to show several, keep "composite" and set the',
+  "visibility of every channel (false for those to hide). A call_action result lists each",
+  "setting it changed, with the value before and after, and those that already were so:",
+  "tell the user only what it lists as changed. If a call_action result is an error, read why,",
+  "and fix the arguments or tell the user. When even call_action cannot make a change",
+  "(e.g. deleting or adding objects), do not pretend to make it: say so, and say which",
+  "setting would do it, so that the user can change it in the panels of TissUUmaps.",
   'When the user asks what can be changed (e.g. "which properties of the labels can I',
   'change?"), answer about TissUUmaps: list all the settings in the types, then say which',
   "of them you can change yourself with your tools.",
@@ -2887,12 +4420,14 @@ function stateJson(project: ProjectStore, app: AppStore): string {
  * sent apart from it (see `providers.ts`).
  *
  * @param project - The project
+ * @param dataStore - The data store, for the channels of the images
  * @param tables - What the panel knows about the tables
  * @param persona - The personality of the assistant
  * @returns The text
  */
 function buildContext(
   project: ProjectStore,
+  dataStore: DataStoreApi,
   tables: TableKnowledge,
   persona: Persona,
 ): string {
@@ -2903,7 +4438,9 @@ function buildContext(
     "",
     `# Project "${project.name}"`,
     describeObjects("Layers", project.layers, project.colorMaps),
-    describeObjects("Images", project.images, project.colorMaps),
+    describeObjects("Images", project.images, project.colorMaps, (image) =>
+      describeChannels(image, loadedImageData(dataStore, image)),
+    ),
     describeItemsObjects("Labels", "labels", project, tables),
     describeItemsObjects("Points", "points", project, tables),
     describeObjects("Shapes", project.shapes, project.colorMaps),
@@ -3099,6 +4636,17 @@ function describeValueChange(
   from: unknown,
   to: unknown,
 ): string {
+  if (change.type === "added") {
+    return `${change.name} (the map added by the chat is deleted)`;
+  }
+  if (change.type === "moved") {
+    return `${change.name} back at position ${Number(to) + 1}`;
+  }
+  if (change.kind === "app") {
+    return change.property === "highlightedItemGroup"
+      ? "the highlighted group"
+      : "the expanded entries";
+  }
   // the settings of colors and filters are too long to show
   if (change.property.endsWith("Color")) {
     return `${change.name} colors`;
@@ -3106,18 +4654,26 @@ function describeValueChange(
   if (change.property.endsWith("Visibility")) {
     return `${change.name} group filter`;
   }
-  const format = (value: unknown): string =>
-    change.property === "visibility"
-      ? value === true
-        ? "visible"
-        : "hidden"
-      : String(round(Number(value)));
+  const format = (value: unknown): string => {
+    if (change.property === "visibility") {
+      return value === true ? "visible" : "hidden";
+    }
+    if (typeof value === "string") {
+      return `"${value}"`;
+    }
+    return String(round(Number(value)));
+  };
   const labels: Record<string, string> = {
     visibility: "",
     opacity: " opacity",
     pointSizeFactor: " point size factor",
   };
-  return `${change.name}${labels[change.property] ?? ` ${change.property}`} ${format(from)} → ${format(to)}`;
+  const label = labels[change.property] ?? ` ${change.property}`;
+  // e.g. a transform or the channels: only named
+  if (typeof from === "object" || typeof to === "object") {
+    return `${change.name}${label}`;
+  }
+  return `${change.name}${label} ${format(from)} → ${format(to)}`;
 }
 
 // --- User interface ---
@@ -3310,7 +4866,11 @@ function makeThinkingIndicator(): { element: HTMLElement; stop: () => void } {
 function describeCall(name: string, args: ToolArguments): string {
   const values = Object.entries(args).map(([key, value]) => {
     if (Array.isArray(value)) {
-      return `${key}: [${value.map(String).join(", ")}]`;
+      // objects in full, so that two different calls never read the same
+      const items = value.map((item: unknown) =>
+        typeof item === "string" ? item : JSON.stringify(item),
+      );
+      return `${key}: [${items.join(", ")}]`;
     }
     if (typeof value === "object" && value !== null) {
       return `${key}: ${JSON.stringify(value)}`;
@@ -3873,12 +5433,52 @@ function mountAiChat(
     }
   }
 
-  /** The value a change is about, as it is in the project now */
-  function currentValue(change: Change): unknown {
-    const object = findById(projectStore.getState(), change.kind, change.id);
-    return object === undefined
-      ? undefined
-      : (object as Record<string, unknown>)[change.property];
+  /**
+   * What a change is about, as it is now: the value of the property, the
+   * added map, or the index of the moved entry; `undefined` if the entry is
+   * not in the project any more
+   */
+  function currentValue(change: Change): { value: unknown } | undefined {
+    const project = projectStore.getState();
+    if (change.kind === "project" || change.kind === "app") {
+      const state: object =
+        change.kind === "project" ? project : appStore.getState();
+      return { value: (state as Record<string, unknown>)[change.property] };
+    }
+    if (change.type === "moved") {
+      const index = project[change.kind].findIndex(
+        (entry) => entry.id === change.id,
+      );
+      return index === -1 ? undefined : { value: index };
+    }
+    const entry = findById(project, change.kind, change.id);
+    if (entry === undefined) {
+      return undefined;
+    }
+    return {
+      value:
+        change.type === "added"
+          ? entry
+          : (entry as unknown as Record<string, unknown>)[change.property],
+    };
+  }
+
+  /** Puts back what one change changed, with the store actions */
+  function takeBack(change: Change): void {
+    const project = projectStore.getState();
+    if (change.kind === "project") {
+      setProjectSetting(project, change.property, change.before);
+    } else if (change.kind === "app") {
+      setView(appStore.getState(), change.property, change.before);
+    } else if (change.type === "added" && isMapKind(change.kind)) {
+      deleteMap(project, change.kind, change.id);
+    } else if (change.type === "moved" && !isMapKind(change.kind)) {
+      applyMove(project, change.kind, change.id, change.before as number);
+    } else {
+      applyUpdate(project, change.kind, change.id, {
+        [change.property]: change.before,
+      });
+    }
   }
 
   /**
@@ -3895,15 +5495,13 @@ function mountAiChat(
         );
         continue;
       }
-      applyUpdate(projectStore.getState(), change.kind, change.id, {
-        [change.property]: change.before,
-      });
-      // the chat's maps are only named, e.g. "Chat colors – cell_labels"
+      takeBack(change);
+      // the changes of the maps are only named, e.g. "Chat colors – cell_labels"
       let line =
-        change.kind === "colorMaps" || change.kind === "visibilityMaps"
+        isMapKind(change.kind) && change.type === undefined
           ? change.name
-          : describeValueChange(change, now, change.before);
-      if (!same(now, change.after)) {
+          : describeValueChange(change, now.value, change.before);
+      if (!same(now.value, change.after)) {
         line += handNote;
       }
       lines.push(line);
@@ -3945,9 +5543,9 @@ function mountAiChat(
     }
     const touched = new Map<string, { change: Change; from: unknown }>();
     for (const change of undoStack.flat()) {
-      const key = `${change.kind} ${change.id} ${change.property}`;
+      const key = `${change.type ?? ""} ${change.kind} ${change.id} ${change.property}`;
       if (!touched.has(key)) {
-        touched.set(key, { change, from: currentValue(change) });
+        touched.set(key, { change, from: currentValue(change)?.value });
       }
     }
     const notes: string[] = [];
@@ -3964,10 +5562,14 @@ function mountAiChat(
     }
     const restored: string[] = [];
     for (const { change, from } of touched.values()) {
-      const to = currentValue(change);
-      const isMap =
-        change.kind === "colorMaps" || change.kind === "visibilityMaps";
-      if (from !== undefined && !same(from, to) && !isMap) {
+      const to = currentValue(change)?.value;
+      if (change.type === "added") {
+        restored.push(describeValueChange(change, from, to));
+      } else if (
+        from !== undefined &&
+        !same(from, to) &&
+        !isMapKind(change.kind)
+      ) {
         restored.push(describeValueChange(change, from, to));
       }
     }
@@ -4339,8 +5941,16 @@ function mountAiChat(
    */
   function instructionsFor(provider: Provider): string {
     return provider.wholeApp
-      ? `${instructions}\n\n${wholeAppInstructions}`
+      ? `${instructions.replace(toolLimits, actionLimits)}\n\n${wholeAppInstructions}`
       : instructions;
+  }
+
+  /** The tools for a service: for the strong models, also call_action */
+  function toolsFor(provider: Provider) {
+    return [
+      ...toolDefinitions,
+      ...(provider.wholeApp ? [callActionDefinition] : []),
+    ].map((definition) => definition.function);
   }
 
   /**
@@ -4348,7 +5958,12 @@ function mountAiChat(
    * JSON after the summary
    */
   function contextFor(provider: Provider): string {
-    const summary = buildContext(projectStore.getState(), tables, persona);
+    const summary = buildContext(
+      projectStore.getState(),
+      dataStore,
+      tables,
+      persona,
+    );
     if (!provider.wholeApp) {
       return summary;
     }
@@ -4381,7 +5996,7 @@ function mountAiChat(
         instructions: instructionsFor(provider),
         context,
         messages,
-        tools: toolDefinitions.map((definition) => definition.function),
+        tools: toolsFor(provider),
       },
       onText,
       { signal },
@@ -4442,11 +6057,14 @@ function mountAiChat(
    * visible object can cover the change
    */
   async function runTool(
+    provider: Provider,
     name: string,
     args: ToolArguments,
     changes: Change[],
   ): Promise<{ result: string; warning: string }> {
-    const tool = Object.hasOwn(tools, name) ? tools[name] : undefined;
+    const offered = name !== "call_action" || provider.wholeApp;
+    const tool =
+      Object.hasOwn(tools, name) && offered ? tools[name] : undefined;
     if (tool === undefined) {
       return {
         result: `Error: there is no tool called "${name}".`,
@@ -4458,7 +6076,7 @@ function mountAiChat(
     try {
       result = await tool(
         args,
-        { projectStore, dataStore, tables, changes },
+        { projectStore, dataStore, appStore, tables, changes },
         { signal },
       );
     } catch (error) {
@@ -4580,6 +6198,11 @@ function mountAiChat(
         for (const call of toolCalls) {
           const { name, arguments: args } = call;
           const callText = describeCall(name, args);
+          // an action is shown as it reads, with names instead of IDs
+          const shownCall =
+            name === "call_action"
+              ? describeAction(projectStore.getState(), args)
+              : callText;
           let outcome = {
             result: "Error: this exact call already failed.",
             warning: "",
@@ -4587,12 +6210,12 @@ function mountAiChat(
           if (failedCalls.includes(callText)) {
             repeated = true;
           } else {
-            outcome = await runTool(name, args, changes);
+            outcome = await runTool(provider, name, args, changes);
           }
           if (outcome.result.startsWith("Error")) {
             failedCalls.push(callText);
           }
-          show("Tool", `${callText}\n→ ${outcome.result}`);
+          show("Tool", `${shownCall}\n→ ${outcome.result}`);
           if (outcome.warning !== "") {
             show("Note", outcome.warning);
           }

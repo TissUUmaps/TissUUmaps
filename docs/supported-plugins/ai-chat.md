@@ -19,7 +19,7 @@ The assistant can:
 - give chosen colors to some groups (_"T cell in blue, the others grey"_), or one color to all items;
 - show only some groups of labels or points (_"show only clusters 1 and 3"_), and show all of them again.
 
-It cannot change or delete anything else, and it cannot filter by numbers (e.g. _"cells with an area above 50"_).
+It cannot change or delete anything else, and it cannot filter by numbers (e.g. _"cells with an area above 50"_). It cannot zoom or move the view yet: use the mouse wheel to zoom, drag the image to move it, and click the button with the house at the top right of the viewer (_Reset view_) to see the whole image again.
 
 Every request sends the model a summary of the project: the objects, how they are colored, and the useful columns of their tables. _Show context_ shows exactly what the model receives.
 
@@ -56,7 +56,7 @@ With OpenAI, Anthropic and Ollama (cloud), your messages and the project summary
 
 TissUUmaps does not provide API keys: everyone uses their own. An API key is a secret code that lets the chat use your account, and every request is billed to that account, so first add a payment method or buy credit there. With the first model in the menu (`gpt-6-luna` or `claude-haiku-5-5`), a request usually costs well under one cent; the other models cost more. Under each answer, a small line shows the tokens used (input, read from and written to the service's prompt cache, output) and about how much they cost, also in total since the panel was opened. These are estimates from the published prices: the bill of the service counts.
 
-These models also get the types and the current state of the whole app (see [API](#api)), so they can answer detailed questions about the settings of each object, e.g. _"which properties of the labels can I change?"_, and explain how to change what the chat cannot change by itself, such as the color of an image channel. For now they only answer: the changes are still made by the same tools as with Ollama.
+These models also get the types and the current state of the whole app (see [API](#api)), so they can answer detailed questions about the settings of each object, e.g. _"which properties of the labels can I change?"_, and change most of them: _"make channel 1 of morphology_focus red"_, _"show only the DAPI channel of morphology_focus"_, _"show the transcripts as squares"_, _"rotate the H&E image by 90 degrees"_, _"put the H&E image on top"_, _"highlight cluster 3 of the cell labels"_. They use the same tools as with Ollama when those are enough, and otherwise call one of the allowed actions of the app state. Every change goes through Undo. They never delete or add objects or change where their data comes from, and they rename something only when you ask.
 
 ### Getting a key
 
@@ -145,6 +145,22 @@ The conversation is kept in one format of the plugin's own, and each service's p
 OpenAI and Anthropic only take the model's thinking back while everything sent before it is unchanged, and bill less for a beginning they have already seen ([prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)). So with them the beginning of every request stays the same: the fixed instructions, the tools, and the conversation, to which messages are only added. The project summary and the personality, which change, go with the user's message that starts each turn, and stay the same while the model calls tools in that turn. The thinking is sent back only within the turn; if a service still refuses it, the plugin sends the request once more without it.
 
 With OpenAI and Anthropic, the fixed instructions also contain the types of the app state, as plugins see it: the project store, the model of the project, and the parts of the app store that only change the view. They are generated from the types of `@tissuumaps/core` by `scripts/generate-store-types.ts` in `@tissuumaps/plugins`, which lets the TypeScript compiler resolve them into plain property lists with the first sentence of each comment, and writes them to `src/ai-chat/store-types.generated.ts`. After changing those types, run `pnpm run generate:store-types` in `packages/@tissuumaps-plugins`; a test fails until the generated file is up to date. Each turn then comes with the current state as JSON, after the project summary. Ollama's models get only the summary, which suits their shorter context.
+
+These models also get the tool `call_action(store, action, args)`, which calls one action of the stores. Only actions that can be taken back are allowed:
+
+| Allowed                                                                                                 | Taken back by Undo with                    |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `updateLayer`, `updateImage`, `updateLabels`, `updatePoints`, `updateShapes` (not `id` or `dataSource`) | the earlier values of the changed settings |
+| `add…Map` and `update…Map` for marker, size, color, visibility and opacity maps                         | `delete…Map`, or the earlier values        |
+| `moveLayer`, `moveImage`, `moveLabels`, `movePoints`, `moveShapes`                                      | a move back to the earlier index           |
+| `setName`, `setViewerBackgroundColor`                                                                   | the earlier value                          |
+| `setHighlightedItemGroup` and `setExpanded…Ids` of the app store                                        | the earlier value                          |
+
+Deleting and clearing, adding objects, `updateTable`, the viewer options, `setInteractionMode`, `setActivePanelId`, `setImageChannelPreview`, the workspace and the data providers are refused, with the reason. Before an action runs, its arguments are checked: the IDs, the settings of the type, the ranges of numbers, the colors, and for configurations (with `isConstantConfig`, `isFromConfig`, `isGroupByConfig` and `isRandomConfig`) the columns, maps and palettes they name. If anything is wrong, nothing changes and the model is told why. The property names come from the same generated file as the types.
+
+The channels of an image are counted like the Images panel counts them: from the image's loaded data (`getSizeC()`), even when the image's `channels` list in the project is shorter. A change of a channel lengthens that list the way the panel does, with `{}` for the channels it did not list yet. The project summary lists each image's channels with their index, name, visibility and color, and the view mode.
+
+The result of an action lists exactly what changed, with the value before and after (e.g. `channels[1] (ATP1A1).visibility true → false`), and what already was so; if nothing changes, it says "Nothing changed" and Undo has nothing to take back. Only the settings that really change are changed, so that the model cannot claim more than the action did.
 
 The names, tones and avatars of Dia and Aid, and the words shown while the model thinks, are in `persona.ts`, next to the plugin. The panel uses TissUUmaps' theme colors (CSS variables such as `--foreground` and `--muted`), so that it stays readable with the light and the dark theme.
 

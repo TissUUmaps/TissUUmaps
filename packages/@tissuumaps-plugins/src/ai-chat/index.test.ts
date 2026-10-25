@@ -7,7 +7,8 @@ import {
   type AppStoreApi,
   type Color,
   type DataStoreApi,
-  type GroupValueMap,
+  type Image,
+  type ImageData,
   type Labels,
   type Points,
   type ProjectStore,
@@ -33,6 +34,7 @@ const nucleusLabels = "labels/nucleus_labels@global";
 const cellCircles = "shapes/cell_circles@global";
 const transcripts = "points/transcripts@global";
 const heImage = "images/he_image@global";
+const morphologyFocus = "images/morphology_focus@global";
 
 /** Makes `count` copies of `values` after one another */
 function repeat<TValue>(values: TValue[], count: number): TValue[] {
@@ -193,28 +195,45 @@ function makeProjectStore(): ProjectStoreApi & {
       layer: "global",
       dataSource: { type: "ome-zarr", source: `${id}.zarr`, table },
     });
+  type ListKind =
+    | "layers"
+    | "images"
+    | "labels"
+    | "points"
+    | "shapes"
+    | "markerMaps"
+    | "sizeMaps"
+    | "colorMaps"
+    | "visibilityMaps"
+    | "opacityMaps";
   const store = createStore<ProjectStore>()(
     immer((set) => {
-      const update =
-        (
-          kind:
-            | "images"
-            | "labels"
-            | "points"
-            | "shapes"
-            | "colorMaps"
-            | "visibilityMaps",
-        ) =>
-        (id: string, updates: object) =>
-          set((draft) => {
-            const object = (draft[kind] as { id: string }[]).find(
-              (o) => o.id === id,
-            );
-            if (object === undefined) {
-              throw new Error(`${kind} "${id}" does not exist`);
-            }
-            Object.assign(object, updates);
-          });
+      const find = (draft: ProjectStore, kind: ListKind, id: string) => {
+        const list = draft[kind] as { id: string }[];
+        const index = list.findIndex((o) => o.id === id);
+        if (index === -1) {
+          throw new Error(`${kind} "${id}" does not exist`);
+        }
+        return { list, index };
+      };
+      const update = (kind: ListKind) => (id: string, updates: object) =>
+        set((draft) => {
+          const { list, index } = find(draft, kind, id);
+          Object.assign(list[index] as object, updates);
+        });
+      const add = (kind: ListKind) => (entry: { id: string }) =>
+        set((draft) => void (draft[kind] as { id: string }[]).push(entry));
+      const remove = (kind: ListKind) => (id: string) =>
+        set((draft) => {
+          const { list, index } = find(draft, kind, id);
+          list.splice(index, 1);
+        });
+      const move = (kind: ListKind) => (id: string, newIndex: number) =>
+        set((draft) => {
+          const { list, index } = find(draft, kind, id);
+          const [entry] = list.splice(index, 1);
+          list.splice(newIndex, 0, entry as { id: string });
+        });
       const state = {
         ...createProject({ name: "xenium" }),
         source: null,
@@ -228,11 +247,15 @@ function makeProjectStore(): ProjectStoreApi & {
             dataSource: { type: "ome-zarr", source: "he.zarr" },
           }),
           createImage({
-            id: "images/morphology_focus@global",
+            id: morphologyFocus,
             name: "morphology_focus",
             visibility: false,
             layer: "global",
             dataSource: { type: "ome-zarr", source: "focus.zarr" },
+            channels: ["DAPI", "ATP1A1", "18S", "AlphaSMA"].map((name) => ({
+              name,
+              color: { r: 255, g: 255, b: 255 },
+            })),
           }),
         ],
         labels: [
@@ -295,17 +318,38 @@ function makeProjectStore(): ProjectStoreApi & {
             values: { "T cell": { r: 255, g: 0, b: 0 } },
           },
         ],
+        markerMaps: [],
+        sizeMaps: [],
         visibilityMaps: [],
+        opacityMaps: [],
+        setName: (name: string) => set({ name }),
+        setViewerBackgroundColor: (viewerBackgroundColor: Color) =>
+          set({ viewerBackgroundColor }),
+        updateLayer: update("layers"),
         updateImage: update("images"),
         updateLabels: update("labels"),
         updatePoints: update("points"),
         updateShapes: update("shapes"),
+        updateMarkerMap: update("markerMaps"),
+        updateSizeMap: update("sizeMaps"),
         updateColorMap: update("colorMaps"),
         updateVisibilityMap: update("visibilityMaps"),
-        addColorMap: (map: GroupValueMap<Color>) =>
-          set((draft) => void draft.colorMaps.push(map)),
-        addVisibilityMap: (map: GroupValueMap<boolean>) =>
-          set((draft) => void draft.visibilityMaps.push(map)),
+        updateOpacityMap: update("opacityMaps"),
+        addMarkerMap: add("markerMaps"),
+        addSizeMap: add("sizeMaps"),
+        addColorMap: add("colorMaps"),
+        addVisibilityMap: add("visibilityMaps"),
+        addOpacityMap: add("opacityMaps"),
+        deleteMarkerMap: remove("markerMaps"),
+        deleteSizeMap: remove("sizeMaps"),
+        deleteColorMap: remove("colorMaps"),
+        deleteVisibilityMap: remove("visibilityMaps"),
+        deleteOpacityMap: remove("opacityMaps"),
+        moveLayer: move("layers"),
+        moveImage: move("images"),
+        moveLabels: move("labels"),
+        movePoints: move("points"),
+        moveShapes: move("shapes"),
       };
       return state as unknown as ProjectStore;
     }),
@@ -319,15 +363,34 @@ function makeProjectStore(): ProjectStoreApi & {
   });
 }
 
-/** A data store with the given loaded tables */
-function makeDataStore(tables: Record<string, TableData>): DataStoreApi {
-  const tableDataRefs = new Map(
-    Object.entries(tables).map(([id, data]) => [
-      id,
-      { status: "loaded", data, promise: Promise.resolve(data) },
-    ]),
-  );
-  return createStore(() => ({ tableDataRefs })) as unknown as DataStoreApi;
+/** A data store with the given loaded tables, and image data */
+function makeDataStore(
+  tables: Record<string, TableData>,
+  images: Record<string, ImageData> = {},
+): DataStoreApi {
+  const loaded = <T>(data: Record<string, T>) =>
+    new Map(
+      Object.entries(data).map(([id, entry]) => [
+        id,
+        { status: "loaded", data: entry, promise: Promise.resolve(entry) },
+      ]),
+    );
+  return createStore(() => ({
+    tableDataRefs: loaded(tables),
+    imageDataRefs: loaded(images),
+  })) as unknown as DataStoreApi;
+}
+
+/**
+ * Image data with named channels and no colors of its own, like the
+ * morphology image of the real Xenium project
+ */
+function makeImageData(names: string[]): ImageData {
+  return {
+    getSizeC: () => names.length,
+    getChannelName: (c: number) => names[c],
+    getTileSource: () => "tiles.dzi",
+  } as unknown as ImageData;
 }
 
 /** What the fake Ollama does, and what it was asked */
@@ -346,6 +409,7 @@ const ollama = {
   requests: [] as {
     messages: { role: string; content: string }[];
     options: { num_ctx: number };
+    tools?: Record<string, unknown>[];
   }[],
 };
 
@@ -737,7 +801,7 @@ function modelCalls(...toolCalls: [string, Record<string, unknown>][]): void {
 
 /** An app store with the state that only changes the view */
 function makeAppStore(): AppStoreApi {
-  return createStore(() => ({
+  return createStore<Record<string, unknown>>()((set) => ({
     interactionMode: "pan",
     imageChannelPreview: null,
     highlightedItemGroup: null,
@@ -747,6 +811,13 @@ function makeAppStore(): AppStoreApi {
     expandedPointsIds: [],
     expandedShapesIds: [],
     expandedTableIds: [],
+    setHighlightedItemGroup: (highlightedItemGroup: unknown) =>
+      set({ highlightedItemGroup }),
+    setExpandedImageIds: (ids: string[]) => set({ expandedImageIds: ids }),
+    setExpandedLabelsIds: (ids: string[]) => set({ expandedLabelsIds: ids }),
+    setExpandedPointsIds: (ids: string[]) => set({ expandedPointsIds: ids }),
+    setExpandedShapesIds: (ids: string[]) => set({ expandedShapesIds: ids }),
+    setExpandedTableIds: (ids: string[]) => set({ expandedTableIds: ids }),
   })) as unknown as AppStoreApi;
 }
 
@@ -776,10 +847,11 @@ async function openPanel(
   }: { provider?: string | null; settingsStore?: SettingsStoreApi } = {},
 ) {
   const container = document.createElement("div");
+  const appStore = makeAppStore();
   const unmount = aiChatPlugin.mount?.(container, {
     projectStore,
     dataStore,
-    appStore: makeAppStore(),
+    appStore,
     settingsStore,
   });
   const button = (text: string) =>
@@ -823,6 +895,7 @@ async function openPanel(
     }));
   return {
     projectStore,
+    appStore,
     container,
     unmount,
     status: () => status.textContent,
@@ -1344,10 +1417,15 @@ describe("aiChatPlugin", () => {
         ["set_group_colors", { ids: [cellLabels], colors: { 3: "red" } }],
       );
       await panel.say("Cluster 3 in red.");
+      const mapIds = () =>
+        panel.projectStore.getState().colorMaps.map(({ id }) => id);
+      expect(mapIds()).toEqual(["map-1", `chat-colors/labels/${cellLabels}`]);
       panel.button("Undo").click();
       const labels = objectOf(panel.projectStore, cellLabels) as Labels;
       expect(labels.labelColor).toEqual({ random: { palette: "distinct" } });
       expect(labels.visibility).toBe(false);
+      // the map the chat made for the colors is gone too
+      expect(mapIds()).toEqual(["map-1"]);
       panel.button("Undo").click();
       expect(panel.projectStore.getState().images[0]?.opacity).toBe(1);
       expect(panel.button("Undo").disabled).toBe(true);
@@ -1604,6 +1682,421 @@ describe("aiChatPlugin", () => {
       expect(panel.status()).toContain(
         "Ollama is running, but it blocks this website (https://tissuumaps.github.io): by default it only accepts pages opened from this computer. To allow it, set OLLAMA_ORIGINS to https://tissuumaps.github.io",
       );
+    });
+  });
+
+  describe("call_action, for OpenAI and Anthropic", () => {
+    /** A call of an action, as the model makes it */
+    const act = (
+      action: string,
+      args: unknown[],
+      store = "projectStore",
+    ): [string, Record<string, unknown>] => [
+      "call_action",
+      { store, action, args },
+    ];
+    const image = (store: ProjectStoreApi, id: string) =>
+      store.getState().images.find((i) => i.id === id) as Image;
+
+    it("colors a channel, draws points as squares and rotates an image, shows each readably, and Undo takes them back", async () => {
+      const panel = await openPanel(undefined, undefined, {
+        provider: "anthropic",
+      });
+      await panel.pasteKey(anthropicKey);
+      const red = { r: 255, g: 0, b: 0 };
+      for (const [text, call] of [
+        [
+          "Make channel 1 of morphology_focus red.",
+          act("updateImage", [
+            morphologyFocus,
+            { channels: [{}, { color: red }, {}, {}] },
+          ]),
+        ],
+        [
+          "Show the transcripts as squares.",
+          act("updatePoints", [
+            transcripts,
+            { pointMarker: { constant: { value: 2 } } },
+          ]),
+        ],
+        [
+          "Rotate the H&E image by 90 degrees.",
+          act("updateImage", [heImage, { transform: { rotation: 90 } }]),
+        ],
+      ] as const) {
+        services.answers = [{ toolCalls: [call] }, { content: "Done." }];
+        await panel.say(text);
+      }
+      const { projectStore } = panel;
+      // only the channel asked for, the others as they were
+      expect(image(projectStore, morphologyFocus).channels).toEqual([
+        { name: "DAPI", color: { r: 255, g: 255, b: 255 } },
+        { name: "ATP1A1", color: red },
+        { name: "18S", color: { r: 255, g: 255, b: 255 } },
+        { name: "AlphaSMA", color: { r: 255, g: 255, b: 255 } },
+      ]);
+      expect(
+        (objectOf(projectStore, transcripts) as Points).pointMarker,
+      ).toEqual({ constant: { value: 2 } });
+      // only the rotation, the rest of the transform as it was
+      expect(image(projectStore, heImage).transform).toMatchObject({
+        rotation: 90,
+        scale: 1,
+        flip: false,
+      });
+      expect(panel.texts("Tool")).toEqual([
+        'updateImage(morphology_focus, {channels[1].color: {"r":255,"g":0,"b":0}})\n→ Done. Changed in morphology_focus: channels[1] (ATP1A1).color white → red. morphology_focus is hidden: show it to see the change.',
+        'updatePoints(transcripts, {pointMarker: {"constant":{"value":2}}})\n→ Done. Changed in transcripts: pointMarker {"constant":{"value":6}} → {"constant":{"value":2}}. transcripts is hidden: show it to see the change.',
+        "updateImage(he_image, {transform.rotation: 90})\n→ Done. Changed in he_image: transform.rotation 0 → 90.",
+      ]);
+      for (let i = 0; i < 3; i++) {
+        panel.button("Undo").click();
+      }
+      expect(image(projectStore, heImage).transform.rotation).toBe(0);
+      expect(
+        (objectOf(projectStore, transcripts) as Points).pointMarker,
+      ).not.toEqual({ constant: { value: 2 } });
+      expect(image(projectStore, morphologyFocus).channels?.[1]?.color).toEqual(
+        { r: 255, g: 255, b: 255 },
+      );
+      expect(panel.texts("Undo")).toEqual([
+        "Undone: he_image transform",
+        "Undone: transcripts pointMarker",
+        "Undone: morphology_focus channels",
+      ]);
+    });
+
+    it("refuses what is not allowed or not right, says why, and changes nothing", async () => {
+      const panel = await openPanel(undefined, undefined, {
+        provider: "openai",
+      });
+      await panel.pasteKey(openAiKey);
+      const before = JSON.stringify(panel.projectStore.getState());
+      const viewBefore = JSON.stringify(panel.appStore.getState());
+      services.answers = [
+        {
+          toolCalls: [
+            act("deleteImage", [heImage]),
+            act("addImage", [{ id: "images/new" }]),
+            act("setActivePanelId", ["images"], "appStore"),
+            act("setImageChannelPreview", [null], "appStore"),
+            act("rotateImage", [heImage]),
+            act("updateImage", [heImage, { opacity: 0.5 }], "appStore"),
+            act("updateImage", ["images/nope", { opacity: 0.5 }]),
+            act("updateImage", [heImage, { dataSource: { type: "x" } }]),
+            act("updateImage", [heImage, { opacity: 2, sparkle: true }]),
+            act("updateImage", [morphologyFocus, { channels: [{}] }]),
+            act("updateLabels", [
+              cellLabels,
+              { labelColor: { groupBy: { column: "obs/nope" } } },
+            ]),
+            act("updateLabels", [
+              cellLabels,
+              { labelVisibility: { groupBy: { column: "obs/leiden" } } },
+            ]),
+          ],
+        },
+        { content: "I could not." },
+      ];
+      await panel.say("Try everything.");
+      expect(JSON.stringify(panel.projectStore.getState())).toBe(before);
+      expect(JSON.stringify(panel.appStore.getState())).toBe(viewBefore);
+      const results = panel.texts("Tool").map((text) => text.split("→ ")[1]);
+      expect(results).toEqual([
+        "Error: deleteImage is not allowed: deleting cannot be taken back safely. Nothing changed.",
+        "Error: addImage is not allowed: new objects would need their data from a file. Nothing changed.",
+        "Error: setActivePanelId is not allowed: another panel could hide the chat. Nothing changed.",
+        "Error: setImageChannelPreview is not allowed: to show one channel, call updateImage with channelViewMode and activeChannel. Nothing changed.",
+        expect.stringMatching(
+          /^Error: there is no action "rotateImage" that you can call\. You can call: updateLayer, updateImage,/,
+        ) as string,
+        'Error: updateImage is an action of projectStore: call it with store "projectStore".',
+        'Error: there is no entry of images with id "images/nope". Use an id from the app state.',
+        "Error: nothing changed: dataSource cannot be changed.",
+        expect.stringMatching(
+          /^Error: nothing changed: opacity must be a number from 0 to 1; Image has no "sparkle"; it has name, opacity,/,
+        ) as string,
+        "Error: nothing changed: morphology_focus has 4 channels (0 DAPI, 1 ATP1A1, 2 18S, 3 AlphaSMA): give 4 entries, {} for the channels that stay.",
+        'Error: nothing changed: the table "tables/table" has no column "obs/nope": give its exact name, e.g. "obs/leiden".',
+        'Error: nothing changed: labelVisibility.groupBy needs "map": the id of a map of visibilityMaps.',
+      ]);
+    });
+
+    it("adds a map, moves an image, renames the project and sets the view, and Undo takes all of it back", async () => {
+      const panel = await openPanel(undefined, undefined, {
+        provider: "anthropic",
+      });
+      await panel.pasteKey(anthropicKey);
+      const group = {
+        annotatedObject: { labelsId: cellLabels },
+        groupBy: { column: "obs/leiden" },
+        group: "3",
+      };
+      services.answers = [
+        {
+          toolCalls: [
+            act("addColorMap", [
+              {
+                id: "my-colors",
+                name: "My colors",
+                values: { 3: { r: 255, g: 0, b: 0 } },
+                default: { r: 200, g: 200, b: 200 },
+              },
+            ]),
+            act("updateLabels", [
+              cellLabels,
+              {
+                labelColor: {
+                  groupBy: { column: "obs/leiden", map: "my-colors" },
+                },
+              },
+            ]),
+            act("moveImage", [heImage, 1]),
+            act("setName", ["xenium 2"]),
+            act("setHighlightedItemGroup", [group], "appStore"),
+            act("setExpandedLabelsIds", [[nucleusLabels]], "appStore"),
+          ],
+        },
+        { content: "Done." },
+      ];
+      await panel.say("Do all of it.");
+      const state = () => panel.projectStore.getState();
+      const view = () => panel.appStore.getState();
+      // each says exactly what changed, from what to what
+      expect(panel.texts("Tool")).toEqual([
+        'addColorMap({id: "my-colors", name: "My colors", values.3: {"r":255,"g":0,"b":0}, default: {"r":200,"g":200,"b":200}})\n→ Done. Added to colorMaps the map "My colors" (id my-colors), with 1 group: 3.',
+        'updateLabels(cell_labels, {labelColor: {"groupBy":{"column":"obs/leiden","map":"my-colors"}}})\n→ Done. Changed in cell_labels: labelColor {"random":{"palette":"distinct"}} → {"groupBy":{"column":"obs/leiden","map":"my-colors"}}. cell_labels is hidden: show it to see the change.',
+        "moveImage(he_image, 1)\n→ Done. Moved he_image from index 0 to 1.",
+        'setName("xenium 2")\n→ Done. Changed in the project: name "xenium" → "xenium 2".',
+        // readable, with the name of the labels instead of their id
+        'setHighlightedItemGroup({annotatedObject.labelsId: cell_labels, groupBy.column: "obs/leiden", group: "3"})\n→ Done. Changed in the view: highlightedItemGroup none → group "3" of column "obs/leiden" of cell_labels.',
+        "setExpandedLabelsIds([nucleus_labels])\n→ Done. Changed in the view: expandedLabelsIds [cell_labels] → [nucleus_labels].",
+      ]);
+      expect(state().colorMaps.map(({ id }) => id)).toEqual([
+        "map-1",
+        "my-colors",
+      ]);
+      expect(state().images.map(({ name }) => name)).toEqual([
+        "morphology_focus",
+        "he_image",
+      ]);
+      expect(state().name).toBe("xenium 2");
+      expect(view().highlightedItemGroup).toEqual(group);
+      expect(view().expandedLabelsIds).toEqual([nucleusLabels]);
+      panel.button("Undo").click();
+      expect(state().colorMaps.map(({ id }) => id)).toEqual(["map-1"]);
+      expect(
+        (objectOf(panel.projectStore, cellLabels) as Labels).labelColor,
+      ).toEqual({ random: { palette: "distinct" } });
+      expect(state().images.map(({ name }) => name)).toEqual([
+        "he_image",
+        "morphology_focus",
+      ]);
+      expect(state().name).toBe("xenium");
+      expect(view().highlightedItemGroup).toBeNull();
+      expect(view().expandedLabelsIds).toEqual([cellLabels]);
+      expect(panel.texts("Undo")).toEqual([
+        'Undone: the expanded entries, the highlighted group, the project name "xenium 2" → "xenium", he_image back at position 1, cell_labels colors, My colors (the map added by the chat is deleted)',
+      ]);
+    });
+
+    /**
+     * A panel with Anthropic and the morphology image of the real Xenium
+     * project: visible, with one channel in the project, and four in its data
+     */
+    async function morphologyPanel() {
+      const projectStore = makeProjectStore();
+      projectStore.setState((draft) => {
+        const morphology = draft.images.find(
+          ({ id }) => id === morphologyFocus,
+        ) as Image;
+        morphology.visibility = true;
+        morphology.channels = [{ color: { r: 255, g: 255, b: 255 } }];
+      });
+      const dataStore = makeDataStore(makeTables(), {
+        [morphologyFocus]: makeImageData(["DAPI", "ATP1A1", "18S", "AlphaSMA"]),
+      });
+      const panel = await openPanel(projectStore, dataStore, {
+        provider: "anthropic",
+      });
+      await panel.pasteKey(anthropicKey);
+      return panel;
+    }
+
+    /** The results of the tools, after the arrow of each Tool row */
+    const results = (panel: { texts: (who: string) => string[] }) =>
+      panel.texts("Tool").map((text) => text.split("\n→ ")[1]);
+
+    it("counts the channels of the image data like the Images panel, also when the project lists fewer", async () => {
+      const panel = await morphologyPanel();
+      // all four, with their indices and as the panel shows them
+      expect(panel.context()).toContain(
+        "4 channels, composite (the visible channels blended): 0 DAPI (visible, white), 1 ATP1A1 (visible, rgb(0, 255, 0)), 2 18S (visible, rgb(0, 0, 255)), 3 AlphaSMA (visible, rgb(255, 255, 0))",
+      );
+      const hideOthers = act("updateImage", [
+        morphologyFocus,
+        { channels: [{}, ...repeat([{ visibility: false }], 3)] },
+      ]);
+      services.answers = [
+        // one entry, as the project's list: the four are asked for, by name
+        {
+          toolCalls: [
+            act("updateImage", [
+              morphologyFocus,
+              { channels: [{ visibility: true }] },
+            ]),
+          ],
+        },
+        { toolCalls: [hideOthers] },
+        { content: "Only DAPI is shown now." },
+      ];
+      await panel.say("Show only channel 0 of morphology.");
+      expect(results(panel)).toEqual([
+        "Error: nothing changed: morphology_focus has 4 channels (0 DAPI, 1 ATP1A1, 2 18S, 3 AlphaSMA): give 4 entries, {} for the channels that stay.",
+        "Done. Changed in morphology_focus: channels[1] (ATP1A1).visibility true → false; channels[2] (18S).visibility true → false; channels[3] (AlphaSMA).visibility true → false.",
+      ]);
+      // lengthened like the panel does, the first channel as it was
+      expect(image(panel.projectStore, morphologyFocus).channels).toEqual([
+        { color: { r: 255, g: 255, b: 255 } },
+        { visibility: false },
+        { visibility: false },
+        { visibility: false },
+      ]);
+      expect(panel.context()).toContain(
+        "0 DAPI (visible, white), 1 ATP1A1 (hidden, rgb(0, 255, 0)), 2 18S (hidden, rgb(0, 0, 255)), 3 AlphaSMA (hidden, rgb(255, 255, 0))",
+      );
+      // the same again changes nothing, and says so
+      services.answers = [{ toolCalls: [hideOthers] }, { content: "Already." }];
+      await panel.say("Hide the other channels.");
+      expect(results(panel)[2]).toBe(
+        "Nothing changed: in morphology_focus already channels[1] (ATP1A1).visibility = false; channels[2] (18S).visibility = false; channels[3] (AlphaSMA).visibility = false.",
+      );
+      panel.button("Undo").click();
+      expect(image(panel.projectStore, morphologyFocus).channels).toEqual([
+        { color: { r: 255, g: 255, b: 255 } },
+      ]);
+    });
+
+    it("shows one channel with the color view mode, and says which one is shown", async () => {
+      const panel = await morphologyPanel();
+      services.answers = [
+        {
+          toolCalls: [
+            act("updateImage", [morphologyFocus, { activeChannel: 4 }]),
+            act("updateImage", [
+              morphologyFocus,
+              { channelViewMode: "color", activeChannel: 1 },
+            ]),
+          ],
+        },
+        { content: "Only ATP1A1 is shown." },
+      ];
+      await panel.say("Show only ATP1A1.");
+      expect(results(panel)).toEqual([
+        "Error: nothing changed: activeChannel must be the number of a channel, from 0 to 3.",
+        'Done. Changed in morphology_focus: channelViewMode "composite" → "color"; activeChannel 0 → 1. In the color view mode, only channel 1 (ATP1A1) is shown, whatever the visibility of the channels.',
+      ]);
+      expect(panel.context()).toContain(
+        "4 channels, color (only channel 1, ATP1A1, is shown): 0 DAPI",
+      );
+      panel.button("Undo").click();
+      expect(image(panel.projectStore, morphologyFocus)).toMatchObject({
+        channelViewMode: "composite",
+        activeChannel: 0,
+      });
+    });
+
+    it("says what already was so, and nothing changed when all of it was", async () => {
+      const panel = await openPanel(undefined, undefined, {
+        provider: "openai",
+      });
+      await panel.pasteKey(openAiKey);
+      const before = JSON.stringify(panel.projectStore.getState());
+      const viewBefore = JSON.stringify(panel.appStore.getState());
+      services.answers = [
+        {
+          toolCalls: [
+            act("updateImage", [heImage, { opacity: 1, visibility: true }]),
+            act("setName", ["xenium"]),
+            act("setHighlightedItemGroup", [null], "appStore"),
+            act("moveImage", [heImage, 0]),
+          ],
+        },
+        { content: "It was all like that already." },
+      ];
+      await panel.say("Make sure all of it is as it is.");
+      expect(results(panel)).toEqual([
+        "Nothing changed: in he_image already opacity = 1; visibility = true.",
+        'Nothing changed: the project name already is "xenium".',
+        "Nothing changed: highlightedItemGroup already is none.",
+        "Nothing changed: he_image is already at index 0.",
+      ]);
+      expect(JSON.stringify(panel.projectStore.getState())).toBe(before);
+      expect(JSON.stringify(panel.appStore.getState())).toBe(viewBefore);
+      services.answers = [
+        {
+          toolCalls: [
+            act("updateImage", [heImage, { opacity: 0.5, visibility: true }]),
+          ],
+        },
+        { content: "he_image is half transparent." },
+      ];
+      await panel.say("Make the H&E image half transparent.");
+      expect(results(panel)[4]).toBe(
+        "Done. Changed in he_image: opacity 1 → 0.5. Already so: visibility = true.",
+      );
+      // only what changed is taken back
+      panel.button("Undo").click();
+      expect(panel.texts("Undo").at(-1)).toBe(
+        "Undone: he_image opacity 0.5 → 1",
+      );
+    });
+
+    it("tells every model that it cannot zoom yet, and how to do it by hand", async () => {
+      const panel = await openPanel(undefined, undefined, {
+        provider: "anthropic",
+      });
+      await panel.pasteKey(anthropicKey);
+      await panel.say("Zoom out.");
+      const hint = 'top right of the viewer ("Reset view")';
+      expect(services.requests.at(-1)?.body?.system?.[0]?.text).toContain(hint);
+      await (await openPanel()).say("Zoom out.");
+      expect(ollama.requests.at(-1)?.messages[0]?.content).toContain(
+        "mouse wheel zooms, dragging the image moves it",
+      );
+    });
+
+    it("tells only OpenAI and Anthropic about call_action, and what they may change", async () => {
+      const names = (tools: Record<string, unknown>[] = []) =>
+        tools.map((tool) =>
+          String(
+            (tool.function as { name?: string } | undefined)?.name ?? tool.name,
+          ),
+        );
+      for (const provider of ["openai", "anthropic"]) {
+        const panel = await openPanel(undefined, undefined, { provider });
+        await panel.pasteKey(provider === "openai" ? openAiKey : anthropicKey);
+        await panel.say("Hello");
+        const body = services.requests.at(-1)?.body;
+        expect(names(body?.tools)).toContain("call_action");
+        const fixed =
+          provider === "openai" ? body?.instructions : body?.system?.[0]?.text;
+        expect(fixed).toContain("Rename something");
+        expect(fixed).not.toContain("You cannot change anything else");
+      }
+      const panel = await openPanel();
+      modelCalls(act("updateImage", [heImage, { opacity: 0.5 }]));
+      await panel.say("Hello");
+      const request = ollama.requests[0];
+      expect(names(request?.tools)).not.toContain("call_action");
+      expect(request?.messages[0]?.content).toContain(
+        "You cannot change anything else",
+      );
+      // and if a small model calls it anyway, it does nothing
+      expect(panel.texts("Tool")[0]).toContain(
+        'Error: there is no tool called "call_action".',
+      );
+      expect(panel.projectStore.getState().images[0]?.opacity).toBe(1);
     });
   });
 
