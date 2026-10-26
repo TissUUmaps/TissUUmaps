@@ -74,14 +74,20 @@ function makeTable({
   geneValues?: Record<string, (row: number) => number>;
   failing?: Record<string, Error>;
   delay?: number;
-}): TableData & { loaded: string[] } {
+}): TableData & {
+  loaded: string[];
+  geneReads: { now: number; most: number };
+} {
   const loaded: string[] = [];
+  // how many slow genes are being read now, and at most at once
+  const geneReads = { now: 0, most: 0 };
   const isChild = (query: string, path: string) =>
     path.startsWith(query) && !path.slice(query.length).includes("/");
   // made when asked, and then always the same array, as TissUUmaps expects
   let ids: string[] | undefined;
   const table = {
     loaded,
+    geneReads,
     getIds: () => (ids ??= Array.from({ length: rows }, (_, i) => String(i))),
     getSize: () => rows,
     suggestColumnQueries: (query: string) => {
@@ -117,14 +123,25 @@ function makeTable({
       ) {
         const value = geneValues[column] ?? ((i: number) => (i * 7) % 50);
         const values = Float32Array.from({ length: rows }, (_, i) => value(i));
-        return delay === 0
-          ? Promise.resolve(values)
-          : new Promise((resolve) => setTimeout(() => resolve(values), delay));
+        if (delay === 0) {
+          return Promise.resolve(values);
+        }
+        geneReads.now++;
+        geneReads.most = Math.max(geneReads.most, geneReads.now);
+        return new Promise((resolve) =>
+          setTimeout(() => {
+            geneReads.now--;
+            resolve(values);
+          }, delay),
+        );
       }
       return Promise.resolve(columns[column]);
     },
   };
-  return table as unknown as TableData & { loaded: string[] };
+  return table as unknown as TableData & {
+    loaded: string[];
+    geneReads: { now: number; most: number };
+  };
 }
 
 /**
@@ -134,7 +151,7 @@ function makeTable({
  */
 function makeTables(
   options: { geneNames?: boolean; geneDelay?: number } = {},
-): Record<string, TableData & { loaded: string[] }> {
+): Record<string, ReturnType<typeof makeTable>> {
   const { geneNames = true, geneDelay = 0 } = options;
   const geneList = geneNames
     ? genes(377)
@@ -908,12 +925,21 @@ async function openPanel(
   }
   // the tables are read
   await new Promise((resolve) => setTimeout(resolve, 20));
+  // a tool row is folded: its name is in data-who, its call and result in
+  // the part that opens
   const messages = () =>
-    [...history.children].map((message) => ({
-      who: message.children[0]?.textContent ?? "",
-      text: message.children[1]?.textContent ?? "",
-      element: message.children[1] as HTMLElement,
-    }));
+    [...history.children].map((message) => {
+      const element = (message.querySelector("[data-details]") ??
+        message.children[1]) as HTMLElement;
+      return {
+        who:
+          (message as HTMLElement).dataset.who ??
+          message.children[0]?.textContent ??
+          "",
+        text: element.textContent,
+        element,
+      };
+    });
   return {
     projectStore,
     appStore,
@@ -2122,9 +2148,26 @@ describe("aiChatPlugin", () => {
   });
 
   describe("statistics, for OpenAI and Anthropic", () => {
-    /** The results of the tools, after the arrow of each Tool row */
+    /** The results of the tools, as the model got them in the last request */
+    const modelResults = () =>
+      (services.requests.at(-1)?.body.messages ?? [])
+        .flatMap((message) => message.content)
+        .filter((block) => block.type === "tool_result")
+        .map((block) => String(block.content));
+
+    /** The results of the tools in the panel, after the arrow of each open row */
     const results = (panel: { texts: (who: string) => string[] }) =>
       panel.texts("Tool").map((text) => text.split("\n→ ")[1] ?? "");
+
+    /** The rows of the tools: open or not, their line, and their table */
+    const toolRows = (panel: { container: HTMLElement }) =>
+      [...panel.container.querySelectorAll("details")].map((details) => ({
+        open: details.open,
+        summary: details.querySelector("summary")?.textContent ?? "",
+        table: [...details.querySelectorAll("tr")].map((row) =>
+          [...row.cells].map((cell) => cell.textContent),
+        ),
+      }));
 
     /** A panel with Anthropic, and the tools the model calls in one turn */
     async function ask(
@@ -2153,7 +2196,7 @@ describe("aiChatPlugin", () => {
         ],
         ["column_stats", { id: cellLabels, column: "obs/total_counts" }],
       ]);
-      const [counts, byCluster, types, numbers] = results(panel);
+      const [counts, byCluster, types, numbers] = modelResults();
       expect(counts).toBe(
         [
           "obs/leiden of cell_labels: 2,000 items in 16 groups, largest first:",
@@ -2180,13 +2223,61 @@ describe("aiChatPlugin", () => {
       expect(numbers).toBe(
         "obs/total_counts of cell_labels: 2,000 items with a value: mean 1599, median 1599, min 100, max 3099, above 0 in 100%.",
       );
+      // the panel: one folded line each, and tables with all the groups
+      const rows = toolRows(panel);
+      expect(rows.map(({ open, summary }) => ({ open, summary }))).toEqual([
+        {
+          open: false,
+          summary: "📊 obs/leiden of cell_labels: 16 groups, 2,000 items",
+        },
+        {
+          open: false,
+          summary: "📊 X[MS4A1] by obs/leiden: 16 groups, highest mean in 3",
+        },
+        {
+          open: false,
+          summary: "📊 obs/cell_type within obs/leiden: 16 groups",
+        },
+        {
+          open: false,
+          summary: "📊 obs/total_counts of cell_labels: mean 1599, median 1599",
+        },
+      ]);
+      const [countTable = [], clusterTable = [], typeTable = [], numberTable] =
+        rows.map(({ table }) => table);
+      expect(countTable).toHaveLength(17);
+      expect(countTable.slice(0, 2)).toEqual([
+        ["group", "items", "%"],
+        ["0", "125", "6.3%"],
+      ]);
+      expect(clusterTable).toHaveLength(18);
+      expect(clusterTable.slice(0, 2)).toEqual([
+        ["group", "items", "mean", "median", "min", "max", "% > 0"],
+        ["3", "125", "5.992", "6", "5", "7", "100%"],
+      ]);
+      expect(clusterTable.at(-1)?.[0]).toBe("All");
+      expect(typeTable[1]).toEqual([
+        "0",
+        "125",
+        "B cell 20%, Epithelial 20%, Fibroblast 20% (+ 2 more)",
+      ]);
+      expect(numberTable).toEqual([
+        ["items", "mean", "median", "min", "max", "% > 0"],
+        ["2,000", "1599", "1599", "100", "3099", "100%"],
+      ]);
+      // the numbers to the right, the names of the groups to the left
+      const cells = panel.container
+        .querySelectorAll("details")[1]
+        ?.querySelectorAll("td");
+      expect(cells?.[0]?.style.textAlign).toBe("left");
+      expect(cells?.[2]?.style.textAlign).toBe("right");
     });
 
     it("joins the rows of two tables by the IDs of their items", async () => {
-      const panel = await ask([
+      await ask([
         ["column_stats", { id: cellCircles, column: "radius", by: "leiden" }],
       ]);
-      const [result = ""] = results(panel);
+      const [result = ""] = modelResults();
       expect(result).toContain(
         "radius of cell_circles by obs/leiden (16 groups)",
       );
@@ -2216,7 +2307,7 @@ describe("aiChatPlugin", () => {
         ],
         makeDataStore(tables),
       );
-      const [up = "", down = ""] = results(panel);
+      const [up = "", down = ""] = modelResults();
       const lines = up.split("\n");
       expect(lines.slice(0, 4)).toEqual([
         'Marker genes of group "3" of obs/leiden in cell_labels: 125 items vs all the other items (1,875), over 377 genes of X.',
@@ -2228,7 +2319,7 @@ describe("aiChatPlugin", () => {
         ) as string,
       ]);
       expect(lines.at(-1)).toMatch(
-        /^Took [\d.]+ s to read and test the genes\.$/,
+        /^Took [\d.]+ s to read and test the genes: [\d.]+ s of tests, the rest reading; the first gene took [\d.]+ s\.$/,
       );
       // the second question used the kept results: no gene was read again
       expect(
@@ -2238,6 +2329,37 @@ describe("aiChatPlugin", () => {
         /^1\. PTPRC: log2FC -3\d\.\d+, in 0% of the group vs 100% of the others, adj\. p \S+e-\d+$/,
       );
       expect(down.split("\n").at(-1)).toMatch(/^From the results kept since /);
+      // the panel: the genes in a table, under the line of the tests
+      const [upRow] = toolRows(panel);
+      expect(upRow?.summary).toMatch(
+        /^🧬 Marker genes of "3" \(obs\/leiden\), highest: MS4A1, \S+$/,
+      );
+      expect(upRow?.table[0]).toEqual([
+        "#",
+        "gene",
+        "log2FC",
+        "% in group",
+        "% in others",
+        "adj. p",
+      ]);
+      expect(upRow?.table[1]?.slice(0, 5)).toEqual([
+        "1",
+        "MS4A1",
+        "5.39",
+        "100%",
+        "14.3%",
+      ]);
+      expect(upRow?.table).toHaveLength(3);
+    });
+
+    it("reads several genes at once, for the stores whose reads overlap", async () => {
+      const tables = makeTables({ geneDelay: 2 });
+      await ask(
+        [["marker_genes", { id: cellLabels, by: "leiden", group: "3" }]],
+        makeDataStore(tables),
+      );
+      expect(modelResults()[0]).toMatch(/^Marker genes of group "3"/);
+      expect(tables["tables/table"]?.geneReads.most).toBe(6);
     });
 
     it("shows how far the marker genes are, and stops them", async () => {
@@ -2249,6 +2371,7 @@ describe("aiChatPlugin", () => {
       await panel.pasteKey(anthropicKey);
       services.answers = [
         {
+          content: "Let me look at the genes.",
           toolCalls: [
             ["marker_genes", { id: cellLabels, group: "3", by: "leiden" }],
           ],
@@ -2261,14 +2384,25 @@ describe("aiChatPlugin", () => {
       expect(panel.texts("Tool")[0]).toMatch(
         /marker_genes\(.*\)\n… testing the genes: \d+ of 377 \(\d+%\), [\d.]+ sStop$/,
       );
+      // after the first words of the model, while the tool works, the
+      // thinking word is still shown, below everything
+      const history = panel.container.children[3] as HTMLElement;
+      expect(panel.texts("Dia")[0]).toBe("Let me look at the genes.");
+      expect(
+        history.lastElementChild?.querySelector('[role="tooltip"]'),
+      ).not.toBeNull();
       panel.button("Stop").click();
       await vi.waitFor(() =>
         expect(panel.button("Send").textContent).toBe("Send"),
       );
+      // stopped: shown open, like errors
       expect(results(panel)).toEqual([
         "Stopped by the user before the end: nothing was computed. Tell the user.",
       ]);
+      expect(toolRows(panel)[0]?.open).toBe(true);
       expect(panel.button("Stop")).toBeUndefined();
+      expect(panel.container.querySelector('[role="tooltip"]')).toBeNull();
+      expect(panel.texts("Dia").at(-1)).toBe("I stopped, as you asked.");
     });
 
     it("compares a number between two clusters, and correlates two genes", async () => {
@@ -2307,7 +2441,7 @@ describe("aiChatPlugin", () => {
         ],
       ]);
       const [compared = "", correlated, inGroup, noGroup, noNumbers] =
-        results(panel);
+        modelResults();
       const lines = compared.split("\n");
       // by hand: the rows 3 + 16 k and 5 + 16 k, so 1.5 · 2 lower; mean
       // 1592.5 and max 3080.5, with 4 significant digits
@@ -2335,6 +2469,59 @@ describe("aiChatPlugin", () => {
       expect(noNumbers).toBe(
         "Error: obs/cell_type does not hold numbers. To compare groups of it, use column_stats with by.",
       );
+      // the panel: tables, and the errors always open, with their message
+      const rows = toolRows(panel);
+      expect(rows[0]?.summary).toMatch(
+        /^⚖️ obs\/total_counts: "3" vs "5", mean -3, p = 0\.9\d*$/,
+      );
+      expect(rows[0]?.table).toEqual([
+        ["group", "items", "mean", "median", "min", "max", "% > 0"],
+        ['"3"', "125", "1593", "1593", "104.5", "3081", "100%"],
+        ['"5"', "125", "1596", "1596", "107.5", "3084", "100%"],
+      ]);
+      expect(rows[1]?.summary).toMatch(
+        /^📈 X\[MS4A1\] and X\[PTPRC\]: rho -0\.\d+$/,
+      );
+      expect(rows[1]?.table[1]?.[0]).toBe("2,000");
+      expect(rows[2]?.summary).toBe("📈 X[MS4A1] and X[PTPRC]: no correlation");
+      expect(
+        rows.slice(3).map(({ open, summary }) => ({ open, summary })),
+      ).toEqual([
+        {
+          open: true,
+          summary: expect.stringMatching(
+            /^⚠️ Error: obs\/leiden has no group "99"/,
+          ) as string,
+        },
+        {
+          open: true,
+          summary:
+            "⚠️ Error: obs/cell_type does not hold numbers. To compare groups of it, use column_stats with by.",
+        },
+      ]);
+    });
+
+    it("opens all the rows of the tools with Show tool details, remembered by the browser", async () => {
+      const panel = await ask([
+        ["column_stats", { id: cellLabels, column: "leiden" }],
+        ["set_opacity", { ids: [cellLabels], opacity: 0.5 }],
+      ]);
+      expect(toolRows(panel).map(({ open }) => open)).toEqual([false, false]);
+      // a tool without a table: its call and result, after one line
+      expect(toolRows(panel)[1]?.summary).toMatch(/^🌫 Done/);
+      expect(panel.texts("Tool")[1]).toMatch(/^set_opacity\(.*\)\n→ Done/);
+      const box = [
+        ...panel.container.querySelectorAll('input[type="checkbox"]'),
+      ].find((input) =>
+        input.parentElement?.textContent?.includes("Show tool details"),
+      ) as HTMLInputElement;
+      box.checked = true;
+      box.dispatchEvent(new Event("change"));
+      expect(toolRows(panel).map(({ open }) => open)).toEqual([true, true]);
+      const again = await ask([
+        ["column_stats", { id: cellLabels, column: "leiden" }],
+      ]);
+      expect(toolRows(again).map(({ open }) => open)).toEqual([true]);
     });
 
     it("reads only what a huge table tells by itself, and nothing more", async () => {
@@ -2365,7 +2552,11 @@ describe("aiChatPlugin", () => {
         [["column_stats", { id: transcripts, column: "feature_name" }]],
         makeDataStore(tables),
       );
-      expect(results(counted)).toEqual([
+      expect(toolRows(counted)[0]?.table.slice(1)).toEqual([
+        ["EPCAM", "4,000,000", "66.7%"],
+        ["KRT7", "2,000,000", "33.3%"],
+      ]);
+      expect(modelResults()).toEqual([
         [
           "The table points/transcripts@global has 6,000,000 rows, too many to read here; the table counted its values itself.",
           "feature_name of transcripts: 6,000,000 items in 2 groups, largest first:",

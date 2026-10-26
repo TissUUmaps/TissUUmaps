@@ -292,6 +292,23 @@ type ToolContext = {
    * a button that stops it
    */
   progress?: (text: string) => void;
+  /** Gives the panel a summary line and a table of the result, see {@link ToolReport} */
+  report?: (report: ToolReport) => void;
+};
+
+/** A table of a tool result, for the panel */
+type ResultTable = { columns: string[]; rows: string[][] };
+
+/**
+ * What a tool shows in the panel besides its short result for the model: the
+ * line of its folded row, and its result as a table, between lines of text
+ */
+type ToolReport = {
+  /** e.g. "📊 X[EPCAM] by obs/leiden: 16 groups, highest mean in 11" */
+  summary: string;
+  title?: string;
+  table?: ResultTable;
+  notes?: string[];
 };
 
 /**
@@ -4420,15 +4437,60 @@ function listLimit(limit: unknown): number {
 }
 
 /**
+ * At most this many rows of a table are shown in the panel, which can show
+ * more groups than the model is told
+ */
+const maxTableRows = 100;
+
+/**
+ * The rows of a table for the panel, with a last row that tells how many
+ * more there are
+ *
+ * @param rows - All the rows
+ * @param columns - The number of columns
+ * @returns At most {@link maxTableRows} rows
+ */
+function tableRows(rows: string[][], columns: number): string[][] {
+  if (rows.length <= maxTableRows) {
+    return rows;
+  }
+  const more = [`… ${count(rows.length - maxTableRows)} more`];
+  return [
+    ...rows.slice(0, maxTableRows),
+    [...more, ...Array.from({ length: columns - 1 }, () => "")],
+  ];
+}
+
+/** The columns of a summary of numbers in a table */
+const summaryColumns = ["mean", "median", "min", "max", "% > 0"];
+
+/**
+ * The cells of a summary of numbers in a table
+ *
+ * @param summary - The summary
+ * @returns The cells, in the order of {@link summaryColumns}
+ */
+function summaryCells(summary: Summary): string[] {
+  return [
+    short(summary.mean),
+    short(summary.median),
+    short(summary.min),
+    short(summary.max),
+    percent(summary.positive),
+  ];
+}
+
+/**
  * Lists the number of items of each group, the largest first (or the
  * smallest, if asked)
  *
  * @param title - What is counted, e.g. "obs/leiden of cell_labels"
  * @param counts - The count of each group
  * @param missing - How many items have no value
- * @param limit - How many groups to list
+ * @param limit - How many groups to list for the model
  * @param lowest - Whether to list the smallest first
- * @returns The text
+ * @returns The text for the model, and the report for the panel, with all
+ * the groups
  */
 function describeCounts(
   title: string,
@@ -4436,14 +4498,16 @@ function describeCounts(
   missing: number,
   limit: number,
   lowest: boolean,
-): string {
+): { text: string; report: ToolReport } {
   const total = [...counts.values()].reduce((sum, n) => sum + n, 0);
   const sorted = [...counts].sort((a, b) =>
     lowest ? a[1] - b[1] : b[1] - a[1],
   );
-  const lines = [
+  const heading =
     `${title}: ${count(total)} items in ${count(counts.size)} groups` +
-      `${missing > 0 ? ` (and ${count(missing)} without a value)` : ""}, ${lowest ? "smallest" : "largest"} first:`,
+    `${missing > 0 ? ` (and ${count(missing)} without a value)` : ""}, ${lowest ? "smallest" : "largest"} first:`;
+  const lines = [
+    heading,
     ...sorted
       .slice(0, limit)
       .map(([group, n]) => `- ${group}: ${count(n)} (${percent(n / total)})`),
@@ -4451,7 +4515,19 @@ function describeCounts(
   if (sorted.length > limit) {
     lines.push(`(+ ${count(sorted.length - limit)} more groups)`);
   }
-  return lines.join("\n");
+  const rows = sorted.map(([group, n]) => [
+    group,
+    count(n),
+    percent(n / total),
+  ]);
+  return {
+    text: lines.join("\n"),
+    report: {
+      summary: `📊 ${title}: ${count(counts.size)} groups, ${count(total)} items`,
+      title: heading,
+      table: { columns: ["group", "items", "%"], rows: tableRows(rows, 3) },
+    },
+  };
 }
 
 /**
@@ -4462,6 +4538,7 @@ function describeCounts(
  * @param found - The column
  * @param limit - How many groups to list
  * @param lowest - Whether to list the smallest first
+ * @param context - What the tool works with, for the report
  * @param options - Optional abort signal
  * @returns The result for the model
  */
@@ -4470,6 +4547,7 @@ async function bigColumnStats(
   found: FoundColumn,
   limit: number,
   lowest: boolean,
+  context: ToolContext,
   options?: { signal?: AbortSignal },
 ): Promise<string> {
   const { data, column, tableId } = found;
@@ -4478,7 +4556,16 @@ async function bigColumnStats(
   if (data.loadValueRange !== undefined) {
     const range = await data.loadValueRange(column, options);
     if (range !== undefined) {
-      return `${title}: ${intro}; the table only tells the range: min ${short(range[0])}, max ${short(range[1])}.`;
+      const text = `${title}: ${intro}; the table only tells the range: min ${short(range[0])}, max ${short(range[1])}.`;
+      context.report?.({
+        summary: `📊 ${title}: min ${short(range[0])}, max ${short(range[1])}`,
+        title: `${title}: ${intro}; the table only tells the range.`,
+        table: {
+          columns: ["min", "max"],
+          rows: [[short(range[0]), short(range[1])]],
+        },
+      });
+      return text;
     }
   }
   if (data.loadUniqueValueCounts !== undefined) {
@@ -4490,7 +4577,13 @@ async function bigColumnStats(
       const group = String(value);
       counts.set(group, (counts.get(group) ?? 0) + n);
     }
-    return `${intro}; the table counted its values itself.\n${describeCounts(title, counts, 0, limit, lowest)}`;
+    const counted = describeCounts(title, counts, 0, limit, lowest);
+    const note = `${intro}; the table counted its values itself.`;
+    context.report?.({
+      ...counted.report,
+      title: `${note}\n${counted.report.title ?? ""}`,
+    });
+    return `${note}\n${counted.text}`;
   }
   return tooBigError(tableId, rows);
 }
@@ -4531,7 +4624,7 @@ async function columnStats(
   const big = found.find(({ data }) => data.getSize() > maxRowsToRead);
   if (big !== undefined) {
     return by === undefined
-      ? bigColumnStats(title, column, limit, lowest, options)
+      ? bigColumnStats(title, column, limit, lowest, context, options)
       : tooBigError(big.tableId, big.data.getSize());
   }
   const [values, byValues] = await loadAligned(found, options);
@@ -4553,20 +4646,30 @@ async function columnStats(
           counts.set(group, (counts.get(group) ?? 0) + 1);
         }
       }
-      const text = describeCounts(title, counts, missing, limit, lowest);
-      return numbers === undefined
-        ? text
-        : `${text}\nAs numbers: ${describeSummary(summarize(numbers))}.`;
+      const counted = describeCounts(title, counts, missing, limit, lowest);
+      if (numbers === undefined) {
+        context.report?.(counted.report);
+        return counted.text;
+      }
+      const asNumbers = `As numbers: ${describeSummary(summarize(numbers))}.`;
+      context.report?.({ ...counted.report, notes: [asNumbers] });
+      return `${counted.text}\n${asNumbers}`;
     }
     if (numbers === undefined) {
       return `Error: ${title} has more than ${count(maxCategories)} different texts (e.g. names of single items): it cannot be counted by group.`;
     }
     const summary = summarize(numbers);
     const missing = numbers.length - summary.count;
-    return (
-      `${title}: ${count(summary.count)} items with a value` +
-      `${missing > 0 ? ` (${count(missing)} without)` : ""}: ${describeSummary(summary)}.`
-    );
+    const without = missing > 0 ? ` (${count(missing)} without)` : "";
+    context.report?.({
+      summary: `📊 ${title}: mean ${short(summary.mean)}, median ${short(summary.median)}`,
+      title: `${title}: ${count(summary.count)} items with a value${without}`,
+      table: {
+        columns: ["items", ...summaryColumns],
+        rows: [[count(summary.count), ...summaryCells(summary)]],
+      },
+    });
+    return `${title}: ${count(summary.count)} items with a value${without}: ${describeSummary(summary)}.`;
   }
   const grouped = groupRows(byValues);
   if (grouped === undefined) {
@@ -4596,25 +4699,48 @@ async function columnStats(
           ? (sizes[a] as number) - (sizes[b] as number)
           : (sizes[b] as number) - (sizes[a] as number),
       );
+    // the three main values of each group, e.g. "T cell 61.2%, B cell 20.1%"
+    const mainValues = (k: number) => {
+      const size = sizes[k] as number;
+      const row = table[k] as Int32Array;
+      const main = inner.groups
+        .map((group, j) => [group, row[j] as number] as const)
+        .filter(([, n]) => n > 0)
+        .sort((a, b) => b[1] - a[1]);
+      const shown = main
+        .slice(0, 3)
+        .map(([group, n]) => `${group} ${percent(n / size)}`);
+      const more = main.length > 3 ? ` (+ ${main.length - 3} more)` : "";
+      return `${shown.join(", ") || "no values"}${more}`;
+    };
+    const heading = `${column.column} within each group of ${by.column} in ${object.name} (${grouped.groups.length} groups), ${lowest ? "smallest" : "largest"} groups first:`;
     const lines = [
-      `${column.column} within each group of ${by.column} in ${object.name} (${grouped.groups.length} groups), ${lowest ? "smallest" : "largest"} groups first:`,
-      ...order.slice(0, limit).map((k) => {
-        const size = sizes[k] as number;
-        const row = table[k] as Int32Array;
-        const main = inner.groups
-          .map((group, j) => [group, row[j] as number] as const)
-          .filter(([, n]) => n > 0)
-          .sort((a, b) => b[1] - a[1]);
-        const shown = main
-          .slice(0, 3)
-          .map(([group, n]) => `${group} ${percent(n / size)}`);
-        const more = main.length > 3 ? ` (+ ${main.length - 3} more)` : "";
-        return `- ${grouped.groups[k]} (${count(size)} items): ${shown.join(", ") || "no values"}${more}`;
-      }),
+      heading,
+      ...order
+        .slice(0, limit)
+        .map(
+          (k) =>
+            `- ${grouped.groups[k]} (${count(sizes[k] as number)} items): ${mainValues(k)}`,
+        ),
     ];
     if (order.length > limit) {
       lines.push(`(+ ${order.length - limit} more groups)`);
     }
+    context.report?.({
+      summary: `📊 ${column.column} within ${by.column}: ${grouped.groups.length} groups`,
+      title: heading,
+      table: {
+        columns: ["group", "items", `main values of ${column.column}`],
+        rows: tableRows(
+          order.map((k) => [
+            grouped.groups[k] as string,
+            count(sizes[k] as number),
+            mainValues(k),
+          ]),
+          3,
+        ),
+      },
+    });
     return lines.join("\n");
   }
   const parts = splitByGroup(numbers, grouped.codes, grouped.groups.length);
@@ -4637,8 +4763,10 @@ async function columnStats(
         key(summaries[a] as Summary) - key(summaries[b] as Summary);
       return lowest ? difference : -difference;
     });
+  const sortName = sort.replaceAll("_", " ");
+  const heading = `${byTitle}, sorted by ${sortName}, ${lowest ? "lowest" : "highest"} first:`;
   const lines = [
-    `${byTitle}, sorted by ${sort.replaceAll("_", " ")}, ${lowest ? "lowest" : "highest"} first:`,
+    heading,
     ...order.slice(0, limit).map((k) => {
       const summary = summaries[k] as Summary;
       return `- ${grouped.groups[k]}: ${describeSummary(summary)}, ${count(summary.count)} items`;
@@ -4649,6 +4777,32 @@ async function columnStats(
   }
   const all = summarize(numbers);
   lines.push(`All: ${describeSummary(all)}, ${count(all.count)} items.`);
+  const first = order[0];
+  context.report?.({
+    summary:
+      `📊 ${column.column} by ${by.column}: ${grouped.groups.length} groups` +
+      (first === undefined
+        ? ""
+        : `, ${lowest ? "lowest" : "highest"} ${sortName} in ${grouped.groups[first]}`),
+    title: heading,
+    table: {
+      columns: ["group", "items", ...summaryColumns],
+      rows: [
+        ...tableRows(
+          order.map((k) => {
+            const summary = summaries[k] as Summary;
+            return [
+              grouped.groups[k] as string,
+              count(summary.count),
+              ...summaryCells(summary),
+            ];
+          }),
+          7,
+        ),
+        ["All", count(all.count), ...summaryCells(all)],
+      ],
+    },
+  });
   return lines.join("\n");
 }
 
@@ -4752,13 +4906,29 @@ async function compareGroups(
   const b = summarizeSorted(ys);
   const test = mannWhitneySorted(xs, ys);
   const signed = (value: number) => `${value > 0 ? "+" : ""}${short(value)}`;
+  const heading = `${column.column} of ${object.name}, group ${name} vs ${other} of ${by.column}:`;
+  const difference =
+    `Difference ${name} − ${other}: mean ${signed(a.mean - b.mean)}, median ${signed(a.median - b.median)}. ` +
+    `An item of ${name} is higher than one of ${other} in ${percent(test.auc)} of the pairs (ties count half; 50% = no difference).`;
+  const testLine = `Wilcoxon rank-sum test (Mann-Whitney U, ties corrected): U = ${short(test.u)}, p = ${formatP(test.p)}.`;
+  context.report?.({
+    summary: `⚖️ ${column.column}: ${name} vs ${other}, mean ${signed(a.mean - b.mean)}, p = ${formatP(test.p)}`,
+    title: heading,
+    table: {
+      columns: ["group", "items", ...summaryColumns],
+      rows: [
+        [name, count(a.count), ...summaryCells(a)],
+        [other, count(b.count), ...summaryCells(b)],
+      ],
+    },
+    notes: [difference, testLine],
+  });
   return [
-    `${column.column} of ${object.name}, group ${name} vs ${other} of ${by.column}:`,
+    heading,
     `- ${name}: ${count(a.count)} items, ${describeSummary(a)}`,
     `- ${other}: ${count(b.count)} items, ${describeSummary(b)}`,
-    `Difference ${name} − ${other}: mean ${signed(a.mean - b.mean)}, median ${signed(a.median - b.median)}. ` +
-      `An item of ${name} is higher than one of ${other} in ${percent(test.auc)} of the pairs (ties count half; 50% = no difference).`,
-    `Wilcoxon rank-sum test (Mann-Whitney U, ties corrected): U = ${short(test.u)}, p = ${formatP(test.p)}.`,
+    difference,
+    testLine,
   ].join("\n");
 }
 
@@ -4801,6 +4971,7 @@ async function correlation(
     return `Error: ${x === undefined ? a.column : b.column} does not hold numbers: a correlation needs numbers or genes.`;
   }
   let where = "";
+  let groupName = "all";
   if (by !== undefined && byValues !== undefined) {
     const grouped = groupRows(byValues);
     if (grouped === undefined) {
@@ -4815,11 +4986,28 @@ async function correlation(
         x[i] = NaN;
       }
     });
-    where = ` within group "${grouped.groups[group]}" of ${by.column}`;
+    groupName = `"${grouped.groups[group]}" of ${by.column}`;
+    where = ` within group ${groupName}`;
   }
   const result = spearman(x, y);
   const title = `Spearman correlation of ${a.column} and ${b.column} in ${object.name}${where}`;
-  if (Number.isNaN(result.rho)) {
+  const missing = Number.isNaN(result.rho);
+  context.report?.({
+    summary: `📈 ${a.column} and ${b.column}: ${missing ? "no correlation" : `rho ${short(result.rho)}`}`,
+    title,
+    table: {
+      columns: ["items", "rho", "p"],
+      rows: [
+        [
+          count(result.n),
+          missing ? "-" : short(result.rho),
+          missing ? "-" : formatP(result.p),
+        ],
+      ],
+    },
+    notes: [`Items: ${groupName === "all" ? "all" : `group ${groupName}`}.`],
+  });
+  if (missing) {
     return `${title}: not available over ${count(result.n)} items, since ${result.n < 3 ? "there are fewer than 3" : "one of the columns is constant there"}.`;
   }
   return `${title}: rho ${short(result.rho)} over ${count(result.n)} items, p = ${formatP(result.p)}.`;
@@ -4848,9 +5036,23 @@ type MarkerResults = {
   outCount: number;
   /** How long the reading and the tests took, in seconds */
   seconds: number;
+  /** How long the tests took, without the reading, in seconds */
+  computeSeconds: number;
+  /**
+   * How long the first gene took to arrive, in seconds: much longer than the
+   * others when reading one gene downloads the whole matrix
+   */
+  firstSeconds: number;
   /** When the results were computed */
   at: Date;
 };
+
+/**
+ * How many genes marker_genes asks for at once: the data of Zarr tables come
+ * with separate requests, which overlap; those of HDF5 files (h5ad) are read
+ * one after the other anyway (see the documentation)
+ */
+const geneReadsAtOnce = 6;
 
 /**
  * The results of marker_genes, by table and by question, so that a later
@@ -4998,35 +5200,69 @@ async function markerGenes(
   const geneName = (column: string) =>
     column.startsWith(prefix) ? column.slice(prefix.length, -1) : column;
   const limit = listLimit(args.limit);
-  const lines = [
+  const shown = order.slice(0, limit).map((k) => {
+    const gene = results.genes[k] as GeneResult;
+    return {
+      name: geneName(gene.gene),
+      fold: short(log2FoldChange(gene.meanIn, gene.meanOut, results.logged)),
+      inside: percent(gene.fractionIn),
+      outside: percent(gene.fractionOut),
+      p: formatP(results.adjusted[k] as number),
+    };
+  });
+  const heading =
     `Marker genes of group ${name} of ${by.column} in ${object.name}: ${count(results.inCount)} items vs ${other} ` +
-      `(${count(results.outCount)}), over ${count(results.genes.length)} genes of ${matrix.matrix}.`,
+    `(${count(results.outCount)}), over ${count(results.genes.length)} genes of ${matrix.matrix}.`;
+  const method =
     "Wilcoxon rank-sum test (Mann-Whitney U, ties corrected), p-values adjusted with Benjamini-Hochberg over all the genes. " +
-      (results.logged
-        ? "The values look log1p-transformed: log2 fold change of expm1 of the means, as scanpy."
-        : "The values are whole numbers (counts): log2 fold change of the means."),
-    `${down ? "Lower" : "Higher"} in the group, by z-score as scanpy sorts:`,
-    ...order.slice(0, limit).map((k, rank) => {
-      const gene = results.genes[k] as GeneResult;
-      const fold = log2FoldChange(gene.meanIn, gene.meanOut, results.logged);
-      return (
-        `${rank + 1}. ${geneName(gene.gene)}: log2FC ${short(fold)}, ` +
-        `in ${percent(gene.fractionIn)} of the group vs ${percent(gene.fractionOut)} of the others, ` +
-        `adj. p ${formatP(results.adjusted[k] as number)}`
-      );
-    }),
-    `${count(significant)} of ${count(results.genes.length)} genes are ${down ? "lower" : "higher"} in the group with adj. p < 0.05.`,
+    (results.logged
+      ? "The values look log1p-transformed: log2 fold change of expm1 of the means, as scanpy."
+      : "The values are whole numbers (counts): log2 fold change of the means.");
+  const sorting = `${down ? "Lower" : "Higher"} in the group, by z-score as scanpy sorts:`;
+  const significance = `${count(significant)} of ${count(results.genes.length)} genes are ${down ? "lower" : "higher"} in the group with adj. p < 0.05.`;
+  const timing =
     cached === undefined
-      ? `Took ${short(results.seconds)} s to read and test the genes.`
-      : `From the results kept since ${results.at.toLocaleTimeString("en-GB")} (they took ${short(results.seconds)} s).`,
-  ];
-  return lines.join("\n");
+      ? `Took ${short(results.seconds)} s to read and test the genes: ${short(results.computeSeconds)} s of tests, ` +
+        `the rest reading; the first gene took ${short(results.firstSeconds)} s.`
+      : `From the results kept since ${results.at.toLocaleTimeString("en-GB")} (they took ${short(results.seconds)} s).`;
+  context.report?.({
+    summary: `🧬 Marker genes of ${name} (${by.column}), ${down ? "lowest" : "highest"}: ${shown
+      .slice(0, 3)
+      .map((gene) => gene.name)
+      .join(", ")}${shown.length > 3 ? ", …" : ""}`,
+    title: `${heading}\n${method}\n${sorting}`,
+    table: {
+      columns: ["#", "gene", "log2FC", "% in group", "% in others", "adj. p"],
+      rows: shown.map((gene, rank) => [
+        String(rank + 1),
+        gene.name,
+        gene.fold,
+        gene.inside,
+        gene.outside,
+        gene.p,
+      ]),
+    },
+    notes: [significance, timing],
+  });
+  return [
+    heading,
+    method,
+    sorting,
+    ...shown.map(
+      (gene, rank) =>
+        `${rank + 1}. ${gene.name}: log2FC ${gene.fold}, ` +
+        `in ${gene.inside} of the group vs ${gene.outside} of the others, adj. p ${gene.p}`,
+    ),
+    significance,
+    timing,
+  ].join("\n");
 }
 
 /**
  * Tests every gene of a matrix between the rows of a group and the others,
- * one gene at a time, so that only one column is in memory; tells its
- * progress and lets the page breathe between the genes
+ * reading {@link geneReadsAtOnce} genes at once, so that only a few columns
+ * are in memory; tells its progress and lets the page breathe between the
+ * genes
  *
  * @param columns - The columns of the genes
  * @param data - The table of the matrix
@@ -5046,7 +5282,10 @@ async function testGenes(
 ): Promise<MarkerResults> {
   const started = performance.now();
   let lastBreath = started;
+  let computeTime = 0;
+  let firstTime: number | undefined;
   const genes: GeneResult[] = [];
+  // shared: each gene is tested at once when it arrives, without waiting
   const xs = new Float64Array(inRows.length);
   const ys = new Float64Array(outRows.length);
   let wholeNumbers = true;
@@ -5078,30 +5317,45 @@ async function testGenes(
     );
   };
   tellProgress(0);
-  for (const [index, column] of columns.entries()) {
-    signal?.throwIfAborted();
-    const values = (await data.loadValues<number>(column, {
-      signal,
-    })) as ArrayLike<number>;
-    const inside = fill(xs, inRows, values);
-    const outside = fill(ys, outRows, values);
-    const test = mannWhitneySorted(xs, ys);
-    genes.push({
-      gene: column,
-      z: test.z,
-      p: test.p,
-      meanIn: inside.mean,
-      meanOut: outside.mean,
-      fractionIn: inside.fraction,
-      fractionOut: outside.fraction,
-    });
-    // the progress is shown, and Stop can be clicked, between the genes
-    if (performance.now() - lastBreath > 100) {
-      tellProgress(index + 1);
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      lastBreath = performance.now();
+  let next = 0;
+  let done = 0;
+  // each reader takes the next gene until none is left
+  const reader = async () => {
+    while (next < columns.length) {
+      signal?.throwIfAborted();
+      const index = next++;
+      const column = columns[index] as string;
+      const values = (await data.loadValues<number>(column, {
+        signal,
+      })) as ArrayLike<number>;
+      signal?.throwIfAborted();
+      const computeStart = performance.now();
+      firstTime ??= computeStart - started;
+      const inside = fill(xs, inRows, values);
+      const outside = fill(ys, outRows, values);
+      const test = mannWhitneySorted(xs, ys);
+      genes[index] = {
+        gene: column,
+        z: test.z,
+        p: test.p,
+        meanIn: inside.mean,
+        meanOut: outside.mean,
+        fractionIn: inside.fraction,
+        fractionOut: outside.fraction,
+      };
+      done++;
+      computeTime += performance.now() - computeStart;
+      // the progress is shown, and Stop can be clicked, between the genes
+      if (performance.now() - lastBreath > 100) {
+        tellProgress(done);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        lastBreath = performance.now();
+      }
     }
-  }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(geneReadsAtOnce, columns.length) }, reader),
+  );
   return {
     genes,
     adjusted: benjaminiHochberg(genes.map((gene) => gene.p)),
@@ -5109,6 +5363,8 @@ async function testGenes(
     inCount: inRows.length,
     outCount: outRows.length,
     seconds: (performance.now() - started) / 1000,
+    computeSeconds: computeTime / 1000,
+    firstSeconds: (firstTime ?? 0) / 1000,
     at: new Date(),
   };
 }
@@ -6105,6 +6361,89 @@ function makeThinkingIndicator(): { element: HTMLElement; stop: () => void } {
   return { element, stop: () => clearInterval(timer) };
 }
 
+/** The icon of each tool, at the start of its folded row */
+const toolIcons: Record<string, string> = {
+  set_visibility: "👁",
+  show_only: "👁",
+  set_opacity: "🌫",
+  set_point_size: "⚫",
+  color_by_column: "🎨",
+  set_group_colors: "🎨",
+  set_color: "🎨",
+  show_only_groups: "🔍",
+  show_all_groups: "🔍",
+  call_action: "⚙️",
+  column_stats: "📊",
+  marker_genes: "🧬",
+  compare_groups: "⚖️",
+  correlation: "📈",
+};
+
+/**
+ * The first line of a text, cut at 120 characters, for a folded row
+ *
+ * @param text - The text
+ * @returns The line
+ */
+function firstLine(text: string): string {
+  const line = text.split("\n")[0] ?? "";
+  return line.length > 120 ? `${line.slice(0, 119)}…` : line;
+}
+
+/**
+ * Whether a cell of a table holds a number, e.g. "1,234", "12.5%", "-0.3"
+ * or "< 1e-300", which is aligned to the right
+ */
+function isNumberCell(text: string): boolean {
+  return (
+    text === "" ||
+    text === "-" ||
+    /^[<+\-−]?\s?[\d,.]+(e[-+]?\d+)?%?$/.test(text)
+  );
+}
+
+/**
+ * Makes a table of a tool result, with the numbers aligned to the right; the
+ * cells are set as text, never as HTML
+ *
+ * @param table - The columns and rows
+ * @returns The element, which scrolls sideways in a narrow panel
+ */
+function renderTable(table: ResultTable): HTMLElement {
+  const box = document.createElement("div");
+  box.style.cssText = "overflow-x: auto; margin: 4px 0;";
+  const element = document.createElement("table");
+  element.style.cssText =
+    "border-collapse: collapse; font-size: 12px; white-space: nowrap;" +
+    "font-variant-numeric: tabular-nums;";
+  // the first column names the rows; the others are numbers, or not
+  const right = table.columns.map(
+    (_, c) => c > 0 && table.rows.every((row) => isNumberCell(row[c] ?? "")),
+  );
+  const cellStyle = (c: number) =>
+    `padding: 2px 8px; text-align: ${right[c] === true ? "right" : "left"};`;
+  const head = element.createTHead().insertRow();
+  table.columns.forEach((name, c) => {
+    const cell = document.createElement("th");
+    cell.textContent = name;
+    cell.style.cssText =
+      cellStyle(c) +
+      "border-bottom: 1px solid var(--border); font-weight: 600;";
+    head.append(cell);
+  });
+  const body = element.createTBody();
+  for (const row of table.rows) {
+    const line = body.insertRow();
+    row.forEach((value, c) => {
+      const cell = line.insertCell();
+      cell.textContent = value;
+      cell.style.cssText = cellStyle(c);
+    });
+  }
+  box.append(element);
+  return box;
+}
+
 /**
  * Formats a tool call for the chat, e.g. "set_visibility(category: points,
  * visible: false)" or 'set_group_colors(colors: {"3":"red"})'
@@ -6309,6 +6648,22 @@ function mountAiChat(
     "display: flex; flex-wrap: wrap; gap: 8px; align-items: center;";
   keyRow.append(keyLabel, rememberLabel, forgetButton);
 
+  /** Whether the rows of the tools are open, remembered by the browser */
+  let showToolDetails = loadSetting("toolDetails") === "true";
+  const toolDetailsBox = document.createElement("input");
+  toolDetailsBox.type = "checkbox";
+  toolDetailsBox.checked = showToolDetails;
+  toolDetailsBox.style.accentColor = "var(--primary)";
+  toolDetailsBox.addEventListener("change", () => {
+    showToolDetails = toolDetailsBox.checked;
+    saveSetting("toolDetails", showToolDetails ? "true" : null);
+    updateToolRows();
+  });
+  const toolDetailsLabel = document.createElement("label");
+  toolDetailsLabel.title =
+    "Show the calls and the results of the tools, instead of one line each";
+  toolDetailsLabel.append(toolDetailsBox, " Show tool details");
+
   const status = document.createElement("span");
   status.setAttribute("role", "status");
   status.style.cssText = "flex: 1;";
@@ -6324,7 +6679,7 @@ function mountAiChat(
   const settingsBox = document.createElement("div");
   settingsBox.style.cssText =
     "display: flex; flex-direction: column; gap: 8px;";
-  settingsBox.append(serviceRow, keyRow, statusRow);
+  settingsBox.append(serviceRow, keyRow, statusRow, toolDetailsLabel);
 
   const history = document.createElement("div");
   history.style.cssText =
@@ -6512,9 +6867,80 @@ function mountAiChat(
     header.append(who);
     const body = document.createElement("div");
     message.append(header, body);
-    history.append(message);
-    history.scrollTop = history.scrollHeight;
+    addToHistory(message);
     return body;
+  }
+
+  /**
+   * Adds a message at the end of the history, but above the indicator that
+   * the model is thinking, which stays the last one while the model works
+   */
+  function addToHistory(message: HTMLElement): void {
+    history.insertBefore(message, thinking?.element ?? null);
+    history.scrollTop = history.scrollHeight;
+  }
+
+  /** The tool rows, which open and close with "Show tool details" */
+  const toolRows: { details: HTMLDetailsElement; failed: boolean }[] = [];
+
+  /**
+   * Shows a tool call as one folded row: an icon and a summary, e.g.
+   * "📊 X[EPCAM] by obs/leiden: 16 groups, highest mean in 11"; opened, the
+   * call and the whole result, as a table if the tool gave one. Failed calls
+   * are always open.
+   *
+   * @param name - The tool
+   * @param shownCall - The call, as it reads
+   * @param result - The result for the model
+   * @param report - The summary and the table the tool gave, if any
+   */
+  function showTool(
+    name: string,
+    shownCall: string,
+    result: string,
+    report?: ToolReport,
+  ): void {
+    const failed = /^(Error|Stopped)/.test(result);
+    const message = document.createElement("div");
+    message.dataset.who = "Tool";
+    message.style.cssText =
+      "padding: 4px 8px; border: 1px solid; border-radius: 6px;" +
+      messageStyles.tool;
+    const details = document.createElement("details");
+    details.open = failed || showToolDetails;
+    const line = document.createElement("summary");
+    line.style.cssText =
+      "cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
+    line.textContent = failed
+      ? `⚠️ ${firstLine(result)}`
+      : (report?.summary ?? `${toolIcons[name] ?? "🔧"} ${firstLine(result)}`);
+    line.title = line.textContent;
+    const body = document.createElement("div");
+    body.dataset.details = "true";
+    body.style.cssText = "white-space: pre-wrap; margin-top: 4px;";
+    if (report?.table === undefined) {
+      body.textContent = `${shownCall}\n→ ${result}`;
+    } else {
+      body.append(`${shownCall}\n`);
+      if (report.title !== undefined) {
+        body.append(`${report.title}\n`);
+      }
+      body.append(renderTable(report.table));
+      for (const note of report.notes ?? []) {
+        body.append(`${note}\n`);
+      }
+    }
+    details.append(line, body);
+    message.append(details);
+    addToHistory(message);
+    toolRows.push({ details, failed });
+  }
+
+  /** Opens or folds the rows of the tools, as "Show tool details" says */
+  function updateToolRows(): void {
+    for (const { details, failed } of toolRows) {
+      details.open = failed || showToolDetails;
+    }
   }
 
   /**
@@ -6671,6 +7097,7 @@ function mountAiChat(
     }
     messages.length = 0;
     history.replaceChildren();
+    toolRows.length = 0;
     updateExamples();
   }
 
@@ -7321,7 +7748,7 @@ function mountAiChat(
     args: ToolArguments,
     changes: Change[],
     shownCall: string,
-  ): Promise<{ result: string; warning: string }> {
+  ): Promise<{ result: string; warning: string; report?: ToolReport }> {
     const offered = !wholeAppToolNames.includes(name) || provider.wholeApp;
     const tool =
       Object.hasOwn(tools, name) && offered ? tools[name] : undefined;
@@ -7353,10 +7780,19 @@ function mountAiChat(
       progressRow.line.textContent = `${shownCall}\n… ${text}`;
     };
     let result: string;
+    let report: ToolReport | undefined;
     try {
       result = await tool(
         args,
-        { projectStore, dataStore, appStore, tables, changes, progress },
+        {
+          projectStore,
+          dataStore,
+          appStore,
+          tables,
+          changes,
+          progress,
+          report: (value) => (report = value),
+        },
         { signal: stopper.signal },
       );
     } catch (error) {
@@ -7378,7 +7814,10 @@ function mountAiChat(
         `Done. Tell the user: ${warning} What changed: `,
       );
     }
-    return { result, warning };
+    // a stopped or failed tool shows its message, not a table of before
+    return /^(Error|Stopped)/.test(result)
+      ? { result, warning }
+      : { result, warning, report };
   }
 
   /**
@@ -7426,35 +7865,25 @@ function mountAiChat(
     // the tokens of all the requests of this turn
     const usage: Usage = { input: 0, cacheRead: 0, cacheWrite: 0, output: 0 };
     let requests = 0;
+    // shown for the whole turn, below the messages, until the final answer
+    startThinking();
     try {
-      startThinking();
       // the same for every step of this turn
       const context = await turnContext(provider);
       for (let step = 1; step <= maxSteps; step++) {
         // the answer is shown while it arrives, in a message made when the
         // first piece of text comes
         let setText: ((text: string) => void) | null = null;
-        if (thinking === null) {
-          startThinking();
-        }
-        let answer: ChatAnswer;
-        try {
-          answer = await askModel(
-            provider,
-            model,
-            key,
-            context,
-            (textSoFar) => {
-              if (setText === null) {
-                stopThinking();
-                setText = addMessage(persona.name, "assistant", true);
-              }
-              setText(textSoFar);
-            },
-          );
-        } finally {
-          stopThinking();
-        }
+        const answer: ChatAnswer = await askModel(
+          provider,
+          model,
+          key,
+          context,
+          (textSoFar) => {
+            setText ??= addMessage(persona.name, "assistant", true);
+            setText(textSoFar);
+          },
+        );
         if ("error" in answer) {
           show("Error", answer.error);
           showServiceProblem(provider, answer.error);
@@ -7488,10 +7917,11 @@ function mountAiChat(
             name === "call_action"
               ? describeAction(projectStore.getState(), args)
               : callText;
-          let outcome = {
-            result: "Error: this exact call already failed.",
-            warning: "",
-          };
+          let outcome: {
+            result: string;
+            warning: string;
+            report?: ToolReport;
+          } = { result: "Error: this exact call already failed.", warning: "" };
           if (failedCalls.includes(callText)) {
             repeated = true;
           } else {
@@ -7500,7 +7930,7 @@ function mountAiChat(
           if (outcome.result.startsWith("Error")) {
             failedCalls.push(callText);
           }
-          show("Tool", `${shownCall}\n→ ${outcome.result}`);
+          showTool(name, shownCall, outcome.result, outcome.report);
           if (outcome.warning !== "") {
             show("Note", outcome.warning);
           }
@@ -7543,6 +7973,7 @@ function mountAiChat(
         showServiceProblem(provider, message);
       }
     }
+    stopThinking();
     showUsage(provider, model, usage, requests);
     // kept even if something failed later on, but not if another project
     // was opened in the meantime
