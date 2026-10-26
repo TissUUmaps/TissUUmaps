@@ -54,26 +54,35 @@ function genes(count: number): string[] {
 
 /**
  * A fake table: `columns` by name, AnnData-like `groups` ("obs/") and
- * `matrices` (e.g. X, with its column names), and columns that fail to load
+ * `matrices` (e.g. X, with its column names), the values of some genes by
+ * row, and columns that fail to load; the genes load after `delay`
+ * milliseconds. The item of row i has the ID "i".
  */
 function makeTable({
   rows,
   columns = {},
   groups = [],
   matrices = {},
+  geneValues = {},
   failing = {},
+  delay = 0,
 }: {
   rows: number;
   columns?: Record<string, unknown[] | ArrayBufferView>;
   groups?: string[];
   matrices?: Record<string, string[]>;
+  geneValues?: Record<string, (row: number) => number>;
   failing?: Record<string, Error>;
+  delay?: number;
 }): TableData & { loaded: string[] } {
   const loaded: string[] = [];
   const isChild = (query: string, path: string) =>
     path.startsWith(query) && !path.slice(query.length).includes("/");
+  // made when asked, and then always the same array, as TissUUmaps expects
+  let ids: string[] | undefined;
   const table = {
     loaded,
+    getIds: () => (ids ??= Array.from({ length: rows }, (_, i) => String(i))),
     getSize: () => rows,
     suggestColumnQueries: (query: string) => {
       const matrix = matrices[query];
@@ -106,9 +115,11 @@ function makeTable({
         gene !== undefined &&
         matrices[matrix]?.includes(gene)
       ) {
-        return Promise.resolve(
-          Float32Array.from({ length: rows }, (_, i) => (i * 7) % 50),
-        );
+        const value = geneValues[column] ?? ((i: number) => (i * 7) % 50);
+        const values = Float32Array.from({ length: rows }, (_, i) => value(i));
+        return delay === 0
+          ? Promise.resolve(values)
+          : new Promise((resolve) => setTimeout(() => resolve(values), delay));
       }
       return Promise.resolve(columns[column]);
     },
@@ -116,11 +127,15 @@ function makeTable({
   return table as unknown as TableData & { loaded: string[] };
 }
 
-/** The tables of the fake project, like those of a Xenium dataset */
+/**
+ * The tables of the fake project, like those of a Xenium dataset; the cell of
+ * row i is in leiden cluster i % 16, cluster 3 expresses MS4A1 highly and
+ * no PTPRC, and the genes load after `geneDelay` milliseconds
+ */
 function makeTables(
-  options: { geneNames?: boolean } = {},
+  options: { geneNames?: boolean; geneDelay?: number } = {},
 ): Record<string, TableData & { loaded: string[] }> {
-  const { geneNames = true } = options;
+  const { geneNames = true, geneDelay = 0 } = options;
   const geneList = geneNames
     ? genes(377)
     : Array.from({ length: 377 }, (_, i) => String(i));
@@ -130,6 +145,12 @@ function makeTables(
       rows: 2000,
       groups: ["obs/", "var/", "uns/", "obsm/"],
       matrices: { X: geneList, "obsm/spatial": ["0", "1"] },
+      // counts, as in the X of Xenium data
+      geneValues: {
+        "X[MS4A1]": (i) => (i % 16 === 3 ? 5 + (i % 3) : i % 7 === 0 ? 1 : 0),
+        "X[PTPRC]": (i) => (i % 16 === 3 ? 0 : 1 + (i % 4)),
+      },
+      delay: geneDelay,
       failing: {
         "var/_index": new Error(
           geneNames
@@ -2097,6 +2118,281 @@ describe("aiChatPlugin", () => {
         'Error: there is no tool called "call_action".',
       );
       expect(panel.projectStore.getState().images[0]?.opacity).toBe(1);
+    });
+  });
+
+  describe("statistics, for OpenAI and Anthropic", () => {
+    /** The results of the tools, after the arrow of each Tool row */
+    const results = (panel: { texts: (who: string) => string[] }) =>
+      panel.texts("Tool").map((text) => text.split("\n→ ")[1] ?? "");
+
+    /** A panel with Anthropic, and the tools the model calls in one turn */
+    async function ask(
+      calls: [string, Record<string, unknown>][],
+      dataStore = makeDataStore(makeTables()),
+    ) {
+      const panel = await openPanel(undefined, dataStore, {
+        provider: "anthropic",
+      });
+      await panel.pasteKey(anthropicKey);
+      services.answers = [{ toolCalls: calls }, { content: "Here it is." }];
+      await panel.say("Tell me about the cells.");
+      return panel;
+    }
+
+    it("counts the cells of each cluster, and gives the numbers of a gene by cluster, sorted", async () => {
+      const panel = await ask([
+        ["column_stats", { id: cellLabels, column: "leiden", limit: 3 }],
+        [
+          "column_stats",
+          { id: cellLabels, column: "MS4A1", by: "obs/leiden", limit: 2 },
+        ],
+        [
+          "column_stats",
+          { id: cellLabels, column: "obs/cell_type", by: "leiden", limit: 1 },
+        ],
+        ["column_stats", { id: cellLabels, column: "obs/total_counts" }],
+      ]);
+      const [counts, byCluster, types, numbers] = results(panel);
+      expect(counts).toBe(
+        [
+          "obs/leiden of cell_labels: 2,000 items in 16 groups, largest first:",
+          "- 0: 125 (6.3%)",
+          "- 1: 125 (6.3%)",
+          "- 2: 125 (6.3%)",
+          "(+ 13 more groups)",
+        ].join("\n"),
+      );
+      // cluster 3 first, with the mean computed by hand: 5 + 124 / 125
+      expect(byCluster?.split("\n").slice(0, 2)).toEqual([
+        "X[MS4A1] of cell_labels by obs/leiden (16 groups), sorted by mean, highest first:",
+        "- 3: mean 5.992, median 6, min 5, max 7, above 0 in 100%, 125 items",
+      ]);
+      // five cell types, one in five rows: a fifth of each cluster
+      expect(types).toBe(
+        [
+          "obs/cell_type within each group of obs/leiden in cell_labels (16 groups), largest groups first:",
+          "- 0 (125 items): B cell 20%, Epithelial 20%, Fibroblast 20% (+ 2 more)",
+          "(+ 15 more groups)",
+        ].join("\n"),
+      );
+      // 100 + 1.5 i for the rows 0 to 1999, with 4 significant digits
+      expect(numbers).toBe(
+        "obs/total_counts of cell_labels: 2,000 items with a value: mean 1599, median 1599, min 100, max 3099, above 0 in 100%.",
+      );
+    });
+
+    it("joins the rows of two tables by the IDs of their items", async () => {
+      const panel = await ask([
+        ["column_stats", { id: cellCircles, column: "radius", by: "leiden" }],
+      ]);
+      const [result = ""] = results(panel);
+      expect(result).toContain(
+        "radius of cell_circles by obs/leiden (16 groups)",
+      );
+      // the 1000 circles are the cells 0 to 999 of the AnnData table
+      expect(result).toContain("All: mean 5.45, median 5.45, min 3, max 7.9");
+      expect(result).toContain(", 1,000 items.");
+    });
+
+    it("finds the marker genes of a cluster like scanpy, keeps them, and the lowest ones too", async () => {
+      const tables = makeTables();
+      const panel = await ask(
+        [
+          [
+            "marker_genes",
+            { id: cellLabels, by: "leiden", group: "3", limit: 2 },
+          ],
+          [
+            "marker_genes",
+            {
+              id: cellLabels,
+              by: "leiden",
+              group: "cluster 3",
+              limit: 1,
+              direction: "down",
+            },
+          ],
+        ],
+        makeDataStore(tables),
+      );
+      const [up = "", down = ""] = results(panel);
+      const lines = up.split("\n");
+      expect(lines.slice(0, 4)).toEqual([
+        'Marker genes of group "3" of obs/leiden in cell_labels: 125 items vs all the other items (1,875), over 377 genes of X.',
+        "Wilcoxon rank-sum test (Mann-Whitney U, ties corrected), p-values adjusted with Benjamini-Hochberg over all the genes. The values are whole numbers (counts): log2 fold change of the means.",
+        "Higher in the group, by z-score as scanpy sorts:",
+        // by hand: log2(5.992 / (268 / 1875)) = 5.3898
+        expect.stringMatching(
+          /^1\. MS4A1: log2FC 5\.39, in 100% of the group vs 14\.3% of the others, adj\. p \S+e-\d+$/,
+        ) as string,
+      ]);
+      expect(lines.at(-1)).toMatch(
+        /^Took [\d.]+ s to read and test the genes\.$/,
+      );
+      // the second question used the kept results: no gene was read again
+      expect(
+        tables["tables/table"]?.loaded.filter((c) => c.startsWith("X[")),
+      ).toHaveLength(377);
+      expect(down.split("\n")[3]).toMatch(
+        /^1\. PTPRC: log2FC -3\d\.\d+, in 0% of the group vs 100% of the others, adj\. p \S+e-\d+$/,
+      );
+      expect(down.split("\n").at(-1)).toMatch(/^From the results kept since /);
+    });
+
+    it("shows how far the marker genes are, and stops them", async () => {
+      const panel = await openPanel(
+        undefined,
+        makeDataStore(makeTables({ geneDelay: 5 })),
+        { provider: "anthropic" },
+      );
+      await panel.pasteKey(anthropicKey);
+      services.answers = [
+        {
+          toolCalls: [
+            ["marker_genes", { id: cellLabels, group: "3", by: "leiden" }],
+          ],
+        },
+        { content: "I stopped, as you asked." },
+      ];
+      panel.input.value = "Marker genes of cluster 3?";
+      panel.button("Send").click();
+      await vi.waitFor(() => expect(panel.button("Stop")).toBeDefined());
+      expect(panel.texts("Tool")[0]).toMatch(
+        /marker_genes\(.*\)\n… testing the genes: \d+ of 377 \(\d+%\), [\d.]+ sStop$/,
+      );
+      panel.button("Stop").click();
+      await vi.waitFor(() =>
+        expect(panel.button("Send").textContent).toBe("Send"),
+      );
+      expect(results(panel)).toEqual([
+        "Stopped by the user before the end: nothing was computed. Tell the user.",
+      ]);
+      expect(panel.button("Stop")).toBeUndefined();
+    });
+
+    it("compares a number between two clusters, and correlates two genes", async () => {
+      const panel = await ask([
+        [
+          "compare_groups",
+          {
+            id: cellLabels,
+            column: "total_counts",
+            by: "leiden",
+            group: "3",
+            reference: "5",
+          },
+        ],
+        [
+          "correlation",
+          { id: cellLabels, column_a: "MS4A1", column_b: "PTPRC" },
+        ],
+        [
+          "correlation",
+          {
+            id: cellLabels,
+            column_a: "MS4A1",
+            column_b: "PTPRC",
+            by: "leiden",
+            group: "3",
+          },
+        ],
+        [
+          "compare_groups",
+          { id: cellLabels, column: "total_counts", by: "leiden", group: "99" },
+        ],
+        [
+          "compare_groups",
+          { id: cellLabels, column: "cell_type", by: "leiden", group: "3" },
+        ],
+      ]);
+      const [compared = "", correlated, inGroup, noGroup, noNumbers] =
+        results(panel);
+      const lines = compared.split("\n");
+      // by hand: the rows 3 + 16 k and 5 + 16 k, so 1.5 · 2 lower; mean
+      // 1592.5 and max 3080.5, with 4 significant digits
+      expect(lines[0]).toBe(
+        'obs/total_counts of cell_labels, group "3" vs "5" of obs/leiden:',
+      );
+      expect(lines[1]).toBe(
+        '- "3": 125 items, mean 1593, median 1593, min 104.5, max 3081, above 0 in 100%',
+      );
+      expect(lines[3]).toMatch(
+        /^Difference "3" − "5": mean -3, median -3\. An item of "3" is higher than one of "5" in 49\.\d% of the pairs/,
+      );
+      expect(lines[4]).toMatch(
+        /^Wilcoxon rank-sum test \(Mann-Whitney U, ties corrected\): U = [\d.]+, p = 0\.9\d*\.$/,
+      );
+      expect(correlated).toMatch(
+        /^Spearman correlation of X\[MS4A1\] and X\[PTPRC\] in cell_labels: rho -0\.\d+ over 2,000 items, p = \S+\.$/,
+      );
+      expect(inGroup).toBe(
+        'Spearman correlation of X[MS4A1] and X[PTPRC] in cell_labels within group "3" of obs/leiden: not available over 125 items, since one of the columns is constant there.',
+      );
+      expect(noGroup).toMatch(
+        /^Error: obs\/leiden has no group "99"\. Its groups: 0, 1, 2, .*, 15\.$/,
+      );
+      expect(noNumbers).toBe(
+        "Error: obs/cell_type does not hold numbers. To compare groups of it, use column_stats with by.",
+      );
+    });
+
+    it("reads only what a huge table tells by itself, and nothing more", async () => {
+      const tables = makeTables();
+      const transcriptsTable = tables["points/transcripts@global"];
+      const panel = await ask(
+        [
+          ["column_stats", { id: transcripts, column: "feature_name" }],
+          ["column_stats", { id: transcripts, column: "qv" }],
+        ],
+        makeDataStore(tables),
+      );
+      expect(results(panel)).toEqual([
+        "Error: the table points/transcripts@global has 6,000,000 rows, too many to compute statistics in the browser. Tell the user; the table of the cells (one row per cell) can answer many such questions.",
+        "Error: the table points/transcripts@global has 6,000,000 rows, too many to compute statistics in the browser. Tell the user; the table of the cells (one row per cell) can answer many such questions.",
+      ]);
+      // a table that counts its values itself, e.g. from the file's metadata
+      Object.assign(transcriptsTable as object, {
+        loadUniqueValueCounts: () =>
+          Promise.resolve(
+            new Map([
+              ["EPCAM", 4_000_000],
+              ["KRT7", 2_000_000],
+            ]),
+          ),
+      });
+      const counted = await ask(
+        [["column_stats", { id: transcripts, column: "feature_name" }]],
+        makeDataStore(tables),
+      );
+      expect(results(counted)).toEqual([
+        [
+          "The table points/transcripts@global has 6,000,000 rows, too many to read here; the table counted its values itself.",
+          "feature_name of transcripts: 6,000,000 items in 2 groups, largest first:",
+          "- EPCAM: 4,000,000 (66.7%)",
+          "- KRT7: 2,000,000 (33.3%)",
+        ].join("\n"),
+      ]);
+    });
+
+    it("are only for OpenAI and Anthropic, which are told how to report them", async () => {
+      const panel = await ask([]);
+      const fixed = services.requests.at(-1)?.body?.system?.[0]?.text ?? "";
+      expect(fixed).toContain('warn about "double dipping"');
+      expect(fixed).toContain("Give the size of the effect first");
+      expect(fixed).toContain("exploratory, not for a publication");
+      expect(panel.texts("Tool")).toEqual([]);
+      const ollamaPanel = await openPanel();
+      modelCalls(["column_stats", { id: cellLabels, column: "leiden" }]);
+      await ollamaPanel.say("How many cells per cluster?");
+      const request = ollama.requests.at(-1);
+      expect(
+        request?.tools?.map((tool) => (tool.function as { name: string }).name),
+      ).not.toContain("column_stats");
+      expect(request?.messages[0]?.content).not.toContain("double dipping");
+      expect(results(ollamaPanel)).toEqual([
+        'Error: there is no tool called "column_stats".',
+      ]);
     });
   });
 
