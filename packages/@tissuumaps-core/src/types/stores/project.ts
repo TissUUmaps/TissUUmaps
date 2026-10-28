@@ -481,6 +481,16 @@ export type ProjectStoreActions = {
   ) => void;
 
   /**
+   * Shows or hides the colorbars
+   *
+   * @param colorbarsVisibility - Whether the viewer shows the colorbars of colors
+   * taken from table columns
+   */
+  setColorbarsVisibility: (
+    colorbarsVisibility: Project["colorbarsVisibility"],
+  ) => void;
+
+  /**
    * Replaces the project with a new, empty one
    */
   clear: () => void;

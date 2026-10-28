@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import {
   type Color,
   type ColorConfig,
   type TableColumnRef,
-  TableUtils,
   getActiveConfigSource,
   isConstantConfig,
   isFromConfig,
@@ -12,7 +11,7 @@ import {
   isRandomConfig,
 } from "@tissuumaps/core";
 
-import { useTableData } from "@/data/hooks/useData";
+import { useValueRange } from "@/data/hooks/useValueRange";
 import { useDraftState } from "@/hooks/useDraftState";
 
 import type { ColorConfigSource, ColorConfigWidgetAdapter } from "./adapter";
@@ -159,43 +158,12 @@ export function useColorConfigWidget(
     stateToConfig,
   );
 
-  const tableData = useTableData(
-    state.currentFromTableColumn?.table ?? tableId,
+  const fromColumnValueRange = useValueRange(
+    state.currentSource === "from" && state.currentFromTableColumn !== null
+      ? (state.currentFromTableColumn.table ?? tableId)
+      : null,
+    state.currentFromTableColumn?.column ?? null,
   );
-
-  const [fromColumnValueRange, setFromColumnValueRange] = useState<
-    [number, number] | null
-  >(null);
-
-  useEffect(() => {
-    // clear the previous column's range synchronously, so that the placeholder
-    // does not show a stale range while the new one is still loading
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setFromColumnValueRange(null);
-    if (
-      state.currentSource === "from" &&
-      state.currentFromTableColumn !== null &&
-      tableData !== null
-    ) {
-      const abortController = new AbortController();
-      TableUtils.loadValueRange(
-        tableData,
-        state.currentFromTableColumn.column,
-        { signal: abortController.signal },
-      )
-        .then((valueRange) => {
-          if (!abortController.signal.aborted) {
-            setFromColumnValueRange(valueRange ?? null);
-          }
-        })
-        .catch((error) => {
-          if (!abortController.signal.aborted) {
-            console.error("Error loading table value range", error);
-          }
-        });
-      return () => abortController.abort();
-    }
-  }, [tableData, state.currentSource, state.currentFromTableColumn]);
 
   const setters = useMemo(
     () => ({
