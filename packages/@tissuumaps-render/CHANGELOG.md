@@ -1,5 +1,13 @@
 # @tissuumaps/render
 
+## 0.1.0-beta.4
+
+### Patch Changes
+
+- [#387](https://github.com/TissUUmaps/TissUUmaps/pull/387) [`67de073`](https://github.com/TissUUmaps/TissUUmaps/commit/67de073b7d3e5a55e276ca7035dc057c8a643f59) Thanks [@cavenel](https://github.com/cavenel)! - Points smaller than 8 device pixels are no longer drawn on a faint square.
+- Updated dependencies [[`d6720ba`](https://github.com/TissUUmaps/TissUUmaps/commit/d6720ba27b069f73892a94a07fc3293e94c3faeb)]:
+  - @tissuumaps/core@0.1.0-beta.4
+
 ## 0.1.0-beta.3
 
 ### Minor Changes

@@ -1,5 +1,18 @@
 # tissuumaps
 
+## 4.0.0-beta.4
+
+### Minor Changes
+
+- [#312](https://github.com/TissUUmaps/TissUUmaps/pull/312) [`d6720ba`](https://github.com/TissUUmaps/TissUUmaps/commit/d6720ba27b069f73892a94a07fc3293e94c3faeb) Thanks [@cavenel](https://github.com/cavenel)! - Group the viewer controls into a toolbar.
+
+### Patch Changes
+
+- [#316](https://github.com/TissUUmaps/TissUUmaps/pull/316) [`4c665b6`](https://github.com/TissUUmaps/TissUUmaps/commit/4c665b64b3b224abf3b7fe9eb1475289a730666d) Thanks [@cavenel](https://github.com/cavenel)! - Files and folders can be dropped on data panels before a project is started.
+- Updated dependencies [[`67de073`](https://github.com/TissUUmaps/TissUUmaps/commit/67de073b7d3e5a55e276ca7035dc057c8a643f59), [`d6720ba`](https://github.com/TissUUmaps/TissUUmaps/commit/d6720ba27b069f73892a94a07fc3293e94c3faeb)]:
+  - @tissuumaps/render@0.1.0-beta.4
+  - @tissuumaps/core@0.1.0-beta.4
+
 ## 4.0.0-beta.3
 
 ### Minor Changes
