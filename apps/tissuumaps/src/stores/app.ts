@@ -2,7 +2,12 @@ import { createStore, useStore } from "zustand";
 import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 
-import type { AppStore, AppStoreApi, AppStoreState } from "@tissuumaps/core";
+import {
+  type AppStore,
+  type AppStoreApi,
+  type AppStoreState,
+  InteractionMode,
+} from "@tissuumaps/core";
 
 import { PanelId } from "@/panels";
 
@@ -79,7 +84,7 @@ function createInitialAppStoreState(): AppStoreState {
   return {
     workspace: null,
     projectOpen: false,
-    interactionMode: "pan",
+    interactionMode: InteractionMode.pan,
     imageChannelPreview: null,
     highlightedItemGroup: null,
     imageDataProviders: new Map(),
