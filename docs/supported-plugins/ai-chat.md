@@ -23,30 +23,13 @@ It cannot change or delete anything else, and it cannot filter by numbers (e.g. 
 
 Every request sends the model a summary of the project: the objects, how they are colored, and the useful columns of their tables. _Show context_ shows exactly what the model receives.
 
-### Statistics (OpenAI and Anthropic)
-
-With OpenAI and Anthropic, the assistant can also compute statistics on the columns of labels and points, in the browser:
-
-- _"How many cells are in each cluster?"_, _"what is the mean area per cluster?"_, _"which cluster has the most EPCAM?"_, _"which cell types are in each cluster?"_: counts per group, and the count, minimum, maximum, mean, median and % above 0 of numbers and genes, also for each group, sorted;
-- _"What are the marker genes of cluster 3?"_: like scanpy's `rank_genes_groups` with the Wilcoxon test, for each gene the log2 fold change, the % of cells expressing it in the cluster and outside, and the Wilcoxon rank-sum p-value, adjusted with Benjamini-Hochberg over all the genes;
-- _"Is the area different between cluster 3 and cluster 5?"_: the means and medians of both, their differences, and the Wilcoxon rank-sum test;
-- _"Are EPCAM and KRT7 correlated in cluster 3?"_: the Spearman correlation and its p-value.
-
-The results are shown as tables, with the numbers aligned: e.g. one row per cluster with its number of cells, mean, median, minimum, maximum and % above 0, or one row per marker gene. The panel lists all the groups (up to 100), the model only the first ones.
-
-The marker genes read every gene, a few at a time; a row of the chat shows how far they are, with a _Stop_ button, and the result is kept for later questions about the same group, until the table is loaded again. The result says how long it took, how much of it went to the tests, and how long the first gene took.
-
-These tools change nothing: to color or filter by a result (_"color that cluster in red"_), the assistant uses the usual tools afterwards. It reports the size of an effect before its p-value, and reminds you that with many cells almost every difference is significant, that genes tested between clusters computed from the same expression data give too optimistic p-values ("double dipping"), and that cells are not independent: the results are for exploring, not for a publication.
-
-Tables with more than 5 million rows, such as the transcripts of a Xenium dataset, are too big to read in the browser: only the counts or the value range that the table can give by itself are shown, if it can.
-
 All changes go through the project, like changes made by hand. _Undo_ takes back the changes of the last request, and _Undo all_ takes back every change made by the chat; settings changed by hand in the meantime are left as they are. _New chat_ starts a new conversation; Undo keeps working for the earlier changes.
 
 A few suggested requests for the open project are shown above the text box; click one to send it, without losing what you are typing. In the text box, the up and down arrows go through the messages you sent before, like in a terminal. To refer to a part of an answer, select it and click _Quote_: it is quoted in your next message.
 
 While the model works, until its final answer (also while a tool runs, and between one tool and the next), three dots blink next to an Italian word that changes every few seconds (_pensando_, _impastando_, _sbirciando nelle cellule_...), below the last message; point at the word to see what it means in English.
 
-Each tool call is one short line, with an icon and a summary, e.g. _📊 X[EPCAM] by obs/leiden: 16 groups, highest mean in 11_; click it to see the call and its whole result. _Show tool details_, in the settings (⚙), keeps them all open, and the browser remembers it. Errors, notes, and the row of a tool that is still working, with its _Stop_ button, are always shown.
+Each tool call is one short line, with an icon and the start of its result, e.g. _🌫 Done: …_; click it to see the call and its whole result. _Show tool details_, in the settings (⚙), keeps them all open, and the browser remembers it. Errors and notes are always shown.
 
 ### Dia and Aid
 
@@ -180,12 +163,6 @@ Deleting and clearing, adding objects, `updateTable`, the viewer options, `setIn
 The channels of an image are counted like the Images panel counts them: from the image's loaded data (`getSizeC()`), even when the image's `channels` list in the project is shorter. A change of a channel lengthens that list the way the panel does, with `{}` for the channels it did not list yet. The project summary lists each image's channels with their index, name, visibility and color, and the view mode.
 
 The result of an action lists exactly what changed, with the value before and after (e.g. `channels[1] (ATP1A1).visibility true → false`), and what already was so; if nothing changes, it says "Nothing changed" and Undo has nothing to take back. Only the settings that really change are changed, so that the model cannot claim more than the action did.
-
-The statistics tools `column_stats`, `marker_genes`, `compare_groups` and `correlation` are also only offered to OpenAI and Anthropic. They read columns with `loadValues` of the tables; a column of another table (e.g. the AnnData table of cell circles) is matched to the rows by the IDs of the items, with `TableUtils.forEachRow`, as TissUUmaps matches them. The computations are in `src/ai-chat/stats.ts`, without external libraries, and `stats.test.ts` checks them against values computed with SciPy: the Wilcoxon rank-sum test is `scipy.stats.mannwhitneyu(x, y, method="asymptotic")` (normal approximation, with tie and continuity corrections), Benjamini-Hochberg is `scipy.stats.false_discovery_control`, and Spearman is `scipy.stats.spearmanr` (p-value from Student's t). The log2 fold change follows scanpy: the means of whole numbers (counts) are compared as they are, other values are taken as log1p-transformed and turned back with `expm1`. `marker_genes` sorts the genes by z-score, as scanpy does; with 162,000 cells, the tests take about 4 ms per gene on a laptop, plus the time to read each gene. For tables with more than 5 million rows, only `loadUniqueValueCounts` and `loadValueRange` are used, when the table has them.
-
-Besides its short result for the model, a tool can give the panel a report (`ToolReport`): the line of its folded row, and its result as a table (`ResultTable`, columns and rows of text), which the panel builds with `textContent`, never as HTML.
-
-Reading the genes is what takes time. `marker_genes` asks for 6 genes at once, so that only a few columns are in memory. This helps with Zarr tables, whose reads are separate `fetch` requests that overlap. It does not help with HDF5 files (h5ad): `@tissuumaps/storage` reads them with h5wasm in a Web Worker, through a lazily loaded file whose 1 MB pieces come with synchronous HTTP requests, so the worker reads one column after the other, whatever the plugin asks. Reading them faster would need `@tissuumaps/storage` to read many columns of a matrix in one call (one pass over a dense matrix, or one range of a CSC matrix for consecutive genes), or bigger pieces of the lazy file. The time of the first gene, in the result, tells whether reading one gene downloads the whole matrix (a dense, row-chunked X).
 
 The names, tones and avatars of Dia and Aid, and the words shown while the model thinks, are in `persona.ts`, next to the plugin. The panel uses TissUUmaps' theme colors (CSS variables such as `--foreground` and `--muted`), so that it stays readable with the light and the dark theme.
 
