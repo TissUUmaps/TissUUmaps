@@ -25,6 +25,7 @@ const externalPackages = [
 
 // the entry points besides the root one, which only re-exports them
 const subpathEntries = {
+  "ai-chat": resolve(import.meta.dirname, "src/ai-chat/index.ts"),
   spatialdata: resolve(import.meta.dirname, "src/spatialdata/index.ts"),
 };
 

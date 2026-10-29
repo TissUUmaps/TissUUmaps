@@ -22,6 +22,11 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./ai-chat": {
+      "tissuumaps-development": "./src/ai-chat/index.ts",
+      "types": "./dist/ai-chat.d.ts",
+      "default": "./dist/ai-chat.js"
+    },
     "./spatialdata": {
       "tissuumaps-development": "./src/spatialdata/index.ts",
       "types": "./dist/spatialdata.d.ts",
@@ -32,10 +37,13 @@
   "scripts": {
     "build": "tsc -b tsconfig.src.json && vite build",
     "clean": "rm -rf build dist node_modules",
+    "generate:store-types": "node scripts/generate-store-types.ts",
     "test": "vitest run --passWithNoTests"
   },
   "devDependencies": {
-    "@tissuumaps/core": "workspace:^"
+    "@tissuumaps/core": "workspace:^",
+    "immer": "^11.1.8",
+    "zustand": "^5.0.15"
   },
   "peerDependencies": {
     "@tissuumaps/core": "workspace:^"
@@ -46,6 +54,10 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "./ai-chat": {
+        "types": "./dist/ai-chat.d.ts",
+        "default": "./dist/ai-chat.js"
       },
       "./spatialdata": {
         "types": "./dist/spatialdata.d.ts",
