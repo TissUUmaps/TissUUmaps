@@ -304,6 +304,17 @@ export class SourceUtils {
   }
 
   /**
+   * Returns whether a source is an app-relative path (with `//` prefix), which
+   * {@link SourceUtils.normalizeSource} turns into an absolute URL
+   *
+   * @param source - The source, as authored
+   * @returns `true` for app-relative paths
+   */
+  static isAppPath(source: string): boolean {
+    return source.startsWith(SourceUtils._appPathPrefix);
+  }
+
+  /**
    * Builds a workspace-relative path from the segments of a path within the
    * workspace, as returned by `FileSystemDirectoryHandle.resolve`
    *
