@@ -86,6 +86,64 @@ export class OpenSeadragonUtils {
     };
   }
 
+  private static _isolatedTileSourceCount = 0;
+
+  /**
+   * Gives an opened tile source its own tile cache namespace
+   *
+   * OpenSeadragon shares the cache records of tiles with equal cache keys
+   * between tiled images, and the keys of a tile source (see
+   * `TileSource.getTileHashKey`) depend on its data alone. Two tiled images
+   * that are opened from the same tile source instance - e.g. two labels
+   * objects on the same label mask, colored differently - would therefore
+   * share their cached tiles, and the data transfer of one would recolor the
+   * tiles of the other. The returned object inherits everything from the tile
+   * source, but salts the cache keys with a unique suffix and only equals
+   * itself, so each tiled image created from it caches and recolors its own
+   * tiles.
+   *
+   * @param tileSource - The opened tile source to isolate
+   * @returns A tile source that behaves like `tileSource`, with its own cache
+   * namespace
+   */
+  static isolateTileSource(
+    tileSource: OpenSeadragon.TileSource,
+  ): OpenSeadragon.TileSource {
+    const salt = `#isolated=${OpenSeadragonUtils._isolatedTileSourceCount++}`;
+    const isolatedTileSource = Object.create(
+      tileSource,
+    ) as OpenSeadragon.TileSource;
+    Object.defineProperties(isolatedTileSource, {
+      getTileHashKey: {
+        value: (
+          level: number,
+          x: number,
+          y: number,
+          url: string | (() => string),
+          ajaxHeaders?: object,
+          postData?: unknown,
+        ) =>
+          (
+            tileSource as unknown as {
+              getTileHashKey: (
+                level: number,
+                x: number,
+                y: number,
+                url: string | (() => string),
+                ajaxHeaders?: object,
+                postData?: unknown,
+              ) => string;
+            }
+          ).getTileHashKey(level, x, y, url, ajaxHeaders, postData) + salt,
+      },
+      equals: {
+        value: (other: OpenSeadragon.TileSource) =>
+          other === isolatedTileSource,
+      },
+    });
+    return isolatedTileSource;
+  }
+
   /**
    * Creates a tile source that fills the given size with a single tile
    *
