@@ -469,12 +469,13 @@ export async function saveProjectAs(
  * `ProjectStoreState.source`)
  * @param toProjectSource - The workspace-relative path of the new project file
  * (with `/` prefix)
- * @returns The project with rewritten sources, sharing the unchanged parts
+ * @returns The project with rewritten sources, sharing the objects whose source
+ * is unchanged
  * @throws Error if a source is invalid (see `SourceUtils.normalizeSource`)
  */
-export function rebaseProjectSources(
+function rebaseProjectSources(
   project: Project,
-  workspace: FileSystemDirectoryHandle | null,
+  workspace: FileSystemDirectoryHandle,
   fromProjectSource: string | null,
   toProjectSource: string,
 ): Project {

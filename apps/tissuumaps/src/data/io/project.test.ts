@@ -10,7 +10,6 @@ import {
   loadProject,
   makeProjectFileName,
   makeProjectLink,
-  rebaseProjectSources,
   resolveProjectSource,
   saveProjectAs,
   saveProjectToSourceFile,
@@ -237,74 +236,6 @@ function makeProjectWithSources(sources: string[]) {
   });
 }
 
-describe("rebaseProjectSources", () => {
-  it("makes workspace paths relative to the new file", () => {
-    const project = makeProjectWithSources(["/data/a.tif", "/shared/b.tif"]);
-    const rebased = rebaseProjectSources(
-      project,
-      workspace,
-      null,
-      "/data/study.tm4",
-    );
-    expect(rebased.images.map((image) => image.dataSource.source)).toEqual([
-      "a.tif",
-      "../shared/b.tif",
-    ]);
-  });
-
-  it("rebases paths relative to the old file", () => {
-    const project = makeProjectWithSources(["images/a.tif"]);
-    const rebased = rebaseProjectSources(
-      project,
-      workspace,
-      "/old/project.tm4",
-      "/new/sub/project.tm4",
-    );
-    expect(rebased.images[0]?.dataSource.source).toBe("../../old/images/a.tif");
-  });
-
-  it("keeps URLs and app-relative paths", () => {
-    const project = makeProjectWithSources([
-      "https://example.com/a.tif",
-      "//data/b.tif",
-    ]);
-    const rebased = rebaseProjectSources(
-      project,
-      workspace,
-      null,
-      "/study.tm4",
-    );
-    expect(rebased.images.map((image) => image.dataSource.source)).toEqual([
-      "https://example.com/a.tif",
-      "//data/b.tif",
-    ]);
-  });
-
-  it("makes paths relative to a URL project absolute", () => {
-    const project = makeProjectWithSources(["images/a.tif"]);
-    const rebased = rebaseProjectSources(
-      project,
-      workspace,
-      "https://example.com/study/project.tm4",
-      "/study.tm4",
-    );
-    expect(rebased.images[0]?.dataSource.source).toBe(
-      "https://example.com/study/images/a.tif",
-    );
-  });
-
-  it("keeps the objects whose source does not change", () => {
-    const project = makeProjectWithSources(["https://example.com/a.tif"]);
-    const rebased = rebaseProjectSources(
-      project,
-      workspace,
-      null,
-      "/study.tm4",
-    );
-    expect(rebased.images[0]).toBe(project.images[0]);
-  });
-});
-
 describe("makeProjectFileName", () => {
   it("sanitizes the project name", () => {
     expect(makeProjectFileName(" My study: v2 ")).toBe("My-study-v2.tm4");
@@ -363,6 +294,71 @@ describe("saveProjectAs", () => {
     expect(state.source).toBe("/data/study.tm4");
     expect(state.images[0]?.dataSource.source).toBe("a.tif");
     expect(hasUnsavedChanges(state)).toBe(true);
+  });
+
+  /**
+   * Opens a project with one image per source, saves it as a new file and
+   * returns the sources the open project switched to
+   */
+  async function saveSourcesAs(
+    sources: string[],
+    fromProjectSource: string | null,
+    toProjectSource: string,
+  ) {
+    const { sourceFile } = makeSourceFile(makeWritable());
+    loadProject(makeProjectWithSources(sources), fromProjectSource, null);
+    await saveProjectAs(sourceFile, toProjectSource, workspace);
+    return projectStore
+      .getState()
+      .images.map((image) => image.dataSource.source);
+  }
+
+  it("makes workspace paths relative to the new file", async () => {
+    await expect(
+      saveSourcesAs(["/data/a.tif", "/shared/b.tif"], null, "/data/study.tm4"),
+    ).resolves.toEqual(["a.tif", "../shared/b.tif"]);
+  });
+
+  it("rebases paths relative to the old file", async () => {
+    await expect(
+      saveSourcesAs(
+        ["images/a.tif"],
+        "/old/project.tm4",
+        "/new/sub/project.tm4",
+      ),
+    ).resolves.toEqual(["../../old/images/a.tif"]);
+  });
+
+  it("keeps URLs and app-relative paths", async () => {
+    await expect(
+      saveSourcesAs(
+        ["https://example.com/a.tif", "//data/b.tif"],
+        null,
+        "/study.tm4",
+      ),
+    ).resolves.toEqual(["https://example.com/a.tif", "//data/b.tif"]);
+  });
+
+  it("makes paths relative to a URL project absolute", async () => {
+    await expect(
+      saveSourcesAs(
+        ["images/a.tif"],
+        "https://example.com/study/project.tm4",
+        "/study.tm4",
+      ),
+    ).resolves.toEqual(["https://example.com/study/images/a.tif"]);
+  });
+
+  it("keeps the objects whose source does not change", async () => {
+    const { sourceFile } = makeSourceFile(makeWritable());
+    loadProject(
+      makeProjectWithSources(["https://example.com/a.tif"]),
+      null,
+      null,
+    );
+    const image = projectStore.getState().images[0];
+    await saveProjectAs(sourceFile, "/study.tm4", workspace);
+    expect(projectStore.getState().images[0]).toBe(image);
   });
 
   it("removes the project URL from the address bar", async () => {
