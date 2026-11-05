@@ -23,7 +23,7 @@ import { useProjectStore } from "@/stores/project";
 
 import { ProjectMenu } from "./ProjectMenu";
 import { formatProjectSource } from "./formatProjectSource";
-import { useSaveProjectToFolder } from "./hooks";
+import { useSaveProjectToSourceFile } from "./hooks";
 
 export type ProjectHeaderProps = {
   className?: string;
@@ -44,7 +44,7 @@ export function ProjectHeader({ className }: ProjectHeaderProps) {
   const pointsCount = useProjectStore((state) => state.points.length);
   const shapesCount = useProjectStore((state) => state.shapes.length);
   const tableCount = useProjectStore((state) => state.tables.length);
-  const saveProjectToFolder = useSaveProjectToFolder();
+  const saveProjectToSourceFile = useSaveProjectToSourceFile();
 
   const dataCounts: DataCount[] = [
     {
@@ -107,8 +107,8 @@ export function ProjectHeader({ className }: ProjectHeaderProps) {
           }}
           className="hover:border-input h-8 flex-1 border-transparent bg-transparent px-1.5 text-base font-semibold shadow-none md:text-base dark:bg-transparent"
         />
-        {saveProjectToFolder !== null && (
-          <IconButton label="Save project" onClick={saveProjectToFolder}>
+        {saveProjectToSourceFile !== null && (
+          <IconButton label="Save project" onClick={saveProjectToSourceFile}>
             <SaveIcon />
           </IconButton>
         )}

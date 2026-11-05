@@ -127,14 +127,14 @@ function useReportSaveError(): (error: unknown) => void {
  * @returns The callback, or `null` if the open project was not loaded from a
  * file in the workspace
  */
-export function useSaveProjectToFolder(): (() => void) | null {
+export function useSaveProjectToSourceFile(): (() => void) | null {
   const canSave = useProjectStore((state) => state.sourceFile !== null);
   const reportSaveError = useReportSaveError();
 
-  const saveProjectToFolder = useCallback(() => {
+  const saveToSourceFile = useCallback(() => {
     saveProjectToSourceFile().catch(reportSaveError);
   }, [reportSaveError]);
-  return canSave ? saveProjectToFolder : null;
+  return canSave ? saveToSourceFile : null;
 }
 
 /**
@@ -145,11 +145,11 @@ export function useSaveProjectToFolder(): (() => void) | null {
  *
  * @returns The callback, or `null` if no workspace is open
  */
-export function useSaveProjectToFolderAs(): (() => void) | null {
+export function useSaveProjectAs(): (() => void) | null {
   const workspace = useAppStore((state) => state.workspace);
   const reportSaveError = useReportSaveError();
 
-  const saveProjectToFolderAs = useCallback(() => {
+  const saveAs = useCallback(() => {
     if (workspace === null) {
       return;
     }
@@ -162,7 +162,7 @@ export function useSaveProjectToFolderAs(): (() => void) | null {
       })
       .catch(reportSaveError);
   }, [workspace, reportSaveError]);
-  return workspace !== null ? saveProjectToFolderAs : null;
+  return workspace !== null ? saveAs : null;
 }
 
 /**

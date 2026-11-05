@@ -28,8 +28,8 @@ import {
   useOpenProjectFromFile,
   useOpenProjectFromURL,
   useOpenWorkspace,
-  useSaveProjectToFolder,
-  useSaveProjectToFolderAs,
+  useSaveProjectAs,
+  useSaveProjectToSourceFile,
   workspaceUnsupportedMessage,
 } from "./hooks";
 
@@ -40,8 +40,8 @@ export type ProjectMenuProps = {
 export function ProjectMenu({ className }: ProjectMenuProps) {
   const openProjectFromFile = useOpenProjectFromFile();
   const openProjectFromURL = useOpenProjectFromURL();
-  const saveProjectToFolder = useSaveProjectToFolder();
-  const saveProjectToFolderAs = useSaveProjectToFolderAs();
+  const saveProjectToSourceFile = useSaveProjectToSourceFile();
+  const saveProjectAs = useSaveProjectAs();
   const copyProjectLink = useCopyProjectLink();
   const closeProject = useCloseProject();
   const openWorkspace = useOpenWorkspace();
@@ -77,24 +77,24 @@ export function ProjectMenu({ className }: ProjectMenuProps) {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          disabled={saveProjectToFolder === null}
-          onClick={saveProjectToFolder ?? undefined}
+          disabled={saveProjectToSourceFile === null}
+          onClick={saveProjectToSourceFile ?? undefined}
         >
           <SaveIcon />
           Save project
-          {saveProjectToFolder === null && (
+          {saveProjectToSourceFile === null && (
             <DropdownMenuItemDescription>
               Only for projects opened from the connected folder
             </DropdownMenuItemDescription>
           )}
         </DropdownMenuItem>
         <DropdownMenuItem
-          disabled={saveProjectToFolderAs === null}
-          onClick={saveProjectToFolderAs ?? undefined}
+          disabled={saveProjectAs === null}
+          onClick={saveProjectAs ?? undefined}
         >
           <SaveAllIcon />
           Save as…
-          {saveProjectToFolderAs === null && (
+          {saveProjectAs === null && (
             <DropdownMenuItemDescription>
               Needs a connected folder
             </DropdownMenuItemDescription>
