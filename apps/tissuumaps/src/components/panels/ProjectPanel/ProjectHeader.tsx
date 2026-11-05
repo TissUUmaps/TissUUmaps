@@ -120,21 +120,19 @@ export function ProjectHeader({ className }: ProjectHeaderProps) {
         </IconButton>
         <ProjectMenu />
       </div>
-      {(sourceLabel !== null || unsavedChanges) && (
+      {sourceLabel !== null && (
         <div className="text-muted-foreground flex min-w-0 items-center gap-1.5 px-1.5 text-xs">
-          {sourceLabel !== null && (
+          <SourceIcon className="size-3.5 shrink-0" />
+          <span className="truncate" title={source ?? undefined}>
+            {sourceLabel}
+          </span>
+          {unsavedChanges && (
             <>
-              <SourceIcon className="size-3.5 shrink-0" />
-              <span className="truncate" title={source ?? undefined}>
-                {sourceLabel}
+              <span>·</span>
+              <span className="text-foreground shrink-0 font-medium">
+                Unsaved changes
               </span>
             </>
-          )}
-          {sourceLabel !== null && unsavedChanges && <span>·</span>}
-          {unsavedChanges && (
-            <span className="text-foreground shrink-0 font-medium">
-              Unsaved changes
-            </span>
           )}
         </div>
       )}
