@@ -208,9 +208,10 @@ export type ColorConfig =
        *
        * Values are clipped to this range before mapping them to colors.
        *
-       * If not specified, min-max-scaling is used.
+       * If not specified, min-max-scaling is used. An end that is `null` is
+       * the minimum or maximum value of the table column.
        */
-      range?: [number, number];
+      range?: [number | null, number | null];
 
       /** ID of the color palette to which clipped and rescaled numerical values are mapped */
       palette: string;

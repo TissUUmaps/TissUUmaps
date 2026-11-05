@@ -48,14 +48,12 @@ function configToState(
       ? config.constant.value
       : defaultColor,
     currentFromTableColumn: isFromConfig(config) ? config.from : null,
-    currentFromRangeMin:
-      isFromConfig(config) && config.from.range !== undefined
-        ? config.from.range[0]
-        : null,
-    currentFromRangeMax:
-      isFromConfig(config) && config.from.range !== undefined
-        ? config.from.range[1]
-        : null,
+    currentFromRangeMin: isFromConfig(config)
+      ? (config.from.range?.[0] ?? null)
+      : null,
+    currentFromRangeMax: isFromConfig(config)
+      ? (config.from.range?.[1] ?? null)
+      : null,
     currentFromPalette: isFromConfig(config) ? config.from.palette : null,
     currentGroupByTableColumn: isGroupByConfig(config) ? config.groupBy : null,
     currentGroupByPalette:
@@ -106,7 +104,7 @@ function stateToConfig(
         from: {
           ...state.currentFromTableColumn,
           range:
-            state.currentFromRangeMin !== null &&
+            state.currentFromRangeMin !== null ||
             state.currentFromRangeMax !== null
               ? [state.currentFromRangeMin, state.currentFromRangeMax]
               : undefined,
