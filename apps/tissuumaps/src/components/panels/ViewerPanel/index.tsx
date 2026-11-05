@@ -20,6 +20,7 @@ import {
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
+import { ColorbarViewerControl } from "./ColorbarViewerControl";
 import {
   ScaleBarViewerControl,
   type ScaleBarViewerControlHandle,
@@ -155,6 +156,10 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
       {/* lines up to the right of the navigator, which is mounted first */}
       <ViewerControl anchor={ViewerControlAnchor.BOTTOM_LEFT} autoFade={false}>
         <ScaleBarViewerControl ref={scaleBarRef} viewportRef={viewportRef} />
+      </ViewerControl>
+      {/* never fades out, as the colorbars explain what the viewer shows */}
+      <ViewerControl anchor={ViewerControlAnchor.BOTTOM_RIGHT} autoFade={false}>
+        <ColorbarViewerControl />
       </ViewerControl>
     </Viewer>
   );
