@@ -220,9 +220,23 @@ export class ColorResolver {
       });
     }
     const data = await loadTable(config.from.table, { signal });
-    const valueRange =
-      config.from.range ??
-      (await TableUtils.loadValueRange(data, config.from.column, { signal }));
+    const [rangeMin, rangeMax] = config.from.range ?? [null, null];
+    let valueRange: [number, number] | undefined = undefined;
+    if (rangeMin !== null && rangeMax !== null) {
+      valueRange = [rangeMin, rangeMax];
+    } else {
+      const columnValueRange = await TableUtils.loadValueRange(
+        data,
+        config.from.column,
+        { signal },
+      );
+      if (columnValueRange !== undefined) {
+        valueRange = [
+          rangeMin ?? columnValueRange[0],
+          rangeMax ?? columnValueRange[1],
+        ];
+      }
+    }
     const packedColors = ColorResolver.createColorBuffer(ids.length, { align });
     await TableUtils.fillFromTableValues(
       packedColors,
