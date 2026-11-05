@@ -18,7 +18,7 @@ Image data sources have the `type` `"image"` and accept the following fields:
 
 At least one of `source` and `tileSource` is given. If both are, `tileSource` takes precedence and `source` is ignored.
 
-A `source` is opened as a plain image if its file name has a PNG, JPEG or WebP extension, or if it is a `data:image/...` URL. Any other `source` is handed to OpenSeadragon as the URL of a tile source descriptor. To open an image in another format the browser decodes, such as GIF, or one whose URL has no image extension, give it as an inline `tileSource` of type `image` (`{ "type": "image", "url": "..." }`).
+A `source` is opened as a plain image if its file name has a PNG, JPEG or WebP extension, or if it is a `data:image/...` URL. Any other `source` is handed to OpenSeadragon as the URL of a tile source descriptor. A descriptor whose URL has an image extension can only be given inline, as `tileSource`. To open an image in another format the browser decodes, such as GIF, or one whose URL has no image extension, give it as an inline `tileSource` of type `image` (`{ "type": "image", "url": "..." }`).
 
 ## Images
 

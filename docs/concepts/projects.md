@@ -16,7 +16,7 @@ In Chromium-based browsers (e.g. Chrome), a workspace can be opened alongside a 
 Open a workspace with "Open folder…" in the welcome view in the Project tab or in the Project tab's menu, then a project with "Open project from this folder…" in the welcome view, or "Open project file…" in the menu. The connected folder is shown at the bottom of the Project panel.
 A project file opened from outside the connected folder is opened only after confirmation. Its project-relative paths are then resolved within the connected folder instead of next to the project file, so its data may fail to load.
 While a folder is connected, the file and folder buttons next to a data source's Source field pick a file or a folder (e.g. a Zarr store) inside it and fill in its workspace-relative path.
-A project opened from the connected folder can be saved back to its file with Save, and any project can be saved as a new file in the folder with "Save as…" in the Project tab's menu, which rewrites its data sources relative to the new file. The Project tab marks unsaved changes.
+A project opened from or saved to the connected folder can be saved back to its file with "Save project", and any project can be saved as a new file in the folder with "Save as…" in the Project tab's menu, which rewrites the paths of its data sources in the folder relative to the new file. For a project with a file in the folder, the Project tab marks unsaved changes.
 
 ## Referencing data
 

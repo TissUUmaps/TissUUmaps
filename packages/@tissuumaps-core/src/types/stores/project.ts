@@ -21,15 +21,14 @@ import type { Table } from "../../model/table";
  */
 export type ProjectStoreState = Project & {
   /**
-   * Where the open project was loaded from: its absolute URL, the
-   * workspace-relative path of the project file, or `null` if it was loaded
-   * from neither
+   * Where the open project was loaded from or last saved as: its absolute URL,
+   * the workspace-relative path of the project file, or `null` if neither
    */
   source: string | null;
   /**
    * The project file within the workspace that the open project was loaded
-   * from, which it can be saved back to, or `null` if it was not loaded from
-   * such a file
+   * from or last saved as, which it can be saved back to, or `null` if there is
+   * no such file or the workspace has changed since
    */
   sourceFile: FileSystemFileHandle | null;
   /**

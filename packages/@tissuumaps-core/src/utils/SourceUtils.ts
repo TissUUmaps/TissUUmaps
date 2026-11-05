@@ -44,7 +44,8 @@
  * {@link SourceUtils.getStem} and {@link SourceUtils.getExtension} take them
  * apart, and
  * {@link SourceUtils.makeProjectPath} turns them back into project-relative
- * paths.
+ * paths. {@link SourceUtils.isAppPath} is the exception: it classifies a source
+ * as authored, before normalizing turns an app path into a URL.
  *
  * A relative path whose first segment contains a colon (e.g.
  * `sample1:ch2.tif`) is taken for a URL; write it as `./sample1:ch2.tif`
