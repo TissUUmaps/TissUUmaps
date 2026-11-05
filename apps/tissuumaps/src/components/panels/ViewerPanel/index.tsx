@@ -20,10 +20,7 @@ import {
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
-// TODO: restore once shape drawing is linked with actions
-// import { InteractionModeViewerControls } from "./InteractionModeViewerControls";
-import { HomeViewerControl } from "./HomeViewerControl";
-import { PointSizeViewerControl } from "./PointSizeViewerControl";
+import { ViewerToolbar } from "./ViewerToolbar";
 import { highlightItemGroup } from "./highlightItemGroup";
 
 export type ViewerPanelProps = {
@@ -128,21 +125,14 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
       backgroundColor={viewerBackgroundColor}
       className={className}
     >
-      {/* TODO: restore once shape drawing is linked with actions
-      <ViewerControl anchor={ViewerControlAnchor.TOP_LEFT}>
-        <InteractionModeViewerControls />
+      {/* not faded: the toolbar's menus and popovers render outside the
+          viewer, and OpenSeadragon fades its controls once the pointer
+          leaves it */}
+      <ViewerControl anchor={ViewerControlAnchor.TOP_RIGHT} autoFade={false}>
+        <ViewerToolbar
+          onResetViewport={() => viewerRef.current?.resetViewport()}
+        />
       </ViewerControl>
-      */}
-      {/* mounted first, so it keeps the corner: OpenSeadragon places each
-          later right-anchored control to the left of the existing ones */}
-      <ViewerControl anchor={ViewerControlAnchor.TOP_RIGHT}>
-        <HomeViewerControl onClick={() => viewerRef.current?.resetViewport()} />
-      </ViewerControl>
-      {projectState.points.length > 0 && (
-        <ViewerControl anchor={ViewerControlAnchor.TOP_RIGHT}>
-          <PointSizeViewerControl />
-        </ViewerControl>
-      )}
     </Viewer>
   );
 }

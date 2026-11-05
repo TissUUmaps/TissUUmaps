@@ -15,7 +15,7 @@ TissUUmaps is research software that is meant to be maintained over many years, 
 - **Resource efficiency**: the application handles large data sets in the browser; be deliberate about memory, network traffic and rendering cost.
 - **Maintainability and clean architecture**: respect module boundaries and keep responsibilities well separated (see [Code architecture](./code-architecture.md)).
 
-Conversely, we do not like shortcuts and "quick solutions", premature optimization, and unnecessary over-engineering. Abstractions must earn their place: new named types, generics, conditional types and similar constructs should only be introduced when there is a real need for them. If a single feature ships several of these without such a reason, it is over-engineered and should be simplified.
+Conversely, we do not like shortcuts and "quick solutions", premature optimization, and unnecessary over-engineering. Abstractions must earn their place: new named types, generics, conditional types and similar constructs should only be introduced when there is a real need for them. If a single feature ships several of these without such a reason, it is over-engineered and should be simplified. For example, a small object shape is typed inline, or derived from an existing type with `Pick<>`, rather than given a name of its own.
 
 ## Modules
 
@@ -29,7 +29,7 @@ Conversely, we do not like shortcuts and "quick solutions", premature optimizati
   export type Shape = (typeof Shape)[keyof typeof Shape];
   ```
 
-- Constants are camelCase module-level `const` declarations with a TSDoc comment, not `SCREAMING_CASE`.
+- Constants are camelCase with a TSDoc comment, not `SCREAMING_CASE`. A constant used by a single class is a `private static readonly` member of that class (`_maxCanvasSize`); all others are module-level `const` declarations.
 - Generic type parameters are prefixed with `T` (`TData`, `TValue`), not single letters beyond the trivial `T`.
 
 ## Classes

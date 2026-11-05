@@ -16,20 +16,23 @@ function Slider<Value extends number | readonly number[]>({
       data-slot="slider"
       value={value}
       defaultValue={defaultValue}
-      className={cn("relative flex w-full touch-none items-center", className)}
+      className={cn(
+        "relative flex w-full touch-none items-center data-[orientation=vertical]:w-auto data-[orientation=vertical]:flex-col",
+        className,
+      )}
       {...props}
     >
       <SliderPrimitive.Control
         data-slot="slider-control"
-        className="flex w-full items-center py-2"
+        className="flex w-full items-center py-2 data-[orientation=vertical]:h-full data-[orientation=vertical]:w-auto data-[orientation=vertical]:flex-col data-[orientation=vertical]:px-2 data-[orientation=vertical]:py-0"
       >
         <SliderPrimitive.Track
           data-slot="slider-track"
-          className="bg-input relative h-1.5 w-full grow overflow-hidden rounded-full"
+          className="bg-input relative h-1.5 w-full grow overflow-hidden rounded-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1.5"
         >
           <SliderPrimitive.Indicator
             data-slot="slider-indicator"
-            className="bg-primary absolute h-full"
+            className="bg-primary absolute h-full data-[orientation=vertical]:w-full"
           />
         </SliderPrimitive.Track>
         {Array.from({ length: thumbCount }, (_, index) => (
