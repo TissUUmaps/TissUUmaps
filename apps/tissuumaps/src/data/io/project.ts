@@ -337,12 +337,12 @@ export function makeProjectFileName(projectName: string): string {
  * project
  */
 export function saveAndDownloadProjectToJSON(project?: Project): void {
-  const savedProject = saveProject(project);
-  const projectJSON = JSONUtils.stringify(savedProject);
+  const cleanedProject = saveProject(project);
+  const projectJSON = JSONUtils.stringify(cleanedProject);
   const projectBlob = new Blob([projectJSON], { type: "application/json" });
   const projectUrl = URL.createObjectURL(projectBlob);
   const projectLink = document.createElement("a");
-  projectLink.download = makeProjectFileName(savedProject.name);
+  projectLink.download = makeProjectFileName(cleanedProject.name);
   projectLink.href = projectUrl;
   projectLink.click();
   setTimeout(() => URL.revokeObjectURL(projectUrl), 60_000);
@@ -372,7 +372,9 @@ export async function saveProjectToSourceFile(options?: {
   signal?.throwIfAborted();
   const state = projectStore.getState();
   if (state.sourceFile === null) {
-    throw new Error("The open project was not loaded from the workspace");
+    throw new Error(
+      "The open project was not opened from the connected folder",
+    );
   }
   const { instanceId } = state;
   const project = pickProject(state);
