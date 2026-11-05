@@ -79,7 +79,7 @@ async function rasterizeAndDecode(
   geometry: ShapesGeometry,
   shapesMask: Uint8Array | undefined,
   objectBounds: Rect,
-  options?: { signal?: AbortSignal },
+  options?: { signal?: AbortSignal; shapeOrder?: Uint32Array },
 ) {
   const buffer = await WebGLShapesRasterizer.rasterizeScanlines(
     numScanlines,
@@ -898,6 +898,71 @@ describe("WebGLShapesRasterizer.rasterizeScanlines", () => {
     expect(scanlines[0]!.bins).toEqual([[0], [0], [0, 1], [0, 1]]);
   });
 
+  it("lists the shapes per bin in the given order", async () => {
+    const geometry = createTestGeometry([
+      createTestSquare(0, 0, 1, 1),
+      createTestSquare(0, 0, 1, 1),
+      createTestSquare(0, 0, 1, 1),
+    ]);
+
+    const { scanlines } = await rasterizeAndDecode(
+      1,
+      1,
+      0.5,
+      0.5,
+      geometry,
+      undefined,
+      unitBounds,
+      { shapeOrder: new Uint32Array([2, 0, 1]) },
+    );
+
+    expect(scanlines[0]!.bins).toEqual([[2, 0, 1]]);
+  });
+
+  it("orders the included shapes by their compacted index", async () => {
+    // shape 1 is masked out, shape 3 becomes compacted index 2
+    const geometry = createTestGeometry([
+      createTestSquare(0, 0, 0.25, 1),
+      createTestSquare(0, 0, 1, 1),
+      createTestSquare(0, 0, 0.5, 1),
+      createTestSquare(0, 0, 0.75, 1),
+    ]);
+
+    const { scanlines } = await rasterizeAndDecode(
+      1,
+      1,
+      0.5,
+      0.5,
+      geometry,
+      new Uint8Array([1, 0, 1, 1]),
+      unitBounds,
+      { shapeOrder: new Uint32Array([2, 0, 1]) },
+    );
+
+    expect(scanlines[0]!.bins).toEqual([[2, 0, 1]]);
+    expect(scanlines[0]!.shapes.get(2)!.xMax).toBe(0.75);
+  });
+
+  it("rejects a shape order that does not hold one index per included shape", async () => {
+    const geometry = createTestGeometry([
+      createTestSquare(0, 0, 1, 1),
+      createTestSquare(0, 0, 1, 1),
+    ]);
+
+    await expect(
+      rasterizeAndDecode(
+        1,
+        1,
+        0.5,
+        0.5,
+        geometry,
+        new Uint8Array([1, 0]),
+        unitBounds,
+        { shapeOrder: new Uint32Array([0, 1]) },
+      ),
+    ).rejects.toThrow("expected one per included shape (1)");
+  });
+
   it("bins a multi-polygon shape by its x-range on each scanline", async () => {
     // with 8 scanlines and 8 bins: the lower-left polygon covers scanlines 0-2
     // and bins 0-2, the upper-right one scanlines 5-7 and bins 5-7 (with slack)
@@ -1073,7 +1138,7 @@ describe("WebGLShapesRasterizer.rasterizeScanlines", () => {
       expect(maybeYield).toHaveBeenCalledWith({ signal: controller.signal });
     });
 
-    it("yields for masked-out shapes as well", async () => {
+    it("yields for masked-out shapes in the first pass only", async () => {
       const geometry = createTestGeometry([
         createTestSquare(0, 0, 1, 1),
         createTestSquare(0, 0, 1, 1),
@@ -1091,7 +1156,7 @@ describe("WebGLShapesRasterizer.rasterizeScanlines", () => {
         unitBounds,
       );
 
-      expect(maybeYield).toHaveBeenCalledTimes(2 * 2);
+      expect(maybeYield).toHaveBeenCalledTimes(2);
     });
 
     it("rejects when the signal is aborted mid-iteration", async () => {

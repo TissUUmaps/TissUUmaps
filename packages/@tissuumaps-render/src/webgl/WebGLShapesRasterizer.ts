@@ -232,9 +232,9 @@ export class WebGLShapesRasterizer {
    * padded by `binPadding` to the left and right. The paddings let the strokes
    * the fragment shader draws around a shape, which reach beyond it, find the
    * shape from the neighboring scanlines and bins as well (see
-   * `WebGLShapesRenderOptions.shapePadding`). As shapes are
-   * assigned in order, every bin lists its shapes in ascending order, which is
-   * the order the fragment shader composites them in.
+   * `WebGLShapesRenderOptions.shapePadding`). Every bin lists its shapes in
+   * the order the fragment shader composites them in, which is `shapeOrder` if
+   * given, and ascending order otherwise.
    *
    * Shapes are identified by their index among the *included* shapes, i.e.
    * `shapesMask` compacts the indices. Holes contribute their edges, but not
@@ -248,12 +248,12 @@ export class WebGLShapesRasterizer {
    * The shapes fragment shader documents the layout, and is the authority on
    * it.
    *
-   * The shapes are rasterized twice, without keeping any per-shape data in
-   * between: the first pass only counts the shapes and edges on every
+   * The shapes are rasterized twice, keeping only the index of every included
+   * shape in between: the first pass only counts the shapes and edges on every
    * scanline and the shapes in every bin, which determines where everything
    * goes, and the second pass writes the shapes, their edges and the bins'
-   * shape refs right there. Apart from the buffer itself, this only
-   * takes a few counters per scanline and one per bin.
+   * shape refs right there, in draw order. Apart from the buffer and
+   * these indices, this only takes a few counters per scanline and one per bin.
    *
    * Yields between shapes, i.e. long-running rasterizations neither block the
    * event loop nor ignore an abort for long.
@@ -267,12 +267,14 @@ export class WebGLShapesRasterizer {
    * @param geometry - Geometry for all shapes in the object
    * @param shapesMask - Per-shape inclusion mask, or `undefined` if all shapes are included
    * @param objectBounds - Bounding box of all shapes
-   * @param options - Optional abort signal and alignment, in 32-bit values, to
-   * pad the buffer to (used to fill whole texture lines)
+   * @param options - Optional abort signal, alignment, in 32-bit values, to
+   * pad the buffer to (used to fill whole texture lines), and draw order
+   * (`shapeOrder`, the indices of the included shapes in that order)
    * @returns The packed buffer. Without scanlines or bins, there is nothing to
    * rasterize into, and the buffer is empty
    * @throws Error if `objectBounds` has a non-positive width or height, as shapes
    * cannot be rasterized into a degenerate bounding box
+   * @throws Error if `shapeOrder` does not hold one index per included shape
    */
   static async rasterizeScanlines(
     numScanlines: number,
@@ -282,9 +284,13 @@ export class WebGLShapesRasterizer {
     geometry: ShapesGeometry,
     shapesMask: Uint8Array | undefined,
     objectBounds: Rect,
-    options?: { signal?: AbortSignal; align?: number },
+    options?: {
+      signal?: AbortSignal;
+      align?: number;
+      shapeOrder?: Uint32Array;
+    },
   ): Promise<ArrayBuffer> {
-    const { signal, align = 1 } = options ?? {};
+    const { signal, align = 1, shapeOrder } = options ?? {};
     signal?.throwIfAborted();
     if (objectBounds.width <= 0 || objectBounds.height <= 0) {
       throw new Error("Object bounds must have a positive width and height");
@@ -309,8 +315,12 @@ export class WebGLShapesRasterizer {
     const scanlineNumEdges = new Uint32Array(numScanlines);
     const binNumShapes = new Uint32Array(numScanlines * numBins);
     let totalNumBinShapes = 0;
+    // the index in `geometry` of every included shape
+    const includedShapes = new Uint32Array(shapePolygonOffsets.length - 1);
+    let numIncludedShapes = 0;
     for (let s = 0; s < shapePolygonOffsets.length - 1; s++) {
       if (shapesMask === undefined || shapesMask[s]! > 0) {
+        includedShapes[numIncludedShapes++] = s;
         const { firstShapeScanline, lastShapeScanline } =
           WebGLShapesRasterizer._rasterizeShape(
             s,
@@ -351,6 +361,11 @@ export class WebGLShapesRasterizer {
       }
       await maybeYield({ signal });
     }
+    if (shapeOrder !== undefined && shapeOrder.length !== numIncludedShapes) {
+      throw new Error(
+        `The shape order holds ${shapeOrder.length} indices, expected one per included shape (${numIncludedShapes})`,
+      );
+    }
     // lay out the buffer
     const numBinTexels = Math.ceil((numScanlines * numBins) / 2);
     const numShapeRefTexels = Math.ceil(totalNumBinShapes / 4);
@@ -382,59 +397,57 @@ export class WebGLShapesRasterizer {
       uint32Buffer[2 * bin + 1] = numBinShapes;
       shapeRefValueOffset += numBinShapes;
     }
-    // second pass: write the shapes, their edges and the bins' shape refs
-    let includedShapeCount = 0; // compacted index over included shapes
-    for (let s = 0; s < shapePolygonOffsets.length - 1; s++) {
-      if (shapesMask === undefined || shapesMask[s]! > 0) {
-        const { firstShapeScanline, lastShapeScanline } =
-          WebGLShapesRasterizer._rasterizeShape(
-            s,
-            geometry,
-            objectBounds,
-            numScanlines,
-            scanlinePadding,
-            scanlineMeta,
-            { float32Buffer, scanlineTexelOffsets },
-          );
-        for (
-          let shapeScanline = firstShapeScanline;
-          shapeScanline <= lastShapeScanline;
-          shapeScanline++
-        ) {
-          if (scanlineMeta.hasShape[shapeScanline] !== 0) {
-            const shapeTexelOffset = scanlineTexelOffsets[shapeScanline]!;
-            const shapeValueOffset = 4 * shapeTexelOffset;
-            uint32Buffer[shapeValueOffset] = includedShapeCount;
-            uint32Buffer[shapeValueOffset + 1] =
-              scanlineMeta.numEdges[shapeScanline]!;
-            float32Buffer[shapeValueOffset + 2] =
-              scanlineMeta.xMins[shapeScanline]!;
-            float32Buffer[shapeValueOffset + 3] =
-              scanlineMeta.xMaxs[shapeScanline]!;
-            const { firstBin: firstShapeBin, lastBin: lastShapeBin } =
-              WebGLShapesRasterizer._computeBinRange(
-                scanlineMeta.xMins[shapeScanline]!,
-                scanlineMeta.xMaxs[shapeScanline]!,
-                numBins,
-                binPadding,
-                objectBounds,
-              );
-            for (
-              let shapeBin = firstShapeBin;
-              shapeBin <= lastShapeBin;
-              shapeBin++
-            ) {
-              const index = binShapeRefValueOffsets[
-                shapeScanline * numBins + shapeBin
-              ]!++;
-              uint32Buffer[index] = shapeTexelOffset;
-            }
-            scanlineTexelOffsets[shapeScanline] =
-              shapeTexelOffset + 1 + scanlineMeta.numEdges[shapeScanline]!;
-            scanlineMeta.hasShape[shapeScanline] = 0;
+    // second pass: write the shapes, their edges and the bins' shape refs, in
+    // the order the shapes are composited in
+    for (let i = 0; i < numIncludedShapes; i++) {
+      const shapeIndex = shapeOrder !== undefined ? shapeOrder[i]! : i;
+      const { firstShapeScanline, lastShapeScanline } =
+        WebGLShapesRasterizer._rasterizeShape(
+          includedShapes[shapeIndex]!,
+          geometry,
+          objectBounds,
+          numScanlines,
+          scanlinePadding,
+          scanlineMeta,
+          { float32Buffer, scanlineTexelOffsets },
+        );
+      for (
+        let shapeScanline = firstShapeScanline;
+        shapeScanline <= lastShapeScanline;
+        shapeScanline++
+      ) {
+        if (scanlineMeta.hasShape[shapeScanline] !== 0) {
+          const shapeTexelOffset = scanlineTexelOffsets[shapeScanline]!;
+          const shapeValueOffset = 4 * shapeTexelOffset;
+          uint32Buffer[shapeValueOffset] = shapeIndex;
+          uint32Buffer[shapeValueOffset + 1] =
+            scanlineMeta.numEdges[shapeScanline]!;
+          float32Buffer[shapeValueOffset + 2] =
+            scanlineMeta.xMins[shapeScanline]!;
+          float32Buffer[shapeValueOffset + 3] =
+            scanlineMeta.xMaxs[shapeScanline]!;
+          const { firstBin: firstShapeBin, lastBin: lastShapeBin } =
+            WebGLShapesRasterizer._computeBinRange(
+              scanlineMeta.xMins[shapeScanline]!,
+              scanlineMeta.xMaxs[shapeScanline]!,
+              numBins,
+              binPadding,
+              objectBounds,
+            );
+          for (
+            let shapeBin = firstShapeBin;
+            shapeBin <= lastShapeBin;
+            shapeBin++
+          ) {
+            const index = binShapeRefValueOffsets[
+              shapeScanline * numBins + shapeBin
+            ]!++;
+            uint32Buffer[index] = shapeTexelOffset;
           }
+          scanlineTexelOffsets[shapeScanline] =
+            shapeTexelOffset + 1 + scanlineMeta.numEdges[shapeScanline]!;
+          scanlineMeta.hasShape[shapeScanline] = 0;
         }
-        includedShapeCount++;
       }
       await maybeYield({ signal });
     }
