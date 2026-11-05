@@ -648,6 +648,18 @@ describe("SourceUtils", () => {
     });
   });
 
+  describe("isAppPath", () => {
+    it("returns true for app-relative paths", () => {
+      expect(SourceUtils.isAppPath("//data/points.csv")).toBe(true);
+    });
+
+    it("returns false for other sources", () => {
+      expect(SourceUtils.isAppPath("/proj/points.csv")).toBe(false);
+      expect(SourceUtils.isAppPath("points.csv")).toBe(false);
+      expect(SourceUtils.isAppPath("https://x.example/f.csv")).toBe(false);
+    });
+  });
+
   describe("makeWorkspacePath", () => {
     it("joins the segments with the workspace prefix", () => {
       expect(SourceUtils.makeWorkspacePath(["proj", "points.csv"])).toBe(

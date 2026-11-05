@@ -14,11 +14,10 @@ import type { Table } from "../../model/table";
  *
  * In addition to the project itself, the store keeps track of where the
  * project was loaded from, which is what project-relative paths in its data
- * sources are resolved against, and of an ID identifying the open project as
- * such. Both
- * describe how the project was opened rather than what it contains, so they are
- * not part of {@link Project} and are not to be saved, serialized or exported
- * with it.
+ * sources are resolved against, of an ID identifying the open project as such,
+ * and of the project as it was last loaded or saved. None of these are part of
+ * {@link Project}, and they are not to be saved, serialized or exported with
+ * it.
  */
 export type ProjectStoreState = Project & {
   /**
@@ -28,11 +27,23 @@ export type ProjectStoreState = Project & {
    */
   source: string | null;
   /**
+   * The project file within the workspace that the open project was loaded
+   * from, which it can be saved back to, or `null` if it was not loaded from
+   * such a file
+   */
+  sourceFile: FileSystemFileHandle | null;
+  /**
    * Identifies the open project regardless of its content: a fresh ID is
    * generated whenever a project is loaded or the store is cleared, so that a
    * new project can be told apart from edits to the open one
    */
   instanceId: string;
+  /**
+   * The open project as it was when it was last loaded or saved, sharing its
+   * unchanged parts with the open project, so that a part that differs by
+   * reference has unsaved changes
+   */
+  savedProject: Project;
 };
 
 /**
