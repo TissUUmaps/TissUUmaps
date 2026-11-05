@@ -40,6 +40,9 @@ function cleanProject(project: Project): Project {
     osOptions: structuredClone(project.osOptions),
     glOptions: structuredClone(project.glOptions),
     viewerBackgroundColor: structuredClone(project.viewerBackgroundColor),
+    worldUnitSize: project.worldUnitSize,
+    lengthUnit: project.lengthUnit,
+    scaleBarVisibility: project.scaleBarVisibility,
   };
 }
 

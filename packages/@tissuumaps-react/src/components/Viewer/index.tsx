@@ -21,6 +21,17 @@ export type ViewerProps = {
   children?: ReactNode;
   className?: string;
   ref?: Ref<OpenSeadragonContext>;
+
+  /**
+   * Called once the viewer is ready, and then whenever the viewport or the
+   * container size changes, before the viewer draws the new viewport
+   *
+   * A new identity resubscribes and calls it again.
+   *
+   * @param viewport - Visible viewport, in world coordinates
+   * @param containerSize - Container size, in CSS pixels
+   */
+  onViewportChange?: (viewport: Rect, containerSize: Dims) => void;
 };
 
 export function Viewer({
@@ -29,6 +40,7 @@ export function Viewer({
   children,
   className,
   ref,
+  onViewportChange,
 }: ViewerProps) {
   const [osContext, setOSContext] = useState<OpenSeadragonContext | null>(null);
 
@@ -106,6 +118,21 @@ export function Viewer({
     setGLContainerSize,
     setSVGContainerSize,
   ]);
+
+  useEffect(() => {
+    if (osContext === null || onViewportChange === undefined) {
+      return;
+    }
+    const onViewportChanged = () => {
+      onViewportChange(osContext.getViewport(), osContext.getContainerSize());
+    };
+    onViewportChanged();
+    // OpenSeadragon raises "viewport-change" after every container resize too
+    osContext.viewer.addHandler("viewport-change", onViewportChanged);
+    return () => {
+      osContext.viewer.removeHandler("viewport-change", onViewportChanged);
+    };
+  }, [osContext, onViewportChange]);
 
   useEffect(() => {
     const osContentBounds = [];
