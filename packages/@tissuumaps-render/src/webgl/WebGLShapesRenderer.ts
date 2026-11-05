@@ -24,6 +24,7 @@ import {
   defaultShapeStrokeOpacity,
   defaultShapeStrokeVisibility,
   defaultShapeVisibility,
+  getActiveConfigSource,
   projectDefaults,
 } from "@tissuumaps/core";
 
@@ -47,7 +48,9 @@ import { WebGLUtils } from "./WebGLUtils";
  * Shapes are rasterized on the GPU via a scanline-based algorithm. Each shapes
  * object is represented by a quad covering its bounds within the viewport,
  * whose fragment shader samples a scanline data texture to determine polygon
- * membership, fill colors, and stroke colors.
+ * membership, fill colors, and stroke colors. Shapes whose fill color is taken
+ * `from` a table column are drawn in ascending order of its values, so that
+ * high values are on top (see {@link ColorResolver.resolveColorOrder}).
  *
  * Every object owns its textures. Synchronizing compares the current model
  * against the snapshot those textures were built from, and rebuilds only the
@@ -311,13 +314,15 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   /**
    * Prepares everything that has to be uploaded for an object
    *
-   * Decides what the object's textures need - the geometry for a new object or
-   * changed grid render options (see {@link getRenderOptionsSyncState}), and
-   * the resolved fill and stroke colors whose configurations or referenced
-   * maps changed (see {@link _createRenderConfigSnapshot}) -
-   * requests all of it before the first `await`, and then computes the bounds,
-   * the grid size and the paddings, rasterizes the scanline data and folds the
-   * resolved visibilities and opacities into the colors.
+   * Decides what the object's textures need - the geometry and the draw order
+   * for a new object, changed grid render options (see
+   * {@link getRenderOptionsSyncState}) or a changed draw order (see
+   * {@link _checkShapeOrderChanged}), and the resolved fill and stroke colors
+   * whose configurations or referenced maps changed (see
+   * {@link _createRenderConfigSnapshot}) - requests all of it before the first
+   * `await`, and then computes the bounds, the grid size and the paddings,
+   * rasterizes the scanline data in the draw order and folds the resolved
+   * visibilities and opacities into the colors.
    *
    * See {@link WebGLRendererBase.prepareRenderedObject} for when this runs.
    *
@@ -344,13 +349,17 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     );
     const { edgesPerScanline, binWidthFactor, shapePadding } =
       this.renderOptions;
-    const geometryChanged =
+    const renderConfigSnapshot =
+      WebGLShapesRenderer._createRenderConfigSnapshot(newRef, syncContext);
+    const scanlineDataChanged =
       renderedShapes === undefined ||
       renderedShapes.edgesPerScanline !== edgesPerScanline ||
       renderedShapes.binWidthFactor !== binWidthFactor ||
-      renderedShapes.shapePadding !== shapePadding;
-    const renderConfigSnapshot =
-      WebGLShapesRenderer._createRenderConfigSnapshot(newRef, syncContext);
+      renderedShapes.shapePadding !== shapePadding ||
+      WebGLShapesRenderer._checkShapeOrderChanged(
+        renderedShapes,
+        renderConfigSnapshot,
+      );
     const fillColorsChanged =
       WebGLShapesRenderer._checkShapeFillColorsTextureChanged(
         renderedShapes,
@@ -361,8 +370,16 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         renderedShapes,
         renderConfigSnapshot,
       );
-    const geometryPromise = geometryChanged
+    const geometryPromise = scanlineDataChanged
       ? newRef.data.loadGeometry({ signal })
+      : undefined;
+    const shapeOrderPromise = scanlineDataChanged
+      ? ColorResolver.resolveColorOrder(
+          newRef.itemIds,
+          newRef.object.shapeFillColor,
+          loadTable,
+          { signal },
+        )
       : undefined;
     const colorsChanged = fillColorsChanged || strokeColorsChanged;
     const packedShapeVisibilitiesPromise = colorsChanged
@@ -479,6 +496,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       packedShapeStrokeColors,
       packedShapeStrokeVisibilities,
       packedShapeStrokeOpacities,
+      shapeOrder,
     ] = await Promise.all([
       geometryPromise,
       packedShapeVisibilitiesPromise,
@@ -489,6 +507,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       packedShapeStrokeColorsPromise,
       packedShapeStrokeVisibilitiesPromise,
       packedShapeStrokeOpacitiesPromise,
+      shapeOrderPromise,
     ]);
     signal?.throwIfAborted();
     let objectBounds: Rect;
@@ -525,7 +544,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         geometry,
         newRef.itemsMask,
         objectBounds,
-        { signal },
+        { signal, shapeOrder: shapeOrder ?? undefined },
       );
       this._checkDataTextureSize(
         "scanline data",
@@ -719,9 +738,10 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   /**
    * Builds the scanline data of a shapes object
    *
-   * Rasterizes all shapes into horizontal scanlines and their x-bins, packed
-   * into a 32-bit integer buffer, aligned to the lines of the scanline data
-   * texture that {@link _createScanlineDataTexture} creates from it.
+   * Rasterizes all shapes into horizontal scanlines and their x-bins, in the
+   * given order, packed into a 32-bit integer buffer, aligned to the lines of
+   * the scanline data texture that {@link _createScanlineDataTexture} creates
+   * from it.
    *
    * @param numScanlines - Number of scanlines to rasterize into
    * @param numBins - Number of x-bins per scanline
@@ -730,7 +750,8 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * @param geometry - Geometry for all shapes in the object
    * @param shapesMask - Per-shape inclusion mask, or `undefined` if all shapes are included
    * @param objectBounds - Axis-aligned bounding box of all shapes
-   * @param options - Optional abort signal
+   * @param options - Optional abort signal and order to draw the shapes in
+   * (see {@link WebGLShapesRasterizer.rasterizeScanlines})
    * @returns The packed scanline data
    */
   private static async _createScanlineBuffer(
@@ -741,9 +762,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     geometry: ShapesGeometry,
     shapesMask: Uint8Array | undefined,
     objectBounds: Rect,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; shapeOrder?: Uint32Array },
   ): Promise<Uint32Array> {
-    const { signal } = options ?? {};
+    const { signal, shapeOrder } = options ?? {};
     signal?.throwIfAborted();
     const scanlineBuffer = await WebGLShapesRasterizer.rasterizeScanlines(
       numScanlines,
@@ -755,6 +776,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       objectBounds,
       {
         align: WebGLShapesRenderer._numValuesPerScanlineDataTextureLine,
+        shapeOrder,
         signal,
       },
     );
@@ -1049,6 +1071,31 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       ) ||
       renderedShapes.renderConfigSnapshot.shapeStrokeOpacityMap !==
         newSnapshot.shapeStrokeOpacityMap
+    );
+  }
+
+  /**
+   * Returns whether the draw order of an object has to be resolved again
+   *
+   * The order only depends on the fill color configuration, and is item order
+   * unless it is a `from` source (see {@link ColorResolver.resolveColorOrder}).
+   * A change between two other sources therefore keeps the order, and does not
+   * rasterize the shapes again.
+   */
+  private static _checkShapeOrderChanged(
+    renderedShapes: RenderedShapes | undefined,
+    newSnapshot: RenderedShapes["renderConfigSnapshot"],
+  ): boolean {
+    return (
+      renderedShapes === undefined ||
+      ((getActiveConfigSource(
+        renderedShapes.renderConfigSnapshot.shapeFillColor,
+      ) === "from" ||
+        getActiveConfigSource(newSnapshot.shapeFillColor) === "from") &&
+        !deepEqual(
+          renderedShapes.renderConfigSnapshot.shapeFillColor,
+          newSnapshot.shapeFillColor,
+        ))
     );
   }
 
