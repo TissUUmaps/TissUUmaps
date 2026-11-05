@@ -2,6 +2,7 @@ import { useCallback } from "react";
 
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { usePromptDialog } from "@/components/dialogs/PromptDialog/hooks";
+import { pickFileFromInput } from "@/components/pick-file-from-input";
 import {
   clearProjectURLParam,
   loadProjectFromFile,
@@ -10,11 +11,13 @@ import {
   resolveProjectSource,
   setProjectURLParam,
 } from "@/data/io/project";
-import { pickProjectFile, pickWorkspace } from "@/data/io/workspace";
+import {
+  pickProjectFile,
+  pickWorkspace,
+  projectFileExtensions,
+} from "@/data/io/workspace";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
-
-import { pickProjectFileFromInput } from "./pickProjectFileFromInput";
 
 /** Why a folder cannot be opened, for browsers without the folder picker */
 export const workspaceUnsupportedMessage =
@@ -127,7 +130,7 @@ export function useOpenProjectFromFile(): () => void {
   return useCallback(() => {
     const pickedProjectFile =
       workspace === null
-        ? pickProjectFileFromInput()
+        ? pickFileFromInput(projectFileExtensions)
         : pickProjectFile({ startIn: workspace });
     void pickedProjectFile
       .then(async (projectFile) => {

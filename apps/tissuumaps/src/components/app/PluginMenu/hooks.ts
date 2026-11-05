@@ -3,13 +3,15 @@ import { useCallback } from "react";
 import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { usePromptDialog } from "@/components/dialogs/PromptDialog/hooks";
+import { pickFileFromInput } from "@/components/pick-file-from-input";
 import {
   loadPluginFromFile,
   loadPluginFromURL,
   pluginRegistry,
 } from "@/plugins";
 
-import { pickPluginFileFromInput } from "./pickPluginFileFromInput";
+/** The file extensions of plugin modules */
+const pluginFileExtensions = [".js", ".mjs"];
 
 /** The warning shown before a third-party plugin is loaded */
 const pluginTrustWarning =
@@ -28,7 +30,7 @@ export function useLoadPluginFromFile(): () => void {
   const alert = useAlertDialog();
 
   return useCallback(() => {
-    void pickPluginFileFromInput().then(async (file) => {
+    void pickFileFromInput(pluginFileExtensions).then(async (file) => {
       if (file === null) {
         return;
       }
