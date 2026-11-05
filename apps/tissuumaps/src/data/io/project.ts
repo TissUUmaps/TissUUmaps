@@ -9,6 +9,7 @@ import {
   createProject,
 } from "@tissuumaps/core";
 
+import { appStore } from "@/stores/app";
 import { projectStore } from "@/stores/project";
 
 /** The GET parameter naming the project to load */
@@ -391,9 +392,10 @@ export async function saveProjectToSourceFile(options?: {
  *
  * The sources of the project's data objects are rewritten for the new file
  * (see {@link rebaseProjectSources}), and the open project takes them over, so
- * that saving it again writes to the new file. The project is only switched
- * over if it is still open once written, and changes made while it is being
- * written are kept, but not marked as saved.
+ * that saving it again writes to the new file, and the project URL is removed
+ * from the address bar. The project is only switched over if it is still open
+ * and the workspace is still connected once written, and changes made while it
+ * is being written are kept, but not marked as saved.
  *
  * @param projectFile - The handle of the new file
  * @param projectSource - The workspace-relative path of the new file (with `/`
@@ -422,7 +424,10 @@ export async function saveProjectAs(
   );
   await writeProjectFile(projectFile, project, options);
   const currentState = projectStore.getState();
-  if (currentState.instanceId !== instanceId) {
+  if (
+    currentState.instanceId !== instanceId ||
+    appStore.getState().workspace !== workspace
+  ) {
     return;
   }
   const currentProject = hasChangedParts(currentState, state)
@@ -444,6 +449,7 @@ export async function saveProjectAs(
       true,
     ),
   );
+  clearProjectURLParam();
 }
 
 /**

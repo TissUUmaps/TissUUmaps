@@ -158,7 +158,6 @@ export function useSaveProjectToFolderAs(): (() => void) | null {
       .then(async (picked) => {
         if (picked !== null) {
           await saveProjectAs(picked.file, picked.source, workspace);
-          clearProjectURLParam();
         }
       })
       .catch(reportSaveError);

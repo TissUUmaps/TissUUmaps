@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createProject } from "@tissuumaps/core";
 
+import { appStore } from "@/stores/app";
 import { projectStore } from "@/stores/project";
 
 import {
@@ -329,6 +330,11 @@ describe("makeProjectLink", () => {
 });
 
 describe("saveProjectAs", () => {
+  beforeEach(() => {
+    appStore.getState().setWorkspace(workspace);
+    window.history.replaceState({}, "", "/");
+  });
+
   it("writes the rebased project and switches to the new file", async () => {
     const writable = makeWritable();
     const { sourceFile } = makeSourceFile(writable);
@@ -357,5 +363,47 @@ describe("saveProjectAs", () => {
     expect(state.source).toBe("/data/study.tm4");
     expect(state.images[0]?.dataSource.source).toBe("a.tif");
     expect(hasUnsavedChanges(state)).toBe(true);
+  });
+
+  it("removes the project URL from the address bar", async () => {
+    const { sourceFile } = makeSourceFile(makeWritable());
+    loadProject(makeProjectWithSources(["/data/a.tif"]), null, null);
+    window.history.replaceState({}, "", "/?project=https://example.com/p.tm4");
+    await saveProjectAs(sourceFile, "/data/study.tm4", workspace);
+    expect(window.location.search).toBe("");
+  });
+
+  it("does not switch over once another folder is connected", async () => {
+    const writable = makeWritable();
+    const { sourceFile } = makeSourceFile(writable);
+    loadProject(makeProjectWithSources(["/data/a.tif"]), null, null);
+    writable.write.mockImplementation(() => {
+      appStore.getState().setWorkspace({ ...workspace });
+      return Promise.resolve();
+    });
+    await saveProjectAs(sourceFile, "/data/study.tm4", workspace);
+    const state = projectStore.getState();
+    expect(state.source).toBeNull();
+    expect(state.sourceFile).toBeNull();
+  });
+
+  it("keeps the URL of a project loaded during the write", async () => {
+    const writable = makeWritable();
+    const { sourceFile } = makeSourceFile(writable);
+    loadProject(makeProjectWithSources(["/data/a.tif"]), null, null);
+    writable.write.mockImplementation(() => {
+      loadProject(createProject({ name: "Other" }), null, null);
+      window.history.replaceState(
+        {},
+        "",
+        "/?project=https://example.com/other.tm4",
+      );
+      return Promise.resolve();
+    });
+    await saveProjectAs(sourceFile, "/data/study.tm4", workspace);
+    expect(new URLSearchParams(window.location.search).get("project")).toBe(
+      "https://example.com/other.tm4",
+    );
+    expect(projectStore.getState().sourceFile).toBeNull();
   });
 });
