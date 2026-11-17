@@ -35,6 +35,9 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
   const scaleBarVisibility = useProjectStore(
     (state) => state.scaleBarVisibility,
   );
+  const colorbarsVisibility = useProjectStore(
+    (state) => state.colorbarsVisibility,
+  );
   const imageChannelPreview = useAppStore((state) => state.imageChannelPreview);
   const viewerBackgroundColor = useProjectStore(
     (state) => state.viewerBackgroundColor,
@@ -149,9 +152,14 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
         </ViewerControl>
       )}
       {/* never fades out, as the colorbars explain what the viewer shows */}
-      <ViewerControl anchor={ViewerControlAnchor.BOTTOM_RIGHT} autoFade={false}>
-        <ColorbarViewerControl />
-      </ViewerControl>
+      {colorbarsVisibility && (
+        <ViewerControl
+          anchor={ViewerControlAnchor.BOTTOM_RIGHT}
+          autoFade={false}
+        >
+          <ColorbarViewerControl />
+        </ViewerControl>
+      )}
     </Viewer>
   );
 }

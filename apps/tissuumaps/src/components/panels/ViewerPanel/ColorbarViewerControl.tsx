@@ -86,13 +86,10 @@ export function ColorbarViewerControl({
   const labels = useProjectStore((state) => state.labels);
   const points = useProjectStore((state) => state.points);
   const shapes = useProjectStore((state) => state.shapes);
-  const colorbarsVisibility = useProjectStore(
-    (state) => state.colorbarsVisibility,
-  );
 
   const colorbars = getColorbars({ layers, labels, points, shapes });
 
-  if (!colorbarsVisibility || colorbars.length === 0) {
+  if (colorbars.length === 0) {
     return null;
   }
 
