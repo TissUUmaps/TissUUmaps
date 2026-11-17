@@ -146,6 +146,20 @@ describe("getColorbars", () => {
     ).toEqual(["Shapes (fill)", "Shapes (stroke)"]);
   });
 
+  it("names the fill of shapes whose stroke is not from a column", () => {
+    expect(
+      getColorbarNames({
+        shapes: [
+          createShapes({
+            id: "shapes",
+            ...shapes,
+            shapeStrokeColor: constantColor,
+          }),
+        ],
+      }),
+    ).toEqual(["Shapes (fill)"]);
+  });
+
   it("shares one colorbar between objects with the same table, column, palette and range", () => {
     expect(
       getColorbarNames({
