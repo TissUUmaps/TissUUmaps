@@ -20,6 +20,7 @@ export class OpenSeadragonUtils {
   private static _transparentBlackPixelUrl: string | undefined;
   private static _opaqueBlackPixelUrl: string | undefined;
   private static _tileCacheCounterFixed = false;
+  private static _tileAtPointFixed = false;
 
   /**
    * A single transparent pixel, as a PNG data URL
@@ -43,6 +44,45 @@ export class OpenSeadragonUtils {
     OpenSeadragonUtils._opaqueBlackPixelUrl ??=
       OpenSeadragonUtils.createPixelUrl(0, 0, 0, 1);
     return OpenSeadragonUtils._opaqueBlackPixelUrl;
+  }
+
+  /**
+   * Fixes OpenSeadragon's `TileSource.getTileAtPoint`, which can return a tile
+   * index past the last tile of a level
+   *
+   * It maps the point using the full-resolution size times the level scale, but
+   * counts tiles using the level's own size. If that size is rounded down (e.g.
+   * an OME-Zarr level of one 858 px tile for a scaled height of 858.4 px), a
+   * point near the image edge falls past the last tile. OpenSeadragon only
+   * catches the exact edge, which the draw area of a rotated tiled image misses
+   * by rounding errors. `TiledImage._getTile` then wraps the index, so a copy of
+   * the first tile row or column is drawn next to the image. This clamps the
+   * index to the last tile. Not fixed upstream; remove once OpenSeadragon keeps
+   * the index below `getNumTiles`.
+   *
+   * Idempotent; call before creating a viewer.
+   */
+  static fixTileAtPoint(): void {
+    if (OpenSeadragonUtils._tileAtPointFixed) {
+      return;
+    }
+    OpenSeadragonUtils._tileAtPointFixed = true;
+    const tileSourcePrototype = OpenSeadragon.TileSource
+      .prototype as unknown as {
+      getTileAtPoint: (
+        this: OpenSeadragon.TileSource,
+        level: number,
+        point: OpenSeadragon.Point,
+      ) => OpenSeadragon.Point;
+    };
+    const getTileAtPoint = tileSourcePrototype.getTileAtPoint;
+    tileSourcePrototype.getTileAtPoint = function (level, point) {
+      const tile = getTileAtPoint.call(this, level, point);
+      const numTiles = this.getNumTiles(level);
+      tile.x = Math.min(tile.x, numTiles.x - 1);
+      tile.y = Math.min(tile.y, numTiles.y - 1);
+      return tile;
+    };
   }
 
   /**
