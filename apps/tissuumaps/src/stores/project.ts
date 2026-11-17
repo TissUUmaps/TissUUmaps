@@ -192,8 +192,8 @@ export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
       setGLOptions: (glOptions) => set({ glOptions }),
       setViewerBackgroundColor: (viewerBackgroundColor) =>
         set({ viewerBackgroundColor }),
-      setWorldUnitSize: (worldUnitSize) => set({ worldUnitSize }),
-      setLengthUnit: (lengthUnit) => set({ lengthUnit }),
+      setPhysicalUnitSize: (physicalUnitSize) => set({ physicalUnitSize }),
+      setPhysicalUnit: (physicalUnit) => set({ physicalUnit }),
       setScaleBarVisibility: (scaleBarVisibility) =>
         set({ scaleBarVisibility }),
       setColorbarsVisibility: (colorbarsVisibility) =>
@@ -222,7 +222,7 @@ function createInitialProjectStoreState(): ProjectStoreState {
   return {
     ...structuredClone(projectDefaults),
     // has no default, but clear() merges this state into the store
-    worldUnitSize: undefined,
+    physicalUnitSize: undefined,
     name: "New project",
     layers: [createLayer({ id: crypto.randomUUID(), name: "Default" })],
     images: [],

@@ -1,4 +1,4 @@
-import { lengthUnits } from "@/lib/lengthUnits";
+import { physicalUnits } from "@tissuumaps/core";
 
 /** Formats the value of a scale bar length, hiding floating-point noise */
 const lengthValueFormat = new Intl.NumberFormat(undefined, {
@@ -20,9 +20,9 @@ export function formatScaleBarLength(
   if (unit === "units") {
     return `${lengthValueFormat.format(length)} units`;
   }
-  const lengthUnit =
-    Object.values(lengthUnits).findLast(
-      (lengthUnit) => lengthUnit.size <= length,
-    ) ?? lengthUnits.picometer;
-  return `${lengthValueFormat.format(length / lengthUnit.size)} ${lengthUnit.symbol}`;
+  const physicalUnit =
+    Object.values(physicalUnits).findLast(
+      (physicalUnit) => physicalUnit.size <= length,
+    ) ?? physicalUnits.picometer;
+  return `${lengthValueFormat.format(length / physicalUnit.size)} ${physicalUnit.symbol}`;
 }

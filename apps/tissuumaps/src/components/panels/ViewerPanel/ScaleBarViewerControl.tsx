@@ -1,9 +1,8 @@
 import { useCallback, useRef } from "react";
 
-import type { Dims, Rect } from "@tissuumaps/core";
+import { type Dims, type Rect, physicalUnits } from "@tissuumaps/core";
 import { useViewportChange } from "@tissuumaps/react";
 
-import { lengthUnits } from "@/lib/lengthUnits";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
@@ -20,8 +19,8 @@ export type ScaleBarViewerControlProps = {
 export function ScaleBarViewerControl({
   className,
 }: ScaleBarViewerControlProps) {
-  const worldUnitSize = useProjectStore((state) => state.worldUnitSize);
-  const lengthUnit = useProjectStore((state) => state.lengthUnit);
+  const physicalUnitSize = useProjectStore((state) => state.physicalUnitSize);
+  const physicalUnit = useProjectStore((state) => state.physicalUnit);
   const barRef = useRef<HTMLDivElement>(null);
   const labelRef = useRef<HTMLDivElement>(null);
 
@@ -36,11 +35,12 @@ export function ScaleBarViewerControl({
       ) {
         return;
       }
-      const hasWorldUnitSize = worldUnitSize !== undefined && worldUnitSize > 0;
-      // the label is in meters, or in world units until the world unit size is set
-      const labelUnit = hasWorldUnitSize ? "m" : "units";
-      const labelUnitsPerWorldUnit = hasWorldUnitSize
-        ? worldUnitSize * lengthUnits[lengthUnit].size
+      const hasPhysicalUnitSize =
+        physicalUnitSize !== undefined && physicalUnitSize > 0;
+      // the label is in meters, or in world units until the physical unit size is set
+      const labelUnit = hasPhysicalUnitSize ? "m" : "units";
+      const labelUnitsPerWorldUnit = hasPhysicalUnitSize
+        ? physicalUnitSize * physicalUnits[physicalUnit].size
         : 1;
       const worldUnitsPerCssPixel = viewport.width / containerSize.width;
       const labelUnitsPerCssPixel =
@@ -54,7 +54,7 @@ export function ScaleBarViewerControl({
         labelUnit,
       );
     },
-    [worldUnitSize, lengthUnit],
+    [physicalUnitSize, physicalUnit],
   );
   useViewportChange(updateScaleBar);
 
