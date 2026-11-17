@@ -48,6 +48,11 @@ export class CSVTableDataProvider implements TableDataProvider<
       nameColumn: {
         type: "string",
       },
+      naValues: {
+        type: "array",
+        items: { type: "string" },
+        default: csvTableDataSourceDefaults.naValues,
+      },
       // TODO loadColumns
       // TODO parseConfig
     },
@@ -111,10 +116,13 @@ export class CSVTableDataProvider implements TableDataProvider<
     const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
 
+    const naValues = new Set(normalizedDataSource.naValues);
+
     let columnMetas:
       | {
           name: string;
           index: number;
+          isId: boolean;
           arrayType: Float32ArrayConstructor | Float64ArrayConstructor;
           isString: boolean;
           chunks: ColumnValues[];
@@ -147,6 +155,7 @@ export class CSVTableDataProvider implements TableDataProvider<
               (column) => ({
                 name: column,
                 index: columns.indexOf(column),
+                isId: column === normalizedDataSource.idColumn,
                 arrayType:
                   column === normalizedDataSource.idColumn
                     ? Float64Array
@@ -183,13 +192,18 @@ export class CSVTableDataProvider implements TableDataProvider<
             }
             const value = rowData[columnMeta.index]!;
             if (Array.isArray(columnChunk)) {
-              columnChunk[currentChunkRow] = value;
+              // the same as a missing value of a column that has been
+              // numeric so far, which becomes the empty string
+              columnChunk[currentChunkRow] =
+                !columnMeta.isId && naValues.has(value) ? "" : value;
             } else if (value.trim() === "") {
               columnChunk[currentChunkRow] = NaN;
             } else {
               const numericValue = NumberUtils.tryParseFinite(value);
               if (numericValue !== undefined) {
                 columnChunk[currentChunkRow] = numericValue;
+              } else if (!columnMeta.isId && naValues.has(value)) {
+                columnChunk[currentChunkRow] = NaN;
               } else {
                 columnMeta.isString = true;
                 for (let i = 0; i < columnMeta.chunks.length; i++) {

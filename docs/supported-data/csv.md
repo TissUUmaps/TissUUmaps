@@ -17,6 +17,7 @@ CSV data sources have the `type` `"csv"` and accept the following fields:
 | `columns`     | `string[]` | Names of the columns, for files without a header row. Defaults to the first row of the file.                                                                                                                                                                                                     |
 | `idColumn`    | `string`   | Column holding the ID of each row (see [Data model](../concepts/data-model.md)). Defaults to row numbers.                                                                                                                                                                                        |
 | `nameColumn`  | `string`   | Column holding the name of each row.                                                                                                                                                                                                                                                             |
+| `naValues`    | `string[]` | Cell values that mark a missing value, besides blank cells. Defaults to the missing-value markers of `pandas.read_csv`: `NA`, `NaN`, `nan`, `N/A`, `n/a`, `NULL`, `null`, `None`, `<NA>`, `#N/A` and similar.                                                                                    |
 | `loadColumns` | `string[]` | Columns to load. Defaults to all columns.                                                                                                                                                                                                                                                        |
 | `parseConfig` | `object`   | [PapaParse options](https://www.papaparse.com/docs#config): `delimiter` (defaults to `","`), `newline`, `quoteChar`, `escapeChar`, `preview`, `comments`, `fastMode`, `skipFirstNLines`, `encoding`, and for remote files `downloadRequestHeaders`, `downloadRequestBody` and `withCredentials`. |
 
@@ -24,7 +25,7 @@ Empty lines are skipped.
 
 ## Column types
 
-A column whose cells all hold numbers is read as 32-bit floats, with blank cells as `NaN`. Any other cell makes the column a string column. The `idColumn` is read as integers if every cell holds one, and as strings otherwise; a blank ID fails the load.
+A column whose cells all hold numbers (or missing values) is read as 32-bit floats, with blank cells and `naValues` as `NaN`. Any other cell makes the column a string column, in which blank cells and `naValues` are read as empty strings. The `naValues` do not apply to the `idColumn`. The `idColumn` is read as integers if every cell holds one, and as strings otherwise; a blank ID fails the load.
 
 ## Limitations
 
