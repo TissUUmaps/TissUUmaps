@@ -48,6 +48,8 @@ The style section of the TissUUmaps application picks the columns of an AnnData 
 - **Features**: the columns of `X`, each of the `layers` and `raw/X`, named by the `var` index (`raw/var` for `raw/X`). Switching between them keeps a feature with the same `var` index name.
 - **Embeddings**: the matrices of `obsm`, for example `X_umap` or `spatial`.
 
+Every `obsm` matrix with at least two columns is also a pair of coordinate columns, `obsm/spatial` first, for example as the position of points (see [Table](./table.md#coordinate-detection)).
+
 ## Example
 
 A project showing the cells of an AnnData file as points, placed by their spatial coordinates and colored by cell type:

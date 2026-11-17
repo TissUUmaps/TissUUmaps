@@ -45,6 +45,9 @@ function createTable() {
       },
     ],
     numRows: 3,
+    coordinateColumns: [
+      { name: "spatial", x: "obsm/spatial[0]", y: "obsm/spatial[1]" },
+    ],
     queryGroups: [
       { id: "obs", name: "Annotations", indexPath: "obs/_index" },
       {
@@ -170,6 +173,15 @@ describe("HierarchicalTableDataBase", () => {
     const tableData = new TestTableData(table, 3, undefined, undefined);
     expect(tableData.isColumnCategorical("obs/cell_type")).toBe(true);
     expect(tableData.isColumnCategorical("obs/area")).toBeUndefined();
+  });
+
+  it("returns the coordinate column pairs of the table", () => {
+    const { table } = createTable();
+    expect(
+      new TestTableData(table, 3, undefined, undefined).getCoordinateColumns(),
+    ).toEqual([
+      { name: "spatial", x: "obsm/spatial[0]", y: "obsm/spatial[1]" },
+    ]);
   });
 
   describe("mapColumn", () => {

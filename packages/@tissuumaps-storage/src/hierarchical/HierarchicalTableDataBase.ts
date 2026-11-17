@@ -3,6 +3,7 @@ import type {
   ProgressCallback,
   TableColumnQueryGroup,
   TableColumnQuerySuggestion,
+  TableCoordinateColumns,
   TableData,
   TypedArrayOrArray,
 } from "@tissuumaps/core";
@@ -139,6 +140,10 @@ export abstract class HierarchicalTableDataBase implements TableData {
       }),
     });
     return this._table.queryGroups.map(toQueryGroup);
+  }
+
+  getCoordinateColumns(): TableCoordinateColumns[] {
+    return this._table.coordinateColumns;
   }
 
   describeColumn(

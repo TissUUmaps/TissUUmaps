@@ -27,6 +27,19 @@ export type TableColumnQueryGroup = {
   subgroups?: TableColumnQueryGroup[];
 };
 
+/**
+ * A pair of columns holding two-dimensional coordinates (see
+ * `TableData.getCoordinateColumns`)
+ */
+export type TableCoordinateColumns = {
+  /** The name to show for the pair, e.g. "spatial" */
+  name: string;
+  /** The X coordinate column, as an exact column name */
+  x: string;
+  /** The Y coordinate column, as an exact column name */
+  y: string;
+};
+
 /** A column query suggested by `TableData.suggestColumnQueries` */
 export type TableColumnQuerySuggestion = {
   /** The suggested query, in the provider's own format */
@@ -148,6 +161,20 @@ export interface TableData extends ItemsData {
     column: string,
     options: { queryGroupId: string; signal?: AbortSignal },
   ): Promise<string | null>;
+
+  /**
+   * Returns pairs of columns holding two-dimensional coordinates
+   *
+   * Only implemented by table data whose format records which columns belong
+   * together as coordinates (e.g. the `obsm` matrices of AnnData); callers
+   * fall back to their own defaults otherwise. The pairs name exact columns
+   * (see {@link resolveColumnQuery}), which callers save and load as they
+   * are, without interpreting them.
+   *
+   * @returns The coordinate column pairs, in the canonical order of the
+   * format, each with a name to show for it
+   */
+  getCoordinateColumns?(): TableCoordinateColumns[];
 
   /**
    * Returns whether a column holds categories, as its encoding declares

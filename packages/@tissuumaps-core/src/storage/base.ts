@@ -144,6 +144,12 @@ export interface DataProvider<
    *
    * It must not contain a control for the data source's `source`, which the
    * application renders itself if the schema declares it, as a string.
+   *
+   * Controls of string properties holding a column of the data source's
+   * `table` declare `options: { tableColumn: true }`, so that the application
+   * offers the table's columns; those holding the X and Y coordinate columns
+   * also declare `coordinate: "x"` and `coordinate: "y"`, so that the
+   * application can show them outside of the form.
    */
   readonly uischema: UISchemaElement;
 

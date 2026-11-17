@@ -1,4 +1,7 @@
-import type { TypedArrayOrArray } from "@tissuumaps/core";
+import type {
+  TableCoordinateColumns,
+  TypedArrayOrArray,
+} from "@tissuumaps/core";
 
 import { ColumnQueryUtils } from "./ColumnQueryUtils";
 import type {
@@ -27,6 +30,7 @@ const readableDataTypes = new Set(["integer", "float", "string", "boolean"]);
 export class HierarchicalTableReader implements HierarchicalTable {
   readonly columns: HierarchicalTableColumn[];
   readonly numRows: number;
+  readonly coordinateColumns: TableCoordinateColumns[];
   readonly queryGroups: HierarchicalTableQueryGroup[];
   private readonly _store: HierarchicalStore;
 
@@ -34,11 +38,13 @@ export class HierarchicalTableReader implements HierarchicalTable {
     store: HierarchicalStore,
     columns: HierarchicalTableColumn[],
     numRows: number,
+    coordinateColumns: TableCoordinateColumns[],
     queryGroups: HierarchicalTableQueryGroup[],
   ) {
     this._store = store;
     this.columns = columns;
     this.numRows = numRows;
+    this.coordinateColumns = coordinateColumns;
     this.queryGroups = queryGroups;
   }
 
@@ -89,6 +95,7 @@ export class HierarchicalTableReader implements HierarchicalTable {
         store,
         columns,
         numRows,
+        AnnDataUtils.getCoordinateColumns(columns, annDataPath),
         await AnnDataUtils.loadQueryGroups(store, columns, annDataPath, {
           signal,
         }),

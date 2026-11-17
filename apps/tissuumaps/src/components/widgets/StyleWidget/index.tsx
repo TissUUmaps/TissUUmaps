@@ -104,6 +104,9 @@ export type StyleWidgetProps = {
    */
   noneLabel?: string;
 
+  /** Rows shown above the column, e.g. the position of points */
+  leadingRows?: ReactNode;
+
   /** The settings below the style, e.g. the advanced settings */
   children?: ReactNode;
 
@@ -125,6 +128,7 @@ export function StyleWidget({
   items,
   onStyleChange,
   noneLabel = "None",
+  leadingRows,
   children,
   className,
 }: StyleWidgetProps) {
@@ -153,6 +157,7 @@ export function StyleWidget({
         className="grid grid-cols-[5rem_1fr] items-center gap-x-2 gap-y-1.5"
       >
         <FieldsetLegend className="sr-only">Style</FieldsetLegend>
+        {leadingRows}
         <StyleByPicker
           tableId={tableId}
           column={styleBy.kind === "column" ? styleBy.column : null}

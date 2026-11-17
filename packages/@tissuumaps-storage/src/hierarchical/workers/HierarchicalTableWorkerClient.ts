@@ -1,4 +1,7 @@
-import type { TypedArrayOrArray } from "@tissuumaps/core";
+import type {
+  TableCoordinateColumns,
+  TypedArrayOrArray,
+} from "@tissuumaps/core";
 
 import type {
   HierarchicalTable,
@@ -22,6 +25,7 @@ import type {
 export class HierarchicalTableWorkerClient implements HierarchicalTable {
   readonly columns: HierarchicalTableColumn[];
   readonly numRows: number;
+  readonly coordinateColumns: TableCoordinateColumns[];
   readonly queryGroups: HierarchicalTableQueryGroup[];
   private readonly _channel: WorkerChannel;
 
@@ -29,11 +33,13 @@ export class HierarchicalTableWorkerClient implements HierarchicalTable {
     channel: WorkerChannel,
     columns: HierarchicalTableColumn[],
     numRows: number,
+    coordinateColumns: TableCoordinateColumns[],
     queryGroups: HierarchicalTableQueryGroup[],
   ) {
     this._channel = channel;
     this.columns = columns;
     this.numRows = numRows;
+    this.coordinateColumns = coordinateColumns;
     this.queryGroups = queryGroups;
   }
 
@@ -56,14 +62,13 @@ export class HierarchicalTableWorkerClient implements HierarchicalTable {
     const channel = new WorkerChannel(worker);
     try {
       signal?.throwIfAborted();
-      const { columns, numRows, queryGroups } = await channel.request(
-        { op: "open", source },
-        { signal },
-      );
+      const { columns, numRows, coordinateColumns, queryGroups } =
+        await channel.request({ op: "open", source }, { signal });
       return new HierarchicalTableWorkerClient(
         channel,
         columns,
         numRows,
+        coordinateColumns,
         queryGroups,
       );
     } catch (error) {

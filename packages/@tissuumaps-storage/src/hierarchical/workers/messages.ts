@@ -1,4 +1,7 @@
-import type { TypedArrayOrArray } from "@tissuumaps/core";
+import type {
+  TableCoordinateColumns,
+  TypedArrayOrArray,
+} from "@tissuumaps/core";
 
 import type {
   HierarchicalTableColumn,
@@ -16,6 +19,7 @@ export type HierarchicalTableOpenResponse = {
   op: "open";
   columns: HierarchicalTableColumn[];
   numRows: number;
+  coordinateColumns: TableCoordinateColumns[];
   queryGroups: HierarchicalTableQueryGroup[];
 };
 

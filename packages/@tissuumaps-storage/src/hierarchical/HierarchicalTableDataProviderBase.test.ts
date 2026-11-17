@@ -16,6 +16,7 @@ function createTable() {
   return {
     columns: [],
     numRows: 5,
+    coordinateColumns: [],
     queryGroups: [],
     closeCalls: 0,
     readColumn(query: string) {

@@ -140,6 +140,13 @@ teardown callbacks are only ever called for a plugin whose `setup` succeeded;
 errors they throw are caught and logged. If `mount` throws, the error is logged
 and the plugin is not mounted, but it stays registered.
 
+## Data provider forms
+
+Data providers that plugins register describe their data source form with a JSON Forms UI schema (`DataProvider.uischema`). Besides the standard options, the application understands two of its own on string controls:
+
+- `tableColumn: true`: the field holds a column of the data source's `table`, and is edited with the table's column suggestions.
+- `coordinate: "x"` or `coordinate: "y"`: the field holds the X or Y coordinate column; for points, the application also shows it as the position in the style section.
+
 ## Table data
 
 Query groups are optional facts of the table data (see `TableData.getQueryGroups`); the application decides how to present them.

@@ -1,4 +1,4 @@
-import { SourceUtils } from "@tissuumaps/core";
+import { SourceUtils, type TableData } from "@tissuumaps/core";
 import {
   CSVTableDataProvider,
   GeoJSONShapesDataProvider,
@@ -30,9 +30,44 @@ import {
   zarrTableDataSourceType,
 } from "@tissuumaps/storage";
 
+import { tableDataCache } from "@/data/cache";
 import { addTableDataObject } from "@/data/io/dataObject";
 import { appStore } from "@/stores/app";
 import { projectStore } from "@/stores/project";
+
+/**
+ * Loads the data of a table of the project through the table data cache, so
+ * that data providers preparing data sources share it with the rest of the
+ * application instead of opening the table themselves
+ *
+ * @param tableId - The ID of the table
+ * @param options - Optional abort signal
+ * @returns The table's data
+ * @throws Error if the project has no table with the ID, or if loading fails
+ */
+async function loadTableData(
+  tableId: string,
+  options?: { signal?: AbortSignal },
+): Promise<TableData> {
+  const { signal } = options ?? {};
+  signal?.throwIfAborted();
+  const table = projectStore
+    .getState()
+    .tables.find((table) => table.id === tableId);
+  if (table === undefined) {
+    throw new Error(`No table with ID ${tableId}.`);
+  }
+  const { workspace, tableDataProviders } = appStore.getState();
+  return await tableDataCache.load(
+    table,
+    {
+      workspace,
+      projectSource: projectStore.getState().source,
+      dataProviders: tableDataProviders,
+    },
+    { signal },
+  );
+}
 
 /**
  * Registers the data providers shipped with TissUUmaps with the app store
@@ -120,6 +155,7 @@ export function enableBuiltInDataProviders(): void {
           preparedDataSource,
         );
       },
+      loadTableData,
     }),
   );
 

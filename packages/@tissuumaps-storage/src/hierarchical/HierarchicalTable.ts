@@ -1,4 +1,7 @@
-import type { TypedArrayOrArray } from "@tissuumaps/core";
+import type {
+  TableCoordinateColumns,
+  TypedArrayOrArray,
+} from "@tissuumaps/core";
 
 /**
  * One column that can be addressed by a column query
@@ -50,6 +53,11 @@ export interface HierarchicalTable {
   readonly columns: HierarchicalTableColumn[];
   /** The row count inferred from the store */
   readonly numRows: number;
+  /**
+   * The coordinate column pairs, in the canonical order of the format (see
+   * `TableData.getCoordinateColumns`)
+   */
+  readonly coordinateColumns: TableCoordinateColumns[];
   /** The query groups, in the canonical order of the format */
   readonly queryGroups: HierarchicalTableQueryGroup[];
 

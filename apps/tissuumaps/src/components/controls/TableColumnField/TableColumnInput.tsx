@@ -1,6 +1,7 @@
 import type { Autocomplete as AutocompletePrimitive } from "@base-ui/react/autocomplete";
 import { FolderIcon } from "lucide-react";
 import {
+  type ReactNode,
   type Ref,
   useEffect,
   useEffectEvent,
@@ -45,6 +46,13 @@ export type TableColumnInputProps = {
    * it is committed (e.g. to search other query groups for it)
    */
   onNoMatch?: (text: string) => void;
+  /**
+   * Whether the input is disabled; it stays mounted, so that its field does
+   * not see its controls come and go
+   */
+  disabled?: boolean;
+  /** Shown at the start of the input, e.g. the name of a coordinate axis */
+  startAddon?: ReactNode;
   placeholder?: string;
   className?: string;
 };
@@ -205,6 +213,8 @@ export function TableColumnInput({
   queryGroupId,
   valueName,
   onNoMatch,
+  disabled = false,
+  startAddon,
   placeholder,
   className,
 }: TableColumnInputProps) {
@@ -428,6 +438,7 @@ export function TableColumnInput({
   return (
     <Autocomplete
       value={text}
+      disabled={disabled}
       onValueChange={handleTextChange}
       mode="none"
       items={suggestions ?? []}
@@ -447,6 +458,9 @@ export function TableColumnInput({
       }}
     >
       <AutocompleteInputGroup className={className}>
+        {startAddon !== undefined && (
+          <InputGroupAddon align="inline-start">{startAddon}</InputGroupAddon>
+        )}
         <AutocompleteInput
           placeholder={placeholder}
           aria-invalid={invalid || undefined}

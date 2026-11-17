@@ -17,8 +17,8 @@ import { DataWrapperBase } from "./DataWrapperBase";
  * Values, unique value counts and value ranges are each loaded once per
  * column and then kept for as long as this wrapper lives; column queries are
  * delegated to the wrapped data unchanged. The optional names getter, query
- * groups, column descriptions, column mapping and declared categoricals are
- * only provided if the wrapped data provides them.
+ * groups, coordinate columns, column descriptions, column mapping and
+ * declared categoricals are only provided if the wrapped data provides them.
  */
 export class TableDataWrapper
   extends DataWrapperBase<TableData>
@@ -39,6 +39,7 @@ export class TableDataWrapper
 
   readonly getNames?: TableData["getNames"];
   readonly getQueryGroups?: TableData["getQueryGroups"];
+  readonly getCoordinateColumns?: TableData["getCoordinateColumns"];
   readonly describeColumn?: TableData["describeColumn"];
   readonly mapColumn?: TableData["mapColumn"];
   readonly isColumnCategorical?: TableData["isColumnCategorical"];
@@ -50,6 +51,9 @@ export class TableDataWrapper
     }
     if (data.getQueryGroups !== undefined) {
       this.getQueryGroups = () => this.data.getQueryGroups!();
+    }
+    if (data.getCoordinateColumns !== undefined) {
+      this.getCoordinateColumns = () => this.data.getCoordinateColumns!();
     }
     if (data.describeColumn !== undefined) {
       this.describeColumn = (column, options) =>

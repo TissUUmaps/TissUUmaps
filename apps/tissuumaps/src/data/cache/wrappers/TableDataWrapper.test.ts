@@ -96,6 +96,7 @@ describe("TableDataWrapper", () => {
       expect(wrapperWithout.describeColumn).toBeUndefined();
       expect(wrapperWithout.mapColumn).toBeUndefined();
       expect(wrapperWithout.isColumnCategorical).toBeUndefined();
+      expect(wrapperWithout.getCoordinateColumns).toBeUndefined();
 
       const groups = [
         {
@@ -114,6 +115,7 @@ describe("TableDataWrapper", () => {
         .mockResolvedValue({ queryGroupId: "X", name: "CD3" });
       data.mapColumn = mapColumn;
       data.isColumnCategorical = vi.fn().mockReturnValue(true);
+      data.getCoordinateColumns = vi.fn().mockReturnValue([]);
       const wrapper = new TableDataWrapper(data);
       expect(wrapper.getQueryGroups!()).toBe(groups);
       await expect(wrapper.describeColumn!("X[CD3]")).resolves.toEqual({
@@ -127,6 +129,7 @@ describe("TableDataWrapper", () => {
         queryGroupId: "raw/X",
       });
       expect(wrapper.isColumnCategorical!("obs/cluster")).toBe(true);
+      expect(wrapper.getCoordinateColumns!()).toEqual([]);
     });
   });
 });

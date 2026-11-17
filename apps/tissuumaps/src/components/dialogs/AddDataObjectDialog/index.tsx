@@ -24,8 +24,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { usePrepareDataSource } from "@/data/hooks/usePrepareDataSource";
 import { useLatestCallback } from "@/hooks/useLatestCallback";
-import { useProjectStore } from "@/stores/project";
+import { projectStore, useProjectStore } from "@/stores/project";
 
+import { hasTableColumnControls } from "./hasTableColumnControls";
 import { useSourceInspection } from "./hooks";
 
 // The caller-facing fields: everything except the open state, the source of
@@ -80,6 +81,13 @@ export type AddDataObjectDialogProps<
  * Errors are shown once the source was committed or adding was attempted.
  * The data source is prepared before the data object is added (see
  * `usePrepareDataSource`); closing the dialog cancels it.
+ *
+ * If the form of the selected data provider picks columns of a table (see
+ * `DataProvider.uischema`), the data source is prepared as soon as its source
+ * is inspected rather than on adding, so that the columns of the table it adds
+ * can be offered (and the columns the provider detects shown) before adding.
+ * The tables added that way are removed again if the dialog is cancelled or
+ * the source or type changes.
  */
 export function AddDataObjectDialog<TDataSource extends DataSource>({
   open,
@@ -120,6 +128,59 @@ export function AddDataObjectDialog<TDataSource extends DataSource>({
 
   const isNameEditedRef = useRef(false);
   const chosenTypeRef = useRef<string | null>(null);
+
+  // the source of an early prepared data source, which no longer has one
+  const [earlySource, setEarlySource] = useState<string | undefined>();
+  const earlyTableIdsRef = useRef<string[]>([]);
+
+  const discardEarlyPreparation = () => {
+    const { deleteTable } = projectStore.getState();
+    for (const tableId of earlyTableIdsRef.current) {
+      deleteTable(tableId);
+    }
+    earlyTableIdsRef.current = [];
+    setEarlySource(undefined);
+  };
+  const discardEarlyPreparationOnUnmount = useLatestCallback(
+    discardEarlyPreparation,
+  );
+  useEffect(
+    () => () => discardEarlyPreparationOnUnmount(),
+    [discardEarlyPreparationOnUnmount],
+  );
+
+  const prepareEarly = async (source: string, type: string) => {
+    const dataProvider = dataProviders.get(type);
+    if (
+      dataProvider?.prepareDataSource === undefined ||
+      !hasTableColumnControls(dataProvider.uischema)
+    ) {
+      return;
+    }
+    discardEarlyPreparation();
+    const getTableIds = () =>
+      projectStore.getState().tables.map((table) => table.id);
+    const prevTableIds = new Set(getTableIds());
+    let preparedDataSource: TDataSource | undefined;
+    try {
+      preparedDataSource = await prepare(
+        { type, source } as TDataSource,
+        dataProvider,
+      );
+    } catch (error) {
+      // shown again when adding, which prepares the data source once more
+      console.warn("Failed to prepare the data source", error);
+    }
+    earlyTableIdsRef.current = getTableIds().filter(
+      (tableId) => !prevTableIds.has(tableId),
+    );
+    if (preparedDataSource === undefined) {
+      discardEarlyPreparation();
+      return;
+    }
+    setEarlySource(source);
+    setDraft(preparedDataSource);
+  };
 
   const dataProvider = dataProviders.get(draft.type);
   const validate =
@@ -164,6 +225,9 @@ export function AddDataObjectDialog<TDataSource extends DataSource>({
       if (!isNameEditedRef.current) {
         setName(inspection.name);
       }
+      if (source !== undefined) {
+        await prepareEarly(source, inspection.type);
+      }
     }
   };
 
@@ -198,9 +262,11 @@ export function AddDataObjectDialog<TDataSource extends DataSource>({
       onAdd(
         name.trim() || "Untitled",
         withLayer ? layerId : undefined,
-        draft.source,
+        draft.source ?? earlySource,
         preparedDataSource,
       );
+      // the added data object keeps the tables
+      earlyTableIdsRef.current = [];
     } catch (error) {
       console.error("Failed to add the data object", error);
       void alert({
@@ -230,6 +296,7 @@ export function AddDataObjectDialog<TDataSource extends DataSource>({
         if (!newOpen) {
           cancelInspection();
           cancelPreparation();
+          discardEarlyPreparation();
           setAddPending(false);
           onClose();
         }
@@ -249,7 +316,7 @@ export function AddDataObjectDialog<TDataSource extends DataSource>({
           {dataProvider !== undefined && (
             <SourceField
               schema={dataProvider.schema}
-              value={draft.source}
+              value={draft.source ?? earlySource}
               onValueChange={(source) => {
                 setDraft((draft) => {
                   const newDraft = { ...draft, source };
@@ -288,7 +355,17 @@ export function AddDataObjectDialog<TDataSource extends DataSource>({
               onValueChange={(type) => {
                 if (type !== null) {
                   chosenTypeRef.current = type;
-                  setDraft((draft) => withType(draft, type));
+                  const source = draft.source ?? earlySource;
+                  discardEarlyPreparation();
+                  setDraft((draft) =>
+                    withType(
+                      source !== undefined ? { ...draft, source } : draft,
+                      type,
+                    ),
+                  );
+                  if (source !== undefined) {
+                    void prepareEarly(source, type);
+                  }
                 }
               }}
             />

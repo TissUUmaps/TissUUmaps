@@ -6,10 +6,12 @@ import { useProjectStore } from "@/stores/project";
 
 export const TableEnumCell = withJsonFormsCellProps((props: CellProps) => {
   const tables = useProjectStore((state) => state.tables);
-  const tableId = props.data as string;
+  // null rather than undefined while no table is chosen, so that the select
+  // stays controlled
+  const tableId = (props.data as string | undefined) ?? null;
   if (!props.enabled) {
     const table = tables.find((table) => table.id === tableId);
-    return table?.name ?? tableId;
+    return table?.name ?? tableId ?? "";
   }
   return (
     <SimpleSelect

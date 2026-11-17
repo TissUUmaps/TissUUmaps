@@ -6,6 +6,7 @@ sidebar_position: 5
 
 Each point cloud, label image and shape cloud shows a **Settings** box in its entry in the Points, Labels or Shapes panel, below its data source. Without a table, the style rows are disabled. The other settings are under **Advanced**, collapsed at the end of the box.
 
+- **Position** (points only) picks the columns of the X and Y coordinates. For AnnData tables, the coordinate pairs of `obsm` are offered by name, for example `spatial` or `X_umap`. **Custom…** picks the two columns separately.
 - **Column** picks a column of the object's own table.
   - Tables with query groups, such as AnnData, show one row per group, for example **Annotations**, **Features** and **Embeddings**. Each row searches its columns by name. **from** chooses the set of columns of a row, for example `X`, a layer or `raw`; switching it keeps the feature if that set has it. A name found only in another set of the row is offered there, to switch to.
   - Other tables, such as CSV files, show one **Column** row.

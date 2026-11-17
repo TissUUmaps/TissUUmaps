@@ -1,5 +1,5 @@
 import { EyeIcon, PaletteIcon, ShapesIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 
 import {
   type ColorConfig,
@@ -14,6 +14,8 @@ import {
   pointsDefaults,
 } from "@tissuumaps/core";
 
+import { SimpleSelect } from "@/components/common/simple-select";
+import { TableColumnInput } from "@/components/controls/TableColumnField/TableColumnInput";
 import { useColorConfigWidget } from "@/components/widgets/ColorConfigWidget/hooks";
 import { SizeUnitRadioGroup } from "@/components/widgets/SizeConfigWidget";
 import { useSizeConfigWidget } from "@/components/widgets/SizeConfigWidget/hooks";
@@ -32,9 +34,12 @@ import {
   withMarkerColumn,
   withoutColumn,
 } from "@/components/widgets/StyleWidget/styleBy";
+import { useTableData } from "@/data/hooks/useData";
+import { useAppStore } from "@/stores/app";
 import { projectStore, useProjectStore } from "@/stores/project";
 
 import { PointsSettingsCategory } from "./category";
+import { getCoordinateProperties } from "./getCoordinateProperties";
 
 export type PointsStyleWidgetProps = {
   points: Points;
@@ -44,8 +49,8 @@ export type PointsStyleWidgetProps = {
 };
 
 /**
- * The always available settings of points: the column that their color,
- * marker, size, opacity and visibility follow
+ * The always available settings of points: their position, and the column
+ * that their color, marker, size, opacity and visibility follow
  *
  * If no property follows the column, a newly picked one styles the color.
  */
@@ -216,6 +221,7 @@ export function PointsStyleWidget({
           ),
         });
       }}
+      leadingRows={<PositionField points={points} />}
       className={className}
     >
       {children}
@@ -278,5 +284,129 @@ function SizeIcon({ filled }: SizeIconProps) {
         className={filled ? "fill-current" : undefined}
       />
     </svg>
+  );
+}
+
+/**
+ * @param pair - A coordinate column pair
+ * @returns The key of the pair, by its columns rather than its label, which is
+ * for display only
+ */
+function getPairKey(pair: { x: string; y: string }): string {
+  return JSON.stringify([pair.x, pair.y]);
+}
+
+type PositionFieldProps = {
+  points: Points;
+  className?: string;
+};
+
+/**
+ * The coordinate columns of points, for data sources that declare them (see
+ * `getCoordinateProperties`), as the data provider normalizes them, so that
+ * the columns in use are shown even where the data source leaves them unset
+ *
+ * Coordinate pairs recorded by the table, such as the embeddings of an
+ * AnnData object, are offered in a select; "Custom…" picks the two columns
+ * separately.
+ */
+function PositionField({ points, className }: PositionFieldProps) {
+  const pointsDataProviders = useAppStore((state) => state.pointsDataProviders);
+  const workspace = useAppStore((state) => state.workspace);
+  const projectSource = useProjectStore((state) => state.source);
+  const updatePoints = useProjectStore((state) => state.updatePoints);
+
+  const dataProvider = pointsDataProviders.get(points.dataSource.type);
+  const coordinateProperties =
+    dataProvider !== undefined
+      ? getCoordinateProperties(dataProvider.uischema)
+      : null;
+
+  const tableId = points.dataSource.table ?? null;
+  const tableData = useTableData(tableId);
+  const pairs = tableData?.getCoordinateColumns?.() ?? [];
+  const [isCustom, setCustom] = useState(false);
+
+  if (dataProvider === undefined || coordinateProperties === null) {
+    return null;
+  }
+
+  let normalizedDataSource: Record<string, unknown>;
+  try {
+    normalizedDataSource = {
+      ...dataProvider.normalize(points.dataSource, workspace, projectSource),
+    };
+  } catch {
+    normalizedDataSource = { ...points.dataSource };
+  }
+  const readCoordinate = (property: string) => {
+    const value = normalizedDataSource[property];
+    return typeof value === "string" ? value : undefined;
+  };
+  const x = readCoordinate(coordinateProperties.x);
+  const y = readCoordinate(coordinateProperties.y);
+  const setCoordinates = (newX: string | undefined, newY: string | undefined) =>
+    updatePoints(points.id, {
+      dataSource: {
+        ...points.dataSource,
+        [coordinateProperties.x]: newX,
+        [coordinateProperties.y]: newY,
+      },
+    });
+
+  const selectedPair = pairs.find((pair) => pair.x === x && pair.y === y);
+
+  const columnInputs = (
+    <div className="grid min-w-0 grid-cols-2 gap-x-1.5">
+      <TableColumnInput
+        tableId={tableId}
+        value={x ?? null}
+        onValueChange={(newX) => setCoordinates(newX ?? undefined, y)}
+        startAddon="X"
+        placeholder="Default"
+      />
+      <TableColumnInput
+        tableId={tableId}
+        value={y ?? null}
+        onValueChange={(newY) => setCoordinates(x, newY ?? undefined)}
+        startAddon="Y"
+        placeholder="Default"
+      />
+    </div>
+  );
+
+  if (pairs.length === 0) {
+    return (
+      <StyleRow label="Position" className={className}>
+        {columnInputs}
+      </StyleRow>
+    );
+  }
+  // the unselected value (null) stands for coordinates of no recorded pair
+  return (
+    <>
+      <StyleRow label="Position" className={className}>
+        <SimpleSelect
+          items={pairs}
+          itemLabel={(pair) => pair.name}
+          itemValue={getPairKey}
+          nullable
+          placeholder="Custom…"
+          value={!isCustom && selectedPair ? getPairKey(selectedPair) : null}
+          onValueChange={(key) => {
+            const pair = pairs.find((pair) => getPairKey(pair) === key);
+            setCustom(pair === undefined);
+            if (pair !== undefined) {
+              setCoordinates(pair.x, pair.y);
+            }
+          }}
+          variant="compact"
+          triggerLabel="Position"
+        />
+      </StyleRow>
+      {(isCustom || !selectedPair) && (
+        <StyleRow className={className}>{columnInputs}</StyleRow>
+      )}
+    </>
   );
 }

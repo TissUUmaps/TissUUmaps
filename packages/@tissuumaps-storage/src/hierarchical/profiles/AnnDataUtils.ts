@@ -1,4 +1,7 @@
-import type { TypedArrayOrArray } from "@tissuumaps/core";
+import type {
+  TableCoordinateColumns,
+  TypedArrayOrArray,
+} from "@tissuumaps/core";
 
 import { ColumnQueryUtils } from "../ColumnQueryUtils";
 import type {
@@ -200,6 +203,52 @@ export class AnnDataUtils {
       default:
         throw new Error(`Path '${path}' is a group, not a column`);
     }
+  }
+
+  /**
+   * Returns the coordinate column pairs of an AnnData object
+   *
+   * Every `obsm` matrix with at least two columns is an embedding of the
+   * observations, whose first two columns are a pair:
+   * `obsm/spatial` first, as it holds the spatial coordinates by the scanpy
+   * and squidpy convention, then the others (e.g. `X_umap`, `X_pca`) in path
+   * order.
+   *
+   * @param columns - The columns of the store
+   * @param annDataPath - The path of the AnnData object of the store, if any
+   * @returns The pairs, named by their `obsm` key
+   */
+  static getCoordinateColumns(
+    columns: HierarchicalTableColumn[],
+    annDataPath: string | undefined,
+  ): TableCoordinateColumns[] {
+    if (annDataPath === undefined) {
+      return [];
+    }
+    const obsmPrefix = `${ColumnQueryUtils.joinPath(annDataPath, "obsm")}/`;
+    const pairs: TableCoordinateColumns[] = [];
+    for (const column of columns) {
+      const name = column.path.slice(obsmPrefix.length);
+      if (
+        column.kind === "matrix" &&
+        column.numColumns >= 2 &&
+        column.path.startsWith(obsmPrefix) &&
+        !name.includes("/")
+      ) {
+        // obsm matrices have no selectors, so the indices are canonical
+        const pair = {
+          name,
+          x: `${column.path}[0]`,
+          y: `${column.path}[1]`,
+        };
+        if (name === "spatial") {
+          pairs.unshift(pair);
+        } else {
+          pairs.push(pair);
+        }
+      }
+    }
+    return pairs;
   }
 
   /**

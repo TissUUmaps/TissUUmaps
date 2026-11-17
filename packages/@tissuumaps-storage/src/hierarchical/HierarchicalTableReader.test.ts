@@ -236,6 +236,22 @@ describe("HierarchicalTableReader", () => {
       expect(byPath.get("obs/score")).not.toHaveProperty("categorical");
     });
 
+    it("lists the obsm matrices as coordinate pairs, spatial first", async () => {
+      const reader = await openReader(
+        annData({
+          obsm: group({
+            X_umap: array(new Float32Array(6), [3, 2]),
+            one: array(new Float32Array(3), [3, 1]),
+            spatial: array(new Float32Array(6), [3, 2]),
+          }),
+        }),
+      );
+      expect(reader.coordinateColumns).toEqual([
+        { name: "spatial", x: "obsm/spatial[0]", y: "obsm/spatial[1]" },
+        { name: "X_umap", x: "obsm/X_umap[0]", y: "obsm/X_umap[1]" },
+      ]);
+    });
+
     it("lists the query groups of an AnnData object", async () => {
       const reader = await openReader(
         annData({
@@ -303,6 +319,13 @@ describe("HierarchicalTableReader", () => {
         ),
       );
       expect(reader.queryGroups.map(({ name }) => name)).toEqual(["Features"]);
+    });
+
+    it("lists no coordinate pairs outside AnnData", async () => {
+      const reader = await openReader(
+        group({ obsm: group({ spatial: array(new Float32Array(4), [2, 2]) }) }),
+      );
+      expect(reader.coordinateColumns).toEqual([]);
     });
 
     it("takes the row count from the obs index of an AnnData object", async () => {
