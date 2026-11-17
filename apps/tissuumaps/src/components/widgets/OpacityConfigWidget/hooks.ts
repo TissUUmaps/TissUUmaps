@@ -9,6 +9,7 @@ import {
   isGroupByConfig,
 } from "@tissuumaps/core";
 
+import { useTableColumnValueRange } from "@/data/hooks/useTableColumnValueRange";
 import { useDraftState } from "@/hooks/useDraftState";
 
 import type {
@@ -20,6 +21,8 @@ type OpacityConfigWidgetState = {
   currentSource: OpacityConfigSource;
   currentConstantValue: number;
   currentFromTableColumn: TableColumnRef | null;
+  currentFromRangeMin: number | null;
+  currentFromRangeMax: number | null;
   currentGroupByTableColumn: TableColumnRef | null;
   currentGroupByMap: string | null;
 };
@@ -41,6 +44,12 @@ function configToState(
       ? config.constant.value
       : defaultOpacity,
     currentFromTableColumn: isFromConfig(config) ? config.from : null,
+    currentFromRangeMin: isFromConfig(config)
+      ? (config.from.range?.[0] ?? null)
+      : null,
+    currentFromRangeMax: isFromConfig(config)
+      ? (config.from.range?.[1] ?? null)
+      : null,
     currentGroupByTableColumn: isGroupByConfig(config) ? config.groupBy : null,
     currentGroupByMap:
       isGroupByConfig(config) && config.groupBy.map !== undefined
@@ -79,6 +88,11 @@ function stateToConfig(
         source: "from",
         from: {
           ...state.currentFromTableColumn,
+          range:
+            state.currentFromRangeMin !== null ||
+            state.currentFromRangeMax !== null
+              ? [state.currentFromRangeMin, state.currentFromRangeMax]
+              : undefined,
         },
       };
     case "groupBy":
@@ -113,6 +127,13 @@ export function useOpacityConfigWidget(
     stateToConfig,
   );
 
+  const fromColumnValueRange = useTableColumnValueRange(
+    state.currentSource === "from" && state.currentFromTableColumn !== null
+      ? (state.currentFromTableColumn.table ?? tableId)
+      : null,
+    state.currentFromTableColumn?.column ?? null,
+  );
+
   const setters = useMemo(
     () => ({
       setCurrentSource: (currentSource: OpacityConfigSource) =>
@@ -122,6 +143,10 @@ export function useOpacityConfigWidget(
       setCurrentFromTableColumn: (
         currentFromTableColumn: TableColumnRef | null,
       ) => setState((state) => ({ ...state, currentFromTableColumn })),
+      setCurrentFromRangeMin: (currentFromRangeMin: number | null) =>
+        setState((state) => ({ ...state, currentFromRangeMin })),
+      setCurrentFromRangeMax: (currentFromRangeMax: number | null) =>
+        setState((state) => ({ ...state, currentFromRangeMax })),
       setCurrentGroupByTableColumn: (
         currentGroupByTableColumn: TableColumnRef | null,
       ) => setState((state) => ({ ...state, currentGroupByTableColumn })),
@@ -136,6 +161,7 @@ export function useOpacityConfigWidget(
     defaultOpacity,
     tableId,
     activeSource,
+    fromColumnValueRange,
     ...state,
     ...setters,
   };

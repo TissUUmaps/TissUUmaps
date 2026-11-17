@@ -7,9 +7,12 @@ export type OpacityConfigWidgetAdapter = {
   defaultOpacity: number;
   tableId: string | null;
   activeSource: OpacityConfigSource;
+  fromColumnValueRange: [number, number] | null;
   currentSource: OpacityConfigSource;
   currentConstantValue: number;
   currentFromTableColumn: TableColumnRef | null;
+  currentFromRangeMin: number | null;
+  currentFromRangeMax: number | null;
   currentGroupByTableColumn: TableColumnRef | null;
   currentGroupByMap: string | null;
   setCurrentSource: (newCurrentSource: OpacityConfigSource) => void;
@@ -17,6 +20,8 @@ export type OpacityConfigWidgetAdapter = {
   setCurrentFromTableColumn: (
     newCurrentFromTableColumn: TableColumnRef | null,
   ) => void;
+  setCurrentFromRangeMin: (newCurrentFromRangeMin: number | null) => void;
+  setCurrentFromRangeMax: (newCurrentFromRangeMax: number | null) => void;
   setCurrentGroupByTableColumn: (
     newCurrentGroupByTableColumn: TableColumnRef | null,
   ) => void;
