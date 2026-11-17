@@ -26,16 +26,22 @@ type ColorbarProps = {
 function Colorbar({ name, from, tableId, className }: ColorbarProps) {
   const tables = useProjectStore((state) => state.tables);
 
-  // like in the renderers, a configured range takes precedence over the
+  // like in the renderers, a configured range end takes precedence over the
   // column's value range
+  const [rangeMin, rangeMax] = from.range ?? [null, null];
   const columnValueRange = useValueRange(
-    from.range === undefined ? tableId : null,
+    rangeMin === null || rangeMax === null ? tableId : null,
     from.column,
   );
 
-  const valueRange = from.range ?? columnValueRange;
   const colorPalette = findColorPalette(from.palette);
-  if (valueRange === null || colorPalette === undefined) {
+  const valueMin = rangeMin ?? columnValueRange?.[0];
+  const valueMax = rangeMax ?? columnValueRange?.[1];
+  if (
+    valueMin === undefined ||
+    valueMax === undefined ||
+    colorPalette === undefined
+  ) {
     return null;
   }
 
@@ -64,8 +70,8 @@ function Colorbar({ name, from, tableId, className }: ColorbarProps) {
         }}
       />
       <div className="flex justify-between tabular-nums">
-        <span>{colorbarValueFormat.format(valueRange[0])}</span>
-        <span>{colorbarValueFormat.format(valueRange[1])}</span>
+        <span>{colorbarValueFormat.format(valueMin)}</span>
+        <span>{colorbarValueFormat.format(valueMax)}</span>
       </div>
     </div>
   );

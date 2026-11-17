@@ -168,8 +168,12 @@ export function getColorbars(state: {
     ) {
       continue;
     }
-    // with a range, the colorbar does not depend on the table
-    const key = `${from.range === undefined ? tableId : from.range.join(",")}:${from.palette}:${from.column}`;
+    // with both range ends, the colorbar does not depend on the table
+    const scaleKey =
+      from.range !== undefined && !from.range.includes(null)
+        ? from.range.join(",")
+        : `${tableId}:${from.range?.join(",") ?? ""}`;
+    const key = `${scaleKey}:${from.palette}:${from.column}`;
     const colorbar = colorbars.get(key);
     if (colorbar === undefined) {
       colorbars.set(key, { from, tableId, colors: [objectColor] });

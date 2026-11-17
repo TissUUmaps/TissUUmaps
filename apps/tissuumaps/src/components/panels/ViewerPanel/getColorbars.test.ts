@@ -221,6 +221,23 @@ describe("getColorbars", () => {
     ).toEqual([{ name: "cells, nuclei", table: undefined }]);
   });
 
+  it("keeps one colorbar per table for a range with only one end", () => {
+    const pointColor: ColorConfig = {
+      from: { column: "score", palette: "viridis", range: [0, null] },
+    };
+    expect(
+      getColorbarNames({
+        points: [
+          createPointsWith("cells", { pointColor }),
+          createPointsWith("nuclei", {
+            dataSource: { type: "csv", table: "nuclei" },
+            pointColor,
+          }),
+        ],
+      }),
+    ).toEqual(["cells", "nuclei"]);
+  });
+
   it("leaves out objects without a table", () => {
     expect(
       getColorbarNames({
