@@ -1,11 +1,15 @@
-import { type ColorConfig, findColorPalette } from "@tissuumaps/core";
+import {
+  type ColorConfig,
+  type FromConfig,
+  findColorPalette,
+} from "@tissuumaps/core";
 
 import { formatTableColumn } from "@/components/controls/TableColumnField/formatTableColumn";
 import { useValueRange } from "@/data/hooks/useValueRange";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
-import { getActiveFrom, getColorbars } from "./getColorbars";
+import { getColorbars } from "./getColorbars";
 
 /** Formats the ends of a colorbar's value range */
 const colorbarValueFormat = new Intl.NumberFormat(undefined, {
@@ -14,26 +18,24 @@ const colorbarValueFormat = new Intl.NumberFormat(undefined, {
 
 type ColorbarProps = {
   name: string;
-  colorConfig: ColorConfig;
-  tableId: string | null;
+  from: Extract<ColorConfig, FromConfig>["from"];
+  tableId: string;
   className?: string;
 };
 
-function Colorbar({ name, colorConfig, tableId, className }: ColorbarProps) {
+function Colorbar({ name, from, tableId, className }: ColorbarProps) {
   const tables = useProjectStore((state) => state.tables);
-
-  const from = getActiveFrom(colorConfig);
 
   // like in the renderers, a configured range takes precedence over the
   // column's value range
   const columnValueRange = useValueRange(
-    from !== null && from.range === undefined ? (from.table ?? tableId) : null,
-    from?.column ?? null,
+    from.range === undefined ? tableId : null,
+    from.column,
   );
 
-  const valueRange = from?.range ?? columnValueRange;
-  const colorPalette = findColorPalette(from?.palette);
-  if (from === null || valueRange === null || colorPalette === undefined) {
+  const valueRange = from.range ?? columnValueRange;
+  const colorPalette = findColorPalette(from.palette);
+  if (valueRange === null || colorPalette === undefined) {
     return null;
   }
 
@@ -97,13 +99,8 @@ export function ColorbarViewerControl({
         className,
       )}
     >
-      {colorbars.map(({ key, name, colorConfig, tableId }) => (
-        <Colorbar
-          key={key}
-          name={name}
-          colorConfig={colorConfig}
-          tableId={tableId}
-        />
+      {colorbars.map(({ key, name, from, tableId }) => (
+        <Colorbar key={key} name={name} from={from} tableId={tableId} />
       ))}
     </div>
   );

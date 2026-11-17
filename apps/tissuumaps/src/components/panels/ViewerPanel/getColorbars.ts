@@ -1,5 +1,6 @@
 import {
   type ColorConfig,
+  type FromConfig,
   type Labels,
   type Layer,
   type Points,
@@ -11,16 +12,11 @@ import {
   isFromConfig,
 } from "@tissuumaps/core";
 
-/**
- * Finds the table column that a color configuration takes its colors from
- *
- * The color settings keep the inactive sources as drafts, so a "from" source
- * only counts while it is the active one.
- *
- * @param colorConfig - The color configuration
- * @returns The active "from" source, or `null` if another source is active
- */
-export function getActiveFrom(colorConfig: ColorConfig) {
+type ColorFrom = Extract<ColorConfig, FromConfig>["from"];
+
+// The color settings keep the inactive sources as drafts, so a "from" source
+// only counts while it is the active one.
+function getActiveFrom(colorConfig: ColorConfig): ColorFrom | null {
   return getActiveConfigSource(colorConfig) === "from" &&
     isFromConfig(colorConfig)
     ? colorConfig.from
@@ -49,28 +45,39 @@ function isOnHiddenLayer(
   );
 }
 
+type ObjectColor = {
+  objectKey: string;
+  objectName: string;
+  part: "fill" | "stroke" | null;
+  colorConfig: ColorConfig;
+  visibilityConfig: VisibilityConfig;
+  objectTableId: string | undefined;
+};
+
 /**
  * Lists the colorbars of the shown objects whose colors come from a table
  * column
  *
- * Shapes get a colorbar for their fill and one for their stroke.
+ * Colors with the same column, palette and range share one colorbar. Without
+ * a range, they also need the same table, whose column sets the value range.
+ * A colorbar is named after the objects that use it. The fill or stroke of
+ * shapes is named only if the other one uses another colorbar.
  *
  * @param state - The layers and the objects of the project
- * @returns One colorbar per color, with a unique key, the name to show, the
- * color and visibility configurations, and the table of the object's data
- * source
+ * @returns One colorbar per color scale, with a unique key, the name to show,
+ * the active "from" source and the ID of the table that holds the column
  */
 export function getColorbars(state: {
   layers: Layer[];
   labels: Labels[];
   points: Points[];
   shapes: Shapes[];
-}) {
+}): { key: string; name: string; from: ColorFrom; tableId: string }[] {
   const { layers, labels, points, shapes } = state;
-  return [
+  const objectColors: ObjectColor[] = [
     ...labels
       // without a table of their own, the renderer draws labels in default
-      // colors
+      // colors, even if the color column is in another table
       .filter(
         (labels) =>
           labels.visibility &&
@@ -78,22 +85,24 @@ export function getColorbars(state: {
           labels.dataSource.table !== undefined,
       )
       .map((labels) => ({
-        key: `labels-${labels.id}`,
-        name: labels.name,
+        objectKey: `labels-${labels.id}`,
+        objectName: labels.name,
+        part: null,
         colorConfig: labels.labelColor,
         visibilityConfig: labels.labelVisibility,
-        tableId: labels.dataSource.table ?? null,
+        objectTableId: labels.dataSource.table,
       })),
     ...points
       .filter(
         (points) => points.visibility && !isOnHiddenLayer(points.layer, layers),
       )
       .map((points) => ({
-        key: `points-${points.id}`,
-        name: points.name,
+        objectKey: `points-${points.id}`,
+        objectName: points.name,
+        part: null,
         colorConfig: points.pointColor,
         visibilityConfig: points.pointVisibility,
-        tableId: points.dataSource.table ?? null,
+        objectTableId: points.dataSource.table,
       })),
     ...shapes
       .filter(
@@ -104,23 +113,72 @@ export function getColorbars(state: {
       )
       .flatMap((shapes) => [
         {
-          key: `shapes-${shapes.id}-fill`,
-          name: `${shapes.name} (fill)`,
+          objectKey: `shapes-${shapes.id}`,
+          objectName: shapes.name,
+          part: "fill" as const,
           colorConfig: shapes.shapeFillColor,
           visibilityConfig: shapes.shapeFillVisibility,
-          tableId: shapes.dataSource.table ?? null,
+          objectTableId: shapes.dataSource.table,
         },
         {
-          key: `shapes-${shapes.id}-stroke`,
-          name: `${shapes.name} (stroke)`,
+          objectKey: `shapes-${shapes.id}`,
+          objectName: shapes.name,
+          part: "stroke" as const,
           colorConfig: shapes.shapeStrokeColor,
           visibilityConfig: shapes.shapeStrokeVisibility,
-          tableId: shapes.dataSource.table ?? null,
+          objectTableId: shapes.dataSource.table,
         },
       ]),
-  ].filter(
-    ({ colorConfig, visibilityConfig }) =>
-      getActiveFrom(colorConfig) !== null &&
-      !isConstantlyHidden(visibilityConfig),
-  );
+  ];
+
+  const colorbars = new Map<
+    string,
+    { from: ColorFrom; tableId: string; objectColors: ObjectColor[] }
+  >();
+  const colorbarKeysByObject = new Map<string, Set<string>>();
+  for (const objectColor of objectColors) {
+    const from = getActiveFrom(objectColor.colorConfig);
+    const tableId = from?.table ?? objectColor.objectTableId;
+    // without a table, no renderer colors the items from a column
+    if (
+      from === null ||
+      tableId === undefined ||
+      isConstantlyHidden(objectColor.visibilityConfig)
+    ) {
+      continue;
+    }
+    // with a range, the colorbar does not depend on the table
+    const key = JSON.stringify([
+      from.range === undefined ? tableId : null,
+      from.column,
+      from.palette,
+      from.range ?? null,
+    ]);
+    const colorbar = colorbars.get(key);
+    if (colorbar === undefined) {
+      colorbars.set(key, { from, tableId, objectColors: [objectColor] });
+    } else {
+      colorbar.objectColors.push(objectColor);
+      // a colorbar shared by several tables names none of them
+      if (tableId !== colorbar.tableId) {
+        colorbar.from = { ...colorbar.from, table: undefined };
+      }
+    }
+    const colorbarKeys =
+      colorbarKeysByObject.get(objectColor.objectKey) ?? new Set();
+    colorbarKeysByObject.set(objectColor.objectKey, colorbarKeys.add(key));
+  }
+
+  return [...colorbars].map(([key, { from, tableId, objectColors }]) => {
+    const objectNames = new Map<string, string>();
+    for (const { objectKey, objectName, part } of objectColors) {
+      objectNames.set(
+        objectKey,
+        part !== null && colorbarKeysByObject.get(objectKey)?.size !== 1
+          ? `${objectName} (${part})`
+          : objectName,
+      );
+    }
+    return { key, name: [...objectNames.values()].join(", "), from, tableId };
+  });
 }
