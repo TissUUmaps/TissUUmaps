@@ -244,7 +244,22 @@ export type VisibilityConfig =
 /**
  * Opacity configuration
  *
- * Numerical table values are interpreted as opacities between `0` (fully transparent) and `1` (fully opaque).
+ * When sourced from a numerical table column, values are clipped to the
+ * configured range and then mapped linearly to opacities between `0` (fully
+ * transparent) and `1` (fully opaque).
  */
 export type OpacityConfig =
-  ConstantConfig<number> | FromConfig | GroupByConfig<true>;
+  | ConstantConfig<number>
+  | FromConfig<{
+      /**
+       * Value range that is linearly mapped to opacities between `0` and `1`
+       *
+       * Values are clipped to this range before mapping them to opacities.
+       *
+       * If not specified, the range is from `0` to the maximum value of the
+       * table column. An end that is `null` is `0` for the minimum, or the
+       * maximum value of the table column for the maximum.
+       */
+      range?: [number | null, number | null];
+    }>
+  | GroupByConfig<true>;
