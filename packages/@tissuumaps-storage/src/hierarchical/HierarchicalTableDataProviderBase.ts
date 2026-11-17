@@ -43,6 +43,9 @@ export abstract class HierarchicalTableDataProviderBase<
       nameColumn: {
         type: "string",
       },
+      featureNameColumn: {
+        type: "string",
+      },
     },
     required: ["source"],
   };
@@ -59,6 +62,12 @@ export abstract class HierarchicalTableDataProviderBase<
         type: "Control",
         scope: "#/properties/nameColumn",
         label: "Name Column",
+      },
+      {
+        type: "Control",
+        scope: "#/properties/featureNameColumn",
+        label: "Feature Name Column",
+        options: { placeholder: "Detected automatically" },
       },
     ],
   };
@@ -81,6 +90,7 @@ export abstract class HierarchicalTableDataProviderBase<
       {
         signal,
         workspace,
+        featureNameColumn: normalizedDataSource.featureNameColumn,
       },
     );
     try {
@@ -119,7 +129,9 @@ export abstract class HierarchicalTableDataProviderBase<
    *
    * @param normalizedSource - The normalized source of the data source
    * @param options - `signal` aborts the load; `workspace` is the directory
-   * handle of the open workspace, required for workspace-relative sources
+   * handle of the open workspace, required for workspace-relative sources;
+   * `featureNameColumn` is passed on to the AnnData profile (see
+   * {@link HierarchicalTableDataSource.featureNameColumn})
    * @returns The open table; closed by the returned
    * {@link HierarchicalTableDataBase}
    */
@@ -128,6 +140,7 @@ export abstract class HierarchicalTableDataProviderBase<
     options: {
       signal?: AbortSignal;
       workspace: FileSystemDirectoryHandle | null;
+      featureNameColumn?: string;
     },
   ): Promise<HierarchicalTable>;
 

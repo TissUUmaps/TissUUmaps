@@ -42,6 +42,22 @@ export class AnnDataUtils {
     /^(raw\/)?(X|layers\/[^/]+)$/;
 
   /**
+   * Names of `var` columns that hold feature names by common conventions, in
+   * order of preference: 10x Genomics (`feature_name`), scanpy and
+   * Seurat conversions (`gene_symbols`, `gene_symbol`, `gene_name`), Monocle
+   * (`gene_short_name`), HGNC (`hgnc_symbol`) and generic `symbol`
+   */
+  private static readonly _featureNameColumnNames = [
+    "feature_name",
+    "gene_symbols",
+    "gene_symbol",
+    "gene_name",
+    "gene_short_name",
+    "hgnc_symbol",
+    "symbol",
+  ];
+
+  /**
    * @param group - A group of the store
    * @returns The AnnData encoding of the group, if it carries one
    */
@@ -210,10 +226,14 @@ export class AnnDataUtils {
    * `var` (or `raw/var`), so that a feature maps between them. "Embeddings"
    * holds the matrices of `obsm` (e.g. `X_umap` or `spatial`).
    *
+   * The columns of a matrix are named by a column of its `var` dataframe
+   * (see {@link findFeatureNameColumn}).
+   *
    * @param store - The store to read from
    * @param columns - The columns of the store
    * @param annDataPath - The path of the AnnData object of the store, if any
-   * @param options - Optional abort signal
+   * @param options - Optional abort signal, and the name of the `var` column
+   * that names the features, if chosen
    * @returns The query groups that have columns, in this order: annotations,
    * features (`X`, the layers, `raw/X`), embeddings
    */
@@ -221,9 +241,9 @@ export class AnnDataUtils {
     store: HierarchicalStore,
     columns: HierarchicalTableColumn[],
     annDataPath: string | undefined,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; featureNameColumn?: string },
   ): Promise<HierarchicalTableQueryGroup[]> {
-    const { signal } = options ?? {};
+    const { signal, featureNameColumn } = options ?? {};
     signal?.throwIfAborted();
     if (annDataPath === undefined) {
       return [];
@@ -253,16 +273,22 @@ export class AnnDataUtils {
       relativePath: string;
     }[] = [];
     for (const matrix of matrices) {
-      if (
-        AnnDataUtils._getVariableDataFramePath(matrix.path, annDataPath) ===
-        undefined
-      ) {
+      const featurePath = AnnDataUtils._getVariableDataFramePath(
+        matrix.path,
+        annDataPath,
+      );
+      if (featurePath === undefined) {
         continue;
       }
       const relativePath =
         annDataPath === ""
           ? matrix.path
           : matrix.path.slice(annDataPath.length + 1);
+      const namePath = AnnDataUtils.findFeatureNameColumn(
+        columns,
+        featurePath,
+        featureNameColumn,
+      );
       const layerName = relativePath.startsWith("layers/")
         ? relativePath.slice("layers/".length)
         : undefined;
@@ -278,6 +304,7 @@ export class AnnDataUtils {
               : layerName === "X" || layerName === "raw"
                 ? relativePath
                 : layerName,
+          ...(namePath !== undefined && { namePath }),
         },
         relativePath,
       });
@@ -311,6 +338,35 @@ export class AnnDataUtils {
       });
     }
     return groups;
+  }
+
+  /**
+   * Chooses the column of a feature dataframe (e.g. `var`) whose values name
+   * the features
+   *
+   * @param columns - The columns of the store
+   * @param featurePath - The path of the feature dataframe
+   * @param preferredName - The name of the column to use, if it exists
+   * @returns The path of the name column, or `undefined` to name the
+   * features by the dataframe index
+   */
+  static findFeatureNameColumn(
+    columns: HierarchicalTableColumn[],
+    featurePath: string,
+    preferredName?: string,
+  ): string | undefined {
+    const paths = new Set(
+      columns
+        .filter((column) => column.kind === "dataset")
+        .map((column) => column.path),
+    );
+    const names =
+      preferredName !== undefined
+        ? [preferredName]
+        : AnnDataUtils._featureNameColumnNames;
+    return names
+      .map((name) => ColumnQueryUtils.joinPath(featurePath, name))
+      .find((path) => paths.has(path));
   }
 
   /**

@@ -13,4 +13,12 @@ export interface HierarchicalTableDataSource<
   idColumn?: string;
   /** Column query of the row names */
   nameColumn?: string;
+  /**
+   * Name of the `var` column that labels the features of the matrices (e.g.
+   * `gene_symbols`), for display only; chosen by convention if omitted (see
+   * `AnnDataUtils.findFeatureNameColumn`)
+   *
+   * AnnData profile only; ignored otherwise.
+   */
+  featureNameColumn?: string;
 }

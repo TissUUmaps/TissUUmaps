@@ -23,13 +23,19 @@ import type {
  * The store's query groups (see {@link getQueryGroups}) come from its format,
  * e.g. AnnData. A leaf is either a group of the store whose dataset columns
  * lie directly below it (e.g. the AnnData `obs`), or a matrix whose columns
- * are named by their selectors (e.g. `X`).
+ * are its features (e.g. `X`). The columns of a matrix leaf are named by its
+ * name column (e.g. the gene symbols of the AnnData `var`), read once when the
+ * leaf is first searched, while their queries stay keyed by their selectors.
+ * Names are for display only: columns are matched by selector, never by name
+ * (see {@link mapColumn}).
  */
 export abstract class HierarchicalTableDataBase implements TableData {
   private readonly _table: HierarchicalTable;
   private readonly _numRows: number;
   private _ids: IDArray | undefined;
   private readonly _names: string[] | undefined;
+  /** The name of each column of a matrix leaf, by the leaf's id */
+  private readonly _featureNames = new Map<string, Promise<string[]>>();
 
   /**
    * @param table - The open table, which the data owns and closes
@@ -81,36 +87,30 @@ export abstract class HierarchicalTableDataBase implements TableData {
    * @returns A list of suggested column queries
    * @throws Error if the table has no leaf query group with the given `id`
    */
-  suggestColumnQueries(
+  async suggestColumnQueries(
     currentQuery: string,
     options?: { queryGroupId?: string; signal?: AbortSignal },
   ): Promise<TableColumnQuerySuggestion[]> {
     const { queryGroupId, signal } = options ?? {};
-    if (signal?.aborted) {
-      return Promise.reject(signal.reason as Error);
-    }
+    signal?.throwIfAborted();
     if (queryGroupId === undefined) {
-      return Promise.resolve(
-        ColumnQueryUtils.suggestColumnQueries(
-          this._table.columns,
-          currentQuery,
-        ),
+      return ColumnQueryUtils.suggestColumnQueries(
+        this._table.columns,
+        currentQuery,
       );
     }
     const found = this._findLeaf((leaf) => leaf.id === queryGroupId);
     if (found === undefined) {
-      return Promise.reject(
-        new Error(`Query group '${queryGroupId}' not found`),
-      );
+      throw new Error(`Query group '${queryGroupId}' not found`);
     }
     const matrix = this._getMatrix(found.leaf);
     const suggestions =
       matrix !== undefined
-        ? this._suggestMatrixColumns(matrix)
+        ? await this._suggestMatrixColumns(found.leaf, matrix)
         : this._suggestLeafColumns(found.leaf);
-    return Promise.resolve(
-      ColumnQueryUtils.rankByName(suggestions, currentQuery),
-    );
+    // the names are loaded once for all callers, without the signal
+    signal?.throwIfAborted();
+    return ColumnQueryUtils.rankByName(suggestions, currentQuery);
   }
 
   resolveColumnQuery(
@@ -141,34 +141,35 @@ export abstract class HierarchicalTableDataBase implements TableData {
     return this._table.queryGroups.map(toQueryGroup);
   }
 
-  describeColumn(
+  async describeColumn(
     column: string,
     options?: { signal?: AbortSignal },
   ): Promise<{ queryGroupId: string; name: string } | null> {
     const { signal } = options ?? {};
-    if (signal?.aborted) {
-      return Promise.reject(signal.reason as Error);
-    }
+    signal?.throwIfAborted();
     const resolved = ColumnQueryUtils.resolveColumn(
       this._table.columns,
       column,
     );
     if (resolved === null) {
-      return Promise.resolve(null);
+      return null;
     }
     const { column: tableColumn, index } = resolved;
     const found = this._findLeafOfColumn(tableColumn);
     if (found === undefined) {
-      return Promise.resolve(null);
+      return null;
     }
     const { leaf } = found;
-    return Promise.resolve({
+    if (tableColumn.kind === "matrix") {
+      const names = await this._loadFeatureNames(leaf, tableColumn);
+      // the names are loaded once for all callers, without the signal
+      signal?.throwIfAborted();
+      return { queryGroupId: leaf.id, name: names[index!]! };
+    }
+    return {
       queryGroupId: leaf.id,
-      name:
-        tableColumn.kind === "matrix"
-          ? (tableColumn.selectors?.[index!] ?? String(index))
-          : tableColumn.path.slice(leaf.id.length + 1),
-    });
+      name: tableColumn.path.slice(leaf.id.length + 1),
+    };
   }
 
   /**
@@ -358,15 +359,73 @@ export abstract class HierarchicalTableDataBase implements TableData {
   }
 
   /**
-   * @param matrix - The matrix column of a matrix leaf
-   * @returns The matrix's columns, named by their selectors
+   * @param leaf - A matrix leaf query group
+   * @param matrix - The matrix column of the leaf
+   * @returns The matrix's columns, named by their features
    */
-  private _suggestMatrixColumns(
+  private async _suggestMatrixColumns(
+    leaf: HierarchicalTableQueryGroup,
     matrix: Extract<HierarchicalTableColumn, { kind: "matrix" }>,
-  ): TableColumnQuerySuggestion[] {
-    return Array.from({ length: matrix.numColumns }, (_, i) => {
-      const selector = matrix.selectors?.[i] ?? String(i);
-      return { query: `${matrix.path}[${selector}]`, name: selector };
-    });
+  ): Promise<TableColumnQuerySuggestion[]> {
+    const names = await this._loadFeatureNames(leaf, matrix);
+    return names.map((name, i) => ({
+      query: `${matrix.path}[${matrix.selectors?.[i] ?? i}]`,
+      name,
+    }));
+  }
+
+  /**
+   * Loads the names of the columns of a matrix leaf, once per leaf
+   *
+   * Features are named by the name column of their dataframe, or by their
+   * selector without one; a name that several features share, or that is
+   * empty, is qualified by the selector, e.g. `CD3E (ENSG00000198851)`.
+   *
+   * @param leaf - A matrix leaf query group
+   * @param matrix - The matrix column of the leaf
+   * @returns The name of each column of the matrix
+   */
+  private _loadFeatureNames(
+    leaf: HierarchicalTableQueryGroup,
+    matrix: Extract<HierarchicalTableColumn, { kind: "matrix" }>,
+  ): Promise<string[]> {
+    let names = this._featureNames.get(leaf.id);
+    if (names === undefined) {
+      names = this._readFeatureNames(leaf, matrix);
+      // a failed read is retried on the next search
+      names.catch(() => this._featureNames.delete(leaf.id));
+      this._featureNames.set(leaf.id, names);
+    }
+    return names;
+  }
+
+  private async _readFeatureNames(
+    leaf: HierarchicalTableQueryGroup,
+    matrix: Extract<HierarchicalTableColumn, { kind: "matrix" }>,
+  ): Promise<string[]> {
+    const selectors = Array.from(
+      { length: matrix.numColumns },
+      (_, i) => matrix.selectors?.[i] ?? String(i),
+    );
+    if (leaf.namePath === undefined) {
+      return selectors;
+    }
+    const values = Array.from(
+      await this._table.readColumn(leaf.namePath, {
+        numRows: matrix.numColumns,
+      }),
+      String,
+    );
+    const counts = new Map<string, number>();
+    for (const value of values) {
+      counts.set(value, (counts.get(value) ?? 0) + 1);
+    }
+    return values.map((value, i) =>
+      value === ""
+        ? selectors[i]!
+        : counts.get(value)! > 1
+          ? `${value} (${selectors[i]})`
+          : value,
+    );
   }
 }

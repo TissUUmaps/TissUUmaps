@@ -9,6 +9,7 @@ import type {
 export type HierarchicalTableOpenRequest = {
   op: "open";
   source: File | string;
+  featureNameColumn?: string;
 };
 
 /** The columns and row count of the opened table */

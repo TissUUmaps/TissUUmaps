@@ -67,12 +67,16 @@ export class ZarrTableDataProvider extends HierarchicalTableDataProviderBase<
     options: {
       signal?: AbortSignal;
       workspace: FileSystemDirectoryHandle | null;
+      featureNameColumn?: string;
     },
   ): Promise<HierarchicalTable> {
     const { signal, workspace } = options;
     signal?.throwIfAborted();
     const store = await openZarr(normalizedSource, { signal, workspace });
-    return await HierarchicalTableReader.open(store, { signal });
+    return await HierarchicalTableReader.open(store, {
+      signal,
+      featureNameColumn: options.featureNameColumn,
+    });
   }
 
   protected override createTableData(

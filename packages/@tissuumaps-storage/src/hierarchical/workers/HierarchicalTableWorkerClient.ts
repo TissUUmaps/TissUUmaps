@@ -50,14 +50,18 @@ export class HierarchicalTableWorkerClient implements HierarchicalTable {
   static async open(
     worker: Worker,
     source: File | string,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; featureNameColumn?: string },
   ): Promise<HierarchicalTableWorkerClient> {
-    const { signal } = options ?? {};
+    const { signal, featureNameColumn } = options ?? {};
     const channel = new WorkerChannel(worker);
     try {
       signal?.throwIfAborted();
       const { columns, numRows, queryGroups } = await channel.request(
-        { op: "open", source },
+        {
+          op: "open",
+          source,
+          ...(featureNameColumn !== undefined && { featureNameColumn }),
+        },
         { signal },
       );
       return new HierarchicalTableWorkerClient(

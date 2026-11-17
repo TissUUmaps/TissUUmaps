@@ -49,6 +49,7 @@ export function startHierarchicalTableServer(
             }
             table = await HierarchicalTableReader.open(
               await openStore(event.data.source),
+              { featureNameColumn: event.data.featureNameColumn },
             );
             ctx.postMessage({
               id,

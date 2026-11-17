@@ -34,13 +34,16 @@ export type HierarchicalTableColumn =
  * A query group of the store (see `TableData.getQueryGroups`)
  *
  * A leaf at the path of a matrix column holds the matrix's columns, named by
- * their selectors. Any other leaf holds the dataset columns directly below its
- * path, but for the dataframe index at `indexPath`.
+ * the dataset column at `namePath`, if any (e.g. a gene symbol column of the
+ * AnnData `var`), and otherwise by their selectors. Any other leaf holds the
+ * dataset columns directly below its path, but for the dataframe index at
+ * `indexPath`.
  */
 export type HierarchicalTableQueryGroup = {
   id: string;
   name: string;
   indexPath?: string;
+  namePath?: string;
   subgroups?: HierarchicalTableQueryGroup[];
 };
 

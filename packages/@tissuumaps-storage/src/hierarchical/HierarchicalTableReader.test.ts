@@ -269,9 +269,13 @@ describe("HierarchicalTableReader", () => {
       ]);
     });
 
-    it("keeps feature names distinct", async () => {
+    it("names the features and keeps their leaf names distinct", async () => {
       const reader = await openReader(
         annData({
+          var: dataFrame("gene", {
+            gene: array(["ENSG1", "ENSG2"]),
+            gene_symbols: array(["CD3", "CD4"]),
+          }),
           layers: group({
             raw: sparse("csc_matrix", [3, 2], [], [], [0, 0, 0]),
           }),
@@ -284,12 +288,32 @@ describe("HierarchicalTableReader", () => {
       expect(
         reader.queryGroups
           .find(({ name }) => name === "Features")
-          ?.subgroups?.map(({ id, name }) => [id, name]),
+          ?.subgroups?.map(({ id, name, namePath }) => [id, name, namePath]),
       ).toEqual([
-        ["X", "X"],
-        ["layers/raw", "layers/raw"],
-        ["raw/X", "raw"],
+        ["X", "X", "var/gene_symbols"],
+        ["layers/raw", "layers/raw", "var/gene_symbols"],
+        ["raw/X", "raw", undefined],
       ]);
+    });
+
+    it("takes the chosen name column", async () => {
+      const reader = await HierarchicalTableReader.open(
+        new MemoryStore(
+          annData({
+            var: dataFrame("gene", {
+              gene: array(["ENSG1", "ENSG2"]),
+              gene_symbols: array(["CD3", "CD4"]),
+              alias: array(["a", "b"]),
+            }),
+          }),
+        ),
+        { featureNameColumn: "alias" },
+      );
+      expect(
+        reader.queryGroups
+          .flatMap(({ subgroups }) => subgroups ?? [])
+          .find(({ id }) => id === "X")?.namePath,
+      ).toBe("var/alias");
     });
 
     it("lists no obs group without columns but the index", async () => {

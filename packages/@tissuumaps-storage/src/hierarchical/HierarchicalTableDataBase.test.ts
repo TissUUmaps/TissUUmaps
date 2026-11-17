@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { HierarchicalTable } from "./HierarchicalTable";
 import { HierarchicalTableDataBase } from "./HierarchicalTableDataBase";
@@ -6,7 +6,19 @@ import { HierarchicalTableDataBase } from "./HierarchicalTableDataBase";
 class TestTableData extends HierarchicalTableDataBase {}
 
 /** An AnnData-like table of 3 cells and 3 genes keyed by Ensembl IDs */
-function createTable() {
+function createTable(
+  varColumns: Record<string, string[]> = {
+    feature_name: ["CD3E", "CD4", "CD3E"],
+  },
+  namePath: string | null = "var/feature_name",
+) {
+  const readColumn = vi.fn((query: string) => {
+    const name = query.slice("var/".length);
+    const values = varColumns[name];
+    return values !== undefined
+      ? Promise.resolve(values)
+      : Promise.reject(new Error(`No column "${query}"`));
+  });
   const table: HierarchicalTable = {
     columns: [
       {
@@ -43,6 +55,10 @@ function createTable() {
         numColumns: 3,
         selectors: ["0", "1", "2"],
       },
+      ...Object.keys(varColumns).map((name) => ({
+        kind: "dataset" as const,
+        path: `var/${name}`,
+      })),
     ],
     numRows: 3,
     queryGroups: [
@@ -51,8 +67,16 @@ function createTable() {
         id: "var",
         name: "Features",
         subgroups: [
-          { id: "X", name: "X" },
-          { id: "layers/counts", name: "counts" },
+          {
+            id: "X",
+            name: "X",
+            ...(namePath !== null && { namePath }),
+          },
+          {
+            id: "layers/counts",
+            name: "counts",
+            ...(namePath !== null && { namePath }),
+          },
           { id: "raw/X", name: "raw" },
           { id: "layers/unnamed", name: "unnamed" },
         ],
@@ -66,10 +90,10 @@ function createTable() {
         ],
       },
     ],
-    readColumn: () => Promise.reject(new Error("Not read")),
+    readColumn,
     close: () => {},
   };
-  return { table };
+  return { table, readColumn };
 }
 
 function queries(suggestions: { query: string }[]): string[] {
@@ -136,13 +160,44 @@ describe("HierarchicalTableDataBase", () => {
     // and typing a feature lists it first, then all the other features
     expect(
       queries(
-        await tableData.suggestColumnQueries("ENSG2", { queryGroupId: "X" }),
+        await tableData.suggestColumnQueries("CD4", { queryGroupId: "X" }),
       ),
     ).toEqual(["X[ENSG2]", "X[ENSG1]", "X[ENSG3]"]);
   });
 
-  it("names matrix columns by their selectors", async () => {
-    const { table } = createTable();
+  it("names matrix columns by the conventional name column", async () => {
+    const { table, readColumn } = createTable();
+    const tableData = new TestTableData(table, 3, undefined, undefined);
+    await expect(
+      tableData.suggestColumnQueries("cd4", { queryGroupId: "X" }),
+    ).resolves.toEqual([
+      { query: "X[ENSG2]", name: "CD4" },
+      { query: "X[ENSG1]", name: "CD3E (ENSG1)" },
+      { query: "X[ENSG3]", name: "CD3E (ENSG3)" },
+    ]);
+    // searches by ID too, and reads the names once
+    expect(
+      queries(
+        await tableData.suggestColumnQueries("ensg3", { queryGroupId: "X" }),
+      )[0],
+    ).toBe("X[ENSG3]");
+    expect(readColumn).toHaveBeenCalledTimes(1);
+  });
+
+  it("names matrix columns by the chosen name column", async () => {
+    const { table } = createTable(
+      { feature_name: ["a", "b", "c"], symbol: ["S1", "S2", "S3"] },
+      "var/symbol",
+    );
+    const tableData = new TestTableData(table, 3, undefined, undefined);
+    await expect(tableData.describeColumn("X[ENSG2]")).resolves.toEqual({
+      queryGroupId: "X",
+      name: "S2",
+    });
+  });
+
+  it("names matrix columns by their selectors without a name column", async () => {
+    const { table } = createTable({}, null);
     const tableData = new TestTableData(table, 3, undefined, undefined);
     expect(
       (await tableData.suggestColumnQueries("", { queryGroupId: "X" })).map(
@@ -157,10 +212,6 @@ describe("HierarchicalTableDataBase", () => {
     await expect(tableData.describeColumn("obs/area")).resolves.toEqual({
       queryGroupId: "obs",
       name: "area",
-    });
-    await expect(tableData.describeColumn("X[ENSG2]")).resolves.toEqual({
-      queryGroupId: "X",
-      name: "ENSG2",
     });
     await expect(tableData.describeColumn("uns/unknown")).resolves.toBeNull();
   });

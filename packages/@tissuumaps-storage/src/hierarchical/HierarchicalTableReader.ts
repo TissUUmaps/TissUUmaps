@@ -54,16 +54,18 @@ export class HierarchicalTableReader implements HierarchicalTable {
    *
    * @param store - The store to read from; closed by
    * {@link HierarchicalTable.close}, or here if this method rejects
-   * @param options - Optional abort signal
+   * @param options - Optional abort signal, and the name of the column that
+   * names the features of the AnnData profile, if chosen (see
+   * `AnnDataUtils.loadQueryGroups`)
    * @returns The reader
    * @throws Error if the store has no root group, no columns or more than one
    * AnnData object, or if the node that gives the row count is not a column
    */
   static async open(
     store: HierarchicalStore,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; featureNameColumn?: string },
   ): Promise<HierarchicalTableReader> {
-    const { signal } = options ?? {};
+    const { signal, featureNameColumn } = options ?? {};
     try {
       signal?.throwIfAborted();
       const root = await store.get("", { signal });
@@ -91,6 +93,7 @@ export class HierarchicalTableReader implements HierarchicalTable {
         numRows,
         await AnnDataUtils.loadQueryGroups(store, columns, annDataPath, {
           signal,
+          featureNameColumn,
         }),
       );
     } catch (error) {

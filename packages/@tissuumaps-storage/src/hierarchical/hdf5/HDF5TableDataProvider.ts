@@ -63,6 +63,7 @@ export class HDF5TableDataProvider extends HierarchicalTableDataProviderBase<
     options: {
       signal?: AbortSignal;
       workspace: FileSystemDirectoryHandle | null;
+      featureNameColumn?: string;
     },
   ): Promise<HierarchicalTable> {
     const { signal, workspace } = options;
@@ -75,7 +76,7 @@ export class HDF5TableDataProvider extends HierarchicalTableDataProviderBase<
     return await HierarchicalTableWorkerClient.open(
       new HDF5WorkerScript(),
       source.url !== undefined ? source.url : source.file,
-      { signal },
+      { signal, featureNameColumn: options.featureNameColumn },
     );
   }
 

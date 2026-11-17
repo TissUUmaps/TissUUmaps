@@ -10,12 +10,13 @@ The built-in **HDF5 data provider** opens [HDF5](https://www.hdfgroup.org/soluti
 
 HDF5 data sources have the `type` `"hdf5"` and accept the following fields:
 
-| Field        | Type     | Description                                                                                            |
-| ------------ | -------- | ------------------------------------------------------------------------------------------------------ |
-| `type`       | `string` | Always `"hdf5"`.                                                                                       |
-| `source`     | `string` | URL or path of the HDF5 file (see [Referencing data](../concepts/projects.md#referencing-data)).       |
-| `idColumn`   | `string` | Column of the row IDs, integers or strings without missing values. Sequential IDs are used if omitted. |
-| `nameColumn` | `string` | Column of the row names.                                                                               |
+| Field               | Type     | Description                                                                                                                                                   |
+| ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`              | `string` | Always `"hdf5"`.                                                                                                                                              |
+| `source`            | `string` | URL or path of the HDF5 file (see [Referencing data](../concepts/projects.md#referencing-data)).                                                              |
+| `idColumn`          | `string` | Column of the row IDs, integers or strings without missing values. Sequential IDs are used if omitted.                                                        |
+| `nameColumn`        | `string` | Column of the row names.                                                                                                                                      |
+| `featureNameColumn` | `string` | AnnData only: `var` column naming the features of `X`, the layers and `raw`, for display. Chosen by convention if omitted (see [AnnData](./hdf5.md#anndata)). |
 
 ## Tables
 
@@ -45,7 +46,7 @@ A group whose `encoding-type` is `anndata` is an [AnnData object](https://anndat
 The style section of the TissUUmaps application picks the columns of an AnnData object by query group (see [Style section](../concepts/style-section.md)):
 
 - **Annotations**: the columns of `obs`, but its index.
-- **Features**: the columns of `X`, each of the `layers` and `raw/X`, named by the `var` index (`raw/var` for `raw/X`). Switching between them keeps a feature with the same `var` index name.
+- **Features**: the columns of `X`, each of the `layers` and `raw/X`, named by the `featureNameColumn` of `var` (`raw/var` for `raw/X`), or by convention by the first of `feature_name`, `gene_symbols`, `gene_symbol`, `gene_name`, `gene_short_name`, `hgnc_symbol` and `symbol`, else by the `var` index. Names are for display only: columns stay addressed by the `var` index. Switching between them keeps a feature with the same `var` index name, not the same display name.
 - **Embeddings**: the matrices of `obsm`, for example `X_umap` or `spatial`.
 
 ## Example

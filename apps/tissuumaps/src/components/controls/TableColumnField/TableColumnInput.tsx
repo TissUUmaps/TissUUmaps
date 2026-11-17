@@ -305,6 +305,11 @@ export function TableColumnInput({
       setInvalid(true);
     }
   });
+  const handleSharedName = useEffectEvent(() => {
+    setPendingQuery(null);
+    setInvalid(false);
+    setOpen(true);
+  });
   useEffect(() => {
     if (pendingQuery === null) {
       return;
@@ -325,6 +330,19 @@ export function TableColumnInput({
           query = leafSuggestions?.find(
             (suggestion) => getSuggestionText(suggestion) === pendingQuery,
           )?.query;
+          // a name that several columns share is qualified (e.g. `CD3E
+          // (ENSG…)`): their list is shown to pick from
+          if (
+            query === undefined &&
+            leafSuggestions?.some((suggestion) =>
+              getSuggestionText(suggestion).startsWith(`${pendingQuery} (`),
+            )
+          ) {
+            if (!signal.aborted) {
+              handleSharedName();
+            }
+            return;
+          }
         }
         const column =
           query !== undefined
