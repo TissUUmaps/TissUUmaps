@@ -40,6 +40,16 @@ export type TableColumnInputProps = {
   queryGroupId?: string;
   /** The name to show for the value, if it is not the query itself */
   valueName?: string;
+  /**
+   * Called with a text that matches the name of no column of the query group when
+   * it is committed (e.g. to search other query groups for it)
+   */
+  onNoMatch?: (text: string) => void;
+  /**
+   * A column to list first while nothing is typed, marked as recent (e.g. the
+   * column last colored by)
+   */
+  recentQuery?: string;
   placeholder?: string;
   className?: string;
 };
@@ -51,6 +61,26 @@ export type TableColumnInputProps = {
 function getSuggestionText(suggestion: TableColumnQuerySuggestion): string {
   return suggestion.name ?? suggestion.query;
 }
+
+/**
+ * @param suggestion - A suggestion
+ * @param text - A searched text
+ * @returns Whether the suggestion's name or query contains the text,
+ * ignoring case
+ */
+function matchesText(
+  suggestion: TableColumnQuerySuggestion,
+  text: string,
+): boolean {
+  const lowerCaseText = text.toLowerCase();
+  return (
+    getSuggestionText(suggestion).toLowerCase().includes(lowerCaseText) ||
+    suggestion.query.toLowerCase().includes(lowerCaseText)
+  );
+}
+
+/** Milliseconds of no typing after which a text matching nothing is reported */
+const noMatchDelay = 600;
 
 /** The height of a suggestion, in pixels */
 const rowHeight = 32;
@@ -101,6 +131,7 @@ type SuggestionListHandle = {
 type SuggestionListProps = {
   suggestions: TableColumnQuerySuggestion[];
   query: string;
+  recentQuery: string | undefined;
   ref: Ref<SuggestionListHandle>;
 };
 
@@ -110,7 +141,12 @@ type SuggestionListProps = {
  * Mounted together with its scroll container, which the virtualizer subscribes
  * to on mount.
  */
-function SuggestionList({ suggestions, query, ref }: SuggestionListProps) {
+function SuggestionList({
+  suggestions,
+  query,
+  recentQuery,
+  ref,
+}: SuggestionListProps) {
   const {
     containerRef,
     firstIndex,
@@ -165,6 +201,11 @@ function SuggestionList({ suggestions, query, ref }: SuggestionListProps) {
                 suggestion={getSuggestionText(suggestion)}
                 query={query}
               />
+              {suggestion.query === recentQuery && (
+                <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                  recent
+                </span>
+              )}
             </AutocompleteItem>
           );
         })}
@@ -179,6 +220,8 @@ export function TableColumnInput({
   onValueChange,
   queryGroupId,
   valueName,
+  onNoMatch,
+  recentQuery,
   placeholder,
   className,
 }: TableColumnInputProps) {
@@ -192,6 +235,8 @@ export function TableColumnInput({
   const [suggestions, setSuggestions] = useState<
     TableColumnQuerySuggestion[] | null
   >(null);
+  // the text the suggestions were made for, which lags behind while typing
+  const [suggestionsText, setSuggestionsText] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [pendingQuery, setPendingQuery] = useState<string | null>(null);
 
@@ -221,13 +266,31 @@ export function TableColumnInput({
         const tableData = await loadTableData({
           signal: abortController.signal,
         });
-        const newSuggestions =
+        const allSuggestions =
           (await tableData?.suggestColumnQueries(text, {
             queryGroupId,
             signal: abortController.signal,
           })) ?? [];
         if (!abortController.signal.aborted) {
-          startSuggestTransition(() => setSuggestions(newSuggestions));
+          // the recent column is listed first, even where the suggestions do
+          // not list it (e.g. a column below a path)
+          const recentSuggestion =
+            text === "" && recentQuery !== undefined
+              ? (allSuggestions.find((s) => s.query === recentQuery) ?? {
+                  query: recentQuery,
+                })
+              : undefined;
+          const newSuggestions =
+            recentSuggestion !== undefined
+              ? [
+                  recentSuggestion,
+                  ...allSuggestions.filter((s) => s !== recentSuggestion),
+                ]
+              : allSuggestions;
+          startSuggestTransition(() => {
+            setSuggestions(newSuggestions);
+            setSuggestionsText(text);
+          });
         }
       } catch (error) {
         if (!abortController.signal.aborted) {
@@ -236,7 +299,37 @@ export function TableColumnInput({
       }
     });
     return () => abortController.abort();
-  }, [open, text, queryGroupId, loadTableData, startSuggestTransition]);
+  }, [
+    open,
+    text,
+    queryGroupId,
+    recentQuery,
+    loadTableData,
+    startSuggestTransition,
+  ]);
+
+  // every suggestion is listed, matches first, as the table ranks them; within
+  // a query group, a text that no suggestion matches is reported (see below)
+  const hasNoMatch =
+    queryGroupId !== undefined &&
+    text.trim() !== "" &&
+    text !== valueText &&
+    suggestionsText === text &&
+    suggestions !== null &&
+    !suggestions.some((suggestion) => matchesText(suggestion, text));
+
+  // a text matching nothing in the query group is reported once typing pauses,
+  // and never before its suggestions have loaded; a committed one right away
+  const reportNoMatch = useEffectEvent((noMatchText: string) => {
+    onNoMatch?.(noMatchText);
+  });
+  useEffect(() => {
+    if (!hasNoMatch) {
+      return;
+    }
+    const timeout = setTimeout(() => reportNoMatch(text), noMatchDelay);
+    return () => clearTimeout(timeout);
+  }, [hasNoMatch, text]);
 
   const handleCommitResolved = useEffectEvent((column: string | null) => {
     setPendingQuery(null);
@@ -277,6 +370,9 @@ export function TableColumnInput({
             ? ((await tableData?.resolveColumnQuery(query, { signal })) ?? null)
             : null;
         if (!signal.aborted) {
+          if (query === undefined) {
+            reportNoMatch(pendingQuery);
+          }
           handleCommitResolved(column);
         }
       })
@@ -365,7 +461,7 @@ export function TableColumnInput({
     if (suggestions.length === 0) {
       return text === "" ? "No columns" : `No matches for "${text}"`;
     }
-    return null;
+    return hasNoMatch ? `No matches for "${text}"` : null;
   }
 
   return (
@@ -417,6 +513,7 @@ export function TableColumnInput({
               ref={suggestionListRef}
               suggestions={suggestions}
               query={text}
+              recentQuery={text === "" ? recentQuery : undefined}
             />
           )}
         </AutocompleteList>

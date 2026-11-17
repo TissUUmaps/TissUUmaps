@@ -102,6 +102,30 @@ export function readColorBy(
 }
 
 /**
+ * Returns the column of the color configuration's inactive branch, which the
+ * color-by picker offers first as recent
+ *
+ * @param config - The color configuration
+ * @param tableId - The ID of the object's own table, if any
+ * @returns The column of the own table that the inactive grouping or
+ * gradient names (the grouping first, if neither is active), if any
+ */
+export function getRecentColumn(
+  config: ColorConfig,
+  tableId: string | null,
+): string | null {
+  const source = getActiveConfigSource(config);
+  const refs: TableColumnRef[] = [];
+  if (source !== "groupBy" && isGroupByConfig(config)) {
+    refs.push(config.groupBy);
+  }
+  if (source !== "from" && isFromConfig(config)) {
+    refs.push(config.from);
+  }
+  return refs.find((ref) => isOwnTableColumn(ref, tableId))?.column ?? null;
+}
+
+/**
  * Returns the color configuration that colors by a column of the object's own
  * table
  *
