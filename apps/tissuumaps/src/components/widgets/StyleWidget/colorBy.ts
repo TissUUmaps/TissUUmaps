@@ -2,6 +2,7 @@ import {
   type ColorConfig,
   ConfigUtils,
   type TableColumnRef,
+  type VisibilityConfig,
   defaultLabelColorPalette,
   getActiveConfigSource,
   isConstantConfig,
@@ -52,20 +53,26 @@ export function isOwnTableColumn(
  *
  * Coloring by a column of the object's own table reads as that column,
  * grouped into categories or mapped to a gradient; the property's default
- * coloring without a column reads as none; anything else is custom.
+ * coloring without a column (or a hidden fill) reads as none, so that the
+ * widget and the map agree; anything else is custom.
  *
  * @param config - The color configuration
  * @param tableId - The ID of the object's own table, if it has one
  * @param options - `noneSource` is the source of the property's default
- * coloring without a column (`"constant"` by default, `"random"` for labels)
+ * coloring without a column (`"constant"` by default, `"random"` for labels);
+ * `isHidden` tells whether what the configuration colors is hidden, e.g. the
+ * fill of shapes
  * @returns What the configuration colors by
  */
 export function readColorBy(
   config: ColorConfig,
   tableId: string | null,
-  options?: { noneSource?: "constant" | "random" },
+  options?: { noneSource?: "constant" | "random"; isHidden?: boolean },
 ): ColorBy {
-  const { noneSource = "constant" } = options ?? {};
+  const { noneSource = "constant", isHidden = false } = options ?? {};
+  if (isHidden) {
+    return { kind: "none" };
+  }
   const source = getActiveConfigSource(config) ?? "constant";
   switch (source) {
     case "groupBy":
@@ -189,5 +196,41 @@ export function withoutColorColumn(
   }
   throw new Error(
     "The default color configuration is no constant or random one",
+  );
+}
+
+/**
+ * Shows what a color configuration colors, e.g. the fill of shapes, if it is
+ * hidden by a constant visibility
+ *
+ * @param config - The visibility configuration
+ * @returns The visibility configuration, visible if it was constantly hidden
+ */
+export function showIfHidden(config: VisibilityConfig): VisibilityConfig {
+  return isHiddenByConstant(config)
+    ? { ...config, source: "constant", constant: { value: true } }
+    : config;
+}
+
+/**
+ * Hides what a color configuration colors, e.g. the fill of shapes
+ *
+ * @param config - The visibility configuration
+ * @returns The visibility configuration, constantly hidden; its other branches
+ * are kept
+ */
+export function hide(config: VisibilityConfig): VisibilityConfig {
+  return { ...config, source: "constant", constant: { value: false } };
+}
+
+/**
+ * @param config - A visibility configuration
+ * @returns Whether the configuration constantly hides what it applies to
+ */
+export function isHiddenByConstant(config: VisibilityConfig): boolean {
+  return (
+    getActiveConfigSource(config) === "constant" &&
+    isConstantConfig<boolean>(config) &&
+    !config.constant.value
   );
 }

@@ -6,7 +6,14 @@ import {
   pointsDefaults,
 } from "@tissuumaps/core";
 
-import { readColorBy, withColorColumn, withoutColorColumn } from "./colorBy";
+import {
+  hide,
+  isHiddenByConstant,
+  readColorBy,
+  showIfHidden,
+  withColorColumn,
+  withoutColorColumn,
+} from "./colorBy";
 
 const white = { r: 255, g: 255, b: 255 };
 
@@ -40,12 +47,19 @@ describe("readColorBy", () => {
     ).toEqual({ kind: "column", column: "qv", encoding: "gradient" });
   });
 
-  it("reads the default coloring without a column as none", () => {
+  it("reads the default coloring without a column, and a hidden one, as none", () => {
     expect(readColorBy({ constant: { value: white } }, "t1")).toEqual({
       kind: "none",
     });
     expect(
       readColorBy(labelsDefaults.labelColor, "t1", { noneSource: "random" }),
+    ).toEqual({ kind: "none" });
+    expect(
+      readColorBy(
+        { source: "from", from: { column: "qv", palette: "viridis" } },
+        "t1",
+        { isHidden: true },
+      ),
     ).toEqual({ kind: "none" });
   });
 
@@ -177,5 +191,22 @@ describe("withoutColorColumn", () => {
         labelsDefaults.labelColor,
       ),
     ).toMatchObject({ source: "random", random: { palette: "distinct" } });
+  });
+});
+
+describe("showIfHidden", () => {
+  it("shows a constantly hidden fill only", () => {
+    expect(isHiddenByConstant({ constant: { value: false } })).toBe(true);
+    expect(showIfHidden({ constant: { value: false } })).toEqual({
+      source: "constant",
+      constant: { value: true },
+    });
+    const fromConfig = { from: { column: "visible" } };
+    expect(showIfHidden(fromConfig)).toBe(fromConfig);
+    expect(hide(fromConfig)).toEqual({
+      ...fromConfig,
+      source: "constant",
+      constant: { value: false },
+    });
   });
 });

@@ -7,7 +7,10 @@ import {
 import { useColorConfigWidget } from "@/components/widgets/ColorConfigWidget/hooks";
 import { StyleWidget } from "@/components/widgets/StyleWidget";
 import {
+  hide,
+  isHiddenByConstant,
   readColorBy,
+  showIfHidden,
   withColorColumn,
   withoutColorColumn,
 } from "@/components/widgets/StyleWidget/colorBy";
@@ -18,7 +21,12 @@ export type ShapesStyleWidgetProps = {
   className?: string;
 };
 
-/** The always available settings of shapes: what their fill is colored by */
+/**
+ * The always available settings of shapes: what their fill is colored by
+ *
+ * Coloring by a column also shows a hidden fill, and coloring by none hides
+ * it again.
+ */
 export function ShapesStyleWidget({
   shapes,
   className,
@@ -36,7 +44,9 @@ export function ShapesStyleWidget({
   return (
     <StyleWidget
       tableId={tableId}
-      colorBy={readColorBy(shapes.shapeFillColor, tableId)}
+      colorBy={readColorBy(shapes.shapeFillColor, tableId, {
+        isHidden: isHiddenByConstant(shapes.shapeFillVisibility),
+      })}
       onColorByChange={(colorBy) => {
         // the shapes as they are now: the change may follow a column load
         const current = projectStore
@@ -45,20 +55,27 @@ export function ShapesStyleWidget({
         if (current === undefined) {
           return;
         }
-        updateShapes(current.id, {
-          shapeFillColor:
-            colorBy.kind === "column"
-              ? withColorColumn(
+        updateShapes(
+          current.id,
+          colorBy.kind === "column"
+            ? {
+                shapeFillColor: withColorColumn(
                   current.shapeFillColor,
                   colorBy.column,
                   colorBy.encoding,
                   current.dataSource.table ?? null,
-                )
-              : withoutColorColumn(
+                ),
+                shapeFillVisibility: showIfHidden(current.shapeFillVisibility),
+              }
+            : {
+                shapeFillColor: withoutColorColumn(
                   current.shapeFillColor,
                   shapesDefaults.shapeFillColor,
                 ),
-        });
+                // the mirror of picking a column, which shows a hidden fill
+                shapeFillVisibility: hide(current.shapeFillVisibility),
+              },
+        );
       }}
       colorAdapter={colorAdapter}
       className={className}
