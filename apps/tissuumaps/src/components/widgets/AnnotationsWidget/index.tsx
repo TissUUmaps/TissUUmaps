@@ -9,6 +9,7 @@ import type {
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { TableColumnField } from "@/components/controls/TableColumnField";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +24,11 @@ import type { GroupVisibility } from "./useGroupVisibility";
 // offset alone; cells must fit within it
 const tableRowHeight = 28;
 
-/** Groups beyond which the group table shows a message instead of its rows */
+/**
+ * Groups beyond which the group table asks before listing them: the table only
+ * renders the rows in view, but filtering, sorting and the visibility column
+ * go over every group on the main thread
+ */
 const maxGroupCount = 200_000;
 
 /**
@@ -80,10 +85,18 @@ export function AnnotationsWidget({
   className,
 }: AnnotationsWidgetProps) {
   const [nameQuery, setNameQuery] = useState("");
+  // the group counts the user chose to list despite their number; new counts
+  // ask again
+  const [confirmedGroupCounts, setConfirmedGroupCounts] = useState<Map<
+    string,
+    number
+  > | null>(null);
 
   // the cap counts every group, as a new map is filled with every group
   const hasTooManyGroups =
-    groupCounts !== null && groupCounts.size > maxGroupCount;
+    groupCounts !== null &&
+    groupCounts.size > maxGroupCount &&
+    groupCounts !== confirmedGroupCounts;
 
   const filteredGroupCounts = useMemo(
     () =>
@@ -146,8 +159,16 @@ export function AnnotationsWidget({
       {tableId !== null && selectedGroupBy !== null ? (
         hasTooManyGroups ? (
           <span className="text-xs text-muted-foreground">
-            {groupCounts.size.toLocaleString()} groups: too many to list. Group
-            by a column with at most {maxGroupCount.toLocaleString()} values.
+            This column has {groupCounts.size.toLocaleString()} groups. Listing
+            them may be slow.{" "}
+            <Button
+              variant="link"
+              size="xs"
+              className="h-auto p-0 text-xs"
+              onClick={() => setConfirmedGroupCounts(groupCounts)}
+            >
+              Show anyway
+            </Button>
           </span>
         ) : (
           <GroupAnnotationsTable
