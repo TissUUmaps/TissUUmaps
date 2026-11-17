@@ -1,11 +1,16 @@
 import type { Feature, GeoJSON, Geometry } from "geojson";
 
-import type { IDArray, ShapesGeometry } from "@tissuumaps/core";
+import type {
+  IDArray,
+  ShapesGeometry,
+  TypedArrayOrArray,
+} from "@tissuumaps/core";
 
 import {
   ShapesGeometryBuilder,
   type ShapesPolygon,
 } from "../common/ShapesGeometryBuilder";
+import { GeoJSONUtils } from "./GeoJSONUtils";
 
 export type GeoJSONRequest<TOp extends string = string> = {
   op: TOp;
@@ -28,9 +33,26 @@ export type GeoJSONFileResponse = GeoJSONResponse<GeoJSONFileRequest> & {
   names: string[] | undefined;
 };
 
-export type GeoJSONWorkerRequest = GeoJSONFileRequest;
+/**
+ * Reads the properties of the features that the file request reads as shapes,
+ * as the columns of a table whose rows are keyed by the same IDs
+ */
+export type GeoJSONTableRequest = GeoJSONRequest<"table"> & {
+  file?: File;
+  url?: string;
+  idProperty: string | undefined;
+};
 
-export type GeoJSONWorkerResponse = GeoJSONFileResponse | { error: string };
+export type GeoJSONTableResponse = GeoJSONResponse<GeoJSONTableRequest> & {
+  ids: IDArray;
+  columns: string[];
+  columnValues: Map<string, TypedArrayOrArray<unknown>>;
+};
+
+export type GeoJSONWorkerRequest = GeoJSONFileRequest | GeoJSONTableRequest;
+
+export type GeoJSONWorkerResponse =
+  GeoJSONFileResponse | GeoJSONTableResponse | { error: string };
 
 export type GeoJSONWorkerResponseFor<
   TWorkerRequest extends GeoJSONWorkerRequest,
@@ -98,6 +120,14 @@ ctx.onmessage = (event) => {
             ),
           );
           break;
+        case "table":
+          result = await handleTableRequest(
+            request,
+            stepProgress((progress, total) =>
+              ctx.postMessage({ progress, total }),
+            ),
+          );
+          break;
         default:
           throw new Error("Unknown request");
       }
@@ -110,13 +140,10 @@ ctx.onmessage = (event) => {
   })();
 };
 
-async function handleFileRequest(
-  request: GeoJSONFileRequest,
+async function readText(
+  request: GeoJSONFileRequest | GeoJSONTableRequest,
   onProgress: (progress: number, total: number) => void,
-): Promise<{
-  response: GeoJSONFileResponse;
-  transfer?: Transferable[];
-}> {
+): Promise<string> {
   let text: string;
   if (request.file !== undefined) {
     const file = request.file;
@@ -164,6 +191,17 @@ async function handleFileRequest(
   } else {
     throw new Error("A URL or file is required to load data.");
   }
+  return text;
+}
+
+async function handleFileRequest(
+  request: GeoJSONFileRequest,
+  onProgress: (progress: number, total: number) => void,
+): Promise<{
+  response: GeoJSONFileResponse;
+  transfer?: Transferable[];
+}> {
+  const text = await readText(request, onProgress);
   const geo = JSON.parse(text) as GeoJSON; // TODO Validate GeoJSON
   const { ids, names, geometry } = parseGeoJSON(
     geo,
@@ -182,6 +220,27 @@ async function handleFileRequest(
         ? [ids.buffer]
         : []),
     ],
+  };
+}
+
+async function handleTableRequest(
+  request: GeoJSONTableRequest,
+  onProgress: (progress: number, total: number) => void,
+): Promise<{
+  response: GeoJSONTableResponse;
+  transfer?: Transferable[];
+}> {
+  const text = await readText(request, onProgress);
+  const geo = JSON.parse(text) as GeoJSON<Geometry | null>;
+  const { ids, columns, columnValues } = GeoJSONUtils.readProperties(
+    geo,
+    request.idProperty,
+  );
+  return {
+    response: { op: "table", ids, columns, columnValues },
+    transfer: Array.from(columnValues.values())
+      .filter((values) => ArrayBuffer.isView(values))
+      .map((values) => values.buffer as ArrayBuffer),
   };
 }
 
@@ -218,23 +277,6 @@ function addPolygons(
   if (polygons !== undefined) {
     builder.addShape(polygons, id);
   }
-}
-
-function readFeatureId(
-  feature: Feature<Geometry | null>,
-  idProperty: string,
-): number | string {
-  const id = feature.properties?.[idProperty] as unknown;
-  if (id === undefined || id === null || id === "") {
-    throw new Error(`Feature is missing ID '${idProperty}'`);
-  }
-  if (typeof id === "string") {
-    return id;
-  }
-  if (typeof id === "number" && Number.isSafeInteger(id)) {
-    return id;
-  }
-  throw new Error(`Feature has invalid ID '${idProperty}'`);
 }
 
 function readFeatureName(
@@ -286,7 +328,9 @@ function parseGeoJSON(
         if (polygons !== undefined) {
           builder.addShape(
             polygons,
-            idProperty !== undefined ? readFeatureId(feature, idProperty) : i,
+            idProperty !== undefined
+              ? GeoJSONUtils.readFeatureId(feature, idProperty)
+              : i,
             nameProperty !== undefined
               ? readFeatureName(feature, nameProperty)
               : undefined,

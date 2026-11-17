@@ -2,6 +2,7 @@ import { SourceUtils, type TableDataSource } from "@tissuumaps/core";
 import {
   CSVTableDataProvider,
   GeoJSONShapesDataProvider,
+  GeoJSONTableDataProvider,
   HDF5TableDataProvider,
   OMEZarrImageDataProvider,
   OMEZarrLabelsDataProvider,
@@ -14,6 +15,7 @@ import {
   ZarrTableDataProvider,
   csvTableDataSourceType,
   geoJSONShapesDataSourceType,
+  geoJSONTableDataSourceType,
   hdf5TableDataSourceType,
   omeZarrImageDataSourceType,
   omeZarrLabelsDataSourceType,
@@ -132,11 +134,11 @@ export function enableBuiltInDataProviders(): void {
 
   appStoreState.registerShapesDataProvider(
     geoJSONShapesDataSourceType,
-    new GeoJSONShapesDataProvider(),
+    new GeoJSONShapesDataProvider({ addTable }),
   );
   appStoreState.registerShapesDataProvider(
     parquetShapesDataSourceType,
-    new ParquetShapesDataProvider(),
+    new ParquetShapesDataProvider({ addTable }),
   );
 
   appStoreState.registerTableDataProvider(
@@ -154,5 +156,9 @@ export function enableBuiltInDataProviders(): void {
   appStoreState.registerTableDataProvider(
     zarrTableDataSourceType,
     new ZarrTableDataProvider(),
+  );
+  appStoreState.registerTableDataProvider(
+    geoJSONTableDataSourceType,
+    new GeoJSONTableDataProvider(),
   );
 }

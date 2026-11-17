@@ -2,6 +2,7 @@ import {
   type DataProviderLoadOptions,
   type ShapesDataProvider,
   SourceUtils,
+  type TableDataSource,
 } from "@tissuumaps/core";
 
 import { ParquetShapesData } from "./ParquetShapesData";
@@ -10,6 +11,10 @@ import {
   type ParquetShapesDataSource,
   parquetShapesDataSourceDefaults,
 } from "./ParquetShapesDataSource";
+import {
+  type ParquetTableDataSource,
+  parquetTableDataSourceType,
+} from "./ParquetTableDataSource";
 import { runParquetWorker } from "./runParquetWorker";
 
 export class ParquetShapesDataProvider implements ShapesDataProvider<
@@ -73,6 +78,67 @@ export class ParquetShapesDataProvider implements ShapesDataProvider<
       },
     ],
   };
+
+  private readonly _addTable:
+    | ((
+        dataSource: TableDataSource,
+        options?: { signal?: AbortSignal },
+      ) => Promise<string>)
+    | undefined;
+
+  /**
+   * Creates the data provider
+   *
+   * @param options - `addTable` adds a table backed by a data source to the
+   *   project and resolves to its ID; without it, the other columns of the
+   *   file are not added as a table (see
+   *   {@link ParquetShapesDataProvider.prepareDataSource})
+   */
+  constructor(options?: {
+    addTable?: (
+      dataSource: TableDataSource,
+      options?: { signal?: AbortSignal },
+    ) => Promise<string>;
+  }) {
+    this._addTable = options?.addTable;
+  }
+
+  /**
+   * Adds the file as the table of the shapes, unless the data source
+   * references a table already
+   *
+   * The table reads the same file, keyed by the same ID column (or pandas
+   * index) as the shapes, so that its rows annotate them by ID; its columns
+   * are only read when used.
+   *
+   * @param dataSource - The data source to prepare
+   * @param _workspace - Unused: the table is normalized when it is loaded
+   * @param _projectSource - Unused, as `_workspace`
+   * @param options - Optional abort signal
+   * @returns A promise that resolves to the data source referencing the table
+   * @throws Error if the operation is aborted
+   */
+  async prepareDataSource(
+    dataSource: ParquetShapesDataSource,
+    _workspace: FileSystemDirectoryHandle | null,
+    _projectSource: string | null,
+    options?: { signal?: AbortSignal },
+  ): Promise<ParquetShapesDataSource> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    if (dataSource.table !== undefined || this._addTable === undefined) {
+      return dataSource;
+    }
+    const { source, idColumn, requestHeaders } = dataSource;
+    const tableDataSource: ParquetTableDataSource = {
+      type: parquetTableDataSourceType,
+      source,
+      ...(idColumn !== undefined && { idColumn }),
+      ...(requestHeaders !== undefined && { requestHeaders }),
+    };
+    const table = await this._addTable(tableDataSource, { signal });
+    return { ...dataSource, table };
+  }
 
   normalize(
     dataSource: ParquetShapesDataSource,

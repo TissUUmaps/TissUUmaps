@@ -32,6 +32,8 @@ Parquet shapes data sources have the `type` `"parquet"` and read a [GeoParquet](
 | `requestHeaders` | `object` | Extra HTTP headers sent with the request for a remote file.                                            |
 | `table`          | `string` | ID of the table annotating the shapes (see [Data model](../concepts/data-model.md)).                   |
 
+When shapes are added without a `table`, the file itself is added as their table: a Parquet table of the same file, keyed by the same `idColumn` (or [pandas index](#pandas)), so that its rows annotate the shapes by ID. Its columns are only read when used, e.g. to color the shapes.
+
 ## Profiles
 
 Any Parquet file is read as a table, its rows keyed by row number unless `idColumn` is set (see [Pandas](#pandas)). One profile is detected from the file's metadata:

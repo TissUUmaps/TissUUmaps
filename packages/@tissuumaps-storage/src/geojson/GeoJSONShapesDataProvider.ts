@@ -2,6 +2,7 @@ import {
   type DataProviderLoadOptions,
   type ShapesDataProvider,
   SourceUtils,
+  type TableDataSource,
 } from "@tissuumaps/core";
 
 import { GeoJSONShapesData } from "./GeoJSONShapesData";
@@ -10,6 +11,10 @@ import {
   type NormalizedGeoJSONShapesDataSource,
   geoJSONShapesDataSourceDefaults,
 } from "./GeoJSONShapesDataSource";
+import {
+  type GeoJSONTableDataSource,
+  geoJSONTableDataSourceType,
+} from "./GeoJSONTableDataSource";
 import { runGeoJSONWorker } from "./runGeoJSONWorker";
 
 export class GeoJSONShapesDataProvider implements ShapesDataProvider<
@@ -62,6 +67,30 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
     ],
   };
 
+  private readonly _addTable:
+    | ((
+        dataSource: TableDataSource,
+        options?: { signal?: AbortSignal },
+      ) => Promise<string>)
+    | undefined;
+
+  /**
+   * Creates the data provider
+   *
+   * @param options - `addTable` adds a table backed by a data source to the
+   *   project and resolves to its ID; without it, the feature properties are
+   *   not added as a table (see
+   *   {@link GeoJSONShapesDataProvider.prepareDataSource})
+   */
+  constructor(options?: {
+    addTable?: (
+      dataSource: TableDataSource,
+      options?: { signal?: AbortSignal },
+    ) => Promise<string>;
+  }) {
+    this._addTable = options?.addTable;
+  }
+
   normalize(
     dataSource: GeoJSONShapesDataSource,
     workspace: FileSystemDirectoryHandle | null,
@@ -91,6 +120,43 @@ export class GeoJSONShapesDataProvider implements ShapesDataProvider<
         SourceUtils.getExtension(normalizedSource),
       ),
     );
+  }
+
+  /**
+   * Adds the feature properties of the file as the table of the shapes,
+   * unless the data source references a table already
+   *
+   * The table is keyed by the same IDs as the shapes (see
+   * `GeoJSONTableDataProvider`), so that its rows annotate them by ID rather
+   * than by order. The file is parsed again for the table.
+   *
+   * @param dataSource - The data source to prepare
+   * @param _workspace - Unused: the table is normalized when it is loaded
+   * @param _projectSource - Unused, as `_workspace`
+   * @param options - Optional abort signal
+   * @returns A promise that resolves to the data source referencing the table
+   * @throws Error if the operation is aborted
+   */
+  async prepareDataSource(
+    dataSource: GeoJSONShapesDataSource,
+    _workspace: FileSystemDirectoryHandle | null,
+    _projectSource: string | null,
+    options?: { signal?: AbortSignal },
+  ): Promise<GeoJSONShapesDataSource> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    if (dataSource.table !== undefined || this._addTable === undefined) {
+      return dataSource;
+    }
+    const tableDataSource: GeoJSONTableDataSource = {
+      type: geoJSONTableDataSourceType,
+      source: dataSource.source,
+      ...(dataSource.idProperty !== undefined && {
+        idProperty: dataSource.idProperty,
+      }),
+    };
+    const table = await this._addTable(tableDataSource, { signal });
+    return { ...dataSource, table };
   }
 
   async load(
