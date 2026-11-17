@@ -2,13 +2,20 @@ import { describe, expect, it } from "vitest";
 
 import {
   type ColorConfig,
+  Marker,
+  type MarkerConfig,
   labelsDefaults,
   pointsDefaults,
 } from "@tissuumaps/core";
 
 import {
+  type ColorBy,
   hide,
   isHiddenByConstant,
+  isMarkerByCategory,
+  markerByCategory,
+  markerFollowingColor,
+  markerWithoutCategories,
   readColorBy,
   showIfHidden,
   withColorColumn,
@@ -207,6 +214,157 @@ describe("showIfHidden", () => {
       ...fromConfig,
       source: "constant",
       constant: { value: false },
+    });
+  });
+});
+
+describe("markerByCategory", () => {
+  const constantMarker: MarkerConfig = { constant: { value: Marker.Disc } };
+
+  it("groups the marker by a column", () => {
+    const grouped = markerByCategory(
+      constantMarker,
+      "gene",
+      pointsDefaults.pointMarker,
+      "t1",
+    );
+    expect(grouped).toEqual({
+      constant: { value: Marker.Disc },
+      source: "groupBy",
+      groupBy: { column: "gene", map: undefined },
+    });
+    expect(isMarkerByCategory(grouped, "gene", "t1")).toBe(true);
+    expect(isMarkerByCategory(grouped, "qv", "t1")).toBe(false);
+    expect(isMarkerByCategory(grouped, "gene", null)).toBe(false);
+  });
+
+  it("keeps the grouping of the same column", () => {
+    const grouped = {
+      source: "constant",
+      constant: { value: Marker.Disc },
+      groupBy: { column: "gene", map: "m1" },
+    } as MarkerConfig;
+    expect(
+      markerByCategory(grouped, "gene", pointsDefaults.pointMarker, "t1"),
+    ).toEqual({ ...grouped, source: "groupBy" });
+  });
+
+  it("returns to a constant marker", () => {
+    expect(
+      markerByCategory(
+        { groupBy: { column: "gene", map: undefined } },
+        null,
+        pointsDefaults.pointMarker,
+        "t1",
+      ),
+    ).toMatchObject({ source: "constant", constant: { value: Marker.Disc } });
+  });
+});
+
+describe("markerFollowingColor", () => {
+  const byLeiden: MarkerConfig = {
+    source: "groupBy",
+    groupBy: { column: "leiden", map: undefined },
+  };
+  const colorByLeiden: ColorConfig = {
+    source: "groupBy",
+    groupBy: { column: "leiden", map: undefined },
+  };
+  const isTumor: ColorBy = {
+    kind: "column",
+    column: "is_tumor",
+    encoding: "categories",
+  };
+  const qv: ColorBy = { kind: "column", column: "qv", encoding: "gradient" };
+
+  function follow(
+    marker: MarkerConfig,
+    previousColor: ColorConfig,
+    next: ColorBy,
+  ): MarkerConfig {
+    return markerFollowingColor(
+      marker,
+      previousColor,
+      next,
+      pointsDefaults.pointMarker,
+      "t1",
+    );
+  }
+
+  it("moves the grouping to the next column colored by categories", () => {
+    expect(follow(byLeiden, colorByLeiden, isTumor)).toMatchObject({
+      source: "groupBy",
+      groupBy: { column: "is_tumor" },
+    });
+  });
+
+  it("returns to a constant marker for a gradient or no color", () => {
+    expect(follow(byLeiden, colorByLeiden, qv)).toMatchObject({
+      source: "constant",
+    });
+    expect(follow(byLeiden, colorByLeiden, { kind: "none" })).toMatchObject({
+      source: "constant",
+    });
+  });
+
+  it("stays on through a gradient detour", () => {
+    const marker = follow(byLeiden, colorByLeiden, qv);
+    // the color keeps its grouping by leiden as an inactive branch
+    const colorByQv = withColorColumn(colorByLeiden, "qv", "gradient", "t1");
+    expect(follow(marker, colorByQv, isTumor)).toMatchObject({
+      source: "groupBy",
+      groupBy: { column: "is_tumor" },
+    });
+    expect(
+      follow(marker, colorByQv, {
+        kind: "column",
+        column: "leiden",
+        encoding: "categories",
+      }),
+    ).toMatchObject({ source: "groupBy", groupBy: { column: "leiden" } });
+  });
+
+  it("stays off through a gradient detour once switched off", () => {
+    const marker = markerWithoutCategories(
+      byLeiden,
+      pointsDefaults.pointMarker,
+    );
+    expect(marker).toEqual({
+      source: "constant",
+      constant: { value: Marker.Disc },
+    });
+    const colorByQv = withColorColumn(colorByLeiden, "qv", "gradient", "t1");
+    const afterGradient = follow(marker, colorByLeiden, qv);
+    expect(follow(afterGradient, colorByQv, isTumor)).toEqual(marker);
+  });
+
+  it("leaves a marker that does not follow the color unchanged", () => {
+    const constantMarker: MarkerConfig = { constant: { value: Marker.Disc } };
+    expect(follow(constantMarker, colorByLeiden, isTumor)).toBe(constantMarker);
+    const byOtherTable: MarkerConfig = {
+      source: "groupBy",
+      groupBy: { table: "t2", column: "leiden", map: undefined },
+    };
+    expect(follow(byOtherTable, colorByLeiden, isTumor)).toBe(byOtherTable);
+  });
+});
+
+describe("markerWithoutCategories", () => {
+  it("keeps the constant and gradient branches only", () => {
+    expect(
+      markerWithoutCategories(
+        {
+          source: "groupBy",
+          constant: { value: Marker.Cross },
+          from: { column: "marker" },
+          groupBy: { column: "leiden", map: "m1" },
+        } as MarkerConfig,
+        pointsDefaults.pointMarker,
+      ),
+    ).toEqual({
+      source: "constant",
+      constant: { value: Marker.Cross },
+      from: { column: "marker" },
     });
   });
 });

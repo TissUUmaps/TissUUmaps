@@ -1,6 +1,8 @@
 import {
   type ColorConfig,
   ConfigUtils,
+  Marker,
+  type MarkerConfig,
   type TableColumnRef,
   type VisibilityConfig,
   defaultLabelColorPalette,
@@ -233,4 +235,171 @@ export function isHiddenByConstant(config: VisibilityConfig): boolean {
     isConstantConfig<boolean>(config) &&
     !config.constant.value
   );
+}
+
+/**
+ * Returns whether the point marker tells the categories of a column apart
+ * (see `PointsStyleWidget`)
+ *
+ * @param config - The marker configuration
+ * @param column - The column of the object's own table colored by categories
+ * @param tableId - The ID of the object's own table
+ * @returns Whether the marker groups by the column
+ */
+export function isMarkerByCategory(
+  config: MarkerConfig,
+  column: string,
+  tableId: string | null,
+): boolean {
+  return (
+    getActiveConfigSource(config) === "groupBy" &&
+    isGroupByConfig<false>(config) &&
+    isOwnTableColumn(config.groupBy, tableId) &&
+    config.groupBy.column === column
+  );
+}
+
+/**
+ * Returns the marker configuration that gives each category of a column its
+ * own point marker, or a constant marker to all points
+ *
+ * The user switches it; once on, it follows the color (see
+ * {@link markerFollowingColor}). The branch of the grouping is kept if it
+ * already names the column, so that switching back keeps the edited markers
+ * of the categories.
+ *
+ * @param config - The marker configuration to update
+ * @param column - The column to group the marker by, or `null` for a constant
+ * marker
+ * @param defaultConfig - The default marker configuration, whose constant
+ * marker is used if the configuration has none
+ * @param tableId - The ID of the object's own table
+ * @returns The updated marker configuration
+ */
+export function markerByCategory(
+  config: MarkerConfig,
+  column: string | null,
+  defaultConfig: MarkerConfig,
+  tableId: string | null,
+): MarkerConfig {
+  if (column === null) {
+    return {
+      ...config,
+      source: "constant",
+      constant: getConstantMarker(config, defaultConfig),
+    };
+  }
+  return {
+    ...config,
+    source: "groupBy",
+    groupBy:
+      isGroupByConfig<false>(config) &&
+      ConfigUtils.isSameTableColumn(
+        config.groupBy,
+        { column },
+        tableId ?? undefined,
+      )
+        ? config.groupBy
+        : { column, map: undefined },
+  };
+}
+
+/**
+ * Returns the marker configuration of "Shapes by category" switched off: a
+ * constant marker to all points, without the grouping
+ *
+ * Unlike the constant marker of a gradient (see {@link markerFollowingColor}),
+ * which keeps the grouping as an inactive branch to come back to, switching
+ * off drops it, so that coloring by categories again leaves the switch off.
+ * Edited marker maps stay in the project, but are no longer referenced.
+ *
+ * @param config - The marker configuration to update
+ * @param defaultConfig - The default marker configuration, whose constant
+ * marker is used if the configuration has none
+ * @returns The constant marker configuration
+ */
+export function markerWithoutCategories(
+  config: MarkerConfig,
+  defaultConfig: MarkerConfig,
+): MarkerConfig {
+  return {
+    source: "constant",
+    constant: getConstantMarker(config, defaultConfig),
+    ...(isFromConfig(config) && { from: config.from }),
+  };
+}
+
+/**
+ * Returns the constant branch of a marker configuration, or a copy of the
+ * default one if it has none
+ *
+ * @param config - The marker configuration
+ * @param defaultConfig - The default marker configuration
+ * @returns The constant marker branch
+ */
+function getConstantMarker(
+  config: MarkerConfig,
+  defaultConfig: MarkerConfig,
+): { value: Marker } {
+  if (isConstantConfig<Marker>(config)) {
+    return config.constant;
+  }
+  return isConstantConfig<Marker>(defaultConfig)
+    ? structuredClone(defaultConfig.constant)
+    : { value: Marker.Disc };
+}
+
+/**
+ * Returns the marker configuration that keeps the point marker in step with
+ * the color while "Shapes by category" is on, i.e. while the marker groups by
+ * the column colored by categories
+ *
+ * Coloring another column by categories moves the grouping to that column;
+ * a gradient or no color makes the marker constant, keeping its grouping as
+ * an inactive branch. Coloring by categories again groups the marker anew if
+ * that kept grouping names the column that the color last grouped by (its own
+ * inactive branch), so that the switch stays on through a gradient detour.
+ * A switch turned off has no kept grouping (see
+ * {@link markerWithoutCategories}), so it stays off. Any other marker is left
+ * unchanged.
+ *
+ * @param config - The marker configuration to update
+ * @param previousColorConfig - The color configuration before the change
+ * @param next - What the color colors by after the change
+ * @param defaultConfig - The default marker configuration, whose constant
+ * marker is used if the configuration has none
+ * @param tableId - The ID of the object's own table
+ * @returns The updated marker configuration
+ */
+export function markerFollowingColor(
+  config: MarkerConfig,
+  previousColorConfig: ColorConfig,
+  next: ColorBy,
+  defaultConfig: MarkerConfig,
+  tableId: string | null,
+): MarkerConfig {
+  const previous = readColorBy(previousColorConfig, tableId);
+  const nextColumn =
+    next.kind === "column" && next.encoding === "categories"
+      ? next.column
+      : null;
+  if (previous.kind === "column" && previous.encoding === "categories") {
+    return isMarkerByCategory(config, previous.column, tableId)
+      ? markerByCategory(config, nextColumn, defaultConfig, tableId)
+      : config;
+  }
+  const lastCategoricalColumn =
+    isGroupByConfig(previousColorConfig) &&
+    isOwnTableColumn(previousColorConfig.groupBy, tableId)
+      ? previousColorConfig.groupBy.column
+      : null;
+  const followedLastCategories =
+    lastCategoricalColumn !== null &&
+    getActiveConfigSource(config) === "constant" &&
+    isGroupByConfig<false>(config) &&
+    isOwnTableColumn(config.groupBy, tableId) &&
+    config.groupBy.column === lastCategoricalColumn;
+  return followedLastCategories && nextColumn !== null
+    ? markerByCategory(config, nextColumn, defaultConfig, tableId)
+    : config;
 }

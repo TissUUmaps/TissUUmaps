@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { continuousColorPalettes } from "@tissuumaps/core";
 
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
@@ -36,6 +38,12 @@ export type StyleWidgetProps = {
    */
   noneLabel?: string;
 
+  /**
+   * A row shown while coloring by categories, below the encoding, e.g. the
+   * marker of points
+   */
+  categoryOptions?: ReactNode;
+
   className?: string;
 };
 
@@ -53,6 +61,7 @@ export function StyleWidget({
   onColorByChange,
   colorAdapter,
   noneLabel = "None",
+  categoryOptions,
   className,
 }: StyleWidgetProps) {
   const { isCategorical, isPending, error, pick, setEncoding } = useColorBy(
@@ -124,6 +133,7 @@ export function StyleWidget({
           </ToggleGroup>
         </StyleRow>
       )}
+      {encoding === "categories" && categoryOptions}
       {encoding === "gradient" && colorAdapter.currentSource === "from" && (
         <>
           <StyleRow label="Palette">
