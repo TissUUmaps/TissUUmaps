@@ -5,10 +5,11 @@ import type {
   HierarchicalStore,
   HierarchicalStoreGroup,
 } from "./HierarchicalStore";
-import type {
-  HierarchicalTable,
-  HierarchicalTableColumn,
-  HierarchicalTableQueryGroup,
+import {
+  HierarchicalColumnUnavailability,
+  type HierarchicalTable,
+  type HierarchicalTableColumn,
+  type HierarchicalTableQueryGroup,
 } from "./HierarchicalTable";
 import { AnnDataUtils } from "./profiles/AnnDataUtils";
 
@@ -46,11 +47,19 @@ export class HierarchicalTableReader implements HierarchicalTable {
    * Lists the columns of a store and infers its row count
    *
    * Groups are walked recursively, except groups encoded as a column or a
-   * matrix. Scalars, arrays of more than two dimensions, arrays of non-scalar
-   * types and nodes whose name contains a bracket are skipped.
+   * matrix. Scalars, arrays of more than two dimensions and nodes whose name
+   * contains a bracket are skipped.
+   *
+   * Columns that cannot be read are listed, but tagged with the reason as far
+   * as the metadata tells (see `HierarchicalColumnUnavailability`): arrays of
+   * non-scalar types, CSR matrices, and columns whose length is not the row
+   * count.
    *
    * The row count is the length of the `obs` index of the AnnData object,
-   * otherwise the first column's.
+   * otherwise the first column's. The length of each column is recorded
+   * where it is known without reading values: from array shapes, matrix
+   * `shape` attributes, and, for the encoded columns of an AnnData dataframe,
+   * from the dataframe's index, which is read once per dataframe.
    *
    * @param store - The store to read from; closed by
    * {@link HierarchicalTable.close}, or here if this method rejects
@@ -85,6 +94,15 @@ export class HierarchicalTableReader implements HierarchicalTable {
       await AnnDataUtils.assignMatrixSelectors(store, columns, annDataPath, {
         signal,
       });
+      for (const column of columns) {
+        if (
+          column.unavailable === undefined &&
+          column.numRows !== undefined &&
+          column.numRows !== numRows
+        ) {
+          column.unavailable = HierarchicalColumnUnavailability.LengthMismatch;
+        }
+      }
       return new HierarchicalTableReader(
         store,
         columns,
@@ -147,9 +165,9 @@ async function collectColumns(
   prefix: string,
   columns: HierarchicalTableColumn[],
   annDataPaths: string[],
-  options?: { signal?: AbortSignal },
+  options?: { signal?: AbortSignal; dataFrameNumRows?: number },
 ): Promise<void> {
-  const { signal } = options ?? {};
+  const { signal, dataFrameNumRows } = options ?? {};
   signal?.throwIfAborted();
   // sorted, as a store may list its nodes in write order
   for (const name of group.keys.toSorted()) {
@@ -168,7 +186,11 @@ async function collectColumns(
       if (AnnDataUtils.isColumnGroup(node)) {
         const column = AnnDataUtils.getColumn(node, path);
         if (column !== undefined) {
-          columns.push(column);
+          columns.push(
+            column.kind === "dataset" && dataFrameNumRows !== undefined
+              ? { ...column, numRows: dataFrameNumRows }
+              : column,
+          );
         }
       } else {
         if (AnnDataUtils.isAnnDataObject(node)) {
@@ -176,23 +198,66 @@ async function collectColumns(
         }
         await collectColumns(store, node, `${path}/`, columns, annDataPaths, {
           signal,
+          dataFrameNumRows:
+            AnnDataUtils.getEncodingType(node) === "dataframe"
+              ? await getDataFrameNumRows(store, path, { signal })
+              : undefined,
         });
       }
     } else {
       const { shape, dataType } = node;
-      if (!readableDataTypes.has(dataType)) {
-        continue;
-      }
+      const unavailable = !readableDataTypes.has(dataType)
+        ? { unavailable: HierarchicalColumnUnavailability.UnsupportedType }
+        : {};
       if (shape.length === 1) {
         columns.push({
           kind: "dataset",
           path,
+          numRows: shape[0]!,
           ...(dataType === "boolean" && { categorical: true }),
+          ...unavailable,
         });
       } else if (shape.length === 2) {
-        columns.push({ kind: "matrix", path, numColumns: shape[1]! });
+        columns.push({
+          kind: "matrix",
+          path,
+          numColumns: shape[1]!,
+          numRows: shape[0]!,
+          ...unavailable,
+        });
       }
     }
+  }
+}
+
+/**
+ * Reads the length of the index of an AnnData dataframe
+ *
+ * @param store - The store to read from
+ * @param path - The path of a group
+ * @param options - Optional abort signal
+ * @returns The length of the index, or `undefined` if the group is no
+ * dataframe or its index cannot be read
+ */
+async function getDataFrameNumRows(
+  store: HierarchicalStore,
+  path: string,
+  options?: { signal?: AbortSignal },
+): Promise<number | undefined> {
+  const { signal } = options ?? {};
+  signal?.throwIfAborted();
+  const indexPath = await AnnDataUtils.getDataFrameIndexPath(store, path, {
+    signal,
+  });
+  if (indexPath === undefined) {
+    return undefined;
+  }
+  try {
+    return await getNumRows(store, indexPath, { signal });
+  } catch {
+    signal?.throwIfAborted();
+    // a dataframe whose index cannot be read only costs its columns' lengths
+    return undefined;
   }
 }
 

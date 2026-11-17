@@ -6,9 +6,10 @@ import type {
   HierarchicalStoreArray,
   HierarchicalStoreGroup,
 } from "../HierarchicalStore";
-import type {
-  HierarchicalTableColumn,
-  HierarchicalTableQueryGroup,
+import {
+  HierarchicalColumnUnavailability,
+  type HierarchicalTableColumn,
+  type HierarchicalTableQueryGroup,
 } from "../HierarchicalTable";
 
 /**
@@ -85,8 +86,9 @@ export class AnnDataUtils {
    *
    * @param group - The group, see {@link AnnDataUtils.isColumnGroup}
    * @param path - The path of the group
-   * @returns The column, categorical if its encoding says so; `undefined` for
-   * a matrix without a two-dimensional `shape` attribute
+   * @returns The column, categorical if its encoding says so and, for a
+   * matrix, with its row count; `undefined` for a matrix without a
+   * two-dimensional `shape` attribute
    */
   static getColumn(
     group: HierarchicalStoreGroup,
@@ -102,9 +104,18 @@ export class AnnDataUtils {
       case "csc_matrix":
       case "csr_matrix": {
         const shape = AnnDataUtils._getShapeAttribute(group);
-        return shape !== undefined
-          ? { kind: "matrix", path, numColumns: shape[1]! }
-          : undefined;
+        if (shape === undefined) {
+          return undefined;
+        }
+        return {
+          kind: "matrix",
+          path,
+          numColumns: shape[1]!,
+          numRows: shape[0]!,
+          ...(AnnDataUtils.getEncodingType(group) === "csr_matrix" && {
+            unavailable: HierarchicalColumnUnavailability.RowMajorSparse,
+          }),
+        };
       }
       default:
         return undefined;
@@ -278,6 +289,9 @@ export class AnnDataUtils {
               : layerName === "X" || layerName === "raw"
                 ? relativePath
                 : layerName,
+          ...(matrix.unavailable !== undefined && {
+            unavailable: matrix.unavailable,
+          }),
         },
         relativePath,
       });
@@ -302,6 +316,9 @@ export class AnnDataUtils {
       .map((matrix) => ({
         id: matrix.path,
         name: matrix.path.slice(obsmPath.length + 1),
+        ...(matrix.unavailable !== undefined && {
+          unavailable: matrix.unavailable,
+        }),
       }));
     if (embeddingLeaves.length > 0) {
       groups.push({

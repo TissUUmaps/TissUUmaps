@@ -73,7 +73,7 @@ describe("startHierarchicalTableServer", () => {
     expect(message).toEqual({
       id: 0,
       op: "open",
-      columns: [{ kind: "dataset", path: "a" }],
+      columns: [{ kind: "dataset", path: "a", numRows: 3 }],
       numRows: 3,
       queryGroups: [],
     });

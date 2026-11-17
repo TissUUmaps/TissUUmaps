@@ -25,6 +25,12 @@ export type TableColumnQueryGroup = {
 
   /** The query groups below this one, if it is no leaf */
   subgroups?: TableColumnQueryGroup[];
+
+  /**
+   * Why the columns of the leaf cannot be read, if they cannot, in the
+   * provider's own words (e.g. `"row-major-sparse"`)
+   */
+  unavailable?: string;
 };
 
 /** A column query suggested by `TableData.suggestColumnQueries` */
@@ -37,6 +43,12 @@ export type TableColumnQuerySuggestion = {
    * the gene name of a matrix column)
    */
   name?: string;
+
+  /**
+   * Why the suggested column cannot be read, if it cannot, in the provider's
+   * own words (e.g. `"row-major-sparse"`); reading it fails
+   */
+  unavailable?: string;
 
   /**
    * Whether the query continues into a group of columns, e.g. a path prefix
@@ -135,7 +147,8 @@ export interface TableData extends ItemsData {
    *
    * Only implemented by table data with query groups. Columns map only between
    * the leaves below one top-level query group (see {@link getQueryGroups});
-   * names are never used to decide that.
+   * names are never used to decide that. A column of a query group whose
+   * columns cannot be read is still returned.
    *
    * @param column - The column name
    * @param options - The `id` of the leaf query group to map the column to

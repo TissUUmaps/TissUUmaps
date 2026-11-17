@@ -28,6 +28,8 @@ import { InputGroupAddon } from "@/components/ui/input-group";
 import { useLazyTableData } from "@/data/hooks/useLazyData";
 import { useCompressedRowVirtualizer } from "@/hooks/useCompressedRowVirtualizer";
 
+import { formatUnavailability } from "./formatUnavailability";
+
 export type TableColumnInputProps = {
   tableId: string | null;
   value: string | null;
@@ -175,6 +177,7 @@ function SuggestionList({ suggestions, query, ref }: SuggestionListProps) {
               key={suggestion.query}
               index={index}
               value={suggestion}
+              disabled={suggestion.unavailable !== undefined}
               aria-setsize={suggestions.length}
               aria-posinset={index + 1}
               className="absolute inset-x-0 top-0"
@@ -190,6 +193,11 @@ function SuggestionList({ suggestions, query, ref }: SuggestionListProps) {
                 suggestion={getSuggestionText(suggestion)}
                 query={query}
               />
+              {suggestion.unavailable !== undefined && (
+                <span className="ml-auto shrink-0 truncate text-xs text-muted-foreground">
+                  {formatUnavailability(suggestion.unavailable)}
+                </span>
+              )}
             </AutocompleteItem>
           );
         })}
@@ -323,7 +331,9 @@ export function TableColumnInput({
             { queryGroupId, signal },
           );
           query = leafSuggestions?.find(
-            (suggestion) => getSuggestionText(suggestion) === pendingQuery,
+            (suggestion) =>
+              suggestion.unavailable === undefined &&
+              getSuggestionText(suggestion) === pendingQuery,
           )?.query;
         }
         const column =

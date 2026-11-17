@@ -209,8 +209,15 @@ export class ColumnQueryUtils {
           slash >= 0
             ? { query: `${columnPrefix}${name}/`, group: true }
             : column.kind === "matrix"
-              ? { query: column.path, group: true }
-              : { query: column.path },
+              ? {
+                  query: column.path,
+                  group: true,
+                  ...ColumnQueryUtils._unavailability(column),
+                }
+              : {
+                  query: column.path,
+                  ...ColumnQueryUtils._unavailability(column),
+                },
         );
       }
     }
@@ -246,6 +253,19 @@ export class ColumnQueryUtils {
       ranked[rank >= 0 ? rank : 3]!.push(suggestion);
     }
     return ranked.flat();
+  }
+
+  /**
+   * @param column - A column
+   * @returns The `unavailable` field of a suggestion of the column, if it
+   * cannot be read
+   */
+  private static _unavailability(
+    column: HierarchicalTableColumn,
+  ): Pick<TableColumnQuerySuggestion, "unavailable"> {
+    return column.unavailable !== undefined
+      ? { unavailable: column.unavailable }
+      : {};
   }
 
   /**
@@ -341,14 +361,18 @@ export class ColumnQueryUtils {
         const rank = ColumnQueryUtils._rankMatch(selector, partial);
         rankedSelectors[rank >= 0 ? rank : 3]!.push(selector);
       }
-      return rankedSelectors
-        .flat()
-        .map((selector) => ({ query: `${column.path}[${selector}]` }));
+      return rankedSelectors.flat().map((selector) => ({
+        query: `${column.path}[${selector}]`,
+        ...ColumnQueryUtils._unavailability(column),
+      }));
     }
     const matches: TableColumnQuerySuggestion[] = [];
     const others: TableColumnQuerySuggestion[] = [];
     for (let i = 0; i < column.numColumns; i++) {
-      const suggestion = { query: `${column.path}[${i}]` };
+      const suggestion = {
+        query: `${column.path}[${i}]`,
+        ...ColumnQueryUtils._unavailability(column),
+      };
       if (
         partialSelector === undefined ||
         String(i).startsWith(partialSelector)

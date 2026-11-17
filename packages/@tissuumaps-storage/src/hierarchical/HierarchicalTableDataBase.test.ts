@@ -13,19 +13,23 @@ function createTable() {
         kind: "matrix",
         path: "X",
         numColumns: 3,
+        numRows: 3,
         selectors: ["ENSG1", "ENSG2", "ENSG3"],
       },
       {
         kind: "matrix",
         path: "layers/counts",
         numColumns: 3,
+        numRows: 3,
         selectors: ["ENSG1", "ENSG2", "ENSG3"],
+        unavailable: "row-major-sparse",
       },
-      { kind: "dataset", path: "obs/_index" },
-      { kind: "dataset", path: "obs/area" },
+      { kind: "dataset", path: "obs/_index", numRows: 3 },
+      { kind: "dataset", path: "obs/area", numRows: 3 },
       {
         kind: "dataset",
         path: "obs/cell_type",
+        numRows: 3,
         categorical: true,
       },
       { kind: "dataset", path: "uns/unknown" },
@@ -33,14 +37,16 @@ function createTable() {
         kind: "matrix",
         path: "raw/X",
         numColumns: 2,
+        numRows: 3,
         selectors: ["ENSG3", "ENSG1"],
       },
-      { kind: "matrix", path: "obsm/X_pca", numColumns: 3 },
-      { kind: "matrix", path: "obsm/X_other", numColumns: 3 },
+      { kind: "matrix", path: "obsm/X_pca", numColumns: 3, numRows: 3 },
+      { kind: "matrix", path: "obsm/X_other", numColumns: 3, numRows: 3 },
       {
         kind: "matrix",
         path: "layers/unnamed",
         numColumns: 3,
+        numRows: 3,
         selectors: ["0", "1", "2"],
       },
     ],
@@ -52,7 +58,11 @@ function createTable() {
         name: "Features",
         subgroups: [
           { id: "X", name: "X" },
-          { id: "layers/counts", name: "counts" },
+          {
+            id: "layers/counts",
+            name: "counts",
+            unavailable: "row-major-sparse",
+          },
           { id: "raw/X", name: "raw" },
           { id: "layers/unnamed", name: "unnamed" },
         ],
@@ -88,7 +98,11 @@ describe("HierarchicalTableDataBase", () => {
         name: "Features",
         subgroups: [
           { id: "X", name: "X" },
-          { id: "layers/counts", name: "counts" },
+          {
+            id: "layers/counts",
+            name: "counts",
+            unavailable: "row-major-sparse",
+          },
           { id: "raw/X", name: "raw" },
           { id: "layers/unnamed", name: "unnamed" },
         ],
@@ -151,6 +165,15 @@ describe("HierarchicalTableDataBase", () => {
     ).toEqual(["ENSG1", "ENSG2", "ENSG3"]);
   });
 
+  it("tags the columns of an unavailable matrix", async () => {
+    const { table } = createTable();
+    const tableData = new TestTableData(table, 3, undefined, undefined);
+    const [first] = await tableData.suggestColumnQueries("", {
+      queryGroupId: "layers/counts",
+    });
+    expect(first).toMatchObject({ unavailable: "row-major-sparse" });
+  });
+
   it("describes columns by their leaf and name", async () => {
     const { table } = createTable();
     const tableData = new TestTableData(table, 3, undefined, undefined);
@@ -191,7 +214,7 @@ describe("HierarchicalTableDataBase", () => {
       ).resolves.toBeNull();
     });
 
-    it("maps a feature into a layer", async () => {
+    it("maps into an unavailable query group", async () => {
       await expect(
         createTableData().mapColumn("X[ENSG2]", {
           queryGroupId: "layers/counts",

@@ -1,6 +1,25 @@
 import type { TypedArrayOrArray } from "@tissuumaps/core";
 
 /**
+ * Why a column of a store cannot be read, although it is listed (see the
+ * `unavailable` field of `TableColumnQuerySuggestion`)
+ *
+ * - `"row-major-sparse"`: a column of a sparse matrix stored by rows (an
+ *   AnnData CSR matrix), which cannot be read column by column
+ * - `"length-mismatch"`: a column whose length is not the table's number of
+ *   rows (e.g. a column of the AnnData `var` dataframe)
+ * - `"unsupported-type"`: a column of a data type that cannot be read (e.g.
+ *   compound or opaque HDF5 types)
+ */
+export const HierarchicalColumnUnavailability = {
+  RowMajorSparse: "row-major-sparse",
+  LengthMismatch: "length-mismatch",
+  UnsupportedType: "unsupported-type",
+} as const;
+export type HierarchicalColumnUnavailability =
+  (typeof HierarchicalColumnUnavailability)[keyof typeof HierarchicalColumnUnavailability];
+
+/**
  * One column that can be addressed by a column query
  *
  * A `dataset` column is a 1-D array, or an AnnData `categorical`,
@@ -9,19 +28,26 @@ import type { TypedArrayOrArray } from "@tissuumaps/core";
  * `csc_matrix`/`csr_matrix` group, whose columns are addressed as
  * `path[selector]` (see {@link ColumnQueryUtils}).
  *
- * `categorical` is what the encoding declares, if anything (see
- * `TableData.isColumnCategorical`).
+ * `numRows` is the column length where it is known without reading values
+ * (from the array shape, the matrix `shape` attribute, or the index of the
+ * enclosing AnnData dataframe); `categorical` is what the encoding declares,
+ * if anything (see `TableData.isColumnCategorical`); `unavailable` tells why
+ * the column cannot be read, as far as the metadata tells.
  */
 export type HierarchicalTableColumn =
   | {
       kind: "dataset";
       path: string;
+      numRows?: number;
       categorical?: boolean;
+      unavailable?: HierarchicalColumnUnavailability;
     }
   | {
       kind: "matrix";
       path: string;
       numColumns: number;
+      numRows?: number;
+      unavailable?: HierarchicalColumnUnavailability;
       /**
        * The selector of each matrix column, for expression matrices named by
        * an AnnData `var` index: the variable name, or the column index where
@@ -40,6 +66,7 @@ export type HierarchicalTableColumn =
 export type HierarchicalTableQueryGroup = {
   id: string;
   name: string;
+  unavailable?: HierarchicalColumnUnavailability;
   indexPath?: string;
   subgroups?: HierarchicalTableQueryGroup[];
 };

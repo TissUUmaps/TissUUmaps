@@ -23,6 +23,8 @@ export type SimpleSelectProps<
   placeholder?: string;
   onItemDelete?: (item: TItem) => void;
   isItemDeletable?: (item: TItem) => boolean;
+  /** Whether an item cannot be selected */
+  isItemDisabled?: (item: TItem) => boolean;
   /**
    * `inline` shows the trigger as text, e.g. within a label; `compact` as a
    * small control, e.g. within a dense row
@@ -74,6 +76,7 @@ export function SimpleSelect<
   placeholder,
   onItemDelete,
   isItemDeletable,
+  isItemDisabled,
   variant = "default",
   triggerLabel,
   ...props
@@ -124,7 +127,8 @@ export function SimpleSelect<
                 <SelectPrimitive.Item
                   key={String(value)}
                   value={value}
-                  className="grid cursor-default grid-cols-[0.75rem_1fr_auto] items-center gap-2 py-2 pr-4 pl-2.5 text-sm leading-4 outline-none select-none group-data-[side=none]:pr-12 group-data-[side=none]:text-base group-data-[side=none]:leading-4 data-highlighted:relative data-highlighted:z-0 data-highlighted:text-gray-50 data-highlighted:before:absolute data-highlighted:before:inset-x-1 data-highlighted:before:inset-y-0 data-highlighted:before:z-[-1] data-highlighted:before:rounded-sm data-highlighted:before:bg-gray-900 pointer-coarse:py-2.5 pointer-coarse:text-[0.925rem]"
+                  disabled={item !== undefined && isItemDisabled?.(item)}
+                  className="grid cursor-default grid-cols-[0.75rem_1fr_auto] items-center gap-2 py-2 pr-4 pl-2.5 text-sm leading-4 outline-none select-none group-data-[side=none]:pr-12 group-data-[side=none]:text-base group-data-[side=none]:leading-4 data-highlighted:relative data-highlighted:z-0 data-highlighted:text-gray-50 data-highlighted:before:absolute data-highlighted:before:inset-x-1 data-highlighted:before:inset-y-0 data-highlighted:before:z-[-1] data-highlighted:before:rounded-sm data-highlighted:before:bg-gray-900 pointer-coarse:py-2.5 pointer-coarse:text-[0.925rem] data-disabled:opacity-50"
                 >
                   <SelectPrimitive.ItemIndicator className="col-start-1">
                     <CheckIcon className="size-3" />

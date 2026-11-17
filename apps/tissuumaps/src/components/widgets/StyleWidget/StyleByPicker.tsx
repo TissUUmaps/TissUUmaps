@@ -4,6 +4,7 @@ import type { TableColumnQueryGroup } from "@tissuumaps/core";
 
 import { SimpleSelect } from "@/components/common/simple-select";
 import { TableColumnInput } from "@/components/controls/TableColumnField/TableColumnInput";
+import { formatUnavailability } from "@/components/controls/TableColumnField/formatUnavailability";
 import { Button } from "@/components/ui/button";
 import { useTableData } from "@/data/hooks/useData";
 
@@ -14,7 +15,7 @@ import { findColumnByText } from "./findColumnByText";
 type Row = {
   id: string;
   name: string;
-  leaves: Pick<TableColumnQueryGroup, "id" | "name">[];
+  leaves: Pick<TableColumnQueryGroup, "id" | "name" | "unavailable">[];
   hasFrom: boolean;
 };
 
@@ -32,7 +33,15 @@ function toRows(groups: TableColumnQueryGroup[]): Row[] {
     prefix: string,
   ): Row["leaves"] =>
     group.subgroups === undefined
-      ? [{ id: group.id, name: `${prefix}${group.name}` }]
+      ? [
+          {
+            id: group.id,
+            name: `${prefix}${group.name}`,
+            ...(group.unavailable !== undefined && {
+              unavailable: group.unavailable,
+            }),
+          },
+        ]
       : group.subgroups.flatMap((subgroup) =>
           getLeaves(
             subgroup,
@@ -83,12 +92,12 @@ export type StyleByPickerProps = {
  * "Features"); the table names its query groups, the app only lays them out.
  * A top-level leaf is the row's set of columns; any other top-level query
  * group gets a "from" menu of its leaves (e.g. `X`, a layer or `raw`), whose
- * first leaf is the default. The row of the column styled by is filled, the
- * others empty; picking in any applies right away. Switching "from" keeps the
- * entity styled by if the table maps it to the new leaf (see
+ * first available leaf is the default. The row of the column styled by is
+ * filled, the others empty; picking in any applies right away. Switching
+ * "from" keeps the entity styled by if the table maps it to the new leaf (see
  * `TableData.mapColumn`). A text matching no column of a leaf is looked up in
- * the other leaves of its row and offered there. Tables without query groups
- * get one "Column" row.
+ * the other readable leaves of its row and offered there. Tables without query
+ * groups get one "Column" row.
  */
 export function StyleByPicker({
   tableId,
@@ -257,7 +266,7 @@ export function StyleByPicker({
     }
     try {
       for (const leaf of row.leaves) {
-        if (leaf.id === queryGroupId) {
+        if (leaf.id === queryGroupId || leaf.unavailable !== undefined) {
           continue;
         }
         const found = await findColumnByText(tableData, leaf.id, text, {
@@ -282,12 +291,13 @@ export function StyleByPicker({
     <>
       {rows.map((row) => {
         const isActive = styledRow?.id === row.id;
-        // the chosen leaf, else the styled one, else the first one
+        // the chosen leaf, else the styled one, else the first available one
         const preferredLeafId =
           selectedLeafIds[row.id] ??
           (isActive ? description?.queryGroupId : undefined);
         const leaf =
           row.leaves.find((leaf) => leaf.id === preferredLeafId) ??
+          row.leaves.find((leaf) => leaf.unavailable === undefined) ??
           row.leaves[0];
         if (leaf === undefined) {
           return null;
@@ -315,7 +325,11 @@ export function StyleByPicker({
                 // the first row tells what the object looks like without a
                 // column
                 placeholder={
-                  column === null && row === rows[0] ? placeholder : "Search…"
+                  leaf.unavailable !== undefined
+                    ? formatUnavailability(leaf.unavailable)
+                    : column === null && row === rows[0]
+                      ? placeholder
+                      : "Search…"
                 }
                 className="min-w-0 flex-1"
               />
@@ -327,8 +341,20 @@ export function StyleByPicker({
                   <div className="w-24 shrink-0">
                     <SimpleSelect
                       items={row.leaves}
-                      itemLabel={(item) => item.name}
+                      itemLabel={(item) =>
+                        item.unavailable !== undefined ? (
+                          <span className="flex flex-col">
+                            {item.name}
+                            <span className="text-xs text-muted-foreground">
+                              {formatUnavailability(item.unavailable)}
+                            </span>
+                          </span>
+                        ) : (
+                          item.name
+                        )
+                      }
                       itemValue={(item) => item.id}
+                      isItemDisabled={(item) => item.unavailable !== undefined}
                       value={leaf.id}
                       onValueChange={(queryGroupId) => {
                         if (queryGroupId !== null) {

@@ -220,6 +220,7 @@ describe("HierarchicalTableReader over HDF5Store", () => {
       kind: "matrix",
       path: "X",
       numColumns: 2,
+      numRows: 3,
       selectors: ["CD3", "CD4"],
     });
     expect(await reader.readColumn("obs/cell_type")).toEqual(["T", "", "B"]);

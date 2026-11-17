@@ -131,12 +131,14 @@ export abstract class HierarchicalTableDataBase implements TableData {
       id,
       name,
       subgroups,
+      unavailable,
     }: HierarchicalTableQueryGroup): TableColumnQueryGroup => ({
       id,
       name,
       ...(subgroups !== undefined && {
         subgroups: subgroups.map(toQueryGroup),
       }),
+      ...(unavailable !== undefined && { unavailable }),
     });
     return this._table.queryGroups.map(toQueryGroup);
   }
@@ -354,6 +356,9 @@ export abstract class HierarchicalTableDataBase implements TableData {
       .map((column) => ({
         query: column.path,
         name: column.path.slice(leaf.id.length + 1),
+        ...(column.unavailable !== undefined && {
+          unavailable: column.unavailable,
+        }),
       }));
   }
 
@@ -366,7 +371,13 @@ export abstract class HierarchicalTableDataBase implements TableData {
   ): TableColumnQuerySuggestion[] {
     return Array.from({ length: matrix.numColumns }, (_, i) => {
       const selector = matrix.selectors?.[i] ?? String(i);
-      return { query: `${matrix.path}[${selector}]`, name: selector };
+      return {
+        query: `${matrix.path}[${selector}]`,
+        name: selector,
+        ...(matrix.unavailable !== undefined && {
+          unavailable: matrix.unavailable,
+        }),
+      };
     });
   }
 }

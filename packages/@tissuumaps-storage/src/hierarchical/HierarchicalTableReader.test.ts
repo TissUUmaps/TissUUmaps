@@ -216,13 +216,19 @@ describe("HierarchicalTableReader", () => {
         }),
       );
       expect(reader.columns).toEqual([
-        { kind: "matrix", path: "a/matrix", numColumns: 2 },
-        { kind: "dataset", path: "b" },
-        { kind: "matrix", path: "csc", numColumns: 3 },
+        {
+          kind: "dataset",
+          path: "a/compound",
+          numRows: 2,
+          unavailable: "unsupported-type",
+        },
+        { kind: "matrix", path: "a/matrix", numColumns: 2, numRows: 2 },
+        { kind: "dataset", path: "b", numRows: 2 },
+        { kind: "matrix", path: "csc", numColumns: 3, numRows: 2 },
       ]);
     });
 
-    it("records the declared categoricals", async () => {
+    it("records the column lengths and declared categoricals", async () => {
       const reader = await openReader(annData({}));
       const byPath = new Map(
         reader.columns.map((column) => [column.path, column]),
@@ -230,10 +236,33 @@ describe("HierarchicalTableReader", () => {
       expect(byPath.get("obs/cell_type")).toEqual({
         kind: "dataset",
         path: "obs/cell_type",
+        numRows: 3,
         categorical: true,
       });
       expect(byPath.get("obs/flag")).toMatchObject({ categorical: true });
       expect(byPath.get("obs/score")).not.toHaveProperty("categorical");
+      expect(byPath.get("var/gene")).toMatchObject({ numRows: 2 });
+      expect(byPath.get("X")).toMatchObject({ numRows: 3 });
+    });
+
+    it("tags columns that cannot be read", async () => {
+      const reader = await openReader(
+        annData({
+          layers: group({
+            csr: sparse("csr_matrix", [3, 2], [], [], [0, 0, 0, 0]),
+          }),
+        }),
+      );
+      const byPath = new Map(
+        reader.columns.map((column) => [column.path, column]),
+      );
+      expect(byPath.get("layers/csr")).toMatchObject({
+        unavailable: "row-major-sparse",
+      });
+      expect(byPath.get("var/gene")).toMatchObject({
+        unavailable: "length-mismatch",
+      });
+      expect(byPath.get("obs/area")).not.toHaveProperty("unavailable");
     });
 
     it("lists the query groups of an AnnData object", async () => {
@@ -257,7 +286,11 @@ describe("HierarchicalTableReader", () => {
           name: "Features",
           subgroups: [
             { id: "X", name: "X" },
-            { id: "layers/csr", name: "csr" },
+            {
+              id: "layers/csr",
+              name: "csr",
+              unavailable: "row-major-sparse",
+            },
             { id: "raw/X", name: "raw" },
           ],
         },
