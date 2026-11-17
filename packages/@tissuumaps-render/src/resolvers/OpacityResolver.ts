@@ -164,10 +164,14 @@ export class OpacityResolver {
   }
 
   /**
-   * Loads opacity data by reading numeric values from a table column
+   * Loads opacity data by reading numeric values from a table column and mapping
+   * them linearly from the configured range to opacities
+   *
+   * An unset minimum of the range is `0`; an unset maximum is the maximum value
+   * of the table column.
    *
    * @param ids - Ordered list of item IDs
-   * @param config - From configuration specifying the source column
+   * @param config - From configuration specifying the source column and range
    * @param defaultOpacity - Fallback opacity when a value is missing or invalid
    * @param loadTable - Async function that loads a {@link TableData} by ID
    * @param options - Optional abort signal and buffer alignment
@@ -186,6 +190,20 @@ export class OpacityResolver {
     const { signal, align = 1 } = options ?? {};
     signal?.throwIfAborted();
     const data = await loadTable(config.from.table, { signal });
+    const [rangeMin, rangeMax] = config.from.range ?? [null, null];
+    let valueRange: [number, number] | undefined = undefined;
+    if (rangeMax !== null) {
+      valueRange = [rangeMin ?? 0, rangeMax];
+    } else {
+      const columnValueRange = await TableUtils.loadValueRange(
+        data,
+        config.from.column,
+        { signal },
+      );
+      if (columnValueRange !== undefined) {
+        valueRange = [rangeMin ?? 0, columnValueRange[1]];
+      }
+    }
     const packedOpacities = OpacityResolver.createOpacityBuffer(ids.length, {
       align,
     });
@@ -195,7 +213,7 @@ export class OpacityResolver {
       ids,
       config.from.column,
       defaultOpacity,
-      (value) => OpacityResolver.parseOpacity(value),
+      (value) => OpacityResolver.parseOpacity(value, valueRange),
       (opacity) => OpacityResolver.packOpacity(opacity),
       { signal },
     );
@@ -292,16 +310,28 @@ export class OpacityResolver {
   }
 
   /**
-   * Parses a raw value as an opacity number, clamped to the range [0, 1]
+   * Parses a raw numeric value into an opacity by normalizing it within the
+   * given range
    *
-   * @param value - The raw value to parse (must be a number)
-   * @returns The clamped opacity, or `undefined` if `value` is not a number
+   * The normalized value is clamped to `[0, 1]`. An empty range makes every
+   * value `0`.
+   *
+   * @param value - The raw value to parse (must be a finite number)
+   * @param valueRange - The value range `[min, max]` to normalize within,
+   * `[0, 1]` if `undefined`
+   * @returns The opacity, or `undefined` if `value` is not a finite number
    */
-  static parseOpacity(value: unknown): number | undefined {
-    const opacity = NumberUtils.tryParseFinite(value, {
-      requireSafeBigInt: true,
-    });
-    return opacity !== undefined ? MathUtils.clamp(opacity, 0, 1) : undefined;
+  static parseOpacity(
+    value: unknown,
+    valueRange: [number, number] | undefined,
+  ): number | undefined {
+    const v = NumberUtils.tryParseFinite(value, { requireSafeBigInt: true });
+    if (v === undefined) {
+      return undefined;
+    }
+    const [vmin, vmax] = valueRange ?? [0, 1];
+    const vnorm = vmax > vmin ? (v - vmin) / (vmax - vmin) : 0;
+    return MathUtils.clamp(vnorm, 0, 1);
   }
 
   /**
