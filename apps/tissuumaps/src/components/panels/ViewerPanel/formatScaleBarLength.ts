@@ -6,22 +6,23 @@ const lengthValueFormat = new Intl.NumberFormat(undefined, {
 });
 
 /**
- * Formats a scale bar length in pixels, or in meters converted to the
+ * Formats a scale bar length in world units, or in meters converted to the
  * largest unit that keeps its value at least 1, from picometers to kilometers
  *
- * @param length - The length, in `lengthUnit`
- * @param lengthUnit - The unit of `length`: meters (m) or pixels (px)
- * @returns The formatted length, e.g. "500 nm", "2 km" or "50 px"
+ * @param length - The length, in `unit`
+ * @param unit - The unit of `length`: meters (m) or world units (units)
+ * @returns The formatted length, e.g. "500 nm", "2 km" or "50 units"
  */
 export function formatScaleBarLength(
   length: number,
-  lengthUnit: "m" | "px",
+  unit: "m" | "units",
 ): string {
-  if (lengthUnit === "px") {
-    return `${lengthValueFormat.format(length)} px`;
+  if (unit === "units") {
+    return `${lengthValueFormat.format(length)} units`;
   }
-  const unit =
-    Object.values(lengthUnits).findLast((unit) => unit.size <= length) ??
-    lengthUnits.picometer;
-  return `${lengthValueFormat.format(length / unit.size)} ${unit.symbol}`;
+  const lengthUnit =
+    Object.values(lengthUnits).findLast(
+      (lengthUnit) => lengthUnit.size <= length,
+    ) ?? lengthUnits.picometer;
+  return `${lengthValueFormat.format(length / lengthUnit.size)} ${lengthUnit.symbol}`;
 }

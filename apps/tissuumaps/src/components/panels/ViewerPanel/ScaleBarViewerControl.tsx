@@ -1,14 +1,7 @@
-import {
-  type Ref,
-  type RefObject,
-  useCallback,
-  useImperativeHandle,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useRef } from "react";
 
 import type { Dims, Rect } from "@tissuumaps/core";
+import { useViewportChange } from "@tissuumaps/react";
 
 import { lengthUnits } from "@/lib/lengthUnits";
 import { cn } from "@/lib/utils";
@@ -20,58 +13,51 @@ import { getScaleBarLength } from "./getScaleBarLength";
 /** Maximum width of the scale bar, in CSS pixels */
 const maxScaleBarWidth = 200;
 
-export type ScaleBarViewerControlHandle = {
-  update: () => void;
-};
-
 export type ScaleBarViewerControlProps = {
-  viewportRef: RefObject<{ viewport: Rect; containerSize: Dims } | null>;
-  ref?: Ref<ScaleBarViewerControlHandle>;
   className?: string;
 };
 
 export function ScaleBarViewerControl({
-  viewportRef,
-  ref,
   className,
 }: ScaleBarViewerControlProps) {
   const worldUnitSize = useProjectStore((state) => state.worldUnitSize);
   const lengthUnit = useProjectStore((state) => state.lengthUnit);
-  const scaleBarVisibility = useProjectStore(
-    (state) => state.scaleBarVisibility,
-  );
   const barRef = useRef<HTMLDivElement>(null);
-  const [lengthLabel, setLengthLabel] = useState("");
+  const labelRef = useRef<HTMLDivElement>(null);
 
-  // The bar width changes in every frame of a zoom, so it is written to the
-  // DOM directly; the label only re-renders when its text changes.
-  const updateScaleBar = useCallback(() => {
-    if (
-      !scaleBarVisibility ||
-      viewportRef.current === null ||
-      barRef.current === null
-    ) {
-      return;
-    }
-    const { viewport, containerSize } = viewportRef.current;
-    const physical = worldUnitSize !== undefined && worldUnitSize > 0;
-    const worldUnitLength = physical
-      ? worldUnitSize * lengthUnits[lengthUnit].size
-      : 1;
-    const pixelSize = (worldUnitLength * viewport.width) / containerSize.width;
-    const length = getScaleBarLength(pixelSize * maxScaleBarWidth);
-    barRef.current.style.width = `${length / pixelSize}px`;
-    setLengthLabel(formatScaleBarLength(length, physical ? "m" : "px"));
-  }, [viewportRef, scaleBarVisibility, worldUnitSize, lengthUnit]);
-  useLayoutEffect(updateScaleBar, [updateScaleBar]);
+  // The scale bar changes in every frame of a zoom, so it is written to the
+  // DOM directly, in the same frame as the viewer draws.
+  const updateScaleBar = useCallback(
+    (viewport: Rect, containerSize: Dims) => {
+      if (
+        barRef.current === null ||
+        labelRef.current === null ||
+        containerSize.width <= 0
+      ) {
+        return;
+      }
+      const hasWorldUnitSize = worldUnitSize !== undefined && worldUnitSize > 0;
+      // the label is in meters, or in world units until the world unit size is set
+      const labelUnit = hasWorldUnitSize ? "m" : "units";
+      const labelUnitsPerWorldUnit = hasWorldUnitSize
+        ? worldUnitSize * lengthUnits[lengthUnit].size
+        : 1;
+      const worldUnitsPerCssPixel = viewport.width / containerSize.width;
+      const labelUnitsPerCssPixel =
+        labelUnitsPerWorldUnit * worldUnitsPerCssPixel;
+      const labelLength = getScaleBarLength(
+        labelUnitsPerCssPixel * maxScaleBarWidth,
+      );
+      barRef.current.style.width = `${labelLength / labelUnitsPerCssPixel}px`;
+      labelRef.current.textContent = formatScaleBarLength(
+        labelLength,
+        labelUnit,
+      );
+    },
+    [worldUnitSize, lengthUnit],
+  );
+  useViewportChange(updateScaleBar);
 
-  useImperativeHandle(ref, () => ({ update: updateScaleBar }), [
-    updateScaleBar,
-  ]);
-
-  if (!scaleBarVisibility) {
-    return null;
-  }
   // An inline-block that hides its overflow has its baseline at its bottom
   // edge, like the navigator, so that both line up at the bottom.
   return (
@@ -81,7 +67,7 @@ export function ScaleBarViewerControl({
         className,
       )}
     >
-      <div className="tabular-nums">{lengthLabel}</div>
+      <div ref={labelRef} className="tabular-nums" />
       <div
         ref={barRef}
         className="mx-auto h-1.5 border-x-2 border-b-2 border-foreground"

@@ -196,8 +196,7 @@ export interface RawProject extends RawModel {
   /**
    * Physical size of one world unit, in the length unit
    *
-   * The scale bar shows world units as pixels unless this is set to a
-   * positive value.
+   * The scale bar is in world units unless this is set to a positive value.
    */
   worldUnitSize?: number;
 
