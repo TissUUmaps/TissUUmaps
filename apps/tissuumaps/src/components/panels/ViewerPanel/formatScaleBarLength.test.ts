@@ -25,8 +25,8 @@ describe("formatScaleBarLength", () => {
     expect(formatScaleBarLength(5e-13, "m")).toBe(`${half} pm`);
   });
 
-  it("formats pixels without converting them", () => {
-    expect(formatScaleBarLength(200, "px")).toBe("200 px");
-    expect(formatScaleBarLength(0.5, "px")).toBe(`${half} px`);
+  it("formats world units without converting them", () => {
+    expect(formatScaleBarLength(200, "units")).toBe("200 units");
+    expect(formatScaleBarLength(0.5, "units")).toBe(`${half} units`);
   });
 });
