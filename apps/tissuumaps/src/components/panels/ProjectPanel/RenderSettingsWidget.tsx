@@ -1,6 +1,11 @@
 import { RotateCcwIcon, SquareIcon } from "lucide-react";
 
-import { ColorUtils, LengthUnit, projectDefaults } from "@tissuumaps/core";
+import {
+  ColorUtils,
+  PhysicalUnit,
+  physicalUnits,
+  projectDefaults,
+} from "@tissuumaps/core";
 
 import {
   Collapsible,
@@ -18,7 +23,6 @@ import {
 import { SimpleSelect } from "@/components/common/simple-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { lengthUnits } from "@/lib/lengthUnits";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
@@ -35,10 +39,12 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
   const setViewerBackgroundColor = useProjectStore(
     (state) => state.setViewerBackgroundColor,
   );
-  const worldUnitSize = useProjectStore((state) => state.worldUnitSize);
-  const setWorldUnitSize = useProjectStore((state) => state.setWorldUnitSize);
-  const lengthUnit = useProjectStore((state) => state.lengthUnit);
-  const setLengthUnit = useProjectStore((state) => state.setLengthUnit);
+  const physicalUnitSize = useProjectStore((state) => state.physicalUnitSize);
+  const setPhysicalUnitSize = useProjectStore(
+    (state) => state.setPhysicalUnitSize,
+  );
+  const physicalUnit = useProjectStore((state) => state.physicalUnit);
+  const setPhysicalUnit = useProjectStore((state) => state.setPhysicalUnit);
 
   const { globalPointSizeFactor } = glOptions.pointsRenderOptions;
   const viewerBackgroundColorHex = ColorUtils.toHex(viewerBackgroundColor);
@@ -62,15 +68,15 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
           <FieldLabel className="shrink-0">World unit size in</FieldLabel>
           <Field className="flex min-w-0">
             <SimpleSelect
-              aria-label="Length unit"
-              items={Object.values(LengthUnit)}
-              itemLabel={(unit) => lengthUnits[unit].symbol}
+              aria-label="Physical unit"
+              items={Object.values(PhysicalUnit)}
+              itemLabel={(unit) => physicalUnits[unit].symbol}
               itemValue={(unit) => unit}
               variant="inline"
-              value={lengthUnit}
+              value={physicalUnit}
               onValueChange={(unit) => {
                 if (unit !== null) {
-                  setLengthUnit(unit);
+                  setPhysicalUnit(unit);
                 }
               }}
             />
@@ -84,10 +90,10 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
               min={0}
               step="any"
               placeholder="Unknown"
-              value={worldUnitSize ?? ""}
+              value={physicalUnitSize ?? ""}
               onChange={(event) => {
                 const newValue = event.target.valueAsNumber;
-                setWorldUnitSize(
+                setPhysicalUnitSize(
                   isNaN(newValue) ? undefined : Math.max(0, newValue),
                 );
               }}

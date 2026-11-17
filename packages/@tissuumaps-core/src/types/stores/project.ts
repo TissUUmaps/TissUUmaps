@@ -457,19 +457,19 @@ export type ProjectStoreActions = {
   ) => void;
 
   /**
-   * Sets the project's world unit size
+   * Sets the project's physical unit size
    *
-   * @param worldUnitSize - The physical size of one world unit, in the length
-   * unit, or `undefined` if it is unknown
+   * @param physicalUnitSize - The physical size of one world unit, in the
+   * physical unit, or `undefined` if it is unknown
    */
-  setWorldUnitSize: (worldUnitSize: Project["worldUnitSize"]) => void;
+  setPhysicalUnitSize: (physicalUnitSize: Project["physicalUnitSize"]) => void;
 
   /**
-   * Sets the unit of the project's world unit size
+   * Sets the unit of the project's physical unit size
    *
-   * @param lengthUnit - The length unit
+   * @param physicalUnit - The physical unit
    */
-  setLengthUnit: (lengthUnit: Project["lengthUnit"]) => void;
+  setPhysicalUnit: (physicalUnit: Project["physicalUnit"]) => void;
 
   /**
    * Shows or hides the scale bar

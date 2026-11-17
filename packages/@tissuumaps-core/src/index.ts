@@ -47,7 +47,8 @@ export {
   type VisibilityConfig,
 } from "./model/configs";
 export {
-  LengthUnit,
+  PhysicalUnit,
+  physicalUnits,
   createProject,
   projectDefaults,
   type Project,
