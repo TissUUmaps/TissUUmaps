@@ -2,7 +2,6 @@ import { useCallback } from "react";
 
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { usePromptDialog } from "@/components/dialogs/PromptDialog/hooks";
-import { pickFileFromInput } from "@/components/pick-file-from-input";
 import {
   clearProjectURLParam,
   loadProjectFromFile,
@@ -16,6 +15,7 @@ import {
   pickWorkspace,
   projectFileExtensions,
 } from "@/data/io/workspace";
+import { pickFileFromInput } from "@/lib/pickFileFromInput";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 

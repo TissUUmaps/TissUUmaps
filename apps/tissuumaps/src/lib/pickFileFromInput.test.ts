@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { pickFileFromInput } from "./pick-file-from-input";
+import { pickFileFromInput } from "./pickFileFromInput";
 
 // jsdom opens no dialog, so the stub acts as the user on click
 function stubFileInputClick(onClick: (input: HTMLInputElement) => void): void {

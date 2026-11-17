@@ -3,7 +3,7 @@ import { useCallback } from "react";
 import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { usePromptDialog } from "@/components/dialogs/PromptDialog/hooks";
-import { pickFileFromInput } from "@/components/pick-file-from-input";
+import { pickFileFromInput } from "@/lib/pickFileFromInput";
 import {
   loadPluginFromFile,
   loadPluginFromURL,
