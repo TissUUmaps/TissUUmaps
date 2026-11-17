@@ -1,0 +1,100 @@
+import type {
+  IDArray,
+  TableColumnQuerySuggestion,
+  TableData,
+  TypedArrayOrArray,
+} from "@tissuumaps/core";
+
+/**
+ * Table data whose columns are all loaded up front, held in memory by name
+ *
+ * Shared by the formats that are parsed as a whole, such as CSV files and the
+ * feature properties of GeoJSON files.
+ */
+export class ColumnarTableData implements TableData {
+  private readonly _n: number;
+  private _ids: IDArray | undefined;
+  private readonly _names: string[] | undefined;
+  private readonly _columns: string[];
+  private readonly _columnValues: Map<string, TypedArrayOrArray<unknown>>;
+
+  constructor(
+    n: number,
+    ids: IDArray | undefined,
+    names: string[] | undefined,
+    columns: string[],
+    columnValues: Map<string, TypedArrayOrArray<unknown>>,
+  ) {
+    this._n = n;
+    this._ids = ids;
+    this._names = names;
+    this._columns = columns;
+    this._columnValues = columnValues;
+  }
+
+  getIds(): IDArray {
+    if (this._ids === undefined) {
+      console.warn("No ID column specified, assigning sequential IDs instead");
+      this._ids = Uint32Array.from({ length: this.getSize() }, (_, i) => i);
+    }
+    return this._ids;
+  }
+
+  getSize(): number {
+    return this._n;
+  }
+
+  getNames(): string[] | undefined {
+    return this._names;
+  }
+
+  suggestColumnQueries(
+    currentQuery: string,
+  ): Promise<TableColumnQuerySuggestion[]> {
+    const lowerCaseQuery = currentQuery.toLowerCase();
+    const exactMatches: string[] = [];
+    const prefixMatches: string[] = [];
+    const matches: string[] = [];
+    const others: string[] = [];
+    for (const column of this._columns) {
+      const lowerCaseColumn = column.toLowerCase();
+      if (column === currentQuery) {
+        exactMatches.push(column);
+      } else if (lowerCaseColumn.startsWith(lowerCaseQuery)) {
+        prefixMatches.push(column);
+      } else if (lowerCaseColumn.includes(lowerCaseQuery)) {
+        matches.push(column);
+      } else {
+        others.push(column);
+      }
+    }
+    return Promise.resolve(
+      [...exactMatches, ...prefixMatches, ...matches, ...others].map(
+        (query) => ({ query }),
+      ),
+    );
+  }
+
+  resolveColumnQuery(query: string): Promise<string | null> {
+    if (this._columns.includes(query)) {
+      return Promise.resolve(query);
+    }
+    const lowerCaseQuery = query.toLowerCase();
+    const matches = this._columns.filter(
+      (column) => column.toLowerCase() === lowerCaseQuery,
+    );
+    return Promise.resolve(matches.length === 1 ? matches[0]! : null);
+  }
+
+  loadValues<T>(column: string): Promise<TypedArrayOrArray<T>> {
+    const columnValues = this._columnValues.get(column);
+    if (columnValues === undefined) {
+      return Promise.reject(
+        new Error(`Column ${column} does not exist in the table`),
+      );
+    }
+    return Promise.resolve(columnValues as TypedArrayOrArray<T>);
+  }
+
+  close(): void {}
+}
