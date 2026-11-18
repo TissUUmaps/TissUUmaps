@@ -6,6 +6,7 @@ import { appStore } from "@/stores/app";
 import { projectStore } from "@/stores/project";
 
 import {
+  appendProjectURLParam,
   clearProjectURLParams,
   downloadProject,
   findLocalProjectProviders,
@@ -636,6 +637,21 @@ describe("project providers", () => {
       window.history.replaceState({}, "", "/?project=a.tm4&other=1");
       setProjectURLParam({ ...zarrProvider, urlParam: undefined }, "b");
       expect(window.location.search).toBe("?other=1");
+    });
+
+    it("appends a parameter when importing", () => {
+      window.history.replaceState({}, "", "/?project=a.tm4");
+      appendProjectURLParam(zarrProvider, "b.zarr");
+      appendProjectURLParam(zarrProvider, "c.zarr");
+      expect(window.location.search).toBe(
+        "?project=a.tm4&zarr=b.zarr&zarr=c.zarr",
+      );
+    });
+
+    it("leaves the URL alone when importing with a project provider without a parameter", () => {
+      window.history.replaceState({}, "", "/?project=a.tm4");
+      appendProjectURLParam({ ...zarrProvider, urlParam: undefined }, "b");
+      expect(window.location.search).toBe("?project=a.tm4");
     });
 
     it("removes the parameters of every project provider", () => {

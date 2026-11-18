@@ -720,11 +720,28 @@ export function setProjectURLParam(
   projectUrl: string,
 ): void {
   clearProjectURLParams();
-  if (projectProvider.urlParam !== undefined) {
-    const url = new URL(window.location.href);
-    url.searchParams.append(projectProvider.urlParam, projectUrl);
-    window.history.replaceState({}, "", url);
+  appendProjectURLParam(projectProvider, projectUrl);
+}
+
+/**
+ * Records an imported project in the address bar, after the projects recorded
+ * already, so that reloading the page imports it again
+ *
+ * Does nothing for a project provider without a `urlParam`.
+ *
+ * @param projectProvider - The project provider the project was imported with
+ * @param projectUrl - The URL the project was imported from
+ */
+export function appendProjectURLParam(
+  projectProvider: ProjectProvider,
+  projectUrl: string,
+): void {
+  if (projectProvider.urlParam === undefined) {
+    return;
   }
+  const url = new URL(window.location.href);
+  url.searchParams.append(projectProvider.urlParam, projectUrl);
+  window.history.replaceState({}, "", url);
 }
 
 /**

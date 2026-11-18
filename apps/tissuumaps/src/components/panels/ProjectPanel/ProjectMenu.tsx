@@ -2,7 +2,9 @@ import {
   DownloadIcon,
   EllipsisIcon,
   FileIcon,
+  FileInputIcon,
   FolderIcon,
+  ImportIcon,
   LinkIcon,
   XIcon,
 } from "lucide-react";
@@ -21,6 +23,8 @@ import { isWorkspaceSupported } from "@/data/io/workspace";
 import {
   useCloseProject,
   useDownloadProject,
+  useImportProjectFromFile,
+  useImportProjectFromURL,
   useOpenProjectFromFile,
   useOpenProjectFromURL,
   useOpenWorkspace,
@@ -34,6 +38,8 @@ export type ProjectMenuProps = {
 export function ProjectMenu({ className }: ProjectMenuProps) {
   const openProjectFromFile = useOpenProjectFromFile();
   const openProjectFromURL = useOpenProjectFromURL();
+  const importProjectFromFile = useImportProjectFromFile();
+  const importProjectFromURL = useImportProjectFromURL();
   const closeProject = useCloseProject();
   const downloadProject = useDownloadProject();
   const openWorkspace = useOpenWorkspace();
@@ -55,6 +61,16 @@ export function ProjectMenu({ className }: ProjectMenuProps) {
           <LinkIcon />
           Open from URL…
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={importProjectFromFile}>
+          <FileInputIcon />
+          Import project file…
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={importProjectFromURL}>
+          <ImportIcon />
+          Import from URL…
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem
           disabled={!workspaceSupported}
           onClick={openWorkspace}

@@ -3,10 +3,12 @@ import { useCallback } from "react";
 import type { ProjectProvider } from "@tissuumaps/core";
 import { tissuumapsProjectType } from "@tissuumaps/storage";
 
+import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
 import { useChooseDialog } from "@/components/dialogs/ChooseDialog/hooks";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { usePromptDialog } from "@/components/dialogs/PromptDialog/hooks";
 import {
+  appendProjectURLParam,
   clearProjectURLParams,
   downloadProject,
   findLocalProjectProviders,
@@ -14,6 +16,9 @@ import {
   getProjectFileExtensions,
   getProjectFileTypes,
   getProjectProvider,
+  importProjectFromFile,
+  importProjectFromFileHandle,
+  importProjectFromURL,
   openProjectFromFile,
   openProjectFromFileHandle,
   openProjectFromURL,
@@ -155,7 +160,8 @@ export function useChooseProjectProvider(): (
  * project from it with the project provider that supports it, or the one the
  * user chooses if none or several do (see `useChooseProjectProvider`)
  *
- * Failures are logged, as the callback is called from event handlers.
+ * Failures are logged and shown, as the callback is called from event
+ * handlers.
  *
  * @returns The callback
  */
@@ -164,6 +170,7 @@ export function useOpenProjectFromURL(): () => void {
 
   const chooseProjectProvider = useChooseProjectProvider();
 
+  const alert = useAlertDialog();
   const prompt = usePromptDialog();
 
   return useCallback(() => {
@@ -187,10 +194,14 @@ export function useOpenProjectFromURL(): () => void {
         await openProjectFromURL(projectProvider, projectUrl);
         setProjectURLParam(projectProvider, projectUrl);
       })
-      .catch((error) => {
+      .catch(async (error: unknown) => {
         console.error("Failed to load project from URL", error);
+        await alert({
+          title: "Cannot open the project",
+          body: error instanceof Error ? error.message : String(error),
+        });
       });
-  }, [workspace, chooseProjectProvider, prompt]);
+  }, [workspace, chooseProjectProvider, prompt, alert]);
 }
 
 /**
@@ -202,8 +213,8 @@ export function useOpenProjectFromURL(): () => void {
  * `useChooseProjectProvider`). A project file picked outside the open
  * workspace is loaded only after confirmation, as its project-relative paths
  * are then resolved against the workspace instead of the project file's
- * directory (see `openProjectFromFileHandle`). Failures are logged, as the
- * callback is called from event handlers.
+ * directory (see `openProjectFromFileHandle`). Failures are logged and shown,
+ * as the callback is called from event handlers.
  *
  * @returns The callback
  */
@@ -214,6 +225,7 @@ export function useOpenProjectFromFile(): () => void {
 
   const chooseProjectProvider = useChooseProjectProvider();
 
+  const alert = useAlertDialog();
   const confirm = useConfirmDialog();
 
   return useCallback(() => {
@@ -247,10 +259,14 @@ export function useOpenProjectFromFile(): () => void {
           await loadProjectFile(projectFile, projectProvider);
         }
       })
-      .catch((error) => {
+      .catch(async (error: unknown) => {
         console.error("Failed to load project from file", error);
+        await alert({
+          title: "Cannot open the project",
+          body: error instanceof Error ? error.message : String(error),
+        });
       });
-  }, [workspace, loadProjectFile, chooseProjectProvider, confirm]);
+  }, [workspace, loadProjectFile, chooseProjectProvider, confirm, alert]);
 }
 
 /**
@@ -287,6 +303,129 @@ export function useLoadProjectFile(): (
     },
     [workspace, setProjectOpen],
   );
+}
+
+/**
+ * Returns a callback that asks the user for a project URL, and imports the
+ * project from it into the open project with the project provider that
+ * supports it, or the one the user chooses if none or several do (see
+ * `useChooseProjectProvider`)
+ *
+ * The imported project is recorded in the address bar (see
+ * `appendProjectURLParam`). Failures are logged and shown, as the callback is
+ * called from event handlers.
+ *
+ * @returns The callback
+ */
+export function useImportProjectFromURL(): () => void {
+  const workspace = useAppStore((state) => state.workspace);
+
+  const chooseProjectProvider = useChooseProjectProvider();
+
+  const alert = useAlertDialog();
+  const prompt = usePromptDialog();
+
+  return useCallback(() => {
+    void prompt({ title: "Enter project URL to import", actionLabel: "Import" })
+      .then(async (value) => {
+        const projectUrl = value?.trim();
+        if (!projectUrl) {
+          return;
+        }
+        const projectProvider = await chooseProjectProvider(
+          projectUrl,
+          await findProjectProviders(
+            new URL(projectUrl, document.baseURI).href,
+            workspace,
+          ),
+          { actionLabel: "Import" },
+        );
+        if (projectProvider === null) {
+          return;
+        }
+        await importProjectFromURL(projectProvider, projectUrl);
+        appendProjectURLParam(projectProvider, projectUrl);
+      })
+      .catch(async (error: unknown) => {
+        console.error("Failed to import project from URL", error);
+        await alert({
+          title: "Cannot import the project",
+          body: error instanceof Error ? error.message : String(error),
+        });
+      });
+  }, [workspace, chooseProjectProvider, prompt, alert]);
+}
+
+/**
+ * Returns a callback that lets the user pick a project file, within the
+ * workspace if one is open, and imports it into the open project
+ *
+ * The file is imported with the project provider that loads files with its
+ * extension, or the one the user chooses if none or several do (see
+ * `useChooseProjectProvider`). A project file picked outside the open
+ * workspace is imported only after confirmation, as for opening (see
+ * `useOpenProjectFromFile`). The project URL parameters are left as they are,
+ * as a file cannot be recorded in them. Failures are logged and shown, as the
+ * callback is called from event handlers.
+ *
+ * @returns The callback
+ */
+export function useImportProjectFromFile(): () => void {
+  const workspace = useAppStore((state) => state.workspace);
+
+  const chooseProjectProvider = useChooseProjectProvider();
+
+  const alert = useAlertDialog();
+  const confirm = useConfirmDialog();
+
+  return useCallback(() => {
+    const pickedProjectFile =
+      workspace === null
+        ? pickProjectFileFromInput(getProjectFileExtensions())
+        : pickProjectFile(getProjectFileTypes(), { startIn: workspace });
+    void pickedProjectFile
+      .then(async (projectFile) => {
+        if (projectFile === null) {
+          return;
+        }
+        if (
+          workspace !== null &&
+          (projectFile instanceof File ||
+            (await resolveProjectSource(projectFile, workspace)) === null) &&
+          !(await confirm({
+            title: "Import project from outside the workspace",
+            body: `"${projectFile.name}" is not in the workspace "${workspace.name}". Its relative paths will be looked up in "${workspace.name}" instead of next to the project file, so some of its data may fail to load. Import it anyway?`,
+            actionLabel: "Import",
+          }))
+        ) {
+          return;
+        }
+        const projectProvider = await chooseProjectProvider(
+          projectFile.name,
+          findLocalProjectProviders(projectFile),
+          { actionLabel: "Import" },
+        );
+        if (projectProvider === null) {
+          return;
+        }
+        if (projectFile instanceof File) {
+          await importProjectFromFile(projectProvider, projectFile);
+        } else {
+          await importProjectFromFileHandle(
+            projectProvider,
+            projectFile,
+            workspace,
+          );
+        }
+      })
+      .catch(async (error: unknown) => {
+        console.error("Failed to import project from file", error);
+        await alert({
+          title: "Cannot import the project",
+          body: error instanceof Error ? error.message : String(error),
+        });
+      });
+  }, [workspace, chooseProjectProvider, confirm, alert]);
 }
 
 /**
