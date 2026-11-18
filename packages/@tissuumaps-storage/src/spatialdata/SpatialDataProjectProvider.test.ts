@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { ParquetShapesDataProvider } from "../parquet/ParquetShapesDataProvider";
 import { SpatialDataProjectProvider } from "./SpatialDataProjectProvider";
 
 const storeURL = "https://data.example/datasets/data.zarr";
@@ -40,6 +41,18 @@ function rasterAttributes(
       ],
       ...(labels ? { "image-label": {} } : {}),
     },
+    spatialdata_attrs: { version: "0.3" },
+  };
+}
+
+/** The attributes of a shapes element, as spatialdata writes them */
+function shapesAttributes(coordinateSystems: string[]) {
+  return {
+    "encoding-type": "ngff:shapes",
+    axes: ["x", "y"],
+    coordinateTransformations: coordinateSystems.map((name) =>
+      identity(name, ["x", "y"]),
+    ),
     spatialdata_attrs: { version: "0.3" },
   };
 }
@@ -158,15 +171,7 @@ describe("SpatialDataProjectProvider", () => {
     it.each([
       ["an image", rasterAttributes(["global"])],
       ["labels", rasterAttributes(["global"], true)],
-      [
-        "shapes",
-        {
-          "encoding-type": "ngff:shapes",
-          axes: ["x", "y"],
-          coordinateTransformations: [identity("global", ["x", "y"])],
-          spatialdata_attrs: { version: "0.3" },
-        },
-      ],
+      ["shapes", shapesAttributes(["global"])],
       [
         "points",
         {
@@ -317,6 +322,119 @@ describe("SpatialDataProjectProvider", () => {
         ["cells", cellTable!.id],
         ["nuclei", undefined],
       ]);
+    });
+
+    describe("shapes", () => {
+      const shapesGroups = {
+        shapes: {},
+        "shapes/outlines": shapesAttributes(["global"]),
+        "shapes/spots": {
+          ...shapesAttributes(["global"]),
+          coordinateTransformations: [
+            {
+              type: "scale",
+              scale: [2, 2],
+              input: system("xy", ["x", "y"]),
+              output: system("global", ["x", "y"]),
+            },
+          ],
+        },
+        tables: {},
+        "tables/outline_table": tableAttributes("outlines"),
+        "tables/spot_table": tableAttributes("spots"),
+      };
+
+      async function loadShapes() {
+        // the GeoParquet file of the outlines holds polygons, that of the
+        // spots points
+        const supports = vi
+          .spyOn(ParquetShapesDataProvider.prototype, "supports")
+          .mockImplementation((normalizedSource) =>
+            Promise.resolve(normalizedSource.includes("/outlines/")),
+          );
+        stubFetch({
+          [`${storeURL}/zarr.json`]: rootMetadata(
+            spatialDataAttributes,
+            shapesGroups,
+          ),
+        });
+        const loaded = await provider.load(storeURL);
+        return { ...loaded, supports };
+      }
+
+      it("tells polygons from circles from their GeoParquet files", async () => {
+        const { supports } = await loadShapes();
+        expect(supports.mock.calls.map(([source]) => source)).toEqual([
+          `${storeURL}/shapes/outlines/shapes.parquet`,
+          `${storeURL}/shapes/spots/shapes.parquet`,
+        ]);
+      });
+
+      it("maps polygons to Parquet shapes, linked to the table annotating them", async () => {
+        const { project } = await loadShapes();
+        const outlineTable = project.tables!.find(
+          ({ name }) => name === "outline_table",
+        )!;
+        expect(project.shapes).toEqual([
+          {
+            id: expect.stringMatching(/^outlines-/) as string,
+            name: "outlines",
+            layer: project.layers![0]!.id,
+            transform: {
+              flip: false,
+              scale: 1,
+              rotation: 0,
+              translation: { x: 0, y: 0 },
+            },
+            dataSource: {
+              type: "parquet",
+              source: "data.zarr/shapes/outlines/shapes.parquet",
+              table: outlineTable.id,
+            },
+          },
+        ]);
+      });
+
+      it("maps circles to a point cloud of a Parquet table, sized by their diameter", async () => {
+        const { project } = await loadShapes();
+        const spotsTable = project.tables!.find(
+          ({ name }) => name === "spots",
+        )!;
+        expect(spotsTable.dataSource).toEqual({
+          type: "parquet",
+          source: "data.zarr/shapes/spots/shapes.parquet",
+        });
+        expect(project.points).toEqual([
+          {
+            id: expect.stringMatching(/^spots-/) as string,
+            name: "spots",
+            layer: project.layers![0]!.id,
+            transform: {
+              flip: false,
+              scale: 2,
+              rotation: 0,
+              translation: { x: 0, y: 0 },
+            },
+            dataSource: {
+              type: "table",
+              table: spotsTable.id,
+              x: "geometry[x]",
+              y: "geometry[y]",
+            },
+            pointSize: { from: { column: "radius", unit: "data" } },
+            pointSizeFactor: 2,
+          },
+        ]);
+      });
+
+      it("keeps the table annotating circles, unlinked", async () => {
+        const { project } = await loadShapes();
+        expect(project.tables!.map(({ name }) => name)).toEqual([
+          "outline_table",
+          "spot_table",
+          "spots",
+        ]);
+      });
     });
 
     it("warns about an approximated transformation", async () => {
