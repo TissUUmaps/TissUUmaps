@@ -8,6 +8,7 @@ import {
   OpenSeadragonImageDataProvider,
   ParquetShapesDataProvider,
   ParquetTableDataProvider,
+  SpatialDataProjectProvider,
   TIFFImageDataProvider,
   TIFFLabelsDataProvider,
   TablePointsDataProvider,
@@ -21,6 +22,7 @@ import {
   openSeadragonImageDataSourceType,
   parquetShapesDataSourceType,
   parquetTableDataSourceType,
+  spatialDataProjectType,
   tablePointsDataSourceType,
   tiffImageDataSourceType,
   tiffLabelsDataSourceType,
@@ -154,10 +156,15 @@ export function enableBuiltInDataProviders(): void {
  * Called once during application startup, before any project is loaded.
  */
 export function enableBuiltInProjectProviders(): void {
-  appStore
-    .getState()
-    .registerProjectProvider(
-      tissuumapsProjectType,
-      new TissUUmapsProjectProvider(),
-    );
+  const appStoreState = appStore.getState();
+
+  appStoreState.registerProjectProvider(
+    tissuumapsProjectType,
+    new TissUUmapsProjectProvider(),
+  );
+
+  appStoreState.registerProjectProvider(
+    spatialDataProjectType,
+    new SpatialDataProjectProvider(),
+  );
 }
