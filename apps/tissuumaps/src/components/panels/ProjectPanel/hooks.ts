@@ -440,19 +440,32 @@ export function useCloseProject(): () => void {
 }
 
 /**
- * Returns a callback that downloads the open project as a TissUUmaps project
- * file
+ * Returns a callback that downloads the open project with a project provider,
+ * by default as a TissUUmaps project file
  *
- * Failures are logged, as the callback is called from event handlers.
+ * Failures are logged and shown, as the callback is called from event
+ * handlers.
  *
- * @returns The callback
+ * @returns The callback, which takes the project provider to write the
+ * project with
  */
-export function useDownloadProject(): () => void {
-  return useCallback(() => {
-    void downloadProject(getProjectProvider(tissuumapsProjectType)).catch(
-      (error) => {
+export function useDownloadProject(): (
+  projectProvider?: ProjectProvider,
+) => void {
+  const alert = useAlertDialog();
+
+  return useCallback(
+    (projectProvider) => {
+      void downloadProject(
+        projectProvider ?? getProjectProvider(tissuumapsProjectType),
+      ).catch(async (error: unknown) => {
         console.error("Failed to download project", error);
-      },
-    );
-  }, []);
+        await alert({
+          title: "Cannot download the project",
+          body: error instanceof Error ? error.message : String(error),
+        });
+      });
+    },
+    [alert],
+  );
 }

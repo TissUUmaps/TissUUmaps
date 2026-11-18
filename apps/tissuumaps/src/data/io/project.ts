@@ -345,7 +345,10 @@ function loadWithProjectProvider(
  * The project is cleaned first, which detaches it from the project store and
  * drops everything that is not part of the project itself - most notably where
  * it was loaded from, which must never be saved. Every save path goes through
- * here, so that no such state can escape into a saved project.
+ * here, so that no such state can escape into a saved project. The currently
+ * open project is downloaded under the name of where it was opened from, if
+ * that has one (e.g. `my_experiment` for `…/my_experiment.tm4`), so that it
+ * keeps its file name; otherwise the project provider names the file.
  *
  * @param projectProvider - The project provider to write the project with
  * @param options - Optional project to download, defaulting to the currently
@@ -357,16 +360,22 @@ export async function downloadProject(
   projectProvider: ProjectProvider,
   options?: { project?: Project; signal?: AbortSignal },
 ): Promise<void> {
-  const { project = projectStore.getState(), signal } = options ?? {};
+  const { project, signal } = options ?? {};
   signal?.throwIfAborted();
   if (projectProvider.toFile === undefined) {
     throw new Error(
       `Project provider ${projectProvider.name} cannot write projects.`,
     );
   }
-  const projectFile = await projectProvider.toFile(cleanProject(project), {
-    signal,
-  });
+  const projectState = projectStore.getState();
+  const name =
+    project === undefined && projectState.source !== null
+      ? SourceUtils.getStem(projectState.source) || undefined
+      : undefined;
+  const projectFile = await projectProvider.toFile(
+    cleanProject(project ?? projectState),
+    { name, signal },
+  );
   signal?.throwIfAborted();
   const projectUrl = URL.createObjectURL(projectFile);
   const projectLink = document.createElement("a");

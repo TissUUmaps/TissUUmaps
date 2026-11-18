@@ -108,12 +108,18 @@ export interface ProjectProvider {
    * are.
    *
    * @param project - The project to write
-   * @param options - Optional abort signal and progress callback
-   * @returns A promise that resolves to the file, named after the project and
-   * with the extension of the format
+   * @param options - Optional name of the file without extension, to use as is
+   * (e.g. that of the file the project was opened from), abort signal and
+   * progress callback
+   * @returns A promise that resolves to the file, named as given or else after
+   * the project, and with the extension of the format
    */
   toFile?(
     project: Project,
-    options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
+    options?: {
+      name?: string;
+      signal?: AbortSignal;
+      onProgress?: ProgressCallback;
+    },
   ): Promise<File>;
 }

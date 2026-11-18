@@ -314,6 +314,27 @@ describe("downloadProject", () => {
     expect(clickedLinks[0]?.href).toBe(objectUrl);
   });
 
+  it("names the file after where the open project was opened from", async () => {
+    const names: (string | undefined)[] = [];
+    const projectProvider: ProjectProvider = {
+      name: "Test",
+      toFile: (_project, options) => {
+        names.push(options?.name);
+        return Promise.resolve(new File([], "p.tm4"));
+      },
+    };
+    projectStore.setState({ source: "https://data.example/my_experiment.tm4" });
+    await downloadProject(projectProvider);
+    projectStore.setState({ source: "/" });
+    await downloadProject(projectProvider);
+    projectStore.setState({ source: null });
+    await downloadProject(projectProvider);
+    await downloadProject(projectProvider, {
+      project: projectStore.getState(),
+    });
+    expect(names).toEqual(["my_experiment", undefined, undefined, undefined]);
+  });
+
   it("rejects for a project provider that cannot write projects", async () => {
     await expect(downloadProject({ name: "Test" })).rejects.toThrow(
       "Project provider Test cannot write projects.",

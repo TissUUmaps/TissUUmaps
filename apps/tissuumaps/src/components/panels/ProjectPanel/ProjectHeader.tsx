@@ -99,7 +99,7 @@ export function ProjectHeader({ className }: ProjectHeaderProps) {
           }}
           className="hover:border-input h-8 flex-1 border-transparent bg-transparent px-1.5 text-base font-semibold shadow-none md:text-base dark:bg-transparent"
         />
-        <IconButton label="Download project" onClick={downloadProject}>
+        <IconButton label="Download project" onClick={() => downloadProject()}>
           <DownloadIcon />
         </IconButton>
         <ProjectMenu />

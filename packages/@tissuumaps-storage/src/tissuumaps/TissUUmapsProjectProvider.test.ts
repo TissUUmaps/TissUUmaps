@@ -142,6 +142,12 @@ describe("TissUUmapsProjectProvider", () => {
       expect((await provider.toFile(project)).name).toBe("My-project-v2.tm4");
     });
 
+    it("names the file as given instead, unchanged", async () => {
+      const project = createProject({ name: "Project" });
+      const file = await provider.toFile(project, { name: "heart_v1.2 ä" });
+      expect(file.name).toBe("heart_v1.2 ä.tm4");
+    });
+
     it("falls back to Untitled", async () => {
       const project = createProject({ name: " ?! " });
       expect((await provider.toFile(project)).name).toBe("Untitled.tm4");

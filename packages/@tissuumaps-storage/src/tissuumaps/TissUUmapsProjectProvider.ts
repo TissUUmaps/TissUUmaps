@@ -73,23 +73,25 @@ export class TissUUmapsProjectProvider implements ProjectProvider {
   /**
    * Writes a project to a project file
    *
-   * The file is named after the project, with whitespace replaced by hyphens
-   * and any other non-alphanumeric characters removed, falling back to
-   * `Untitled`.
+   * The file is named as given, or else after the project, with whitespace
+   * replaced by hyphens and any other non-alphanumeric characters removed from
+   * the project name, falling back to `Untitled`.
    *
    * @param project - The project to write
+   * @param options - Optional name of the file without extension, used as is
    * @returns A promise that resolves to the project file
    */
-  toFile(project: Project): Promise<File> {
+  toFile(project: Project, options?: { name?: string }): Promise<File> {
     const sanitizedProjectName = project.name
       .trim()
       .replace(/\s+/g, "-")
       .replace(/[^a-zA-Z0-9_-]+/g, "")
       .replace(/^[-_]+|[-_]+$/g, "");
+    const name = options?.name || sanitizedProjectName || "Untitled";
     return Promise.resolve(
       new File(
         [JSONUtils.stringify(project)],
-        `${sanitizedProjectName || "Untitled"}${TissUUmapsProjectProvider._extension}`,
+        `${name}${TissUUmapsProjectProvider._extension}`,
         { type: TissUUmapsProjectProvider._mediaType },
       ),
     );
