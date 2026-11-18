@@ -28,12 +28,31 @@ export interface ProjectProvider {
   readonly urlParam?: string;
 
   /**
+   * The extensions of the project files this project provider loads, in
+   * lowercase and with leading dot (e.g. `[".tm4"]`)
+   *
+   * Used to pick a project provider for a local file, which has no source to
+   * pass to {@link ProjectProvider.supports}, matching its name regardless of
+   * case, and to filter file pickers. Only used for project providers that
+   * implement {@link ProjectProvider.load}.
+   */
+  readonly fileExtensions?: string[];
+
+  /**
+   * The extensions of the project directories this project provider loads, in
+   * lowercase and with leading dot (e.g. `[".zarr"]`)
+   *
+   * Used like {@link ProjectProvider.fileExtensions}, for local directories.
+   */
+  readonly directoryExtensions?: string[];
+
+  /**
    * Returns whether this project provider can likely load a source
    *
    * Used to pick a project provider for a source the user entered or dropped,
-   * e.g. by its file extension or by cheaply reading its metadata. A project
-   * provider without this method is never picked automatically, but can still
-   * be chosen by the user. Callers treat a rejection as `false`.
+   * e.g. by its extension or by cheaply reading its metadata. A project
+   * provider without this method is never picked for a source automatically,
+   * but can still be chosen by the user. Callers treat a rejection as `false`.
    *
    * @param normalizedSource - The source, normalized with
    * `SourceUtils.normalizeSource`

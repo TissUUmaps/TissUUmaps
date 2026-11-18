@@ -22,6 +22,7 @@ export class TissUUmapsProjectProvider implements ProjectProvider {
 
   readonly name = "TissUUmaps";
   readonly urlParam = "project";
+  readonly fileExtensions = [TissUUmapsProjectProvider._extension];
 
   supports(normalizedSource: string): Promise<boolean> {
     return Promise.resolve(
