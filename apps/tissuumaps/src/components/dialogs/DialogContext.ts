@@ -4,6 +4,7 @@ import type { DataSource } from "@tissuumaps/core";
 
 import type { AddDataObjectDialogParams } from "./AddDataObjectDialog";
 import type { AlertDialogParams } from "./AlertDialog";
+import type { AskDialogParams } from "./AskDialog";
 import type { ChooseDialogParams } from "./ChooseDialog";
 import type { ConfirmDialogParams } from "./ConfirmDialog";
 import type { PromptDialogParams } from "./PromptDialog";
@@ -17,6 +18,8 @@ export type DialogContextValue = {
   prompt: (params: PromptDialogParams) => Promise<string | null>;
   /** Opens a choice dialog. Resolves to the chosen option's value, or `null`. */
   choose: (params: ChooseDialogParams) => Promise<string | null>;
+  /** Opens a dialog with several actions. Resolves to the chosen action's value, or `null`. */
+  ask: (params: AskDialogParams) => Promise<string | null>;
   /**
    * Queues add data object dialogs: one per given source, pre-filled with it,
    * so none for an empty array, or a single empty one if `sources` is omitted.

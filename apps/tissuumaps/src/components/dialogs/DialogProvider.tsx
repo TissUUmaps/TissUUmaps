@@ -14,6 +14,7 @@ import {
   type AddDataObjectDialogParams,
 } from "./AddDataObjectDialog";
 import { AlertDialog, type AlertDialogParams } from "./AlertDialog";
+import { AskDialog, type AskDialogParams } from "./AskDialog";
 import { ChooseDialog, type ChooseDialogParams } from "./ChooseDialog";
 import { ConfirmDialog, type ConfirmDialogParams } from "./ConfirmDialog";
 import { DialogContext, type DialogContextValue } from "./DialogContext";
@@ -105,6 +106,15 @@ function createDialogContextValue(
     choose: (params: ChooseDialogParams) =>
       show<string | null>(null, (settle) => (open) => (
         <ChooseDialog
+          {...params}
+          open={open}
+          onCancel={() => settle(null)}
+          onConfirm={settle}
+        />
+      )),
+    ask: (params: AskDialogParams) =>
+      show<string | null>(null, (settle) => (open) => (
+        <AskDialog
           {...params}
           open={open}
           onCancel={() => settle(null)}

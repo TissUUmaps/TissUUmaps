@@ -14,6 +14,7 @@ import {
   useAddTableDialogParams,
 } from "@/components/dialogs/AddDataObjectDialog/hooks";
 import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
+import { useAskDialog } from "@/components/dialogs/AskDialog/hooks";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import {
   useChooseProjectProvider,
@@ -22,6 +23,8 @@ import {
 import {
   findLocalProjectProviders,
   getProjectFileExtensions,
+  importProjectFromFile,
+  importProjectFromFileHandle,
   resolveProjectSource,
 } from "@/data/io/project";
 import {
@@ -37,10 +40,11 @@ import { projectStore, useProjectStore } from "@/stores/project";
  * Returns what a panel accepts when files or directories are dropped on it,
  * and handles the drop
  *
- * The project panel accepts a single project file, which it loads, or a
- * single directory, which it opens as the workspace, either after
- * confirmation. A file that no project provider or several load by its
- * extension is confirmed by choosing the project provider (see
+ * The project panel accepts a single project file, which it opens, or
+ * imports into the open project if the user chooses so, or a single
+ * directory, which it opens as the workspace, either after confirmation.
+ * Without an open project, a file that no project provider or several load
+ * by its extension is confirmed by choosing the project provider (see
  * `useChooseProjectProvider`). It warns about project files outside the
  * workspace when asking.
  * The data panels accept files and directories within the workspace, and
@@ -70,6 +74,7 @@ export function usePanelDrop(panelId: string): {
   const chooseProjectProvider = useChooseProjectProvider();
 
   const alert = useAlertDialog();
+  const ask = useAskDialog();
   const confirm = useConfirmDialog();
   const addDataObject = useAddDataObjectDialog();
   const addImageDialogParams = useAddImageDialogParams();
@@ -131,46 +136,72 @@ export function usePanelDrop(panelId: string): {
         ? `"${projectFile.name}" is not in the workspace "${workspace.name}". Its relative paths will be looked up in "${workspace.name}" instead of next to the project file, so some of its data may fail to load.`
         : undefined;
     const foundProjectProviders = findLocalProjectProviders(projectFile);
+    let action: string | null;
     let projectProvider: ProjectProvider | null;
-    if (foundProjectProviders.length === 1) {
-      const body = [
-        outsideWorkspaceNote,
-        `Open the project "${projectFile.name}"?`,
-        isProjectOpen
-          ? "It replaces the open project, and unsaved changes are lost."
-          : undefined,
-      ].filter((part) => part !== undefined);
+    if (isProjectOpen) {
+      const question = `Import "${projectFile.name}" into the open project, or open it instead? Opening it replaces the open project, and unsaved changes are lost.`;
+      action = await ask({
+        title: "Open or import project",
+        body:
+          outsideWorkspaceNote !== undefined
+            ? `${outsideWorkspaceNote} ${question}`
+            : question,
+        actions: [
+          { value: "import", label: "Import" },
+          { value: "open", label: "Open" },
+        ],
+      });
+      if (action === null) {
+        return;
+      }
+      projectProvider = await chooseProjectProvider(
+        projectFile.name,
+        foundProjectProviders,
+        { actionLabel: action === "import" ? "Import" : "Open" },
+      );
+    } else if (foundProjectProviders.length === 1) {
+      action = "open";
+      const question = `Open the project "${projectFile.name}"?`;
       const confirmed = await confirm({
         title: "Open project",
-        body: body.join(" "),
+        body:
+          outsideWorkspaceNote !== undefined
+            ? `${outsideWorkspaceNote} ${question}`
+            : question,
         actionLabel: "Open",
       });
       projectProvider = confirmed ? (foundProjectProviders[0] ?? null) : null;
     } else {
-      const note = [
-        outsideWorkspaceNote,
-        isProjectOpen
-          ? `Opening "${projectFile.name}" replaces the open project, and unsaved changes are lost.`
-          : undefined,
-      ].filter((note) => note !== undefined);
+      // choosing the format confirms the drop, too
+      action = "open";
       projectProvider = await chooseProjectProvider(
         projectFile.name,
         foundProjectProviders,
-        {
-          note: note.length > 0 ? note.join(" ") : undefined,
-          actionLabel: "Open",
-        },
+        { note: outsideWorkspaceNote, actionLabel: "Open" },
       );
     }
     if (projectProvider === null) {
       return;
     }
     try {
-      await loadProjectFile(projectFile, projectProvider);
+      if (action === "open") {
+        await loadProjectFile(projectFile, projectProvider);
+      } else if (projectFile instanceof File) {
+        await importProjectFromFile(projectProvider, projectFile);
+      } else {
+        await importProjectFromFileHandle(
+          projectProvider,
+          projectFile,
+          workspace,
+        );
+      }
     } catch (error) {
-      console.error("Failed to load the dropped project", error);
+      console.error(`Failed to ${action} the dropped project`, error);
       await alert({
-        title: "Cannot open the project",
+        title:
+          action === "open"
+            ? "Cannot open the project"
+            : "Cannot import the project",
         body: error instanceof Error ? error.message : String(error),
       });
     }
@@ -230,7 +261,7 @@ export function usePanelDrop(panelId: string): {
   switch (panelId) {
     case PanelId.project:
       return {
-        label: "Drop to open",
+        label: isProjectOpen ? "Drop to open or import" : "Drop to open",
         accepts: [
           ...(isWorkspaceSupported() ? ["Workspace"] : []),
           `Project file (${getProjectFileExtensions().join(", ")})`,
