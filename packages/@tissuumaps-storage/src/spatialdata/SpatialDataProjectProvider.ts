@@ -4,6 +4,7 @@ import FileSystemHandleStore from "@zarrita/storage/fs-handle";
 import * as zarr from "zarrita";
 
 import {
+  type ColorConfig,
   type ProjectProvider,
   type RawImage,
   type RawLabels,
@@ -15,6 +16,7 @@ import {
   type SimilarityTransform,
   type SizeConfig,
   SourceUtils,
+  defaultLabelColorPalette,
 } from "@tissuumaps/core";
 
 import { ZarrStore } from "../hierarchical/zarr/ZarrStore";
@@ -49,8 +51,11 @@ export const spatialDataProjectType = "spatialdata";
  * - images and labels become OME-Zarr images and labels
  * - shapes become Parquet shapes if they are polygons, and point clouds of a
  *   Parquet table if they are circles, sized by their radius
+ * - points become point clouds of a Parquet table (a Dask dataset directory),
+ *   colored by their feature, if they name one
  * - tables (AnnData) become Zarr tables, keyed by their instance key; a table
  *   annotating a single element is linked to it, unless the element is circles
+ *   or points
  *
  * Each coordinate system becomes a layer, and an element becomes one object
  * per coordinate system it maps into, placed by its transformation into it.
@@ -75,6 +80,12 @@ export class SpatialDataProjectProvider implements ProjectProvider {
 
   /** The column holding the radius of each circle */
   private static readonly _circleRadiusColumn = "radius";
+
+  /** The column holding the x coordinate of each point, named after its axis */
+  private static readonly _pointXColumn = "x";
+
+  /** The column holding the y coordinate of each point, named after its axis */
+  private static readonly _pointYColumn = "y";
 
   /**
    * The attributes that mark the group of an element, which spatialdata also
@@ -173,8 +184,10 @@ export class SpatialDataProjectProvider implements ProjectProvider {
         tableIDsByElement,
         { signal },
       );
+    const { pointTables, points } =
+      await SpatialDataProjectProvider._readPoints(store, source, { signal });
     const layers = SpatialDataProjectProvider._createLayers(
-      [...images, ...labels, ...shapes, ...circles].map(
+      [...images, ...labels, ...shapes, ...circles, ...points].map(
         ({ coordinateSystem }) => coordinateSystem,
       ),
     );
@@ -195,11 +208,11 @@ export class SpatialDataProjectProvider implements ProjectProvider {
         ...object,
         layer: layerIDs.get(coordinateSystem)!,
       })),
-      points: circles.map(({ coordinateSystem, object }) => ({
+      points: [...circles, ...points].map(({ coordinateSystem, object }) => ({
         ...object,
         layer: layerIDs.get(coordinateSystem)!,
       })),
-      tables: [...tables, ...circleTables],
+      tables: [...tables, ...circleTables, ...pointTables],
     };
     return { project, source };
   }
@@ -476,6 +489,91 @@ export class SpatialDataProjectProvider implements ProjectProvider {
       }));
     });
     return { shapes, circleTables, circles };
+  }
+
+  /**
+   * Reads the points of a store as point clouds of Parquet tables, colored by
+   * the feature they name (`feature_key`), if any
+   *
+   * The points of an element are a Dask dataset directory, which the Parquet
+   * table reads as a whole. A table annotating points is not linked to them,
+   * as a point cloud's table holds its coordinates.
+   *
+   * @param store - The store
+   * @param source - The source of the store, without trailing slash
+   * @param options - Optional abort signal
+   * @returns A table per points element, and the point clouds, each with the
+   * name of its coordinate system
+   */
+  private static async _readPoints(
+    store: ZarrStore,
+    source: string,
+    options?: { signal?: AbortSignal },
+  ): Promise<{
+    pointTables: RawTable[];
+    points: { coordinateSystem: string; object: Omit<RawPoints, "layer"> }[];
+  }> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    const groups = (
+      await SpatialDataProjectProvider._readChildGroups(store, "points", {
+        signal,
+      })
+    ).map(({ name, attrs }) => {
+      const path = `points/${name}`;
+      const { feature_key: featureKey } = attrs.spatialdata_attrs as {
+        feature_key?: string;
+      };
+      return {
+        name,
+        path,
+        featureKey,
+        parquetSource: `${SpatialDataProjectProvider._getElementSource(source, path)}/points.parquet`,
+        transforms: SpatialDataProjectProvider._readVectorTransforms(
+          path,
+          attrs,
+        ),
+      };
+    });
+    const pointTables: RawTable[] = groups.map(
+      ({ name, path, parquetSource }) => ({
+        id: SpatialDataProjectProvider._createID(source, path),
+        name,
+        dataSource: { type: parquetTableDataSourceType, source: parquetSource },
+      }),
+    );
+    const points = groups.flatMap(
+      ({ name, path, featureKey, transforms }, i) => {
+        const dataSource: TablePointsDataSource = {
+          type: tablePointsDataSourceType,
+          table: pointTables[i]!.id,
+          x: SpatialDataProjectProvider._pointXColumn,
+          y: SpatialDataProjectProvider._pointYColumn,
+        };
+        const pointColor: ColorConfig | undefined =
+          featureKey !== undefined
+            ? {
+                groupBy: {
+                  column: featureKey,
+                  map: undefined,
+                  // the palette of labels, which are categorical too
+                  palette: defaultLabelColorPalette,
+                },
+              }
+            : undefined;
+        return transforms.map(([coordinateSystem, transform]) => ({
+          coordinateSystem,
+          object: {
+            id: SpatialDataProjectProvider._createID(source, path),
+            name,
+            transform,
+            dataSource,
+            pointColor,
+          },
+        }));
+      },
+    );
+    return { pointTables, points };
   }
 
   /**
