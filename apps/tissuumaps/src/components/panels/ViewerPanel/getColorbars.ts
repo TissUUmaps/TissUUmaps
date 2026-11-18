@@ -5,6 +5,7 @@ import {
   type Layer,
   type Points,
   type Shapes,
+  type Table,
   type TableColumnRef,
   type VisibilityConfig,
   getActiveConfigSource,
@@ -24,6 +25,7 @@ type ColorFrom = Extract<ColorConfig, FromConfig>["from"];
  * @returns The active "from" source, or `null` if another source is active
  */
 function getActiveFrom(colorConfig: ColorConfig): ColorFrom | null {
+  // mirrors ColorResolver.resolveColors
   return getActiveConfigSource(colorConfig) === "from" &&
     isFromConfig(colorConfig)
     ? colorConfig.from
@@ -67,39 +69,33 @@ function isOnHiddenLayer(
   );
 }
 
-type ObjectColor = {
-  objectKey: string;
-  objectName: string;
-  part: "fill" | "stroke" | null;
-  colorConfig: ColorConfig;
-  visibilityConfig: VisibilityConfig;
-  objectTableId: string | undefined;
-};
-
 /**
  * Lists the colorbars of the shown objects whose colors come from a table
  * column
  *
  * Colors with the same column, palette and range share one colorbar. Without
- * a range, they also need the same table, whose column sets the value range.
+ * both range ends, they also need the same table, whose column sets the
+ * missing ends.
  * A colorbar is named after the objects that use it. The fill or stroke of
  * shapes is named unless both use the colorbar.
  *
- * @param state - The layers and the objects of the project
+ * @param state - The layers, the tables and the objects of the project
  * @returns One colorbar per color scale, with a unique key, the name to show,
  * the active "from" source and the ID of the table that holds the column
  */
 export function getColorbars(state: {
   layers: Layer[];
+  tables: Table[];
   labels: Labels[];
   points: Points[];
   shapes: Shapes[];
 }): { key: string; name: string; from: ColorFrom; tableId: string }[] {
-  const { layers, labels, points, shapes } = state;
-  const objectColors: ObjectColor[] = [
+  const { layers, tables, labels, points, shapes } = state;
+  const objectColors = [
     ...labels
       // without a table of their own, the renderer draws labels in default
-      // colors, even if the color column is in another table
+      // colors, even if the color column is in another table; mirrors
+      // OpenSeadragonLabelsRenderer._resolveDataTransfer
       .filter(
         (labels) =>
           labels.visibility &&
@@ -155,24 +151,28 @@ export function getColorbars(state: {
 
   const colorbars = new Map<
     string,
-    { from: ColorFrom; tableId: string; colors: ObjectColor[] }
+    { from: ColorFrom; tableId: string; colors: typeof objectColors }
   >();
   for (const objectColor of objectColors) {
     const from = getActiveFrom(objectColor.colorConfig);
+    // the column is in the configured table, or else in the object's own; a
+    // table that is not in the project colors nothing; mirrors
+    // WebGLRendererBase.createTableLoader
     const tableId = from?.table ?? objectColor.objectTableId;
-    // without a table, no renderer colors the items from a column
     if (
       from === null ||
       tableId === undefined ||
+      !tables.some(({ id }) => id === tableId) ||
       isConstantlyHidden(objectColor.visibilityConfig)
     ) {
       continue;
     }
     // with both range ends, the colorbar does not depend on the table
+    const [rangeMin, rangeMax] = from.range ?? [null, null];
     const scaleKey =
-      from.range !== undefined && !from.range.includes(null)
-        ? from.range.join(",")
-        : `${tableId}:${from.range?.join(",") ?? ""}`;
+      rangeMin !== null && rangeMax !== null
+        ? `${rangeMin},${rangeMax}`
+        : `${tableId}:${rangeMin ?? ""},${rangeMax ?? ""}`;
     const key = `${scaleKey}:${from.palette}:${from.column}`;
     const colorbar = colorbars.get(key);
     if (colorbar === undefined) {

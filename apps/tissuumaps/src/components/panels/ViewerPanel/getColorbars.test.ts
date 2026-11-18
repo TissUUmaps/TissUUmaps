@@ -7,6 +7,7 @@ import {
   createLayer,
   createPoints,
   createShapes,
+  createTable,
 } from "@tissuumaps/core";
 
 import { getColorbars } from "./getColorbars";
@@ -24,6 +25,10 @@ const layers = [
   createLayer({ id: "hidden", name: "Hidden", visibility: false }),
 ];
 
+const tables = ["cells", "nuclei"].map((id) =>
+  createTable({ id, name: id, dataSource: { type: "test" } }),
+);
+
 function createPointsWith(id: string, raw: Partial<RawPoints> = {}) {
   return createPoints({
     id,
@@ -38,6 +43,7 @@ function createPointsWith(id: string, raw: Partial<RawPoints> = {}) {
 function getColorbarNames(state: Partial<Parameters<typeof getColorbars>[0]>) {
   return getColorbars({
     layers,
+    tables,
     labels: [],
     points: [],
     shapes: [],
@@ -197,6 +203,7 @@ describe("getColorbars", () => {
     expect(
       getColorbars({
         layers,
+        tables,
         labels: [],
         points: [
           createPointsWith("cells", {
@@ -236,6 +243,40 @@ describe("getColorbars", () => {
         ],
       }),
     ).toEqual(["cells", "nuclei"]);
+  });
+
+  it("shares one colorbar for a range without ends and no range", () => {
+    expect(
+      getColorbarNames({
+        points: [
+          createPointsWith("no range"),
+          createPointsWith("range without ends", {
+            pointColor: {
+              from: {
+                column: "score",
+                palette: "viridis",
+                range: [null, null],
+              },
+            },
+          }),
+        ],
+      }),
+    ).toEqual(["no range, range without ends"]);
+  });
+
+  it("leaves out objects whose table is not in the project", () => {
+    expect(
+      getColorbarNames({
+        points: [
+          createPointsWith("missing table", {
+            dataSource: { type: "csv", table: "missing" },
+            pointColor: {
+              from: { column: "score", palette: "viridis", range: [0, 1] },
+            },
+          }),
+        ],
+      }),
+    ).toEqual([]);
   });
 
   it("leaves out objects without a table", () => {

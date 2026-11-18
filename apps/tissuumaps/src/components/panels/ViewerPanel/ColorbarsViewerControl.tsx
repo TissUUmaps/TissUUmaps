@@ -83,11 +83,12 @@ export function ColorbarsViewerControl({
   className,
 }: ColorbarsViewerControlProps) {
   const layers = useProjectStore((state) => state.layers);
+  const tables = useProjectStore((state) => state.tables);
   const labels = useProjectStore((state) => state.labels);
   const points = useProjectStore((state) => state.points);
   const shapes = useProjectStore((state) => state.shapes);
 
-  const colorbars = getColorbars({ layers, labels, points, shapes });
+  const colorbars = getColorbars({ layers, tables, labels, points, shapes });
 
   if (colorbars.length === 0) {
     return null;
