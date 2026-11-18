@@ -1,11 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { Project, ProjectProvider } from "@tissuumaps/core";
+import type { Project, ProjectProvider, RawProject } from "@tissuumaps/core";
 
+import { appStore } from "@/stores/app";
 import { projectStore } from "@/stores/project";
 
 import {
   downloadProject,
+  importProjectFromURL,
+  mergeProject,
   openProjectFromFile,
   openProjectFromFileHandle,
   openProjectFromURL,
@@ -261,6 +264,171 @@ describe("downloadProject", () => {
   it("rejects for a project provider that cannot write projects", async () => {
     await expect(downloadProject({ name: "Test" })).rejects.toThrow(
       "Project provider Test cannot write projects.",
+    );
+  });
+});
+
+/** A project to merge, with relative, absolute and missing sources */
+function makeMergedProject(): RawProject {
+  return {
+    name: "Merged",
+    layers: [{ id: "merged-layer", name: "Merged" }],
+    images: [
+      {
+        id: "merged-image",
+        name: "Image",
+        layer: "merged-layer",
+        dataSource: { type: "tiff", source: "images/a.tif" },
+      },
+    ],
+    points: [
+      {
+        id: "merged-points",
+        name: "Points",
+        layer: "merged-layer",
+        dataSource: { type: "table", table: "merged-table" },
+      },
+    ],
+    tables: [
+      {
+        id: "merged-table",
+        name: "Table",
+        dataSource: { type: "csv", source: "https://other.example/t.csv" },
+      },
+    ],
+    colorMaps: [{ id: "shared-map", name: "Colors", values: {} }],
+    viewerBackgroundColor: { r: 255, g: 255, b: 255 },
+  };
+}
+
+describe("mergeProject", () => {
+  const mergedProjectUrl = "https://data.example/merged/project.tm4";
+
+  beforeEach(() => {
+    projectStore.getState().clear();
+    appStore.setState({
+      projectOpen: false,
+      expandedImageIds: [],
+      expandedPointsIds: [],
+      expandedTableIds: [],
+    });
+  });
+
+  it("appends the merged objects, keeping the open project's source and instance", () => {
+    projectStore.setState({ source: "https://data.example/open/project.tm4" });
+    const { instanceId, layers } = projectStore.getState();
+    mergeProject(makeMergedProject(), mergedProjectUrl);
+    const projectState = projectStore.getState();
+    expect(projectState.source).toBe("https://data.example/open/project.tm4");
+    expect(projectState.instanceId).toBe(instanceId);
+    expect(projectState.layers.map((layer) => layer.id)).toEqual([
+      ...layers.map((layer) => layer.id),
+      "merged-layer",
+    ]);
+    expect(projectState.images.map((image) => image.id)).toEqual([
+      "merged-image",
+    ]);
+    expect(projectState.points.map((points) => points.id)).toEqual([
+      "merged-points",
+    ]);
+    expect(projectState.tables.map((table) => table.id)).toEqual([
+      "merged-table",
+    ]);
+    expect(projectState.colorMaps.map((map) => map.id)).toEqual(["shared-map"]);
+  });
+
+  it("normalizes the merged data sources against where the project was loaded from", () => {
+    mergeProject(makeMergedProject(), mergedProjectUrl);
+    const projectState = projectStore.getState();
+    expect(projectState.images[0]?.dataSource.source).toBe(
+      "https://data.example/merged/images/a.tif",
+    );
+    expect(projectState.tables[0]?.dataSource.source).toBe(
+      "https://other.example/t.csv",
+    );
+    expect(projectState.points[0]?.dataSource.source).toBeUndefined();
+  });
+
+  it("leaves the given project unchanged", () => {
+    const rawProject = makeMergedProject();
+    mergeProject(rawProject, mergedProjectUrl);
+    expect(rawProject).toEqual(makeMergedProject());
+  });
+
+  it("adopts the name only for an open project without data, and ignores the viewer options", () => {
+    const { viewerBackgroundColor } = projectStore.getState();
+    mergeProject(makeMergedProject(), mergedProjectUrl);
+    expect(projectStore.getState().name).toBe("Merged");
+    expect(projectStore.getState().viewerBackgroundColor).toEqual(
+      viewerBackgroundColor,
+    );
+    projectStore.getState().setName("Open");
+    mergeProject(
+      {
+        name: "Second",
+        tables: [
+          { id: "second-table", name: "Table", dataSource: { type: "csv" } },
+        ],
+      },
+      mergedProjectUrl,
+    );
+    expect(projectStore.getState().name).toBe("Open");
+  });
+
+  it("expands the merged objects and marks the project open", () => {
+    mergeProject(makeMergedProject(), mergedProjectUrl);
+    const appState = appStore.getState();
+    expect(appState.expandedImageIds).toEqual(["merged-image"]);
+    expect(appState.expandedPointsIds).toEqual(["merged-points"]);
+    expect(appState.expandedTableIds).toEqual(["merged-table"]);
+    expect(appState.projectOpen).toBe(true);
+  });
+
+  it("rejects a taken ID, leaving the open project unchanged", () => {
+    mergeProject(makeMergedProject(), mergedProjectUrl);
+    const projectState = projectStore.getState();
+    const rawProject = makeMergedProject();
+    rawProject.layers = [{ id: "fresh-layer", name: "Fresh" }];
+    expect(() => {
+      mergeProject(rawProject, mergedProjectUrl);
+    }).toThrow("ID merged-image is taken");
+    expect(projectStore.getState()).toBe(projectState);
+  });
+
+  it("allows a map ID that is taken in another list of maps", () => {
+    mergeProject(makeMergedProject(), mergedProjectUrl);
+    mergeProject(
+      {
+        name: "Sizes",
+        sizeMaps: [{ id: "shared-map", name: "Sizes", values: {} }],
+      },
+      mergedProjectUrl,
+    );
+    expect(projectStore.getState().sizeMaps.map((map) => map.id)).toEqual([
+      "shared-map",
+    ]);
+  });
+});
+
+describe("importProjectFromURL", () => {
+  beforeEach(() => {
+    projectStore.getState().clear();
+  });
+
+  it("merges the project, resolving its sources against the reported source", async () => {
+    const projectProvider: ProjectProvider = {
+      name: "Test",
+      load: () =>
+        Promise.resolve({
+          project: makeMergedProject(),
+          source: "https://cdn.example/merged/project.tm4",
+        }),
+    };
+    const { source } = projectStore.getState();
+    await importProjectFromURL(projectProvider, "https://data.example/p.tm4");
+    expect(projectStore.getState().source).toBe(source);
+    expect(projectStore.getState().images[0]?.dataSource.source).toBe(
+      "https://cdn.example/merged/images/a.tif",
     );
   });
 });

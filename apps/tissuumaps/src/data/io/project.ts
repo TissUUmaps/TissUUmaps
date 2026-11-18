@@ -3,6 +3,7 @@ import { freeze } from "immer";
 import {
   type Project,
   type ProjectProvider,
+  ProjectUtils,
   type RawProject,
   SourceUtils,
   createProject,
@@ -93,31 +94,24 @@ export function openProject(
 /**
  * Loads a project from a URL with a project provider and opens it
  *
- * The URL is resolved like a link, against the document base URL, never
- * against the open workspace or project. The project is opened with the source
- * the project provider reports, which is the URL it was redirected to, if any -
- * so that its project-relative data sources are resolved against where the
- * project really is.
+ * See {@link loadProjectFromURL} for how the URL and the project source are
+ * determined.
  *
  * @param projectProvider - The project provider to load the project with
  * @param projectUrl - The URL to load the project from, absolute or relative
  * to the document base URL
  * @param options - Optional abort signal
- * @throws Error if `projectUrl` is not a valid URL, if the project provider
- * cannot load projects, or if the project cannot be loaded
+ * @throws See {@link loadProjectFromURL}
  */
 export async function openProjectFromURL(
   projectProvider: ProjectProvider,
   projectUrl: string,
   options?: { signal?: AbortSignal },
 ): Promise<void> {
-  const { signal } = options ?? {};
-  signal?.throwIfAborted();
-  const absoluteProjectUrl = new URL(projectUrl, document.baseURI).href;
-  const { project, source } = await loadWithProjectProvider(
+  const { project, source } = await loadProjectFromURL(
     projectProvider,
-    absoluteProjectUrl,
-    { signal },
+    projectUrl,
+    options,
   );
   openProject(createProject(project), source);
 }
@@ -125,37 +119,241 @@ export async function openProjectFromURL(
 /**
  * Loads a project from a file with a project provider and opens it
  *
- * The project is opened without a source: a `File` cannot be located, the
- * object URL through which it is read is revoked immediately afterwards, and
- * `blob:` URLs cannot serve as a base for project-relative data sources anyway.
- * Its project-relative data sources hence fall back to being
- * workspace-relative, and without an open workspace, to being app-relative
- * (see `SourceUtils`).
+ * The project is opened without a source (see {@link loadProjectFromFile}),
+ * so its project-relative data sources fall back to being workspace-relative,
+ * and without an open workspace, to being app-relative (see `SourceUtils`).
  *
  * @param projectProvider - The project provider to load the project with
  * @param projectFile - The file to load the project from
  * @param options - Optional abort signal
- * @throws Error if the project provider cannot load projects, or if the
- * project cannot be loaded
+ * @throws See {@link loadProjectFromFile}
  */
 export async function openProjectFromFile(
   projectProvider: ProjectProvider,
   projectFile: File,
   options?: { signal?: AbortSignal },
 ): Promise<void> {
-  const { signal } = options ?? {};
-  signal?.throwIfAborted();
-  const objectUrl = URL.createObjectURL(projectFile);
-  try {
-    const { project } = await loadWithProjectProvider(
-      projectProvider,
-      objectUrl,
-      { signal },
-    );
-    openProject(createProject(project), null);
-  } finally {
-    URL.revokeObjectURL(objectUrl);
+  const { project, source } = await loadProjectFromFile(
+    projectProvider,
+    projectFile,
+    options,
+  );
+  openProject(createProject(project), source);
+}
+
+/**
+ * Loads a project from a file handle with a project provider and opens it
+ *
+ * A file within the open workspace is opened with its workspace-relative path
+ * as its source, so that its project-relative data sources are resolved within
+ * the file's directory. Otherwise it is opened without a source, like an
+ * uploaded file (see {@link openProjectFromFile}).
+ *
+ * @param projectProvider - The project provider to load the project with
+ * @param projectFile - The handle of the file to load the project from
+ * @param workspace - The directory handle of the open workspace, if any
+ * @param options - Optional abort signal
+ * @throws See {@link loadProjectFromFileHandle}
+ */
+export async function openProjectFromFileHandle(
+  projectProvider: ProjectProvider,
+  projectFile: FileSystemFileHandle,
+  workspace: FileSystemDirectoryHandle | null,
+  options?: { signal?: AbortSignal },
+): Promise<void> {
+  const { project, source } = await loadProjectFromFileHandle(
+    projectProvider,
+    projectFile,
+    workspace,
+    options,
+  );
+  openProject(createProject(project), source);
+}
+
+/**
+ * Merges a project into the open project
+ *
+ * The data sources of the merged project are normalized (see
+ * `SourceUtils.normalizeSource`), so relative sources become absolute URLs or
+ * workspace-relative paths. The layers, data objects, tables and maps of the
+ * merged project are appended to those of the open project, in a single
+ * update. Its name is adopted only if the open project has no data objects;
+ * its viewer options and background color are ignored. The open project keeps
+ * its instance ID, so that the viewport is not reset. The merged objects are
+ * expanded in their panels, and the project is marked open.
+ *
+ * @param rawProject - The project to merge
+ * @param projectSource - Where the project to merge was loaded from: its
+ * absolute URL, the workspace-relative path of the project file (with `/`
+ * prefix), or `null` if it was loaded from neither
+ * @throws Error if an ID of the merged project is already taken in the open
+ * project, or if one of its data sources cannot be normalized; the open
+ * project is left unchanged in either case
+ */
+export function mergeProject(
+  rawProject: RawProject,
+  projectSource: string | null,
+): void {
+  const project = createProject(rawProject);
+  const { workspace } = appStore.getState();
+  // resolve against where the merged project was loaded from, as its relative
+  // sources would resolve against the open project's source otherwise
+  for (const dataObject of [
+    ...project.images,
+    ...project.labels,
+    ...project.points,
+    ...project.shapes,
+    ...project.tables,
+  ]) {
+    if (dataObject.dataSource.source !== undefined) {
+      dataObject.dataSource.source = SourceUtils.normalizeSource(
+        dataObject.dataSource.source,
+        workspace,
+        projectSource,
+      );
+    }
   }
+  const baseProject = projectStore.getState();
+  for (const [baseItems, mergedItems] of [
+    [baseProject.layers, project.layers],
+    [baseProject.images, project.images],
+    [baseProject.labels, project.labels],
+    [baseProject.points, project.points],
+    [baseProject.shapes, project.shapes],
+    [baseProject.tables, project.tables],
+    [baseProject.markerMaps, project.markerMaps],
+    [baseProject.sizeMaps, project.sizeMaps],
+    [baseProject.colorMaps, project.colorMaps],
+    [baseProject.visibilityMaps, project.visibilityMaps],
+    [baseProject.opacityMaps, project.opacityMaps],
+  ] as const) {
+    const baseIds = new Set(baseItems.map((item) => item.id));
+    const takenItem = mergedItems.find((item) => baseIds.has(item.id));
+    if (takenItem !== undefined) {
+      throw new Error(`Cannot merge project: ID ${takenItem.id} is taken.`);
+    }
+  }
+  const adoptName = !ProjectUtils.hasData(baseProject);
+  projectStore.setState((draft) => {
+    if (adoptName) {
+      draft.name = project.name;
+    }
+    draft.layers.push(...project.layers);
+    draft.images.push(...project.images);
+    draft.labels.push(...project.labels);
+    draft.points.push(...project.points);
+    draft.shapes.push(...project.shapes);
+    draft.tables.push(...project.tables);
+    draft.markerMaps.push(...project.markerMaps);
+    draft.sizeMaps.push(...project.sizeMaps);
+    draft.colorMaps.push(...project.colorMaps);
+    draft.visibilityMaps.push(...project.visibilityMaps);
+    draft.opacityMaps.push(...project.opacityMaps);
+  });
+  const appState = appStore.getState();
+  appState.setExpandedImageIds([
+    ...appState.expandedImageIds,
+    ...project.images.map((image) => image.id),
+  ]);
+  appState.setExpandedLabelsIds([
+    ...appState.expandedLabelsIds,
+    ...project.labels.map((labels) => labels.id),
+  ]);
+  appState.setExpandedPointsIds([
+    ...appState.expandedPointsIds,
+    ...project.points.map((points) => points.id),
+  ]);
+  appState.setExpandedShapesIds([
+    ...appState.expandedShapesIds,
+    ...project.shapes.map((shapes) => shapes.id),
+  ]);
+  appState.setExpandedTableIds([
+    ...appState.expandedTableIds,
+    ...project.tables.map((table) => table.id),
+  ]);
+  appState.setProjectOpen(true);
+}
+
+/**
+ * Loads a project from a URL with a project provider and merges it into the
+ * open project
+ *
+ * See {@link loadProjectFromURL} for how the URL and the project source are
+ * determined, and {@link mergeProject} for how the project is merged.
+ *
+ * @param projectProvider - The project provider to load the project with
+ * @param projectUrl - The URL to load the project from, absolute or relative
+ * to the document base URL
+ * @param options - Optional abort signal
+ * @throws See {@link loadProjectFromURL} and {@link mergeProject}
+ */
+export async function importProjectFromURL(
+  projectProvider: ProjectProvider,
+  projectUrl: string,
+  options?: { signal?: AbortSignal },
+): Promise<void> {
+  const { project, source } = await loadProjectFromURL(
+    projectProvider,
+    projectUrl,
+    options,
+  );
+  mergeProject(project, source);
+}
+
+/**
+ * Loads a project from a file with a project provider and merges it into the
+ * open project
+ *
+ * The project is merged without a source (see {@link loadProjectFromFile}),
+ * so its project-relative data sources fall back to being workspace-relative,
+ * and without an open workspace, to being app-relative (see `SourceUtils`).
+ *
+ * @param projectProvider - The project provider to load the project with
+ * @param projectFile - The file to load the project from
+ * @param options - Optional abort signal
+ * @throws See {@link loadProjectFromFile} and {@link mergeProject}
+ */
+export async function importProjectFromFile(
+  projectProvider: ProjectProvider,
+  projectFile: File,
+  options?: { signal?: AbortSignal },
+): Promise<void> {
+  const { project, source } = await loadProjectFromFile(
+    projectProvider,
+    projectFile,
+    options,
+  );
+  mergeProject(project, source);
+}
+
+/**
+ * Loads a project from a file handle with a project provider and merges it
+ * into the open project
+ *
+ * A file within the open workspace is merged with its workspace-relative path
+ * as its source, so that its project-relative data sources are resolved within
+ * the file's directory. Otherwise it is merged without a source, like an
+ * uploaded file (see {@link importProjectFromFile}).
+ *
+ * @param projectProvider - The project provider to load the project with
+ * @param projectFile - The handle of the file to load the project from
+ * @param workspace - The directory handle of the open workspace, if any
+ * @param options - Optional abort signal
+ * @throws See {@link loadProjectFromFileHandle} and {@link mergeProject}
+ */
+export async function importProjectFromFileHandle(
+  projectProvider: ProjectProvider,
+  projectFile: FileSystemFileHandle,
+  workspace: FileSystemDirectoryHandle | null,
+  options?: { signal?: AbortSignal },
+): Promise<void> {
+  const { project, source } = await loadProjectFromFileHandle(
+    projectProvider,
+    projectFile,
+    workspace,
+    options,
+  );
+  mergeProject(project, source);
 }
 
 /**
@@ -185,28 +383,90 @@ export async function resolveProjectSource(
 }
 
 /**
- * Loads a project from a file handle with a project provider and opens it
+ * Loads a project from a URL with a project provider
+ *
+ * The URL is resolved like a link, against the document base URL, never
+ * against the open workspace or project. The project's source is the one the
+ * project provider reports, which is the URL it was redirected to, if any - so
+ * that its project-relative data sources are resolved against where the
+ * project really is.
+ *
+ * @param projectProvider - The project provider to load the project with
+ * @param projectUrl - The URL to load the project from, absolute or relative
+ * to the document base URL
+ * @param options - Optional abort signal
+ * @returns The loaded project and its source
+ * @throws Error if `projectUrl` is not a valid URL, if the project provider
+ * cannot load projects, or if the project cannot be loaded
+ */
+function loadProjectFromURL(
+  projectProvider: ProjectProvider,
+  projectUrl: string,
+  options?: { signal?: AbortSignal },
+): Promise<{ project: RawProject; source: string | null }> {
+  const { signal } = options ?? {};
+  signal?.throwIfAborted();
+  const absoluteProjectUrl = new URL(projectUrl, document.baseURI).href;
+  return loadWithProjectProvider(projectProvider, absoluteProjectUrl, {
+    signal,
+  });
+}
+
+/**
+ * Loads a project from a file with a project provider
+ *
+ * The project has no source: a `File` cannot be located, the object URL
+ * through which it is read is revoked immediately afterwards, and `blob:` URLs
+ * cannot serve as a base for project-relative data sources anyway.
+ *
+ * @param projectProvider - The project provider to load the project with
+ * @param projectFile - The file to load the project from
+ * @param options - Optional abort signal
+ * @returns The loaded project, with a `null` source
+ * @throws Error if the project provider cannot load projects, or if the
+ * project cannot be loaded
+ */
+async function loadProjectFromFile(
+  projectProvider: ProjectProvider,
+  projectFile: File,
+  options?: { signal?: AbortSignal },
+): Promise<{ project: RawProject; source: string | null }> {
+  const { signal } = options ?? {};
+  signal?.throwIfAborted();
+  const objectUrl = URL.createObjectURL(projectFile);
+  try {
+    const { project } = await loadWithProjectProvider(
+      projectProvider,
+      objectUrl,
+      { signal },
+    );
+    return { project, source: null };
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+/**
+ * Loads a project from a file handle with a project provider
  *
  * A file within the open workspace is loaded through its workspace-relative
- * path, which the project is opened with as its source, so that its
- * project-relative data sources are resolved within the file's directory.
- * Otherwise it is loaded like an uploaded file, without a source (see
- * {@link openProjectFromFile}), and its project-relative data sources fall
- * back to being workspace-relative and then app-relative (see `SourceUtils`).
+ * path, which becomes its source. Otherwise it is loaded like an uploaded file,
+ * without a source (see {@link loadProjectFromFile}).
  *
  * @param projectProvider - The project provider to load the project with
  * @param projectFile - The handle of the file to load the project from
  * @param workspace - The directory handle of the open workspace, if any
  * @param options - Optional abort signal
+ * @returns The loaded project and its source
  * @throws Error if the project provider cannot load projects, or if the
  * project cannot be loaded
  */
-export async function openProjectFromFileHandle(
+async function loadProjectFromFileHandle(
   projectProvider: ProjectProvider,
   projectFile: FileSystemFileHandle,
   workspace: FileSystemDirectoryHandle | null,
   options?: { signal?: AbortSignal },
-): Promise<void> {
+): Promise<{ project: RawProject; source: string | null }> {
   const { signal } = options ?? {};
   const projectSource = await resolveProjectSource(
     projectFile,
@@ -216,15 +476,12 @@ export async function openProjectFromFileHandle(
   if (projectSource === null) {
     const file = await projectFile.getFile();
     signal?.throwIfAborted(); // getFile() does not throw on abort
-    await openProjectFromFile(projectProvider, file, options);
-    return;
+    return loadProjectFromFile(projectProvider, file, options);
   }
-  const { project, source } = await loadWithProjectProvider(
-    projectProvider,
-    projectSource,
-    { signal, workspace },
-  );
-  openProject(createProject(project), source);
+  return loadWithProjectProvider(projectProvider, projectSource, {
+    signal,
+    workspace,
+  });
 }
 
 /**
