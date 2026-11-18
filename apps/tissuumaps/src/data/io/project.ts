@@ -1,7 +1,6 @@
 import { freeze } from "immer";
 
 import {
-  JSONUtils,
   type Project,
   type ProjectProvider,
   type RawProject,
@@ -259,53 +258,37 @@ function loadWithProjectProvider(
 }
 
 /**
- * Saves a project
+ * Writes a project to a file with a project provider and downloads it
  *
- * The project is cleaned, which detaches it from the project store and drops
- * everything that is not part of the project itself - most notably where it
- * was loaded from, which must never be saved. Every save path goes through
+ * The project is cleaned first, which detaches it from the project store and
+ * drops everything that is not part of the project itself - most notably where
+ * it was loaded from, which must never be saved. Every save path goes through
  * here, so that no such state can escape into a saved project.
  *
- * @param project - The project to save, defaulting to the currently open
- * project
- * @returns The project, detached from the project store
+ * @param projectProvider - The project provider to write the project with
+ * @param options - Optional project to download, defaulting to the currently
+ * open project, and abort signal
+ * @throws Error if the project provider cannot write projects, or if the
+ * project cannot be written
  */
-export function saveProject(project?: Project): Project {
-  return cleanProject(project ?? projectStore.getState());
-}
-
-/**
- * Serializes a project to JSON
- *
- * @param project - The project to serialize, defaulting to the currently open
- * project
- * @returns The serialized project
- */
-export function saveProjectToJSON(project?: Project): string {
-  return JSONUtils.stringify(saveProject(project));
-}
-
-/**
- * Serializes a project to JSON and downloads it as a `.tm4` file
- *
- * The file is named after the project, with whitespace replaced by hyphens and
- * any other non-alphanumeric characters removed, falling back to `Untitled`.
- *
- * @param project - The project to download, defaulting to the currently open
- * project
- */
-export function saveAndDownloadProjectToJSON(project?: Project): void {
-  const savedProject = saveProject(project);
-  const sanitizedProjectName = savedProject.name
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-zA-Z0-9_-]+/g, "")
-    .replace(/^[-_]+|[-_]+$/g, "");
-  const projectJSON = JSONUtils.stringify(savedProject);
-  const projectBlob = new Blob([projectJSON], { type: "application/json" });
-  const projectUrl = URL.createObjectURL(projectBlob);
+export async function downloadProject(
+  projectProvider: ProjectProvider,
+  options?: { project?: Project; signal?: AbortSignal },
+): Promise<void> {
+  const { project = projectStore.getState(), signal } = options ?? {};
+  signal?.throwIfAborted();
+  if (projectProvider.toFile === undefined) {
+    throw new Error(
+      `Project provider ${projectProvider.name} cannot write projects.`,
+    );
+  }
+  const projectFile = await projectProvider.toFile(cleanProject(project), {
+    signal,
+  });
+  signal?.throwIfAborted();
+  const projectUrl = URL.createObjectURL(projectFile);
   const projectLink = document.createElement("a");
-  projectLink.download = `${sanitizedProjectName || "Untitled"}.tm4`;
+  projectLink.download = projectFile.name;
   projectLink.href = projectUrl;
   projectLink.click();
   setTimeout(() => URL.revokeObjectURL(projectUrl), 60_000);

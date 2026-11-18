@@ -16,11 +16,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { saveAndDownloadProjectToJSON } from "@/data/io/project";
 import { isWorkspaceSupported } from "@/data/io/workspace";
 
 import {
   useCloseProject,
+  useDownloadProject,
   useOpenProjectFromFile,
   useOpenProjectFromURL,
   useOpenWorkspace,
@@ -35,6 +35,7 @@ export function ProjectMenu({ className }: ProjectMenuProps) {
   const openProjectFromFile = useOpenProjectFromFile();
   const openProjectFromURL = useOpenProjectFromURL();
   const closeProject = useCloseProject();
+  const downloadProject = useDownloadProject();
   const openWorkspace = useOpenWorkspace();
   const workspaceSupported = isWorkspaceSupported();
 
@@ -67,7 +68,7 @@ export function ProjectMenu({ className }: ProjectMenuProps) {
           )}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => saveAndDownloadProjectToJSON()}>
+        <DropdownMenuItem onClick={downloadProject}>
           <DownloadIcon />
           Download project
         </DropdownMenuItem>

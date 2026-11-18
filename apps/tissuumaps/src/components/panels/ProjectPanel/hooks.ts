@@ -6,6 +6,7 @@ import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { usePromptDialog } from "@/components/dialogs/PromptDialog/hooks";
 import {
   clearProjectURLParam,
+  downloadProject,
   getProjectProvider,
   openProjectFromFile,
   openProjectFromFileHandle,
@@ -217,4 +218,22 @@ export function useCloseProject(): () => void {
       }
     });
   }, [clearProject, confirm, setProjectOpen]);
+}
+
+/**
+ * Returns a callback that downloads the open project as a TissUUmaps project
+ * file
+ *
+ * Failures are logged, as the callback is called from event handlers.
+ *
+ * @returns The callback
+ */
+export function useDownloadProject(): () => void {
+  return useCallback(() => {
+    void downloadProject(getProjectProvider(tissuumapsProjectType)).catch(
+      (error) => {
+        console.error("Failed to download project", error);
+      },
+    );
+  }, []);
 }

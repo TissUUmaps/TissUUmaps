@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ProjectProvider } from "@tissuumaps/core";
+import type { Project, ProjectProvider } from "@tissuumaps/core";
 
 import { projectStore } from "@/stores/project";
 
 import {
+  downloadProject,
   openProjectFromFile,
   openProjectFromFileHandle,
   openProjectFromURL,
@@ -209,5 +210,57 @@ describe("openProjectFromFileHandle", () => {
       // @ts-expect-error removes what was stubbed above
       delete URL.revokeObjectURL;
     }
+  });
+});
+
+describe("downloadProject", () => {
+  const objectUrl = "blob:http://localhost/0f8e";
+  let clickedLinks: HTMLAnchorElement[] = [];
+
+  beforeEach(() => {
+    projectStore.getState().clear();
+    clickedLinks = [];
+    // jsdom implements neither of the two, nor navigation for the link
+    URL.createObjectURL = () => objectUrl;
+    URL.revokeObjectURL = () => {};
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      clickedLinks.push(this);
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    // @ts-expect-error removes what beforeEach stubbed
+    delete URL.createObjectURL;
+    // @ts-expect-error removes what beforeEach stubbed
+    delete URL.revokeObjectURL;
+  });
+
+  it("writes the open project without store state and downloads the file", async () => {
+    projectStore.getState().setName("Downloaded");
+    const writtenProjects: Project[] = [];
+    await downloadProject({
+      name: "Test",
+      toFile: (project) => {
+        writtenProjects.push(project);
+        return Promise.resolve(new File([], "Downloaded.tm4"));
+      },
+    });
+    expect(writtenProjects).toHaveLength(1);
+    expect(writtenProjects[0]).toMatchObject({ name: "Downloaded" });
+    expect(writtenProjects[0]).not.toHaveProperty("source");
+    expect(writtenProjects[0]).not.toHaveProperty("instanceId");
+    expect(writtenProjects[0]).not.toHaveProperty("setName");
+    expect(clickedLinks).toHaveLength(1);
+    expect(clickedLinks[0]?.download).toBe("Downloaded.tm4");
+    expect(clickedLinks[0]?.href).toBe(objectUrl);
+  });
+
+  it("rejects for a project provider that cannot write projects", async () => {
+    await expect(downloadProject({ name: "Test" })).rejects.toThrow(
+      "Project provider Test cannot write projects.",
+    );
   });
 });

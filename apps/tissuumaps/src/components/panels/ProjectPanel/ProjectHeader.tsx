@@ -11,7 +11,6 @@ import { IconButton } from "@/components/common/icon-button";
 import { objectKindIcons } from "@/components/object-kind-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { saveAndDownloadProjectToJSON } from "@/data/io/project";
 import { cn } from "@/lib/utils";
 import { PanelId } from "@/panels";
 import { useAppStore } from "@/stores/app";
@@ -19,6 +18,7 @@ import { useProjectStore } from "@/stores/project";
 
 import { ProjectMenu } from "./ProjectMenu";
 import { formatProjectSource } from "./formatProjectSource";
+import { useDownloadProject } from "./hooks";
 
 export type ProjectHeaderProps = {
   className?: string;
@@ -35,6 +35,8 @@ export function ProjectHeader({ className }: ProjectHeaderProps) {
   const pointsCount = useProjectStore((state) => state.points.length);
   const shapesCount = useProjectStore((state) => state.shapes.length);
   const tableCount = useProjectStore((state) => state.tables.length);
+
+  const downloadProject = useDownloadProject();
 
   const dataCounts: DataCount[] = [
     {
@@ -97,10 +99,7 @@ export function ProjectHeader({ className }: ProjectHeaderProps) {
           }}
           className="hover:border-input h-8 flex-1 border-transparent bg-transparent px-1.5 text-base font-semibold shadow-none md:text-base dark:bg-transparent"
         />
-        <IconButton
-          label="Download project"
-          onClick={() => saveAndDownloadProjectToJSON()}
-        >
+        <IconButton label="Download project" onClick={downloadProject}>
           <DownloadIcon />
         </IconButton>
         <ProjectMenu />
