@@ -5,14 +5,14 @@
  * A fresh input is used for every call, so that picking the same file again
  * still fires a change event.
  *
- * @param accept - The file extensions to offer
+ * @param extensions - The file extensions to offer
  * @returns The picked file, or `null` if the user cancelled
  */
-export function pickFileFromInput(accept: string[]): Promise<File | null> {
+export function pickFileFromInput(extensions: string[]): Promise<File | null> {
   return new Promise((resolve) => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = accept.join(",");
+    input.accept = extensions.join(",");
     input.addEventListener("change", () => resolve(input.files?.[0] ?? null), {
       once: true,
     });
