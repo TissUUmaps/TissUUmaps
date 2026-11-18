@@ -87,25 +87,21 @@ export class SpatialDataProjectProvider implements ProjectProvider {
   /** The column holding the y coordinate of each point, named after its axis */
   private static readonly _pointYColumn = "y";
 
-  /**
-   * The attributes that mark the group of an element, which spatialdata also
-   * gives SpatialData attributes: images and labels have OME-Zarr attributes,
-   * shapes and points an encoding type, and tables a SpatialData encoding type
-   */
-  private static readonly _elementAttributes = [
-    "ome",
-    "multiscales",
-    "encoding-type",
-    "spatialdata-encoding-type",
-  ];
+  /** The encoding type of the group of a shapes element */
+  private static readonly _shapesEncodingType = "ngff:shapes";
+
+  /** The encoding type of the group of a points element */
+  private static readonly _pointsEncodingType = "ngff:points";
+
+  /** The SpatialData encoding type of the group of a table element */
+  private static readonly _tableEncodingType = "ngff:regions_table";
 
   readonly name = "SpatialData";
   readonly urlParam = "spatialdata";
 
   /**
    * Returns whether a source is a SpatialData store, from the attributes of
-   * its root group: SpatialData attributes, but none of those spatialdata
-   * gives the groups of its elements
+   * its root group: SpatialData attributes, but not those of an element
    *
    * @param normalizedSource - The normalized source, which may be the
    * workspace root `/`
@@ -135,11 +131,10 @@ export class SpatialDataProjectProvider implements ProjectProvider {
       }
       throw error;
     }
+    // spatialdata gives the groups of elements SpatialData attributes too
     return (
       "spatialdata_attrs" in attributes &&
-      !SpatialDataProjectProvider._elementAttributes.some(
-        (name) => name in attributes,
-      )
+      SpatialDataProjectProvider._getElementKind(attributes) === undefined
     );
   }
 
@@ -260,7 +255,7 @@ export class SpatialDataProjectProvider implements ProjectProvider {
   ): Promise<{ tables: RawTable[]; tableIDsByElement: Map<string, string> }> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const groups = await SpatialDataProjectProvider._readChildGroups(
+    const groups = await SpatialDataProjectProvider._readElements(
       store,
       "tables",
       { signal },
@@ -270,7 +265,7 @@ export class SpatialDataProjectProvider implements ProjectProvider {
     for (const { name, attrs } of groups) {
       const { region, instance_key: instanceKey } = attrs as {
         region: string | string[] | null;
-        instance_key: string;
+        instance_key: string | null;
       };
       const tableSource = SpatialDataProjectProvider._getElementSource(
         source,
@@ -279,7 +274,8 @@ export class SpatialDataProjectProvider implements ProjectProvider {
       const dataSource: ZarrTableDataSource = {
         type: zarrTableDataSourceType,
         source: tableSource,
-        idColumn: `obs/${instanceKey}`,
+        // a table that annotates nothing has no instance key
+        idColumn: instanceKey !== null ? `obs/${instanceKey}` : undefined,
       };
       const id = SpatialDataProjectProvider._createID(source, `tables/${name}`);
       tables.push({ id, name, dataSource });
@@ -307,7 +303,7 @@ export class SpatialDataProjectProvider implements ProjectProvider {
   ): Promise<{ coordinateSystem: string; object: Omit<RawImage, "layer"> }[]> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const groups = await SpatialDataProjectProvider._readChildGroups(
+    const groups = await SpatialDataProjectProvider._readElements(
       store,
       "images",
       { signal },
@@ -353,7 +349,7 @@ export class SpatialDataProjectProvider implements ProjectProvider {
   ): Promise<{ coordinateSystem: string; object: Omit<RawLabels, "layer"> }[]> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const groups = await SpatialDataProjectProvider._readChildGroups(
+    const groups = await SpatialDataProjectProvider._readElements(
       store,
       "labels",
       { signal },
@@ -412,7 +408,7 @@ export class SpatialDataProjectProvider implements ProjectProvider {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const groups = (
-      await SpatialDataProjectProvider._readChildGroups(store, "shapes", {
+      await SpatialDataProjectProvider._readElements(store, "shapes", {
         signal,
       })
     ).map(({ name, attrs }) => {
@@ -516,7 +512,7 @@ export class SpatialDataProjectProvider implements ProjectProvider {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     const groups = (
-      await SpatialDataProjectProvider._readChildGroups(store, "points", {
+      await SpatialDataProjectProvider._readElements(store, "points", {
         signal,
       })
     ).map(({ name, attrs }) => {
@@ -685,28 +681,80 @@ export class SpatialDataProjectProvider implements ProjectProvider {
   }
 
   /**
-   * Reads the child groups of a group, e.g. the images of a store
+   * Reads the elements of a kind, e.g. the images of a store
+   *
+   * The kind of an element is told from its own metadata, as the SpatialData
+   * format asks of readers: a group of another kind in the group of a kind is
+   * skipped with a warning.
    *
    * @param store - The store
-   * @param path - The path of the group, which may be missing
+   * @param kind - The kind, i.e. the name of the group listing the elements of
+   * that kind, which may be missing
    * @param options - Optional abort signal
-   * @returns The name and attributes of each child group, in store order
+   * @returns The name and attributes of each element, in store order
    */
-  private static async _readChildGroups(
+  private static async _readElements(
     store: ZarrStore,
-    path: string,
+    kind: "images" | "labels" | "shapes" | "points" | "tables",
     options?: { signal?: AbortSignal },
   ): Promise<{ name: string; attrs: Readonly<Record<string, unknown>> }[]> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const group = await store.get(path, { signal });
+    const group = await store.get(kind, { signal });
     const names = group?.kind === "group" ? group.keys : [];
-    return Promise.all(
+    const children = await Promise.all(
       names.map(async (name) => {
-        const child = await store.get(`${path}/${name}`, { signal });
+        const child = await store.get(`${kind}/${name}`, { signal });
         return { name, attrs: child?.kind === "group" ? child.attrs : {} };
       }),
     );
+    return children.filter(({ name, attrs }) => {
+      const elementKind = SpatialDataProjectProvider._getElementKind(attrs);
+      if (elementKind !== kind) {
+        console.warn(
+          `Skipping ${kind}/${name}, whose metadata ${elementKind !== undefined ? `marks it as ${elementKind}` : "marks no SpatialData element"}.`,
+        );
+        return false;
+      }
+      return true;
+    });
+  }
+
+  /**
+   * Tells the kind of an element from the attributes of its group
+   *
+   * Tables are checked first, as their AnnData encoding type is not that of
+   * an element. Images and labels have OME-Zarr multiscales, which labels mark
+   * as such.
+   *
+   * @param attrs - The attributes of the element's group
+   * @returns The kind, or `undefined` for a group that is no element
+   */
+  private static _getElementKind(
+    attrs: Readonly<Record<string, unknown>>,
+  ): "images" | "labels" | "shapes" | "points" | "tables" | undefined {
+    if (
+      attrs["spatialdata-encoding-type"] ===
+      SpatialDataProjectProvider._tableEncodingType
+    ) {
+      return "tables";
+    }
+    if (
+      attrs["encoding-type"] === SpatialDataProjectProvider._shapesEncodingType
+    ) {
+      return "shapes";
+    }
+    if (
+      attrs["encoding-type"] === SpatialDataProjectProvider._pointsEncodingType
+    ) {
+      return "points";
+    }
+    // OME-Zarr 0.5 nests its attributes under `ome`, as spatialdata writes them
+    const ome = (attrs.ome ?? attrs) as Readonly<Record<string, unknown>>;
+    if ("multiscales" in ome) {
+      return "image-label" in ome ? "labels" : "images";
+    }
+    return undefined;
   }
 
   /**

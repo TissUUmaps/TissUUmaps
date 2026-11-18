@@ -26,7 +26,7 @@ export type CoordinateTransformation = {
     }
   | {
       type: "mapAxis";
-      /** The input axis by output axis */
+      /** The input axis by output axis, for the output axes that change */
       mapAxis: { [outputAxis: string]: string };
     }
   | { type: "sequence"; transformations: CoordinateTransformation[] }
@@ -184,8 +184,10 @@ export class SpatialDataTransformUtils {
         break;
       }
       case "mapAxis":
+        // an output axis that is not mapped takes the input axis of its name
         output = outputAxes.map(
-          (axis) => point.forms.get(transformation.mapAxis[axis]!) ?? [0, 0, 0],
+          (axis) =>
+            point.forms.get(transformation.mapAxis[axis] ?? axis) ?? [0, 0, 0],
         );
         break;
       default:

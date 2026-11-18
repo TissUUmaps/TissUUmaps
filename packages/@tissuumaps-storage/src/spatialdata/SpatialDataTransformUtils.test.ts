@@ -180,6 +180,28 @@ describe("SpatialDataTransformUtils", () => {
       });
     });
 
+    it("keeps an output axis that is not mapped as the input axis of its name", () => {
+      expect(
+        getTransform({
+          type: "sequence",
+          input: xy,
+          output: global,
+          transformations: [
+            { type: "translation", translation: [5, 7], input: xy, output: xy },
+            { type: "mapAxis", mapAxis: {}, input: xy, output: global },
+          ],
+        }),
+      ).toEqual({
+        transform: {
+          flip: false,
+          scale: 1,
+          rotation: 0,
+          translation: { x: 5, y: 7 },
+        },
+        exact: true,
+      });
+    });
+
     it("returns one transform per coordinate system, the first one given", () => {
       const transforms = SpatialDataTransformUtils.getSimilarityTransforms(
         [
