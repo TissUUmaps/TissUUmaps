@@ -423,10 +423,16 @@ async function handleRangeRequest(
   const parts = await openParquetParts(request.parts);
   if (request.axis !== undefined) {
     const { axis } = request;
-    const axisRanges = parts.map(({ metadata }) =>
-      GeoParquetUtils.getAxisRange(metadata, request.column, axis),
-    );
-    if (axisRanges.every((axisRange) => axisRange !== undefined)) {
+    // an empty part has no bounds, and needs none
+    const axisRanges = parts
+      .filter(({ metadata }) => ParquetUtils.getNumRows(metadata) > 0)
+      .map(({ metadata }) =>
+        GeoParquetUtils.getAxisRange(metadata, request.column, axis),
+      );
+    if (
+      axisRanges.length > 0 &&
+      axisRanges.every((axisRange) => axisRange !== undefined)
+    ) {
       const range: [number, number] = [
         Math.min(...axisRanges.map(([min]) => min)),
         Math.max(...axisRanges.map(([, max]) => max)),

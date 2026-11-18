@@ -231,8 +231,8 @@ export class ParquetUtils {
    * {@link ParquetUtils.getColumnArrayType}) before reading, and the chunks
    * are written into it as they arrive. A missing value is `NaN` in a float
    * array and `null` in a plain array, so an integer column is read as 64-bit
-   * floats unless, in every part, its schema requires a value or its
-   * statistics count no nulls.
+   * floats unless, in every part holding rows, its schema requires a value or
+   * its statistics count no nulls.
    *
    * @param parts - The parts of the table
    * @param column - The column to read
@@ -261,8 +261,10 @@ export class ParquetUtils {
     } else if (
       parts.every(
         ({ metadata }) =>
+          ParquetUtils.getNumRows(metadata) === 0 ||
           ParquetUtils.getColumnElement(metadata, column)?.repetition_type ===
-            "REQUIRED" || ParquetUtils.isNullable(metadata, column) === false,
+            "REQUIRED" ||
+          ParquetUtils.isNullable(metadata, column) === false,
       )
     ) {
       result = new arrayType(numRows);
