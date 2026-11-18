@@ -403,6 +403,35 @@ describe("ParquetUtils", () => {
       ).resolves.toStrictEqual(new Float64Array([1, 2, 3, NaN]));
     });
 
+    it("keeps integers next to an empty part without statistics", async () => {
+      const values = fakeFile(
+        { type: "INT32", repetition_type: "OPTIONAL" },
+        2,
+        [0],
+      );
+      const empty = fakeFile(
+        { type: "INT32", repetition_type: "OPTIONAL" },
+        0,
+        [undefined],
+      );
+      fakeChunks(
+        new Map([
+          [values, [new Int32Array([1, 2])]],
+          [empty, []],
+        ]),
+      );
+      await expect(
+        ParquetUtils.readColumn(
+          [
+            { buffer, metadata: values },
+            { buffer, metadata: empty },
+          ],
+          "c",
+          () => {},
+        ),
+      ).resolves.toStrictEqual(new Int32Array([1, 2]));
+    });
+
     it("keeps integers whose statistics count no nulls", async () => {
       const metadata = fakeFile(
         { type: "INT32", repetition_type: "OPTIONAL" },
