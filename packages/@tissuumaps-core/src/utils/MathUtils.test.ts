@@ -545,18 +545,16 @@ describe("MathUtils", () => {
 
     it("keeps the order of values in the same bin", async () => {
       const order = await MathUtils.computeBinnedSortOrder(
-        new Float64Array([1, 0.1, 0, 0.9]),
-        [0, 1],
-        { bins: 2 },
+        new Float64Array([0.4, 0.2, 1, 0]),
+        [0, 65535],
       );
-      expect(Array.from(order)).toEqual([1, 2, 0, 3]);
+      expect(Array.from(order)).toEqual([0, 1, 3, 2]);
     });
 
     it("puts values outside the range in the edge bins", async () => {
       const order = await MathUtils.computeBinnedSortOrder(
         new Float64Array([20, -10, 5]),
         [0, 10],
-        { bins: 3 },
       );
       expect(Array.from(order)).toEqual([1, 2, 0]);
     });
@@ -575,6 +573,16 @@ describe("MathUtils", () => {
         [1, 1],
       );
       expect(Array.from(order)).toEqual([0, 1, 2]);
+    });
+
+    it("rejects with the reason of an aborted signal", async () => {
+      const controller = new AbortController();
+      controller.abort(new Error("aborted"));
+      await expect(
+        MathUtils.computeBinnedSortOrder(new Float64Array(10), [0, 1], {
+          signal: controller.signal,
+        }),
+      ).rejects.toThrow("aborted");
     });
   });
 });
