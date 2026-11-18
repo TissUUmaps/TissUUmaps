@@ -56,14 +56,15 @@ function isSameGroupBy(
  * @param objectName - The name of the annotated object
  * @param tableId - The ID of the annotated object's table
  * @param settings - The settings of the annotated object, in order of priority
- * @param activeSettingsCategory - The open settings category, if any
+ * @param activeSettingsCategory - The settings category the group table
+ * follows: the open one, else the one the style section edits
  * @returns The state of the group table, shared by its columns
  */
 export function useGroupTable(
   objectName: string,
   tableId: string | null,
   settings: GroupTableSetting[],
-  activeSettingsCategory: string | null,
+  activeSettingsCategory: string,
 ): GroupTableState {
   const activeConfig = settings.find(
     (setting) => setting.category === activeSettingsCategory,

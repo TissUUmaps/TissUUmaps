@@ -105,7 +105,15 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
           className="bg-card"
         />
       )}
-      <AdvancedSettings>
+      <AdvancedSettings
+        // a hidden settings category would keep the group table from
+        // following the style section
+        onOpenChange={(open) => {
+          if (!open) {
+            setActiveSettingsCategory(null);
+          }
+        }}
+      >
         <DataSourceWidget
           dataSource={labels.dataSource}
           dataProviders={labelsDataProviders}

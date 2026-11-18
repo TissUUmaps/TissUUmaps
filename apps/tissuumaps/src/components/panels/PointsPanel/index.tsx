@@ -109,7 +109,15 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
           className="bg-card"
         />
       )}
-      <AdvancedSettings>
+      <AdvancedSettings
+        // a hidden settings category would keep the group table from
+        // following the style section
+        onOpenChange={(open) => {
+          if (!open) {
+            setActiveSettingsCategory(null);
+          }
+        }}
+      >
         <DataSourceWidget
           dataSource={points.dataSource}
           dataProviders={pointsDataProviders}

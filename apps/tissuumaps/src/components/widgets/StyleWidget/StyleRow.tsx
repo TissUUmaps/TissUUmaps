@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { Field, FieldLabel } from "@/components/common/field";
 import { cn } from "@/lib/utils";
 
 export type StyleRowProps = {
@@ -25,19 +26,23 @@ export function StyleRow({
   className,
 }: StyleRowProps) {
   return (
-    <>
-      <span
-        className={cn(
-          "truncate text-xs",
-          isActive ? "font-medium text-foreground" : "text-muted-foreground",
-        )}
-      >
-        {label}
-        {isActive && <span className="sr-only"> (active)</span>}
-      </span>
+    <Field className="contents">
+      {label !== undefined ? (
+        <FieldLabel
+          className={cn(
+            "truncate text-xs",
+            isActive ? "font-medium text-foreground" : "text-muted-foreground",
+          )}
+        >
+          {label}
+          {isActive && <span className="sr-only"> (active)</span>}
+        </FieldLabel>
+      ) : (
+        <span />
+      )}
       <div className={cn("min-w-0 [&_[data-slot=input-group]]:h-8", className)}>
         {children}
       </div>
-    </>
+    </Field>
   );
 }

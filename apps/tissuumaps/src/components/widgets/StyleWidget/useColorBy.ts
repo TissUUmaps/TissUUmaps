@@ -96,7 +96,24 @@ export function useColorBy(
     return () => abortController.abort();
   }, [loadTableData, column]);
 
-  useEffect(() => () => abortControllerRef.current?.abort(), []);
+  // a pick or switch still loading is for the previous table
+  useEffect(() => () => abortControllerRef.current?.abort(), [tableId]);
+
+  // a new table, or a column colored elsewhere, takes back the error
+  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  const [prevTableId, setPrevTableId] = useState(tableId);
+  const [prevColumn, setPrevColumn] = useState(column);
+  const [prevEncoding, setPrevEncoding] = useState(encoding);
+  if (
+    tableId !== prevTableId ||
+    column !== prevColumn ||
+    encoding !== prevEncoding
+  ) {
+    setPrevTableId(tableId);
+    setPrevColumn(column);
+    setPrevEncoding(encoding);
+    setError(null);
+  }
 
   // an action resolving to null changes nothing, e.g. when the user cancels
   const run = (action: (signal: AbortSignal) => Promise<ColorBy | null>) => {
@@ -129,7 +146,7 @@ export function useColorBy(
   const loadTable = async (signal: AbortSignal) => {
     const tableData = await loadTableData({ signal });
     if (tableData === null) {
-      throw new Error("The table is not available.");
+      throw new Error(`Table ${tableId} is not loaded`);
     }
     return tableData;
   };
