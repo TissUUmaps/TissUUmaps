@@ -4,7 +4,7 @@ sidebar_position: 7
 
 # Parquet
 
-The **Parquet data providers** open Parquet files as **tables**, and [GeoParquet](https://geoparquet.org/) files as **shapes**. Files are read in the browser with [hyparquet](https://hyparquet.com/), one column at a time, so a remote file needs a server that supports HTTP range requests.
+The **Parquet data providers** open Parquet files and [Dask](#dask) dataset directories as **tables**, and [GeoParquet](https://geoparquet.org/) files as **shapes**. Files are read in the browser with [hyparquet](https://hyparquet.com/), one column at a time, so a remote file needs a server that supports HTTP range requests.
 
 ## Table data source
 
@@ -13,7 +13,7 @@ Parquet table data sources have the `type` `"parquet"` and accept the following 
 | Field            | Type     | Description                                                                                                                                    |
 | ---------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | `type`           | `string` | Always `"parquet"`.                                                                                                                            |
-| `source`         | `string` | URL or path of the Parquet file (see [Referencing data](../concepts/projects.md#referencing-data)).                                            |
+| `source`         | `string` | URL or path of the Parquet file or [Dask](#dask) dataset directory (see [Referencing data](../concepts/projects.md#referencing-data)).         |
 | `idColumn`       | `string` | Column holding the ID of each row (see [Data model](../concepts/data-model.md)). Defaults to the [pandas index](#pandas), else to row numbers. |
 | `nameColumn`     | `string` | Column holding the name of each row.                                                                                                           |
 | `requestHeaders` | `object` | Extra HTTP headers sent with the request for a remote file.                                                                                    |
@@ -54,7 +54,13 @@ Parquet has no index. [pandas](https://pandas.pydata.org/docs/development/develo
 
 TissUUmaps uses the index column as the default `idColumn`. Item IDs are integers or strings, so an index whose values are not all integers or all strings (e.g. floats, dates, or missing values) is ignored with a warning, and rows are keyed by row numbers. A multi-level index, or an index column missing from the file, also leaves the default at row numbers.
 
-IDs must be unique. An ID column with duplicate values is ignored with a warning, and rows are keyed by row numbers. A [Dask](https://www.dask.org/) DataFrame often has such an index, partition-local with values that repeat across partitions; to key its rows, set `idColumn` to a column with unique values.
+IDs must be unique. An ID column with duplicate values is ignored with a warning, and rows are keyed by row numbers. A [Dask](#dask) DataFrame often has such an index, partition-local with values that repeat across partitions; to key its rows, set `idColumn` to a column with unique values.
+
+### Dask
+
+[Dask](https://www.dask.org/) writes a DataFrame as a directory with one Parquet file per partition, numbered from zero (`part.0.parquet`, `part.1.parquet`, …). The points of a [SpatialData](https://spatialdata.scverse.org/) store are such a directory. A table data source can name the directory: its rows are those of the partition files, in partition order, and the partitions share the schema of the first one.
+
+Dask numbers the partitions without gaps. A directory in the workspace is listed, and fails to load if a partition file is missing. A server cannot list a directory, so a remote source is first checked to be a Parquet file, from its first bytes, and otherwise its partition files are requested in order until the server answers that one is missing (Not Found, Gone, or Forbidden, which object stores answer for missing files); a remote dataset with a gap is therefore read up to the gap. Any other error response, except one saying that the file is too short to be a Parquet file, fails the load rather than reading part of the dataset.
 
 ## Example
 
