@@ -871,4 +871,33 @@ describe("SourceUtils", () => {
       expect(SourceUtils.getStem("https://data.example/")).toBe("");
     });
   });
+
+  describe("createID", () => {
+    const uuid = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+
+    it("names the ID after the file name, with hyphens for dots and a UUID", () => {
+      expect(SourceUtils.createID("/a/cells.ome.zarr")).toMatch(
+        new RegExp(`^cells-ome-zarr-${uuid}$`),
+      );
+      expect(SourceUtils.createID("/a/x.zarr/labels/cells")).toMatch(
+        new RegExp(`^cells-${uuid}$`),
+      );
+      expect(
+        SourceUtils.createID("https://data.example/a/my%20cells.v2.csv?x=1"),
+      ).toMatch(new RegExp(`^my cells-v2-csv-${uuid}$`));
+    });
+
+    it("falls back to the UUID alone", () => {
+      expect(SourceUtils.createID(undefined)).toMatch(new RegExp(`^${uuid}$`));
+      expect(SourceUtils.createID("data:text/csv,a")).toMatch(
+        new RegExp(`^${uuid}$`),
+      );
+    });
+
+    it("creates a new ID for the same source every time", () => {
+      expect(SourceUtils.createID("/a/cells.csv")).not.toBe(
+        SourceUtils.createID("/a/cells.csv"),
+      );
+    });
+  });
 });
