@@ -79,6 +79,7 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
         <div className="flex flex-row items-center gap-x-1">
           <FieldLabel className="shrink-0">World unit size in</FieldLabel>
           <Field className="flex min-w-0">
+            <FieldLabel className="sr-only">Physical unit</FieldLabel>
             <Autocomplete
               value={
                 knownPhysicalUnit !== undefined
@@ -98,7 +99,7 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
               openOnInputClick
             >
               <AutocompleteInputGroup>
-                <AutocompleteInput aria-label="Physical unit" />
+                <AutocompleteInput />
                 <InputGroupAddon align="inline-end">
                   <AutocompleteTrigger label="Show units" />
                 </InputGroupAddon>
