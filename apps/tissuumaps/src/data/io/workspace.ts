@@ -163,12 +163,12 @@ export async function resolveWorkspacePath(
   const segments = await workspace.resolve(handle);
   if (segments === null) {
     throw new Error(
-      `The ${handle.kind === "file" ? "file" : "folder"} is not in the connected folder`,
+      `The ${handle.kind === "file" ? "file" : "folder"} is not in the workspace`,
     );
   }
   if (segments.length === 0) {
     throw new Error(
-      "The connected folder itself cannot be a data source; pick a folder inside it",
+      "The workspace itself cannot be a data source; pick a folder inside it",
     );
   }
   return SourceUtils.makeWorkspacePath(segments);

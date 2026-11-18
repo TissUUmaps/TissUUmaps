@@ -167,7 +167,7 @@ describe("workspace", () => {
       stubOpenFilePicker(() => Promise.resolve([dataFile]));
       await expect(
         pickWorkspacePath(makeWorkspace([]), "directory"),
-      ).rejects.toThrow(/connected folder itself/);
+      ).rejects.toThrow(/workspace itself/);
     });
 
     it("rejects a file outside the workspace", async () => {
@@ -175,7 +175,7 @@ describe("workspace", () => {
       stubOpenFilePicker(() => Promise.resolve([dataFile]));
       await expect(
         pickWorkspacePath(makeWorkspace(null), "file"),
-      ).rejects.toThrow(/not in the connected folder/);
+      ).rejects.toThrow(/not in the workspace/);
     });
 
     it("returns null when the user cancels", async () => {
@@ -199,10 +199,10 @@ describe("workspace", () => {
     it("rejects the workspace itself, and anything outside it", async () => {
       await expect(
         resolveWorkspacePath(directory, makeWorkspace([])),
-      ).rejects.toThrow(/connected folder itself/);
+      ).rejects.toThrow(/workspace itself/);
       await expect(
         resolveWorkspacePath(dataFile, makeWorkspace(null)),
-      ).rejects.toThrow(/not in the connected folder/);
+      ).rejects.toThrow(/not in the workspace/);
     });
   });
 

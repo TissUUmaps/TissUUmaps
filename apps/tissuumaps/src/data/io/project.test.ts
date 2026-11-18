@@ -8,6 +8,8 @@ import { projectStore } from "@/stores/project";
 import {
   clearProjectURLParams,
   downloadProject,
+  findLocalProjectProviders,
+  findProjectProviders,
   getProjectFileExtensions,
   getProjectFileTypes,
   importProjectFromURL,
@@ -15,8 +17,6 @@ import {
   openProjectFromFile,
   openProjectFromFileHandle,
   openProjectFromURL,
-  pickLocalProjectProvider,
-  pickProjectProvider,
   readProjectURLParams,
   resolveProjectSource,
   setProjectURLParam,
@@ -468,14 +468,14 @@ describe("project providers", () => {
     window.history.replaceState({}, "", "/?other=1");
   });
 
-  describe("pickProjectProvider", () => {
-    it("returns the first project provider that supports the source", async () => {
+  describe("findProjectProviders", () => {
+    it("returns the project providers that support the source", async () => {
       await expect(
-        pickProjectProvider("https://data.example/a.zarr", null),
-      ).resolves.toBe(zarrProvider);
+        findProjectProviders("https://data.example/a.zarr", null),
+      ).resolves.toEqual([zarrProvider]);
     });
 
-    it("prefers earlier registered project providers over faster ones", async () => {
+    it("returns all supporting project providers in registration order, however fast", async () => {
       const slowProvider: ProjectProvider = {
         ...tm4Provider,
         supports: () =>
@@ -485,8 +485,8 @@ describe("project providers", () => {
       appStore.getState().registerProjectProvider("slow", slowProvider);
       appStore.getState().registerProjectProvider("zarr", zarrProvider);
       await expect(
-        pickProjectProvider("https://data.example/a.zarr", null),
-      ).resolves.toBe(slowProvider);
+        findProjectProviders("https://data.example/a.zarr", null),
+      ).resolves.toEqual([slowProvider, zarrProvider]);
     });
 
     it("skips project providers that cannot load, or whose check rejects", async () => {
@@ -502,23 +502,42 @@ describe("project providers", () => {
       });
       appStore.getState().registerProjectProvider("zarr", zarrProvider);
       await expect(
-        pickProjectProvider("https://data.example/a.zarr", null),
-      ).resolves.toBe(zarrProvider);
+        findProjectProviders("https://data.example/a.zarr", null),
+      ).resolves.toEqual([zarrProvider]);
     });
 
-    it("returns undefined if no project provider supports the source", async () => {
+    it("returns no project provider if none supports the source", async () => {
       await expect(
-        pickProjectProvider("https://data.example/a.csv", null),
-      ).resolves.toBeUndefined();
+        findProjectProviders("https://data.example/a.csv", null),
+      ).resolves.toEqual([]);
+    });
+
+    it("rejects if cancelled", async () => {
+      const abortController = new AbortController();
+      abortController.abort();
+      await expect(
+        findProjectProviders("https://data.example/a.zarr", null, {
+          signal: abortController.signal,
+        }),
+      ).rejects.toThrow();
     });
   });
 
-  describe("pickLocalProjectProvider", () => {
+  describe("findLocalProjectProviders", () => {
     it("matches files by their file extension, regardless of case", () => {
-      expect(pickLocalProjectProvider(new File([], "Project.TM4"))).toBe(
+      expect(findLocalProjectProviders(new File([], "Project.TM4"))).toEqual([
         tm4Provider,
-      );
-      expect(pickLocalProjectProvider(new File([], "a.csv"))).toBeUndefined();
+      ]);
+      expect(findLocalProjectProviders(new File([], "a.csv"))).toEqual([]);
+    });
+
+    it("returns all matching project providers in registration order", () => {
+      const otherProvider: ProjectProvider = { ...tm4Provider, name: "Other" };
+      appStore.getState().registerProjectProvider("other", otherProvider);
+      expect(findLocalProjectProviders(new File([], "p.tm4"))).toEqual([
+        tm4Provider,
+        otherProvider,
+      ]);
     });
 
     it("skips project providers that cannot load", () => {
@@ -528,9 +547,9 @@ describe("project providers", () => {
         fileTypes: { "application/json": [".tm4"] },
         toFile: () => Promise.resolve(new File([], "p")),
       });
-      expect(
-        pickLocalProjectProvider(new File([], "project.tm4")),
-      ).toBeUndefined();
+      expect(findLocalProjectProviders(new File([], "project.tm4"))).toEqual(
+        [],
+      );
     });
   });
 

@@ -50,6 +50,7 @@ export function ObjectListItemMenu({
               title: `Rename ${objectLabel}`,
               defaultValue: name,
               inputProps: { required: true },
+              actionLabel: "Rename",
             }).then((value) => {
               const newName = value?.trim();
               if (newName) {
@@ -69,6 +70,7 @@ export function ObjectListItemMenu({
             void confirm({
               title: `Delete ${objectLabel}`,
               body: `Are you sure you want to delete "${displayName}"? This action cannot be undone.`,
+              actionLabel: "Delete",
             }).then((confirmed) => {
               if (confirmed) {
                 onDelete();

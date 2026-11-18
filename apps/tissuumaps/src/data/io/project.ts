@@ -549,71 +549,64 @@ export async function downloadProject(
 }
 
 /**
- * Returns the first registered project provider that can load a source
+ * Returns the registered project providers that can load a source
  *
  * Only project providers that implement `load` and `supports` are considered,
- * and the first one in registration order that supports the source is
- * returned; a `supports` that rejects counts as `false`.
+ * in registration order; a `supports` that rejects counts as `false`.
  *
  * @param normalizedSource - The normalized source to load
  * @param workspace - The directory handle of the open workspace, if any
  * @param options - Optional abort signal
- * @returns The project provider, or `undefined` if none supports the source
+ * @returns The project providers that support the source, in registration
+ * order
  */
-export async function pickProjectProvider(
+export async function findProjectProviders(
   normalizedSource: string,
   workspace: FileSystemDirectoryHandle | null,
   options?: { signal?: AbortSignal },
-): Promise<ProjectProvider | undefined> {
+): Promise<ProjectProvider[]> {
   const { signal } = options ?? {};
   signal?.throwIfAborted();
-  const checks = Array.from(
+  const projectProviders = Array.from(
     appStore.getState().projectProviders.values(),
-    async (projectProvider) => {
-      let supported = false;
-      if (
-        projectProvider.load !== undefined &&
-        projectProvider.supports !== undefined
-      ) {
-        try {
-          supported = await projectProvider.supports(
-            normalizedSource,
-            workspace,
-            { signal },
-          );
-        } catch {
-          // treated as unsupported
-        }
-      }
-      return { projectProvider, supported };
-    },
   );
-  for (const check of checks) {
-    const checkResult = await check;
-    signal?.throwIfAborted();
-    if (checkResult.supported) {
-      return checkResult.projectProvider;
-    }
-  }
-  return undefined;
+  const support = await Promise.all(
+    projectProviders.map(async (projectProvider) => {
+      if (
+        projectProvider.load === undefined ||
+        projectProvider.supports === undefined
+      ) {
+        return false;
+      }
+      try {
+        return await projectProvider.supports(normalizedSource, workspace, {
+          signal,
+        });
+      } catch {
+        return false; // treated as unsupported
+      }
+    }),
+  );
+  signal?.throwIfAborted();
+  return projectProviders.filter((_, i) => support[i]);
 }
 
 /**
- * Returns the first registered project provider that loads a local file, by
- * its extension
+ * Returns the registered project providers that load a local file, by its
+ * extension
  *
  * Only project providers that implement `load` are considered, in
  * registration order, matching the extensions of their `fileTypes`
  * regardless of case.
  *
  * @param projectFile - The file, or its handle
- * @returns The project provider, or `undefined` if none loads it
+ * @returns The project providers that load the file, in registration order
  */
-export function pickLocalProjectProvider(
+export function findLocalProjectProviders(
   projectFile: File | FileSystemFileHandle,
-): ProjectProvider | undefined {
+): ProjectProvider[] {
   const name = projectFile.name.toLowerCase();
-  return Array.from(appStore.getState().projectProviders.values()).find(
+  return Array.from(appStore.getState().projectProviders.values()).filter(
     (projectProvider) =>
       projectProvider.load !== undefined &&
       Object.values(projectProvider.fileTypes ?? {})

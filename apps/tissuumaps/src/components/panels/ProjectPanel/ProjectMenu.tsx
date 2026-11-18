@@ -60,7 +60,7 @@ export function ProjectMenu({ className }: ProjectMenuProps) {
           onClick={openWorkspace}
         >
           <FolderIcon />
-          Open folder…
+          Open workspace…
           {!workspaceSupported && (
             <DropdownMenuItemDescription>
               {workspaceUnsupportedMessage}

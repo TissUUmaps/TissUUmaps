@@ -35,7 +35,6 @@ export function useLoadPluginFromFile(): () => void {
       const confirmed = await confirm({
         title: "Load plugin",
         body: `Load the plugin from "${file.name}"? ${pluginTrustWarning}`,
-        cancelLabel: "Cancel",
         actionLabel: "Load",
       });
       if (!confirmed) {

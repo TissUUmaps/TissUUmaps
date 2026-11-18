@@ -2,9 +2,9 @@ import { ProjectUtils } from "@tissuumaps/core";
 
 import { startDataCaches } from "./data/cache";
 import {
+  findProjectProviders,
   importProjectFromURL,
   openProjectFromURL,
-  pickProjectProvider,
   readProjectURLParams,
 } from "./data/io/project";
 import {
@@ -99,9 +99,9 @@ function startCollapsingOnProjectSwitch(): () => void {
  * provider, and imports the projects named by the following ones, in order
  *
  * Without such parameters, {@link fallbackProjectUrl} is opened with the first
- * project provider that supports it. Failures are logged, unless loading was
- * cancelled; the projects that follow a failed one are still loaded, into the
- * empty project if opening failed.
+ * project provider that supports it, without asking. Failures are logged,
+ * unless loading was cancelled; the projects that follow a failed one are
+ * still loaded, into the empty project if opening failed.
  *
  * @param options - Optional abort signal
  */
@@ -114,7 +114,7 @@ async function loadInitialProjects(options?: {
   );
   if (baseProject === undefined) {
     try {
-      const fallbackProjectProvider = await pickProjectProvider(
+      const [fallbackProjectProvider] = await findProjectProviders(
         new URL(fallbackProjectUrl, document.baseURI).href,
         null,
         { signal },
