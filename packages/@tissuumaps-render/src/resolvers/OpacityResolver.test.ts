@@ -104,7 +104,7 @@ describe("OpacityResolver", () => {
   });
 
   describe("resolveOpacitiesFromTableValues", () => {
-    it("reads opacities from the table column", async () => {
+    it("maps from 0 to 1 when the table column has no value range", async () => {
       const ids = new Uint32Array([1, 2]);
       const data = createMockTableData(ids, [0, 1]);
       const loadTable = vi.fn().mockResolvedValue(data);
@@ -260,6 +260,28 @@ describe("OpacityResolver", () => {
       expect(loadTable).toHaveBeenCalledWith(undefined, {
         signal: controller.signal,
       });
+    });
+
+    it("does not apply the minimum when the table column has no value range", async () => {
+      const ids = new Uint32Array([1, 2]);
+      const data = createMockTableData(ids, [0.5, 5]);
+      const loadTable = vi.fn().mockResolvedValue(data);
+      const config = {
+        from: { column: "col1", range: [2, null] },
+      } satisfies OpacityConfig;
+
+      const packedOpacities =
+        await OpacityResolver.resolveOpacitiesFromTableValues(
+          ids,
+          config,
+          1,
+          loadTable,
+        );
+
+      expect(Array.from(packedOpacities)).toEqual([
+        OpacityResolver.packOpacity(0.5),
+        255,
+      ]);
     });
   });
 
