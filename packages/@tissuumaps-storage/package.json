@@ -53,6 +53,11 @@
       "types": "./dist/parquet.d.ts",
       "default": "./dist/parquet.js"
     },
+    "./spatialdata": {
+      "tissuumaps-development": "./src/spatialdata/index.ts",
+      "types": "./dist/spatialdata.d.ts",
+      "default": "./dist/spatialdata.js"
+    },
     "./table": {
       "tissuumaps-development": "./src/table/index.ts",
       "types": "./dist/table.d.ts",
@@ -134,6 +139,10 @@
       "./parquet": {
         "types": "./dist/parquet.d.ts",
         "default": "./dist/parquet.js"
+      },
+      "./spatialdata": {
+        "types": "./dist/spatialdata.d.ts",
+        "default": "./dist/spatialdata.js"
       },
       "./table": {
         "types": "./dist/table.d.ts",
