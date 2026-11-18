@@ -142,7 +142,7 @@ and the plugin is not mounted, but it stays registered.
 
 ## Table data
 
-Query groups and labels are optional facts of the table data (see `TableData.loadQueryGroups`); the application decides how to present them.
+Query groups are optional facts of the table data (see `TableData.getQueryGroups`); the application decides how to present them.
 
 ## Stores
 

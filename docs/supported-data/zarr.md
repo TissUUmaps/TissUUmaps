@@ -34,7 +34,7 @@ One profile is detected from the store's attributes:
 
 ### AnnData
 
-AnnData objects are recognized and decoded as in [HDF5](./hdf5.md#anndata) files, whether the source points at one or at a store containing them, including their [column groups](./hdf5.md#column-groups) (annotations and features).
+AnnData objects are recognized and decoded as in [HDF5](./hdf5.md#anndata) files, whether the source points at one or at a store containing them, including their query groups.
 
 ## Example
 

@@ -56,6 +56,8 @@ TissUUmaps uses the index column as the default `idColumn`. Item IDs are integer
 
 IDs must be unique. An ID column with duplicate values is ignored with a warning, and rows are keyed by row numbers. A [Dask](https://www.dask.org/) DataFrame often has such an index, partition-local with values that repeat across partitions; to key its rows, set `idColumn` to a column with unique values.
 
+Columns of the pandas `category` dtype are categorical (see `TableData.isColumnCategorical`), even when their values are numbers.
+
 ## Example
 
 A project showing the circles and the polygons of a [SpatialData](https://spatialdata.scverse.org/) store. The circles are a GeoParquet file of points with a radius, read as a table and drawn as a point cloud sized by that radius; the polygons are read as shapes:

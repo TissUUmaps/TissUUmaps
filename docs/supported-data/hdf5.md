@@ -23,6 +23,7 @@ Any HDF5 file is read as a table of its datasets. A column is addressed by the p
 
 - One-dimensional datasets are columns.
 - Two-dimensional datasets expose one column per matrix column as `path[i]`, for example `obsm/spatial[0]` and `obsm/spatial[1]` for spatial coordinates.
+- Boolean datasets are categorical columns (see `TableData.isColumnCategorical`).
 
 ## Profiles
 
@@ -37,17 +38,15 @@ Groups with an AnnData `encoding-type` attribute are decoded wherever they are i
 - `nullable-integer` and `nullable-boolean` groups are numeric columns; missing values are `NaN`.
 - `nullable-string-array` groups are string columns; missing values are empty strings.
 
-The encodings also declare the column types that the values do not reveal: `categorical` groups are categories, even with numeric categories, and `nullable-boolean` groups are booleans (see `TableData.loadColumnDataType`).
+`categorical` and `nullable-boolean` groups are categorical columns, even when their values are numbers.
 
 A group whose `encoding-type` is `anndata` is an [AnnData object](https://anndata.readthedocs.io/). A file may hold only one. Its `obs` index gives the number of rows. Its `X`, `layers` and their `raw` counterparts are addressed by variable name as well as by index, for example `X[CD3]` besides `X[12]`. The names are the index of the `var` dataframe of the object, and `raw/var` for `raw/X`. Names are matched exactly, or ignoring case if that matches a single name. A number between the brackets is always an index, so numeric, duplicate and empty names are addressed by index.
 
-### Column groups
+The style section of the TissUUmaps application picks the columns of an AnnData object by query group (see [Style section](../concepts/style-section.md)):
 
-For an AnnData object, the style section of the TissUUmaps application picks columns by group rather than by path (see [Style section](../concepts/style-section.md)). A group is a single set of columns or holds several:
-
-- **Annotations**: the columns of `obs`, describing the observations, if it has a column besides its index.
-- **Features**: the sets of columns of `X`, each of the `layers` and `raw/X`, in this order (a single set if there is only `X`), matrices whose columns are the features of `var` (or `raw/var`). Features are listed by the `var` index, and a feature is matched between the sets of columns of the group by its `var` index name.
-- `obsm`, `obsp` and `uns` are not part of any group.
+- **Annotations**: the columns of `obs`, but its index.
+- **Features**: the columns of `X`, each of the `layers` and `raw/X`, named by the `var` index (`raw/var` for `raw/X`). Switching between them keeps a feature with the same `var` index name.
+- **Embeddings**: the matrices of `obsm`, for example `X_umap` or `spatial`.
 
 ## Example
 

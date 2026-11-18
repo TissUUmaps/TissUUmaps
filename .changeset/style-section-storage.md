@@ -2,4 +2,4 @@
 "@tissuumaps/storage": minor
 ---
 
-AnnData tables group their columns into annotations (`obs`) and features (`X`, layers, `raw`), declare column types where the values do not reveal them (categoricals with numeric codes, nullable booleans), and map features between `X`, the layers and `raw`.
+AnnData tables group their columns into annotations, features (`X`, the layers and `raw`) and embeddings (`obsm`), and declare categorical columns, as Parquet tables do for pandas `category` columns.

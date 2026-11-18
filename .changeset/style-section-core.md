@@ -2,4 +2,4 @@
 "@tissuumaps/core": minor
 ---
 
-Table data can describe its columns by group (e.g. the annotations and features of AnnData), so that the TissUUmaps application can pick columns by name rather than by path.
+Table data can group its columns into query groups (`TableData.getQueryGroups`, searched with the `queryGroupId` option of `suggestColumnQueries`, with `describeColumn` and `mapColumn`) and declare categorical columns (`TableData.isColumnCategorical`, with the `TableUtils.loadIsColumnCategorical` fallback).

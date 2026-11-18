@@ -2,4 +2,4 @@
 "tissuumaps": minor
 ---
 
-Points, labels and shapes show a style section (color by, categories or gradient) above their group table; the other settings move under "Advanced settings".
+Points, labels and shapes show a style section to color them by a column of their table, as categories or as a gradient. The other settings move under "Advanced settings".
