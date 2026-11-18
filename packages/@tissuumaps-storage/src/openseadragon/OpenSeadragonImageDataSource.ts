@@ -7,7 +7,7 @@ export const openSeadragonImageDataSourceDefaults = {};
 export interface OpenSeadragonImageDataSource extends ImageDataSource<
   typeof openSeadragonImageDataSourceType
 > {
-  tileSource?: string | TileSourceConfig;
+  tileSource?: TileSourceConfig;
 }
 
 export type NormalizedOpenSeadragonImageDataSource = Required<
@@ -19,5 +19,4 @@ export type NormalizedOpenSeadragonImageDataSource = Required<
   Omit<
     OpenSeadragonImageDataSource,
     keyof typeof openSeadragonImageDataSourceDefaults
-  > &
-  Required<Pick<OpenSeadragonImageDataSource, "tileSource">>;
+  >;

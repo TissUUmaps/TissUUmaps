@@ -1,9 +1,12 @@
 import {
+  CopyIcon,
   DownloadIcon,
   EllipsisIcon,
   FileIcon,
   FolderIcon,
   LinkIcon,
+  SaveAllIcon,
+  SaveIcon,
   XIcon,
 } from "lucide-react";
 
@@ -21,9 +24,12 @@ import { isWorkspaceSupported } from "@/data/io/workspace";
 
 import {
   useCloseProject,
+  useCopyProjectLink,
   useOpenProjectFromFile,
   useOpenProjectFromURL,
   useOpenWorkspace,
+  useSaveProjectToFolder,
+  useSaveProjectToFolderAs,
   workspaceUnsupportedMessage,
 } from "./hooks";
 
@@ -34,6 +40,9 @@ export type ProjectMenuProps = {
 export function ProjectMenu({ className }: ProjectMenuProps) {
   const openProjectFromFile = useOpenProjectFromFile();
   const openProjectFromURL = useOpenProjectFromURL();
+  const saveProjectToFolder = useSaveProjectToFolder();
+  const saveProjectToFolderAs = useSaveProjectToFolderAs();
+  const copyProjectLink = useCopyProjectLink();
   const closeProject = useCloseProject();
   const openWorkspace = useOpenWorkspace();
   const workspaceSupported = isWorkspaceSupported();
@@ -67,9 +76,51 @@ export function ProjectMenu({ className }: ProjectMenuProps) {
           )}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
+        <DropdownMenuItem
+          disabled={saveProjectToFolder === null}
+          onClick={saveProjectToFolder ?? undefined}
+        >
+          <SaveIcon />
+          Save project
+          {saveProjectToFolder === null && (
+            <DropdownMenuItemDescription>
+              Only for projects opened from the connected folder
+            </DropdownMenuItemDescription>
+          )}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={saveProjectToFolderAs === null}
+          onClick={saveProjectToFolderAs ?? undefined}
+        >
+          <SaveAllIcon />
+          Save as…
+          {saveProjectToFolderAs === null && (
+            <DropdownMenuItemDescription>
+              Needs a connected folder
+            </DropdownMenuItemDescription>
+          )}
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => saveAndDownloadProjectToJSON()}>
           <DownloadIcon />
           Download project
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={copyProjectLink === null || !window.isSecureContext}
+          onClick={copyProjectLink ?? undefined}
+        >
+          <CopyIcon />
+          Copy share link
+          {copyProjectLink === null ? (
+            <DropdownMenuItemDescription>
+              Only for projects opened from a URL
+            </DropdownMenuItemDescription>
+          ) : (
+            !window.isSecureContext && (
+              <DropdownMenuItemDescription>
+                Copying needs a secure (https) connection
+              </DropdownMenuItemDescription>
+            )
+          )}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={closeProject}>

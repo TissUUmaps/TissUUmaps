@@ -17,14 +17,15 @@ const fallbackProjectUrl = "project.tm4";
  * Registers the built-in data providers, starts the data caches and the plugin
  * registry, registers the built-in plugins, marks the project open once it has
  * a source or data, collapses the expanded objects whenever another project is
- * loaded or the project is closed,
- * starts loading the initial project, and finally announces that the
- * application has loaded.
+ * loaded or the project is closed, forgets the project's file whenever the
+ * workspace changes, starts loading the initial project, and finally announces
+ * that the application has loaded.
  * The project is only loading, not loaded, by the time this returns.
  *
  * @returns A callback that cancels the initial project loading, stops
- * collapsing the expanded objects and marking the project open, and stops the
- * plugin registry and the data caches, invoked on hot module replacement
+ * forgetting the project's file, collapsing the expanded objects and marking
+ * the project open, and stops the plugin registry and the data caches, invoked
+ * on hot module replacement
  */
 export function bootstrap(): () => void {
   enableBuiltInDataProviders();
@@ -33,10 +34,13 @@ export function bootstrap(): () => void {
   enableBuiltInPlugins();
   const stopMarkingProjectOpen = startMarkingProjectOpen();
   const stopCollapsingOnProjectSwitch = startCollapsingOnProjectSwitch();
+  const stopForgettingSourceFileOnWorkspaceSwitch =
+    startForgettingSourceFileOnWorkspaceSwitch();
   const cancelInitialProjectLoading = loadInitialProject();
   notifyTissUUmapsLoaded();
   return () => {
     cancelInitialProjectLoading();
+    stopForgettingSourceFileOnWorkspaceSwitch();
     stopCollapsingOnProjectSwitch();
     stopMarkingProjectOpen();
     stopPluginRegistry();
@@ -81,6 +85,23 @@ function startCollapsingOnProjectSwitch(): () => void {
         expandedShapesIds: [],
         expandedTableIds: [],
       });
+    }
+  });
+}
+
+/**
+ * Forgets the workspace file the open project was loaded from whenever another
+ * workspace is opened or the workspace is closed, however that happens
+ *
+ * The file belongs to the previous workspace, so the project can no longer be
+ * saved back to it (see `ProjectStoreState.sourceFile`).
+ *
+ * @returns A callback that stops watching the workspace
+ */
+function startForgettingSourceFileOnWorkspaceSwitch(): () => void {
+  return appStore.subscribe((appState, prevAppState) => {
+    if (appState.workspace !== prevAppState.workspace) {
+      projectStore.setState({ sourceFile: null });
     }
   });
 }

@@ -14,6 +14,12 @@ declare global {
       multiple?: boolean;
       types?: { description?: string; accept: Record<string, string[]> }[];
     }) => Promise<FileSystemFileHandle[]>;
+    showSaveFilePicker?: (options?: {
+      id?: string;
+      startIn?: FileSystemHandle;
+      suggestedName?: string;
+      types?: { description?: string; accept: Record<string, string[]> }[];
+    }) => Promise<FileSystemFileHandle>;
   }
 
   /** The drag and drop API missing from `lib.dom.d.ts` */
@@ -149,6 +155,47 @@ export async function pickWorkspacePath(
     return null;
   }
   return await resolveWorkspacePath(handle, workspace);
+}
+
+/**
+ * Lets the user choose where to save a project file within the workspace
+ *
+ * @param workspace - The directory handle of the open workspace, which the
+ * picker opens in
+ * @param suggestedName - The file name the picker suggests
+ * @returns The handle of the chosen file and its workspace-relative path (with
+ * `/` prefix), or `null` if the user cancelled the picker
+ * @throws Error if the browser does not support saving a file, if access to
+ * the file was denied, or if the file does not lie within the workspace
+ */
+export async function pickWorkspaceSaveFile(
+  workspace: FileSystemDirectoryHandle,
+  suggestedName: string,
+): Promise<{ file: FileSystemFileHandle; source: string } | null> {
+  if (window.showSaveFilePicker === undefined) {
+    throw new Error("Saving a file is not supported by this browser");
+  }
+  let file: FileSystemFileHandle;
+  try {
+    // Called as a method: the picker throws if it loses its receiver
+    file = await window.showSaveFilePicker({
+      id: workspacePickerId,
+      startIn: workspace,
+      suggestedName,
+      types: [
+        {
+          description: "TissUUmaps project",
+          accept: { "application/json": projectFileExtensions },
+        },
+      ],
+    });
+  } catch (error) {
+    if (isAbortError(error)) {
+      return null;
+    }
+    throw error;
+  }
+  return { file, source: await resolveWorkspacePath(file, workspace) };
 }
 
 /**

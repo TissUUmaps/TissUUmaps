@@ -48,7 +48,7 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
     type: "object",
     properties: {
       source: { type: "string" },
-      tileSource: { type: ["string", "object"] },
+      tileSource: { type: "object" },
     },
     anyOf: [{ required: ["source"] }, { required: ["tileSource"] }],
   };
@@ -65,42 +65,33 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
     workspace: FileSystemDirectoryHandle | null,
     projectSource: string | null,
   ): NormalizedOpenSeadragonImageDataSource {
-    let { source, tileSource } = dataSource;
-    if (typeof tileSource === "string") {
-      tileSource = SourceUtils.normalizeSource(
-        tileSource,
-        workspace,
-        projectSource,
-      );
-      source = tileSource;
-    } else if (tileSource !== undefined) {
-      source = undefined;
-    } else if (source !== undefined) {
-      source = SourceUtils.normalizeSource(source, workspace, projectSource);
-      tileSource = OpenSeadragonImageDataProvider._isImageSource(source)
-        ? {
-            type: "image",
-            url: source,
-            crossOriginPolicy: "Anonymous",
-            ajaxWithCredentials: false,
-          }
-        : source;
-    } else {
+    if (dataSource.tileSource !== undefined) {
+      return {
+        ...openSeadragonImageDataSourceDefaults,
+        ...dataSource,
+        source: undefined,
+      };
+    }
+    if (dataSource.source === undefined) {
       throw new Error("Either source or tileSource must be specified.");
     }
+    const source = SourceUtils.normalizeSource(
+      dataSource.source,
+      workspace,
+      projectSource,
+    );
     if (
-      typeof tileSource === "string" &&
-      SourceUtils.isWorkspacePath(tileSource)
+      !OpenSeadragonImageDataProvider._isImageSource(source) &&
+      SourceUtils.isWorkspacePath(source)
     ) {
       throw new Error(
-        `Tile sources cannot be opened from the workspace: ${tileSource}`,
+        `Tile sources cannot be opened from the workspace: ${source}`,
       );
     }
     return {
       ...openSeadragonImageDataSourceDefaults,
       ...dataSource,
       source,
-      tileSource,
     };
   }
 
@@ -133,18 +124,26 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
     const { signal, workspace = null } = options ?? {};
     signal?.throwIfAborted();
     const { source, tileSource } = normalizedDataSource;
-    if (source === undefined || typeof tileSource === "string") {
+    if (tileSource !== undefined) {
       return new OpenSeadragonImageData(tileSource);
+    }
+    if (source === undefined) {
+      throw new Error("Either source or tileSource must be specified.");
+    }
+    if (!OpenSeadragonImageDataProvider._isImageSource(source)) {
+      return new OpenSeadragonImageData(source);
     }
     const { url, file } = await SourceUtils.openSourceFile(source, workspace, {
       signal,
     });
-    if (url !== undefined) {
-      return new OpenSeadragonImageData({ ...tileSource, url });
-    }
-    const objectUrl = URL.createObjectURL(file);
+    const objectUrl = url === undefined ? URL.createObjectURL(file) : undefined;
     return new OpenSeadragonImageData(
-      { ...tileSource, url: objectUrl },
+      {
+        type: "image",
+        url: url ?? objectUrl,
+        crossOriginPolicy: "Anonymous",
+        ajaxWithCredentials: false,
+      },
       objectUrl,
     );
   }

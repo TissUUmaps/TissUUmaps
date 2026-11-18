@@ -291,6 +291,9 @@ export interface RawDataSource<TType extends string = string> extends RawModel {
    * Where the data is loaded from: a URL, an app-relative path (`//` prefix),
    * a workspace-relative path (`/` prefix), or a project-relative path (no
    * prefix); see `SourceUtils` for the syntax and how paths are resolved
+   *
+   * This is the only field of a data source that is resolved as a path, so
+   * that the app can rewrite it when the project file moves.
    */
   source?: string;
 }
