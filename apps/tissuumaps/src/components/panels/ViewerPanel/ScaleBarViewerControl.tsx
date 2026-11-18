@@ -1,6 +1,11 @@
 import { useCallback, useRef } from "react";
 
-import { type Dims, type Rect, physicalUnits } from "@tissuumaps/core";
+import {
+  type Dims,
+  PhysicalUnit,
+  type Rect,
+  physicalUnits,
+} from "@tissuumaps/core";
 import { useViewportChange } from "@tissuumaps/react";
 
 import { cn } from "@/lib/utils";
@@ -37,11 +42,21 @@ export function ScaleBarViewerControl({
       }
       const hasPhysicalUnitSize =
         physicalUnitSize !== undefined && physicalUnitSize > 0;
-      // the label is in meters, or in world units until the physical unit size is set
-      const labelUnit = hasPhysicalUnitSize ? "m" : "units";
-      const labelUnitsPerWorldUnit = hasPhysicalUnitSize
-        ? physicalUnitSize * physicalUnits[physicalUnit].size
-        : 1;
+      const knownPhysicalUnit = Object.values(PhysicalUnit).find(
+        (unit) => unit === physicalUnit,
+      );
+      // the label is in world units until the physical unit size is set, then
+      // in meters for a known physical unit and in the unit as typed otherwise
+      let labelUnit = "units";
+      let labelUnitsPerWorldUnit = 1;
+      if (hasPhysicalUnitSize && knownPhysicalUnit !== undefined) {
+        labelUnit = PhysicalUnit.meter;
+        labelUnitsPerWorldUnit =
+          physicalUnitSize * physicalUnits[knownPhysicalUnit].size;
+      } else if (hasPhysicalUnitSize) {
+        labelUnit = physicalUnit;
+        labelUnitsPerWorldUnit = physicalUnitSize;
+      }
       const worldUnitsPerCssPixel = viewport.width / containerSize.width;
       const labelUnitsPerCssPixel =
         labelUnitsPerWorldUnit * worldUnitsPerCssPixel;

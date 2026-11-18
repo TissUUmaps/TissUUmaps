@@ -8,6 +8,15 @@ import {
 } from "@tissuumaps/core";
 
 import {
+  Autocomplete,
+  AutocompleteInput,
+  AutocompleteInputGroup,
+  AutocompleteItem,
+  AutocompleteList,
+  AutocompletePopup,
+  AutocompleteTrigger,
+} from "@/components/common/autocomplete";
+import {
   Collapsible,
   CollapsiblePanel,
   CollapsibleTrigger,
@@ -20,9 +29,9 @@ import {
   FieldDescription,
   FieldLabel,
 } from "@/components/common/field";
-import { SimpleSelect } from "@/components/common/simple-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InputGroupAddon } from "@/components/ui/input-group";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
@@ -46,6 +55,9 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
   const physicalUnit = useProjectStore((state) => state.physicalUnit);
   const setPhysicalUnit = useProjectStore((state) => state.setPhysicalUnit);
 
+  const knownPhysicalUnit = Object.values(PhysicalUnit).find(
+    (unit) => unit === physicalUnit,
+  );
   const { globalPointSizeFactor } = glOptions.pointsRenderOptions;
   const viewerBackgroundColorHex = ColorUtils.toHex(viewerBackgroundColor);
 
@@ -67,19 +79,40 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
         <div className="flex flex-row items-center gap-x-1">
           <FieldLabel className="shrink-0">World unit size in</FieldLabel>
           <Field className="flex min-w-0">
-            <SimpleSelect
-              aria-label="Physical unit"
+            <Autocomplete
+              value={
+                knownPhysicalUnit !== undefined
+                  ? physicalUnits[knownPhysicalUnit].symbol
+                  : physicalUnit
+              }
+              onValueChange={(text) =>
+                setPhysicalUnit(
+                  Object.values(PhysicalUnit).find(
+                    (unit) => physicalUnits[unit].symbol === text,
+                  ) ?? text,
+                )
+              }
+              mode="none"
               items={Object.values(PhysicalUnit)}
-              itemLabel={(unit) => physicalUnits[unit].symbol}
-              itemValue={(unit) => unit}
-              variant="inline"
-              value={physicalUnit}
-              onValueChange={(unit) => {
-                if (unit !== null) {
-                  setPhysicalUnit(unit);
-                }
-              }}
-            />
+              itemToStringValue={(unit) => physicalUnits[unit].symbol}
+              openOnInputClick
+            >
+              <AutocompleteInputGroup>
+                <AutocompleteInput aria-label="Physical unit" />
+                <InputGroupAddon align="inline-end">
+                  <AutocompleteTrigger label="Show units" />
+                </InputGroupAddon>
+              </AutocompleteInputGroup>
+              <AutocompletePopup>
+                <AutocompleteList>
+                  {(unit: PhysicalUnit) => (
+                    <AutocompleteItem key={unit} value={unit}>
+                      {physicalUnits[unit].symbol}
+                    </AutocompleteItem>
+                  )}
+                </AutocompleteList>
+              </AutocompletePopup>
+            </Autocomplete>
           </Field>
         </div>
         <FieldControl

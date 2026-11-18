@@ -216,9 +216,12 @@ export interface RawProject extends RawModel {
   /**
    * Unit of the physical unit size
    *
+   * Either one of the {@link PhysicalUnit} names, between which the scale bar
+   * converts, or any other text, which the scale bar shows as is.
+   *
    * @defaultValue {@link projectDefaults.physicalUnit}
    */
-  physicalUnit?: PhysicalUnit;
+  physicalUnit?: string;
 
   /**
    * Whether the viewer shows the scale bar
