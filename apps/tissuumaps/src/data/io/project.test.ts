@@ -6,13 +6,17 @@ import { appStore } from "@/stores/app";
 import { projectStore } from "@/stores/project";
 
 import {
+  clearProjectURLParams,
   downloadProject,
   importProjectFromURL,
   mergeProject,
   openProjectFromFile,
   openProjectFromFileHandle,
   openProjectFromURL,
+  pickProjectProvider,
+  readProjectURLParams,
   resolveProjectSource,
+  setProjectURLParam,
 } from "./project";
 
 const projectFile = {
@@ -430,5 +434,119 @@ describe("importProjectFromURL", () => {
     expect(projectStore.getState().images[0]?.dataSource.source).toBe(
       "https://cdn.example/merged/images/a.tif",
     );
+  });
+});
+
+/** Creates a project provider that loads projects with the given extension */
+function makeLoadingProjectProvider(
+  name: string,
+  urlParam: string,
+  extension: string,
+): ProjectProvider {
+  return {
+    name,
+    urlParam,
+    supports: (normalizedSource) =>
+      Promise.resolve(normalizedSource.endsWith(extension)),
+    load: (normalizedSource) =>
+      Promise.resolve({ project: { name }, source: normalizedSource }),
+  };
+}
+
+describe("project providers", () => {
+  const tm4Provider = makeLoadingProjectProvider("TM4", "project", ".tm4");
+  const zarrProvider = makeLoadingProjectProvider("Zarr", "zarr", ".zarr");
+
+  beforeEach(() => {
+    appStore.setState({ projectProviders: new Map() });
+    appStore.getState().registerProjectProvider("tm4", tm4Provider);
+    appStore.getState().registerProjectProvider("zarr", zarrProvider);
+    window.history.replaceState({}, "", "/?other=1");
+  });
+
+  describe("pickProjectProvider", () => {
+    it("returns the first project provider that supports the source", async () => {
+      await expect(
+        pickProjectProvider("https://data.example/a.zarr", null),
+      ).resolves.toBe(zarrProvider);
+    });
+
+    it("prefers earlier registered project providers over faster ones", async () => {
+      const slowProvider: ProjectProvider = {
+        ...tm4Provider,
+        supports: () =>
+          new Promise((resolve) => setTimeout(() => resolve(true), 10)),
+      };
+      appStore.setState({ projectProviders: new Map() });
+      appStore.getState().registerProjectProvider("slow", slowProvider);
+      appStore.getState().registerProjectProvider("zarr", zarrProvider);
+      await expect(
+        pickProjectProvider("https://data.example/a.zarr", null),
+      ).resolves.toBe(slowProvider);
+    });
+
+    it("skips project providers that cannot load, or whose check rejects", async () => {
+      appStore.setState({ projectProviders: new Map() });
+      appStore.getState().registerProjectProvider("writer", {
+        name: "Writer",
+        supports: () => Promise.resolve(true),
+        toFile: () => Promise.resolve(new File([], "p")),
+      });
+      appStore.getState().registerProjectProvider("broken", {
+        ...tm4Provider,
+        supports: () => Promise.reject(new Error("Broken")),
+      });
+      appStore.getState().registerProjectProvider("zarr", zarrProvider);
+      await expect(
+        pickProjectProvider("https://data.example/a.zarr", null),
+      ).resolves.toBe(zarrProvider);
+    });
+
+    it("returns undefined if no project provider supports the source", async () => {
+      await expect(
+        pickProjectProvider("https://data.example/a.csv", null),
+      ).resolves.toBeUndefined();
+    });
+  });
+
+  describe("readProjectURLParams", () => {
+    it("returns the named projects in the order of the parameters", () => {
+      expect(
+        readProjectURLParams("?zarr=a.zarr&other=1&project=b.tm4&zarr=c.zarr"),
+      ).toEqual([
+        { projectProvider: zarrProvider, projectUrl: "a.zarr" },
+        { projectProvider: tm4Provider, projectUrl: "b.tm4" },
+        { projectProvider: zarrProvider, projectUrl: "c.zarr" },
+      ]);
+    });
+
+    it("skips empty values and project providers that cannot load", () => {
+      appStore.getState().registerProjectProvider("writer", {
+        name: "Writer",
+        urlParam: "writer",
+        toFile: () => Promise.resolve(new File([], "p")),
+      });
+      expect(readProjectURLParams("?project=&writer=w.tm4")).toEqual([]);
+    });
+  });
+
+  describe("URL parameters", () => {
+    it("replaces the parameters of every project provider when opening", () => {
+      window.history.replaceState({}, "", "/?project=a.tm4&other=1&zarr=b");
+      setProjectURLParam(zarrProvider, "c.zarr");
+      expect(window.location.search).toBe("?other=1&zarr=c.zarr");
+    });
+
+    it("only removes the parameters for a project provider without one", () => {
+      window.history.replaceState({}, "", "/?project=a.tm4&other=1");
+      setProjectURLParam({ ...zarrProvider, urlParam: undefined }, "b");
+      expect(window.location.search).toBe("?other=1");
+    });
+
+    it("removes the parameters of every project provider", () => {
+      window.history.replaceState({}, "", "/?project=a.tm4&other=1&zarr=b");
+      clearProjectURLParams();
+      expect(window.location.search).toBe("?other=1");
+    });
   });
 });

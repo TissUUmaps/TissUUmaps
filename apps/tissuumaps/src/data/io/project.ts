@@ -12,9 +12,6 @@ import {
 import { appStore } from "@/stores/app";
 import { projectStore } from "@/stores/project";
 
-/** The GET parameter naming the project to load */
-export const projectURLParam = "project";
-
 /**
  * Creates a deep copy of a project, keeping only the project's own properties
  *
@@ -552,22 +549,118 @@ export async function downloadProject(
 }
 
 /**
- * Records the project URL in the address bar, so that reloading the page
- * restores the same project
+ * Returns the first registered project provider that can load a source
  *
- * @param projectUrl - The URL the project was loaded from
+ * Only project providers that implement `load` and `supports` are considered,
+ * and the first one in registration order that supports the source is
+ * returned; a `supports` that rejects counts as `false`.
+ *
+ * @param normalizedSource - The normalized source to load
+ * @param workspace - The directory handle of the open workspace, if any
+ * @param options - Optional abort signal
+ * @returns The project provider, or `undefined` if none supports the source
  */
-export function setProjectURLParam(projectUrl: string): void {
-  const url = new URL(window.location.href);
-  url.searchParams.set(projectURLParam, projectUrl);
-  window.history.replaceState({}, "", url);
+export async function pickProjectProvider(
+  normalizedSource: string,
+  workspace: FileSystemDirectoryHandle | null,
+  options?: { signal?: AbortSignal },
+): Promise<ProjectProvider | undefined> {
+  const { signal } = options ?? {};
+  signal?.throwIfAborted();
+  const checks = Array.from(
+    appStore.getState().projectProviders.values(),
+    async (projectProvider) => {
+      let supported = false;
+      if (
+        projectProvider.load !== undefined &&
+        projectProvider.supports !== undefined
+      ) {
+        try {
+          supported = await projectProvider.supports(
+            normalizedSource,
+            workspace,
+            { signal },
+          );
+        } catch {
+          // treated as unsupported
+        }
+      }
+      return { projectProvider, supported };
+    },
+  );
+  for (const check of checks) {
+    const checkResult = await check;
+    signal?.throwIfAborted();
+    if (checkResult.supported) {
+      return checkResult.projectProvider;
+    }
+  }
+  return undefined;
 }
 
 /**
- * Removes the project URL from the address bar
+ * Returns the projects named by the GET parameters of the registered project
+ * providers, in the order of the parameters
+ *
+ * A parameter names a project if its key is the `urlParam` of a project
+ * provider that implements `load`, and its value is not empty.
+ *
+ * @param search - The query string, e.g. `window.location.search`
+ * @returns The project providers and the URLs of the named projects
  */
-export function clearProjectURLParam(): void {
+export function readProjectURLParams(
+  search: string,
+): { projectProvider: ProjectProvider; projectUrl: string }[] {
+  const projectProviders = Array.from(
+    appStore.getState().projectProviders.values(),
+  );
+  return Array.from(new URLSearchParams(search)).flatMap(
+    ([key, projectUrl]) => {
+      const projectProvider = projectProviders.find(
+        (projectProvider) =>
+          projectProvider.load !== undefined &&
+          projectProvider.urlParam === key,
+      );
+      return projectProvider !== undefined && projectUrl !== ""
+        ? [{ projectProvider, projectUrl }]
+        : [];
+    },
+  );
+}
+
+/**
+ * Records an opened project in the address bar, so that reloading the page
+ * opens the same project again
+ *
+ * Replaces the GET parameters of every registered project provider with the
+ * one of the given project provider. Without a `urlParam`, the project cannot
+ * be recorded, and the parameters are only removed.
+ *
+ * @param projectProvider - The project provider the project was opened with
+ * @param projectUrl - The URL the project was opened from
+ */
+export function setProjectURLParam(
+  projectProvider: ProjectProvider,
+  projectUrl: string,
+): void {
+  clearProjectURLParams();
+  if (projectProvider.urlParam !== undefined) {
+    const url = new URL(window.location.href);
+    url.searchParams.append(projectProvider.urlParam, projectUrl);
+    window.history.replaceState({}, "", url);
+  }
+}
+
+/**
+ * Removes the GET parameters of every registered project provider from the
+ * address bar
+ */
+export function clearProjectURLParams(): void {
   const url = new URL(window.location.href);
-  url.searchParams.delete(projectURLParam);
+  for (const projectProvider of appStore.getState().projectProviders.values()) {
+    if (projectProvider.urlParam !== undefined) {
+      url.searchParams.delete(projectProvider.urlParam);
+    }
+  }
   window.history.replaceState({}, "", url);
 }

@@ -56,9 +56,10 @@ export interface ProjectProvider {
    * those of a project file against the file's location, so a dataset that is
    * a directory includes its own name in them (e.g. `data.zarr/images/a`).
    *
-   * Every ID in the project has to be unique, also across projects loaded
-   * separately (e.g. by including a random UUID), so that the project can be
-   * merged into another one, and must not contain `:`.
+   * Every ID in the project has to be unique within it, and must not contain
+   * `:`. The application rejects merging the project into another one that
+   * already uses one of its IDs, so a project provider that creates IDs
+   * should make them unique across projects (e.g. with `SourceUtils.createID`).
    *
    * @param normalizedSource - The source, normalized with
    * `SourceUtils.normalizeSource`

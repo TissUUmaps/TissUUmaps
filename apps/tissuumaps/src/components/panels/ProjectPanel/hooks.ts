@@ -5,7 +5,7 @@ import { tissuumapsProjectType } from "@tissuumaps/storage";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { usePromptDialog } from "@/components/dialogs/PromptDialog/hooks";
 import {
-  clearProjectURLParam,
+  clearProjectURLParams,
   downloadProject,
   getProjectProvider,
   openProjectFromFile,
@@ -80,7 +80,7 @@ export function useOpenEmptyProject(): () => void {
 
   return useCallback(() => {
     clearProject();
-    clearProjectURLParam();
+    clearProjectURLParams();
     setProjectOpen(true);
   }, [clearProject, setProjectOpen]);
 }
@@ -101,11 +101,9 @@ export function useOpenProjectFromURL(): () => void {
       .then(async (value) => {
         const projectUrl = value?.trim();
         if (projectUrl) {
-          await openProjectFromURL(
-            getProjectProvider(tissuumapsProjectType),
-            projectUrl,
-          );
-          setProjectURLParam(projectUrl);
+          const projectProvider = getProjectProvider(tissuumapsProjectType);
+          await openProjectFromURL(projectProvider, projectUrl);
+          setProjectURLParam(projectProvider, projectUrl);
         }
       })
       .catch((error) => {
@@ -166,7 +164,7 @@ export function useOpenProjectFromFile(): () => void {
  *
  * A file handle is loaded with its source if it lies within the workspace
  * (see `openProjectFromFileHandle`), a file without one. The project URL
- * parameter is cleared, as it names another project.
+ * parameters are cleared, as they name other projects.
  *
  * @returns The function, which rejects if the project cannot be read or
  * parsed
@@ -189,7 +187,7 @@ export function useLoadProjectFile(): (
           workspace,
         );
       }
-      clearProjectURLParam();
+      clearProjectURLParams();
       setProjectOpen(true);
     },
     [workspace, setProjectOpen],
@@ -213,7 +211,7 @@ export function useCloseProject(): () => void {
     }).then((confirmed) => {
       if (confirmed) {
         clearProject();
-        clearProjectURLParam();
+        clearProjectURLParams();
         setProjectOpen(false);
       }
     });
