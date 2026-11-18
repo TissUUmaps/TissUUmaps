@@ -16,12 +16,10 @@ import {
   getProjectFileExtensions,
   getProjectFileTypes,
   getProjectProvider,
-  importProjectFromFile,
-  importProjectFromFileHandle,
-  importProjectFromURL,
-  openProjectFromFile,
-  openProjectFromFileHandle,
-  openProjectFromURL,
+  loadLocalProject,
+  loadProjectFromURL,
+  mergeProject,
+  openProject,
   resolveProjectSource,
   setProjectURLParam,
 } from "@/data/io/project";
@@ -191,7 +189,7 @@ export function useOpenProjectFromURL(): () => void {
         if (projectProvider === null) {
           return;
         }
-        await openProjectFromURL(projectProvider, projectUrl);
+        openProject(await loadProjectFromURL(projectProvider, projectUrl));
         setProjectURLParam(projectProvider, projectUrl);
       })
       .catch(async (error: unknown) => {
@@ -213,7 +211,7 @@ export function useOpenProjectFromURL(): () => void {
  * `useChooseProjectProvider`). A project file picked outside the open
  * workspace is loaded only after confirmation, as its project-relative paths
  * are then resolved against the workspace instead of the project file's
- * directory (see `openProjectFromFileHandle`). Failures are logged and shown,
+ * directory (see `loadLocalProject`). Failures are logged and shown,
  * as the callback is called from event handlers.
  *
  * @returns The callback
@@ -270,18 +268,18 @@ export function useOpenProjectFromFile(): () => void {
 }
 
 /**
- * Returns a function that loads a project from a file with a project provider
- * and marks it open
+ * Returns a function that loads a project from a local file or directory with
+ * a project provider and marks it open
  *
- * A file handle is loaded with its source if it lies within the workspace
- * (see `openProjectFromFileHandle`), a file without one. The project URL
- * parameters are cleared, as they name other projects.
+ * A file or directory within the workspace is loaded with its source (see
+ * `loadLocalProject`). The project URL parameters are cleared, as they name
+ * other projects.
  *
  * @returns The function, which rejects if the project cannot be read or
  * parsed
  */
 export function useLoadProjectFile(): (
-  projectFile: FileSystemFileHandle | File,
+  projectFile: File | FileSystemFileHandle | FileSystemDirectoryHandle,
   projectProvider: ProjectProvider,
 ) => Promise<void> {
   const workspace = useAppStore((state) => state.workspace);
@@ -289,15 +287,9 @@ export function useLoadProjectFile(): (
 
   return useCallback(
     async (projectFile, projectProvider) => {
-      if (projectFile instanceof File) {
-        await openProjectFromFile(projectProvider, projectFile);
-      } else {
-        await openProjectFromFileHandle(
-          projectProvider,
-          projectFile,
-          workspace,
-        );
-      }
+      openProject(
+        await loadLocalProject(projectProvider, projectFile, workspace),
+      );
       clearProjectURLParams();
       setProjectOpen(true);
     },
@@ -343,7 +335,7 @@ export function useImportProjectFromURL(): () => void {
         if (projectProvider === null) {
           return;
         }
-        await importProjectFromURL(projectProvider, projectUrl);
+        mergeProject(await loadProjectFromURL(projectProvider, projectUrl));
         appendProjectURLParam(projectProvider, projectUrl);
       })
       .catch(async (error: unknown) => {
@@ -408,15 +400,9 @@ export function useImportProjectFromFile(): () => void {
         if (projectProvider === null) {
           return;
         }
-        if (projectFile instanceof File) {
-          await importProjectFromFile(projectProvider, projectFile);
-        } else {
-          await importProjectFromFileHandle(
-            projectProvider,
-            projectFile,
-            workspace,
-          );
-        }
+        mergeProject(
+          await loadLocalProject(projectProvider, projectFile, workspace),
+        );
       })
       .catch(async (error: unknown) => {
         console.error("Failed to import project from file", error);

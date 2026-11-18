@@ -13,13 +13,10 @@ import {
   findProjectProviders,
   getProjectFileExtensions,
   getProjectFileTypes,
-  importProjectFromDirectoryHandle,
-  importProjectFromURL,
+  loadLocalProject,
+  loadProjectFromURL,
   mergeProject,
-  openProjectFromDirectoryHandle,
-  openProjectFromFile,
-  openProjectFromFileHandle,
-  openProjectFromURL,
+  openProject,
   readProjectURLParams,
   resolveProjectSource,
   setProjectURLParam,
@@ -120,43 +117,57 @@ function makeProjectProvider(source?: string) {
   return { load, projectProvider: { name: "Test", load } as ProjectProvider };
 }
 
-describe("openProjectFromURL", () => {
+describe("openProject", () => {
   beforeEach(() => {
     projectStore.getState().clear();
   });
 
-  it("resolves the URL against the document base URL", async () => {
-    const { load, projectProvider } = makeProjectProvider();
-    await openProjectFromURL(projectProvider, "projects/p.tm4");
-    const expectedUrl = new URL("projects/p.tm4", document.baseURI).href;
-    expect(load).toHaveBeenCalledWith(expectedUrl, { signal: undefined });
-    expect(projectStore.getState().source).toBe(expectedUrl);
-  });
-
-  it("opens the project with the source the project provider reports", async () => {
-    const redirectedUrl = "https://cdn.example/p.tm4";
-    const { projectProvider } = makeProjectProvider(redirectedUrl);
+  it("opens the project with its source and a fresh instance ID", () => {
     const prevInstanceId = projectStore.getState().instanceId;
-    await openProjectFromURL(projectProvider, "https://data.example/p.tm4");
+    openProject({ project: { name: "Loaded" }, source: "/p.tm4" });
     const projectState = projectStore.getState();
     expect(projectState.name).toBe("Loaded");
-    expect(projectState.source).toBe(redirectedUrl);
+    expect(projectState.source).toBe("/p.tm4");
     expect(projectState.instanceId).not.toBe(prevInstanceId);
+  });
+});
+
+describe("loadProjectFromURL", () => {
+  it("resolves the URL against the document base URL", async () => {
+    const { load, projectProvider } = makeProjectProvider();
+    const { source } = await loadProjectFromURL(
+      projectProvider,
+      "projects/p.tm4",
+    );
+    const expectedUrl = new URL("projects/p.tm4", document.baseURI).href;
+    expect(load).toHaveBeenCalledWith(expectedUrl, { signal: undefined });
+    expect(source).toBe(expectedUrl);
+  });
+
+  it("returns the source the project provider reports", async () => {
+    const redirectedUrl = "https://cdn.example/p.tm4";
+    const { projectProvider } = makeProjectProvider(redirectedUrl);
+    await expect(
+      loadProjectFromURL(projectProvider, "https://data.example/p.tm4"),
+    ).resolves.toEqual({ project: { name: "Loaded" }, source: redirectedUrl });
   });
 
   it("rejects for a project provider that cannot load projects", async () => {
     await expect(
-      openProjectFromURL({ name: "Test" }, "https://data.example/p.tm4"),
+      loadProjectFromURL({ name: "Test" }, "https://data.example/p.tm4"),
     ).rejects.toThrow("Project provider Test cannot load projects.");
   });
 });
 
-describe("openProjectFromFile", () => {
+describe("loadLocalProject", () => {
   const objectUrl = "blob:http://localhost/0f8e";
   const revokeObjectURL = vi.fn();
+  const projectDirectory = {
+    kind: "directory",
+    name: "data.zarr",
+  } as FileSystemDirectoryHandle;
 
   beforeEach(() => {
-    projectStore.getState().clear();
     revokeObjectURL.mockClear();
     // jsdom implements neither of the two
     URL.createObjectURL = () => objectUrl;
@@ -170,12 +181,12 @@ describe("openProjectFromFile", () => {
     delete URL.revokeObjectURL;
   });
 
-  it("opens the project without a source, and revokes the object URL", async () => {
+  it("loads a file without a source, and revokes the object URL", async () => {
     const { load, projectProvider } = makeProjectProvider();
-    await openProjectFromFile(projectProvider, new File([], "p.tm4"));
+    await expect(
+      loadLocalProject(projectProvider, new File([], "p.tm4"), null),
+    ).resolves.toEqual({ project: { name: "Loaded" }, source: null });
     expect(load).toHaveBeenCalledWith(objectUrl, { signal: undefined });
-    expect(projectStore.getState().name).toBe("Loaded");
-    expect(projectStore.getState().source).toBeNull();
     expect(revokeObjectURL).toHaveBeenCalledWith(objectUrl);
   });
 
@@ -185,66 +196,46 @@ describe("openProjectFromFile", () => {
       load: () => Promise.reject(new Error("Broken")),
     };
     await expect(
-      openProjectFromFile(projectProvider, new File([], "p.tm4")),
+      loadLocalProject(projectProvider, new File([], "p.tm4"), null),
     ).rejects.toThrow("Broken");
     expect(revokeObjectURL).toHaveBeenCalledWith(objectUrl);
-  });
-});
-
-describe("openProjectFromFileHandle", () => {
-  beforeEach(() => {
-    projectStore.getState().clear();
   });
 
   it("loads a file in the workspace through its workspace-relative path", async () => {
     const { workspace } = makeWorkspace(["study", "project.tm4"]);
     const { load, projectProvider } = makeProjectProvider();
-    await openProjectFromFileHandle(projectProvider, projectFile, workspace);
+    const { source } = await loadLocalProject(
+      projectProvider,
+      projectFile,
+      workspace,
+    );
     expect(load).toHaveBeenCalledWith("/study/project.tm4", {
       signal: undefined,
       workspace,
     });
-    expect(projectStore.getState().source).toBe("/study/project.tm4");
+    expect(source).toBe("/study/project.tm4");
   });
 
   it("loads a file outside the workspace like an uploaded file", async () => {
-    const objectUrl = "blob:http://localhost/0f8e";
-    URL.createObjectURL = () => objectUrl;
-    URL.revokeObjectURL = () => {};
-    try {
-      const { workspace } = makeWorkspace(null);
-      const file = new File([], "project.tm4");
-      const outsideFile = {
-        ...projectFile,
-        getFile: () => Promise.resolve(file),
-      } as FileSystemFileHandle;
-      const { load, projectProvider } = makeProjectProvider();
-      await openProjectFromFileHandle(projectProvider, outsideFile, workspace);
-      expect(load).toHaveBeenCalledWith(objectUrl, { signal: undefined });
-      expect(projectStore.getState().source).toBeNull();
-    } finally {
-      // @ts-expect-error removes what was stubbed above
-      delete URL.createObjectURL;
-      // @ts-expect-error removes what was stubbed above
-      delete URL.revokeObjectURL;
-    }
-  });
-});
-
-describe("openProjectFromDirectoryHandle", () => {
-  const projectDirectory = {
-    kind: "directory",
-    name: "data.zarr",
-  } as FileSystemDirectoryHandle;
-
-  beforeEach(() => {
-    projectStore.getState().clear();
+    const { workspace } = makeWorkspace(null);
+    const outsideFile = {
+      ...projectFile,
+      getFile: () => Promise.resolve(new File([], "project.tm4")),
+    } as FileSystemFileHandle;
+    const { load, projectProvider } = makeProjectProvider();
+    const { source } = await loadLocalProject(
+      projectProvider,
+      outsideFile,
+      workspace,
+    );
+    expect(load).toHaveBeenCalledWith(objectUrl, { signal: undefined });
+    expect(source).toBeNull();
   });
 
   it("loads a directory in the workspace through its workspace-relative path", async () => {
     const { workspace } = makeWorkspace(["study", "data.zarr"]);
     const { load, projectProvider } = makeProjectProvider();
-    await openProjectFromDirectoryHandle(
+    const { source } = await loadLocalProject(
       projectProvider,
       projectDirectory,
       workspace,
@@ -253,61 +244,28 @@ describe("openProjectFromDirectoryHandle", () => {
       signal: undefined,
       workspace,
     });
-    expect(projectStore.getState().source).toBe("/study/data.zarr");
+    expect(source).toBe("/study/data.zarr");
   });
 
   it("loads the workspace itself through the workspace root", async () => {
     const { workspace } = makeWorkspace([]);
     const { load, projectProvider } = makeProjectProvider();
-    await openProjectFromDirectoryHandle(projectProvider, workspace, workspace);
+    const { source } = await loadLocalProject(
+      projectProvider,
+      workspace,
+      workspace,
+    );
     expect(load).toHaveBeenCalledWith("/", { signal: undefined, workspace });
-    expect(projectStore.getState().source).toBe("/");
+    expect(source).toBe("/");
   });
 
   it("rejects a directory outside the workspace", async () => {
     const { workspace } = makeWorkspace(null);
     const { load, projectProvider } = makeProjectProvider();
     await expect(
-      openProjectFromDirectoryHandle(
-        projectProvider,
-        projectDirectory,
-        workspace,
-      ),
+      loadLocalProject(projectProvider, projectDirectory, workspace),
     ).rejects.toThrow(/not in the workspace/);
     expect(load).not.toHaveBeenCalled();
-  });
-});
-
-describe("importProjectFromDirectoryHandle", () => {
-  beforeEach(() => {
-    projectStore.getState().clear();
-  });
-
-  afterEach(() => {
-    appStore.setState({ workspace: null });
-  });
-
-  it("merges the project, resolving its sources against the workspace root", async () => {
-    const { workspace } = makeWorkspace([]);
-    appStore.setState({ workspace });
-    const projectProvider: ProjectProvider = {
-      name: "Test",
-      load: (normalizedSource) =>
-        Promise.resolve({
-          project: makeMergedProject(),
-          source: normalizedSource,
-        }),
-    };
-    const { source } = projectStore.getState();
-    await importProjectFromDirectoryHandle(
-      projectProvider,
-      workspace,
-      workspace,
-    );
-    expect(projectStore.getState().source).toBe(source);
-    expect(projectStore.getState().images[0]?.dataSource.source).toBe(
-      "/images/a.tif",
-    );
   });
 });
 
@@ -412,7 +370,7 @@ describe("mergeProject", () => {
   it("appends the merged objects, keeping the open project's source and instance", () => {
     projectStore.setState({ source: "https://data.example/open/project.tm4" });
     const { instanceId, layers } = projectStore.getState();
-    mergeProject(makeMergedProject(), mergedProjectUrl);
+    mergeProject({ project: makeMergedProject(), source: mergedProjectUrl });
     const projectState = projectStore.getState();
     expect(projectState.source).toBe("https://data.example/open/project.tm4");
     expect(projectState.instanceId).toBe(instanceId);
@@ -433,7 +391,7 @@ describe("mergeProject", () => {
   });
 
   it("normalizes the merged data sources against where the project was loaded from", () => {
-    mergeProject(makeMergedProject(), mergedProjectUrl);
+    mergeProject({ project: makeMergedProject(), source: mergedProjectUrl });
     const projectState = projectStore.getState();
     expect(projectState.images[0]?.dataSource.source).toBe(
       "https://data.example/merged/images/a.tif",
@@ -446,32 +404,32 @@ describe("mergeProject", () => {
 
   it("leaves the given project unchanged", () => {
     const rawProject = makeMergedProject();
-    mergeProject(rawProject, mergedProjectUrl);
+    mergeProject({ project: rawProject, source: mergedProjectUrl });
     expect(rawProject).toEqual(makeMergedProject());
   });
 
   it("adopts the name only for an open project without data, and ignores the viewer options", () => {
     const { viewerBackgroundColor } = projectStore.getState();
-    mergeProject(makeMergedProject(), mergedProjectUrl);
+    mergeProject({ project: makeMergedProject(), source: mergedProjectUrl });
     expect(projectStore.getState().name).toBe("Merged");
     expect(projectStore.getState().viewerBackgroundColor).toEqual(
       viewerBackgroundColor,
     );
     projectStore.getState().setName("Open");
-    mergeProject(
-      {
+    mergeProject({
+      project: {
         name: "Second",
         tables: [
           { id: "second-table", name: "Table", dataSource: { type: "csv" } },
         ],
       },
-      mergedProjectUrl,
-    );
+      source: mergedProjectUrl,
+    });
     expect(projectStore.getState().name).toBe("Open");
   });
 
   it("expands the merged objects and marks the project open", () => {
-    mergeProject(makeMergedProject(), mergedProjectUrl);
+    mergeProject({ project: makeMergedProject(), source: mergedProjectUrl });
     const appState = appStore.getState();
     expect(appState.expandedImageIds).toEqual(["merged-image"]);
     expect(appState.expandedPointsIds).toEqual(["merged-points"]);
@@ -480,51 +438,41 @@ describe("mergeProject", () => {
   });
 
   it("rejects a taken ID, leaving the open project unchanged", () => {
-    mergeProject(makeMergedProject(), mergedProjectUrl);
+    mergeProject({ project: makeMergedProject(), source: mergedProjectUrl });
     const projectState = projectStore.getState();
     const rawProject = makeMergedProject();
     rawProject.layers = [{ id: "fresh-layer", name: "Fresh" }];
     expect(() => {
-      mergeProject(rawProject, mergedProjectUrl);
+      mergeProject({ project: rawProject, source: mergedProjectUrl });
     }).toThrow("ID merged-image is taken");
     expect(projectStore.getState()).toBe(projectState);
   });
 
+  it("normalizes the merged data sources against the workspace root", () => {
+    const { workspace } = makeWorkspace([]);
+    appStore.setState({ workspace });
+    try {
+      mergeProject({ project: makeMergedProject(), source: "/" });
+      expect(projectStore.getState().images[0]?.dataSource.source).toBe(
+        "/images/a.tif",
+      );
+    } finally {
+      appStore.setState({ workspace: null });
+    }
+  });
+
   it("allows a map ID that is taken in another list of maps", () => {
-    mergeProject(makeMergedProject(), mergedProjectUrl);
-    mergeProject(
-      {
+    mergeProject({ project: makeMergedProject(), source: mergedProjectUrl });
+    mergeProject({
+      project: {
         name: "Sizes",
         sizeMaps: [{ id: "shared-map", name: "Sizes", values: {} }],
       },
-      mergedProjectUrl,
-    );
+      source: mergedProjectUrl,
+    });
     expect(projectStore.getState().sizeMaps.map((map) => map.id)).toEqual([
       "shared-map",
     ]);
-  });
-});
-
-describe("importProjectFromURL", () => {
-  beforeEach(() => {
-    projectStore.getState().clear();
-  });
-
-  it("merges the project, resolving its sources against the reported source", async () => {
-    const projectProvider: ProjectProvider = {
-      name: "Test",
-      load: () =>
-        Promise.resolve({
-          project: makeMergedProject(),
-          source: "https://cdn.example/merged/project.tm4",
-        }),
-    };
-    const { source } = projectStore.getState();
-    await importProjectFromURL(projectProvider, "https://data.example/p.tm4");
-    expect(projectStore.getState().source).toBe(source);
-    expect(projectStore.getState().images[0]?.dataSource.source).toBe(
-      "https://cdn.example/merged/images/a.tif",
-    );
   });
 });
 

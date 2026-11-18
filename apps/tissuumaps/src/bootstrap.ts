@@ -3,8 +3,9 @@ import { ProjectUtils } from "@tissuumaps/core";
 import { startDataCaches } from "./data/cache";
 import {
   findProjectProviders,
-  importProjectFromURL,
-  openProjectFromURL,
+  loadProjectFromURL,
+  mergeProject,
+  openProject,
   readProjectURLParams,
 } from "./data/io/project";
 import {
@@ -122,9 +123,11 @@ async function loadInitialProjects(options?: {
       if (fallbackProjectProvider === undefined) {
         throw new Error(`No project provider supports ${fallbackProjectUrl}.`);
       }
-      await openProjectFromURL(fallbackProjectProvider, fallbackProjectUrl, {
-        signal,
-      });
+      openProject(
+        await loadProjectFromURL(fallbackProjectProvider, fallbackProjectUrl, {
+          signal,
+        }),
+      );
     } catch (error) {
       if (!signal?.aborted) {
         console.error(
@@ -136,10 +139,12 @@ async function loadInitialProjects(options?: {
     return;
   }
   try {
-    await openProjectFromURL(
-      baseProject.projectProvider,
-      baseProject.projectUrl,
-      { signal },
+    openProject(
+      await loadProjectFromURL(
+        baseProject.projectProvider,
+        baseProject.projectUrl,
+        { signal },
+      ),
     );
   } catch (error) {
     if (signal?.aborted) {
@@ -152,7 +157,9 @@ async function loadInitialProjects(options?: {
   }
   for (const { projectProvider, projectUrl } of projectsToImport) {
     try {
-      await importProjectFromURL(projectProvider, projectUrl, { signal });
+      mergeProject(
+        await loadProjectFromURL(projectProvider, projectUrl, { signal }),
+      );
     } catch (error) {
       if (signal?.aborted) {
         return;

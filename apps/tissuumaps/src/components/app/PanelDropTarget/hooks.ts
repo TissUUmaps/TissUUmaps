@@ -25,10 +25,9 @@ import {
   findLocalProjectProviders,
   findProjectProviders,
   getProjectFileExtensions,
-  importProjectFromDirectoryHandle,
-  importProjectFromFile,
-  importProjectFromFileHandle,
-  openProjectFromDirectoryHandle,
+  loadLocalProject,
+  mergeProject,
+  openProject,
   resolveProjectSource,
 } from "@/data/io/project";
 import {
@@ -233,35 +232,11 @@ export function usePanelDrop(panelId: string): {
       return;
     }
     try {
-      if (projectFile instanceof File || projectFile.kind === "file") {
-        if (action === "open") {
-          await loadProjectFile(projectFile, projectProvider);
-        } else if (projectFile instanceof File) {
-          await importProjectFromFile(projectProvider, projectFile);
-        } else {
-          await importProjectFromFileHandle(
-            projectProvider,
-            projectFile,
-            workspace,
-          );
-        }
-      } else if (workspace === null) {
-        throw new Error(
-          `The folder "${projectFile.name}" is not in the workspace.`,
-        );
-      } else if (action === "open") {
-        await openProjectFromDirectoryHandle(
-          projectProvider,
-          projectFile,
-          workspace,
-        );
-        clearProjectURLParams();
-        setProjectOpen(true);
+      if (action === "open") {
+        await loadProjectFile(projectFile, projectProvider);
       } else {
-        await importProjectFromDirectoryHandle(
-          projectProvider,
-          projectFile,
-          workspace,
+        mergeProject(
+          await loadLocalProject(projectProvider, projectFile, workspace),
         );
       }
     } catch (error) {
@@ -313,10 +288,9 @@ export function usePanelDrop(panelId: string): {
     }
     setWorkspace(directory);
     try {
-      await openProjectFromDirectoryHandle(
-        projectProvider,
-        directory,
-        directory,
+      // loaded within the new workspace, as the hooks still see the old one
+      openProject(
+        await loadLocalProject(projectProvider, directory, directory),
       );
       clearProjectURLParams();
       setProjectOpen(true);
