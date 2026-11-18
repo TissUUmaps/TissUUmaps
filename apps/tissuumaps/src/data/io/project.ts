@@ -3,11 +3,13 @@ import { freeze } from "immer";
 import {
   JSONUtils,
   type Project,
+  type ProjectProvider,
   type RawProject,
   SourceUtils,
   createProject,
 } from "@tissuumaps/core";
 
+import { appStore } from "@/stores/app";
 import { projectStore } from "@/stores/project";
 
 /** The GET parameter naming the project to load */
@@ -44,21 +46,36 @@ function cleanProject(project: Project): Project {
 }
 
 /**
- * Loads a project into the project store, replacing the currently open project
+ * Returns the registered project provider of a project type
  *
- * The loaded project is deeply frozen, so that it can only be changed through
+ * @param type - The project type
+ * @returns The project provider
+ * @throws Error if no project provider is registered for the type
+ */
+export function getProjectProvider(type: string): ProjectProvider {
+  const projectProvider = appStore.getState().projectProviders.get(type);
+  if (projectProvider === undefined) {
+    throw new Error(`No project provider for type ${type}.`);
+  }
+  return projectProvider;
+}
+
+/**
+ * Opens a project in the project store, replacing the currently open project
+ *
+ * The opened project is deeply frozen, so that it can only be changed through
  * the project store's actions. The project, where it was loaded from and its
  * fresh instance ID are written in a single update, so that they are never out
  * of sync for the data caches, which resolve project-relative data sources
  * against the project source, and for the viewer, which resets its viewport on
  * a new instance ID.
  *
- * @param project - The project to load
+ * @param project - The project to open
  * @param projectSource - Where the project was loaded from: its absolute URL,
  * the workspace-relative path of the project file (with `/` prefix), or `null`
  * if it was loaded from neither
  */
-export function loadProject(
+export function openProject(
   project: Project,
   projectSource: string | null,
 ): void {
@@ -75,46 +92,71 @@ export function loadProject(
 }
 
 /**
- * Fetches a project from a URL and loads it into the project store
+ * Loads a project from a URL with a project provider and opens it
  *
- * The project is loaded with the URL it was actually fetched from, which is the
- * one it was redirected to, if any - so that its project-relative data sources
- * are resolved against where the project file really is.
+ * The URL is resolved like a link, against the document base URL, never
+ * against the open workspace or project. The project is opened with the source
+ * the project provider reports, which is the URL it was redirected to, if any -
+ * so that its project-relative data sources are resolved against where the
+ * project really is.
  *
- * @param projectUrl - The URL to fetch the project from
+ * @param projectProvider - The project provider to load the project with
+ * @param projectUrl - The URL to load the project from, absolute or relative
+ * to the document base URL
  * @param options - Optional abort signal
- * @throws Error if the project cannot be fetched or parsed
+ * @throws Error if `projectUrl` is not a valid URL, if the project provider
+ * cannot load projects, or if the project cannot be loaded
  */
-export async function loadProjectFromURL(
+export async function openProjectFromURL(
+  projectProvider: ProjectProvider,
   projectUrl: string,
   options?: { signal?: AbortSignal },
 ): Promise<void> {
-  const { project, resolvedProjectUrl } = await fetchProject(
-    projectUrl,
-    options,
+  const { signal } = options ?? {};
+  signal?.throwIfAborted();
+  const absoluteProjectUrl = new URL(projectUrl, document.baseURI).href;
+  const { project, source } = await loadWithProjectProvider(
+    projectProvider,
+    absoluteProjectUrl,
+    { signal },
   );
-  loadProject(project, resolvedProjectUrl);
+  openProject(createProject(project), source);
 }
 
 /**
- * Reads a project from a file and loads it into the project store
+ * Loads a project from a file with a project provider and opens it
  *
- * The project is loaded without a source: a `File` cannot be located, the
+ * The project is opened without a source: a `File` cannot be located, the
  * object URL through which it is read is revoked immediately afterwards, and
  * `blob:` URLs cannot serve as a base for project-relative data sources anyway.
  * Its project-relative data sources hence fall back to being
  * workspace-relative, and without an open workspace, to being app-relative
  * (see `SourceUtils`).
  *
- * @param projectFile - The file to read the project from
+ * @param projectProvider - The project provider to load the project with
+ * @param projectFile - The file to load the project from
  * @param options - Optional abort signal
- * @throws Error if the project cannot be read or parsed
+ * @throws Error if the project provider cannot load projects, or if the
+ * project cannot be loaded
  */
-export async function loadProjectFromFile(
+export async function openProjectFromFile(
+  projectProvider: ProjectProvider,
   projectFile: File,
   options?: { signal?: AbortSignal },
 ): Promise<void> {
-  loadProject(await readProjectFile(projectFile, options), null);
+  const { signal } = options ?? {};
+  signal?.throwIfAborted();
+  const objectUrl = URL.createObjectURL(projectFile);
+  try {
+    const { project } = await loadWithProjectProvider(
+      projectProvider,
+      objectUrl,
+      { signal },
+    );
+    openProject(createProject(project), null);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
 }
 
 /**
@@ -144,21 +186,24 @@ export async function resolveProjectSource(
 }
 
 /**
- * Reads a project from a file handle and loads it into the project store
+ * Loads a project from a file handle with a project provider and opens it
  *
- * The project is loaded with the workspace-relative path of the file as its
- * source if the file lies within the open workspace, so that its
+ * A file within the open workspace is loaded through its workspace-relative
+ * path, which the project is opened with as its source, so that its
  * project-relative data sources are resolved within the file's directory.
- * Otherwise it is loaded without a source, like an uploaded file, and its
- * project-relative data sources fall back to being workspace-relative and then
- * app-relative (see `SourceUtils`).
+ * Otherwise it is loaded like an uploaded file, without a source (see
+ * {@link openProjectFromFile}), and its project-relative data sources fall
+ * back to being workspace-relative and then app-relative (see `SourceUtils`).
  *
- * @param projectFile - The handle of the file to read the project from
+ * @param projectProvider - The project provider to load the project with
+ * @param projectFile - The handle of the file to load the project from
  * @param workspace - The directory handle of the open workspace, if any
  * @param options - Optional abort signal
- * @throws Error if the project cannot be read or parsed
+ * @throws Error if the project provider cannot load projects, or if the
+ * project cannot be loaded
  */
-export async function loadProjectFromFileHandle(
+export async function openProjectFromFileHandle(
+  projectProvider: ProjectProvider,
   projectFile: FileSystemFileHandle,
   workspace: FileSystemDirectoryHandle | null,
   options?: { signal?: AbortSignal },
@@ -169,65 +214,48 @@ export async function loadProjectFromFileHandle(
     workspace,
     options,
   );
-  const file = await projectFile.getFile();
-  signal?.throwIfAborted(); // getFile() does not throw on abort
-  loadProject(await readProjectFile(file, options), projectSource);
-}
-
-/**
- * Reads a project from a file, without loading it into the project store
- *
- * The file is read through an object URL, which is revoked afterwards.
- *
- * @param file - The file to read the project from
- * @param options - Optional abort signal
- * @returns The project read from the file
- * @throws Error if the project cannot be read or parsed
- */
-async function readProjectFile(
-  file: File,
-  options?: { signal?: AbortSignal },
-): Promise<Project> {
-  const objectUrl = URL.createObjectURL(file);
-  try {
-    const { project } = await fetchProject(objectUrl, options);
-    return project;
-  } finally {
-    URL.revokeObjectURL(objectUrl);
+  if (projectSource === null) {
+    const file = await projectFile.getFile();
+    signal?.throwIfAborted(); // getFile() does not throw on abort
+    await openProjectFromFile(projectProvider, file, options);
+    return;
   }
+  const { project, source } = await loadWithProjectProvider(
+    projectProvider,
+    projectSource,
+    { signal, workspace },
+  );
+  openProject(createProject(project), source);
 }
 
 /**
- * Fetches a project from a URL, without loading it into the project store
+ * Loads a project with a project provider
  *
- * @param projectUrl - The URL to fetch the project from, absolute or relative
- * to the document base URL
- * @param options - Optional abort signal
- * @returns The fetched project, and the absolute URL it was fetched from after
- * following any redirects
- * @throws Error if `projectUrl` is not a valid URL, or if the project cannot be
- * fetched or parsed
+ * @param projectProvider - The project provider to load the project with
+ * @param normalizedSource - The normalized source to load the project from
+ * @param options - Optional abort signal and the directory handle of the open
+ * workspace
+ * @returns The loaded project, and where it was loaded from (see
+ * `ProjectProvider.load`)
+ * @throws Error if the project provider cannot load projects, or if the
+ * project cannot be loaded
  */
-async function fetchProject(
-  projectUrl: string,
-  options?: { signal?: AbortSignal },
-): Promise<{ project: Project; resolvedProjectUrl: string }> {
-  const { signal } = options ?? {};
-  signal?.throwIfAborted();
-  const absoluteProjectUrl = new URL(projectUrl, document.baseURI).href;
-  const response = await fetch(absoluteProjectUrl, { signal });
-  if (!response.ok) {
-    throw new Error(
-      `Failed to load project from ${projectUrl}: ${response.status} ${response.statusText}`,
+function loadWithProjectProvider(
+  projectProvider: ProjectProvider,
+  normalizedSource: string,
+  options?: {
+    signal?: AbortSignal;
+    workspace?: FileSystemDirectoryHandle | null;
+  },
+): Promise<{ project: RawProject; source: string }> {
+  if (projectProvider.load === undefined) {
+    return Promise.reject(
+      new Error(
+        `Project provider ${projectProvider.name} cannot load projects.`,
+      ),
     );
   }
-  const rawProjectJSON = await response.text(); // throws on abort
-  const rawProject = JSONUtils.parse(rawProjectJSON) as RawProject; // TODO validate raw project data
-  // response.url is empty for responses that are not the result of a request
-  return {
-    project: createProject(rawProject),
-    resolvedProjectUrl: response.url || absoluteProjectUrl,
-  };
+  return projectProvider.load(normalizedSource, options);
 }
 
 /**

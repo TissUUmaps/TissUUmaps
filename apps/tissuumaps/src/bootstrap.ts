@@ -1,8 +1,16 @@
 import { ProjectUtils } from "@tissuumaps/core";
+import { tissuumapsProjectType } from "@tissuumaps/storage";
 
 import { startDataCaches } from "./data/cache";
-import { loadProjectFromURL, projectURLParam } from "./data/io/project";
-import { enableBuiltInDataProviders } from "./data/providers";
+import {
+  getProjectProvider,
+  openProjectFromURL,
+  projectURLParam,
+} from "./data/io/project";
+import {
+  enableBuiltInDataProviders,
+  enableBuiltInProjectProviders,
+} from "./data/providers";
 import { notifyTissUUmapsLoaded } from "./events";
 import { enableBuiltInPlugins, startPluginRegistry } from "./plugins";
 import { appStore } from "./stores/app";
@@ -14,12 +22,11 @@ const fallbackProjectUrl = "project.tm4";
 /**
  * Starts up the parts of the application that live outside of React
  *
- * Registers the built-in data providers, starts the data caches and the plugin
- * registry, registers the built-in plugins, marks the project open once it has
- * a source or data, collapses the expanded objects whenever another project is
- * loaded or the project is closed,
- * starts loading the initial project, and finally announces that the
- * application has loaded.
+ * Registers the built-in data providers and project providers, starts the data
+ * caches and the plugin registry, registers the built-in plugins, marks the
+ * project open once it has a source or data, collapses the expanded objects
+ * whenever another project is loaded or the project is closed, starts loading
+ * the initial project, and finally announces that the application has loaded.
  * The project is only loading, not loaded, by the time this returns.
  *
  * @returns A callback that cancels the initial project loading, stops
@@ -28,6 +35,7 @@ const fallbackProjectUrl = "project.tm4";
  */
 export function bootstrap(): () => void {
   enableBuiltInDataProviders();
+  enableBuiltInProjectProviders();
   const stopDataCaches = startDataCaches();
   const stopPluginRegistry = startPluginRegistry();
   enableBuiltInPlugins();
@@ -97,12 +105,12 @@ function loadInitialProject(): () => void {
   const abortController = new AbortController();
   const params = new URLSearchParams(window.location.search);
   const projectUrl = params.get(projectURLParam) || fallbackProjectUrl;
-  loadProjectFromURL(projectUrl, { signal: abortController.signal }).catch(
-    (error) => {
-      if (!abortController.signal.aborted) {
-        console.error(`Failed to load project from ${projectUrl}:`, error);
-      }
-    },
-  );
+  openProjectFromURL(getProjectProvider(tissuumapsProjectType), projectUrl, {
+    signal: abortController.signal,
+  }).catch((error) => {
+    if (!abortController.signal.aborted) {
+      console.error(`Failed to load project from ${projectUrl}:`, error);
+    }
+  });
   return () => abortController.abort();
 }

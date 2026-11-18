@@ -1,12 +1,15 @@
 import { useCallback } from "react";
 
+import { tissuumapsProjectType } from "@tissuumaps/storage";
+
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { usePromptDialog } from "@/components/dialogs/PromptDialog/hooks";
 import {
   clearProjectURLParam,
-  loadProjectFromFile,
-  loadProjectFromFileHandle,
-  loadProjectFromURL,
+  getProjectProvider,
+  openProjectFromFile,
+  openProjectFromFileHandle,
+  openProjectFromURL,
   resolveProjectSource,
   setProjectURLParam,
 } from "@/data/io/project";
@@ -97,7 +100,10 @@ export function useOpenProjectFromURL(): () => void {
       .then(async (value) => {
         const projectUrl = value?.trim();
         if (projectUrl) {
-          await loadProjectFromURL(projectUrl);
+          await openProjectFromURL(
+            getProjectProvider(tissuumapsProjectType),
+            projectUrl,
+          );
           setProjectURLParam(projectUrl);
         }
       })
@@ -114,7 +120,7 @@ export function useOpenProjectFromURL(): () => void {
  * A project file picked outside the open workspace is loaded only after
  * confirmation, as its project-relative paths are then resolved against the
  * workspace instead of the project file's directory (see
- * `loadProjectFromFileHandle`). Failures are logged, as the callback is
+ * `openProjectFromFileHandle`). Failures are logged, as the callback is
  * called from event handlers.
  *
  * @returns The callback
@@ -158,7 +164,7 @@ export function useOpenProjectFromFile(): () => void {
  * Returns a function that loads a project from a file and marks it open
  *
  * A file handle is loaded with its source if it lies within the workspace
- * (see `loadProjectFromFileHandle`), a file without one. The project URL
+ * (see `openProjectFromFileHandle`), a file without one. The project URL
  * parameter is cleared, as it names another project.
  *
  * @returns The function, which rejects if the project cannot be read or
@@ -172,10 +178,15 @@ export function useLoadProjectFile(): (
 
   return useCallback(
     async (projectFile) => {
+      const projectProvider = getProjectProvider(tissuumapsProjectType);
       if (projectFile instanceof File) {
-        await loadProjectFromFile(projectFile);
+        await openProjectFromFile(projectProvider, projectFile);
       } else {
-        await loadProjectFromFileHandle(projectFile, workspace);
+        await openProjectFromFileHandle(
+          projectProvider,
+          projectFile,
+          workspace,
+        );
       }
       clearProjectURLParam();
       setProjectOpen(true);
