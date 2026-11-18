@@ -8,9 +8,12 @@ import {
   type RawImage,
   type RawLabels,
   type RawLayer,
+  type RawPoints,
   type RawProject,
+  type RawShapes,
   type RawTable,
   type SimilarityTransform,
+  type SizeConfig,
   SourceUtils,
 } from "@tissuumaps/core";
 
@@ -21,6 +24,13 @@ import {
 } from "../hierarchical/zarr/ZarrTableDataSource";
 import { omeZarrImageDataSourceType } from "../ome-zarr/OMEZarrImageDataSource";
 import { omeZarrLabelsDataSourceType } from "../ome-zarr/OMEZarrLabelsDataSource";
+import { ParquetShapesDataProvider } from "../parquet/ParquetShapesDataProvider";
+import { parquetShapesDataSourceType } from "../parquet/ParquetShapesDataSource";
+import { parquetTableDataSourceType } from "../parquet/ParquetTableDataSource";
+import {
+  type TablePointsDataSource,
+  tablePointsDataSourceType,
+} from "../table/TablePointsDataSource";
 import {
   type CoordinateTransformation,
   SpatialDataTransformUtils,
@@ -37,8 +47,10 @@ export const spatialDataProjectType = "spatialdata";
  * objects of the existing types:
  *
  * - images and labels become OME-Zarr images and labels
+ * - shapes become Parquet shapes if they are polygons, and point clouds of a
+ *   Parquet table if they are circles, sized by their radius
  * - tables (AnnData) become Zarr tables, keyed by their instance key; a table
- *   annotating a single element is linked to it
+ *   annotating a single element is linked to it, unless the element is circles
  *
  * Each coordinate system becomes a layer, and an element becomes one object
  * per coordinate system it maps into, placed by its transformation into it.
@@ -50,6 +62,19 @@ export const spatialDataProjectType = "spatialdata";
 export class SpatialDataProjectProvider implements ProjectProvider {
   /** The default coordinate system of SpatialData */
   private static readonly _defaultCoordinateSystem = "global";
+
+  /** Reads the GeoParquet files of shapes, to tell polygons from circles */
+  private static readonly _parquetShapesDataProvider =
+    new ParquetShapesDataProvider();
+
+  /** The factor from a circle's radius to its point size, a point's diameter */
+  private static readonly _circlePointSizeFactor = 2;
+
+  /** The geometry column of shapes, whose points are the centers of circles */
+  private static readonly _circleGeometryColumn = "geometry";
+
+  /** The column holding the radius of each circle */
+  private static readonly _circleRadiusColumn = "radius";
 
   /**
    * The attributes that mark the group of an element, which spatialdata also
@@ -140,8 +165,18 @@ export class SpatialDataProjectProvider implements ProjectProvider {
       tableIDsByElement,
       { signal },
     );
+    const { shapes, circleTables, circles } =
+      await SpatialDataProjectProvider._readShapes(
+        store,
+        source,
+        workspace,
+        tableIDsByElement,
+        { signal },
+      );
     const layers = SpatialDataProjectProvider._createLayers(
-      [...images, ...labels].map(({ coordinateSystem }) => coordinateSystem),
+      [...images, ...labels, ...shapes, ...circles].map(
+        ({ coordinateSystem }) => coordinateSystem,
+      ),
     );
     const layerIDs = new Map(layers.map(({ id, name }) => [name, id]));
     const project: RawProject = {
@@ -156,7 +191,15 @@ export class SpatialDataProjectProvider implements ProjectProvider {
         ...object,
         layer: layerIDs.get(coordinateSystem)!,
       })),
-      tables,
+      shapes: shapes.map(({ coordinateSystem, object }) => ({
+        ...object,
+        layer: layerIDs.get(coordinateSystem)!,
+      })),
+      points: circles.map(({ coordinateSystem, object }) => ({
+        ...object,
+        layer: layerIDs.get(coordinateSystem)!,
+      })),
+      tables: [...tables, ...circleTables],
     };
     return { project, source };
   }
@@ -327,6 +370,115 @@ export class SpatialDataProjectProvider implements ProjectProvider {
   }
 
   /**
+   * Reads the shapes of a store: polygons as Parquet shapes, and circles as
+   * point clouds of a Parquet table, sized by their radius
+   *
+   * Polygons and circles are told apart from the geometry types of the
+   * GeoParquet file. A table annotating circles is not linked to them, as a
+   * point cloud's table holds its coordinates.
+   *
+   * @param store - The store
+   * @param source - The source of the store, without trailing slash
+   * @param workspace - The directory handle of the workspace, if any
+   * @param tableIDsByElement - The ID of the table annotating an element alone
+   * @param options - Optional abort signal
+   * @returns The polygon shapes and the circle point clouds, each with the
+   * name of its coordinate system, and a table per circles element
+   */
+  private static async _readShapes(
+    store: ZarrStore,
+    source: string,
+    workspace: FileSystemDirectoryHandle | null,
+    tableIDsByElement: Map<string, string>,
+    options?: { signal?: AbortSignal },
+  ): Promise<{
+    shapes: { coordinateSystem: string; object: Omit<RawShapes, "layer"> }[];
+    circleTables: RawTable[];
+    circles: { coordinateSystem: string; object: Omit<RawPoints, "layer"> }[];
+  }> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    const groups = (
+      await SpatialDataProjectProvider._readChildGroups(store, "shapes", {
+        signal,
+      })
+    ).map(({ name, attrs }) => {
+      const path = `shapes/${name}`;
+      return {
+        name,
+        path,
+        parquetSource: `${SpatialDataProjectProvider._getElementSource(source, path)}/shapes.parquet`,
+        transforms: SpatialDataProjectProvider._readVectorTransforms(
+          path,
+          attrs,
+        ),
+      };
+    });
+    const isPolygons = await Promise.all(
+      groups.map(({ parquetSource }) =>
+        SpatialDataProjectProvider._parquetShapesDataProvider.supports(
+          SourceUtils.normalizeSource(parquetSource, workspace, source),
+          workspace,
+          { signal },
+        ),
+      ),
+    );
+    const polygonGroups = groups.filter((_, i) => isPolygons[i]);
+    const circleGroups = groups.filter((_, i) => !isPolygons[i]);
+
+    const shapes = polygonGroups.flatMap(
+      ({ name, path, parquetSource, transforms }) =>
+        transforms.map(([coordinateSystem, transform]) => ({
+          coordinateSystem,
+          object: {
+            id: SpatialDataProjectProvider._createID(source, path),
+            name,
+            transform,
+            dataSource: {
+              type: parquetShapesDataSourceType,
+              source: parquetSource,
+              table: tableIDsByElement.get(name),
+            },
+          },
+        })),
+    );
+    const circleTables: RawTable[] = circleGroups.map(
+      ({ name, path, parquetSource }) => ({
+        id: SpatialDataProjectProvider._createID(source, path),
+        name,
+        dataSource: { type: parquetTableDataSourceType, source: parquetSource },
+      }),
+    );
+    const circles = circleGroups.flatMap(({ name, path, transforms }, i) => {
+      const geometryColumn = SpatialDataProjectProvider._circleGeometryColumn;
+      const dataSource: TablePointsDataSource = {
+        type: tablePointsDataSourceType,
+        table: circleTables[i]!.id,
+        x: `${geometryColumn}[x]`,
+        y: `${geometryColumn}[y]`,
+      };
+      const pointSize: SizeConfig = {
+        from: {
+          column: SpatialDataProjectProvider._circleRadiusColumn,
+          unit: "data",
+        },
+      };
+      return transforms.map(([coordinateSystem, transform]) => ({
+        coordinateSystem,
+        object: {
+          id: SpatialDataProjectProvider._createID(source, path),
+          name,
+          transform,
+          dataSource,
+          pointSize,
+          pointSizeFactor: SpatialDataProjectProvider._circlePointSizeFactor,
+        },
+      }));
+    });
+    return { shapes, circleTables, circles };
+  }
+
+  /**
    * Creates a layer per coordinate system, of which only one is visible:
    * `global`, or else the first one most objects are placed in
    *
@@ -355,12 +507,12 @@ export class SpatialDataProjectProvider implements ProjectProvider {
 
   /**
    * Reads the transform by which an image or labels element is placed in each
-   * coordinate system it maps into, warning about approximated ones
+   * coordinate system it maps into, from its multiscales
    *
-   * @param path - The path of the element, for the warning
+   * @param path - The path of the element, for warnings
    * @param attrs - The attributes of the element's group
-   * @returns The transform by coordinate system name, in the order of the
-   * element's transformations
+   * @returns The transform by coordinate system name, see
+   * {@link SpatialDataProjectProvider._getTransforms}
    */
   private static _readRasterTransforms(
     path: string,
@@ -374,9 +526,55 @@ export class SpatialDataProjectProvider implements ProjectProvider {
       }[];
     };
     const { axes, coordinateTransformations } = multiscales[0]!;
-    const transforms = SpatialDataTransformUtils.getSimilarityTransforms(
+    return SpatialDataProjectProvider._getTransforms(
+      path,
       coordinateTransformations,
       axes.map(({ name }) => name),
+    );
+  }
+
+  /**
+   * Reads the transform by which a shapes or points element is placed in each
+   * coordinate system it maps into, from the attributes of its group
+   *
+   * @param path - The path of the element, for warnings
+   * @param attrs - The attributes of the element's group
+   * @returns The transform by coordinate system name, see
+   * {@link SpatialDataProjectProvider._getTransforms}
+   */
+  private static _readVectorTransforms(
+    path: string,
+    attrs: Readonly<Record<string, unknown>>,
+  ): [string, SimilarityTransform][] {
+    const { axes, coordinateTransformations } = attrs as {
+      axes: string[];
+      coordinateTransformations: CoordinateTransformation[];
+    };
+    return SpatialDataProjectProvider._getTransforms(
+      path,
+      coordinateTransformations,
+      axes,
+    );
+  }
+
+  /**
+   * Returns the transform by which an element is placed in each coordinate
+   * system it maps into, warning about approximated ones
+   *
+   * @param path - The path of the element, for the warning
+   * @param transformations - The coordinate transformations of the element
+   * @param axes - The names of the element's axes, in order
+   * @returns The transform by coordinate system name, in the order of the
+   * element's transformations
+   */
+  private static _getTransforms(
+    path: string,
+    transformations: CoordinateTransformation[],
+    axes: string[],
+  ): [string, SimilarityTransform][] {
+    const transforms = SpatialDataTransformUtils.getSimilarityTransforms(
+      transformations,
+      axes,
     );
     return [...transforms].map(([coordinateSystem, { transform, exact }]) => {
       if (!exact) {
