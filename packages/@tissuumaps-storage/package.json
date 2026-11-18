@@ -63,6 +63,11 @@
       "types": "./dist/tiff.d.ts",
       "default": "./dist/tiff.js"
     },
+    "./tissuumaps": {
+      "tissuumaps-development": "./src/tissuumaps/index.ts",
+      "types": "./dist/tissuumaps.d.ts",
+      "default": "./dist/tissuumaps.js"
+    },
     "./zarr": {
       "tissuumaps-development": "./src/hierarchical/zarr/index.ts",
       "types": "./dist/zarr.d.ts",
@@ -137,6 +142,10 @@
       "./tiff": {
         "types": "./dist/tiff.d.ts",
         "default": "./dist/tiff.js"
+      },
+      "./tissuumaps": {
+        "types": "./dist/tissuumaps.d.ts",
+        "default": "./dist/tissuumaps.js"
       },
       "./zarr": {
         "types": "./dist/zarr.d.ts",
