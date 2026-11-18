@@ -467,39 +467,28 @@ describe("TableUtils", () => {
     });
   });
 
-  describe("loadColumnDataType", () => {
-    it("uses the declared type of the table", async () => {
+  describe("loadIsColumnCategorical", () => {
+    it("uses what the table declares", async () => {
       const { data, loadValues } = createMockTableData(
         new Uint32Array([0, 1]),
         new Float32Array([0, 1]),
       );
-      data.loadColumnDataType = vi.fn().mockResolvedValue("category");
-      await expect(TableUtils.loadColumnDataType(data, "col1")).resolves.toBe(
-        "category",
-      );
+      data.isColumnCategorical = vi.fn().mockReturnValue(true);
+      await expect(
+        TableUtils.loadIsColumnCategorical(data, "col1"),
+      ).resolves.toBe(true);
       expect(loadValues).not.toHaveBeenCalled();
     });
 
-    it("derives the type from the values otherwise", async () => {
+    it("inspects the values otherwise", async () => {
       const { data } = createMockTableData(
         new Uint32Array([0, 1]),
         new Float32Array([0, 1]),
       );
-      data.loadColumnDataType = vi.fn().mockResolvedValue(undefined);
-      await expect(TableUtils.loadColumnDataType(data, "col1")).resolves.toBe(
-        "number",
-      );
-    });
-  });
-
-  describe("computeColumnDataType", () => {
-    it("derives the type from the array type and values", () => {
-      expect(TableUtils.computeColumnDataType(new Float32Array([1]))).toBe(
-        "number",
-      );
-      expect(TableUtils.computeColumnDataType(["a", "b"])).toBe("category");
-      expect(TableUtils.computeColumnDataType([true, false])).toBe("boolean");
-      expect(TableUtils.computeColumnDataType([])).toBe("category");
+      data.isColumnCategorical = vi.fn().mockReturnValue(undefined);
+      await expect(
+        TableUtils.loadIsColumnCategorical(data, "col1"),
+      ).resolves.toBe(false);
     });
   });
 

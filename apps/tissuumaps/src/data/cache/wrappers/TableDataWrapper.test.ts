@@ -88,74 +88,45 @@ describe("TableDataWrapper", () => {
     });
   });
 
-  describe("optional facts", () => {
+  describe("optional methods", () => {
     it("forwards the optional methods only if the wrapped data has them", async () => {
       const { data } = createTestTableData([]);
       const wrapperWithout = new TableDataWrapper(data);
-      expect(wrapperWithout.loadQueryGroups).toBeUndefined();
+      expect(wrapperWithout.getQueryGroups).toBeUndefined();
       expect(wrapperWithout.describeColumn).toBeUndefined();
       expect(wrapperWithout.mapColumn).toBeUndefined();
+      expect(wrapperWithout.isColumnCategorical).toBeUndefined();
 
       const groups = [
         {
+          id: "var",
           name: "Features",
           subgroups: [
-            { name: "X", id: "X" },
-            { name: "raw", id: "raw/X" },
+            { id: "X", name: "X" },
+            { id: "raw/X", name: "raw" },
           ],
         },
       ];
       const mapColumn = vi.fn().mockResolvedValue("raw/X[CD3]");
-      data.loadQueryGroups = vi.fn().mockResolvedValue(groups);
+      data.getQueryGroups = vi.fn().mockReturnValue(groups);
       data.describeColumn = vi
         .fn()
-        .mockResolvedValue({ groupId: "X", name: "CD3" });
+        .mockResolvedValue({ queryGroupId: "X", name: "CD3" });
       data.mapColumn = mapColumn;
+      data.isColumnCategorical = vi.fn().mockReturnValue(true);
       const wrapper = new TableDataWrapper(data);
-      await expect(wrapper.loadQueryGroups!()).resolves.toBe(groups);
+      expect(wrapper.getQueryGroups!()).toBe(groups);
       await expect(wrapper.describeColumn!("X[CD3]")).resolves.toEqual({
-        groupId: "X",
+        queryGroupId: "X",
         name: "CD3",
       });
       await expect(
-        wrapper.mapColumn!("X[CD3]", { groupId: "raw/X" }),
+        wrapper.mapColumn!("X[CD3]", { queryGroupId: "raw/X" }),
       ).resolves.toBe("raw/X[CD3]");
       expect(mapColumn).toHaveBeenCalledWith("X[CD3]", {
-        groupId: "raw/X",
+        queryGroupId: "raw/X",
       });
-    });
-
-    it("passes the group ID through to suggest", async () => {
-      const { data } = createTestTableData([]);
-      const suggestColumnQueries = vi.fn().mockResolvedValue([]);
-      data.suggestColumnQueries = suggestColumnQueries;
-      const wrapper = new TableDataWrapper(data);
-      await wrapper.suggestColumnQueries("cd", { groupId: "X" });
-      expect(suggestColumnQueries).toHaveBeenCalledWith("cd", {
-        groupId: "X",
-      });
-    });
-  });
-
-  describe("loadColumnDataType", () => {
-    it("uses the type the wrapped data declares", async () => {
-      const { data, loadValues } = createTestTableData([1, 2]);
-      data.loadColumnDataType = vi.fn().mockResolvedValue("category");
-      const wrapper = new TableDataWrapper(data);
-      await expect(wrapper.loadColumnDataType("col1")).resolves.toBe(
-        "category",
-      );
-      expect(loadValues).not.toHaveBeenCalled();
-    });
-
-    it("derives the type from the shared column load otherwise", async () => {
-      const { data, loadValues } = createTestTableData(["a", "b"]);
-      const wrapper = new TableDataWrapper(data);
-      await wrapper.loadValues("col1");
-      await expect(wrapper.loadColumnDataType("col1")).resolves.toBe(
-        "category",
-      );
-      expect(loadValues).toHaveBeenCalledTimes(1);
+      expect(wrapper.isColumnCategorical!("obs/cluster")).toBe(true);
     });
   });
 });

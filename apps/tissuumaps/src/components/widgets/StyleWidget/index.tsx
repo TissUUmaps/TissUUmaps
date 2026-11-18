@@ -67,13 +67,13 @@ export function StyleWidget({
   noneLabel = "None",
   className,
 }: StyleWidgetProps) {
-  const { dataType, isPending, error, pick, setEncoding } = useColorBy(
+  const { isCategorical, isPending, error, pick, setEncoding } = useColorBy(
     tableId,
     colorBy,
     onColorByChange,
   );
 
-  const isGradientDisabled = dataType !== null && dataType !== "number";
+  const isGradientDisabled = isCategorical === true;
   const encoding = colorBy.kind === "column" ? colorBy.encoding : null;
 
   return (
@@ -108,8 +108,8 @@ export function StyleWidget({
             }}
             size="sm"
             className="border rounded"
-            // the encodings a column allows are known with its data type
-            disabled={isPending || dataType === null}
+            // the encodings a column allows are known with its type
+            disabled={isPending || isCategorical === null}
           >
             <ToggleGroupItem
               value={"categories" satisfies ColorByEncoding}
@@ -127,7 +127,7 @@ export function StyleWidget({
               disabled={isGradientDisabled}
               title={
                 isGradientDisabled
-                  ? "Only numeric columns can be shown as a gradient"
+                  ? "Categorical columns cannot be shown as a gradient"
                   : undefined
               }
             >

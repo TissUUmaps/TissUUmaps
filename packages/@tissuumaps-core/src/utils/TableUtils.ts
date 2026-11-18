@@ -1,4 +1,4 @@
-import type { TableColumnDataType, TableData } from "../storage/table";
+import type { TableData } from "../storage/table";
 import type { IDArray, TypedArray, TypedArrayOrArray } from "../types/arrays";
 import type { ProgressCallback } from "../types/callbacks";
 import { AsyncUtils } from "./AsyncUtils";
@@ -218,55 +218,28 @@ export class TableUtils {
   }
 
   /**
-   * Loads the type of a table column's values
+   * Loads whether a table column holds categories
    *
-   * Uses the type the table declares, if it declares one, and otherwise
-   * derives it from the loaded column values (see
-   * {@link computeColumnDataType}).
+   * Uses what the table declares, if it declares anything (see
+   * `TableData.isColumnCategorical`), and otherwise inspects the loaded column
+   * values: numeric typed arrays hold numbers, plain arrays categories.
    *
-   * @param tableData - The table to load the column type of
+   * @param tableData - The table holding the column
    * @param column - Name of the table column
    * @param options - Optional abort signal and progress callback
-   * @returns The type of the column's values
+   * @returns Whether the column is categorical
    */
-  static async loadColumnDataType(
+  static async loadIsColumnCategorical(
     tableData: TableData,
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<TableColumnDataType> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    const declaredDataType = await tableData.loadColumnDataType?.(column, {
-      signal,
-    });
-    if (declaredDataType !== undefined) {
-      return declaredDataType;
+  ): Promise<boolean> {
+    const isCategorical = tableData.isColumnCategorical?.(column);
+    if (isCategorical !== undefined) {
+      return isCategorical;
     }
     const values = await tableData.loadValues<unknown>(column, options);
-    return TableUtils.computeColumnDataType(values);
-  }
-
-  /**
-   * Derives the type of loaded table column values
-   *
-   * Numeric typed arrays hold numbers, plain arrays categories, unless every
-   * value is a boolean. Categories that the values do not reveal as such
-   * (e.g. numerically coded ones) can only be declared by the table, see
-   * `TableData.loadColumnDataType`.
-   *
-   * @param values - The column values
-   * @returns The type of the values
-   */
-  static computeColumnDataType(
-    values: TypedArrayOrArray<unknown>,
-  ): TableColumnDataType {
-    if (ArrayBuffer.isView(values)) {
-      return "number";
-    }
-    return values.length > 0 &&
-      values.every((value) => typeof value === "boolean")
-      ? "boolean"
-      : "category";
+    return !ArrayBuffer.isView(values);
   }
 
   /**

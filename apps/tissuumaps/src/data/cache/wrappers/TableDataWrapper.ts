@@ -2,7 +2,6 @@ import {
   type IDArray,
   MathUtils,
   type ProgressCallback,
-  type TableColumnDataType,
   type TableColumnQuerySuggestion,
   type TableData,
   TableUtils,
@@ -18,8 +17,8 @@ import { DataWrapperBase } from "./DataWrapperBase";
  * Values, unique value counts and value ranges are each loaded once per
  * column and then kept for as long as this wrapper lives; column queries are
  * delegated to the wrapped data unchanged. The optional names getter, query
- * groups, column descriptions and column mapping are only provided if the
- * wrapped data provides them.
+ * groups, column descriptions, column mapping and declared categoricals are
+ * only provided if the wrapped data provides them.
  */
 export class TableDataWrapper
   extends DataWrapperBase<TableData>
@@ -39,17 +38,18 @@ export class TableDataWrapper
   >();
 
   readonly getNames?: TableData["getNames"];
-  readonly loadQueryGroups?: TableData["loadQueryGroups"];
+  readonly getQueryGroups?: TableData["getQueryGroups"];
   readonly describeColumn?: TableData["describeColumn"];
   readonly mapColumn?: TableData["mapColumn"];
+  readonly isColumnCategorical?: TableData["isColumnCategorical"];
 
   constructor(data: TableData) {
     super(data);
     if (data.getNames !== undefined) {
       this.getNames = () => this.data.getNames!();
     }
-    if (data.loadQueryGroups !== undefined) {
-      this.loadQueryGroups = (options) => this.data.loadQueryGroups!(options);
+    if (data.getQueryGroups !== undefined) {
+      this.getQueryGroups = () => this.data.getQueryGroups!();
     }
     if (data.describeColumn !== undefined) {
       this.describeColumn = (column, options) =>
@@ -58,6 +58,10 @@ export class TableDataWrapper
     if (data.mapColumn !== undefined) {
       this.mapColumn = (column, options) =>
         this.data.mapColumn!(column, options);
+    }
+    if (data.isColumnCategorical !== undefined) {
+      this.isColumnCategorical = (column) =>
+        this.data.isColumnCategorical!(column);
     }
   }
 
@@ -71,7 +75,7 @@ export class TableDataWrapper
 
   suggestColumnQueries(
     currentQuery: string,
-    options?: { groupId?: string; signal?: AbortSignal },
+    options?: { queryGroupId?: string; signal?: AbortSignal },
   ): Promise<TableColumnQuerySuggestion[]> {
     return this.data.suggestColumnQueries(currentQuery, options);
   }
@@ -117,36 +121,6 @@ export class TableDataWrapper
       op = newOp;
     }
     return op.subscribe(options) as Promise<TypedArrayOrArray<T>>;
-  }
-
-  /**
-   * Loads the type of a column's values
-   *
-   * Unless the wrapped data declares the type, it is derived from the shared
-   * column values (see {@link loadValues}), so the column is only loaded once.
-   *
-   * @param column - The name of the column to load the type of
-   * @param options - Optional abort signal
-   * @returns A promise that resolves to the type of the column's values, or
-   * rejects if the wrapper has been destroyed
-   */
-  async loadColumnDataType(
-    column: string,
-    options?: { signal?: AbortSignal },
-  ): Promise<TableColumnDataType> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
-    // not TableUtils.loadColumnDataType: given this.data, it would bypass the
-    // shared column load, and given this, it would call back into this method
-    const declaredDataType = await this.data.loadColumnDataType?.(column, {
-      signal,
-    });
-    return (
-      declaredDataType ??
-      TableUtils.computeColumnDataType(
-        await this.loadValues(column, { signal }),
-      )
-    );
   }
 
   /**

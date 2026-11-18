@@ -34,11 +34,11 @@ export type TableColumnInputProps = {
   onValueChange: (value: string | null) => void;
   /**
    * The `id` of the leaf query group to pick a column of (see
-   * `TableData.loadQueryGroups`); the input then searches the query group's
-   * columns by name, and a column is
-   * picked from the suggestions rather than typed as a query
+   * `TableData.getQueryGroups`); the input then searches the leaf's columns
+   * by name, and a column is picked from the suggestions rather than typed as
+   * a query
    */
-  groupId?: string;
+  queryGroupId?: string;
   /** The name to show for the value, if it is not the query itself */
   valueName?: string;
   placeholder?: string;
@@ -178,7 +178,7 @@ export function TableColumnInput({
   tableId,
   value,
   onValueChange,
-  groupId,
+  queryGroupId,
   valueName,
   placeholder,
   className,
@@ -224,7 +224,7 @@ export function TableColumnInput({
         });
         const newSuggestions =
           (await tableData?.suggestColumnQueries(text, {
-            groupId,
+            queryGroupId,
             signal: abortController.signal,
           })) ?? [];
         if (!abortController.signal.aborted) {
@@ -237,13 +237,13 @@ export function TableColumnInput({
       }
     });
     return () => abortController.abort();
-  }, [open, text, groupId, loadTableData, startSuggestTransition]);
+  }, [open, text, queryGroupId, loadTableData, startSuggestTransition]);
 
   const handleCommitResolved = useEffectEvent((column: string | null) => {
     setPendingQuery(null);
     if (column !== null) {
       // within a query group, the input keeps showing the picked name
-      if (groupId === undefined) {
+      if (queryGroupId === undefined) {
         setText(column);
       }
       setInvalid(false);
@@ -289,7 +289,7 @@ export function TableColumnInput({
       onValueChange(null);
       return;
     }
-    if (groupId !== undefined) {
+    if (queryGroupId !== undefined) {
       // a name is no query: it has to match a suggestion exactly, as names
       // differing in case may name different columns (e.g. human and mouse
       // gene symbols)
@@ -337,7 +337,7 @@ export function TableColumnInput({
       );
       if (pressed?.group) {
         reopenRef.current = true;
-      } else if (groupId !== undefined && pressed !== undefined) {
+      } else if (queryGroupId !== undefined && pressed !== undefined) {
         // a suggestion is a query, which is resolved to its column first
         setPendingQuery(pressed.query);
       } else {
@@ -411,7 +411,7 @@ export function TableColumnInput({
           }}
           onBlur={() => {
             // a name left half-typed within a query group falls back to the value
-            if (groupId !== undefined) {
+            if (queryGroupId !== undefined) {
               setText(query);
               setInvalid(false);
             } else {

@@ -16,7 +16,7 @@ export type HierarchicalTableOpenResponse = {
   op: "open";
   columns: HierarchicalTableColumn[];
   numRows: number;
-  columnGroups: HierarchicalTableQueryGroup[];
+  queryGroups: HierarchicalTableQueryGroup[];
 };
 
 /** Reads the values of a column, see {@link HierarchicalTable.readColumn} */

@@ -168,7 +168,6 @@ export {
   type ShapesGeometry,
 } from "./storage/shapes";
 export {
-  type TableColumnDataType,
   type TableColumnQueryGroup,
   type TableColumnQuerySuggestion,
   type TableData,

@@ -55,7 +55,7 @@ export function startHierarchicalTableServer(
               op: "open",
               columns: table.columns,
               numRows: table.numRows,
-              columnGroups: table.columnGroups,
+              queryGroups: table.queryGroups,
             });
             break;
           }

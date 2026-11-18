@@ -1,4 +1,4 @@
-import type { TableColumnDataType, TypedArrayOrArray } from "@tissuumaps/core";
+import type { TypedArrayOrArray } from "@tissuumaps/core";
 
 /**
  * One column that can be addressed by a column query
@@ -9,14 +9,14 @@ import type { TableColumnDataType, TypedArrayOrArray } from "@tissuumaps/core";
  * `csc_matrix`/`csr_matrix` group, whose columns are addressed as
  * `path[selector]` (see {@link ColumnQueryUtils}).
  *
- * `dataType` is the type the encoding declares, if any (see
- * `TableData.loadColumnDataType`).
+ * `categorical` is what the encoding declares, if anything (see
+ * `TableData.isColumnCategorical`).
  */
 export type HierarchicalTableColumn =
   | {
       kind: "dataset";
       path: string;
-      dataType?: TableColumnDataType;
+      categorical?: boolean;
     }
   | {
       kind: "matrix";
@@ -31,22 +31,17 @@ export type HierarchicalTableColumn =
     };
 
 /**
- * A leaf query group of a column group (see `TableData.loadQueryGroups`)
+ * A query group of the store (see `TableData.getQueryGroups`)
  *
- * A query group at the path of a matrix column holds the matrix's columns,
- * named by their selectors. Any other query group holds the dataset columns
- * directly below its path, but for the index at `indexPath`.
+ * A leaf at the path of a matrix column holds the matrix's columns, named by
+ * their selectors. Any other leaf holds the dataset columns directly below its
+ * path, but for the dataframe index at `indexPath`.
  */
-export type HierarchicalTableQueryGroupLeaf = {
+export type HierarchicalTableQueryGroup = {
   id: string;
   name: string;
   indexPath?: string;
-};
-
-/** A column group of the store, with its query groups in canonical order */
-export type HierarchicalTableQueryGroup = {
-  name: string;
-  subgroups: HierarchicalTableQueryGroupLeaf[];
+  subgroups?: HierarchicalTableQueryGroup[];
 };
 
 /** An open hierarchical table: the columns of a store and a way to read them */
@@ -55,8 +50,8 @@ export interface HierarchicalTable {
   readonly columns: HierarchicalTableColumn[];
   /** The row count inferred from the store */
   readonly numRows: number;
-  /** The column groups the store records, in the canonical order of its format */
-  readonly columnGroups: HierarchicalTableQueryGroup[];
+  /** The query groups, in the canonical order of the format */
+  readonly queryGroups: HierarchicalTableQueryGroup[];
 
   /**
    * Reads the values of a column

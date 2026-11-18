@@ -22,19 +22,19 @@ import type {
 export class HierarchicalTableWorkerClient implements HierarchicalTable {
   readonly columns: HierarchicalTableColumn[];
   readonly numRows: number;
-  readonly columnGroups: HierarchicalTableQueryGroup[];
+  readonly queryGroups: HierarchicalTableQueryGroup[];
   private readonly _channel: WorkerChannel;
 
   private constructor(
     channel: WorkerChannel,
     columns: HierarchicalTableColumn[],
     numRows: number,
-    columnGroups: HierarchicalTableQueryGroup[],
+    queryGroups: HierarchicalTableQueryGroup[],
   ) {
     this._channel = channel;
     this.columns = columns;
     this.numRows = numRows;
-    this.columnGroups = columnGroups;
+    this.queryGroups = queryGroups;
   }
 
   /**
@@ -56,7 +56,7 @@ export class HierarchicalTableWorkerClient implements HierarchicalTable {
     const channel = new WorkerChannel(worker);
     try {
       signal?.throwIfAborted();
-      const { columns, numRows, columnGroups } = await channel.request(
+      const { columns, numRows, queryGroups } = await channel.request(
         { op: "open", source },
         { signal },
       );
@@ -64,7 +64,7 @@ export class HierarchicalTableWorkerClient implements HierarchicalTable {
         channel,
         columns,
         numRows,
-        columnGroups,
+        queryGroups,
       );
     } catch (error) {
       channel.terminate();

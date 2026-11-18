@@ -27,19 +27,19 @@ const readableDataTypes = new Set(["integer", "float", "string", "boolean"]);
 export class HierarchicalTableReader implements HierarchicalTable {
   readonly columns: HierarchicalTableColumn[];
   readonly numRows: number;
-  readonly columnGroups: HierarchicalTableQueryGroup[];
+  readonly queryGroups: HierarchicalTableQueryGroup[];
   private readonly _store: HierarchicalStore;
 
   private constructor(
     store: HierarchicalStore,
     columns: HierarchicalTableColumn[],
     numRows: number,
-    columnGroups: HierarchicalTableQueryGroup[],
+    queryGroups: HierarchicalTableQueryGroup[],
   ) {
     this._store = store;
     this.columns = columns;
     this.numRows = numRows;
-    this.columnGroups = columnGroups;
+    this.queryGroups = queryGroups;
   }
 
   /**
@@ -89,7 +89,7 @@ export class HierarchicalTableReader implements HierarchicalTable {
         store,
         columns,
         numRows,
-        await AnnDataUtils.getColumnGroups(store, columns, annDataPath, {
+        await AnnDataUtils.loadQueryGroups(store, columns, annDataPath, {
           signal,
         }),
       );
@@ -187,7 +187,7 @@ async function collectColumns(
         columns.push({
           kind: "dataset",
           path,
-          ...(dataType === "boolean" ? { dataType: "boolean" as const } : {}),
+          ...(dataType === "boolean" && { categorical: true }),
         });
       } else if (shape.length === 2) {
         columns.push({ kind: "matrix", path, numColumns: shape[1]! });

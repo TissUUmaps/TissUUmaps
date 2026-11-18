@@ -26,7 +26,7 @@ function createTable() {
       {
         kind: "dataset",
         path: "obs/cell_type",
-        dataType: "category",
+        categorical: true,
       },
       { kind: "dataset", path: "uns/unknown" },
       {
@@ -45,12 +45,10 @@ function createTable() {
       },
     ],
     numRows: 3,
-    columnGroups: [
+    queryGroups: [
+      { id: "obs", name: "Annotations", indexPath: "obs/_index" },
       {
-        name: "Annotations",
-        subgroups: [{ id: "obs", name: "obs", indexPath: "obs/_index" }],
-      },
-      {
+        id: "var",
         name: "Features",
         subgroups: [
           { id: "X", name: "X" },
@@ -60,10 +58,11 @@ function createTable() {
         ],
       },
       {
+        id: "obsm",
         name: "Embeddings",
         subgroups: [
-          { id: "obsm/X_pca", name: "pca" },
-          { id: "obsm/X_other", name: "other" },
+          { id: "obsm/X_pca", name: "X_pca" },
+          { id: "obsm/X_other", name: "X_other" },
         ],
       },
     ],
@@ -78,26 +77,28 @@ function queries(suggestions: { query: string }[]): string[] {
 }
 
 describe("HierarchicalTableDataBase", () => {
-  it("lists the query groups as a tree, without their internals", async () => {
+  it("returns the query groups without their internals", () => {
     const { table } = createTable();
-    await expect(
-      new TestTableData(table, 3, undefined, undefined).loadQueryGroups(),
-    ).resolves.toEqual([
-      { name: "Annotations", id: "obs" },
+    expect(
+      new TestTableData(table, 3, undefined, undefined).getQueryGroups(),
+    ).toEqual([
+      { id: "obs", name: "Annotations" },
       {
+        id: "var",
         name: "Features",
         subgroups: [
-          { name: "X", id: "X" },
-          { name: "counts", id: "layers/counts" },
-          { name: "raw", id: "raw/X" },
-          { name: "unnamed", id: "layers/unnamed" },
+          { id: "X", name: "X" },
+          { id: "layers/counts", name: "counts" },
+          { id: "raw/X", name: "raw" },
+          { id: "layers/unnamed", name: "unnamed" },
         ],
       },
       {
+        id: "obsm",
         name: "Embeddings",
         subgroups: [
-          { name: "pca", id: "obsm/X_pca" },
-          { name: "other", id: "obsm/X_other" },
+          { id: "obsm/X_pca", name: "X_pca" },
+          { id: "obsm/X_other", name: "X_other" },
         ],
       },
     ]);
@@ -116,7 +117,7 @@ describe("HierarchicalTableDataBase", () => {
     const { table } = createTable();
     const tableData = new TestTableData(table, 3, undefined, undefined);
     await expect(
-      tableData.suggestColumnQueries("type", { groupId: "obs" }),
+      tableData.suggestColumnQueries("type", { queryGroupId: "obs" }),
     ).resolves.toEqual([
       { query: "obs/cell_type", name: "cell_type" },
       { query: "obs/area", name: "area" },
@@ -128,11 +129,15 @@ describe("HierarchicalTableDataBase", () => {
     const tableData = new TestTableData(table, 3, undefined, undefined);
     // e.g. typing an annotation lists it first, then all the others
     expect(
-      queries(await tableData.suggestColumnQueries("area", { groupId: "obs" })),
+      queries(
+        await tableData.suggestColumnQueries("area", { queryGroupId: "obs" }),
+      ),
     ).toEqual(["obs/area", "obs/cell_type"]);
     // and typing a feature lists it first, then all the other features
     expect(
-      queries(await tableData.suggestColumnQueries("ENSG2", { groupId: "X" })),
+      queries(
+        await tableData.suggestColumnQueries("ENSG2", { queryGroupId: "X" }),
+      ),
     ).toEqual(["X[ENSG2]", "X[ENSG1]", "X[ENSG3]"]);
   });
 
@@ -140,7 +145,7 @@ describe("HierarchicalTableDataBase", () => {
     const { table } = createTable();
     const tableData = new TestTableData(table, 3, undefined, undefined);
     expect(
-      (await tableData.suggestColumnQueries("", { groupId: "X" })).map(
+      (await tableData.suggestColumnQueries("", { queryGroupId: "X" })).map(
         ({ name }) => name,
       ),
     ).toEqual(["ENSG1", "ENSG2", "ENSG3"]);
@@ -150,25 +155,21 @@ describe("HierarchicalTableDataBase", () => {
     const { table } = createTable();
     const tableData = new TestTableData(table, 3, undefined, undefined);
     await expect(tableData.describeColumn("obs/area")).resolves.toEqual({
-      groupId: "obs",
+      queryGroupId: "obs",
       name: "area",
     });
     await expect(tableData.describeColumn("X[ENSG2]")).resolves.toEqual({
-      groupId: "X",
+      queryGroupId: "X",
       name: "ENSG2",
     });
     await expect(tableData.describeColumn("uns/unknown")).resolves.toBeNull();
   });
 
-  it("returns the declared column types", async () => {
+  it("returns whether a column is declared categorical", () => {
     const { table } = createTable();
     const tableData = new TestTableData(table, 3, undefined, undefined);
-    await expect(tableData.loadColumnDataType("obs/cell_type")).resolves.toBe(
-      "category",
-    );
-    await expect(
-      tableData.loadColumnDataType("obs/area"),
-    ).resolves.toBeUndefined();
+    expect(tableData.isColumnCategorical("obs/cell_type")).toBe(true);
+    expect(tableData.isColumnCategorical("obs/area")).toBeUndefined();
   });
 
   describe("mapColumn", () => {
@@ -179,65 +180,65 @@ describe("HierarchicalTableDataBase", () => {
     it("maps a feature between matrices by its selector, not its name", async () => {
       const tableData = createTableData();
       await expect(
-        tableData.mapColumn("X[ENSG3]", { groupId: "raw/X" }),
+        tableData.mapColumn("X[ENSG3]", { queryGroupId: "raw/X" }),
       ).resolves.toBe("raw/X[ENSG3]");
       // ENSG1 and ENSG3 share the name CD3E, but are different features
       await expect(
-        tableData.mapColumn("X[ENSG1]", { groupId: "raw/X" }),
+        tableData.mapColumn("X[ENSG1]", { queryGroupId: "raw/X" }),
       ).resolves.toBe("raw/X[ENSG1]");
       await expect(
-        tableData.mapColumn("X[ENSG2]", { groupId: "raw/X" }),
+        tableData.mapColumn("X[ENSG2]", { queryGroupId: "raw/X" }),
       ).resolves.toBeNull();
     });
 
     it("maps a feature into a layer", async () => {
       await expect(
         createTableData().mapColumn("X[ENSG2]", {
-          groupId: "layers/counts",
+          queryGroupId: "layers/counts",
         }),
       ).resolves.toBe("layers/counts[ENSG2]");
     });
 
-    it("maps matrices without selectors only by the same position", async () => {
+    it("maps no matrix without selectors, nor a column named by its index", async () => {
       const tableData = createTableData();
       await expect(
-        tableData.mapColumn("obsm/X_pca[1]", { groupId: "obsm/X_other" }),
-      ).resolves.toBe("obsm/X_other[1]");
+        tableData.mapColumn("obsm/X_pca[1]", { queryGroupId: "obsm/X_other" }),
+      ).resolves.toBeNull();
       await expect(
-        tableData.mapColumn("layers/unnamed[1]", { groupId: "X" }),
+        tableData.mapColumn("layers/unnamed[1]", { queryGroupId: "X" }),
       ).resolves.toBeNull();
     });
 
-    it("maps only between the query groups of one column group", async () => {
+    it("maps only between the leaves of one top-level query group", async () => {
       const tableData = createTableData();
       await expect(
-        tableData.mapColumn("X[ENSG1]", { groupId: "obsm/X_pca" }),
+        tableData.mapColumn("X[ENSG1]", { queryGroupId: "obsm/X_pca" }),
       ).resolves.toBeNull();
       await expect(
-        tableData.mapColumn("obsm/X_pca[0]", { groupId: "X" }),
+        tableData.mapColumn("obsm/X_pca[0]", { queryGroupId: "X" }),
       ).resolves.toBeNull();
     });
 
     it("throws for an unknown query group", async () => {
       const tableData = createTableData();
       await expect(
-        tableData.mapColumn("X[ENSG1]", { groupId: "nope" }),
+        tableData.mapColumn("X[ENSG1]", { queryGroupId: "nope" }),
       ).rejects.toThrow('No query group "nope"');
       await expect(
-        tableData.suggestColumnQueries("", { groupId: "nope" }),
+        tableData.suggestColumnQueries("", { queryGroupId: "nope" }),
       ).rejects.toThrow('No query group "nope"');
     });
 
     it("finds a column in its own query group of columns only", async () => {
       const tableData = createTableData();
       await expect(
-        tableData.mapColumn("obs/area", { groupId: "obs" }),
+        tableData.mapColumn("obs/area", { queryGroupId: "obs" }),
       ).resolves.toBe("obs/area");
       await expect(
-        tableData.mapColumn("obs/_index", { groupId: "obs" }),
+        tableData.mapColumn("obs/_index", { queryGroupId: "obs" }),
       ).resolves.toBeNull();
       await expect(
-        tableData.mapColumn("X[ENSG1]", { groupId: "obs" }),
+        tableData.mapColumn("X[ENSG1]", { queryGroupId: "obs" }),
       ).resolves.toBeNull();
     });
   });

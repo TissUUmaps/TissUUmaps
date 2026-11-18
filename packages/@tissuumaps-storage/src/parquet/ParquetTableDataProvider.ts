@@ -123,9 +123,9 @@ export class ParquetTableDataProvider implements TableDataProvider<
       numRows,
       columns,
       coordinateColumns,
-      categoricalColumns,
       ids,
       names,
+      categoricalColumns,
     );
   }
 }

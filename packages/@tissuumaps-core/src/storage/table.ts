@@ -4,32 +4,28 @@ import type { ProgressCallback } from "../types/callbacks";
 import type { DataProvider, ItemsData } from "./base";
 
 /**
- * A group of the columns of a table to pick from, by the conventions of its
- * format (see `TableData.loadQueryGroups`)
+ * A group of a table's columns, by the conventions of its format (see
+ * `TableData.getQueryGroups`)
  *
- * A leaf is a set of columns that can be searched as one, e.g. the features
- * of one expression matrix. Its `id` is passed back as `groupId` (see
- * `TableData.suggestColumnQueries`); it is opaque to callers, unique among the
- * table's leaves and stable across reopening the table. A node gathers
- * subgroups that hold the same kind of columns, e.g. the features of AnnData
- * in `X`, a layer and `raw`; a column maps between the leaves below one
- * top-level query group (see `TableData.mapColumn`). Query groups may nest to
- * any depth. Names are for display only: they do not identify query groups or
- * columns.
+ * A query group without subgroups is a leaf: a set of columns searched as one,
+ * e.g. the features of one expression matrix. Pass its `id` as
+ * `queryGroupId` (see `TableData.suggestColumnQueries`). A query group with
+ * subgroups gathers leaves that hold the same kind of columns, e.g. the
+ * features of AnnData in `X`, a layer and `raw`. Names are for display only.
  */
-export type TableColumnQueryGroup =
-  | {
-      /** The name to show for the leaf, e.g. "X" */
-      name: string;
-      /** The key of the leaf, passed back as `groupId` */
-      id: string;
-    }
-  | {
-      /** The name to show for the node, e.g. "Features" */
-      name: string;
-      /** The query groups below this one */
-      subgroups: TableColumnQueryGroup[];
-    };
+export type TableColumnQueryGroup = {
+  /**
+   * The key of the query group, unique among the table's query groups and
+   * stable across reopening the table
+   */
+  id: string;
+
+  /** The name to show, e.g. "Features" */
+  name: string;
+
+  /** The query groups below this one, if it is no leaf */
+  subgroups?: TableColumnQueryGroup[];
+};
 
 /** A column query suggested by `TableData.suggestColumnQueries` */
 export type TableColumnQuerySuggestion = {
@@ -38,7 +34,7 @@ export type TableColumnQuerySuggestion = {
 
   /**
    * The name to show for the suggested column, if the query is not one (e.g.
-   * the gene symbol of a matrix column whose query names its gene ID)
+   * the gene name of a matrix column)
    */
   name?: string;
 
@@ -47,25 +43,13 @@ export type TableColumnQuerySuggestion = {
    *
    * A group suggestion does not resolve to a column; it continues the query,
    * e.g. into the columns of a group or a matrix. Other suggestions are
-   * expected to resolve to an exact column name. Unrelated to query groups,
-   * whose leaves are identified by their `id` (see
-   * `TableData.loadQueryGroups`).
+   * expected to resolve to an exact column name. Unrelated to query groups
+   * (see `TableData.getQueryGroups`).
    *
    * @defaultValue false
    */
   group?: boolean;
 };
-
-/**
- * The type of a table column's values, as far as coloring and grouping by it
- * are concerned
- *
- * - `"number"`: numeric values on a continuous scale
- * - `"category"`: categories, whatever their values (e.g. strings, or the
- *   numeric categories of an AnnData categorical)
- * - `"boolean"`: two states (possibly with missing values)
- */
-export type TableColumnDataType = "number" | "category" | "boolean";
 
 /**
  * Loaded tabular data providing column-wise access
@@ -80,28 +64,27 @@ export type TableColumnDataType = "number" | "category" | "boolean";
  */
 export interface TableData extends ItemsData {
   /**
-   * Returns column query suggestions for the current query
+   * Suggests column queries matching the current query
    *
-   * The query format is up to the provider. Suggestions matching the current
+   * Suggestions are unique by query. Suggestions that resolve to the current
    * query come first, best matches first, followed by the other suggestions.
    * The list is not capped.
    *
-   * Scoped to a leaf query group (see {@link loadQueryGroups}), the
-   * suggestions are the columns of that leaf, and the current query is matched
-   * against their names (and their queries) rather than continued as a query.
+   * Within a leaf query group (see {@link getQueryGroups}), the suggestions
+   * are the leaf's columns, and the current query is matched against their
+   * names.
    *
-   * @param currentQuery - The partial column query to autocomplete, or the
-   * text to search for within a leaf query group
-   * @param options - The `id` of the leaf query group to suggest the columns
-   * of (`groupId`), if any, and an optional abort signal
+   * @param currentQuery - The partial column query, or the text to search for
+   * within a leaf query group
+   * @param options - The `id` of a leaf query group (`queryGroupId`), if any,
+   * and an optional abort signal
    * @returns A list of suggested column queries
-   * @throws Error if the table implements {@link loadQueryGroups} and has no
-   * query group with the given `id`; tables without query groups ignore the
-   * option
+   * @throws Error if the table has query groups but no leaf with the given
+   * `id`; tables without query groups ignore the option
    */
   suggestColumnQueries(
     currentQuery: string,
-    options?: { groupId?: string; signal?: AbortSignal },
+    options?: { queryGroupId?: string; signal?: AbortSignal },
   ): Promise<TableColumnQuerySuggestion[]>;
 
   /**
@@ -117,74 +100,68 @@ export interface TableData extends ItemsData {
   ): Promise<string | null>;
 
   /**
-   * Lists the query groups of the table's columns, by the conventions of its
-   * format, for picking columns by group rather than by query
+   * Returns the query groups of the table's columns, by the conventions of its
+   * format
    *
    * Only implemented by table data whose format groups its columns (e.g. the
-   * annotations and the features of AnnData); an empty list means that the
-   * table has no such groups. How query groups are presented is up to the
-   * caller.
+   * annotations and the features of AnnData); callers without it pick columns
+   * by query (see {@link suggestColumnQueries}).
    *
-   * @param options - Optional abort signal
    * @returns The top-level query groups, in the canonical order of the format
    */
-  loadQueryGroups?(options?: {
-    signal?: AbortSignal;
-  }): Promise<TableColumnQueryGroup[]>;
+  getQueryGroups?(): TableColumnQueryGroup[];
 
   /**
-   * Describes a column by the leaf query group holding it and its name (see
-   * {@link loadQueryGroups})
+   * Loads the leaf query group of a column and the column's name in it (see
+   * {@link getQueryGroups})
+   *
+   * Only implemented by table data with query groups. Async, as naming a column
+   * may take a read (e.g. gene names from a column of `var`).
    *
    * @param column - The column name
    * @param options - Optional abort signal
-   * @returns The `id` of the column's leaf query group (`groupId`) and the
-   * column's name, or `null` if the column belongs to no query group
+   * @returns The `id` of the column's leaf query group and the column's name,
+   * or `null` if the column belongs to no query group
    */
   describeColumn?(
     column: string,
     options?: { signal?: AbortSignal },
-  ): Promise<{ groupId: string; name: string } | null>;
+  ): Promise<{ queryGroupId: string; name: string } | null>;
 
   /**
-   * Maps a column to the column of another leaf query group holding the same
-   * entity (e.g. the same gene in another expression matrix), as far as the
-   * format tells; names are never used to decide that
+   * Loads the column of another leaf query group that holds the same entity
+   * (e.g. the same gene in another expression matrix), as far as the format
+   * tells
    *
-   * Columns map only between the leaves below one top-level query group (see
-   * {@link loadQueryGroups}): a column of another top-level query group maps
-   * to `null`.
+   * Only implemented by table data with query groups. Columns map only between
+   * the leaves below one top-level query group (see {@link getQueryGroups});
+   * names are never used to decide that.
    *
    * @param column - The column name
    * @param options - The `id` of the leaf query group to map the column to
-   * and an optional abort signal
-   * @returns The column of the query group, or `null` if it has none for the
-   * entity
-   * @throws Error if the table has no query group with the given `id`
+   * (`queryGroupId`) and an optional abort signal
+   * @returns The column of the leaf query group, or `null` if it has none for
+   * the entity
+   * @throws Error if the table has no leaf query group with the given `id`
    */
   mapColumn?(
     column: string,
-    options: { groupId: string; signal?: AbortSignal },
+    options: { queryGroupId: string; signal?: AbortSignal },
   ): Promise<string | null>;
 
   /**
-   * Loads the type that a column's encoding declares
+   * Returns whether a column holds categories, as its encoding declares
    *
-   * Only implemented by table data whose format declares column types that
-   * the loaded values do not reveal (e.g. AnnData categoricals with numeric
-   * categories, or nullable booleans loaded as numbers); otherwise, callers
-   * derive the type from the values loaded by {@link loadValues} (see
-   * `TableUtils.computeColumnDataType`).
+   * Only implemented by table data whose format declares categories that the
+   * loaded values do not reveal (e.g. AnnData categoricals with numeric
+   * categories); callers without it, or given `undefined`, inspect the values
+   * (see `TableUtils.loadIsColumnCategorical`).
    *
    * @param column - The column name
-   * @param options - Optional abort signal
-   * @returns The declared type, or `undefined` if the format declares none for
-   * the column
+   * @returns Whether the column is categorical, or `undefined` if the format
+   * does not say
    */
-  loadColumnDataType?(
-    column: string,
-    options?: { signal?: AbortSignal },
-  ): Promise<TableColumnDataType | undefined>;
+  isColumnCategorical?(column: string): boolean | undefined;
 
   /**
    * Loads a column's values

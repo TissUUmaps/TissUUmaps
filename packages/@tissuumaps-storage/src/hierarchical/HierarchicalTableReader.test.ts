@@ -222,7 +222,7 @@ describe("HierarchicalTableReader", () => {
       ]);
     });
 
-    it("records the declared types", async () => {
+    it("records the declared categoricals", async () => {
       const reader = await openReader(annData({}));
       const byPath = new Map(
         reader.columns.map((column) => [column.path, column]),
@@ -230,13 +230,13 @@ describe("HierarchicalTableReader", () => {
       expect(byPath.get("obs/cell_type")).toEqual({
         kind: "dataset",
         path: "obs/cell_type",
-        dataType: "category",
+        categorical: true,
       });
-      expect(byPath.get("obs/flag")).toMatchObject({ dataType: "boolean" });
-      expect(byPath.get("obs/score")).not.toHaveProperty("dataType");
+      expect(byPath.get("obs/flag")).toMatchObject({ categorical: true });
+      expect(byPath.get("obs/score")).not.toHaveProperty("categorical");
     });
 
-    it("lists the column groups of an AnnData object", async () => {
+    it("lists the query groups of an AnnData object", async () => {
       const reader = await openReader(
         annData({
           raw: group({
@@ -246,15 +246,14 @@ describe("HierarchicalTableReader", () => {
           layers: group({
             csr: sparse("csr_matrix", [3, 2], [], [], [0, 0, 0, 0]),
           }),
+          obsm: group({ X_umap: array(new Float32Array(6), [3, 2]) }),
           obsp: group({ distances: array(new Float32Array(9), [3, 3]) }),
         }),
       );
-      expect(reader.columnGroups).toEqual([
+      expect(reader.queryGroups).toEqual([
+        { id: "obs", name: "Annotations", indexPath: "obs/_index" },
         {
-          name: "Annotations",
-          subgroups: [{ id: "obs", name: "obs", indexPath: "obs/_index" }],
-        },
-        {
+          id: "var",
           name: "Features",
           subgroups: [
             { id: "X", name: "X" },
@@ -262,10 +261,15 @@ describe("HierarchicalTableReader", () => {
             { id: "raw/X", name: "raw" },
           ],
         },
+        {
+          id: "obsm",
+          name: "Embeddings",
+          subgroups: [{ id: "obsm/X_umap", name: "X_umap" }],
+        },
       ]);
     });
 
-    it("keeps group names distinct", async () => {
+    it("keeps feature names distinct", async () => {
       const reader = await openReader(
         annData({
           layers: group({
@@ -278,11 +282,10 @@ describe("HierarchicalTableReader", () => {
         }),
       );
       expect(
-        reader.columnGroups.flatMap(({ subgroups }) =>
-          subgroups.map(({ id, name }) => [id, name]),
-        ),
+        reader.queryGroups
+          .find(({ name }) => name === "Features")
+          ?.subgroups?.map(({ id, name }) => [id, name]),
       ).toEqual([
-        ["obs", "obs"],
         ["X", "X"],
         ["layers/raw", "layers/raw"],
         ["raw/X", "raw"],
@@ -299,7 +302,7 @@ describe("HierarchicalTableReader", () => {
           { "encoding-type": "anndata" },
         ),
       );
-      expect(reader.columnGroups.map(({ name }) => name)).toEqual(["Features"]);
+      expect(reader.queryGroups.map(({ name }) => name)).toEqual(["Features"]);
     });
 
     it("takes the row count from the obs index of an AnnData object", async () => {

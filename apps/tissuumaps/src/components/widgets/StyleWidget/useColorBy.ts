@@ -1,10 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import {
-  MathUtils,
-  type TableColumnDataType,
-  TableUtils,
-} from "@tissuumaps/core";
+import { MathUtils, TableUtils } from "@tissuumaps/core";
 
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { useLazyTableData } from "@/data/hooks/useLazyData";
@@ -20,8 +16,8 @@ const maxCategoryCount = 1000;
 
 /** The state of coloring by a column of the object's own table */
 export type ColorByState = {
-  /** The type of the colored column's values, once it is known */
-  dataType: TableColumnDataType | null;
+  /** Whether the colored column is categorical, once it is known */
+  isCategorical: boolean | null;
 
   /** Whether a column is being loaded for a pick or a switch */
   isPending: boolean;
@@ -43,8 +39,8 @@ export type ColorByState = {
  * Picks the column to color by and switches between categories and a
  * gradient, loading what that takes from the object's own table
  *
- * Numeric columns are shown as a gradient, all other columns (and those the
- * table declares as categories or booleans) as categories. Showing a column
+ * Categorical columns are shown as categories, all others as a gradient (see
+ * `TableUtils.loadIsColumnCategorical`). Showing a column
  * as categories, whether picked or switched to, counts its distinct values
  * first, and asks for confirmation beyond {@link maxCategoryCount}. Nothing is written until the user picks or
  * switches; the write happens once the column is loaded, so the caller must
@@ -62,7 +58,7 @@ export function useColorBy(
 ): ColorByState {
   const loadTableData = useLazyTableData(tableId);
   const confirm = useConfirmDialog();
-  const [dataType, setDataType] = useState<TableColumnDataType | null>(null);
+  const [isCategorical, setCategorical] = useState<boolean | null>(null);
   const [isPending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -70,12 +66,12 @@ export function useColorBy(
   const column = colorBy.kind === "column" ? colorBy.column : null;
   const encoding = colorBy.kind === "column" ? colorBy.encoding : null;
 
-  // the column's type follows the configuration, e.g. when it is
-  // edited in the advanced settings; the column is loaded anyway to render it
+  // follows the configuration, e.g. when the column is edited in the
+  // advanced settings; the column is loaded anyway to render it
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- reset synchronously,
        so that nothing stale is shown while the new column loads */
-    setDataType(null);
+    setCategorical(null);
     /* eslint-enable react-hooks/set-state-in-effect */
     if (column === null) {
       return;
@@ -87,12 +83,11 @@ export function useColorBy(
       if (tableData === null) {
         return;
       }
-      const newDataType = await TableUtils.loadColumnDataType(
-        tableData,
-        column,
-        { signal },
+      setCategorical(
+        await TableUtils.loadIsColumnCategorical(tableData, column, {
+          signal,
+        }),
       );
-      setDataType(newDataType);
     })().catch((error: unknown) => {
       if (!signal.aborted) {
         console.error("Failed to load the column to color by", error);
@@ -173,21 +168,18 @@ export function useColorBy(
     }
     run(async (signal) => {
       const tableData = await loadTable(signal);
-      const newDataType = await TableUtils.loadColumnDataType(
+      const isNewCategorical = await TableUtils.loadIsColumnCategorical(
         tableData,
         newColumn,
         { signal },
       );
-      if (
-        newDataType !== "number" &&
-        !(await confirmCategories(newColumn, signal))
-      ) {
+      if (isNewCategorical && !(await confirmCategories(newColumn, signal))) {
         return null;
       }
       return {
         kind: "column",
         column: newColumn,
-        encoding: newDataType === "number" ? "gradient" : "categories",
+        encoding: isNewCategorical ? "categories" : "gradient",
       };
     });
   };
@@ -207,5 +199,5 @@ export function useColorBy(
     });
   };
 
-  return { dataType, isPending, error, pick, setEncoding };
+  return { isCategorical, isPending, error, pick, setEncoding };
 }
