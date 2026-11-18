@@ -259,6 +259,10 @@ export type OpacityConfig =
        * If not specified, the range is from `0` to the maximum value of the
        * table column. An end that is `null` is `0` for the minimum, or the
        * maximum value of the table column for the maximum.
+       *
+       * If the maximum is not set and the table column has no value range (it
+       * is not numerical or holds no two distinct finite values), the range is
+       * `[0, 1]` and the minimum is not applied.
        */
       range?: [number | null, number | null];
     }>

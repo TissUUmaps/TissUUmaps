@@ -168,7 +168,8 @@ export class OpacityResolver {
    * them linearly from the configured range to opacities
    *
    * An unset minimum of the range is `0`; an unset maximum is the maximum value
-   * of the table column.
+   * of the table column. Without a value range of the table column, the range
+   * is `[0, 1]`.
    *
    * @param ids - Ordered list of item IDs
    * @param config - From configuration specifying the source column and range
