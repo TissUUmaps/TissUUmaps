@@ -355,8 +355,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * @param syncContext - The inputs of the current synchronization
    * @param options - Optional abort signal
    * @returns The snapshot the decisions were based on, the masked geometry
-   * (new objects only), the bounds, and the attributes that have to be
-   * uploaded, each resolved per point or as a constant
+   * (new objects only), the bounds, the attributes that have to be uploaded,
+   * each resolved per point or as a constant, and the draw order
    */
   protected override async prepareRenderedObject(
     newRef: PointsRef,
@@ -642,8 +642,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   }
 
   /**
-   * Deletes the vertex array and all attribute buffers owned by a single
-   * rendered object
+   * Deletes the vertex array, the attribute buffers and the index buffer owned
+   * by a single rendered object
    *
    * @param renderedPoints - The rendered object whose GPU resources to delete
    */
@@ -1154,9 +1154,10 @@ type PreparedPoints = {
  * the per-point attributes, each backed by a buffer holding one value per
  * point or by one constant value for all points (see
  * {@link WebGLPointsRenderer._backAttribute}), the index buffer holding the
- * draw order, if any (see {@link WebGLPointsRenderer._backOrder}), plus a snapshot of the model
- * values they were loaded from, which the change predicates compare against
- * (see {@link WebGLPointsRenderer._createRenderConfigSnapshot}). Layer- and
+ * draw order, if any (see {@link WebGLPointsRenderer._backOrder}), plus a
+ * snapshot of the model values they were loaded from, which the change
+ * predicates compare against (see
+ * {@link WebGLPointsRenderer._createRenderConfigSnapshot}). Layer- and
  * object-level properties are read from the current model when drawing (see
  * {@link WebGLRendererBase.getRenderPasses}), and are not part of the snapshot.
  */
