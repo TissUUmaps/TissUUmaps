@@ -8,11 +8,14 @@ import { projectStore } from "@/stores/project";
 import {
   clearProjectURLParams,
   downloadProject,
+  getProjectFileExtensions,
+  getProjectFileTypes,
   importProjectFromURL,
   mergeProject,
   openProjectFromFile,
   openProjectFromFileHandle,
   openProjectFromURL,
+  pickLocalProjectProvider,
   pickProjectProvider,
   readProjectURLParams,
   resolveProjectSource,
@@ -446,6 +449,7 @@ function makeLoadingProjectProvider(
   return {
     name,
     urlParam,
+    fileTypes: { "application/octet-stream": [extension] },
     supports: (normalizedSource) =>
       Promise.resolve(normalizedSource.endsWith(extension)),
     load: (normalizedSource) =>
@@ -506,6 +510,78 @@ describe("project providers", () => {
       await expect(
         pickProjectProvider("https://data.example/a.csv", null),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe("pickLocalProjectProvider", () => {
+    it("matches files by their file extension, regardless of case", () => {
+      expect(pickLocalProjectProvider(new File([], "Project.TM4"))).toBe(
+        tm4Provider,
+      );
+      expect(pickLocalProjectProvider(new File([], "a.csv"))).toBeUndefined();
+    });
+
+    it("skips project providers that cannot load", () => {
+      appStore.setState({ projectProviders: new Map() });
+      appStore.getState().registerProjectProvider("writer", {
+        name: "Writer",
+        fileTypes: { "application/json": [".tm4"] },
+        toFile: () => Promise.resolve(new File([], "p")),
+      });
+      expect(
+        pickLocalProjectProvider(new File([], "project.tm4")),
+      ).toBeUndefined();
+    });
+  });
+
+  describe("getProjectFileExtensions", () => {
+    it("returns the file extensions of the project providers that can load", () => {
+      appStore.getState().registerProjectProvider("other", {
+        ...tm4Provider,
+        fileTypes: { "application/json": [".tm4", ".json"] },
+      });
+      appStore.getState().registerProjectProvider("writer", {
+        name: "Writer",
+        fileTypes: { "application/xml": [".xml"] },
+        toFile: () => Promise.resolve(new File([], "p")),
+      });
+      expect(getProjectFileExtensions()).toEqual([".tm4", ".zarr", ".json"]);
+    });
+  });
+
+  describe("getProjectFileTypes", () => {
+    it("offers all project files first, then those of each project provider", () => {
+      appStore.getState().registerProjectProvider("json", {
+        ...tm4Provider,
+        name: "JSON",
+        fileTypes: { "application/json": [".tm4", ".json"] },
+      });
+      appStore.getState().registerProjectProvider("writer", {
+        name: "Writer",
+        fileTypes: { "application/xml": [".xml"] },
+        toFile: () => Promise.resolve(new File([], "p")),
+      });
+      expect(getProjectFileTypes()).toEqual([
+        {
+          description: "Project",
+          accept: {
+            "application/octet-stream": [".tm4", ".zarr"],
+            "application/json": [".tm4", ".json"],
+          },
+        },
+        {
+          description: "TM4 project",
+          accept: { "application/octet-stream": [".tm4"] },
+        },
+        {
+          description: "Zarr project",
+          accept: { "application/octet-stream": [".zarr"] },
+        },
+        {
+          description: "JSON project",
+          accept: { "application/json": [".tm4", ".json"] },
+        },
+      ]);
     });
   });
 

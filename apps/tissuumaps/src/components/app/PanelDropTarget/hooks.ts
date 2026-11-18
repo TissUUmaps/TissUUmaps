@@ -12,10 +12,13 @@ import {
 import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { useLoadProjectFile } from "@/components/panels/ProjectPanel/hooks";
-import { resolveProjectSource } from "@/data/io/project";
+import {
+  getProjectFileExtensions,
+  pickLocalProjectProvider,
+  resolveProjectSource,
+} from "@/data/io/project";
 import {
   isWorkspaceSupported,
-  projectFileExtensions,
   readDroppedItems,
   resolveWorkspacePath,
 } from "@/data/io/workspace";
@@ -65,8 +68,8 @@ export function usePanelDrop(panelId: string): {
     const items = await readDroppedItems(dataTransfer);
     const item = items[0];
     const dropHint = isWorkspaceSupported()
-      ? `Drop a single project file (${projectFileExtensions.join(", ")}) or folder.`
-      : `Drop a single project file (${projectFileExtensions.join(", ")}).`;
+      ? `Drop a single project file (${getProjectFileExtensions().join(", ")}) or folder.`
+      : `Drop a single project file (${getProjectFileExtensions().join(", ")}).`;
     if (item === undefined || items.length > 1) {
       await alert({
         title: "Cannot open the dropped items",
@@ -107,11 +110,7 @@ export function usePanelDrop(panelId: string): {
       });
       return;
     }
-    if (
-      !projectFileExtensions.some((projectFileExtension) =>
-        projectFile.name.toLowerCase().endsWith(projectFileExtension),
-      )
-    ) {
+    if (pickLocalProjectProvider(projectFile) === undefined) {
       await alert({
         title: "Cannot open the dropped item",
         body: `"${projectFile.name}" is not a project file. ${dropHint}`,
@@ -203,7 +202,7 @@ export function usePanelDrop(panelId: string): {
         label: "Drop to open",
         accepts: [
           ...(isWorkspaceSupported() ? ["Workspace (folder)"] : []),
-          `Project file (${projectFileExtensions.join(", ")})`,
+          `Project file (${getProjectFileExtensions().join(", ")})`,
         ],
         onDrop: dropProject,
       };

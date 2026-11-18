@@ -17,12 +17,16 @@ export const tissuumapsProjectType = "tissuumaps";
  * `JSONUtils`. Its relative data sources are relative to the file.
  */
 export class TissUUmapsProjectProvider implements ProjectProvider {
-  private static readonly _extension = ".tm4";
   private static readonly _mediaType = "application/json";
+  private static readonly _extension = ".tm4";
 
   readonly name = "TissUUmaps";
   readonly urlParam = "project";
-  readonly fileExtensions = [TissUUmapsProjectProvider._extension];
+  readonly fileTypes = {
+    [TissUUmapsProjectProvider._mediaType]: [
+      TissUUmapsProjectProvider._extension,
+    ],
+  };
 
   supports(normalizedSource: string): Promise<boolean> {
     return Promise.resolve(

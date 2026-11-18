@@ -599,6 +599,89 @@ export async function pickProjectProvider(
 }
 
 /**
+ * Returns the first registered project provider that loads a local file, by
+ * its extension
+ *
+ * Only project providers that implement `load` are considered, in
+ * registration order, matching the extensions of their `fileTypes`
+ * regardless of case.
+ *
+ * @param projectFile - The file, or its handle
+ * @returns The project provider, or `undefined` if none loads it
+ */
+export function pickLocalProjectProvider(
+  projectFile: File | FileSystemFileHandle,
+): ProjectProvider | undefined {
+  const name = projectFile.name.toLowerCase();
+  return Array.from(appStore.getState().projectProviders.values()).find(
+    (projectProvider) =>
+      projectProvider.load !== undefined &&
+      Object.values(projectProvider.fileTypes ?? {})
+        .flat()
+        .some((fileExtension) => name.endsWith(fileExtension)),
+  );
+}
+
+/**
+ * Returns the extensions of the project files that the registered project
+ * providers load, without duplicates
+ *
+ * @returns The file extensions, in lowercase and with leading dot
+ */
+export function getProjectFileExtensions(): string[] {
+  const fileExtensions = new Set<string>();
+  for (const projectProvider of appStore.getState().projectProviders.values()) {
+    if (projectProvider.load !== undefined) {
+      for (const fileExtension of Object.values(
+        projectProvider.fileTypes ?? {},
+      ).flat()) {
+        fileExtensions.add(fileExtension);
+      }
+    }
+  }
+  return Array.from(fileExtensions);
+}
+
+/**
+ * Returns the types of project files that the registered project providers
+ * load, as filters for a file picker
+ *
+ * All project files come first, as file pickers select the first filter,
+ * followed by the project files of each project provider that implements
+ * `load` and has `fileTypes`, named after it.
+ *
+ * @returns The descriptions, and the file extensions by media type
+ */
+export function getProjectFileTypes(): {
+  description: string;
+  accept: Record<string, string[]>;
+}[] {
+  const allAccept: Record<string, string[]> = {};
+  const fileTypes: { description: string; accept: Record<string, string[]> }[] =
+    [];
+  for (const projectProvider of appStore.getState().projectProviders.values()) {
+    if (
+      projectProvider.load === undefined ||
+      projectProvider.fileTypes === undefined
+    ) {
+      continue;
+    }
+    for (const [mediaType, fileExtensions] of Object.entries(
+      projectProvider.fileTypes,
+    )) {
+      allAccept[mediaType] = [
+        ...new Set([...(allAccept[mediaType] ?? []), ...fileExtensions]),
+      ];
+    }
+    fileTypes.push({
+      description: `${projectProvider.name} project`,
+      accept: projectProvider.fileTypes,
+    });
+  }
+  return [{ description: "Project", accept: allAccept }, ...fileTypes];
+}
+
+/**
  * Returns the projects named by the GET parameters of the registered project
  * providers, in the order of the parameters
  *

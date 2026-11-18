@@ -7,10 +7,14 @@ import { usePromptDialog } from "@/components/dialogs/PromptDialog/hooks";
 import {
   clearProjectURLParams,
   downloadProject,
+  getProjectFileExtensions,
+  getProjectFileTypes,
   getProjectProvider,
   openProjectFromFile,
   openProjectFromFileHandle,
   openProjectFromURL,
+  pickLocalProjectProvider,
+  pickProjectProvider,
   resolveProjectSource,
   setProjectURLParam,
 } from "@/data/io/project";
@@ -87,13 +91,16 @@ export function useOpenEmptyProject(): () => void {
 
 /**
  * Returns a callback that asks the user for a project URL, and loads the
- * project from it
+ * project from it with the first project provider that supports it (see
+ * `pickProjectProvider`)
  *
  * Failures are logged, as the callback is called from event handlers.
  *
  * @returns The callback
  */
 export function useOpenProjectFromURL(): () => void {
+  const workspace = useAppStore((state) => state.workspace);
+
   const prompt = usePromptDialog();
 
   return useCallback(() => {
@@ -101,7 +108,13 @@ export function useOpenProjectFromURL(): () => void {
       .then(async (value) => {
         const projectUrl = value?.trim();
         if (projectUrl) {
-          const projectProvider = getProjectProvider(tissuumapsProjectType);
+          const projectProvider = await pickProjectProvider(
+            new URL(projectUrl, document.baseURI).href,
+            workspace,
+          );
+          if (projectProvider === undefined) {
+            throw new Error(`No project provider supports ${projectUrl}.`);
+          }
           await openProjectFromURL(projectProvider, projectUrl);
           setProjectURLParam(projectProvider, projectUrl);
         }
@@ -109,7 +122,7 @@ export function useOpenProjectFromURL(): () => void {
       .catch((error) => {
         console.error("Failed to load project from URL", error);
       });
-  }, [prompt]);
+  }, [workspace, prompt]);
 }
 
 /**
@@ -132,8 +145,8 @@ export function useOpenProjectFromFile(): () => void {
   return useCallback(() => {
     const pickedProjectFile =
       workspace === null
-        ? pickProjectFileFromInput()
-        : pickProjectFile({ startIn: workspace });
+        ? pickProjectFileFromInput(getProjectFileExtensions())
+        : pickProjectFile(getProjectFileTypes(), { startIn: workspace });
     void pickedProjectFile
       .then(async (projectFile) => {
         if (projectFile === null) {
@@ -162,12 +175,14 @@ export function useOpenProjectFromFile(): () => void {
 /**
  * Returns a function that loads a project from a file and marks it open
  *
- * A file handle is loaded with its source if it lies within the workspace
- * (see `openProjectFromFileHandle`), a file without one. The project URL
+ * The file is loaded with the first project provider that loads files with
+ * its extension (see `pickLocalProjectProvider`). A file handle is loaded with
+ * its source if it lies within the workspace (see
+ * `openProjectFromFileHandle`), a file without one. The project URL
  * parameters are cleared, as they name other projects.
  *
- * @returns The function, which rejects if the project cannot be read or
- * parsed
+ * @returns The function, which rejects if no project provider loads the file,
+ * or if the project cannot be read or parsed
  */
 export function useLoadProjectFile(): (
   projectFile: FileSystemFileHandle | File,
@@ -177,7 +192,10 @@ export function useLoadProjectFile(): (
 
   return useCallback(
     async (projectFile) => {
-      const projectProvider = getProjectProvider(tissuumapsProjectType);
+      const projectProvider = pickLocalProjectProvider(projectFile);
+      if (projectProvider === undefined) {
+        throw new Error(`No project provider loads "${projectFile.name}".`);
+      }
       if (projectFile instanceof File) {
         await openProjectFromFile(projectProvider, projectFile);
       } else {

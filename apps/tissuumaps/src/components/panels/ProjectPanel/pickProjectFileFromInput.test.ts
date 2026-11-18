@@ -22,23 +22,23 @@ describe("pickProjectFileFromInput", () => {
       Object.defineProperty(input, "files", { value: [file] });
       input.dispatchEvent(new Event("change"));
     });
-    await expect(pickProjectFileFromInput()).resolves.toBe(file);
+    await expect(pickProjectFileFromInput([".tm4"])).resolves.toBe(file);
   });
 
-  it("offers project files", async () => {
+  it("offers the given project file extensions", async () => {
     let accept: string | undefined;
     stubFileInputClick((input) => {
       accept = input.accept;
       input.dispatchEvent(new Event("cancel"));
     });
-    await pickProjectFileFromInput();
-    expect(accept).toBe(".tm4");
+    await pickProjectFileFromInput([".tm4", ".json"]);
+    expect(accept).toBe(".tm4,.json");
   });
 
   it("returns null when the user cancels", async () => {
     stubFileInputClick((input) => {
       input.dispatchEvent(new Event("cancel"));
     });
-    await expect(pickProjectFileFromInput()).resolves.toBeNull();
+    await expect(pickProjectFileFromInput([".tm4"])).resolves.toBeNull();
   });
 });

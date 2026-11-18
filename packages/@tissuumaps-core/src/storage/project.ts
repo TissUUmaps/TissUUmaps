@@ -28,23 +28,16 @@ export interface ProjectProvider {
   readonly urlParam?: string;
 
   /**
-   * The extensions of the project files this project provider loads, in
-   * lowercase and with leading dot (e.g. `[".tm4"]`)
+   * The project files this project provider loads, as their extensions by
+   * media type, in lowercase and with leading dot (e.g.
+   * `{ "application/json": [".tm4"] }`)
    *
    * Used to pick a project provider for a local file, which has no source to
    * pass to {@link ProjectProvider.supports}, matching its name regardless of
    * case, and to filter file pickers. Only used for project providers that
    * implement {@link ProjectProvider.load}.
    */
-  readonly fileExtensions?: string[];
-
-  /**
-   * The extensions of the project directories this project provider loads, in
-   * lowercase and with leading dot (e.g. `[".zarr"]`)
-   *
-   * Used like {@link ProjectProvider.fileExtensions}, for local directories.
-   */
-  readonly directoryExtensions?: string[];
+  readonly fileTypes?: Record<string, string[]>;
 
   /**
    * Returns whether this project provider can likely load a source
