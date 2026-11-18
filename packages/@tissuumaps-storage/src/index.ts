@@ -5,6 +5,7 @@ export * from "./hierarchical/zarr";
 export * from "./ome-zarr";
 export * from "./openseadragon";
 export * from "./parquet";
+export * from "./spatialdata";
 export * from "./table";
 export * from "./tiff";
 export * from "./tissuumaps";
