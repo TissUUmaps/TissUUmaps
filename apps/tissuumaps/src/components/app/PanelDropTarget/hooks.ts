@@ -21,10 +21,14 @@ import {
   useLoadProjectFile,
 } from "@/components/panels/ProjectPanel/hooks";
 import {
+  clearProjectURLParams,
   findLocalProjectProviders,
+  findProjectProviders,
   getProjectFileExtensions,
+  importProjectFromDirectoryHandle,
   importProjectFromFile,
   importProjectFromFileHandle,
+  openProjectFromDirectoryHandle,
   resolveProjectSource,
 } from "@/data/io/project";
 import {
@@ -42,9 +46,12 @@ import { projectStore, useProjectStore } from "@/stores/project";
  *
  * The project panel accepts a single project file, which it opens, or
  * imports into the open project if the user chooses so, or a single
- * directory, which it opens as the workspace, either after confirmation.
- * Without an open project, a file that no project provider or several load
- * by its extension is confirmed by choosing the project provider (see
+ * directory, either after confirmation. A directory that a project provider
+ * supports is handled like a project file if it lies within the workspace;
+ * otherwise, the user can open it as the workspace, and as a project from the
+ * workspace root, too. Any other directory is opened as the workspace.
+ * Without an open project, a project file that no project provider or several
+ * load by its extension is confirmed by choosing the project provider (see
  * `useChooseProjectProvider`). It warns about project files outside the
  * workspace when asking.
  * The data panels accept files and directories within the workspace, and
@@ -66,6 +73,7 @@ export function usePanelDrop(panelId: string): {
   const workspace = useAppStore((state) => state.workspace);
   const isProjectOpen = useAppStore((state) => state.projectOpen);
   const setWorkspace = useAppStore((state) => state.setWorkspace);
+  const setProjectOpen = useAppStore((state) => state.setProjectOpen);
 
   const hasLayers = useProjectStore((state) => state.layers.length > 0);
 
@@ -98,12 +106,38 @@ export function usePanelDrop(panelId: string): {
     }
     if (item.handle?.kind === "directory") {
       const directory = item.handle as FileSystemDirectoryHandle;
-      if (workspace !== null && (await workspace.isSameEntry(directory))) {
-        await alert({
-          title: "Workspace already open",
-          body: `The folder "${directory.name}" is already the workspace.`,
-        });
-        return;
+      const projectSource = await resolveProjectSource(directory, workspace);
+      if (workspace !== null && projectSource !== null) {
+        const foundProjectProviders = await findProjectProviders(
+          projectSource,
+          workspace,
+        );
+        if (foundProjectProviders.length > 0) {
+          await loadDroppedProject(
+            directory,
+            foundProjectProviders,
+            undefined,
+            workspace,
+          );
+          return;
+        }
+        if (projectSource === "/") {
+          await alert({
+            title: "Workspace already open",
+            body: `The folder "${directory.name}" is already the workspace.`,
+          });
+          return;
+        }
+      } else {
+        // the folder is checked as the workspace it would become
+        const foundProjectProviders = await findProjectProviders(
+          "/",
+          directory,
+        );
+        if (foundProjectProviders.length > 0) {
+          await openDroppedWorkspace(directory, foundProjectProviders);
+          return;
+        }
       }
       const confirmed = await confirm({
         title: "Open workspace",
@@ -135,7 +169,22 @@ export function usePanelDrop(panelId: string): {
         (await resolveProjectSource(projectFile, workspace)) === null)
         ? `"${projectFile.name}" is not in the workspace "${workspace.name}". Its relative paths will be looked up in "${workspace.name}" instead of next to the project file, so some of its data may fail to load.`
         : undefined;
-    const foundProjectProviders = findLocalProjectProviders(projectFile);
+    await loadDroppedProject(
+      projectFile,
+      findLocalProjectProviders(projectFile),
+      outsideWorkspaceNote,
+      workspace,
+    );
+  };
+
+  // asks whether to open the dropped project or to import it into the open
+  // project, and with which project provider, and does so
+  const loadDroppedProject = async (
+    projectFile: File | FileSystemFileHandle | FileSystemDirectoryHandle,
+    foundProjectProviders: ProjectProvider[],
+    outsideWorkspaceNote: string | undefined,
+    workspace: FileSystemDirectoryHandle | null,
+  ) => {
     let action: string | null;
     let projectProvider: ProjectProvider | null;
     if (isProjectOpen) {
@@ -184,12 +233,32 @@ export function usePanelDrop(panelId: string): {
       return;
     }
     try {
-      if (action === "open") {
-        await loadProjectFile(projectFile, projectProvider);
-      } else if (projectFile instanceof File) {
-        await importProjectFromFile(projectProvider, projectFile);
+      if (projectFile instanceof File || projectFile.kind === "file") {
+        if (action === "open") {
+          await loadProjectFile(projectFile, projectProvider);
+        } else if (projectFile instanceof File) {
+          await importProjectFromFile(projectProvider, projectFile);
+        } else {
+          await importProjectFromFileHandle(
+            projectProvider,
+            projectFile,
+            workspace,
+          );
+        }
+      } else if (workspace === null) {
+        throw new Error(
+          `The folder "${projectFile.name}" is not in the workspace.`,
+        );
+      } else if (action === "open") {
+        await openProjectFromDirectoryHandle(
+          projectProvider,
+          projectFile,
+          workspace,
+        );
+        clearProjectURLParams();
+        setProjectOpen(true);
       } else {
-        await importProjectFromFileHandle(
+        await importProjectFromDirectoryHandle(
           projectProvider,
           projectFile,
           workspace,
@@ -202,6 +271,59 @@ export function usePanelDrop(panelId: string): {
           action === "open"
             ? "Cannot open the project"
             : "Cannot import the project",
+        body: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
+  // asks whether to open the dropped folder as the workspace only, or as a
+  // project from the workspace root, too, and does so
+  const openDroppedWorkspace = async (
+    directory: FileSystemDirectoryHandle,
+    foundProjectProviders: ProjectProvider[],
+  ) => {
+    const question =
+      workspace !== null
+        ? `Open the folder "${directory.name}" as the workspace instead of "${workspace.name}", or also open it as a project?`
+        : `Open the folder "${directory.name}" as the workspace, or also open it as a project?`;
+    const action = await ask({
+      title: "Open workspace",
+      body: isProjectOpen
+        ? `${question} Opening it as a project replaces the open project, and unsaved changes are lost.`
+        : question,
+      actions: [
+        { value: "workspace", label: "Open workspace" },
+        { value: "project", label: "Open as project" },
+      ],
+    });
+    if (action === null) {
+      return;
+    }
+    if (action === "workspace") {
+      setWorkspace(directory);
+      return;
+    }
+    const projectProvider = await chooseProjectProvider(
+      directory.name,
+      foundProjectProviders,
+      { actionLabel: "Open" },
+    );
+    if (projectProvider === null) {
+      return;
+    }
+    setWorkspace(directory);
+    try {
+      await openProjectFromDirectoryHandle(
+        projectProvider,
+        directory,
+        directory,
+      );
+      clearProjectURLParams();
+      setProjectOpen(true);
+    } catch (error) {
+      console.error("Failed to open the dropped folder as a project", error);
+      await alert({
+        title: "Cannot open the project",
         body: error instanceof Error ? error.message : String(error),
       });
     }

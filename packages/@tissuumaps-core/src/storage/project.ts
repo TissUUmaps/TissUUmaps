@@ -10,9 +10,21 @@ import type { ProgressCallback } from "../types/callbacks";
  * either opens a loaded project, replacing the current one, or imports it,
  * merging it into the current one.
  *
- * {@link ProjectProvider.load} and {@link ProjectProvider.toFile} are both
- * optional, as some formats can only be read and others only be written, but
- * a project provider has to implement at least one of them.
+ * Its members serve three roles:
+ *
+ * - recognizing what it loads: {@link ProjectProvider.fileTypes} for local
+ *   files, {@link ProjectProvider.supports} for sources
+ * - loading: {@link ProjectProvider.load}, also from the GET parameter
+ *   {@link ProjectProvider.urlParam}
+ * - writing: {@link ProjectProvider.toFile}
+ *
+ * `load` and `toFile` are both optional, as some formats can only be read and
+ * others only be written, but a project provider has to implement at least
+ * one of them. The members for recognizing and loading are only used for
+ * project providers that implement `load`.
+ *
+ * A source can be the workspace root `/`, e.g. for a directory that is about
+ * to become the workspace.
  */
 export interface ProjectProvider {
   /** The human-readable name of the project provider */
@@ -21,9 +33,6 @@ export interface ProjectProvider {
   /**
    * The GET parameter naming a source to load with this project provider, if
    * any (e.g. `spatialdata` for `?spatialdata=…`)
-   *
-   * Only used for project providers that implement
-   * {@link ProjectProvider.load}.
    */
   readonly urlParam?: string;
 
@@ -34,8 +43,7 @@ export interface ProjectProvider {
    *
    * Used to pick a project provider for a local file, which has no source to
    * pass to {@link ProjectProvider.supports}, matching its name regardless of
-   * case, and to filter file pickers. Only used for project providers that
-   * implement {@link ProjectProvider.load}.
+   * case, and to filter file pickers.
    */
   readonly fileTypes?: Record<string, string[]>;
 
@@ -49,7 +57,7 @@ export interface ProjectProvider {
    *
    * @param normalizedSource - The source, normalized with
    * `SourceUtils.normalizeSource`
-   * @param workspace - The directory handle of the open workspace, if any
+   * @param workspace - The directory handle of the workspace, if any
    * @param options - Optional abort signal
    * @returns A promise that resolves to whether the source is supported
    */
@@ -66,7 +74,8 @@ export interface ProjectProvider {
    * are allowed, and preferred, so that the project stays portable. They are
    * resolved against the returned `source` with ordinary URL semantics, like
    * those of a project file against the file's location, so a dataset that is
-   * a directory includes its own name in them (e.g. `data.zarr/images/a`).
+   * a directory includes its own name in them (e.g. `data.zarr/images/a`),
+   * unless it is the workspace root (e.g. `images/a`).
    *
    * Every ID in the project has to be unique within it, and must not contain
    * `:`. The application rejects merging the project into another one that
@@ -75,7 +84,7 @@ export interface ProjectProvider {
    *
    * @param normalizedSource - The source, normalized with
    * `SourceUtils.normalizeSource`
-   * @param options - Optional abort signal, the directory handle of the open
+   * @param options - Optional abort signal, the directory handle of the
    * workspace, and a progress callback
    * @returns A promise that resolves to the project, and to where it was
    * actually read from: the absolute URL after following any redirects, or the
@@ -92,10 +101,9 @@ export interface ProjectProvider {
   ): Promise<{ project: RawProject; source: string }>;
 
   /**
-   * Writes a project to a single file
+   * Writes a project to a single file, which the application downloads
    *
-   * The application downloads the file, or writes it into the workspace. The
-   * project has been detached from the project store beforehand, and holds
+   * The project has been detached from the project store beforehand, and holds
    * the project's own properties only. Its data sources are written as they
    * are.
    *

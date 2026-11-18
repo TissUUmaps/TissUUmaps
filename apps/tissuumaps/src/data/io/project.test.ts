@@ -13,8 +13,10 @@ import {
   findProjectProviders,
   getProjectFileExtensions,
   getProjectFileTypes,
+  importProjectFromDirectoryHandle,
   importProjectFromURL,
   mergeProject,
+  openProjectFromDirectoryHandle,
   openProjectFromFile,
   openProjectFromFileHandle,
   openProjectFromURL,
@@ -55,6 +57,11 @@ describe("resolveProjectSource", () => {
     await expect(resolveProjectSource(projectFile, workspace)).resolves.toBe(
       "/project.tm4",
     );
+  });
+
+  it("returns the workspace root for the workspace itself", async () => {
+    const { workspace } = makeWorkspace([]);
+    await expect(resolveProjectSource(workspace, workspace)).resolves.toBe("/");
   });
 
   it("returns null for a file outside the workspace", async () => {
@@ -221,6 +228,86 @@ describe("openProjectFromFileHandle", () => {
       // @ts-expect-error removes what was stubbed above
       delete URL.revokeObjectURL;
     }
+  });
+});
+
+describe("openProjectFromDirectoryHandle", () => {
+  const projectDirectory = {
+    kind: "directory",
+    name: "data.zarr",
+  } as FileSystemDirectoryHandle;
+
+  beforeEach(() => {
+    projectStore.getState().clear();
+  });
+
+  it("loads a directory in the workspace through its workspace-relative path", async () => {
+    const { workspace } = makeWorkspace(["study", "data.zarr"]);
+    const { load, projectProvider } = makeProjectProvider();
+    await openProjectFromDirectoryHandle(
+      projectProvider,
+      projectDirectory,
+      workspace,
+    );
+    expect(load).toHaveBeenCalledWith("/study/data.zarr", {
+      signal: undefined,
+      workspace,
+    });
+    expect(projectStore.getState().source).toBe("/study/data.zarr");
+  });
+
+  it("loads the workspace itself through the workspace root", async () => {
+    const { workspace } = makeWorkspace([]);
+    const { load, projectProvider } = makeProjectProvider();
+    await openProjectFromDirectoryHandle(projectProvider, workspace, workspace);
+    expect(load).toHaveBeenCalledWith("/", { signal: undefined, workspace });
+    expect(projectStore.getState().source).toBe("/");
+  });
+
+  it("rejects a directory outside the workspace", async () => {
+    const { workspace } = makeWorkspace(null);
+    const { load, projectProvider } = makeProjectProvider();
+    await expect(
+      openProjectFromDirectoryHandle(
+        projectProvider,
+        projectDirectory,
+        workspace,
+      ),
+    ).rejects.toThrow(/not in the workspace/);
+    expect(load).not.toHaveBeenCalled();
+  });
+});
+
+describe("importProjectFromDirectoryHandle", () => {
+  beforeEach(() => {
+    projectStore.getState().clear();
+  });
+
+  afterEach(() => {
+    appStore.setState({ workspace: null });
+  });
+
+  it("merges the project, resolving its sources against the workspace root", async () => {
+    const { workspace } = makeWorkspace([]);
+    appStore.setState({ workspace });
+    const projectProvider: ProjectProvider = {
+      name: "Test",
+      load: (normalizedSource) =>
+        Promise.resolve({
+          project: makeMergedProject(),
+          source: normalizedSource,
+        }),
+    };
+    const { source } = projectStore.getState();
+    await importProjectFromDirectoryHandle(
+      projectProvider,
+      workspace,
+      workspace,
+    );
+    expect(projectStore.getState().source).toBe(source);
+    expect(projectStore.getState().images[0]?.dataSource.source).toBe(
+      "/images/a.tif",
+    );
   });
 });
 

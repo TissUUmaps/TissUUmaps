@@ -168,6 +168,34 @@ export async function openProjectFromFileHandle(
 }
 
 /**
+ * Loads a project from a directory handle with a project provider and opens it
+ *
+ * The directory has to lie within the open workspace, or be the workspace
+ * itself; it is opened with its workspace-relative path as its source.
+ *
+ * @param projectProvider - The project provider to load the project with
+ * @param projectDirectory - The handle of the directory to load the project
+ * from
+ * @param workspace - The directory handle of the open workspace
+ * @param options - Optional abort signal
+ * @throws See {@link loadProjectFromDirectoryHandle}
+ */
+export async function openProjectFromDirectoryHandle(
+  projectProvider: ProjectProvider,
+  projectDirectory: FileSystemDirectoryHandle,
+  workspace: FileSystemDirectoryHandle,
+  options?: { signal?: AbortSignal },
+): Promise<void> {
+  const { project, source } = await loadProjectFromDirectoryHandle(
+    projectProvider,
+    projectDirectory,
+    workspace,
+    options,
+  );
+  openProject(createProject(project), source);
+}
+
+/**
  * Merges a project into the open project
  *
  * The data sources of the merged project are normalized (see
@@ -354,18 +382,47 @@ export async function importProjectFromFileHandle(
 }
 
 /**
- * Determines where a project file is, for resolving its project-relative data
- * sources
+ * Loads a project from a directory handle with a project provider and merges
+ * it into the open project
  *
- * @param projectFile - The handle of the project file
+ * The directory has to lie within the open workspace, or be the workspace
+ * itself; it is merged with its workspace-relative path as its source.
+ *
+ * @param projectProvider - The project provider to load the project with
+ * @param projectDirectory - The handle of the directory to load the project
+ * from
+ * @param workspace - The directory handle of the open workspace
+ * @param options - Optional abort signal
+ * @throws See {@link loadProjectFromDirectoryHandle} and {@link mergeProject}
+ */
+export async function importProjectFromDirectoryHandle(
+  projectProvider: ProjectProvider,
+  projectDirectory: FileSystemDirectoryHandle,
+  workspace: FileSystemDirectoryHandle,
+  options?: { signal?: AbortSignal },
+): Promise<void> {
+  const { project, source } = await loadProjectFromDirectoryHandle(
+    projectProvider,
+    projectDirectory,
+    workspace,
+    options,
+  );
+  mergeProject(project, source);
+}
+
+/**
+ * Determines where a project file or directory is, for resolving its
+ * project-relative data sources
+ *
+ * @param projectFile - The handle of the project file or directory
  * @param workspace - The directory handle of the open workspace, if any
  * @param options - Optional abort signal
- * @returns The workspace-relative path of the file (with `/` prefix) if it
- * lies within the open workspace, or `null` if it does not, or if no workspace
- * is open
+ * @returns The workspace-relative path of the file or directory (with `/`
+ * prefix, and `/` for the workspace itself) if it lies within the open
+ * workspace, or `null` if it does not, or if no workspace is open
  */
 export async function resolveProjectSource(
-  projectFile: FileSystemFileHandle,
+  projectFile: FileSystemFileHandle | FileSystemDirectoryHandle,
   workspace: FileSystemDirectoryHandle | null,
   options?: { signal?: AbortSignal },
 ): Promise<string | null> {
@@ -474,6 +531,45 @@ async function loadProjectFromFileHandle(
     const file = await projectFile.getFile();
     signal?.throwIfAborted(); // getFile() does not throw on abort
     return loadProjectFromFile(projectProvider, file, options);
+  }
+  return loadWithProjectProvider(projectProvider, projectSource, {
+    signal,
+    workspace,
+  });
+}
+
+/**
+ * Loads a project from a directory handle with a project provider
+ *
+ * The directory is loaded through its workspace-relative path, which becomes
+ * its source. Unlike a file, a directory cannot be read without the
+ * workspace.
+ *
+ * @param projectProvider - The project provider to load the project with
+ * @param projectDirectory - The handle of the directory to load the project
+ * from
+ * @param workspace - The directory handle of the open workspace
+ * @param options - Optional abort signal
+ * @returns The loaded project and its source
+ * @throws Error if the directory does not lie within the workspace, if the
+ * project provider cannot load projects, or if the project cannot be loaded
+ */
+async function loadProjectFromDirectoryHandle(
+  projectProvider: ProjectProvider,
+  projectDirectory: FileSystemDirectoryHandle,
+  workspace: FileSystemDirectoryHandle,
+  options?: { signal?: AbortSignal },
+): Promise<{ project: RawProject; source: string }> {
+  const { signal } = options ?? {};
+  const projectSource = await resolveProjectSource(
+    projectDirectory,
+    workspace,
+    options,
+  );
+  if (projectSource === null) {
+    throw new Error(
+      `The folder "${projectDirectory.name}" is not in the workspace.`,
+    );
   }
   return loadWithProjectProvider(projectProvider, projectSource, {
     signal,
