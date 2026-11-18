@@ -20,7 +20,7 @@ import {
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
-import { ColorbarViewerControl } from "./ColorbarViewerControl";
+import { ColorbarsViewerControl } from "./ColorbarsViewerControl";
 import { ScaleBarViewerControl } from "./ScaleBarViewerControl";
 import { ViewerToolbar } from "./ViewerToolbar";
 import { highlightItemGroup } from "./highlightItemGroup";
@@ -157,7 +157,7 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
           anchor={ViewerControlAnchor.BOTTOM_RIGHT}
           autoFade={false}
         >
-          <ColorbarViewerControl />
+          <ColorbarsViewerControl />
         </ViewerControl>
       )}
     </Viewer>

@@ -11,7 +11,7 @@ import {
   isRandomConfig,
 } from "@tissuumaps/core";
 
-import { useValueRange } from "@/data/hooks/useValueRange";
+import { useTableColumnValueRange } from "@/data/hooks/useTableColumnValueRange";
 import { useDraftState } from "@/hooks/useDraftState";
 
 import type { ColorConfigSource, ColorConfigWidgetAdapter } from "./adapter";
@@ -156,7 +156,7 @@ export function useColorConfigWidget(
     stateToConfig,
   );
 
-  const fromColumnValueRange = useValueRange(
+  const fromColumnValueRange = useTableColumnValueRange(
     state.currentSource === "from" && state.currentFromTableColumn !== null
       ? (state.currentFromTableColumn.table ?? tableId)
       : null,

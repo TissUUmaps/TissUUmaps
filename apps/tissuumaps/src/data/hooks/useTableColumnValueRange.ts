@@ -19,7 +19,7 @@ type LoadedValueRange = {
  * table or column, while loading, if loading failed, or if the column is not
  * numerical (see `TableUtils.loadValueRange`)
  */
-export function useValueRange(
+export function useTableColumnValueRange(
   tableId: string | null,
   column: string | null,
 ): [number, number] | null {

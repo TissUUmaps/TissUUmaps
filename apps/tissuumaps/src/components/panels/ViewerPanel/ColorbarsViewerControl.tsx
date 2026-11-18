@@ -5,7 +5,7 @@ import {
 } from "@tissuumaps/core";
 
 import { formatTableColumn } from "@/components/controls/TableColumnField/formatTableColumn";
-import { useValueRange } from "@/data/hooks/useValueRange";
+import { useTableColumnValueRange } from "@/data/hooks/useTableColumnValueRange";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
@@ -29,7 +29,7 @@ function Colorbar({ name, from, tableId, className }: ColorbarProps) {
   // like in the renderers, a configured range end takes precedence over the
   // column's value range
   const [rangeMin, rangeMax] = from.range ?? [null, null];
-  const columnValueRange = useValueRange(
+  const columnValueRange = useTableColumnValueRange(
     rangeMin === null || rangeMax === null ? tableId : null,
     from.column,
   );
@@ -77,11 +77,11 @@ function Colorbar({ name, from, tableId, className }: ColorbarProps) {
   );
 }
 
-export type ColorbarViewerControlProps = { className?: string };
+export type ColorbarsViewerControlProps = { className?: string };
 
-export function ColorbarViewerControl({
+export function ColorbarsViewerControl({
   className,
-}: ColorbarViewerControlProps) {
+}: ColorbarsViewerControlProps) {
   const layers = useProjectStore((state) => state.layers);
   const labels = useProjectStore((state) => state.labels);
   const points = useProjectStore((state) => state.points);
