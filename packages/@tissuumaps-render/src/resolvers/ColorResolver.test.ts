@@ -193,7 +193,7 @@ describe("ColorResolver", () => {
       );
 
       // the unparsable value comes first
-      expect(Array.from(order!)).toEqual([1, 2, 3, 0]);
+      expect(order).toEqual(new Uint32Array([1, 2, 3, 0]));
     });
 
     it("looks the values up by ID", async () => {
@@ -214,7 +214,45 @@ describe("ColorResolver", () => {
       );
 
       // ID 9 is missing and comes first
-      expect(Array.from(order!)).toEqual([2, 0, 1]);
+      expect(order).toEqual(new Uint32Array([2, 0, 1]));
+    });
+
+    it("takes a missing end of the configured range from the loaded value range", async () => {
+      const ids = new Uint32Array([1, 2, 3]);
+      const data = createMockTableData(ids, [30, 10, 20], [10, 30]);
+      const loadTable = vi.fn().mockResolvedValue(data);
+      const config = {
+        from: { column: "col1", palette: testPalette.id, range: [0, null] },
+      } satisfies ColorConfig;
+
+      const order = await ColorResolver.resolveColorOrder(
+        ids,
+        config,
+        loadTable,
+      );
+
+      expect(order).toEqual(new Uint32Array([1, 2, 0]));
+    });
+
+    it("rejects with the reason of an aborted signal", async () => {
+      const ids = new Uint32Array([1, 2]);
+      const data = createMockTableData(ids, [2, 1], [1, 2]);
+      const controller = new AbortController();
+      controller.abort(new Error("aborted"));
+      const config = {
+        from: { column: "col1", palette: testPalette.id },
+      } satisfies ColorConfig;
+
+      await expect(
+        ColorResolver.resolveColorOrder(
+          ids,
+          config,
+          () => Promise.resolve(data),
+          {
+            signal: controller.signal,
+          },
+        ),
+      ).rejects.toThrow("aborted");
     });
 
     it("returns null for other sources", async () => {

@@ -143,8 +143,7 @@ export class ColorResolver {
       const data = await loadTable(config.from.table, { signal });
       const [tableValues, valueRange] = await Promise.all([
         data.loadValues(config.from.column, { signal }),
-        config.from.range ??
-          TableUtils.loadValueRange(data, config.from.column, { signal }),
+        ColorResolver._loadValueRange(data, config, { signal }),
       ]);
       const values = new Float64Array(ids.length).fill(NaN);
       await TableUtils.forEachRow(
@@ -160,9 +159,11 @@ export class ColorResolver {
         },
         { signal },
       );
-      return MathUtils.computeBinnedSortOrder(values, valueRange ?? [0, 1], {
-        signal,
-      });
+      return await MathUtils.computeBinnedSortOrder(
+        values,
+        valueRange ?? [0, 1],
+        { signal },
+      );
     } catch (error) {
       signal?.throwIfAborted();
       console.warn(
@@ -283,23 +284,9 @@ export class ColorResolver {
       });
     }
     const data = await loadTable(config.from.table, { signal });
-    const [rangeMin, rangeMax] = config.from.range ?? [null, null];
-    let valueRange: [number, number] | undefined = undefined;
-    if (rangeMin !== null && rangeMax !== null) {
-      valueRange = [rangeMin, rangeMax];
-    } else {
-      const columnValueRange = await TableUtils.loadValueRange(
-        data,
-        config.from.column,
-        { signal },
-      );
-      if (columnValueRange !== undefined) {
-        valueRange = [
-          rangeMin ?? columnValueRange[0],
-          rangeMax ?? columnValueRange[1],
-        ];
-      }
-    }
+    const valueRange = await ColorResolver._loadValueRange(data, config, {
+      signal,
+    });
     const packedColors = ColorResolver.createColorBuffer(ids.length, { align });
     await TableUtils.fillFromTableValues(
       packedColors,
@@ -547,5 +534,39 @@ export class ColorResolver {
    */
   static packColor(color: Color): number {
     return ColorUtils.packColor(color);
+  }
+
+  /**
+   * Loads the value range that the colors of a `from` source are mapped over
+   *
+   * An end of the configured range that is not set is taken from the value
+   * range of the column.
+   *
+   * @param data - The table holding the column
+   * @param config - From configuration specifying the source column and range
+   * @param options - Optional abort signal
+   * @returns The value range as `[min, max]`, or `undefined` if an end is not
+   * set and the column is not numeric
+   */
+  private static async _loadValueRange(
+    data: TableData,
+    config: Extract<ColorConfig, FromConfig>,
+    options?: { signal?: AbortSignal },
+  ): Promise<[number, number] | undefined> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    const [rangeMin, rangeMax] = config.from.range ?? [null, null];
+    if (rangeMin !== null && rangeMax !== null) {
+      return [rangeMin, rangeMax];
+    }
+    const columnValueRange = await TableUtils.loadValueRange(
+      data,
+      config.from.column,
+      { signal },
+    );
+    if (columnValueRange === undefined) {
+      return undefined;
+    }
+    return [rangeMin ?? columnValueRange[0], rangeMax ?? columnValueRange[1]];
   }
 }
