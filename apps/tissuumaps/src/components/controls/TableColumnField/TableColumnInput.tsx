@@ -34,9 +34,8 @@ export type TableColumnInputProps = {
   onValueChange: (value: string | null) => void;
   /**
    * The `id` of the leaf query group to pick a column of (see
-   * `TableData.getQueryGroups`); the input then searches the leaf's columns
-   * by name, and a column is picked from the suggestions rather than typed as
-   * a query
+   * `TableData.getQueryGroups`); the input then shows and searches the leaf's
+   * columns by name, and a typed name has to match a column's name exactly
    */
   queryGroupId?: string;
   /** The name to show for the value, if it is not the query itself */
@@ -186,9 +185,9 @@ export function TableColumnInput({
   const loadTableData = useLazyTableData(tableId);
 
   // within a query group, the input shows and searches names, not queries
-  const query = (value !== null ? valueName : undefined) ?? value ?? "";
+  const valueText = (value !== null ? valueName : undefined) ?? value ?? "";
 
-  const [text, setText] = useState(query);
+  const [text, setText] = useState(valueText);
   const [invalid, setInvalid] = useState(false);
   const [suggestions, setSuggestions] = useState<
     TableColumnQuerySuggestion[] | null
@@ -197,12 +196,12 @@ export function TableColumnInput({
   const [pendingQuery, setPendingQuery] = useState<string | null>(null);
 
   // https://react.dev/reference/react/useState#storing-information-from-previous-renders
-  const [prevQuery, setPrevQuery] = useState(query);
+  const [prevValueText, setPrevValueText] = useState(valueText);
   const [prevTableId, setPrevTableId] = useState(tableId);
-  if (query !== prevQuery) {
-    setPrevQuery(query);
+  if (valueText !== prevValueText) {
+    setPrevValueText(valueText);
     setPrevTableId(tableId);
-    setText(query);
+    setText(valueText);
     setInvalid(false);
     setPendingQuery(null);
   } else if (tableId !== prevTableId) {
@@ -260,9 +259,23 @@ export function TableColumnInput({
     const { signal } = abortController;
     loadTableData({ signal })
       .then(async (tableData) => {
+        let query: string | undefined = pendingQuery;
+        if (queryGroupId !== undefined) {
+          // a name is no query: it has to match a column's name exactly, as
+          // names differing in case may name different columns (e.g. human
+          // and mouse gene symbols)
+          const leafSuggestions = await tableData?.suggestColumnQueries(
+            pendingQuery,
+            { queryGroupId, signal },
+          );
+          query = leafSuggestions?.find(
+            (suggestion) => getSuggestionText(suggestion) === pendingQuery,
+          )?.query;
+        }
         const column =
-          (await tableData?.resolveColumnQuery(pendingQuery, { signal })) ??
-          null;
+          query !== undefined
+            ? ((await tableData?.resolveColumnQuery(query, { signal })) ?? null)
+            : null;
         if (!signal.aborted) {
           handleCommitResolved(column);
         }
@@ -274,10 +287,10 @@ export function TableColumnInput({
         }
       });
     return () => abortController.abort();
-  }, [pendingQuery, loadTableData]);
+  }, [pendingQuery, queryGroupId, loadTableData]);
 
   function commit(newQuery: string) {
-    if (newQuery === query && !invalid) {
+    if (newQuery === valueText && !invalid) {
       setPendingQuery(null);
       setInvalid(false);
       return;
@@ -287,23 +300,6 @@ export function TableColumnInput({
       setText("");
       setInvalid(false);
       onValueChange(null);
-      return;
-    }
-    if (queryGroupId !== undefined) {
-      // a name is no query: it has to match a suggestion exactly, as names
-      // differing in case may name different columns (e.g. human and mouse
-      // gene symbols)
-      const match = suggestions?.find(
-        (suggestion) => getSuggestionText(suggestion) === newQuery,
-      );
-      if (match !== undefined) {
-        // a suggestion is a query, which is resolved to its column first
-        setText(getSuggestionText(match));
-        setInvalid(false);
-        setPendingQuery(match.query);
-      } else {
-        setInvalid(true);
-      }
       return;
     }
     setPendingQuery(newQuery);
@@ -337,9 +333,6 @@ export function TableColumnInput({
       );
       if (pressed?.group) {
         reopenRef.current = true;
-      } else if (queryGroupId !== undefined && pressed !== undefined) {
-        // a suggestion is a query, which is resolved to its column first
-        setPendingQuery(pressed.query);
       } else {
         commit(newText);
       }
@@ -409,15 +402,7 @@ export function TableColumnInput({
               commit(text);
             }
           }}
-          onBlur={() => {
-            // a name left half-typed within a query group falls back to the value
-            if (queryGroupId !== undefined) {
-              setText(query);
-              setInvalid(false);
-            } else {
-              commit(text);
-            }
-          }}
+          onBlur={() => commit(text)}
         />
         <InputGroupAddon align="inline-end">
           <AutocompleteClear />
