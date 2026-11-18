@@ -84,7 +84,7 @@ export function ProjectMenu({ className }: ProjectMenuProps) {
           Save project
           {saveProjectToSourceFile === null && (
             <DropdownMenuItemDescription>
-              Only for projects opened from the connected folder
+              Only for projects opened from or saved to the connected folder
             </DropdownMenuItemDescription>
           )}
         </DropdownMenuItem>

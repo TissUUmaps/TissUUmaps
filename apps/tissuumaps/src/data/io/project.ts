@@ -349,19 +349,18 @@ export function saveAndDownloadProjectToJSON(project?: Project): void {
 }
 
 /**
- * Saves the currently open project back to the workspace file it was loaded
- * from, and marks it as saved (see {@link hasUnsavedChanges})
+ * Saves the currently open project back to its file in the workspace, and
+ * marks it as saved (see {@link hasUnsavedChanges})
  *
- * The project is written to the file handle it was loaded from, so connecting
- * another workspace in the meantime cannot redirect the save. The browser asks
- * for permission to write the file, as the workspace is opened for reading
- * only. The project is only marked as saved if it is still open and still
- * belongs to that file once written, and changes made while it is being
- * written are not.
+ * The project is written to the file handle it was loaded from or last saved
+ * as (see `ProjectStoreState.sourceFile`), so connecting another workspace in
+ * the meantime cannot redirect the save. The browser asks for permission to
+ * write the file, as the workspace is opened for reading only. The project is
+ * only marked as saved if it is still open and still belongs to that file once
+ * written, and changes made while it is being written are not.
  *
  * @param options - Optional abort signal
- * @throws Error if the open project was not loaded from a file within the
- * workspace
+ * @throws Error if the open project has no file within the workspace
  * @throws DOMException if the file cannot be written, e.g. because the
  * permission to write it was denied (`NotAllowedError`)
  */
@@ -373,7 +372,7 @@ export async function saveProjectToSourceFile(options?: {
   const state = projectStore.getState();
   if (state.sourceFile === null) {
     throw new Error(
-      "The open project was not opened from the connected folder",
+      "The open project was not opened from or saved to the connected folder",
     );
   }
   const { instanceId } = state;
@@ -459,11 +458,11 @@ export async function saveProjectAs(
  * within the workspace
  *
  * Sources within the workspace, whether workspace-relative or relative to the
- * current project file, become relative to the new project file. URLs and
- * app-relative paths stay as they are, and paths relative to a project loaded
- * from a URL become absolute URLs, as the new file cannot reach them relatively.
- * Only `source` is rewritten, as no other field of a data source is resolved as
- * a path (see `RawDataSource.source`).
+ * current project file, become relative to the new project file. URLs are kept
+ * in their normalized form, app-relative paths stay as they are, and paths
+ * relative to a project loaded from a URL become absolute URLs, as the new file
+ * cannot reach them relatively. Only `source` is rewritten, as no other field
+ * of a data source is resolved as a path (see `RawDataSource.source`).
  *
  * @param project - The project whose sources to rewrite
  * @param workspace - The directory handle of the open workspace

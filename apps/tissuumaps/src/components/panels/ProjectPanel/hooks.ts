@@ -124,8 +124,8 @@ function useReportSaveError(): (error: unknown) => void {
  *
  * Failures are logged and reported in an alert dialog.
  *
- * @returns The callback, or `null` if the open project was not loaded from a
- * file in the workspace
+ * @returns The callback, or `null` if the open project has no file in the
+ * workspace (see `ProjectStoreState.sourceFile`)
  */
 export function useSaveProjectToSourceFile(): (() => void) | null {
   const canSave = useProjectStore((state) => state.sourceFile !== null);
