@@ -24,10 +24,9 @@ import {
   setProjectURLParam,
 } from "@/data/io/project";
 import { pickProjectFile, pickWorkspace } from "@/data/io/workspace";
+import { pickFileFromInput } from "@/lib/pickFileFromInput";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
-
-import { pickProjectFileFromInput } from "./pickProjectFileFromInput";
 
 /** Why a workspace cannot be opened, for browsers without the folder picker */
 export const workspaceUnsupportedMessage =
@@ -229,7 +228,7 @@ export function useOpenProjectFromFile(): () => void {
   return useCallback(() => {
     const pickedProjectFile =
       workspace === null
-        ? pickProjectFileFromInput(getProjectFileExtensions())
+        ? pickFileFromInput(getProjectFileExtensions())
         : pickProjectFile(getProjectFileTypes(), { startIn: workspace });
     void pickedProjectFile
       .then(async (projectFile) => {
@@ -373,7 +372,7 @@ export function useImportProjectFromFile(): () => void {
   return useCallback(() => {
     const pickedProjectFile =
       workspace === null
-        ? pickProjectFileFromInput(getProjectFileExtensions())
+        ? pickFileFromInput(getProjectFileExtensions())
         : pickProjectFile(getProjectFileTypes(), { startIn: workspace });
     void pickedProjectFile
       .then(async (projectFile) => {
