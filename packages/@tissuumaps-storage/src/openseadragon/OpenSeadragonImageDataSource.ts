@@ -17,6 +17,13 @@ export type NormalizedOpenSeadragonImageDataSource = Required<
   >
 > &
   Omit<
-    OpenSeadragonImageDataSource,
-    keyof typeof openSeadragonImageDataSourceDefaults
-  >;
+    Omit<
+      OpenSeadragonImageDataSource,
+      keyof typeof openSeadragonImageDataSourceDefaults
+    >,
+    "source" | "tileSource"
+  > &
+  (
+    | { source: string; tileSource?: undefined }
+    | { source?: undefined; tileSource: TileSourceConfig }
+  );

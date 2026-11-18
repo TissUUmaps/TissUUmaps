@@ -70,6 +70,7 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
         ...openSeadragonImageDataSourceDefaults,
         ...dataSource,
         source: undefined,
+        tileSource: dataSource.tileSource,
       };
     }
     if (dataSource.source === undefined) {
@@ -92,6 +93,7 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
       ...openSeadragonImageDataSourceDefaults,
       ...dataSource,
       source,
+      tileSource: undefined,
     };
   }
 
@@ -126,9 +128,6 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
     const { source, tileSource } = normalizedDataSource;
     if (tileSource !== undefined) {
       return new OpenSeadragonImageData(tileSource);
-    }
-    if (source === undefined) {
-      throw new Error("Either source or tileSource must be specified.");
     }
     if (!OpenSeadragonImageDataProvider._isImageSource(source)) {
       return new OpenSeadragonImageData(source);
