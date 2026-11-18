@@ -8,20 +8,13 @@ export type ColorPaletteSelectProps = {
   colorPalettes: ColorPalette[];
   value: string | null;
   onValueChange: (newValue: string | null) => void;
-  /**
-   * Shows the selected palette as a color bar filling a small trigger, named
-   * by its tooltip only
-   */
-  asColorBar?: boolean;
 };
 
 export function ColorPaletteSelect({
   colorPalettes,
   value,
   onValueChange,
-  asColorBar = false,
 }: ColorPaletteSelectProps) {
-  const selectedPalette = colorPalettes.find((p) => p.id === value);
   return (
     <SimpleSelect
       items={colorPalettes}
@@ -29,14 +22,7 @@ export function ColorPaletteSelect({
       itemValue={(p) => p.id}
       value={value}
       onValueChange={onValueChange}
-      nullable={!asColorBar}
-      {...(asColorBar && {
-        variant: "compact" as const,
-        triggerLabel: `Palette: ${selectedPalette?.name ?? "none"}`,
-        // the swatch fills the trigger, which names the palette in its tooltip
-        triggerClassName:
-          "[&_[data-palette-swatch]]:h-4 [&_[data-palette-swatch]]:w-full [&_[data-palette-swatch]]:shrink [&_[data-palette-name]]:sr-only",
-      })}
+      nullable
     />
   );
 }
@@ -59,13 +45,12 @@ function ColorPaletteLabel({ colorPalette }: ColorPaletteLabelProps) {
   return (
     <>
       <span
-        data-palette-swatch
         className="h-3 w-8 shrink-0 rounded-xs border border-input"
         style={{
           backgroundImage: `linear-gradient(to right, ${stops.join(", ")})`,
         }}
       />
-      <span data-palette-name>{name}</span>
+      {name}
     </>
   );
 }

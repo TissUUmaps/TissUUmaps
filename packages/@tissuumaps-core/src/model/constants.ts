@@ -29,18 +29,6 @@ export const defaultLabelColor = {
 /** ID of the default color palette for random label colors */
 export const defaultLabelColorPalette = "distinct";
 
-/**
- * ID of the default color palette for coloring by a categorical table column
- * (see `GroupByConfig`)
- */
-export const defaultCategoricalColorPalette = defaultLabelColorPalette;
-
-/**
- * ID of the default color palette for coloring by a numerical table column
- * (see `FromConfig`)
- */
-export const defaultContinuousColorPalette = "viridis";
-
 /** Default label visibility */
 export const defaultLabelVisibility = true;
 

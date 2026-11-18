@@ -1,19 +1,10 @@
-import { RotateCcwIcon } from "lucide-react";
-import { useEffect, useState } from "react";
-
-import {
-  type ColorConfig,
-  TableUtils,
-  continuousColorPalettes,
-  isFromConfig,
-} from "@tissuumaps/core";
+import { continuousColorPalettes } from "@tissuumaps/core";
 
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
-import { IconButton } from "@/components/common/icon-button";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ColorPaletteSelect } from "@/components/widgets/ColorConfigWidget/ColorPaletteSelect";
-import { useTableData } from "@/data/hooks/useData";
+import type { ColorConfigWidgetAdapter } from "@/components/widgets/ColorConfigWidget/adapter";
 import { cn } from "@/lib/utils";
 
 import { ColorByPicker } from "./ColorByPicker";
@@ -35,9 +26,7 @@ export type StyleWidgetProps = {
   onColorByChange: (colorBy: ColorBy) => void;
 
   /** The color configuration, whose gradient the widget edits */
-  colorConfig: ColorConfig;
-
-  onColorConfigChange: (colorConfig: ColorConfig) => void;
+  colorAdapter: ColorConfigWidgetAdapter;
 
   /**
    * What the object looks like while colored by no column, e.g. "Random
@@ -62,8 +51,7 @@ export function StyleWidget({
   tableId,
   colorBy,
   onColorByChange,
-  colorConfig,
-  onColorConfigChange,
+  colorAdapter,
   noneLabel = "None",
   className,
 }: StyleWidgetProps) {
@@ -136,17 +124,31 @@ export function StyleWidget({
           </ToggleGroup>
         </StyleRow>
       )}
-      {encoding === "gradient" &&
-        isFromConfig<{ palette: string; range?: [number, number] }>(
-          colorConfig,
-        ) && (
-          <GradientSettings
-            tableId={tableId}
-            colorConfig={colorConfig}
-            onColorConfigChange={onColorConfigChange}
-            className="col-span-2"
-          />
-        )}
+      {encoding === "gradient" && colorAdapter.currentSource === "from" && (
+        <>
+          <StyleRow label="Palette">
+            <ColorPaletteSelect
+              colorPalettes={continuousColorPalettes}
+              value={colorAdapter.currentFromPalette}
+              onValueChange={colorAdapter.setCurrentFromPalette}
+            />
+          </StyleRow>
+          <StyleRow label="Range" className="grid grid-cols-2 gap-x-1">
+            <RangeEndInput
+              label="Min. value"
+              value={colorAdapter.currentFromRangeMin}
+              onValueChange={colorAdapter.setCurrentFromRangeMin}
+              placeholder={colorAdapter.fromColumnValueRange?.[0]}
+            />
+            <RangeEndInput
+              label="Max. value"
+              value={colorAdapter.currentFromRangeMax}
+              onValueChange={colorAdapter.setCurrentFromRangeMax}
+              placeholder={colorAdapter.fromColumnValueRange?.[1]}
+            />
+          </StyleRow>
+        </>
+      )}
       {isPending && (
         <StyleRow>
           <span className="text-xs text-muted-foreground">Loading column…</span>
@@ -161,171 +163,40 @@ export function StyleWidget({
   );
 }
 
-type GradientSettingsProps = {
-  tableId: string | null;
-  colorConfig: ColorConfig & {
-    from: { column: string; palette: string; range?: [number, number] };
-  };
-  onColorConfigChange: (colorConfig: ColorConfig) => void;
-  className?: string;
+type RangeEndInputProps = {
+  label: string;
+  value: number | null;
+  onValueChange: (value: number | null) => void;
+  /** The column's minimum or maximum value, shown while the end is unset */
+  placeholder: number | undefined;
 };
 
-/**
- * `[min] ▓▓ palette ▓▓ [max]`: the range is the data range unless set
- *
- * The bounds can only be edited once the data range is known: editing one
- * stores the other as the data bound, as a range always has both; a cleared
- * bound returns to the data bound, a minimum above the maximum is refused,
- * and the reset button returns to the data range.
- */
-function GradientSettings({
-  tableId,
-  colorConfig,
-  onColorConfigChange,
-  className,
-}: GradientSettingsProps) {
-  const { from } = colorConfig;
-  const tableData = useTableData(tableId);
-  const [valueRange, setValueRange] = useState<[number, number] | null>(null);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- no stale range
-    setValueRange(null);
-    if (tableData === null) {
-      return;
-    }
-    const abortController = new AbortController();
-    TableUtils.loadValueRange(tableData, from.column, {
-      signal: abortController.signal,
-    })
-      .then((range) => {
-        if (!abortController.signal.aborted) {
-          setValueRange(range ?? null);
-        }
-      })
-      .catch((error: unknown) => {
-        if (!abortController.signal.aborted) {
-          console.error("Error loading table value range", error);
-        }
-      });
-    return () => abortController.abort();
-  }, [tableData, from.column]);
-
-  const [drafts, setDrafts] = useState<[string | null, string | null]>([
-    null,
-    null,
-  ]);
-  const [rangeError, setRangeError] = useState<string | null>(null);
-
-  const setRange = (range: [number, number] | undefined) =>
-    onColorConfigChange({ ...colorConfig, from: { ...from, range } });
-
-  // a bound equal to the data bound is automatic, and shown empty
-  const getBoundText = (index: 0 | 1) => {
-    const bound = from.range?.[index];
-    return bound === undefined || bound === valueRange?.[index]
-      ? ""
-      : String(bound);
-  };
-
-  const commitBound = (index: 0 | 1) => {
-    const draft = drafts[index];
-    if (draft === null || valueRange === null) {
-      return;
-    }
-    const newRange: [number, number] = [...(from.range ?? valueRange)];
-    const newValue = draft.trim() === "" ? valueRange[index] : Number(draft);
-    if (isNaN(newValue)) {
-      return;
-    }
-    newRange[index] = newValue;
-    if (newRange[0] > newRange[1]) {
-      setRangeError("The minimum must not exceed the maximum");
-      return;
-    }
-    setRangeError(null);
-    setDrafts((drafts) => {
-      const newDrafts: [string | null, string | null] = [...drafts];
-      newDrafts[index] = null;
-      return newDrafts;
-    });
-    setRange(
-      newRange[0] === valueRange[0] && newRange[1] === valueRange[1]
-        ? undefined
-        : newRange,
-    );
-  };
-
-  const rangeInput = (index: 0 | 1) => (
+/** One end of the gradient's value range; an empty end is the column's own */
+function RangeEndInput({
+  label,
+  value,
+  onValueChange,
+  placeholder,
+}: RangeEndInputProps) {
+  return (
     <Input
       type="number"
       inputMode="decimal"
-      aria-label={index === 0 ? "Minimum value" : "Maximum value"}
-      title={index === 0 ? "Minimum value" : "Maximum value"}
-      aria-invalid={rangeError !== null || undefined}
-      disabled={valueRange === null}
-      placeholder={valueRange?.[index].toPrecision(4)}
-      value={drafts[index] ?? getBoundText(index)}
+      aria-label={label}
+      title={label}
+      placeholder={placeholder?.toPrecision(6)}
+      value={value ?? ""}
       onChange={(event) => {
-        const draft = event.target.value;
-        setDrafts((drafts) => {
-          const newDrafts: [string | null, string | null] = [...drafts];
-          newDrafts[index] = draft;
-          return newDrafts;
-        });
-      }}
-      onBlur={() => commitBound(index)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter") {
-          commitBound(index);
+        if (event.target.value === "") {
+          onValueChange(null);
+        } else {
+          const newValue = event.target.valueAsNumber;
+          if (!isNaN(newValue)) {
+            onValueChange(newValue);
+          }
         }
       }}
-      className="h-8 w-20 shrink-0 px-1.5 text-xs placeholder:text-muted-foreground/70 md:text-xs"
+      className="h-8 min-w-0"
     />
-  );
-
-  return (
-    <div
-      className={cn(
-        "flex min-w-0 flex-row flex-wrap items-center gap-1",
-        className,
-      )}
-    >
-      {rangeInput(0)}
-      <div className="min-w-12 flex-1">
-        <ColorPaletteSelect
-          colorPalettes={continuousColorPalettes}
-          value={from.palette}
-          onValueChange={(palette) => {
-            if (palette !== null) {
-              onColorConfigChange({
-                ...colorConfig,
-                from: { ...from, palette },
-              });
-            }
-          }}
-          asColorBar
-        />
-      </div>
-      {rangeInput(1)}
-      {from.range !== undefined && (
-        <IconButton
-          label="Reset to the data range"
-          size="icon-xs"
-          onClick={() => {
-            setDrafts([null, null]);
-            setRangeError(null);
-            setRange(undefined);
-          }}
-        >
-          <RotateCcwIcon />
-        </IconButton>
-      )}
-      {rangeError !== null && (
-        <span className="basis-full text-xs text-destructive">
-          {rangeError}
-        </span>
-      )}
-    </div>
   );
 }

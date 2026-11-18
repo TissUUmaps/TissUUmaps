@@ -1,10 +1,15 @@
-import { type Points, pointsDefaults } from "@tissuumaps/core";
+import {
+  type Points,
+  defaultPointColor,
+  pointsDefaults,
+} from "@tissuumaps/core";
 
+import { useColorConfigWidget } from "@/components/widgets/ColorConfigWidget/hooks";
 import { StyleWidget } from "@/components/widgets/StyleWidget";
 import {
-  colorByColumn,
-  colorByNone,
   readColorBy,
+  withColorColumn,
+  withoutColorColumn,
 } from "@/components/widgets/StyleWidget/colorBy";
 import { projectStore, useProjectStore } from "@/stores/project";
 
@@ -20,6 +25,12 @@ export function PointsStyleWidget({
 }: PointsStyleWidgetProps) {
   const updatePoints = useProjectStore((state) => state.updatePoints);
   const tableId = points.dataSource.table ?? null;
+  const colorAdapter = useColorConfigWidget(
+    points.pointColor,
+    (newColorConfig) => updatePoints(points.id, { pointColor: newColorConfig }),
+    defaultPointColor,
+    tableId,
+  );
   const colorBy = readColorBy(points.pointColor, tableId);
 
   return (
@@ -37,19 +48,19 @@ export function PointsStyleWidget({
         updatePoints(current.id, {
           pointColor:
             newColorBy.kind === "column"
-              ? colorByColumn(
+              ? withColorColumn(
                   current.pointColor,
                   newColorBy.column,
                   newColorBy.encoding,
                   current.dataSource.table ?? null,
                 )
-              : colorByNone(current.pointColor, pointsDefaults.pointColor),
+              : withoutColorColumn(
+                  current.pointColor,
+                  pointsDefaults.pointColor,
+                ),
         });
       }}
-      colorConfig={points.pointColor}
-      onColorConfigChange={(pointColor) =>
-        updatePoints(points.id, { pointColor })
-      }
+      colorAdapter={colorAdapter}
       className={className}
     />
   );

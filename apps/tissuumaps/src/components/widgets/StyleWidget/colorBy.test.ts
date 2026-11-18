@@ -6,7 +6,7 @@ import {
   pointsDefaults,
 } from "@tissuumaps/core";
 
-import { colorByColumn, colorByNone, readColorBy } from "./colorBy";
+import { readColorBy, withColorColumn, withoutColorColumn } from "./colorBy";
 
 const white = { r: 255, g: 255, b: 255 };
 
@@ -74,10 +74,15 @@ describe("readColorBy", () => {
   });
 });
 
-describe("colorByColumn", () => {
+describe("withColorColumn", () => {
   it("groups by a new column with the default palette", () => {
     expect(
-      colorByColumn({ constant: { value: white } }, "gene", "categories", "t1"),
+      withColorColumn(
+        { constant: { value: white } },
+        "gene",
+        "categories",
+        "t1",
+      ),
     ).toEqual({
       constant: { value: white },
       source: "groupBy",
@@ -87,7 +92,7 @@ describe("colorByColumn", () => {
 
   it("maps a new column to the gradient's palette, without a range", () => {
     expect(
-      colorByColumn(
+      withColorColumn(
         {
           source: "from",
           from: { column: "qv", palette: "batlow", range: [0, 1] },
@@ -101,7 +106,7 @@ describe("colorByColumn", () => {
       from: { column: "area", palette: "batlow" },
     });
     expect(
-      colorByColumn({ constant: { value: white } }, "area", "gradient", "t1"),
+      withColorColumn({ constant: { value: white } }, "area", "gradient", "t1"),
     ).toEqual({
       constant: { value: white },
       source: "from",
@@ -111,7 +116,7 @@ describe("colorByColumn", () => {
 
   it("groups a new column with the categories' palette, without a map", () => {
     expect(
-      colorByColumn(
+      withColorColumn(
         {
           source: "groupBy",
           groupBy: { column: "leiden", palette: "batlowS", map: "m1" },
@@ -131,9 +136,9 @@ describe("colorByColumn", () => {
       source: "from",
       from: { table: "t1", column: "qv", palette: "batlow", range: [0, 1] },
     } as ColorConfig;
-    expect(colorByColumn(config, "qv", "gradient", "t1")).toEqual(config);
+    expect(withColorColumn(config, "qv", "gradient", "t1")).toEqual(config);
     // a branch of another table is not the own column: only its palette stays
-    expect(colorByColumn(config, "qv", "gradient", "t2")).toEqual({
+    expect(withColorColumn(config, "qv", "gradient", "t2")).toEqual({
       source: "from",
       from: { column: "qv", palette: "batlow" },
     });
@@ -145,16 +150,16 @@ describe("colorByColumn", () => {
       from: { column: "qv", palette: "batlow", range: [0, 1] },
       groupBy: { column: "qv", map: "m1" },
     } as ColorConfig;
-    const categories = colorByColumn(config, "qv", "categories", "t1");
+    const categories = withColorColumn(config, "qv", "categories", "t1");
     expect(categories).toEqual({ ...config, source: "groupBy" });
-    expect(colorByColumn(categories, "qv", "gradient", "t1")).toEqual(config);
+    expect(withColorColumn(categories, "qv", "gradient", "t1")).toEqual(config);
   });
 });
 
-describe("colorByNone", () => {
+describe("withoutColorColumn", () => {
   it("returns to the default source, keeping its branch", () => {
     expect(
-      colorByNone(
+      withoutColorColumn(
         {
           constant: { value: { r: 1, g: 2, b: 3 } },
           source: "groupBy",
@@ -167,7 +172,7 @@ describe("colorByNone", () => {
       constant: { value: { r: 1, g: 2, b: 3 } },
     });
     expect(
-      colorByNone(
+      withoutColorColumn(
         { groupBy: { column: "gene", map: undefined } },
         labelsDefaults.labelColor,
       ),

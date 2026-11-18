@@ -1,12 +1,20 @@
 import {
   type ColorConfig,
+  ConfigUtils,
   type TableColumnRef,
-  defaultCategoricalColorPalette,
-  defaultContinuousColorPalette,
+  defaultLabelColorPalette,
   getActiveConfigSource,
+  isConstantConfig,
   isFromConfig,
   isGroupByConfig,
+  isRandomConfig,
 } from "@tissuumaps/core";
+
+/** ID of the color palette of a newly colored categorical column */
+const defaultCategoricalColorPalette = defaultLabelColorPalette;
+
+/** ID of the color palette of a newly colored numeric column */
+const defaultContinuousColorPalette = "viridis";
 
 /** How the values of a column are mapped to colors */
 export type ColorByEncoding = "categories" | "gradient";
@@ -85,7 +93,8 @@ export function readColorBy(
 }
 
 /**
- * Colors by a column of the object's own table
+ * Returns the color configuration that colors by a column of the object's own
+ * table
  *
  * The branch of the encoding is kept if it already names the column, so that
  * switching between categories and a gradient keeps the palette, color map
@@ -99,23 +108,21 @@ export function readColorBy(
  * @param tableId - The ID of the object's own table
  * @returns The updated color configuration
  */
-export function colorByColumn(
+export function withColorColumn(
   config: ColorConfig,
   column: string,
   encoding: ColorByEncoding,
   tableId: string | null,
 ): ColorConfig {
+  const isSameColumn = (ref: TableColumnRef) =>
+    ConfigUtils.isSameTableColumn(ref, { column }, tableId ?? undefined);
   if (encoding === "categories") {
-    const groupBy = isGroupByConfig<false, { palette?: string }>(config)
-      ? config.groupBy
-      : undefined;
+    const groupBy = isGroupByConfig(config) ? config.groupBy : undefined;
     return {
       ...config,
       source: "groupBy",
       groupBy:
-        groupBy !== undefined &&
-        isOwnTableColumn(groupBy, tableId) &&
-        groupBy.column === column
+        groupBy !== undefined && isSameColumn(groupBy)
           ? groupBy
           : {
               column,
@@ -124,18 +131,12 @@ export function colorByColumn(
             },
     };
   }
-  const from = isFromConfig<{ palette: string; range?: [number, number] }>(
-    config,
-  )
-    ? config.from
-    : undefined;
+  const from = isFromConfig(config) ? config.from : undefined;
   return {
     ...config,
     source: "from",
     from:
-      from !== undefined &&
-      isOwnTableColumn(from, tableId) &&
-      from.column === column
+      from !== undefined && isSameColumn(from)
         ? from
         : {
             column,
@@ -145,21 +146,48 @@ export function colorByColumn(
 }
 
 /**
- * Stops coloring by a column, returning to the default source of the property
+ * Returns the color configuration that colors by no column, i.e. by the
+ * default source of the property
  *
- * The branch of the default source is kept if the configuration has one.
+ * The branch of the default source is kept if the configuration has one, and
+ * taken from the default configuration otherwise.
  *
  * @param config - The color configuration to update
  * @param defaultConfig - The default color configuration of the property
  * @returns The updated color configuration
+ * @throws Error if the default configuration is not a constant or random one
  */
-export function colorByNone(
+export function withoutColorColumn(
   config: ColorConfig,
   defaultConfig: ColorConfig,
 ): ColorConfig {
-  return {
-    ...structuredClone(defaultConfig),
-    ...config,
-    source: getActiveConfigSource(defaultConfig),
-  } as ColorConfig;
+  switch (getActiveConfigSource(defaultConfig)) {
+    case "constant":
+      if (isConstantConfig(config)) {
+        return { ...config, source: "constant" };
+      }
+      if (isConstantConfig(defaultConfig)) {
+        return {
+          ...config,
+          source: "constant",
+          constant: structuredClone(defaultConfig.constant),
+        };
+      }
+      break;
+    case "random":
+      if (isRandomConfig(config)) {
+        return { ...config, source: "random" };
+      }
+      if (isRandomConfig(defaultConfig)) {
+        return {
+          ...config,
+          source: "random",
+          random: structuredClone(defaultConfig.random),
+        };
+      }
+      break;
+  }
+  throw new Error(
+    "The default color configuration is no constant or random one",
+  );
 }

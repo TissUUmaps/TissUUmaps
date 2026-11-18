@@ -1,10 +1,15 @@
-import { type Shapes, shapesDefaults } from "@tissuumaps/core";
+import {
+  type Shapes,
+  defaultShapeFillColor,
+  shapesDefaults,
+} from "@tissuumaps/core";
 
+import { useColorConfigWidget } from "@/components/widgets/ColorConfigWidget/hooks";
 import { StyleWidget } from "@/components/widgets/StyleWidget";
 import {
-  colorByColumn,
-  colorByNone,
   readColorBy,
+  withColorColumn,
+  withoutColorColumn,
 } from "@/components/widgets/StyleWidget/colorBy";
 import { projectStore, useProjectStore } from "@/stores/project";
 
@@ -20,6 +25,13 @@ export function ShapesStyleWidget({
 }: ShapesStyleWidgetProps) {
   const updateShapes = useProjectStore((state) => state.updateShapes);
   const tableId = shapes.dataSource.table ?? null;
+  const colorAdapter = useColorConfigWidget(
+    shapes.shapeFillColor,
+    (newColorConfig) =>
+      updateShapes(shapes.id, { shapeFillColor: newColorConfig }),
+    defaultShapeFillColor,
+    tableId,
+  );
 
   return (
     <StyleWidget
@@ -36,22 +48,19 @@ export function ShapesStyleWidget({
         updateShapes(current.id, {
           shapeFillColor:
             colorBy.kind === "column"
-              ? colorByColumn(
+              ? withColorColumn(
                   current.shapeFillColor,
                   colorBy.column,
                   colorBy.encoding,
                   current.dataSource.table ?? null,
                 )
-              : colorByNone(
+              : withoutColorColumn(
                   current.shapeFillColor,
                   shapesDefaults.shapeFillColor,
                 ),
         });
       }}
-      colorConfig={shapes.shapeFillColor}
-      onColorConfigChange={(shapeFillColor) =>
-        updateShapes(shapes.id, { shapeFillColor })
-      }
+      colorAdapter={colorAdapter}
       className={className}
     />
   );

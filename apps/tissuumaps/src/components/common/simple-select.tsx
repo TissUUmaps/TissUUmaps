@@ -9,7 +9,6 @@ import {
 import { type ReactNode, useMemo } from "react";
 
 import { IconButton } from "@/components/common/icon-button";
-import { cn } from "@/lib/utils";
 
 export type SimpleSelectProps<
   TItem,
@@ -31,8 +30,6 @@ export type SimpleSelectProps<
   variant?: "default" | "inline" | "compact";
   /** The accessible name and tooltip of the trigger */
   triggerLabel?: string;
-  /** Classes of the trigger, e.g. to style the shown value */
-  triggerClassName?: string;
 } & Omit<
   SelectPrimitive.Root.Props<TValue, TMultiple>,
   "items" | "itemToStringLabel" | "itemToStringValue"
@@ -79,7 +76,6 @@ export function SimpleSelect<
   isItemDeletable,
   variant = "default",
   triggerLabel,
-  triggerClassName,
   ...props
 }: SimpleSelectProps<TItem, TNullable, TValue, TMultiple>) {
   const memoizedItems = useMemo(() => {
@@ -100,7 +96,7 @@ export function SimpleSelect<
   return (
     <SelectPrimitive.Root items={memoizedItems} {...props}>
       <SelectPrimitive.Trigger
-        className={cn(triggerVariants({ variant }), triggerClassName)}
+        className={triggerVariants({ variant })}
         aria-label={triggerLabel}
         title={triggerLabel}
       >

@@ -118,8 +118,6 @@ export {
   type SimilarityTransform,
 } from "./model/primitives";
 export {
-  defaultCategoricalColorPalette,
-  defaultContinuousColorPalette,
   defaultLabelColor,
   defaultLabelColorPalette,
   defaultLabelOpacity,

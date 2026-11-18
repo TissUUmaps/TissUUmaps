@@ -1,10 +1,15 @@
-import { type Labels, labelsDefaults } from "@tissuumaps/core";
+import {
+  type Labels,
+  defaultLabelColor,
+  labelsDefaults,
+} from "@tissuumaps/core";
 
+import { useColorConfigWidget } from "@/components/widgets/ColorConfigWidget/hooks";
 import { StyleWidget } from "@/components/widgets/StyleWidget";
 import {
-  colorByColumn,
-  colorByNone,
   readColorBy,
+  withColorColumn,
+  withoutColorColumn,
 } from "@/components/widgets/StyleWidget/colorBy";
 import { projectStore, useProjectStore } from "@/stores/project";
 
@@ -24,6 +29,12 @@ export function LabelsStyleWidget({
 }: LabelsStyleWidgetProps) {
   const updateLabels = useProjectStore((state) => state.updateLabels);
   const tableId = labels.dataSource.table ?? null;
+  const colorAdapter = useColorConfigWidget(
+    labels.labelColor,
+    (newColorConfig) => updateLabels(labels.id, { labelColor: newColorConfig }),
+    defaultLabelColor,
+    tableId,
+  );
 
   return (
     <StyleWidget
@@ -42,20 +53,20 @@ export function LabelsStyleWidget({
         updateLabels(current.id, {
           labelColor:
             colorBy.kind === "column"
-              ? colorByColumn(
+              ? withColorColumn(
                   current.labelColor,
                   colorBy.column,
                   colorBy.encoding,
                   current.dataSource.table ?? null,
                 )
-              : colorByNone(current.labelColor, labelsDefaults.labelColor),
+              : withoutColorColumn(
+                  current.labelColor,
+                  labelsDefaults.labelColor,
+                ),
         });
       }}
       noneLabel="Random colors"
-      colorConfig={labels.labelColor}
-      onColorConfigChange={(labelColor) =>
-        updateLabels(labels.id, { labelColor })
-      }
+      colorAdapter={colorAdapter}
       className={className}
     />
   );
