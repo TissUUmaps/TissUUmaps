@@ -81,7 +81,8 @@ function isOnHiddenLayer(
  *
  * @param state - The layers, the tables and the objects of the project
  * @returns One colorbar per color scale, with a unique key, the name to show,
- * the active "from" source and the ID of the table that holds the column
+ * the active "from" source and the ID of the table to load the column's value
+ * range from; the source names a table only if all colors name the same one
  */
 export function getColorbars(state: {
   layers: Layer[];
@@ -179,8 +180,8 @@ export function getColorbars(state: {
       colorbars.set(key, { from, tableId, colors: [objectColor] });
     } else {
       colorbar.colors.push(objectColor);
-      // a colorbar shared by several tables names none of them
-      if (tableId !== colorbar.tableId) {
+      // a colorbar names a table only if all its colors name the same one
+      if (from.table !== colorbar.from.table) {
         colorbar.from = { ...colorbar.from, table: undefined };
       }
     }

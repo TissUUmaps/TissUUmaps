@@ -264,6 +264,29 @@ describe("getColorbars", () => {
     ).toEqual(["no range, range without ends"]);
   });
 
+  it("names a table only if all colors name the same one, in any order", () => {
+    const ownTable = createPointsWith("own table");
+    const explicitTable = createPointsWith("explicit table", {
+      pointColor: {
+        from: { table: "cells", column: "score", palette: "viridis" },
+      },
+    });
+    for (const points of [
+      [ownTable, explicitTable],
+      [explicitTable, ownTable],
+    ]) {
+      expect(
+        getColorbars({
+          layers,
+          tables,
+          labels: [],
+          points,
+          shapes: [],
+        }).map(({ from }) => from.table),
+      ).toEqual([undefined]);
+    }
+  });
+
   it("leaves out objects whose table is not in the project", () => {
     expect(
       getColorbarNames({
