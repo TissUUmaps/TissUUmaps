@@ -286,9 +286,10 @@ export class OpenSeadragonImageRenderer extends OpenSeadragonRendererBase<
    * the tiled image.
    *
    * The scaled color is not computed per pixel: the transfer packs a ramp of
-   * 256 colors once, with `ColorUtils.packColor` and `ColorUtils.withAlpha`,
-   * and maps each value to the nearest ramp entry. As no color component
-   * exceeds 255, the ramp holds every color the channel can take.
+   * 256 RGBA colors once, with `ColorUtils.packColor` and
+   * `ColorUtils.withAlpha`, and maps each value to the nearest ramp entry. As
+   * no color component exceeds 255, the ramp holds every color the channel can
+   * take.
    *
    * @param data - The image data providing the channel's values
    * @param channel - The resolved color and contrast limits of the channel
