@@ -180,7 +180,7 @@ export function useOpenProjectFromURL(): () => void {
   const prompt = usePromptDialog();
 
   return useCallback(() => {
-    void prompt({ title: "Enter project URL to load", actionLabel: "Open" })
+    void prompt({ title: "Open project from URL", actionLabel: "Open" })
       .then(async (value) => {
         const projectUrl = value?.trim();
         if (!projectUrl) {
@@ -328,7 +328,7 @@ export function useImportProjectFromURL(): () => void {
   const prompt = usePromptDialog();
 
   return useCallback(() => {
-    void prompt({ title: "Enter project URL to import", actionLabel: "Import" })
+    void prompt({ title: "Import project from URL", actionLabel: "Import" })
       .then(async (value) => {
         const projectUrl = value?.trim();
         if (!projectUrl) {

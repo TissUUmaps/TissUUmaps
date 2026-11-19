@@ -48,7 +48,7 @@ export function useLoadPluginFromFile(): () => void {
       } catch (error) {
         console.error(`Failed to load plugin from ${file.name}`, error);
         await alert({
-          title: "Failed to load plugin",
+          title: "Cannot load the plugin",
           body: error instanceof Error ? error.message : String(error),
         });
       }
@@ -86,7 +86,7 @@ export function useLoadPluginFromURL(): () => void {
       } catch (error) {
         console.error(`Failed to load plugin from ${pluginUrl}`, error);
         await alert({
-          title: "Failed to load plugin",
+          title: "Cannot load the plugin",
           body: error instanceof Error ? error.message : String(error),
         });
       }
