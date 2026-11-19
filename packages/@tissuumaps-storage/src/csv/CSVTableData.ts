@@ -87,7 +87,7 @@ export class CSVTableData implements TableData {
     const columnValues = this._columnValues.get(column);
     if (columnValues === undefined) {
       return Promise.reject(
-        new Error(`Column ${column} does not exist in the table`),
+        new Error(`Column '${column}' not found in the table`),
       );
     }
     return Promise.resolve(columnValues as TypedArrayOrArray<T>);

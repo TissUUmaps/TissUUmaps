@@ -484,7 +484,7 @@ describe("ParquetUtils", () => {
           "missing",
           () => {},
         ),
-      ).rejects.toThrow('Column "missing" not found in Parquet file');
+      ).rejects.toThrow("Column 'missing' not found in the Parquet file");
     });
   });
 });

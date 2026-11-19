@@ -93,7 +93,7 @@ describe("DaskUtils", () => {
           ]),
         ),
       ).rejects.toThrow(
-        'The Dask dataset directory "points.parquet" lacks partition file part.1.parquet.',
+        "The Dask dataset directory 'points.parquet' lacks partition file 'part.1.parquet'",
       );
     });
 
@@ -205,7 +205,7 @@ describe("DaskUtils", () => {
           [`${url}/part.2.parquet`]: parquetBytes,
         });
         await expect(DaskUtils.findParquetURLs(url)).rejects.toThrow(
-          `Failed to check ${url}/part.1.parquet: ${status}`,
+          `Failed to check '${url}/part.1.parquet': ${status}`,
         );
       },
     );
