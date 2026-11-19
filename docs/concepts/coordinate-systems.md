@@ -24,3 +24,7 @@ sidebar_position: 4
 | Viewport -> Device | _device coordinates_ = _device pixel ratio_ \* _viewport coordinates_                |
 
 User-configurable variables are highlighted in bold.
+
+## Physical units
+
+The project's physical unit size is the physical size of one world unit, in the project's physical unit: one of the listed units (picometers to kilometers, micrometers by default) or any other text. The scale bar converts between the listed units and shows any other unit as typed; without a physical unit size, it is in world units.
