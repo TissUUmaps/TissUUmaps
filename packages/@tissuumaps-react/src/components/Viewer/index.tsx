@@ -49,7 +49,7 @@ export function Viewer({
     glPointsBounds,
     glShapesBounds,
   } = useWebGL(adapter);
-  const { initSVG, setSVGViewport, setSVGContainerSize } = useSVG(adapter);
+  const { initSVG, setSVGViewport } = useSVG(adapter);
 
   // the setters and init callbacks are memoized; a new identity tears down and
   // recreates the whole overlay
@@ -72,7 +72,6 @@ export function Viewer({
     };
     const updateContainerSize = (containerSize: Dims) => {
       setGLContainerSize(containerSize);
-      setSVGContainerSize(containerSize);
     };
     updateViewport(os.context.getViewport());
     updateContainerSize(os.context.getContainerSize());
@@ -104,7 +103,6 @@ export function Viewer({
     setGLViewport,
     setSVGViewport,
     setGLContainerSize,
-    setSVGContainerSize,
   ]);
 
   useEffect(() => {
