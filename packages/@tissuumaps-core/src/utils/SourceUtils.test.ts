@@ -127,7 +127,7 @@ describe("SourceUtils", () => {
           SourceUtils.normalizeSource("http://", workspace, projectPath, {
             baseUrl,
           }),
-        ).toThrow("Invalid URL: http://");
+        ).toThrow("Invalid URL 'http://'");
       });
 
       it("takes a relative path with a colon in its first segment for a URL", () => {
@@ -206,23 +206,23 @@ describe("SourceUtils", () => {
           SourceUtils.normalizeSource("/../x.csv", workspace, null, {
             baseUrl,
           }),
-        ).toThrow("Path escapes workspace");
+        ).toThrow("escapes the workspace");
         expect(() =>
           SourceUtils.normalizeSource("/a/../../x.csv", workspace, null, {
             baseUrl,
           }),
-        ).toThrow("Path escapes workspace");
+        ).toThrow("escapes the workspace");
       });
 
       it("throws if the path names the workspace root", () => {
         expect(() =>
           SourceUtils.normalizeSource("/", workspace, null, { baseUrl }),
-        ).toThrow("Not a workspace file or directory: /");
+        ).toThrow("Not a workspace file or directory '/'");
         expect(() =>
           SourceUtils.normalizeSource("/./a/..", workspace, null, {
             baseUrl,
           }),
-        ).toThrow("Not a workspace file or directory: /./a/..");
+        ).toThrow("Not a workspace file or directory '/./a/..'");
       });
 
       it("falls back to being app-relative without a workspace", () => {
@@ -312,7 +312,7 @@ describe("SourceUtils", () => {
           SourceUtils.normalizeSource("../../x.csv", workspace, projectPath, {
             baseUrl,
           }),
-        ).toThrow("Path escapes workspace");
+        ).toThrow("escapes the workspace");
       });
 
       it("falls back to being app-relative for a project loaded from the workspace without an open workspace", () => {
@@ -424,7 +424,7 @@ describe("SourceUtils", () => {
     it("rejects a workspace-relative path without a workspace", async () => {
       await expect(
         SourceUtils.resolveSource("/proj/points.csv", null),
-      ).rejects.toThrow("without workspace");
+      ).rejects.toThrow("cannot be resolved without a workspace");
     });
 
     it("rejects if a directory or the file does not exist", async () => {
@@ -451,9 +451,9 @@ describe("SourceUtils", () => {
     it("rejects if the path leaves the workspace or names the root", async () => {
       await expect(
         SourceUtils.resolveSource("/../x.csv", workspace),
-      ).rejects.toThrow("Path escapes workspace");
+      ).rejects.toThrow("escapes the workspace");
       await expect(SourceUtils.resolveSource("/", workspace)).rejects.toThrow(
-        "Not a workspace file or directory: /",
+        "Not a workspace file or directory '/'",
       );
     });
 
@@ -530,7 +530,7 @@ describe("SourceUtils", () => {
         SourceUtils.resolveSourceFile("/proj/sub", workspace),
       ).rejects.toMatchObject({
         name: "TypeMismatchError",
-        message: "Not a workspace file: /proj/sub",
+        message: "Not a workspace file '/proj/sub'",
       });
     });
 
@@ -562,7 +562,7 @@ describe("SourceUtils", () => {
         SourceUtils.resolveSourceDirectory("/proj/points.csv", workspace),
       ).rejects.toMatchObject({
         name: "TypeMismatchError",
-        message: "Not a workspace directory: /proj/points.csv",
+        message: "Not a workspace directory '/proj/points.csv'",
       });
     });
 
@@ -869,6 +869,35 @@ describe("SourceUtils", () => {
     it("returns an empty string for URLs without a path", () => {
       expect(SourceUtils.getStem("data:image/png;base64,AAAA")).toBe("");
       expect(SourceUtils.getStem("https://data.example/")).toBe("");
+    });
+  });
+
+  describe("createID", () => {
+    const uuid = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+
+    it("names the ID after the file name, with hyphens for dots and a UUID", () => {
+      expect(SourceUtils.createID("/a/cells.ome.zarr")).toMatch(
+        new RegExp(`^cells-ome-zarr-${uuid}$`),
+      );
+      expect(SourceUtils.createID("/a/x.zarr/labels/cells")).toMatch(
+        new RegExp(`^cells-${uuid}$`),
+      );
+      expect(
+        SourceUtils.createID("https://data.example/a/my%20cells.v2.csv?x=1"),
+      ).toMatch(new RegExp(`^my cells-v2-csv-${uuid}$`));
+    });
+
+    it("falls back to the UUID alone", () => {
+      expect(SourceUtils.createID(undefined)).toMatch(new RegExp(`^${uuid}$`));
+      expect(SourceUtils.createID("data:text/csv,a")).toMatch(
+        new RegExp(`^${uuid}$`),
+      );
+    });
+
+    it("creates a new ID for the same source every time", () => {
+      expect(SourceUtils.createID("/a/cells.csv")).not.toBe(
+        SourceUtils.createID("/a/cells.csv"),
+      );
     });
   });
 });

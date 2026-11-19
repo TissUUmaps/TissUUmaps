@@ -112,10 +112,10 @@ describe("ShapesGeometryBuilder", () => {
     builder.addShape([[square]], 10);
     const { ids } = builder.build();
     expect(() => builder.addShape([[square]], 20)).toThrow(
-      "Shapes cannot be added once the geometry is built.",
+      "Shapes cannot be added once the geometry is built",
     );
     expect(() => builder.build()).toThrow(
-      "The geometry has already been built.",
+      "The geometry has already been built",
     );
     expect(ids).toEqual(new Float64Array([10]));
   });
@@ -131,7 +131,7 @@ describe("ShapesGeometryBuilder", () => {
     const builder = new ShapesGeometryBuilder();
     builder.addShape([[square]], 1);
     builder.addShape([[square]], "b");
-    expect(() => builder.build()).toThrow("ID is not a safe integer: b");
+    expect(() => builder.build()).toThrow("ID 'b' is not a safe integer");
   });
 
   it("counts the shapes added so far", () => {

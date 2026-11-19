@@ -46,17 +46,17 @@ export class ShapesGeometryBuilder {
     name?: string,
   ): void {
     if (this._built) {
-      throw new Error("Shapes cannot be added once the geometry is built.");
+      throw new Error("Shapes cannot be added once the geometry is built");
     }
     let polygonsAdded = false;
     for (const rings of polygons) {
       if (rings.length === 0 || rings[0]!.length < 3) {
-        console.warn("Skipping polygon without a valid shell.");
+        console.warn("Skipping polygon without a valid shell");
         continue;
       }
       for (const ring of rings) {
         if (ring.length < 3) {
-          console.warn("Skipping invalid ring with fewer than three vertices.");
+          console.warn("Skipping invalid ring with fewer than three vertices");
           continue;
         }
         for (const position of ring) {
@@ -100,7 +100,7 @@ export class ShapesGeometryBuilder {
     names: string[] | undefined;
   } {
     if (this._built) {
-      throw new Error("The geometry has already been built.");
+      throw new Error("The geometry has already been built");
     }
     this._built = true;
     return {

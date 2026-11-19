@@ -13,7 +13,7 @@ describe("formatProjectSource", () => {
 
   it("names the folder generically without a workspace", () => {
     expect(formatProjectSource("/project.tm4", null, baseUrl)).toBe(
-      "Folder › project.tm4",
+      "Workspace › project.tm4",
     );
   });
 

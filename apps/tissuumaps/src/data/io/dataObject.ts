@@ -16,30 +16,6 @@ import { appStore } from "@/stores/app";
 import { projectStore } from "@/stores/project";
 
 /**
- * Creates a unique ID for a data object, named after its source
- *
- * The ID is the file name of the source with every `.` replaced by `-`,
- * followed by a random UUID, so `cells.ome.zarr` gives e.g.
- * `cells-ome-zarr-0f8e…`. The UUID keeps the ID unique, also against the IDs
- * of deleted data objects that may still be referenced. Without a source, or
- * for URLs without a path, the ID is the UUID alone.
- *
- * @param normalizedSource - The normalized source of the data object, if any
- * @returns The ID
- * @throws See `SourceUtils.getPathSegments`
- */
-export function createDataObjectID(
-  normalizedSource: string | undefined,
-): string {
-  const fileName =
-    normalizedSource !== undefined
-      ? SourceUtils.getPathSegments(normalizedSource).at(-1)
-      : undefined;
-  const uuid = crypto.randomUUID();
-  return fileName ? `${fileName.replaceAll(".", "-")}-${uuid}` : uuid;
-}
-
-/**
  * Normalizes the source of a data object to add, against the open workspace
  * and the project source
  *
@@ -64,7 +40,7 @@ function normalizeSource(source: string | undefined): string | undefined {
  * @param name - The name of the image
  * @param layerId - The ID of the layer to add the image to
  * @param origSource - The source the data source had before it was prepared,
- * which the ID is created from (see {@link createDataObjectID})
+ * which the ID is created from (see `SourceUtils.createID`)
  * @param preparedDataSource - The data source of the image, prepared (see
  * `DataProvider.prepareDataSource`)
  * @returns The ID of the added image
@@ -77,9 +53,9 @@ export function addImageDataObject(
   preparedDataSource: ImageDataSource,
 ): string {
   if (layerId === undefined) {
-    throw new Error("Images have to be added to a layer.");
+    throw new Error("Images must be added to a layer");
   }
-  const id = createDataObjectID(normalizeSource(origSource));
+  const id = SourceUtils.createID(normalizeSource(origSource));
   projectStore
     .getState()
     .addImage(
@@ -98,7 +74,7 @@ export function addImageDataObject(
  * @param name - The name of the labels
  * @param layerId - The ID of the layer to add the labels to
  * @param origSource - The source the data source had before it was prepared,
- * which the ID is created from (see {@link createDataObjectID})
+ * which the ID is created from (see `SourceUtils.createID`)
  * @param preparedDataSource - The data source of the labels, prepared (see
  * `DataProvider.prepareDataSource`)
  * @returns The ID of the added labels
@@ -111,9 +87,9 @@ export function addLabelsDataObject(
   preparedDataSource: LabelsDataSource,
 ): string {
   if (layerId === undefined) {
-    throw new Error("Labels have to be added to a layer.");
+    throw new Error("Labels must be added to a layer");
   }
-  const id = createDataObjectID(normalizeSource(origSource));
+  const id = SourceUtils.createID(normalizeSource(origSource));
   projectStore.getState().addLabels(
     createLabels({
       id,
@@ -135,7 +111,7 @@ export function addLabelsDataObject(
  * @param name - The name of the points
  * @param layerId - The ID of the layer to add the points to
  * @param origSource - The source the data source had before it was prepared,
- * which the ID is created from (see {@link createDataObjectID})
+ * which the ID is created from (see `SourceUtils.createID`)
  * @param preparedDataSource - The data source of the points, prepared (see
  * `DataProvider.prepareDataSource`)
  * @returns The ID of the added points
@@ -148,9 +124,9 @@ export function addPointsDataObject(
   preparedDataSource: PointsDataSource,
 ): string {
   if (layerId === undefined) {
-    throw new Error("Points have to be added to a layer.");
+    throw new Error("Points must be added to a layer");
   }
-  const id = createDataObjectID(normalizeSource(origSource));
+  const id = SourceUtils.createID(normalizeSource(origSource));
   projectStore.getState().addPoints(
     createPoints({
       id,
@@ -172,7 +148,7 @@ export function addPointsDataObject(
  * @param name - The name of the shapes
  * @param layerId - The ID of the layer to add the shapes to
  * @param origSource - The source the data source had before it was prepared,
- * which the ID is created from (see {@link createDataObjectID})
+ * which the ID is created from (see `SourceUtils.createID`)
  * @param preparedDataSource - The data source of the shapes, prepared (see
  * `DataProvider.prepareDataSource`)
  * @returns The ID of the added shapes
@@ -185,9 +161,9 @@ export function addShapesDataObject(
   preparedDataSource: ShapesDataSource,
 ): string {
   if (layerId === undefined) {
-    throw new Error("Shapes have to be added to a layer.");
+    throw new Error("Shapes must be added to a layer");
   }
-  const id = createDataObjectID(normalizeSource(origSource));
+  const id = SourceUtils.createID(normalizeSource(origSource));
   projectStore.getState().addShapes(
     createShapes({
       id,
@@ -208,7 +184,7 @@ export function addShapesDataObject(
  *
  * @param name - The name of the table
  * @param origSource - The source the data source had before it was prepared,
- * which the ID is created from (see {@link createDataObjectID})
+ * which the ID is created from (see `SourceUtils.createID`)
  * @param preparedDataSource - The data source of the table, prepared (see
  * `DataProvider.prepareDataSource`)
  * @returns The ID of the added table
@@ -219,7 +195,7 @@ export function addTableDataObject(
   origSource: string | undefined,
   preparedDataSource: TableDataSource,
 ): string {
-  const id = createDataObjectID(normalizeSource(origSource));
+  const id = SourceUtils.createID(normalizeSource(origSource));
   projectStore
     .getState()
     .addTable(createTable({ id, name, dataSource: preparedDataSource }));

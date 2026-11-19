@@ -4,6 +4,7 @@ import {
   type TableDataProvider,
 } from "@tissuumaps/core";
 
+import { DaskUtils } from "./DaskUtils";
 import { ParquetTableData } from "./ParquetTableData";
 import {
   type NormalizedParquetTableDataSource,
@@ -11,6 +12,7 @@ import {
   parquetTableDataSourceDefaults,
 } from "./ParquetTableDataSource";
 import { runParquetWorker } from "./runParquetWorker";
+import type { ParquetSource } from "./types";
 
 export class ParquetTableDataProvider implements TableDataProvider<
   ParquetTableDataSource,
@@ -90,30 +92,57 @@ export class ParquetTableDataProvider implements TableDataProvider<
     );
   }
 
+  /**
+   * Loads a table from a Parquet file, or from the partition files of a Dask
+   * dataset directory, in partition order
+   *
+   * A remote directory cannot be listed, so its partition files are requested
+   * in order until one is missing.
+   *
+   * @param normalizedDataSource - The normalized data source
+   * @param options - Optional abort signal, progress callback and workspace
+   * @returns A promise that resolves to the table
+   * @throws Error if the source names neither a Parquet file nor a directory
+   * holding partition files
+   */
   async load(
     normalizedDataSource: NormalizedParquetTableDataSource,
     options?: DataProviderLoadOptions,
   ): Promise<ParquetTableData> {
     const { signal, onProgress, workspace = null } = options ?? {};
     signal?.throwIfAborted();
-    const { file, url } = await SourceUtils.openSourceFile(
-      normalizedDataSource.source,
-      workspace,
-      { signal },
-    );
-    const parquetSource = {
-      file,
-      url,
-      headers: normalizedDataSource.requestHeaders,
-    };
+    const { source, requestHeaders: headers } = normalizedDataSource;
+    const resolvedSource = await SourceUtils.resolveSource(source, workspace, {
+      signal,
+    });
+    let parts: ParquetSource[];
+    if (typeof resolvedSource === "string") {
+      const urls = await DaskUtils.findParquetURLs(resolvedSource, {
+        headers,
+        signal,
+      });
+      parts = urls.map((url) => ({ url, headers }));
+    } else if (resolvedSource.kind === "file") {
+      const file = await resolvedSource.getFile();
+      signal?.throwIfAborted(); // getFile() does not throw on abort
+      parts = [{ file }];
+    } else {
+      const files = await DaskUtils.listPartFiles(resolvedSource, { signal });
+      parts = files.map((file) => ({ file }));
+    }
+    if (parts.length === 0) {
+      throw new Error(
+        `No Parquet file or Dask dataset directory found at '${source}'`,
+      );
+    }
     const { idColumn, nameColumn } = normalizedDataSource;
     const { numRows, columns, coordinateColumns, ids, names } =
       await runParquetWorker(
-        { op: "file", source: parquetSource, idColumn, nameColumn },
+        { op: "file", parts, idColumn, nameColumn },
         { signal, onProgress },
       );
     return new ParquetTableData(
-      parquetSource,
+      parts,
       numRows,
       columns,
       coordinateColumns,

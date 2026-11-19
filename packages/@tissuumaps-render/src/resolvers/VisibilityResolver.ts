@@ -233,7 +233,7 @@ export class VisibilityResolver {
     const visibilityMap = ConfigUtils.findGroupByMap(config, visibilityMaps);
     if (visibilityMap === undefined) {
       console.warn(
-        `Visibility map ${config.groupBy.map} not found, using default visibility`,
+        `Visibility map '${config.groupBy.map}' not found, using default visibility`,
       );
       return VisibilityResolver.createUniformVisibilities(
         ids.length,

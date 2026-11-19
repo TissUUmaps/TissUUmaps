@@ -86,14 +86,14 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
           }
         : source;
     } else {
-      throw new Error("Either source or tileSource must be specified.");
+      throw new Error("Either source or tileSource must be specified");
     }
     if (
       typeof tileSource === "string" &&
       SourceUtils.isWorkspacePath(tileSource)
     ) {
       throw new Error(
-        `Tile sources cannot be opened from the workspace: ${tileSource}`,
+        `Tile source '${tileSource}' cannot be opened from the workspace`,
       );
     }
     return {

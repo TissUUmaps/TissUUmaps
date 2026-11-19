@@ -188,7 +188,7 @@ export function useColorConfigWidget(
         })
         .catch((error) => {
           if (!abortController.signal.aborted) {
-            console.error("Error loading table value range", error);
+            console.error("Failed to load the table value range", error);
           }
         });
       return () => abortController.abort();

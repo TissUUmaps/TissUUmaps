@@ -53,6 +53,11 @@
       "types": "./dist/parquet.d.ts",
       "default": "./dist/parquet.js"
     },
+    "./spatialdata": {
+      "tissuumaps-development": "./src/spatialdata/index.ts",
+      "types": "./dist/spatialdata.d.ts",
+      "default": "./dist/spatialdata.js"
+    },
     "./table": {
       "tissuumaps-development": "./src/table/index.ts",
       "types": "./dist/table.d.ts",
@@ -62,6 +67,11 @@
       "tissuumaps-development": "./src/tiff/index.ts",
       "types": "./dist/tiff.d.ts",
       "default": "./dist/tiff.js"
+    },
+    "./tissuumaps": {
+      "tissuumaps-development": "./src/tissuumaps/index.ts",
+      "types": "./dist/tissuumaps.d.ts",
+      "default": "./dist/tissuumaps.js"
     },
     "./zarr": {
       "tissuumaps-development": "./src/hierarchical/zarr/index.ts",
@@ -130,6 +140,10 @@
         "types": "./dist/parquet.d.ts",
         "default": "./dist/parquet.js"
       },
+      "./spatialdata": {
+        "types": "./dist/spatialdata.d.ts",
+        "default": "./dist/spatialdata.js"
+      },
       "./table": {
         "types": "./dist/table.d.ts",
         "default": "./dist/table.js"
@@ -137,6 +151,10 @@
       "./tiff": {
         "types": "./dist/tiff.d.ts",
         "default": "./dist/tiff.js"
+      },
+      "./tissuumaps": {
+        "types": "./dist/tissuumaps.d.ts",
+        "default": "./dist/tissuumaps.js"
       },
       "./zarr": {
         "types": "./dist/zarr.d.ts",

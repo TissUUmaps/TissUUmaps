@@ -107,7 +107,7 @@ export class TIFFUtils {
     const count = offsetsPerPlane[0]?.length ?? 0;
     if (offsetsPerPlane.some((offsets) => offsets.length !== count)) {
       throw new Error(
-        `The channels have different numbers of SubIFDs (${offsetsPerPlane.map((o) => o.length).join(", ")}).`,
+        `The channels have different numbers of SubIFDs (${offsetsPerPlane.map((o) => o.length).join(", ")})`,
       );
     }
     if (count === 0) {
@@ -247,13 +247,13 @@ export class TIFFUtils {
    */
   static validatePyramids(pyramids: GeoTIFFImage[][]): void {
     if (pyramids.length === 0) {
-      throw new Error("The TIFF file contains no image.");
+      throw new Error("The TIFF file contains no image");
     }
     pyramids.forEach((pyramid, c) => {
       const widths = pyramid.map((image) => image.getWidth());
       if (widths.some((width, i) => i > 0 && width >= widths[i - 1]!)) {
         throw new Error(
-          `The pyramid levels of channel ${c} do not shrink (widths ${widths.join(", ")}).`,
+          `The pyramid levels of channel ${c} do not shrink (widths ${widths.join(", ")})`,
         );
       }
     });
@@ -264,16 +264,16 @@ export class TIFFUtils {
       const plane = pyramid[0]!;
       const samples = plane.getSamplesPerPixel();
       if (samples !== 1) {
-        throw new Error(`Channel ${c} has ${samples} samples per pixel.`);
+        throw new Error(`Channel ${c} has ${samples} samples per pixel`);
       }
       const photometric = plane
         .getFileDirectory()
         .getValue("PhotometricInterpretation");
       if (photometric === Palette) {
-        throw new Error(`Channel ${c} is a palette image.`);
+        throw new Error(`Channel ${c} is a palette image`);
       }
       if (photometric === WhiteIsZero) {
-        throw new Error(`Channel ${c} is a white-is-zero image.`);
+        throw new Error(`Channel ${c} is a white-is-zero image`);
       }
     });
   }
