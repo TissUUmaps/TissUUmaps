@@ -452,7 +452,7 @@ describe("SpatialDataProjectProvider", () => {
       );
       await expect(promise).rejects.toHaveProperty(
         "cause.message",
-        "Unknown coordinate transformation type 'bogus'",
+        "Coordinate transformation type 'bogus' is not supported",
       );
     });
 
