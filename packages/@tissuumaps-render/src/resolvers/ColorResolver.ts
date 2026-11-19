@@ -213,7 +213,7 @@ export class ColorResolver {
     const colorPalette = findColorPalette(config.from.palette);
     if (colorPalette === undefined) {
       console.warn(
-        `Color palette ${config.from.palette} not found, using default color`,
+        `Color palette '${config.from.palette}' not found, using default color`,
       );
       return ColorResolver.createUniformColors(ids.length, defaultColor, {
         align,
@@ -280,7 +280,7 @@ export class ColorResolver {
     const colorPalette = findColorPalette(config.groupBy.palette);
     if (config.groupBy.map !== undefined && colorMap === undefined) {
       console.warn(
-        `Color map ${config.groupBy.map} not found, using default color`,
+        `Color map '${config.groupBy.map}' not found, using default color`,
       );
       return ColorResolver.createUniformColors(ids.length, defaultColor, {
         align,
@@ -289,8 +289,8 @@ export class ColorResolver {
     if (config.groupBy.map === undefined && colorPalette === undefined) {
       console.warn(
         config.groupBy.palette !== undefined
-          ? `Color palette ${config.groupBy.palette} not found, using default color`
-          : `No color map or color palette specified, using default color`,
+          ? `Color palette '${config.groupBy.palette}' not found, using default color`
+          : "No color map or color palette specified, using default color",
       );
       return ColorResolver.createUniformColors(ids.length, defaultColor, {
         align,
@@ -348,7 +348,7 @@ export class ColorResolver {
     const colorPalette = findColorPalette(config.random.palette);
     if (colorPalette === undefined) {
       console.warn(
-        `Color palette ${config.random.palette} not found, using default color`,
+        `Color palette '${config.random.palette}' not found, using default color`,
       );
       return ColorResolver.createUniformColors(ids.length, defaultColor, {
         align,

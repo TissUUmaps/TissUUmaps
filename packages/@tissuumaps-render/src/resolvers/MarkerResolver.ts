@@ -226,7 +226,7 @@ export class MarkerResolver {
     const markerMap = ConfigUtils.findGroupByMap(config, markerMaps);
     if (config.groupBy.map !== undefined && markerMap === undefined) {
       console.warn(
-        `Marker map ${config.groupBy.map} not found, using default marker`,
+        `Marker map '${config.groupBy.map}' not found, using default marker`,
       );
       return MarkerResolver.createUniformMarkers(ids.length, defaultMarker, {
         align,
