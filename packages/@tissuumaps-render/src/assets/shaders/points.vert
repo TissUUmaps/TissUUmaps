@@ -5,7 +5,7 @@
 #define N_MARKERS_PER_CHANNEL (MARKER_ATLAS_GRID_SIZE * MARKER_ATLAS_GRID_SIZE)
 
 // Macro to discard the current vertex
-#define DISCARD gl_PointSize = 0.0; gl_Position = vec4(2.0, 2.0, 0.0, 1.0); v_color = vec4(0.0); v_marker = uvec3(0); return;
+#define DISCARD gl_PointSize = 0.0; gl_Position = vec4(2.0, 2.0, 0.0, 1.0); v_rgba = vec4(0.0); v_marker = uvec3(0); return;
 
 // Global uniforms
 uniform float u_globalPointSizeFactor;
@@ -23,19 +23,19 @@ uniform float u_opacityFactor; // layer and object opacity, 0 if the layer or ob
 layout(location = 0) in float a_x; // in data units
 layout(location = 1) in float a_y; // in data units
 layout(location = 2) in float a_size; // in the unit of the size configuration, see u_pointSizeFactor
-layout(location = 3) in uint a_color; // packed 8-bit RGBA, 0xAABBGGRR (red in the lowest byte); alpha holds the point visibility and opacity
+layout(location = 3) in uint a_rgba; // packed 8-bit RGBA, 0xAABBGGRR (red in the lowest byte); alpha holds the point visibility and opacity
 layout(location = 4) in uint a_marker; // marker index
 
 // Outputs to fragment shader
-flat out vec4 v_color; // RGBA color
+flat out vec4 v_rgba; // with the opacity factor and coverage applied to alpha
 flat out uvec3 v_marker; // (col, row, channel)
 
 // Unpacks a uint-packed 8-bit RGBA color, 0xAABBGGRR (red in the lowest byte)
-vec4 unpackColor(uint color) {
-    float r = float((color >> 0) & 0xFFu) / 255.0;
-    float g = float((color >> 8) & 0xFFu) / 255.0;
-    float b = float((color >> 16) & 0xFFu) / 255.0;
-    float a = float((color >> 24) & 0xFFu) / 255.0;
+vec4 unpackRgba(uint rgba) {
+    float r = float((rgba >> 0) & 0xFFu) / 255.0;
+    float g = float((rgba >> 8) & 0xFFu) / 255.0;
+    float b = float((rgba >> 16) & 0xFFu) / 255.0;
+    float a = float((rgba >> 24) & 0xFFu) / 255.0;
     return vec4(r, g, b, a);
 }
 
@@ -68,12 +68,12 @@ void main() {
     gl_Position = vec4(ndcPosition, 0.0, 1.0);
 
     // Unpack color, apply the layer and object opacity and the coverage, and discard fully transparent points
-    vec4 color = unpackColor(a_color);
-    color.a *= u_opacityFactor * coverage * coverage;
-    if(color.a == 0.0) {
+    vec4 rgba = unpackRgba(a_rgba);
+    rgba.a *= u_opacityFactor * coverage * coverage;
+    if(rgba.a == 0.0) {
         DISCARD;
     }
-    v_color = color;
+    v_rgba = rgba;
 
     // Get marker atlas coordinates
     v_marker = markerAtlasCoords(a_marker);
