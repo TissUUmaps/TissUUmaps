@@ -133,7 +133,7 @@ export function useChooseProjectProvider(): (
             : projectProvider.load !== undefined,
       );
       if (choices.length === 0) {
-        throw new Error("No project provider can load projects.");
+        throw new Error("No project provider can load projects");
       }
       if (choices.length === 1) {
         const choice = choices[0]!;
