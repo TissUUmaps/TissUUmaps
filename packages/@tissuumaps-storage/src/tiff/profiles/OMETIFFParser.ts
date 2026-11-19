@@ -92,7 +92,7 @@ export class OMETIFFParser implements TIFFParser {
     signal?.throwIfAborted();
     const root = await readOMEXML(tiff, { signal });
     if (root === undefined) {
-      throw new Error("The file has no OME-XML.");
+      throw new Error("The file has no OME-XML");
     }
     const images = await TIFFUtils.readImages(tiff, { signal });
 
@@ -102,21 +102,21 @@ export class OMETIFFParser implements TIFFParser {
       .map((pixels) => parsePixels(pixels, fileUUID));
     const largestImage = findLargestImage(root);
     if (largestImage === undefined) {
-      throw new Error("The OME-XML describes no image.");
+      throw new Error("The OME-XML describes no image");
     }
     const pixels = parsePixels(largestImage.pixels, fileUUID);
     if (z < 0 || z >= pixels.sizeZ) {
-      throw new Error(`z=${z} is out of bounds (SizeZ=${pixels.sizeZ}).`);
+      throw new Error(`z=${z} is out of bounds (SizeZ=${pixels.sizeZ})`);
     }
     if (t < 0 || t >= pixels.sizeT) {
-      throw new Error(`t=${t} is out of bounds (SizeT=${pixels.sizeT}).`);
+      throw new Error(`t=${t} is out of bounds (SizeT=${pixels.sizeT})`);
     }
 
     const ifdByPlane = mapPlanesToIFDs(pixels, images.length);
     const planes = Array.from({ length: getPlaneCountC(pixels) }, (_, c) => {
       const ifd = ifdByPlane.get(planeKey(c, z, t));
       if (ifd === undefined) {
-        throw new Error(`No IFD for plane c=${c}, z=${z}, t=${t}.`);
+        throw new Error(`No IFD for plane c=${c}, z=${z}, t=${t}`);
       }
       return images[ifd]!; // mapPlanesToIFDs() only maps IFDs the file has
     });
@@ -197,7 +197,7 @@ function findLargestImage(
 function parsePixels(pixels: Element, fileUUID: string | null): Pixels {
   const dimensionOrder = pixels.getAttribute("DimensionOrder") ?? "XYCZT";
   if (!dimensionOrders.includes(dimensionOrder)) {
-    throw new Error(`Invalid DimensionOrder "${dimensionOrder}".`);
+    throw new Error(`Invalid DimensionOrder '${dimensionOrder}'`);
   }
   const tiffData = XMLUtils.getChildren(pixels, "TiffData").map((element) => {
     const uuid = XMLUtils.getChildren(element, "UUID")[0];
@@ -206,8 +206,8 @@ function parsePixels(pixels: Element, fileUUID: string | null): Pixels {
         uuid.getAttribute("FileName") ?? uuid.textContent?.trim();
       throw new Error(
         fileUUID === null
-          ? `The OME-XML has no UUID, so the planes in ${fileName} cannot be matched to this file.`
-          : `Multi-file OME-TIFF is not supported (${fileName}).`,
+          ? `The OME-XML has no UUID, so the planes in '${fileName}' cannot be matched to this file`
+          : `Multi-file OME-TIFF is not supported; planes are stored in '${fileName}'`,
       );
     }
     // PlaneCount defaults to 1 if IFD is given, else to all remaining planes

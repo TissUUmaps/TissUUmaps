@@ -83,5 +83,5 @@ export async function findTIFFParser(
       return parser;
     }
   }
-  throw new Error("No parser supports the TIFF file.");
+  throw new Error("No parser supports the TIFF file");
 }
