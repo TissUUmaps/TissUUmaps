@@ -504,10 +504,10 @@ export class OpenSeadragonContext {
    * is applied to every tile of the tiled image, including those loaded later.
    *
    * The data transfer is remembered per tile source, until the tile source is
-   * garbage-collected. Tiled images that share a tile source therefore also
-   * share a data transfer, with the last one set winning - including the tiled
-   * images of the navigator, which mirror those of this viewer and are
-   * recolored along with them. As the navigator keeps a tile cache of its own,
+   * garbage-collected. Every tiled image of this viewer has a tile source of
+   * its own (see {@link OpenSeadragonUtils.isolateTileSource}), which it shares
+   * only with the tiled image of the navigator that mirrors it, so that one is
+   * recolored along with it. As the navigator keeps a tile cache of its own,
    * which the invalidation of `tiledImage` does not reach, its tiled images
    * that share the tile source are invalidated explicitly, too. Those are few
    * low-resolution tiles, so this stays cheap; invalidating the whole viewer
@@ -662,7 +662,11 @@ export class OpenSeadragonContext {
           // this needs to be a shallow copy; OpenSeadragon mutates it!
           { ...tiledImageOptions, tileSource },
         )) as { source: OpenSeadragon.TileSource };
-      return openedTileSource;
+      // Data objects may hand out one tile source instance for several
+      // tiled images (e.g. two labels objects on the same mask), which would
+      // then share their tile cache and overwrite each other's recolored
+      // tiles, so every tiled image gets its own cache namespace.
+      return OpenSeadragonUtils.isolateTileSource(openedTileSource);
     } catch (error) {
       throw new Error("Failed to open tile source", { cause: error });
     }

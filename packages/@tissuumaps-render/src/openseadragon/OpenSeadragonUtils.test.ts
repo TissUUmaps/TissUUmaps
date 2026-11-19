@@ -449,3 +449,52 @@ describe("OpenSeadragonUtils", () => {
     );
   });
 });
+
+describe("OpenSeadragonUtils.isolateTileSource", () => {
+  function createTileSource() {
+    return new OpenSeadragon.TileSource({
+      width: 1024,
+      height: 1024,
+      tileSize: 256,
+      minLevel: 0,
+      maxLevel: 2,
+      getTileUrl: (level: number, x: number, y: number) =>
+        `tile-${level}-${x}-${y}`,
+    } as OpenSeadragon.TileSourceOptions);
+  }
+
+  it("inherits the tile source's behavior", () => {
+    const tileSource = createTileSource();
+    const isolated = OpenSeadragonUtils.isolateTileSource(tileSource);
+    expect(isolated).toBeInstanceOf(OpenSeadragon.TileSource);
+    expect(isolated.getTileUrl(1, 2, 3)).toBe(tileSource.getTileUrl(1, 2, 3));
+    expect(isolated.getNumTiles(2)).toEqual(tileSource.getNumTiles(2));
+    expect(isolated.ready).toBe(tileSource.ready);
+  });
+
+  it("gives each isolated tile source its own cache keys", () => {
+    const tileSource = createTileSource();
+    const a = OpenSeadragonUtils.isolateTileSource(tileSource);
+    const b = OpenSeadragonUtils.isolateTileSource(tileSource);
+    const url = tileSource.getTileUrl(1, 2, 3) as string;
+    const originalKey = String(
+      tileSource.getTileHashKey(1, 2, 3, url, {}, null),
+    );
+    const keyA = String(a.getTileHashKey(1, 2, 3, url, {}, null));
+    const keyB = String(b.getTileHashKey(1, 2, 3, url, {}, null));
+    expect(keyA).not.toBe(keyB);
+    expect(keyA.startsWith(originalKey)).toBe(true);
+    expect(keyB.startsWith(originalKey)).toBe(true);
+    // the same tiled image keeps stable keys
+    expect(String(a.getTileHashKey(1, 2, 3, url, {}, null))).toBe(keyA);
+  });
+
+  it("only equals itself", () => {
+    const tileSource = createTileSource();
+    const a = OpenSeadragonUtils.isolateTileSource(tileSource);
+    const b = OpenSeadragonUtils.isolateTileSource(tileSource);
+    expect(a.equals(a)).toBe(true);
+    expect(a.equals(b)).toBe(false);
+    expect(a.equals(tileSource)).toBe(false);
+  });
+});
