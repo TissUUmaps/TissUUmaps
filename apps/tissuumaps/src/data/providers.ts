@@ -8,9 +8,11 @@ import {
   OpenSeadragonImageDataProvider,
   ParquetShapesDataProvider,
   ParquetTableDataProvider,
+  SpatialDataProjectProvider,
   TIFFImageDataProvider,
   TIFFLabelsDataProvider,
   TablePointsDataProvider,
+  TissUUmapsProjectProvider,
   ZarrTableDataProvider,
   csvTableDataSourceType,
   geoJSONShapesDataSourceType,
@@ -20,9 +22,11 @@ import {
   openSeadragonImageDataSourceType,
   parquetShapesDataSourceType,
   parquetTableDataSourceType,
+  spatialDataProjectType,
   tablePointsDataSourceType,
   tiffImageDataSourceType,
   tiffLabelsDataSourceType,
+  tissuumapsProjectType,
   zarrTableDataSourceType,
 } from "@tissuumaps/storage";
 
@@ -143,5 +147,24 @@ export function enableBuiltInDataProviders(): void {
   appStoreState.registerTableDataProvider(
     zarrTableDataSourceType,
     new ZarrTableDataProvider(),
+  );
+}
+
+/**
+ * Registers the project providers shipped with TissUUmaps with the app store
+ *
+ * Called once during application startup, before any project is loaded.
+ */
+export function enableBuiltInProjectProviders(): void {
+  const appStoreState = appStore.getState();
+
+  appStoreState.registerProjectProvider(
+    tissuumapsProjectType,
+    new TissUUmapsProjectProvider(),
+  );
+
+  appStoreState.registerProjectProvider(
+    spatialDataProjectType,
+    new SpatialDataProjectProvider(),
   );
 }

@@ -357,6 +357,7 @@ describe("GeoParquetUtils", () => {
 
   describe("readCoordinateColumns", () => {
     const threePoints = fakeMetadata(pointsGeo, 3);
+    const onePoint = fakeMetadata(pointsGeo, 1);
 
     it("reads both axes of a point column in one pass", async () => {
       const readColumnChunks = fakeGeometryChunks([
@@ -365,8 +366,7 @@ describe("GeoParquetUtils", () => {
       ]);
       await expect(
         GeoParquetUtils.readCoordinateColumns(
-          buffer,
-          threePoints,
+          [{ buffer, metadata: threePoints }],
           "geometry",
           () => {},
         ),
@@ -377,12 +377,50 @@ describe("GeoParquetUtils", () => {
       expect(readColumnChunks).toHaveBeenCalledTimes(1);
     });
 
+    it("reads the parts of a table one after another", async () => {
+      const chunksByPart = new Map([
+        [threePoints, [[point(1, 2), point(3, 4)], [point(5, 6)]]],
+        [onePoint, [[point(7, 8)]]],
+      ]);
+      const readColumnChunks = vi
+        .spyOn(ParquetUtils, "readColumnChunks")
+        .mockImplementation(
+          (buffer, metadata, _column, onChunk, onProgress) => {
+            let rowStart = 0;
+            for (const chunk of chunksByPart.get(metadata)!) {
+              onChunk(chunk, rowStart);
+              rowStart += chunk.length;
+            }
+            onProgress(buffer.byteLength, buffer.byteLength);
+            return Promise.resolve();
+          },
+        );
+      const onProgress = vi.fn();
+      await expect(
+        GeoParquetUtils.readCoordinateColumns(
+          [
+            { buffer, metadata: threePoints },
+            { buffer, metadata: onePoint },
+          ],
+          "geometry",
+          onProgress,
+        ),
+      ).resolves.toEqual({
+        x: new Float32Array([1, 3, 5, 7]),
+        y: new Float32Array([2, 4, 6, 8]),
+      });
+      expect(readColumnChunks).toHaveBeenCalledTimes(2);
+      expect(onProgress.mock.calls).toEqual([
+        [8, 16],
+        [16, 16],
+      ]);
+    });
+
     it("rejects a row without a geometry", async () => {
       fakeGeometryChunks([[point(1, 2), null, point(5, 6)]]);
       await expect(
         GeoParquetUtils.readCoordinateColumns(
-          buffer,
-          threePoints,
+          [{ buffer, metadata: threePoints }],
           "geometry",
           () => {},
         ),
@@ -393,8 +431,7 @@ describe("GeoParquetUtils", () => {
       fakeGeometryChunks([[point(1, 2), polygon, point(5, 6)]]);
       await expect(
         GeoParquetUtils.readCoordinateColumns(
-          buffer,
-          threePoints,
+          [{ buffer, metadata: threePoints }],
           "geometry",
           () => {},
         ),

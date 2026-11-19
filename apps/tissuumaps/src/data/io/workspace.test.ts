@@ -90,19 +90,26 @@ describe("workspace", () => {
   });
 
   describe("pickProjectFile", () => {
+    const fileTypes = [
+      { description: "Project", accept: { "application/json": [".tm4"] } },
+    ];
+
     it("returns the picked file", async () => {
       const picker = vi.fn(() => Promise.resolve([projectFile]));
       stubOpenFilePicker(picker);
-      await expect(pickProjectFile()).resolves.toBe(projectFile);
+      await expect(pickProjectFile(fileTypes)).resolves.toBe(projectFile);
       expect(picker).toHaveBeenCalledWith(
-        expect.objectContaining({ multiple: false }),
+        expect.objectContaining({
+          multiple: false,
+          types: fileTypes,
+        }),
       );
     });
 
     it("opens the picker in the given directory", async () => {
       const picker = vi.fn(() => Promise.resolve([projectFile]));
       stubOpenFilePicker(picker);
-      await pickProjectFile({ startIn: directory });
+      await pickProjectFile(fileTypes, { startIn: directory });
       expect(picker).toHaveBeenCalledWith(
         expect.objectContaining({ startIn: directory }),
       );
@@ -110,25 +117,25 @@ describe("workspace", () => {
 
     it("returns null when the picker returns no file", async () => {
       stubOpenFilePicker(() => Promise.resolve([]));
-      await expect(pickProjectFile()).resolves.toBeNull();
+      await expect(pickProjectFile(fileTypes)).resolves.toBeNull();
     });
 
     it("returns null when the user cancels", async () => {
       stubOpenFilePicker(() =>
         Promise.reject(new DOMException("Aborted", "AbortError")),
       );
-      await expect(pickProjectFile()).resolves.toBeNull();
+      await expect(pickProjectFile(fileTypes)).resolves.toBeNull();
     });
 
     it("rethrows other errors", async () => {
       const error = new DOMException("Denied", "NotAllowedError");
       stubOpenFilePicker(() => Promise.reject(error));
-      await expect(pickProjectFile()).rejects.toBe(error);
+      await expect(pickProjectFile(fileTypes)).rejects.toBe(error);
     });
 
     it("rejects without the picker", async () => {
       stubOpenFilePicker(null);
-      await expect(pickProjectFile()).rejects.toThrow(/not supported/);
+      await expect(pickProjectFile(fileTypes)).rejects.toThrow(/not supported/);
     });
   });
 
@@ -160,7 +167,7 @@ describe("workspace", () => {
       stubOpenFilePicker(() => Promise.resolve([dataFile]));
       await expect(
         pickWorkspacePath(makeWorkspace([]), "directory"),
-      ).rejects.toThrow(/connected folder itself/);
+      ).rejects.toThrow(/workspace itself/);
     });
 
     it("rejects a file outside the workspace", async () => {
@@ -168,7 +175,7 @@ describe("workspace", () => {
       stubOpenFilePicker(() => Promise.resolve([dataFile]));
       await expect(
         pickWorkspacePath(makeWorkspace(null), "file"),
-      ).rejects.toThrow(/not in the connected folder/);
+      ).rejects.toThrow(/not in the workspace/);
     });
 
     it("returns null when the user cancels", async () => {
@@ -192,10 +199,10 @@ describe("workspace", () => {
     it("rejects the workspace itself, and anything outside it", async () => {
       await expect(
         resolveWorkspacePath(directory, makeWorkspace([])),
-      ).rejects.toThrow(/connected folder itself/);
+      ).rejects.toThrow(/workspace itself/);
       await expect(
         resolveWorkspacePath(dataFile, makeWorkspace(null)),
-      ).rejects.toThrow(/not in the connected folder/);
+      ).rejects.toThrow(/not in the workspace/);
     });
   });
 
