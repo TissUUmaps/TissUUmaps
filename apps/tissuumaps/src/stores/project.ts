@@ -196,6 +196,8 @@ export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
       setPhysicalUnit: (physicalUnit) => set({ physicalUnit }),
       setScaleBarVisibility: (scaleBarVisibility) =>
         set({ scaleBarVisibility }),
+      setColorbarsVisibility: (colorbarsVisibility) =>
+        set({ colorbarsVisibility }),
       clear: () => set(createInitialProjectStoreState()),
     })),
     { name: "project", enabled: import.meta.env.DEV },

@@ -20,6 +20,7 @@ import {
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
+import { ColorbarsViewerControl } from "./ColorbarsViewerControl";
 import { ScaleBarViewerControl } from "./ScaleBarViewerControl";
 import { ViewerToolbar } from "./ViewerToolbar";
 import { highlightItemGroup } from "./highlightItemGroup";
@@ -33,6 +34,9 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
   const interactionMode = useAppStore((state) => state.interactionMode);
   const scaleBarVisibility = useProjectStore(
     (state) => state.scaleBarVisibility,
+  );
+  const colorbarsVisibility = useProjectStore(
+    (state) => state.colorbarsVisibility,
   );
   const imageChannelPreview = useAppStore((state) => state.imageChannelPreview);
   const viewerBackgroundColor = useProjectStore(
@@ -145,6 +149,15 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
           autoFade={false}
         >
           <ScaleBarViewerControl />
+        </ViewerControl>
+      )}
+      {/* never fades out, as the colorbars explain what the viewer shows */}
+      {colorbarsVisibility && (
+        <ViewerControl
+          anchor={ViewerControlAnchor.BOTTOM_RIGHT}
+          autoFade={false}
+        >
+          <ColorbarsViewerControl />
         </ViewerControl>
       )}
     </Viewer>

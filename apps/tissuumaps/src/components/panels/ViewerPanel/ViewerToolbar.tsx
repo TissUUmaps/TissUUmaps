@@ -4,6 +4,7 @@ import { IconButton } from "@/components/common/icon-button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
+import { ColorbarsToggle } from "./ColorbarsToggle";
 import { InteractionModeMenu } from "./InteractionModeMenu";
 import { NavigatorToggle } from "./NavigatorToggle";
 import { PointSizePopover } from "./PointSizePopover";
@@ -47,6 +48,7 @@ export function ViewerToolbar({
       <Separator orientation="vertical" className="mx-0.5" />
       <NavigatorToggle />
       <ScaleBarToggle />
+      <ColorbarsToggle />
     </div>
   );
 }

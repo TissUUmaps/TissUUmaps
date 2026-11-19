@@ -43,6 +43,7 @@ function cleanProject(project: Project): Project {
     physicalUnitSize: project.physicalUnitSize,
     physicalUnit: project.physicalUnit,
     scaleBarVisibility: project.scaleBarVisibility,
+    colorbarsVisibility: project.colorbarsVisibility,
   };
 }
 
