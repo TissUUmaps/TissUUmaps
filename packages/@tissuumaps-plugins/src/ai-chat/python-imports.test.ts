@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   analyzePython,
+  explainMissingModule,
   findImports,
   listedPackages,
+  missingModule,
   packageName,
   pyodidePackages,
 } from "./python-imports";
@@ -200,5 +202,43 @@ describe("python-imports", () => {
     expect(
       analyzePython(new Map([["README.md", "# Hi"]]), pyodidePackages(lock)),
     ).toEqual({ hasPython: false, packages: [], broken: [] });
+  });
+});
+
+describe("missingModule and explainMissingModule", () => {
+  it("finds the module that Python could not import", () => {
+    expect(
+      missingModule("ModuleNotFoundError: No module named 'scipy.sparse'"),
+    ).toEqual({ module: "scipy.sparse", top: "scipy" });
+    expect(missingModule("ZeroDivisionError: division by zero")).toBe(
+      undefined,
+    );
+    expect(missingModule(undefined)).toBe(undefined);
+  });
+
+  it("drops the advice of Pyodide and says what to do in the sandbox", () => {
+    const { byImport } = pyodidePackages(lock);
+    const explained = explainMissingModule(
+      [
+        '  File "<script>", line 3, in main',
+        "ModuleNotFoundError: No module named 'sklearn'",
+        "The module 'scikit-learn' is included in the Pyodide distribution, but it is not installed.",
+        "You can install it by calling:",
+        '  await micropip.install("scikit-learn") in Python, or',
+      ].join("\n"),
+      byImport,
+    );
+    expect(explained).toBe(
+      [
+        '  File "<script>", line 3, in main',
+        "ModuleNotFoundError: No module named 'sklearn'",
+        "scikit-learn is a package of Pyodide, the Python of the sandbox, but it was not loaded before the code ran.",
+      ].join("\n"),
+    );
+    expect(explained).not.toContain("micropip.install");
+    // another error stays as it is
+    expect(explainMissingModule("ValueError: no", byImport)).toBe(
+      "ValueError: no",
+    );
   });
 });

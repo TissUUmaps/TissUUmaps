@@ -1,4 +1,5 @@
 import { notebookText } from "./notebooks";
+import { skillPackageName } from "./python-imports";
 import type { Skill } from "./skills";
 import type { ToolArguments, ToolContext } from "./types";
 
@@ -158,7 +159,8 @@ export const skillInstructions = [
   "read_skill_file (notebooks come as text, without their outputs). To use its Python code,",
   'write your own code with run_code, with language "python" and the name of the skill as',
   "skill: the code can import the modules of the skill (e.g. from anhood import anhood), as",
-  "from the top of its folder. Only the packages of Pyodide can be imported: the parts that",
+  "from the top of its folder; a skill whose folder is a package itself (with __init__.py)",
+  "is imported by the name that load_skill gives. Only the packages of Pyodide can be imported: the parts that",
   "need others (e.g. squidpy or scanpy) do not work; say so, and use the parts that do. When",
   "the chat wrote the SKILL.md of a skill (it says so), and once you have used the code",
   "successfully, offer to write better instructions, and propose them with",
@@ -233,6 +235,7 @@ export function loadSkill(args: ToolArguments, context: ToolContext): string {
   const files = [...skill.files].map(
     ([path, content]) => `${path} (${size(content.size)})`,
   );
+  const packageName = skillPackageName(skill);
   return [
     `Done: loaded the skill "${skill.name}". Follow its instructions:`,
     "",
@@ -243,6 +246,11 @@ export function loadSkill(args: ToolArguments, context: ToolContext): string {
     files.length > 0
       ? `Its other files, for read_skill_file: ${files.join(", ")}.`
       : "It has no other files.",
+    ...(packageName === undefined
+      ? []
+      : [
+          `Its folder is a Python package (it has __init__.py): in Python with this skill, import it by its name, e.g. import ${packageName}, or from ${packageName} import ...; its relative imports then work.`,
+        ]),
   ].join("\n");
 }
 

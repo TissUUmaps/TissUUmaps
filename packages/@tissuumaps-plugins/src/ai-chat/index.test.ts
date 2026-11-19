@@ -10,6 +10,9 @@ import {
   type Image,
   type ImageData,
   type Labels,
+  type Plugin,
+  type PluginRegistry,
+  type PluginStores,
   type Points,
   type ProjectStore,
   type ProjectStoreApi,
@@ -222,6 +225,64 @@ vi.mock("./python-sandbox", () => ({
     };
   },
 }));
+
+/**
+ * The modules of the plugins that the model proposes in the tests, by their
+ * code: jsdom cannot import modules, so each code has its module here
+ */
+const pluginModules = vi.hoisted(() => new Map<string, unknown>());
+vi.mock("./plugin-import", () => ({
+  importModule: (code: string) =>
+    Promise.resolve(pluginModules.get(code) ?? {}),
+}));
+
+/**
+ * A plugin registry like the one TissUUmaps puts on window, which runs
+ * setup, mount and teardown, and keeps the panels it mounted
+ */
+function stubPluginRegistry() {
+  const registered = new Map<
+    string,
+    {
+      plugin: Plugin;
+      teardown: (() => void) | void;
+      panel?: HTMLElement;
+      unmount?: (() => void) | void;
+    }
+  >();
+  const stores = {} as PluginStores;
+  const registry: PluginRegistry = {
+    registerPlugin: (plugin) => {
+      registry.unregisterPlugin(plugin.id);
+      try {
+        registered.set(plugin.id, { plugin, teardown: plugin.setup?.(stores) });
+      } catch {
+        // logged by TissUUmaps
+      }
+    },
+    mountPlugin: (id) => {
+      const entry = registered.get(id);
+      if (entry !== undefined && entry.panel === undefined) {
+        const panel = document.createElement("div");
+        try {
+          entry.unmount = entry.plugin.mount?.(panel, stores);
+          entry.panel = panel;
+        } catch {
+          // logged by TissUUmaps
+        }
+      }
+    },
+    unmountPlugin: () => {},
+    unregisterPlugin: (id) => {
+      const entry = registered.get(id);
+      registered.delete(id);
+      entry?.unmount?.();
+      entry?.teardown?.();
+    },
+  };
+  (window as { tissuumaps?: PluginRegistry }).tissuumaps = registry;
+  return registered;
+}
 
 /**
  * A small PNG image, as matplotlib writes one: its signature, the chunk with
@@ -1259,16 +1320,22 @@ async function openPanel(
   {
     provider = "ollama",
     settingsStore = makeSettingsStore(),
-  }: { provider?: string | null; settingsStore?: SettingsStoreApi } = {},
+    setup = false,
+  }: {
+    provider?: string | null;
+    settingsStore?: SettingsStoreApi;
+    /** Whether the plugin is set up first, as the app does */
+    setup?: boolean;
+  } = {},
 ) {
   const container = document.createElement("div");
   const appStore = makeAppStore();
-  const unmount = aiChatPlugin.mount?.(container, {
-    projectStore,
-    dataStore,
-    appStore,
-    settingsStore,
-  });
+  const stores = { projectStore, dataStore, appStore, settingsStore };
+  const teardown = setup ? aiChatPlugin.setup?.(stores) : undefined;
+  if (teardown) {
+    teardowns.push(teardown);
+  }
+  const unmount = aiChatPlugin.mount?.(container, stores);
   const button = (text: string) =>
     [...container.querySelectorAll("button")].find(
       (b) => b.textContent === text,
@@ -1321,8 +1388,15 @@ async function openPanel(
     projectStore,
     appStore,
     dataStore,
+    stores,
     container,
     unmount,
+    /** Opens the panel again, after it was closed, in a new element */
+    remount: () => {
+      const again = document.createElement("div");
+      const unmountAgain = aiChatPlugin.mount?.(again, stores);
+      return { container: again, unmount: unmountAgain };
+    },
     status: () => status.textContent,
     provider: () => providerSelect.value,
     providers: () =>
@@ -1436,7 +1510,14 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
+/** The teardowns of the plugins set up by the tests, called after each test */
+const teardowns: (() => void)[] = [];
+
 afterEach(() => {
+  for (const teardown of teardowns.splice(0)) {
+    teardown();
+  }
+  delete (window as { tissuumaps?: PluginRegistry }).tissuumaps;
   document.body.replaceChildren();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -3108,15 +3189,42 @@ describe("aiChatPlugin", () => {
       );
     });
 
-    it("says who made it, with a link to the GitHub page of the author", async () => {
+    it("says who made it, with a link to the GitHub page of the author, and opens About", async () => {
       const panel = await openPanel();
       const link = [...panel.container.querySelectorAll("a")].find(
-        (a) => a.textContent === "Made by Alessia Giustolisi",
+        (a) => a.textContent === "Alessia Giustolisi",
       );
+      const footer = link!.parentElement!;
+      expect(footer.textContent).toBe(
+        "The AID of DIA · Made by Alessia Giustolisi",
+      );
+      // "The AID of DIA" opens About
+      footer.querySelector("button")!.click();
+      expect(panel.messages().at(-1)!.text).toMatch(/^About: The AID of DIA/);
       expect(link?.href).toBe("https://github.com/ale2sia-g");
       expect(link?.title).toBe("View on GitHub");
       expect(link?.target).toBe("_blank");
       expect(link?.rel).toBe("noopener noreferrer");
+    });
+
+    it("tells where the names Dia and Aid come from, with About", async () => {
+      const panel = await openPanel();
+      panel.button("About").click();
+      const about = panel.messages().at(-1)!;
+      expect(about.who).toBe("Dia");
+      expect(about.text).toBe(
+        "About: The AID of DIA" +
+          "Dia (light theme) and Aid (dark theme) are the two moods of the same assistant: read one name backwards and you get the other. Aid is what it gives you: help." +
+          'In ancient Greek, διά (diá) means "through". It is the root of διάλογος (diálogos), dialogue, "through the word", and of διάγνωσις (diágnōsis), diagnosis, "through knowledge". Through dialogue and through knowledge, the assistant helps you explore your data and do science.' +
+          "Made by Alessia Giustolisi.",
+      );
+      expect(about.element.querySelector("b")?.textContent).toBe(
+        "About: The AID of DIA",
+      );
+      const link = about.element.querySelector("a");
+      expect(link?.textContent).toBe("Alessia Giustolisi");
+      expect(link?.href).toBe("https://github.com/ale2sia-g");
+      expect(link?.target).toBe("_blank");
     });
   });
 
@@ -3481,6 +3589,21 @@ describe("aiChatPlugin", () => {
       input.dispatchEvent(new Event("change"));
       await vi.waitFor(() => expect(container.textContent).toContain("Added:"));
     }
+
+    it("keeps the skills in the setup of the plugin, also while its panel is closed", async () => {
+      const panel = await openPanel(undefined, undefined, {
+        provider: "anthropic",
+        setup: true,
+      });
+      await addSkills(panel.container, {
+        "skills/hello/SKILL.md": hello,
+      });
+      panel.unmount?.();
+      const again = panel.remount();
+      expect(again.container.textContent).toContain("hello");
+      expect(again.container.textContent).toContain("Add skill from GitHub…");
+      again.unmount?.();
+    });
 
     /** Opens the panel with Anthropic, and the two skills on */
     async function panelWithSkills() {
@@ -4074,6 +4197,30 @@ describe("aiChatPlugin", () => {
       expect(python.runs).toHaveLength(5);
       // chat, project, chat again: three Pythons
       expect([python.starts, python.stops]).toEqual([4, 3]);
+    });
+
+    it("refuses code sent in the other language, before it runs", async () => {
+      const panel = await openPanel(undefined, undefined, {
+        provider: "anthropic",
+      });
+      await panel.pasteKey(anthropicKey);
+      services.answers = [
+        {
+          toolCalls: [
+            [
+              "run_code",
+              { title: "tables", language: "python", code: countScript },
+            ],
+          ],
+        },
+        { content: "Oops." },
+      ];
+      await panel.say("Count the tables with Python");
+      expect(panel.texts("Tool")[0]).toContain(
+        'Error: this looks like JavaScript, not Python: pass language "javascript", or write Python with async def main(tm): ....',
+      );
+      expect(python.runs).toEqual([]);
+      expect(python.starts).toBe(0);
     });
 
     it("runs code that the model wrote in the sandbox, after showing it", async () => {
@@ -5086,6 +5233,370 @@ describe("aiChatPlugin", () => {
       expect(panel.texts("Tool")[0]).toContain(
         'Error: there is no tool called "load_skill".',
       );
+    });
+  });
+
+  describe("plugins made by the chat, for OpenAI and Anthropic", () => {
+    /** The code of a plugin that counts the tables and saves a column */
+    const counterCode = [
+      "// Counts the tables of the project, and saves a column",
+      "export default function createPlugin(chat) {",
+      "  return {",
+      "    mount(container, stores) {",
+      '      chat.saveColumn("table", "near", values);',
+      '      fetch("https://example.org/x");',
+      "    },",
+      "  };",
+      "}",
+    ].join("\n");
+    /** What the plugin did, for the checks */
+    const counter: { tables?: unknown; saved?: unknown; panel?: HTMLElement } =
+      {};
+    pluginModules.set(counterCode, {
+      default: (chat: {
+        tables: () => Promise<unknown>;
+        saveColumn: (...args: unknown[]) => Promise<unknown>;
+      }) => ({
+        mount: (container: HTMLElement) => {
+          counter.panel = container;
+          const title = document.createElement("h2");
+          title.textContent = "Counter";
+          container.append(title);
+          void chat.tables().then((tables) => (counter.tables = tables));
+          void chat
+            .saveColumn(
+              "table",
+              "near",
+              Array.from({ length: 2000 }, (_, i) => i % 3),
+            )
+            .then((saved) => (counter.saved = saved));
+        },
+      }),
+    });
+
+    /** Sends a request and clicks a button of the question of the chat */
+    async function sayAndAnswer(
+      panel: Awaited<ReturnType<typeof openPanel>>,
+      text: string,
+      button: string,
+    ): Promise<HTMLElement> {
+      panel.input.value = text;
+      panel.button("Send").click();
+      let question: HTMLElement | undefined;
+      await vi.waitFor(() => {
+        question = [
+          ...panel.container.querySelectorAll<HTMLElement>(
+            '[data-who="Confirm"]',
+          ),
+        ].find((element) =>
+          // the button not answered yet; Copy stays enabled
+          [...element.querySelectorAll("button")].some(
+            (candidate) =>
+              candidate.textContent === button && !candidate.disabled,
+          ),
+        );
+        expect(question).toBeDefined();
+      });
+      [...question!.querySelectorAll("button")]
+        .find((candidate) => candidate.textContent === button)!
+        .click();
+      await vi.waitFor(() =>
+        expect(panel.button("Send").textContent).toBe("Send"),
+      );
+      return question!;
+    }
+
+    /** Opens the panel with Anthropic, set up as in the app */
+    async function panelWithPlugins() {
+      const registered = stubPluginRegistry();
+      const panel = await openPanel(undefined, undefined, {
+        provider: "anthropic",
+        setup: true,
+      });
+      await panel.pasteKey(anthropicKey);
+      return { panel, registered };
+    }
+
+    const proposal = (code = counterCode) =>
+      [
+        "propose_plugin",
+        {
+          id: "Counter",
+          name: "Table counter",
+          description: "Counts the tables.",
+          code,
+        },
+      ] as [string, Record<string, unknown>];
+
+    it("shows a plugin with its code, what it uses and its warnings, and runs it after yes", async () => {
+      const { panel, registered } = await panelWithPlugins();
+      services.answers = [
+        { toolCalls: [proposal()] },
+        { content: "Your plugin is open." },
+      ];
+      const question = await sayAndAnswer(
+        panel,
+        "Make me a plugin that counts the tables",
+        "Run plugin",
+      );
+      const request = JSON.stringify(services.requests[0]?.body);
+      expect(request).toContain('"name":"propose_plugin"');
+      expect(request).toContain("# Plugins that you make");
+      const shown = question.textContent;
+      for (const part of [
+        "Run a plugin made by the chat?",
+        "Plugin: Table counter (chat-counter)",
+        "What it does: Counts the tables.",
+        "Code (9 lines of JavaScript)",
+        "It uses: a panel of its own, opened from the plugins menu",
+        "⚠ It uses the network",
+        "Found: fetch, https://example.org/x",
+        '⚠ It changes the project. "Undo" in the chat does not take back what a plugin changes',
+        "Found: chat.saveColumn (adds columns to a table (chat))",
+        "What it uses was found by reading its code, which may miss things",
+        "Remember this plugin",
+        "Running: its panel is open, and it is in the plugins menu.",
+      ]) {
+        expect(shown).toContain(part);
+      }
+      expect(question.querySelector("pre")?.textContent).toBe(counterCode);
+      expect(panel.texts("Tool")[0]).toContain(
+        '→ Done: the user ran the plugin "Table counter" (id chat-counter); its panel is open in TissUUmaps. ' +
+          'It is kept for this session only, unless the user turns on "Remember" for it in the settings of the chat. ' +
+          "Tell the user where to find it, and that what it changes in the project is not taken back by Undo in the chat.",
+      );
+
+      // a real plugin of TissUUmaps, with its panel, signed by the chat
+      expect(registered.get("chat-counter")?.plugin.name).toBe("Table counter");
+      expect(counter.panel?.firstElementChild?.textContent).toBe("Counter");
+      expect(counter.panel?.lastElementChild?.textContent).toBe(
+        "This plugin was made with the AID of DIA, the AI agent of TissUUmaps",
+      );
+      await vi.waitFor(() => expect(counter.saved).toBeDefined());
+      expect(counter.tables).toEqual([{ id: "tables/table", name: "table" }]);
+      // the column it saved is known to the chat, and not undone by Undo
+      expect(panel.context()).toContain(
+        "another table, ai-chat:tables/table, with rows for the same items; computed by the chat",
+      );
+      expect(panel.button("Undo").disabled).toBe(true);
+    });
+
+    it("runs nothing when the user says no, and tells the model why a plugin cannot run", async () => {
+      const { panel, registered } = await panelWithPlugins();
+      services.answers = [
+        { toolCalls: [proposal()] },
+        { content: "As you wish." },
+      ];
+      await sayAndAnswer(panel, "Make me a plugin", "Cancel");
+      expect(registered.size).toBe(0);
+      expect(panel.texts("Tool")[0]).toContain(
+        'Nothing changed: the user did not run the plugin "Table counter". Do not propose it again unless they ask.',
+      );
+
+      services.answers = [
+        { toolCalls: [proposal("export default 42")] },
+        { content: "It failed." },
+      ];
+      const question = await sayAndAnswer(panel, "Try again", "Run plugin");
+      expect(question.textContent).toContain(
+        'Did not run: the code must "export default" a function createPlugin(chat)',
+      );
+      expect(panel.texts("Tool")[1]).toContain(
+        'Error: the user said yes, but the plugin "Table counter" could not run: the code must "export default" a function createPlugin(chat)',
+      );
+
+      services.answers = [
+        { toolCalls: [proposal("no module here")] },
+        { content: "Sorry." },
+      ];
+      await panel.say("Again");
+      expect(panel.texts("Tool")[2]).toContain(
+        "Error: code is missing or has no export default",
+      );
+    });
+
+    it("lists the plugins made by the chat in the settings: open, show the code, remember, export, remove", async () => {
+      const { panel, registered } = await panelWithPlugins();
+      const section = () =>
+        [...panel.container.querySelectorAll("div")].find((element) =>
+          element.firstElementChild?.textContent?.startsWith(
+            "Plugins made by the chat",
+          ),
+        )!;
+      expect(section().textContent).toContain(
+        'No plugins yet. Ask the chat to make one, e.g. "make me a plugin with a slider for the opacity of the cells".',
+      );
+      services.answers = [{ toolCalls: [proposal()] }, { content: "Done." }];
+      await sayAndAnswer(panel, "Make me a plugin", "Run plugin");
+      const row = () =>
+        section().querySelector<HTMLElement>('[data-plugin="chat-counter"]')!;
+      const click = (text: string) =>
+        [...row().querySelectorAll("button")]
+          .find((button) => button.textContent === text)!
+          .click();
+      expect(row().textContent).toContain("Table counterrunning");
+      expect(row().textContent).toContain("Counts the tables.");
+
+      click("Show code");
+      expect(panel.texts("Script").at(-1)).toBe(counterCode);
+
+      // jsdom has no IndexedDB: the plugin stays for this session
+      const box = row().querySelector("input")!;
+      box.checked = true;
+      box.dispatchEvent(new Event("change"));
+      await vi.waitFor(() =>
+        expect(section().textContent).toContain(
+          "Table counter is kept for this session only: this browser cannot remember skills and plugins (it has no IndexedDB)",
+        ),
+      );
+
+      const files: Blob[] = [];
+      URL.createObjectURL = vi.fn((file: Blob) => {
+        files.push(file);
+        return "blob:plugin";
+      });
+      URL.revokeObjectURL = vi.fn();
+      const saved: { name: string; text: string }[] = [];
+      vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
+        function (this: HTMLAnchorElement) {
+          saved.push({ name: this.download, text: "" });
+        },
+      );
+      click("Export .js");
+      expect(saved).toEqual([{ name: "chat-counter.js", text: "" }]);
+      const text = await files[0]!.text();
+      expect(text).toContain("// id: chat-counter\n// name: Table counter\n");
+      expect(text).toContain(
+        "// This plugin was made with the AID of DIA, the AI agent of TissUUmaps.",
+      );
+      expect(text.endsWith(counterCode)).toBe(true);
+
+      // a file exported before is asked about like a new plugin
+      pluginModules.set(text, pluginModules.get(counterCode));
+      const input =
+        section().querySelector<HTMLInputElement>('input[type="file"]')!;
+      Object.defineProperty(input, "files", {
+        value: [new File([text], "chat-counter.js")],
+        configurable: true,
+      });
+      input.dispatchEvent(new Event("change"));
+      let question: HTMLElement | undefined;
+      await vi.waitFor(() => {
+        question = [
+          ...panel.container.querySelectorAll<HTMLElement>(
+            '[data-who="Confirm"]',
+          ),
+        ].at(-1);
+        expect(question?.textContent).toContain("Run a plugin from a file?");
+      });
+      expect(question?.textContent).toContain(
+        "Plugin: Table counter (chat-counter)",
+      );
+      [...question!.querySelectorAll("button")]
+        .find((button) => button.textContent === "Cancel")!
+        .click();
+
+      // removed after asking: its panel closes
+      const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+      click("Remove");
+      expect(confirm).toHaveBeenCalledWith(
+        'Remove the plugin "Table counter"? Its panel closes. What it changed in the project stays.',
+      );
+      await vi.waitFor(() =>
+        expect(section().textContent).toContain("Table counter removed."),
+      );
+      expect(registered.has("chat-counter")).toBe(false);
+      expect(section().querySelector('[data-plugin="chat-counter"]')).toBe(
+        null,
+      );
+    });
+
+    it("replaces a plugin made before, also when the model gives it another id, and lists it once", async () => {
+      const { panel, registered } = await panelWithPlugins();
+      services.answers = [{ toolCalls: [proposal()] }, { content: "Done." }];
+      await sayAndAnswer(panel, "Make me a plugin", "Run plugin");
+      /** Whether a request to the model told it this */
+      const told = (text: string) =>
+        services.requests.some(({ body }) =>
+          JSON.stringify(body).includes(JSON.stringify(text).slice(1, -1)),
+        );
+
+      const better = `${counterCode}\n// with a better title`;
+      pluginModules.set(better, pluginModules.get(counterCode));
+      services.answers = [
+        { toolCalls: [["read_plugin", { id: "counter" }]] },
+        {
+          toolCalls: [
+            [
+              "propose_plugin",
+              {
+                id: "counter-2",
+                name: "Table counter",
+                description: "Counts the tables, better.",
+                code: better,
+              },
+            ],
+          ],
+        },
+        { content: "Improved." },
+      ];
+      const question = await sayAndAnswer(
+        panel,
+        "Give the counter a better title",
+        "Run plugin",
+      );
+      expect(panel.texts("Tool").at(-2)).toContain(
+        `→ Done: the plugin "Table counter" (id chat-counter)`,
+      );
+      expect(panel.texts("Tool").at(-2)).toContain(`Code:\n${counterCode}`);
+      expect(question.textContent).toContain(
+        'Replaces: the version of "Table counter" (chat-counter) made before, which closes: its code had 9 lines, this one has 10',
+      );
+      expect(panel.texts("Tool").at(-1)).toContain(
+        'Done: the user ran the plugin "Table counter" (id chat-counter), which replaces its earlier version;',
+      );
+      // one plugin, the new version, in the registry and in the list
+      expect([...registered.keys()]).toEqual(["chat-counter"]);
+      expect(panel.container.querySelectorAll("[data-plugin]").length).toBe(1);
+      // the model knows the plugins made by the chat, with their ids
+      expect(
+        told(
+          '# Plugins made by the chat\n- chat-counter: "Table counter", Counts the tables. (running)',
+        ),
+      ).toBe(true);
+
+      services.answers = [
+        { toolCalls: [["read_plugin", { id: "nothing" }]] },
+        { content: "No such plugin." },
+      ];
+      await panel.say("Show me the code of nothing");
+      expect(
+        told(
+          '- chat-counter: "Table counter", Counts the tables, better. (running)',
+        ),
+      ).toBe(true);
+      expect(panel.texts("Tool").at(-1)).toContain(
+        'Error: there is no plugin "nothing" made by the chat. The plugins made by the chat: chat-counter.',
+      );
+    });
+
+    it("keeps the plugins running while the panel of the chat is closed", async () => {
+      const { panel, registered } = await panelWithPlugins();
+      services.answers = [{ toolCalls: [proposal()] }, { content: "Done." }];
+      await sayAndAnswer(panel, "Make me a plugin", "Run plugin");
+      panel.unmount?.();
+      expect(registered.has("chat-counter")).toBe(true);
+      const again = panel.remount();
+      expect(
+        again.container.querySelector('[data-plugin="chat-counter"]')
+          ?.textContent,
+      ).toContain("running");
+      again.unmount?.();
+      // only when the AI chat goes, its plugins go
+      for (const teardown of teardowns.splice(0)) {
+        teardown();
+      }
+      expect(registered.has("chat-counter")).toBe(false);
     });
   });
 

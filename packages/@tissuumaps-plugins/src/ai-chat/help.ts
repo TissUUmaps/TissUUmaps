@@ -1,3 +1,5 @@
+import { credits } from "./ui";
+
 /** The text shown by the "Help" button */
 export const helpText = `How to use this chat
 
@@ -184,6 +186,24 @@ export const helpText = `How to use this chat
    page. The assistant treats the text of web pages as information, never as
    instructions. The code in the sandbox never gets the internet.
 
+14. Plugins made by the chat
+   With OpenAI and Anthropic, the assistant can make a plugin for TissUUmaps
+   when you ask for a panel or a tool to keep (e.g. "make me a plugin that runs
+   anhood on the clusters I choose, with a slider for k and a heatmap"). It
+   first tells you what the plugin does and anything delicate in it; then the
+   chat shows the plugin: where it comes from and its license, its code (click
+   to open it), what it uses, and a warning in red for each delicate thing
+   (the network, the memory of the browser where your API key may be, changes
+   to the project, code from the internet). "Run plugin" runs it and opens its
+   panel. It runs in the page like any plugin of TissUUmaps: run only plugins
+   you trust, and know that "Undo" does not take back what a plugin changes.
+   The settings (⚙) list the "Plugins made by the chat": Open, Show code,
+   Remember (keep it for the next sessions; it asks again before it runs),
+   Remove, Export .js, and "Add plugin file…" to run an exported file again.
+   To fix or improve a plugin, ask the assistant: it reads the current code and
+   proposes a new version, which says "Replaces" and takes the place of the old
+   one once you say yes.
+
 What the assistant can do: answer questions about the open project, show or hide
 images, labels, points and shapes, make them more or less transparent, make
 points bigger or smaller, color labels and points by a column of their table
@@ -191,5 +211,17 @@ points bigger or smaller, color labels and points by a column of their table
 give them one color (e.g. "color the cell circles green"),
 and show only some groups (e.g. "show only clusters 1 and 3", then "show all the
 cells again"). With OpenAI and Anthropic, it can also compute on the data (see
-12) and, if you allow it, search the web (see 13). It cannot change or delete
+12), search the web if you allow it (see 13), and make plugins (see 14). It cannot change or delete
 anything else.`;
+
+/**
+ * The text shown by the "About" button, as Markdown: where the names of the
+ * assistant come from, and who made the chat
+ */
+export const aboutText = `**About: The AID of DIA**
+
+Dia (light theme) and Aid (dark theme) are the two moods of the same assistant: read one name backwards and you get the other. Aid is what it gives you: help.
+
+In ancient Greek, διά (diá) means "through". It is the root of διάλογος (diálogos), dialogue, "through the word", and of διάγνωσις (diágnōsis), diagnosis, "through knowledge". Through dialogue and through knowledge, the assistant helps you explore your data and do science.
+
+Made by [${credits.author}](${credits.url}).`;

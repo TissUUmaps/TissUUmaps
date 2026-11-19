@@ -38,9 +38,13 @@ export const messageStyles: Record<MessageKind, string> = {
 /** How long each word is shown while the model thinks, in milliseconds */
 const thinkingWordTime = 2000;
 
-/** The line at the bottom of the panel, which links to the author */
+/**
+ * The line at the bottom of the panel: its title, which opens About, and the
+ * author, who links to GitHub
+ */
 export const credits = {
-  text: "Made by Alessia Giustolisi",
+  title: "The AID of DIA",
+  author: "Alessia Giustolisi",
   url: "https://github.com/ale2sia-g",
 };
 
@@ -268,6 +272,8 @@ export const toolIcons: Record<string, string> = {
   save_computed_table: "💾",
   add_skill_from_github: "📦",
   propose_skill_instructions: "📝",
+  propose_plugin: "🧩",
+  read_plugin: "🧩",
 };
 
 /**

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 
 import {
@@ -7,7 +8,8 @@ import {
   readGitHubSkill,
   skillName,
 } from "./github-skills";
-import { pyodidePackages } from "./python-imports";
+import { pyodidePackages, skillPackageName } from "./python-imports";
+import { confirmGitHubSkill } from "./skill-confirm";
 
 /** The commit of the fake repository */
 const commit = "a7e9fa555837a46ee47a02d7f6e4a70cb3892b0a";
@@ -259,6 +261,44 @@ describe("github-skills", () => {
       packages: [],
       broken: [],
     });
+  });
+
+  it("takes the license of the repository with a folder of it, and keeps a Python package importable by its name", async () => {
+    const { fetchFile } = fakeGitHub({
+      license: { spdx_id: "MIT", name: "MIT License" },
+      files: {
+        LICENSE: "MIT License\n\nCopyright (c) 2024 The authors",
+        "README.md": "# Tools",
+        "points2regions/__init__.py":
+          "from ._points2regions import Points2Regions\n",
+        "points2regions/_points2regions.py": "import scipy.sparse as sp\n",
+      },
+    });
+    const preview = await readGitHubSkill(
+      "https://github.com/lab/tools/tree/main/points2regions",
+      { fetchFile, pyodide },
+    );
+    expect(preview.origin.license).toBe("MIT");
+    expect(preview.topFiles).toEqual(["LICENSE"]);
+    const skill = preview.skills[0]!;
+    expect(skill.name).toBe("points2regions");
+    expect([...skill.files.keys()].sort()).toEqual([
+      "LICENSE",
+      "__init__.py",
+      "_points2regions.py",
+    ]);
+    expect(await skill.files.get("LICENSE")!.text()).toContain(
+      "Copyright (c) 2024 The authors",
+    );
+    // the README of the top stays out: only the license comes with the folder
+    expect(skill.files.has("README.md")).toBe(false);
+    expect(skillPackageName(skill)).toBe("points2regions");
+
+    // the card says where the text of the license comes from
+    const card = confirmGitHubSkill(preview);
+    expect(card.element.textContent).toContain(
+      "License: MIT; its text (LICENSE) comes from the top of the repository, and is added to the skill",
+    );
   });
 
   it("says why a repository cannot be read", async () => {

@@ -1,4 +1,5 @@
 import { maxCharts } from "./charts";
+import { languageProblem } from "./code-language";
 import { findSkill } from "./skill-tools";
 import type { ToolArguments, ToolContext } from "./types";
 
@@ -241,6 +242,10 @@ export async function runCodeTool(
     return python
       ? "Error: code is missing: give Python with a function async def main(tm): ..."
       : "Error: code is missing: give a JavaScript module, export default async function (tm) { ... }.";
+  }
+  const mismatch = languageProblem(code, python ? "python" : "javascript");
+  if (mismatch !== undefined) {
+    return `Error: ${mismatch}.`;
   }
   let skill;
   if (args["skill"] !== undefined && args["skill"] !== "") {

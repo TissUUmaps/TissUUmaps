@@ -18,6 +18,7 @@ import {
   showOnly,
 } from "./object-tools";
 import { itemsKinds, objectKinds } from "./objects";
+import { proposePluginTool, readPluginTool } from "./plugin-tools";
 import {
   addSkillFromGitHub,
   loadSkill,
@@ -295,6 +296,8 @@ export const tools: Record<string, Tool> = {
   save_computed_table: saveComputedTableTool,
   add_skill_from_github: addSkillFromGitHub,
   propose_skill_instructions: proposeSkillInstructions,
+  propose_plugin: proposePluginTool,
+  read_plugin: readPluginTool,
   // only offered to the services that see images, see imageTools
   look_at_chart: lookAtChartTool,
 };
@@ -309,6 +312,8 @@ export const wholeAppTools = [
   "save_computed_table",
   "add_skill_from_github",
   "propose_skill_instructions",
+  "propose_plugin",
+  "read_plugin",
 ];
 
 /** The tools only offered to the services whose models see images */

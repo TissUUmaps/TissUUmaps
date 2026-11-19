@@ -55,6 +55,11 @@ export type GitHubPreview = {
   skipped: SkippedFile[];
   /** Whether the plugin wrote SKILL.md, since the repository has none */
   madeSkillMd: boolean;
+  /**
+   * The license files that a folder of the repository takes from its top
+   * (e.g. "LICENSE"), since the license of a repository covers its folders
+   */
+  topFiles: string[];
   /** What its Python code needs */
   python: PythonNeeds;
 };
@@ -361,8 +366,29 @@ export async function readGitHubSkill(
   if (path !== "" && inFolder.length === 0) {
     throw new Error(`the repository has no folder "${path}", or it is empty`);
   }
+  // a folder takes with it the license of the repository, from its top,
+  // unless it has a file of the same name
+  const own = new Set(
+    inFolder.map((entry) => entry.path.slice(prefix.length).toLowerCase()),
+  );
+  const topLicenses =
+    path === ""
+      ? []
+      : (tree.tree ?? []).filter(
+          (entry) =>
+            entry.type === "blob" &&
+            !entry.path.includes("/") &&
+            keptNames.test(entry.path) &&
+            (entry.size ?? 0) <= gitHubLimits.fileBytes &&
+            !own.has(entry.path.toLowerCase()),
+        );
+  /** The path of a file in the skill's folder */
+  const insideOf = (entry: TreeEntry) =>
+    entry.path.startsWith(prefix)
+      ? entry.path.slice(prefix.length)
+      : entry.path;
   const skipped: SkippedFile[] = [];
-  const wanted: TreeEntry[] = [];
+  const wanted: TreeEntry[] = [...topLicenses];
   let planned = 0;
   for (const entry of inFolder.sort((a, b) => a.path.localeCompare(b.path))) {
     const inside = entry.path.slice(prefix.length);
@@ -393,7 +419,7 @@ export async function readGitHubSkill(
   const download = async () => {
     while (next < wanted.length) {
       const entry = wanted[next++]!;
-      const inside = entry.path.slice(prefix.length);
+      const inside = insideOf(entry);
       const url = `https://raw.githubusercontent.com/${fullName}/${commit}/${entry.path
         .split("/")
         .map(encodeURIComponent)
@@ -518,6 +544,9 @@ export async function readGitHubSkill(
     bytes,
     skipped,
     madeSkillMd,
+    topFiles: topLicenses
+      .map((entry) => entry.path)
+      .filter((name) => kept.has(name)),
     python: analyzePython(kept, packages),
   };
 }

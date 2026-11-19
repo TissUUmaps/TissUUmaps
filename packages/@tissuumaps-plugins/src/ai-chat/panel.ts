@@ -1,13 +1,12 @@
 import {
-  type PluginStores,
   type ProjectStore,
   SourceUtils,
   type TableDataSource,
-  createTable,
 } from "@tissuumaps/core";
 
 import { callActionDefinition, describeAction } from "./call-action";
 import { chartFileName, checkPng, maxCharts, toBase64 } from "./charts";
+import type { ChatPluginEntry, PluginOrigin } from "./chat-plugins";
 import {
   codeInstructions,
   lookAtChartDefinition,
@@ -18,23 +17,16 @@ import { overlapWarning } from "./color-tools";
 import {
   type ComputedTable,
   type ComputedValues,
-  columnValues,
   computedTableCsv,
   computedTableType,
   csvFileName,
-  forgetVersions,
   idsSurviveCsv,
-  keepVersion,
-  maxComputedColumns,
-  registerComputedTables,
   suggestCsvName,
-  valuesByRow,
   versionOf,
-  withComputedTables,
 } from "./computed-tables";
 import { downloadFileName, downloadTypes, maxDownloadBytes } from "./downloads";
 import { type GitHubPreview, readGitHubSkill } from "./github-skills";
-import { helpText } from "./help";
+import { aboutText, helpText } from "./help";
 import {
   actionLimits,
   instructions,
@@ -44,7 +36,15 @@ import {
 import { renderMarkdown } from "./markdown";
 import { findById, isMapKind, same } from "./objects";
 import { personaFor } from "./persona";
-import { loadProjectSkills } from "./project-skills";
+import { type StoreActions, actionsOf, readPluginCode } from "./plugin-code";
+import { type PluginQuestionKind, confirmPlugin } from "./plugin-confirm";
+import { makePluginList } from "./plugin-list";
+import {
+  describePlugins,
+  pluginInstructions,
+  proposePluginDefinition,
+  readPluginDefinition,
+} from "./plugin-tools";
 import {
   type ChatAnswer,
   type ChatMessage,
@@ -60,24 +60,16 @@ import {
   providers,
   readJsonLines,
 } from "./providers";
+import { countPythonFiles, forgetPythonFiles, lockFile } from "./python-files";
 import {
-  type DownloadProgress,
-  countPythonFiles,
-  forgetPythonFiles,
-  lockFile,
-  makePythonFiles,
-} from "./python-files";
-import { type PyodidePackages, pyodidePackages } from "./python-imports";
-import { type PythonKernel, startPythonKernel } from "./python-sandbox";
+  type PyodidePackages,
+  pyodidePackages,
+  skillPackageName,
+} from "./python-imports";
 import { type ScriptOutcome, type ScriptQuestion, runScript } from "./sandbox";
+import type { ChatServices } from "./services";
 import { loadSetting, saveSetting } from "./settings";
 import { confirmGitHubSkill, confirmSkillMd } from "./skill-confirm";
-import { makeSkillList } from "./skill-list";
-import {
-  forgetStoredSkill,
-  loadStoredSkills,
-  storeSkill,
-} from "./skill-storage";
 import {
   describeSkills,
   skillInstructions,
@@ -86,15 +78,12 @@ import {
 import type { Skill } from "./skills";
 import { buildContext, exampleRequests, stateJson } from "./summary";
 import {
-  columnsForCode,
   describeMatrix,
-  describeMatrixReading,
   describeValues,
   findCoordinates,
   findUsedColumns,
   linkedTables,
   listColumns,
-  matrixColumns,
   maxRowsToRead,
   objectTables,
 } from "./tables";
@@ -159,20 +148,17 @@ const maxScriptText = 20_000;
  * Mounts the chat panel
  *
  * @param container - The element to mount the panel into
- * @param stores - The stores of the application
+ * @param services - What the chat keeps while TissUUmaps runs, with the
+ * stores of the application
  * @returns A callback that unmounts the panel
  */
 export function mountAiChat(
   container: HTMLElement,
-  {
-    projectStore,
-    dataStore: appDataStore,
-    settingsStore,
-    appStore,
-  }: PluginStores,
+  services: ChatServices,
 ): () => void {
+  const { projectStore, settingsStore, appStore } = services.stores;
   // with the tables computed by the chat, which the tools must find at once
-  const dataStore = withComputedTables(appDataStore, projectStore);
+  const { dataStore, skillList, pythonFiles } = services;
   // aborted on unmount, which stops the requests to the model and the table reads
   const abortController = new AbortController();
   const { signal } = abortController;
@@ -269,6 +255,8 @@ export function mountAiChat(
     () => show("Help", helpText),
     smallButtonStyle,
   );
+  const aboutButton = makeButton("About", () => showAbout(), smallButtonStyle);
+  aboutButton.title = "Where the names Dia and Aid come from";
   const undoButton = makeButton("Undo", undo, smallButtonStyle);
   const undoAllButton = makeButton("Undo all", undoAll, smallButtonStyle);
   const settingsButton = makeButton("⚙", toggleSettings, smallButtonStyle);
@@ -282,6 +270,7 @@ export function mountAiChat(
     newChatButton,
     contextButton,
     helpButton,
+    aboutButton,
     undoButton,
     undoAllButton,
     settingsButton,
@@ -402,33 +391,26 @@ export function mountAiChat(
   statusRow.append(status, checkButton);
 
   // the skills of the open project, and those added by hand, remembered by
-  // the browser if the user wants
-  const skillList = makeSkillList(
-    { load: loadStoredSkills, save: storeSkill, remove: forgetStoredSkill },
-    updateLayout,
-    { signal, addFromGitHub: () => void addGitHubSkillFromSettings() },
-  );
+  // the browser if the user wants: kept by the services, shown here
+  services.hooks.skillsChanged = updateLayout;
+  services.hooks.addSkillFromGitHub = () => void addGitHubSkillFromSettings();
   /** The skills of the project whose scripts the user allowed, by project and name */
   const allowedScripts = new Set<string>();
 
-  /** The download of the files of Python in progress, if any */
-  let pythonDownload: DownloadProgress | undefined;
   /** Shows the download, in the row of the tool that waits for Python */
   let showPythonDownload: (() => void) | null = null;
-  const pythonFiles = makePythonFiles((progress) => {
-    pythonDownload = progress;
-    showPythonDownload?.();
-  });
+  const stopListeningToDownload = services.onPythonDownload(() =>
+    showPythonDownload?.(),
+  );
   /**
-   * Python, kept for the next runs of this chat, and where the code that it
-   * runs comes from: code from elsewhere gets a new one
+   * Python, kept for the next runs of this chat; code from elsewhere gets a
+   * new one
    */
-  let pythonKernel: { kernel: PythonKernel; source: string } | null = null;
+  const pythonKernel = services.makeKernelSlot();
 
   /** Stops Python: the next Python code starts it again */
   function stopPython(): void {
-    pythonKernel?.kernel.stop();
-    pythonKernel = null;
+    pythonKernel.stop();
   }
 
   const pythonFilesInfo = document.createElement("span");
@@ -461,39 +443,18 @@ export function mountAiChat(
     pythonFilesInfo.textContent = `Python: ${count} files forgotten; they are downloaded again when Python is needed`;
     forgetPythonButton.disabled = true;
   }
-  /** The project and workspace whose skills were read last */
-  let skillsRead: { instanceId: string; workspace: unknown } | null = null;
-
-  /**
-   * Reads the skills of the open project again when another project is
-   * opened or another folder connected; a later read wins over an earlier one
-   */
-  function readProjectSkills(): void {
-    const { source, instanceId } = projectStore.getState();
-    const workspace = appStore.getState().workspace ?? null;
-    if (
-      skillsRead?.instanceId === instanceId &&
-      skillsRead.workspace === workspace
-    ) {
-      return;
-    }
-    const read = { instanceId, workspace };
-    skillsRead = read;
-    loadProjectSkills(source, workspace, { signal }).then(
-      (project) => {
-        if (skillsRead === read) {
-          skillList.setProjectSkills(project);
-        }
-      },
-      (error: unknown) => {
-        if (!signal.aborted && skillsRead === read) {
-          skillList.setProjectSkills(
-            error instanceof Error ? error : new Error(String(error)),
-          );
-        }
-      },
-    );
-  }
+  // the plugins made by the chat, which live in its setup, shown here
+  const pluginList = makePluginList(services.plugins, {
+    askToRun: (entry, kind) => {
+      void askToRunPlugin(entry, kind, { signal });
+    },
+    showCode: (entry) =>
+      showScript(
+        `🧩 ${entry.name}`,
+        `The code of the plugin ${entry.id}, made by the chat`,
+        entry.code,
+      )(),
+  });
 
   const settingsBox = document.createElement("div");
   settingsBox.style.cssText =
@@ -504,6 +465,7 @@ export function mountAiChat(
     statusRow,
     optionsRow,
     skillList.element,
+    pluginList.element,
     pythonRow,
   );
 
@@ -531,21 +493,33 @@ export function mountAiChat(
 
   const footer = document.createElement("div");
   footer.style.cssText = `${quietTextStyle}font-size: 11px; text-align: right;`;
+  // "The AID of DIA" opens About; the name of the author links to GitHub
+  const showAbout = () => show(persona.name, aboutText, "info", true);
+  const aboutLink = document.createElement("button");
+  aboutLink.type = "button";
+  aboutLink.textContent = credits.title;
+  aboutLink.title = "About: where the names Dia and Aid come from";
+  aboutLink.style.cssText =
+    "padding: 0; border: none; background: none; color: inherit; font: inherit;" +
+    "cursor: pointer; text-decoration: none;";
+  aboutLink.addEventListener("click", showAbout);
   const creditsLink = document.createElement("a");
-  creditsLink.textContent = credits.text;
+  creditsLink.textContent = credits.author;
   creditsLink.href = credits.url;
   creditsLink.target = "_blank";
   creditsLink.rel = "noopener noreferrer";
   creditsLink.title = "View on GitHub";
   creditsLink.style.cssText = "color: inherit; text-decoration: none;";
   // underlined only under the pointer, so that it stays quiet
-  creditsLink.addEventListener("mouseenter", () => {
-    creditsLink.style.textDecoration = "underline";
-  });
-  creditsLink.addEventListener("mouseleave", () => {
-    creditsLink.style.textDecoration = "none";
-  });
-  footer.append(creditsLink);
+  for (const link of [aboutLink, creditsLink]) {
+    link.addEventListener("mouseenter", () => {
+      link.style.textDecoration = "underline";
+    });
+    link.addEventListener("mouseleave", () => {
+      link.style.textDecoration = "none";
+    });
+  }
+  footer.append(aboutLink, " · Made by ", creditsLink);
 
   // shown under a part of an answer that the user selects
   const quoteButton = makeButton("Quote", quoteSelection, smallButtonStyle);
@@ -1103,18 +1077,13 @@ export function mountAiChat(
       updateExamples();
     }
     if (state.instanceId === previousState.instanceId) {
+      if (state.tables !== previousState.tables) {
+        linkComputedTables(previousState);
+      }
       return;
     }
     // Python may hold data of the other project
     stopPython();
-    // the computed tables of the other project, unless this one has them too
-    forgetVersions(
-      new Set(
-        state.tables
-          .filter(({ dataSource }) => dataSource.type === computedTableType)
-          .map(({ dataSource }) => dataSource.source ?? ""),
-      ),
-    );
     tables.info.clear();
     tables.remembered.clear();
     readTables();
@@ -1455,7 +1424,7 @@ export function mountAiChat(
    */
   function instructionsFor(provider: Provider): string {
     return provider.wholeApp
-      ? `${instructions.replace(toolLimits, actionLimits)}\n\n${wholeAppInstructions}\n\n${skillInstructions}\n\n${codeInstructions}\n\n${webInstructions}`
+      ? `${instructions.replace(toolLimits, actionLimits)}\n\n${wholeAppInstructions}\n\n${skillInstructions}\n\n${codeInstructions}\n\n${pluginInstructions}\n\n${webInstructions}`
       : instructions;
   }
 
@@ -1472,6 +1441,8 @@ export function mountAiChat(
             ...skillToolDefinitions,
             runCodeDefinition,
             saveComputedTableDefinition,
+            proposePluginDefinition,
+            readPluginDefinition,
             ...(provider.seesImages ? [lookAtChartDefinition] : []),
           ]
         : []),
@@ -1519,7 +1490,8 @@ export function mountAiChat(
           : "- Charts: you get their descriptions only; call look_at_chart to see one when the user asks.",
     ].join("\n");
     const state = stateJson(projectStore.getState(), appStore.getState());
-    return `${summary}\n\n${skills}\n\n${settings}\n\n# The current app state, as JSON\n${state}`;
+    const plugins = describePlugins(services.plugins.list());
+    return `${summary}\n\n${skills}\n\n${plugins}\n\n${settings}\n\n# The current app state, as JSON\n${state}`;
   }
 
   /**
@@ -1655,11 +1627,6 @@ export function mountAiChat(
     if (question.kind === "download") {
       return offerDownload(question.name, question.text);
     }
-    if (question.kind === "tables") {
-      return projectStore
-        .getState()
-        .tables.map(({ id, name }) => ({ id, name }));
-    }
     if (question.kind === "file") {
       if (skill === undefined) {
         throw new Error(
@@ -1672,52 +1639,13 @@ export function mountAiChat(
       }
       return file.text();
     }
-    const table = projectStore
-      .getState()
-      .tables.find(
-        ({ id, name }) => id === question.table || name === question.table,
-      );
-    const tableRef =
-      table === undefined
-        ? undefined
-        : dataStore.getState().tableDataRefs.get(table.id);
-    if (table === undefined || tableRef === undefined) {
-      throw new Error(
-        `there is no loaded table "${question.table}"; tm.tables() lists the tables`,
-      );
-    }
-    const data = await tableRef.promise;
-    stop?.throwIfAborted();
-    if (question.kind === "columns") {
-      if (question.matrix !== undefined) {
-        return matrixColumns(data, question.matrix, { signal: stop });
-      }
-      return columnsForCode(data, { signal: stop });
-    }
-    // the name of a whole matrix, e.g. "obsm/spatial", reads nothing: say how
-    // to read its columns
-    const inner = await matrixColumns(data, question.column, {
-      signal: stop,
-    }).catch(() => []);
-    if (inner.length > 0) {
-      throw new Error(describeMatrixReading(question.column, inner));
-    }
-    const rows = data.getSize();
-    if (rows > maxRowsToRead) {
-      throw new Error(
-        `the table "${table.name}" has ${rows} rows, too many to read here (at most ${maxRowsToRead})`,
-      );
-    }
-    const values = await data.loadValues(question.column, { signal: stop });
-    // a copy of these values only, not of a buffer they may share
-    return values.slice();
+    return services.readData(question, { signal: stop });
   }
 
   /**
    * Saves a column that code computed, one value per row of a table, into the
-   * table "(chat)" of that table: a new version of it, so that TissUUmaps reads
-   * the values again, and a change that Undo takes back. The original table
-   * is never changed.
+   * table "(chat)" of that table (see services.ts), as a change that Undo
+   * takes back, and shows it in the chat
    *
    * @param question - The table, the name of the column, the values, and the
    * item IDs of the values if they are not one per row
@@ -1731,124 +1659,18 @@ export function mountAiChat(
     changes: Change[] | undefined,
     options?: { signal?: AbortSignal },
   ): Promise<unknown> {
-    const { signal: stop } = options ?? {};
     if (changes === undefined) {
       throw new Error("columns can only be saved while the chat runs code");
     }
-    const project = projectStore.getState();
-    const given = project.tables.find(
-      ({ id, name }) => id === question.table || name === question.table,
+    const saved = await services.saveColumn(question, options);
+    changes.push(saved.change);
+    showComputedColumn(
+      saved.tableId,
+      saved.tableName,
+      saved.column,
+      saved.values,
     );
-    if (given === undefined) {
-      throw new Error(
-        `there is no table "${question.table}"; tm.tables() lists the tables`,
-      );
-    }
-    // a table computed by the chat stands for its original table
-    const originId = versionOf(given.dataSource.source)?.originId ?? given.id;
-    const origin = project.tables.find(({ id }) => id === originId);
-    const column =
-      typeof question.column === "string" ? question.column.trim() : "";
-    if (
-      column === "" ||
-      column.length > 60 ||
-      /[[\]\r\n]/.test(column) ||
-      column.toLowerCase() === "id"
-    ) {
-      throw new Error(
-        `${JSON.stringify(question.column)} cannot be the name of a column: give a short name, without [ ], other than "id"`,
-      );
-    }
-    const tableRef = dataStore.getState().tableDataRefs.get(originId);
-    if (origin === undefined || tableRef === undefined) {
-      throw new Error(`the table "${question.table}" is not loaded`);
-    }
-    const data = await tableRef.promise;
-    stop?.throwIfAborted();
-    const rows = data.getSize();
-    if (rows > maxRowsToRead) {
-      throw new Error(
-        `the table "${origin.name}" has ${rows} rows, too many for a computed column (at most ${maxRowsToRead})`,
-      );
-    }
-    const values = columnValues(question.values);
-    const byRow =
-      typeof values === "string" || question.ids === undefined
-        ? values
-        : valuesByRow(data.getIds(), question.ids, values);
-    if (typeof byRow === "string") {
-      throw new Error(byRow);
-    }
-    if (byRow.length !== rows) {
-      throw new Error(
-        `the table "${origin.name}" has ${rows} rows, but there are ${byRow.length} values: give one value per row, in the order of tm.read, or give the ids of the values`,
-      );
-    }
-    const tableId = `${computedTableType}:${originId}`;
-    const existing = project.tables.find(({ id }) => id === tableId);
-    if (
-      existing !== undefined &&
-      existing.dataSource.type !== computedTableType
-    ) {
-      throw new Error(
-        `the table "${existing.name}" was kept as a CSV file, so the chat cannot add columns to it`,
-      );
-    }
-    const previous = versionOf(existing?.dataSource.source);
-    const saved = project.tables
-      .filter(({ dataSource }) => dataSource.type === computedTableType)
-      .reduce(
-        (count, table) =>
-          count + (versionOf(table.dataSource.source)?.columns.size ?? 0),
-        0,
-      );
-    if (
-      !(previous?.columns.has(column) ?? false) &&
-      saved >= maxComputedColumns
-    ) {
-      throw new Error(
-        `the tables computed by the chat have ${maxComputedColumns} columns already, the most there can be: tell the user, who can take some back with Undo`,
-      );
-    }
-    const columns = new Map(previous?.columns);
-    columns.set(column, byRow);
-    const source = keepVersion({
-      originId,
-      ids: data.getIds(),
-      names: data.getNames?.(),
-      columns,
-    });
-    const name = existing?.name ?? `${origin.name} (chat)`;
-    if (existing === undefined) {
-      project.addTable(
-        createTable({
-          id: tableId,
-          name,
-          dataSource: { type: computedTableType, source },
-        }),
-      );
-    } else {
-      project.updateTable(tableId, {
-        dataSource: { ...existing.dataSource, source },
-      });
-    }
-    changes.push({
-      type: "computed",
-      kind: "tables",
-      id: tableId,
-      name,
-      property: column,
-      before: existing?.dataSource.source,
-      after: source,
-    });
-    linkComputedTable(originId, tableId);
-    showComputedColumn(tableId, name, column, byRow);
-    return {
-      table: name,
-      column,
-      rows,
-      values: byRow instanceof Float64Array ? "numbers" : "text",
-    };
+    return saved.result;
   }
 
   /**
@@ -1869,6 +1691,30 @@ export function mountAiChat(
     }
     tables.info.delete(tableId);
     readTables();
+  }
+
+  /**
+   * Links the tables computed by the chat that are new or have a new version
+   * since the project was as before, e.g. a column that the code of the chat
+   * or of a plugin made by the chat saved; without a project before, all of
+   * them, e.g. when the panel opens
+   *
+   * @param before - The project before
+   */
+  function linkComputedTables(before?: ProjectStore): void {
+    const sources = new Map(
+      before?.tables.map(({ id, dataSource }) => [id, dataSource.source]),
+    );
+    for (const { id, dataSource } of projectStore.getState().tables) {
+      const version = versionOf(dataSource.source);
+      if (
+        dataSource.type === computedTableType &&
+        version !== undefined &&
+        sources.get(id) !== dataSource.source
+      ) {
+        linkComputedTable(version.originId, id);
+      }
+    }
   }
 
   /** Forgets the tables computed by the chat that are not in the project any more */
@@ -2455,6 +2301,117 @@ export function mountAiChat(
     return `Done: the skill "${skill.name}" has the new instructions; they are used from now on.`;
   }
 
+  /** The actions of the stores, for reading the code of a plugin */
+  function storeActions(): StoreActions {
+    const stores = services.stores;
+    return {
+      project: actionsOf(projectStore.getState()),
+      other: [
+        ...actionsOf(appStore.getState()),
+        ...actionsOf(settingsStore.getState()),
+        ...actionsOf(stores.dataStore.getState()),
+      ],
+    };
+  }
+
+  /**
+   * Shows a plugin made by the chat in the chat, with its code, what it uses
+   * and its delicate parts; runs it and opens its panel if the user says yes
+   *
+   * @param entry - The plugin
+   * @param kind - Why the user is asked
+   * @param options - Optional abort signal, which answers no
+   * @returns Whether it runs now and the browser remembers it, or why not
+   */
+  async function askToRunPlugin(
+    entry: ChatPluginEntry,
+    kind: PluginQuestionKind,
+    options?: { signal?: AbortSignal },
+  ): Promise<
+    { ran: true; remembered: boolean } | { ran: false; error?: string }
+  > {
+    const existing = services.plugins.get(entry.id);
+    const question = confirmPlugin(
+      entry,
+      readPluginCode(entry.code, storeActions()),
+      {
+        kind,
+        ...(kind !== "remembered" && existing !== undefined
+          ? { replaces: existing.entry }
+          : {}),
+        remembered: existing?.remembered ?? false,
+        ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      },
+    );
+    addToHistory(question.element);
+    const { run, remember } = await question.answer;
+    if (!run) {
+      return { ran: false };
+    }
+    try {
+      await services.plugins.install(entry, { remember });
+      await services.plugins.open(entry.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      question.status.textContent = `Did not run: ${message}`;
+      return { ran: false, error: message };
+    }
+    question.status.textContent =
+      "Running: its panel is open, and it is in the plugins menu.";
+    return {
+      ran: true,
+      remembered: services.plugins.get(entry.id)?.remembered ?? false,
+    };
+  }
+
+  /**
+   * Shows the user a plugin that the model wrote, and runs it if the user
+   * says yes
+   *
+   * @param plugin - Its id, name, description and code
+   * @param options - The skill it is based on, if any; an optional abort
+   * signal, which answers no
+   * @returns The result for the model
+   */
+  async function proposePlugin(
+    plugin: { id: string; name: string; description: string; code: string },
+    options?: { skill?: Skill; signal?: AbortSignal },
+  ): Promise<string> {
+    const { skill, signal: stop } = options ?? {};
+    let origin: PluginOrigin | undefined;
+    if (skill !== undefined) {
+      const from = skillList.originOf(skill);
+      origin = {
+        skill: skill.name,
+        ...(from.kind === "github" ? { github: from.github } : {}),
+        ...(from.kind === "project" ? { project: from.where } : {}),
+      };
+    }
+    const entry: ChatPluginEntry = {
+      ...plugin,
+      made: new Date().toISOString(),
+      ...(origin === undefined ? {} : { origin }),
+    };
+    const replaces = services.plugins.get(entry.id) !== undefined;
+    const outcome = await askToRunPlugin(entry, "proposed", {
+      ...(stop === undefined ? {} : { signal: stop }),
+    });
+    stop?.throwIfAborted();
+    if (outcome.ran) {
+      return (
+        `Done: the user ran the plugin "${entry.name}" (id ${entry.id})${replaces ? ", which replaces its earlier version" : ""}; its panel is open in TissUUmaps. ` +
+        (outcome.remembered
+          ? "The browser remembers it for the next sessions. "
+          : 'It is kept for this session only, unless the user turns on "Remember" for it in the settings of the chat. ') +
+        "Tell the user where to find it, and that what it changes in the project is not taken back by Undo in the chat."
+      );
+    }
+    if (outcome.error !== undefined) {
+      return `Error: the user said yes, but the plugin "${entry.name}" could not run: ${outcome.error}. Fix the code and propose it again with the same id.`;
+    }
+    return `Nothing changed: the user did not run the plugin "${entry.name}". Do not propose it again unless they ask.`;
+  }
+
   /**
    * Runs code that the model wrote in the sandbox, after showing it
    *
@@ -2730,7 +2687,8 @@ export function mountAiChat(
     // e.g. "0.4" or "12"
     const megabytes = (bytes: number) =>
       bytes < 10e6 ? (bytes / 1e6).toFixed(1) : Math.round(bytes / 1e6);
-    const update = () =>
+    const update = () => {
+      const pythonDownload = services.pythonDownload();
       progress?.(
         pythonDownload !== undefined
           ? `Downloading Python, ${megabytes(pythonDownload.done)} of ${megabytes(pythonDownload.total)} MB`
@@ -2738,29 +2696,23 @@ export function mountAiChat(
             ? step
             : `running ${names.short}, ${Math.round((Date.now() - started) / 1000)} s${reported === "" ? "" : `: ${reported}`}`,
       );
+    };
     showPythonDownload = update;
     update();
     const ticker = setInterval(update, 1000);
     try {
-      if (
-        pythonKernel === null ||
-        pythonKernel.kernel.isStopped() ||
-        pythonKernel.source !== source
-      ) {
-        stopPython();
-        pythonKernel = {
-          kernel: await startPythonKernel(pythonFiles, { signal: stop }),
-          source,
-        };
-      }
+      const kernel = await pythonKernel.kernel(source, { signal: stop });
       step = "loading the Python packages";
       update();
-      const outcome = await pythonKernel.kernel.run(
+      const outcome = await kernel.run(
         {
           code,
           args,
           ...(files === undefined ? {} : { files }),
           ...(path === undefined ? {} : { path }),
+          ...(skill === undefined || skillPackageName(skill) === undefined
+            ? {}
+            : { packageName: skillPackageName(skill)! }),
           project: JSON.parse(
             stateJson(projectStore.getState(), appStore.getState()),
           ) as unknown,
@@ -2910,6 +2862,8 @@ export function mountAiChat(
           proposeSkillMd,
           keepComputedTable,
           lookAtChart,
+          proposePlugin,
+          chatPlugins: () => services.plugins.list(),
         },
         { signal: stopper.signal },
       );
@@ -3250,14 +3204,11 @@ export function mountAiChat(
   });
   observer.observe(container);
 
-  // TissUUmaps loads the tables computed by the chat from memory
-  registerComputedTables(appStore);
   const unsubscribeData = dataStore.subscribe(readTables);
   const unsubscribeProject = projectStore.subscribe(onProjectChange);
-  const unsubscribeProjectSkills = projectStore.subscribe(readProjectSkills);
-  const unsubscribeWorkspace = appStore.subscribe(readProjectSkills);
+  // e.g. the columns that plugins made by the chat saved while it was closed
+  linkComputedTables();
   readTables();
-  readProjectSkills();
   showKey();
   fillModelMenu();
   updateStatus();
@@ -3269,6 +3220,12 @@ export function mountAiChat(
   return () => {
     abortController.abort();
     stopPython();
+    stopListeningToDownload();
+    pluginList.dispose();
+    if (services.hooks.skillsChanged === updateLayout) {
+      services.hooks.skillsChanged = undefined;
+      services.hooks.addSkillFromGitHub = undefined;
+    }
     for (const url of chartUrls) {
       URL.revokeObjectURL(url);
     }
@@ -3276,8 +3233,6 @@ export function mountAiChat(
     observer.disconnect();
     unsubscribeData();
     unsubscribeProject();
-    unsubscribeProjectSkills();
-    unsubscribeWorkspace();
     unsubscribeSettings();
     document.removeEventListener("selectionchange", updateQuoteButton);
   };

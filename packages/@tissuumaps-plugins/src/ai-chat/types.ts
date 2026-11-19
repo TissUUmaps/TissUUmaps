@@ -8,6 +8,7 @@ import type {
   Shapes,
 } from "@tissuumaps/core";
 
+import type { ChatPluginState } from "./chat-plugins";
 import type { Skill } from "./skills";
 
 /** The arguments of a tool call, as the model sends them */
@@ -138,6 +139,21 @@ export type ToolContext = {
   keepComputedTable: (
     table: string,
     options?: { fileName?: string },
+  ) => Promise<string>;
+  /**
+   * Shows the user a plugin that the model wrote, with what it uses and its
+   * delicate parts, and runs it and opens its panel if the user says yes
+   *
+   * @param plugin - Its id (with "chat-"), name, description and code
+   * @param options - The skill it is based on, if any; an optional abort
+   * signal, which answers no
+   * @returns The result for the model
+   */
+  /** The plugins made by the chat, for read_plugin and propose_plugin */
+  chatPlugins: () => ChatPluginState[];
+  proposePlugin: (
+    plugin: { id: string; name: string; description: string; code: string },
+    options?: { skill?: Skill; signal?: AbortSignal },
   ) => Promise<string>;
   /**
    * Gives the model the image of a chart of this chat, with the result of

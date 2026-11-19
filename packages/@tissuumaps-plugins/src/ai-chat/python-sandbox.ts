@@ -1,6 +1,11 @@
 import { maxCharts } from "./charts";
 import { type PythonFiles, coreFiles, lockFile } from "./python-files";
 import {
+  explainMissingModule,
+  missingModule,
+  pyodidePackages,
+} from "./python-imports";
+import {
   type ScriptOutcome,
   type ScriptQuestion,
   type ScriptRun,
@@ -33,6 +38,7 @@ const driver = [
   "import importlib",
   "import inspect",
   "import json",
+  "import keyword",
   "import os",
   "import shutil",
   "import sys",
@@ -119,6 +125,8 @@ const driver = [
   "",
   "",
   `SKILL = "${skillFolder}"`,
+  "# where a skill whose folder is a package can be imported by its name",
+  'PACKAGES = SKILL + "_package"',
   "",
   "",
   "def _of_skill(module):",
@@ -137,12 +145,14 @@ const driver = [
   "        if path.startswith(SKILL):",
   "            del sys.path_importer_cache[path]",
   "    shutil.rmtree(SKILL, ignore_errors=True)",
+  "    shutil.rmtree(PACKAGES, ignore_errors=True)",
   "    importlib.invalidate_caches()",
   "",
   "",
-  "def _skill_paths(has_files, script):",
+  "def _skill_paths(has_files, script, package):",
   '    """Where the modules of the skill are: as Python does, the folder of the',
-  '    script first, then the folder of the skill, and its src folder if any"""',
+  "    script first, then the folder of the skill, and its src folder if any;",
+  '    a skill whose folder is a package can also be imported by its name"""',
   "    if not has_files:",
   '        return "[]"',
   "    paths = []",
@@ -151,6 +161,14 @@ const driver = [
   "    paths.append(SKILL)",
   '    if os.path.isdir(f"{SKILL}/src"):',
   '        paths.append(f"{SKILL}/src")',
+  "    if (",
+  "        package.isidentifier()",
+  "        and not keyword.iskeyword(package)",
+  '        and os.path.isfile(f"{SKILL}/__init__.py")',
+  "    ):",
+  "        os.makedirs(PACKAGES, exist_ok=True)",
+  "        os.symlink(SKILL, os.path.join(PACKAGES, package))",
+  "        paths.append(PACKAGES)",
   "    return json.dumps(paths)",
   "",
   "",
@@ -214,7 +232,48 @@ const driver = [
   "                        text = file.read()",
   '                    inside = module if path.endswith("__init__.py") else module.rpartition(".")[0]',
   "                    todo.append((text, inside))",
+  "    # the other Python files of the skill too: the code may import one in a",
+  "    # way that its imports do not show (e.g. importlib, or the skill as a package)",
+  "    outside.update(_skill_imports(paths))",
   '    return "\\n".join(f"import {name}" for name in sorted(outside))',
+  "",
+  "",
+  "_NOT_CODE = {",
+  '    "tests", "test", "testing", "docs", "doc", "examples", "example",',
+  '    "benchmarks", "benchmark", "notebooks", ".git", ".github", "__pycache__",',
+  "}",
+  "",
+  "",
+  "def _skill_imports(paths):",
+  '    """The modules outside the skill that its Python files import, without',
+  '    its tests, examples and docs"""',
+  "    outside = set()",
+  "    if not paths or not os.path.isdir(SKILL):",
+  "        return outside",
+  "    for root, folders, names in os.walk(SKILL):",
+  "        folders[:] = [name for name in folders if name.lower() not in _NOT_CODE]",
+  "        for name in names:",
+  '            if not name.endswith(".py") or name in ("setup.py", "conftest.py"):',
+  "                continue",
+  '            if name.startswith("test_") or name.endswith("_test.py"):',
+  "                continue",
+  "            try:",
+  '                with open(os.path.join(root, name), encoding="utf-8", errors="replace") as file:',
+  "                    tree = ast.parse(file.read())",
+  "            except (OSError, SyntaxError, ValueError):",
+  "                continue",
+  "            for node in ast.walk(tree):",
+  "                if isinstance(node, ast.Import):",
+  "                    found = [alias.name for alias in node.names]",
+  "                elif isinstance(node, ast.ImportFrom) and not node.level and node.module:",
+  "                    found = [node.module]",
+  "                else:",
+  "                    continue",
+  "                for module in found:",
+  '                    top = module.split(".")[0]',
+  "                    if _find_local(top, paths) is None:",
+  "                        outside.add(top)",
+  "    return outside",
   "",
   "",
   `MAX_CHARTS = ${maxCharts}`,
@@ -337,6 +396,16 @@ export type PythonRun = ScriptRun & {
   files?: Record<string, ArrayBuffer>;
   /** The path of the script in the skill, e.g. "scripts/stats.py" */
   path?: string;
+  /**
+   * More modules whose packages of Pyodide to load first, e.g. one that the
+   * code needed in a run before, though its imports did not show it
+   */
+  packages?: string[];
+  /**
+   * The name under which a skill whose folder is a Python package can be
+   * imported, e.g. "points2regions" (see skillPackageName)
+   */
+  packageName?: string;
 };
 
 /** What the worker needs of Pyodide */
@@ -376,7 +445,8 @@ type ToWorker =
       type: "run";
       id: number;
       run: PythonRun;
-    };
+    }
+  | { type: "load"; id: number; packages: string[] };
 
 /** What the worker sends to the panel */
 type FromWorker =
@@ -493,7 +563,15 @@ function workerMain(load: (url: string) => Promise<unknown>): void {
   };
 
   async function run(message: Extract<ToWorker, { type: "run" }>) {
-    const { code, args, project, files: scriptFiles, path = "" } = message.run;
+    const {
+      code,
+      args,
+      project,
+      files: scriptFiles,
+      path = "",
+      packages = [],
+      packageName = "",
+    } = message.run;
     const logs: string[] = [];
     // the files of a skill, which its code can import (the same folder as
     // skillFolder); nothing of the skill of the run before stays
@@ -504,13 +582,19 @@ function workerMain(load: (url: string) => Promise<unknown>): void {
       pyodide.FS.mkdirTree(full.slice(0, full.lastIndexOf("/")));
       pyodide.FS.writeFile(full, new Uint8Array(buffer));
     }
-    const paths = callDriver("_skill_paths", scriptFiles !== undefined, path);
+    const paths = callDriver(
+      "_skill_paths",
+      scriptFiles !== undefined,
+      path,
+      packageName,
+    );
     // the packages of Pyodide that the code imports, also through the
     // modules of the skill, from the panel
     servePyodideFiles(true);
     try {
       await pyodide.loadPackagesFromImports(
-        callDriver("_imports_needed", code, paths),
+        callDriver("_imports_needed", code, paths) +
+          packages.map((name) => `\nimport ${name}`).join(""),
         {
           messageCallback: () => {},
           errorCallback: (text) => logs.push(text),
@@ -552,6 +636,22 @@ function workerMain(load: (url: string) => Promise<unknown>): void {
     }
   }
 
+  // loads packages of Pyodide, e.g. one that code needed but did not show
+  async function loadPackages(
+    message: Extract<ToWorker, { type: "load" }>,
+  ): Promise<null> {
+    servePyodideFiles(true);
+    try {
+      await pyodide.loadPackagesFromImports(
+        message.packages.map((name) => `import ${name}`).join("\n"),
+        { messageCallback: () => {}, errorCallback: () => {} },
+      );
+    } finally {
+      servePyodideFiles(false);
+    }
+    return null;
+  }
+
   self.onmessage = (event: MessageEvent<{ port: MessagePort }>) => {
     self.onmessage = null;
     port = event.data.port;
@@ -568,7 +668,11 @@ function workerMain(load: (url: string) => Promise<unknown>): void {
       }
       try {
         const value =
-          data.type === "start" ? await start(data) : await run(data);
+          data.type === "start"
+            ? await start(data)
+            : data.type === "load"
+              ? await loadPackages(data)
+              : await run(data);
         port.postMessage({ type: "done", id: data.id, value });
       } catch (error) {
         port.postMessage({
@@ -722,6 +826,9 @@ export async function startPythonKernel(
     }
   };
 
+  /** The package of Pyodide of each module that it can import */
+  let byImport = new Map<string, string>();
+
   let started: () => void;
   let failed: (error: Error) => void;
   const ready = new Promise<void>((resolve, reject) => {
@@ -766,6 +873,7 @@ export async function startPythonKernel(
     const lock = new TextDecoder().decode(
       await files.get(lockFile, { signal: downloads.signal }),
     );
+    byImport = pyodidePackages(lock).byImport;
     await call(
       { type: "start", files: given, lock, driver },
       Object.values(given),
@@ -777,43 +885,107 @@ export async function startPythonKernel(
     signal?.removeEventListener("abort", onAbort);
   }
 
+  /** Runs code once in the sandbox, with the time limit */
+  const runOnce: PythonKernel["run"] = (
+    run,
+    answer,
+    { timeLimit, onProgress, onRunning, signal: stopRun },
+  ) => {
+    if (stopRun?.aborted) {
+      return Promise.reject(stopRun.reason as Error);
+    }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onStop = () => stop(stopRun!.reason as Error);
+    stopRun?.addEventListener("abort", onStop, { once: true });
+    current = {
+      answer,
+      onProgress,
+      // the time limit starts once the packages are there
+      onRunning: () => {
+        onRunning?.();
+        timer = setTimeout(() => {
+          stop(
+            new Error(
+              `the script took longer than ${timeLimit / 1000} seconds, and was stopped`,
+            ),
+          );
+        }, timeLimit);
+      },
+    };
+    const transfer = Object.values(run.files ?? {});
+    return (
+      call({ type: "run", run }, transfer) as Promise<ScriptOutcome>
+    ).finally(() => {
+      clearTimeout(timer);
+      stopRun?.removeEventListener("abort", onStop);
+      current = null;
+    });
+  };
+
   return {
     stop: () => stop(),
     isStopped: () => stopped,
-    run: (
-      run,
-      answer,
-      { timeLimit, onProgress, onRunning, signal: stopRun },
-    ) => {
-      if (stopRun?.aborted) {
-        return Promise.reject(stopRun.reason as Error);
-      }
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      const onStop = () => stop(stopRun!.reason as Error);
-      stopRun?.addEventListener("abort", onStop, { once: true });
-      current = {
-        answer,
-        onProgress,
-        // the time limit starts once the packages are there
-        onRunning: () => {
-          onRunning?.();
-          timer = setTimeout(() => {
-            stop(
-              new Error(
-                `the script took longer than ${timeLimit / 1000} seconds, and was stopped`,
-              ),
-            );
-          }, timeLimit);
-        },
+    run: async (run, answer, options) => {
+      // whether the code saved a column or a file, which a second run would
+      // save again
+      let changed = false;
+      const watched = (question: ScriptQuestion) => {
+        if (question.kind === "save_column" || question.kind === "download") {
+          changed = true;
+        }
+        return answer(question);
       };
-      const transfer = Object.values(run.files ?? {});
-      return (
-        call({ type: "run", run }, transfer) as Promise<ScriptOutcome>
-      ).finally(() => {
-        clearTimeout(timer);
-        stopRun?.removeEventListener("abort", onStop);
-        current = null;
-      });
+      // the files go to the sandbox; a second run needs them again
+      const copy = (given: PythonRun): PythonRun =>
+        given.files === undefined
+          ? given
+          : {
+              ...given,
+              files: Object.fromEntries(
+                Object.entries(given.files).map(([path, buffer]) => [
+                  path,
+                  buffer.slice(0),
+                ]),
+              ),
+            };
+      const first = await runOnce(copy(run), watched, options);
+      const missing = missingModule(first.error);
+      if (missing === undefined || first.error === undefined) {
+        return first;
+      }
+      const pyodide = byImport.get(missing.top);
+      if (pyodide === undefined || run.packages?.includes(missing.top)) {
+        return {
+          ...first,
+          error: explainMissingModule(first.error, byImport),
+        };
+      }
+      // a package of Pyodide that the imports of the code did not show (e.g.
+      // imported by a module of the skill in another way): loaded, and the
+      // code runs again, once, unless it saved something already
+      options.onProgress?.(`loading ${pyodide}, which the code needs`);
+      if (changed) {
+        await call({ type: "load", packages: [missing.top] });
+        return {
+          ...first,
+          error: explainMissingModule(first.error, byImport, { loaded: true }),
+        };
+      }
+      const second = await runOnce(
+        copy({ ...run, packages: [...(run.packages ?? []), missing.top] }),
+        watched,
+        options,
+      );
+      return {
+        ...second,
+        logs: [
+          `(The code needed ${pyodide}, a package of Pyodide that its imports did not show: it was loaded, and the code ran again.)`,
+          ...second.logs,
+        ],
+        ...(second.error === undefined
+          ? {}
+          : { error: explainMissingModule(second.error, byImport) }),
+      };
     },
   };
 }

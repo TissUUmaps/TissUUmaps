@@ -396,3 +396,77 @@ export function analyzePython(
     ...(pyodide instanceof Error ? { pyodideError: pyodide.message } : {}),
   };
 }
+
+/**
+ * The module that Python could not import, from the text of the error
+ *
+ * @param error - The error of the code, e.g. "ModuleNotFoundError: No module named 'scipy.sparse'"
+ * @returns The module, e.g. "scipy.sparse", and its top, e.g. "scipy"; none
+ * for another error
+ */
+export function missingModule(
+  error: string | undefined,
+): { module: string; top: string } | undefined {
+  const module = /ModuleNotFoundError: No module named '([\w.]+)'/.exec(
+    error ?? "",
+  )?.[1];
+  return module === undefined
+    ? undefined
+    : { module, top: module.split(".")[0]! };
+}
+
+/**
+ * Explains an error of a module that Python could not import, in place of
+ * the advice of Pyodide (micropip, loadPackage), which the sandbox cannot
+ * follow: it has no network, and the code cannot load packages itself
+ *
+ * @param error - The error of the code
+ * @param byImport - The package of Pyodide of each module it can import
+ * @param options - loaded: the package of Pyodide was loaded after the
+ * error, so that it is there for the next run
+ * @returns The error, explained; the same error if it is another one
+ */
+export function explainMissingModule(
+  error: string,
+  byImport: Map<string, string>,
+  options?: { loaded?: boolean },
+): string {
+  const missing = missingModule(error);
+  if (missing === undefined) {
+    return error;
+  }
+  const lines = error.split("\n");
+  const at = lines.findIndex((line) =>
+    line.includes("ModuleNotFoundError: No module named"),
+  );
+  const kept = lines.slice(0, at + 1).join("\n");
+  const pyodide = byImport.get(missing.top);
+  if (pyodide !== undefined) {
+    return `${kept}\n${pyodide} is a package of Pyodide, the Python of the sandbox, but it was not loaded before the code ran${
+      options?.loaded === true
+        ? "; it is loaded now: run the code again. It was not run again by itself, since it had already saved a column or a file."
+        : "."
+    }`;
+  }
+  return `${kept}\n'${missing.top}' is not a package of Pyodide, the Python of the sandbox, which can only import the packages of Pyodide and the files of the skill: micropip and pip cannot install anything here, since the sandbox has no network. If '${missing.top}' is a module of the skill, import it as the files of the skill are laid out (their folder is on the path of Python); else do without it, e.g. with numpy, scipy, pandas or scikit-learn.`;
+}
+
+/**
+ * The name under which Python can import a skill whose folder is a package
+ * (it has __init__.py at its top, often with relative imports, e.g. the
+ * folder points2regions of a repository): the name of the skill, with _ for
+ * its dashes
+ *
+ * @param skill - The skill: its name and its files
+ * @returns The name, e.g. "points2regions"; none if its folder is not a package
+ */
+export function skillPackageName(skill: {
+  name: string;
+  files: Map<string, unknown>;
+}): string | undefined {
+  if (!skill.files.has("__init__.py")) {
+    return undefined;
+  }
+  const name = skill.name.replace(/[^A-Za-z0-9_]/g, "_");
+  return /^[A-Za-z_]\w*$/.test(name) ? name : `_${name}`;
+}

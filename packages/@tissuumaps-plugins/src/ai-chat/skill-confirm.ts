@@ -17,7 +17,7 @@ const mainButtonStyle =
   "background: var(--primary); color: var(--primary-foreground); border-color: var(--primary);";
 
 /** The look of a warning */
-const warningStyle =
+export const warningStyle =
   "padding: 4px 6px; border-radius: 4px; border: 1px solid color-mix(in oklch, var(--destructive) 50%, transparent);" +
   "background: color-mix(in oklch, var(--destructive) 10%, transparent);";
 
@@ -28,7 +28,10 @@ const warningStyle =
  * @param content - The rest of the line
  * @returns The line
  */
-function line(label: string, ...content: (string | Node)[]): HTMLElement {
+export function line(
+  label: string,
+  ...content: (string | Node)[]
+): HTMLElement {
   const element = document.createElement("div");
   const strong = document.createElement("strong");
   strong.textContent = `${label}: `;
@@ -43,7 +46,7 @@ function line(label: string, ...content: (string | Node)[]): HTMLElement {
  * @param url - Where it goes
  * @returns The link
  */
-function link(text: string, url: string): HTMLAnchorElement {
+export function link(text: string, url: string): HTMLAnchorElement {
   const element = document.createElement("a");
   element.textContent = text;
   element.href = url;
@@ -73,7 +76,7 @@ function megabytes(bytes: number): string {
  * @param signal - Optional abort signal, e.g. Stop
  * @returns The row of buttons, and the answer
  */
-function makeAnswerButtons(
+export function makeAnswerButtons(
   labels: { yes: string; no: string },
   signal?: AbortSignal,
 ): { row: HTMLElement; answer: Promise<boolean>; status: HTMLElement } {
@@ -117,7 +120,7 @@ function makeAnswerButtons(
  * @param title - e.g. "Add a skill from GitHub?"
  * @returns The frame
  */
-function makeFrame(title: string): HTMLElement {
+export function makeFrame(title: string): HTMLElement {
   const element = document.createElement("div");
   element.dataset.who = "Confirm";
   element.style.cssText =
@@ -159,8 +162,12 @@ export function confirmGitHubSkill(
       " (the files exactly as they are in this commit)",
     ),
   );
+  const fromTop =
+    preview.topFiles.length === 0
+      ? ""
+      : `; its text (${preview.topFiles.join(", ")}) comes from the top of the repository, and is added to the skill`;
   if (origin.license !== undefined) {
-    element.append(line("License", origin.license));
+    element.append(line("License", `${origin.license}${fromTop}`));
   } else {
     const warning = line(
       "License",
