@@ -463,6 +463,12 @@ importers:
       '@tissuumaps/core':
         specifier: workspace:^
         version: link:../@tissuumaps-core
+      immer:
+        specifier: ^11.1.8
+        version: 11.1.18
+      zustand:
+        specifier: ^5.0.15
+        version: 5.0.15(@types/react@19.3.0)(immer@11.1.18)(react@19.3.0)(use-sync-external-store@1.7.0(react@19.3.0))
 
   packages/@tissuumaps-react:
     devDependencies:
