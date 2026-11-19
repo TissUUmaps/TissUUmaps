@@ -3,7 +3,7 @@ import { SourceUtils } from "@tissuumaps/core";
 /**
  * Formats a project source for display
  *
- * Workspace files are shown relative to the folder, and URLs under the app
+ * Workspace files are shown relative to the workspace, and URLs under the app
  * relative to the app.
  *
  * @param source - The project source
@@ -17,7 +17,7 @@ export function formatProjectSource(
   baseUrl: string,
 ): string {
   if (SourceUtils.isWorkspacePath(source)) {
-    return `${workspaceName ?? "Folder"} › ${source.slice(1)}`;
+    return `${workspaceName ?? "Workspace"} › ${source.slice(1)}`;
   }
   if (!URL.canParse(source)) {
     return source;

@@ -44,7 +44,7 @@
  * {@link SourceUtils.getStem} and {@link SourceUtils.getExtension} take them
  * apart, and
  * {@link SourceUtils.makeProjectPath} turns them back into project-relative
- * paths.
+ * paths, and {@link SourceUtils.createID} creates IDs named after them.
  *
  * A relative path whose first segment contains a colon (e.g.
  * `sample1:ch2.tif`) is taken for a URL; write it as `./sample1:ch2.tif`
@@ -468,6 +468,30 @@ export class SourceUtils {
     return extensionIndex !== -1
       ? name.substring(extensionIndex).toLowerCase()
       : "";
+  }
+
+  /**
+   * Creates a unique ID for an object, named after its source
+   *
+   * The ID is the file name of the source with every `.` replaced by `-`,
+   * followed by a random UUID, so `cells.ome.zarr` gives e.g.
+   * `cells-ome-zarr-0f8e…`. The UUID keeps the ID unique, also against the IDs
+   * of deleted objects that may still be referenced, and against the IDs of
+   * objects of other projects. Without a source, or for URLs without a path,
+   * the ID is the UUID alone.
+   *
+   * @param normalizedSource - The normalized source of the object (see
+   *   {@link SourceUtils.normalizeSource}), if any
+   * @returns The ID
+   * @throws See {@link SourceUtils.getPathSegments}
+   */
+  static createID(normalizedSource: string | undefined): string {
+    const fileName =
+      normalizedSource !== undefined
+        ? SourceUtils.getPathSegments(normalizedSource).at(-1)
+        : undefined;
+    const uuid = crypto.randomUUID();
+    return fileName ? `${fileName.replaceAll(".", "-")}-${uuid}` : uuid;
   }
 
   /**

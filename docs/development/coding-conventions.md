@@ -56,6 +56,13 @@ async function load(
 }
 ```
 
+## Interfaces
+
+- An interface that is the counterpart of an existing one mirrors its signatures exactly, including which parameters are positional and which are options. For example, `ProjectProvider` mirrors `DataProvider`.
+- Option shapes are declared inline. An interface for a new concept never reuses another interface's option type, even if it matches today.
+- Methods are not named after reserved words (`load`, not `import`).
+- Implementations are trusted to fulfill their contract, e.g. to honor the abort signal. Callers do not guard against broken implementations.
+
 ## Comments
 
 We are old-school and prefer readable and well-organized code over excessive inline comments. Variable and function names, types, and architecture should be self-explanatory; `//` comments should only be placed where essential. Non-obvious code gets a `//` comment explaining _why_ it is written the way it is (not what it does), ideally linking to the issue, specification or upstream bug that motivates it. Deliberate deviations from the conventions on this page are documented the same way.

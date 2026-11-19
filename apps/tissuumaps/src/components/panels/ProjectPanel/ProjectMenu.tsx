@@ -2,7 +2,9 @@ import {
   DownloadIcon,
   EllipsisIcon,
   FileIcon,
+  FileInputIcon,
   FolderIcon,
+  ImportIcon,
   LinkIcon,
   XIcon,
 } from "lucide-react";
@@ -14,13 +16,19 @@ import {
   DropdownMenuItem,
   DropdownMenuItemDescription,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { saveAndDownloadProjectToJSON } from "@/data/io/project";
 import { isWorkspaceSupported } from "@/data/io/workspace";
+import { useAppStore } from "@/stores/app";
 
 import {
   useCloseProject,
+  useDownloadProject,
+  useImportProjectFromFile,
+  useImportProjectFromURL,
   useOpenProjectFromFile,
   useOpenProjectFromURL,
   useOpenWorkspace,
@@ -32,9 +40,17 @@ export type ProjectMenuProps = {
 };
 
 export function ProjectMenu({ className }: ProjectMenuProps) {
+  const projectProviders = useAppStore((state) => state.projectProviders);
+  const writingProjectProviders = Array.from(projectProviders).filter(
+    ([, projectProvider]) => projectProvider.toFile !== undefined,
+  );
+
   const openProjectFromFile = useOpenProjectFromFile();
   const openProjectFromURL = useOpenProjectFromURL();
+  const importProjectFromFile = useImportProjectFromFile();
+  const importProjectFromURL = useImportProjectFromURL();
   const closeProject = useCloseProject();
+  const downloadProject = useDownloadProject();
   const openWorkspace = useOpenWorkspace();
   const workspaceSupported = isWorkspaceSupported();
 
@@ -54,12 +70,22 @@ export function ProjectMenu({ className }: ProjectMenuProps) {
           <LinkIcon />
           Open from URL…
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={importProjectFromFile}>
+          <FileInputIcon />
+          Import project file…
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={importProjectFromURL}>
+          <ImportIcon />
+          Import from URL…
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem
           disabled={!workspaceSupported}
           onClick={openWorkspace}
         >
           <FolderIcon />
-          Open folder…
+          Open workspace…
           {!workspaceSupported && (
             <DropdownMenuItemDescription>
               {workspaceUnsupportedMessage}
@@ -67,10 +93,29 @@ export function ProjectMenu({ className }: ProjectMenuProps) {
           )}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => saveAndDownloadProjectToJSON()}>
+        <DropdownMenuItem onClick={() => downloadProject()}>
           <DownloadIcon />
           Download project
         </DropdownMenuItem>
+        {/* a choice only once another project provider can write projects */}
+        {writingProjectProviders.length > 1 && (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <DownloadIcon />
+              Download as
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              {writingProjectProviders.map(([type, projectProvider]) => (
+                <DropdownMenuItem
+                  key={type}
+                  onClick={() => downloadProject(projectProvider)}
+                >
+                  {projectProvider.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={closeProject}>
           <XIcon />

@@ -18,7 +18,7 @@ import "./zustand";
  *
  * This comprises the open workspace, whether a project is open,
  * the current interaction mode, the hovered channel preview, the registered
- * data providers, the registered plugins, the active panel, and the expanded
+ * data providers and project providers, the registered plugins, the active panel, and the expanded
  * objects of each panel.
  * The plugins are written by the plugin registry, which owns their lifecycle,
  * rather than through an action.
@@ -60,6 +60,11 @@ export const appStore: AppStoreApi = createStore<AppStore>()(
         set((draft) => {
           draft.tableDataProviders.set(type, dataProvider);
         }),
+      registerProjectProvider: (type, projectProvider) => {
+        set((draft) => {
+          draft.projectProviders.set(type, projectProvider);
+        });
+      },
     })),
     { name: "app", enabled: import.meta.env.DEV },
   ),
@@ -92,6 +97,7 @@ function createInitialAppStoreState(): AppStoreState {
     pointsDataProviders: new Map(),
     shapesDataProviders: new Map(),
     tableDataProviders: new Map(),
+    projectProviders: new Map(),
     plugins: new Map(),
     activePanelId: PanelId.project,
     expandedImageIds: [],
