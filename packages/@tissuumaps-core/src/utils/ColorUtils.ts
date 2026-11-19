@@ -29,7 +29,7 @@ export class ColorUtils {
       .map((line, i) => {
         const values = line.split(sep);
         if (values.length !== 3) {
-          throw new Error(`Invalid color palette line ${i}: ${line}`);
+          throw new Error(`Invalid color palette line '${line}' at index ${i}`);
         }
         return {
           r: (Number(values[0]) / maxValue) * 255,
@@ -56,7 +56,7 @@ export class ColorUtils {
     n: number,
   ): Color[] {
     if (!Number.isInteger(n) || n < 2) {
-      throw new Error(`Invalid color scheme size: ${n}`);
+      throw new Error(`Invalid color scheme size ${n}`);
     }
     return Array.from({ length: n }, (_, i) => {
       const spec = colorScheme(i / (n - 1));
@@ -65,7 +65,7 @@ export class ColorUtils {
       // unparseable color only, not an out-of-range one.
       const { r, g, b } = parseCSSColor(spec);
       if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) {
-        throw new Error(`Invalid color scheme color: ${spec}`);
+        throw new Error(`Invalid color scheme color '${spec}'`);
       }
       return { r, g, b };
     });
@@ -139,7 +139,7 @@ export class ColorUtils {
    */
   static fromHex(hex: string): Color {
     if (!/^#([0-9A-Fa-f]{6})$/.test(hex)) {
-      throw new Error(`Invalid hex color: ${hex}`);
+      throw new Error(`Invalid hex color '${hex}'`);
     }
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);

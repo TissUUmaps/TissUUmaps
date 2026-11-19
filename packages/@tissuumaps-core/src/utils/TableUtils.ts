@@ -99,12 +99,12 @@ export class TableUtils {
     );
     if (numMissingIds > 0) {
       console.warn(
-        `${numMissingIds} IDs missing in column ${column}, using default value`,
+        `${numMissingIds} IDs missing in column '${column}', using default value`,
       );
     }
     if (numUnparsedValues > 0) {
       console.warn(
-        `Failed to parse ${numUnparsedValues} values from column ${column}, using default value`,
+        `Failed to parse ${numUnparsedValues} values from column '${column}', using default value`,
       );
     }
   }
@@ -166,7 +166,7 @@ export class TableUtils {
     );
     if (numMissingIds > 0) {
       console.warn(
-        `${numMissingIds} IDs missing in column ${column}, using default value`,
+        `${numMissingIds} IDs missing in column '${column}', using default value`,
       );
     }
   }
