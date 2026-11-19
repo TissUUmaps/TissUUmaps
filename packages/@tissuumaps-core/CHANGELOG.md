@@ -1,5 +1,13 @@
 # @tissuumaps/core
 
+## 0.1.0-beta.4
+
+### Minor Changes
+
+- [#394](https://github.com/TissUUmaps/TissUUmaps/pull/394) [`3503273`](https://github.com/TissUUmaps/TissUUmaps/commit/3503273f101dda019c8c2f170d3297f93e474b86) Thanks [@cavenel](https://github.com/cavenel)! - Either end of a color range can be `null`, which stands for the minimum or maximum value of the table column.
+
+- [#312](https://github.com/TissUUmaps/TissUUmaps/pull/312) [`d6720ba`](https://github.com/TissUUmaps/TissUUmaps/commit/d6720ba27b069f73892a94a07fc3293e94c3faeb) Thanks [@cavenel](https://github.com/cavenel)! - `InteractionMode` is also a const object that lists the interaction modes.
+
 ## 0.1.0-beta.3
 
 ### Minor Changes

@@ -1,5 +1,22 @@
 # tissuumaps
 
+## 4.0.0-beta.4
+
+### Minor Changes
+
+- [#312](https://github.com/TissUUmaps/TissUUmaps/pull/312) [`d6720ba`](https://github.com/TissUUmaps/TissUUmaps/commit/d6720ba27b069f73892a94a07fc3293e94c3faeb) Thanks [@cavenel](https://github.com/cavenel)! - Group the viewer controls into a toolbar.
+
+### Patch Changes
+
+- [#394](https://github.com/TissUUmaps/TissUUmaps/pull/394) [`3503273`](https://github.com/TissUUmaps/TissUUmaps/commit/3503273f101dda019c8c2f170d3297f93e474b86) Thanks [@cavenel](https://github.com/cavenel)! - Setting only the minimum or only the maximum of a color range now applies it; the other end stays at the column's value.
+
+- [#316](https://github.com/TissUUmaps/TissUUmaps/pull/316) [`4c665b6`](https://github.com/TissUUmaps/TissUUmaps/commit/4c665b64b3b224abf3b7fe9eb1475289a730666d) Thanks [@cavenel](https://github.com/cavenel)! - Files and folders can be dropped on data panels before a project is started.
+
+- [#320](https://github.com/TissUUmaps/TissUUmaps/pull/320) [`c2d4e73`](https://github.com/TissUUmaps/TissUUmaps/commit/c2d4e73e1f3ae7c171aa7890d0e3565b387e0f72) Thanks [@cavenel](https://github.com/cavenel)! - The shape stroke width setting accepts decimal values.
+- Updated dependencies [[`3503273`](https://github.com/TissUUmaps/TissUUmaps/commit/3503273f101dda019c8c2f170d3297f93e474b86), [`3503273`](https://github.com/TissUUmaps/TissUUmaps/commit/3503273f101dda019c8c2f170d3297f93e474b86), [`a99d552`](https://github.com/TissUUmaps/TissUUmaps/commit/a99d552103ae8906467214c71d94a480e72a4aa2), [`67de073`](https://github.com/TissUUmaps/TissUUmaps/commit/67de073b7d3e5a55e276ca7035dc057c8a643f59), [`d6720ba`](https://github.com/TissUUmaps/TissUUmaps/commit/d6720ba27b069f73892a94a07fc3293e94c3faeb)]:
+  - @tissuumaps/core@0.1.0-beta.4
+  - @tissuumaps/render@0.1.0-beta.4
+
 ## 4.0.0-beta.3
 
 ### Minor Changes

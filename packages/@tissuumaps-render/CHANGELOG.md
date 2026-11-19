@@ -1,5 +1,17 @@
 # @tissuumaps/render
 
+## 0.1.0-beta.4
+
+### Patch Changes
+
+- [#394](https://github.com/TissUUmaps/TissUUmaps/pull/394) [`3503273`](https://github.com/TissUUmaps/TissUUmaps/commit/3503273f101dda019c8c2f170d3297f93e474b86) Thanks [@cavenel](https://github.com/cavenel)! - A color range with only one end set takes the other end from the table column.
+
+- [#398](https://github.com/TissUUmaps/TissUUmaps/pull/398) [`a99d552`](https://github.com/TissUUmaps/TissUUmaps/commit/a99d552103ae8906467214c71d94a480e72a4aa2) Thanks [@cavenel](https://github.com/cavenel)! - Images rotated by an angle that is not a multiple of 90 degrees get correct bounds, so the home view frames them.
+
+- [#387](https://github.com/TissUUmaps/TissUUmaps/pull/387) [`67de073`](https://github.com/TissUUmaps/TissUUmaps/commit/67de073b7d3e5a55e276ca7035dc057c8a643f59) Thanks [@cavenel](https://github.com/cavenel)! - Points smaller than 8 device pixels are no longer drawn on a faint square.
+- Updated dependencies [[`3503273`](https://github.com/TissUUmaps/TissUUmaps/commit/3503273f101dda019c8c2f170d3297f93e474b86), [`d6720ba`](https://github.com/TissUUmaps/TissUUmaps/commit/d6720ba27b069f73892a94a07fc3293e94c3faeb)]:
+  - @tissuumaps/core@0.1.0-beta.4
+
 ## 0.1.0-beta.3
 
 ### Minor Changes
