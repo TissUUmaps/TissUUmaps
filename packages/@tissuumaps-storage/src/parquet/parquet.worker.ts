@@ -192,7 +192,7 @@ function openParquet(source: ParquetSource): Promise<AsyncBuffer> {
       requestInit: { headers: source.headers },
     });
   }
-  return Promise.reject(new Error("A URL or file is required to load data."));
+  return Promise.reject(new Error("A URL or file is required to load data"));
 }
 
 async function openParquetPart(source: ParquetSource): Promise<ParquetPart> {
@@ -235,7 +235,7 @@ async function readIdsAndNames(
       try {
         return ArrayUtils.toIDArray(idData);
       } catch (error) {
-        throw new Error(`ID column "${keyColumn}" does not hold item IDs`, {
+        throw new Error(`ID column '${keyColumn}' does not hold item IDs`, {
           cause: error,
         });
       }
@@ -243,7 +243,7 @@ async function readIdsAndNames(
     if (indexColumn !== undefined) {
       // the pandas index was not asked for, so it must not fail the read
       idsPromise = idsPromise.catch((error: unknown) => {
-        console.warn("Keying rows by row number instead:", error);
+        console.warn("Keying rows by row number instead", error);
         return undefined;
       });
     }
@@ -262,7 +262,7 @@ async function readIdsAndNames(
   // e.g. the partition-local index that Dask writes; items are looked up by ID
   if (ids !== undefined && new Set<unknown>(ids).size !== ids.length) {
     console.warn(
-      `ID column "${keyColumn}" has duplicate values, keying rows by row number instead`,
+      `ID column '${keyColumn}' has duplicate values, keying rows by row number instead`,
     );
     return { ids: undefined, names };
   }
@@ -459,7 +459,9 @@ async function handleRangeRequest(
       (column) => column.meta_data?.path_in_schema.join(".") === request.column,
     );
     if (columnChunk === undefined) {
-      throw new Error(`Column "${request.column}" not found in Parquet file`);
+      throw new Error(
+        `Column '${request.column}' not found in the Parquet file`,
+      );
     }
     const statistics = columnChunk.meta_data?.statistics;
     if (statistics?.null_count === rowGroup.num_rows) {

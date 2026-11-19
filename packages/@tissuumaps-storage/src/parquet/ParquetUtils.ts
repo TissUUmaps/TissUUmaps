@@ -249,7 +249,7 @@ export class ParquetUtils {
   ): Promise<TypedArrayOrArray<unknown>> {
     const element = ParquetUtils.getColumnElement(parts[0]!.metadata, column);
     if (element === undefined) {
-      throw new Error(`Column "${column}" not found in Parquet file`);
+      throw new Error(`Column '${column}' not found in the Parquet file`);
     }
     const numRows = ParquetUtils.getTotalNumRows(parts);
     const arrayType = ParquetUtils.getColumnArrayType(element);
