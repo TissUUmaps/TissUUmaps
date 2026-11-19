@@ -78,7 +78,7 @@ export function enableBuiltInDataProviders(): void {
         const tableDataProvider = tableDataProviders.get(dataSource.type);
         if (tableDataProvider === undefined) {
           throw new Error(
-            `No table data provider for type ${dataSource.type}.`,
+            `No table data provider for type '${dataSource.type}'`,
           );
         }
         const projectSource = projectStore.getState().source;
