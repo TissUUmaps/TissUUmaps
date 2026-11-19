@@ -223,7 +223,9 @@ export class SpatialDataProjectProvider implements ProjectProvider {
     let directory: string | FileSystemDirectoryHandle;
     if (normalizedSource === "/") {
       if (workspace === null) {
-        throw new Error("Cannot open the workspace root without workspace.");
+        throw new Error(
+          "The workspace root cannot be opened without a workspace",
+        );
       }
       directory = workspace;
     } else {
@@ -673,7 +675,7 @@ export class SpatialDataProjectProvider implements ProjectProvider {
     return [...transforms].map(([coordinateSystem, { transform, exact }]) => {
       if (!exact) {
         console.warn(
-          `The transformation of ${path} into "${coordinateSystem}" is approximated, as it scales the axes differently or shears them.`,
+          `The transformation of '${path}' into '${coordinateSystem}' is approximated, as it scales the axes differently or shears them`,
         );
       }
       return [coordinateSystem, transform];
@@ -712,7 +714,7 @@ export class SpatialDataProjectProvider implements ProjectProvider {
       const elementKind = SpatialDataProjectProvider._getElementKind(attrs);
       if (elementKind !== kind) {
         console.warn(
-          `Skipping ${kind}/${name}, whose metadata ${elementKind !== undefined ? `marks it as ${elementKind}` : "marks no SpatialData element"}.`,
+          `Skipping '${kind}/${name}', whose metadata ${elementKind !== undefined ? `marks it as '${elementKind}'` : "marks no SpatialData element"}`,
         );
         return false;
       }

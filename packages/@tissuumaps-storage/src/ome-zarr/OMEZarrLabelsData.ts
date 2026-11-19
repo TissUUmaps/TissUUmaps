@@ -72,7 +72,9 @@ export class OMEZarrLabelsData implements LabelsData {
         height: tile.shape[0]!,
       };
     }
-    throw new Error(`Unsupported data type: ${tile.data.constructor.name}`);
+    throw new Error(
+      `Data type '${tile.data.constructor.name}' is not supported`,
+    );
   }
 
   close(): void {}
