@@ -131,7 +131,7 @@ describe("ShapesGeometryBuilder", () => {
     const builder = new ShapesGeometryBuilder();
     builder.addShape([[square]], 1);
     builder.addShape([[square]], "b");
-    expect(() => builder.build()).toThrow("ID is not a safe integer: b");
+    expect(() => builder.build()).toThrow("ID 'b' is not a safe integer");
   });
 
   it("counts the shapes added so far", () => {

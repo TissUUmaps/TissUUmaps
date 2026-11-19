@@ -30,7 +30,7 @@ export class JSONUtils {
   static stringify(value: unknown, options?: { stable?: boolean }): string {
     const { stable = false } = options || {};
     if (!JSONUtils._isStringifiable(value)) {
-      throw new Error(`Value of type ${typeof value} is not stringifiable`);
+      throw new Error(`Value of type '${typeof value}' is not stringifiable`);
     }
     if (typeof value !== "object" || value === null) {
       return JSONUtils._stringifyPrimitive(value);

@@ -92,7 +92,7 @@ export class SourceUtils {
       try {
         return new URL(source).toString();
       } catch (error) {
-        throw new Error(`Invalid URL: ${source}`, { cause: error });
+        throw new Error(`Invalid URL '${source}'`, { cause: error });
       }
     }
     if (source.startsWith(SourceUtils._appPathPrefix)) {
@@ -146,13 +146,15 @@ export class SourceUtils {
     }
     if (workspace === null) {
       throw new Error(
-        `Cannot resolve workspace-relative path without workspace: ${normalizedSource}`,
+        `Workspace-relative path '${normalizedSource}' cannot be resolved without a workspace`,
       );
     }
     const segments = SourceUtils._getWorkspaceSegments(normalizedSource);
     const entryName = segments.pop();
     if (entryName === undefined) {
-      throw new Error(`Not a workspace file or directory: ${normalizedSource}`);
+      throw new Error(
+        `Not a workspace file or directory '${normalizedSource}'`,
+      );
     }
     let dir = workspace;
     for (const dirName of segments) {
@@ -202,7 +204,7 @@ export class SourceUtils {
     );
     if (typeof resolvedSource !== "string" && resolvedSource.kind !== "file") {
       throw new DOMException(
-        `Not a workspace file: ${normalizedSource}`,
+        `Not a workspace file '${normalizedSource}'`,
         "TypeMismatchError",
       );
     }
@@ -239,7 +241,7 @@ export class SourceUtils {
       resolvedSource.kind !== "directory"
     ) {
       throw new DOMException(
-        `Not a workspace directory: ${normalizedSource}`,
+        `Not a workspace directory '${normalizedSource}'`,
         "TypeMismatchError",
       );
     }
@@ -525,7 +527,7 @@ export class SourceUtils {
         try {
           return new URL(projectPath, projectSource).toString();
         } catch (error) {
-          throw new Error(`Invalid project-relative path: ${projectPath}`, {
+          throw new Error(`Invalid project-relative path '${projectPath}'`, {
             cause: error,
           });
         }
@@ -575,12 +577,12 @@ export class SourceUtils {
     options?: { baseUrl?: string },
   ): string {
     if (!workspacePath.startsWith(SourceUtils._workspacePathPrefix)) {
-      throw new Error(`Invalid workspace-relative path: ${workspacePath}`);
+      throw new Error(`Invalid workspace-relative path '${workspacePath}'`);
     }
     if (workspace !== null) {
       const segments = SourceUtils._getWorkspaceSegments(workspacePath);
       if (segments.length === 0) {
-        throw new Error(`Not a workspace file or directory: ${workspacePath}`);
+        throw new Error(`Not a workspace file or directory '${workspacePath}'`);
       }
       return SourceUtils.makeWorkspacePath(segments);
     }
@@ -611,7 +613,7 @@ export class SourceUtils {
   ): string {
     const { baseUrl = document.baseURI } = options ?? {};
     if (!appPath.startsWith(SourceUtils._appPathPrefix)) {
-      throw new Error(`Invalid app-relative path: ${appPath}`);
+      throw new Error(`Invalid app-relative path '${appPath}'`);
     }
     const path = appPath.substring(SourceUtils._appPathPrefix.length);
     return new URL(path, baseUrl).toString();
@@ -670,7 +672,7 @@ export class SourceUtils {
       }
       if (segment === "..") {
         if (segments.length === 0) {
-          throw new Error(`Path escapes workspace: ${path}`);
+          throw new Error(`Path '${path}' escapes the workspace`);
         }
         segments.pop();
       } else {
