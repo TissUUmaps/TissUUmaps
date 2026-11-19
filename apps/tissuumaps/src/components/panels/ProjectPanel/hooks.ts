@@ -36,12 +36,15 @@ export const workspaceUnsupportedMessage =
 /**
  * Returns a callback that lets the user pick the workspace
  *
- * Failures are logged, as the callback is called from event handlers.
+ * Failures are logged and shown, as the callback is called from event
+ * handlers.
  *
  * @returns The callback
  */
 export function useOpenWorkspace(): () => void {
   const setWorkspace = useAppStore((state) => state.setWorkspace);
+
+  const alert = useAlertDialog();
 
   return useCallback(() => {
     void pickWorkspace()
@@ -50,10 +53,14 @@ export function useOpenWorkspace(): () => void {
           setWorkspace(directory);
         }
       })
-      .catch((error) => {
+      .catch(async (error: unknown) => {
         console.error("Failed to open workspace", error);
+        await alert({
+          title: "Cannot open the workspace",
+          body: error instanceof Error ? error.message : String(error),
+        });
       });
-  }, [setWorkspace]);
+  }, [setWorkspace, alert]);
 }
 
 /**
