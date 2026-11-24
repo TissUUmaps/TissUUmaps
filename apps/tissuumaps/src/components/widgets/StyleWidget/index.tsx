@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 import { ColorByPicker } from "./ColorByPicker";
 import { StyleRow } from "./StyleRow";
-import { type ColorBy, type ColorByEncoding, getRecentColumn } from "./colorBy";
+import type { ColorBy, ColorByEncoding } from "./colorBy";
 import { useColorBy } from "./useColorBy";
 
 export type StyleWidgetProps = {
@@ -86,7 +86,6 @@ export function StyleWidget({
         tableId={tableId}
         column={colorBy.kind === "column" ? colorBy.column : null}
         onColumnChange={pick}
-        recentColumn={getRecentColumn(colorAdapter.colorConfig, tableId)}
         placeholder={
           tableId === null
             ? "No table"

@@ -45,11 +45,6 @@ export type TableColumnInputProps = {
    * it is committed (e.g. to search other query groups for it)
    */
   onNoMatch?: (text: string) => void;
-  /**
-   * A column to list first while nothing is typed, marked as recent (e.g. the
-   * column last colored by)
-   */
-  recentQuery?: string;
   placeholder?: string;
   className?: string;
 };
@@ -131,7 +126,6 @@ type SuggestionListHandle = {
 type SuggestionListProps = {
   suggestions: TableColumnQuerySuggestion[];
   query: string;
-  recentQuery: string | undefined;
   ref: Ref<SuggestionListHandle>;
 };
 
@@ -141,12 +135,7 @@ type SuggestionListProps = {
  * Mounted together with its scroll container, which the virtualizer subscribes
  * to on mount.
  */
-function SuggestionList({
-  suggestions,
-  query,
-  recentQuery,
-  ref,
-}: SuggestionListProps) {
+function SuggestionList({ suggestions, query, ref }: SuggestionListProps) {
   const {
     containerRef,
     firstIndex,
@@ -201,11 +190,6 @@ function SuggestionList({
                 suggestion={getSuggestionText(suggestion)}
                 query={query}
               />
-              {suggestion.query === recentQuery && (
-                <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-                  recent
-                </span>
-              )}
             </AutocompleteItem>
           );
         })}
@@ -221,7 +205,6 @@ export function TableColumnInput({
   queryGroupId,
   valueName,
   onNoMatch,
-  recentQuery,
   placeholder,
   className,
 }: TableColumnInputProps) {
@@ -266,27 +249,12 @@ export function TableColumnInput({
         const tableData = await loadTableData({
           signal: abortController.signal,
         });
-        const allSuggestions =
+        const newSuggestions =
           (await tableData?.suggestColumnQueries(text, {
             queryGroupId,
             signal: abortController.signal,
           })) ?? [];
         if (!abortController.signal.aborted) {
-          // the recent column is listed first, even where the suggestions do
-          // not list it (e.g. a column below a path)
-          const recentSuggestion =
-            text === "" && recentQuery !== undefined
-              ? (allSuggestions.find((s) => s.query === recentQuery) ?? {
-                  query: recentQuery,
-                })
-              : undefined;
-          const newSuggestions =
-            recentSuggestion !== undefined
-              ? [
-                  recentSuggestion,
-                  ...allSuggestions.filter((s) => s !== recentSuggestion),
-                ]
-              : allSuggestions;
           startSuggestTransition(() => {
             setSuggestions(newSuggestions);
             setSuggestionsText(text);
@@ -299,14 +267,7 @@ export function TableColumnInput({
       }
     });
     return () => abortController.abort();
-  }, [
-    open,
-    text,
-    queryGroupId,
-    recentQuery,
-    loadTableData,
-    startSuggestTransition,
-  ]);
+  }, [open, text, queryGroupId, loadTableData, startSuggestTransition]);
 
   // every suggestion is listed, matches first, as the table ranks them; within
   // a query group, a text that no suggestion matches is reported (see below)
@@ -513,7 +474,6 @@ export function TableColumnInput({
               ref={suggestionListRef}
               suggestions={suggestions}
               query={text}
-              recentQuery={text === "" ? recentQuery : undefined}
             />
           )}
         </AutocompleteList>

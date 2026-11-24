@@ -59,12 +59,6 @@ export type ColorByPickerProps = {
   /** Colors by a column, or by none */
   onColumnChange: (column: string | null) => void;
 
-  /**
-   * A column to offer first in the row it belongs to, e.g. the column of the
-   * color configuration's inactive branch
-   */
-  recentColumn: string | null;
-
   /** The text shown while no column is colored, for tables without groups */
   placeholder: string;
 
@@ -92,7 +86,6 @@ export function ColorByPicker({
   tableId,
   column,
   onColumnChange,
-  recentColumn,
   placeholder,
   className,
 }: ColorByPickerProps) {
@@ -105,7 +98,6 @@ export function ColorByPicker({
     queryGroupId: string;
     name: string;
   } | null>(null);
-  const [recentLeafId, setRecentLeafId] = useState<string | null>(null);
   // the leaf chosen under "from", by row ID, for this session only
   const [selectedLeafIds, setSelectedLeafIds] = useState<
     Partial<Record<string, string>>
@@ -156,29 +148,6 @@ export function ColorByPicker({
     return () => abortController.abort();
   }, [tableData, column]);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- no stale leaf
-    setRecentLeafId(null);
-    if (tableData?.describeColumn === undefined || recentColumn === null) {
-      return;
-    }
-    const abortController = new AbortController();
-    const { signal } = abortController;
-    tableData
-      .describeColumn(recentColumn, { signal })
-      .then((recentDescription) => {
-        if (!signal.aborted) {
-          setRecentLeafId(recentDescription?.queryGroupId ?? null);
-        }
-      })
-      .catch((error: unknown) => {
-        if (!signal.aborted) {
-          console.error("Failed to describe the recent column", error);
-        }
-      });
-    return () => abortController.abort();
-  }, [tableData, recentColumn]);
-
   // a newly colored column takes back the messages
   // https://react.dev/reference/react/useState#storing-information-from-previous-renders
   const [prevColumn, setPrevColumn] = useState(column);
@@ -195,7 +164,6 @@ export function ColorByPicker({
           tableId={tableId}
           value={column}
           onValueChange={onColumnChange}
-          recentQuery={recentColumn ?? undefined}
           placeholder={placeholder}
         />
       </StyleRow>
@@ -204,9 +172,6 @@ export function ColorByPicker({
 
   const coloredRow = rows.find((row) =>
     row.leaves.some((leaf) => leaf.id === description?.queryGroupId),
-  );
-  const recentRow = rows.find((row) =>
-    row.leaves.some((leaf) => leaf.id === recentLeafId),
   );
 
   const startSwitch = () => {
@@ -298,15 +263,10 @@ export function ColorByPicker({
     <>
       {rows.map((row) => {
         const isActive = coloredRow?.id === row.id;
-        // the chosen leaf, else the colored one, else (for an empty row) the
-        // leaf of the recent column, else the first one
+        // the chosen leaf, else the colored one, else the first one
         const preferredLeafId =
           selectedLeafIds[row.id] ??
-          (isActive
-            ? description?.queryGroupId
-            : recentRow?.id === row.id
-              ? recentLeafId
-              : undefined);
+          (isActive ? description?.queryGroupId : undefined);
         const leaf =
           row.leaves.find((leaf) => leaf.id === preferredLeafId) ??
           row.leaves[0];
@@ -332,11 +292,6 @@ export function ColorByPicker({
                 valueName={showsColoredColumn ? description?.name : undefined}
                 onValueChange={onColumnChange}
                 onNoMatch={(text) => void searchElsewhere(text, row, leaf.id)}
-                recentQuery={
-                  !isActive && recentColumn !== null && recentLeafId === leaf.id
-                    ? recentColumn
-                    : undefined
-                }
                 placeholder="Search…"
                 className="min-w-0 flex-1"
               />

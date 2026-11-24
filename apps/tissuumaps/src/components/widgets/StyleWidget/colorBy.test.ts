@@ -10,7 +10,6 @@ import {
 
 import {
   type ColorBy,
-  getRecentColumn,
   hide,
   isHiddenByConstant,
   isMarkerByCategory,
@@ -367,36 +366,5 @@ describe("markerWithoutCategories", () => {
       constant: { value: Marker.Cross },
       from: { column: "marker" },
     });
-  });
-});
-
-describe("getRecentColumn", () => {
-  it("returns the column of the inactive branch of the own table", () => {
-    const config = {
-      source: "groupBy",
-      groupBy: { column: "leiden", map: undefined },
-      from: { column: "X[CD3]", palette: "viridis" },
-    } as ColorConfig;
-    expect(getRecentColumn(config, "t1")).toBe("X[CD3]");
-    expect(
-      getRecentColumn({ ...config, source: "from" } as ColorConfig, "t1"),
-    ).toBe("leiden");
-    expect(
-      getRecentColumn({ ...config, source: "constant" } as ColorConfig, "t1"),
-    ).toBe("leiden");
-    expect(getRecentColumn(config, null)).toBeNull();
-  });
-
-  it("ignores branches of other tables", () => {
-    expect(
-      getRecentColumn(
-        {
-          source: "groupBy",
-          groupBy: { column: "leiden", map: undefined },
-          from: { table: "t2", column: "qv", palette: "viridis" },
-        } as ColorConfig,
-        "t1",
-      ),
-    ).toBeNull();
   });
 });
