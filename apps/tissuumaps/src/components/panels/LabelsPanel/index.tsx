@@ -5,6 +5,7 @@ import type { Labels } from "@tissuumaps/core";
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
 import { AddDataObjectButton } from "@/components/controls/AddDataObjectButton";
+import { AdvancedSettings } from "@/components/controls/AdvancedSettings";
 import {
   SortableObjectList,
   SortableObjectListItem,
@@ -17,6 +18,7 @@ import { useProjectStore } from "@/stores/project";
 
 import { LabelsAnnotationsWidget } from "./LabelsAnnotationsWidget";
 import { LabelsSettingsWidget } from "./LabelsSettingsWidget";
+import { LabelsStyleWidget } from "./LabelsStyleWidget";
 import type { LabelsSettingsCategory } from "./category";
 
 export type LabelsPanelProps = {
@@ -95,20 +97,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
       }
       onDelete={() => deleteLabels(labels.id)}
     >
-      <DataSourceWidget
-        dataSource={labels.dataSource}
-        dataProviders={labelsDataProviders}
-        onDataSourceChange={(newDataSource) => {
-          updateLabels(labels.id, { dataSource: newDataSource });
-        }}
-        className="bg-card"
-      />
-      <LabelsSettingsWidget
-        labels={labels}
-        activeCategory={activeSettingsCategory}
-        onActiveCategoryChange={setActiveSettingsCategory}
-        className="bg-card"
-      />
+      <LabelsStyleWidget labels={labels} className="bg-card" />
       {labels.dataSource.table !== undefined && (
         <LabelsAnnotationsWidget
           labels={labels}
@@ -116,6 +105,22 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
           className="bg-card"
         />
       )}
+      <AdvancedSettings>
+        <DataSourceWidget
+          dataSource={labels.dataSource}
+          dataProviders={labelsDataProviders}
+          onDataSourceChange={(newDataSource) => {
+            updateLabels(labels.id, { dataSource: newDataSource });
+          }}
+          className="bg-card"
+        />
+        <LabelsSettingsWidget
+          labels={labels}
+          activeCategory={activeSettingsCategory}
+          onActiveCategoryChange={setActiveSettingsCategory}
+          className="bg-card"
+        />
+      </AdvancedSettings>
     </SortableObjectListItem>
   );
 }

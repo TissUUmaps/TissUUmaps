@@ -51,6 +51,7 @@ export type ParquetFileResponse = ParquetResponse<ParquetFileRequest> & {
   numRows: number;
   columns: string[];
   coordinateColumns: CoordinateColumn[];
+  categoricalColumns: string[];
   ids: IDArray | undefined;
   names: string[] | undefined;
 };
@@ -444,6 +445,7 @@ async function handleFileRequest(
       numRows: ParquetUtils.getNumRows(metadata),
       columns,
       coordinateColumns,
+      categoricalColumns: PandasMetadataUtils.readCategoricalColumns(metadata),
       ids,
       names,
     },

@@ -222,6 +222,86 @@ describe("HierarchicalTableReader", () => {
       ]);
     });
 
+    it("records the declared types", async () => {
+      const reader = await openReader(annData({}));
+      const byPath = new Map(
+        reader.columns.map((column) => [column.path, column]),
+      );
+      expect(byPath.get("obs/cell_type")).toEqual({
+        kind: "dataset",
+        path: "obs/cell_type",
+        dataType: "category",
+      });
+      expect(byPath.get("obs/flag")).toMatchObject({ dataType: "boolean" });
+      expect(byPath.get("obs/score")).not.toHaveProperty("dataType");
+    });
+
+    it("lists the column groups of an AnnData object", async () => {
+      const reader = await openReader(
+        annData({
+          raw: group({
+            X: sparse("csc_matrix", [3, 2], [], [], [0, 0, 0]),
+            var: dataFrame("gene", { gene: array(["CD3", "CD4"]) }),
+          }),
+          layers: group({
+            csr: sparse("csr_matrix", [3, 2], [], [], [0, 0, 0, 0]),
+          }),
+          obsp: group({ distances: array(new Float32Array(9), [3, 3]) }),
+        }),
+      );
+      expect(reader.columnGroups).toEqual([
+        {
+          name: "Annotations",
+          subgroups: [{ id: "obs", name: "obs", indexPath: "obs/_index" }],
+        },
+        {
+          name: "Features",
+          subgroups: [
+            { id: "X", name: "X" },
+            { id: "layers/csr", name: "csr" },
+            { id: "raw/X", name: "raw" },
+          ],
+        },
+      ]);
+    });
+
+    it("keeps group names distinct", async () => {
+      const reader = await openReader(
+        annData({
+          layers: group({
+            raw: sparse("csc_matrix", [3, 2], [], [], [0, 0, 0]),
+          }),
+          raw: group({
+            X: sparse("csc_matrix", [3, 2], [], [], [0, 0, 0]),
+            var: dataFrame("gene", { gene: array(["ENSG1", "ENSG2"]) }),
+          }),
+        }),
+      );
+      expect(
+        reader.columnGroups.flatMap(({ subgroups }) =>
+          subgroups.map(({ id, name }) => [id, name]),
+        ),
+      ).toEqual([
+        ["obs", "obs"],
+        ["X", "X"],
+        ["layers/raw", "layers/raw"],
+        ["raw/X", "raw"],
+      ]);
+    });
+
+    it("lists no obs group without columns but the index", async () => {
+      const reader = await openReader(
+        group(
+          {
+            obs: dataFrame("_index", { _index: array(["c0", "c1"]) }),
+            X: array(new Float32Array(4), [2, 2]),
+          },
+          { "encoding-type": "anndata" },
+        ),
+      );
+      expect(reader.columnGroups.map(({ name }) => name)).toEqual(["Features"]);
+    });
+
     it("takes the row count from the obs index of an AnnData object", async () => {
       const reader = await openReader(annData({}));
       expect(reader.numRows).toBe(3);

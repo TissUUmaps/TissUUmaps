@@ -5,6 +5,7 @@ import type { Points } from "@tissuumaps/core";
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
 import { AddDataObjectButton } from "@/components/controls/AddDataObjectButton";
+import { AdvancedSettings } from "@/components/controls/AdvancedSettings";
 import {
   SortableObjectList,
   SortableObjectListItem,
@@ -18,6 +19,7 @@ import { useProjectStore } from "@/stores/project";
 
 import { PointsAnnotationsWidget } from "./PointsAnnotationsWidget";
 import { PointsSettingsWidget } from "./PointsSettingsWidget";
+import { PointsStyleWidget } from "./PointsStyleWidget";
 import type { PointsSettingsCategory } from "./category";
 
 export type PointsPanelProps = {
@@ -98,20 +100,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
       }
       onDelete={() => deletePoints(points.id)}
     >
-      <DataSourceWidget
-        dataSource={points.dataSource}
-        dataProviders={pointsDataProviders}
-        onDataSourceChange={(newDataSource) => {
-          updatePoints(points.id, { dataSource: newDataSource });
-        }}
-        className="bg-card"
-      />
-      <PointsSettingsWidget
-        points={points}
-        activeCategory={activeSettingsCategory}
-        onActiveCategoryChange={setActiveSettingsCategory}
-        className="bg-card"
-      />
+      <PointsStyleWidget points={points} className="bg-card" />
       {pointsData !== null && (
         <PointsAnnotationsWidget
           points={points}
@@ -120,6 +109,22 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
           className="bg-card"
         />
       )}
+      <AdvancedSettings>
+        <DataSourceWidget
+          dataSource={points.dataSource}
+          dataProviders={pointsDataProviders}
+          onDataSourceChange={(newDataSource) => {
+            updatePoints(points.id, { dataSource: newDataSource });
+          }}
+          className="bg-card"
+        />
+        <PointsSettingsWidget
+          points={points}
+          activeCategory={activeSettingsCategory}
+          onActiveCategoryChange={setActiveSettingsCategory}
+          className="bg-card"
+        />
+      </AdvancedSettings>
     </SortableObjectListItem>
   );
 }

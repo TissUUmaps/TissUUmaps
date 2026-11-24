@@ -50,7 +50,9 @@ export function LabelsAnnotationsWidget({
         config: labels.labelOpacity,
       },
     ],
-    activeSettingsCategory,
+    // without an open settings category, the group table follows the color,
+    // which the style section edits
+    activeSettingsCategory ?? LabelsSettingsCategory.labelColor,
   );
 
   const colorAdapter = useColorGroupValues();

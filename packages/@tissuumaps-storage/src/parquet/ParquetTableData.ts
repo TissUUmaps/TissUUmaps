@@ -2,6 +2,7 @@ import {
   AsyncUtils,
   type IDArray,
   type ProgressCallback,
+  type TableColumnDataType,
   type TableColumnQuerySuggestion,
   type TableData,
   type TypedArrayOrArray,
@@ -18,6 +19,8 @@ export class ParquetTableData implements TableData {
   // The coordinate columns of the file, by name: a column is derived only if
   // the reader said so, never because its name looks derived.
   private readonly _coordinateColumns: Map<string, CoordinateColumn>;
+  // the columns of a pandas category dtype, see PandasMetadataUtils
+  private readonly _categoricalColumns: Set<string>;
   private _ids: IDArray | undefined;
   private readonly _names: string[] | undefined;
   // Both axes of a point geometry column are decoded in one pass, so the
@@ -32,9 +35,11 @@ export class ParquetTableData implements TableData {
     numRows: number,
     columns: string[],
     coordinateColumns: CoordinateColumn[],
+    categoricalColumns: string[],
     ids: IDArray | undefined,
     names: string[] | undefined,
   ) {
+    this._categoricalColumns = new Set(categoricalColumns);
     this._source = source;
     this._numRows = numRows;
     this._columns = columns;
@@ -62,6 +67,12 @@ export class ParquetTableData implements TableData {
 
   getNames(): string[] | undefined {
     return this._names;
+  }
+
+  loadColumnDataType(column: string): Promise<TableColumnDataType | undefined> {
+    return Promise.resolve(
+      this._categoricalColumns.has(column) ? "category" : undefined,
+    );
   }
 
   suggestColumnQueries(

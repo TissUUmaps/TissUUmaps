@@ -107,16 +107,23 @@ export class ParquetTableDataProvider implements TableDataProvider<
       headers: normalizedDataSource.requestHeaders,
     };
     const { idColumn, nameColumn } = normalizedDataSource;
-    const { numRows, columns, coordinateColumns, ids, names } =
-      await runParquetWorker(
-        { op: "file", source: parquetSource, idColumn, nameColumn },
-        { signal, onProgress },
-      );
+    const {
+      numRows,
+      columns,
+      coordinateColumns,
+      categoricalColumns,
+      ids,
+      names,
+    } = await runParquetWorker(
+      { op: "file", source: parquetSource, idColumn, nameColumn },
+      { signal, onProgress },
+    );
     return new ParquetTableData(
       parquetSource,
       numRows,
       columns,
       coordinateColumns,
+      categoricalColumns,
       ids,
       names,
     );

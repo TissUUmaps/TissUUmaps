@@ -62,7 +62,9 @@ export function PointsAnnotationsWidget({
         config: points.pointOpacity,
       },
     ],
-    activeSettingsCategory,
+    // without an open settings category, the group table follows the color,
+    // which the style section edits
+    activeSettingsCategory ?? PointsSettingsCategory.pointColor,
   );
 
   const markerAdapter = useMarkerGroupValues();

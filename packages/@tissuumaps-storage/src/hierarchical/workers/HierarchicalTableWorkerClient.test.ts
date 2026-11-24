@@ -33,7 +33,13 @@ async function openClient() {
     worker as unknown as Worker,
     "table.h5ad",
   );
-  worker.respond({ id: 0, op: "open", columns, numRows: 3 });
+  worker.respond({
+    id: 0,
+    op: "open",
+    columns,
+    numRows: 3,
+    columnGroups: [],
+  });
   return { worker, client: await client };
 }
 

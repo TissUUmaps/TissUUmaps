@@ -16,6 +16,7 @@ function createTable() {
   return {
     columns: [],
     numRows: 5,
+    columnGroups: [],
     closeCalls: 0,
     readColumn(query: string) {
       const data = values[query];

@@ -118,6 +118,8 @@ export {
   type SimilarityTransform,
 } from "./model/primitives";
 export {
+  defaultCategoricalColorPalette,
+  defaultContinuousColorPalette,
   defaultLabelColor,
   defaultLabelColorPalette,
   defaultLabelOpacity,
@@ -166,6 +168,8 @@ export {
   type ShapesGeometry,
 } from "./storage/shapes";
 export {
+  type TableColumnDataType,
+  type TableColumnQueryGroup,
   type TableColumnQuerySuggestion,
   type TableData,
   type TableDataProvider,

@@ -78,7 +78,9 @@ export function ShapesAnnotationsWidget({
         config: shapes.shapeStrokeOpacity,
       },
     ],
-    activeSettingsCategory,
+    // without an open settings category, the group table follows the color,
+    // which the style section edits
+    activeSettingsCategory ?? ShapesSettingsCategory.shapeFillColor,
   );
 
   const colorAdapter = useColorGroupValues();

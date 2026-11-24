@@ -49,8 +49,9 @@ function isSameGroupBy(
  * groups
  *
  * The group table follows the column that the open settings category groups
- * by. Otherwise it starts from the column that most settings group by, and
- * keeps the column picked by the user until the table changes.
+ * by, and is emptied when that category stops grouping. Otherwise it starts
+ * from the column that most settings group by, and keeps the column picked by
+ * the user until the table changes.
  *
  * @param objectName - The name of the annotated object
  * @param tableId - The ID of the annotated object's table
@@ -91,10 +92,25 @@ export function useGroupTable(
   }
 
   const [prevActiveGroupBy, setPrevActiveGroupBy] = useState(activeGroupBy);
-  if (!isSameGroupBy(activeGroupBy, prevActiveGroupBy)) {
+  const [prevActiveCategory, setPrevActiveCategory] = useState(
+    activeSettingsCategory,
+  );
+  if (
+    !isSameGroupBy(activeGroupBy, prevActiveGroupBy) ||
+    activeSettingsCategory !== prevActiveCategory
+  ) {
     setPrevActiveGroupBy(activeGroupBy);
+    setPrevActiveCategory(activeSettingsCategory);
     if (activeGroupBy !== null) {
       setGroupBy(activeGroupBy);
+    } else if (
+      activeSettingsCategory === prevActiveCategory &&
+      prevActiveGroupBy !== null &&
+      isSameGroupBy(groupBy, prevActiveGroupBy)
+    ) {
+      // the open category stopped grouping (e.g. the color became a
+      // gradient): its groups would be stale
+      setGroupBy(null);
     }
   }
 

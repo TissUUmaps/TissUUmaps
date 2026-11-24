@@ -6,7 +6,11 @@ import type {
   HierarchicalStoreArray,
   HierarchicalStoreGroup,
 } from "../HierarchicalStore";
-import type { HierarchicalTableColumn } from "../HierarchicalTable";
+import type {
+  HierarchicalTableColumn,
+  HierarchicalTableQueryGroup,
+  HierarchicalTableQueryGroupLeaf,
+} from "../HierarchicalTable";
 
 /**
  * Reads the AnnData on-disk encoding of a hierarchical store
@@ -82,8 +86,8 @@ export class AnnDataUtils {
    *
    * @param group - The group, see {@link AnnDataUtils.isColumnGroup}
    * @param path - The path of the group
-   * @returns The column, or `undefined` for a matrix without a
-   * two-dimensional `shape` attribute
+   * @returns The column, with the type its encoding declares; `undefined` for
+   * a matrix without a two-dimensional `shape` attribute
    */
   static getColumn(
     group: HierarchicalStoreGroup,
@@ -91,8 +95,10 @@ export class AnnDataUtils {
   ): HierarchicalTableColumn | undefined {
     switch (AnnDataUtils.getEncodingType(group)) {
       case "categorical":
-      case "nullable-integer":
+        return { kind: "dataset", path, dataType: "category" };
       case "nullable-boolean":
+        return { kind: "dataset", path, dataType: "boolean" };
+      case "nullable-integer":
       case "nullable-string-array":
         return { kind: "dataset", path };
       case "csc_matrix":
@@ -196,6 +202,109 @@ export class AnnDataUtils {
       default:
         throw new Error(`"${path}" is a group, not a column`);
     }
+  }
+
+  /**
+   * Lists the column groups of an AnnData object
+   *
+   * The `obs` dataframe is the query group of the "Annotations" group, the columns
+   * describing the observations; `X`, each of the `layers` and `raw/X` are the
+   * query groups of the "Features" group, matrices whose columns are the features
+   * described by `var` (or `raw/var`), so that a feature maps between them. `obsm` (coordinates and
+   * embeddings), `obsp` (pairwise matrices) and `uns` (unstructured data) are
+   * no groups.
+   *
+   * @param store - The store to read from
+   * @param columns - The columns of the store
+   * @param annDataPath - The path of the AnnData object of the store, if any
+   * @param options - Optional abort signal
+   * @returns The column groups in the canonical order of AnnData: the
+   * annotations (if `obs` has a column but its index), then the features of
+   * `X`, the layers and `raw/X`
+   */
+  static async getColumnGroups(
+    store: HierarchicalStore,
+    columns: HierarchicalTableColumn[],
+    annDataPath: string | undefined,
+    options?: { signal?: AbortSignal },
+  ): Promise<HierarchicalTableQueryGroup[]> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    if (annDataPath === undefined) {
+      return [];
+    }
+    const groups: HierarchicalTableQueryGroup[] = [];
+    const obsPath = ColumnQueryUtils.joinPath(annDataPath, "obs");
+    const obsIndexPath = await AnnDataUtils.getDataFrameIndexPath(
+      store,
+      obsPath,
+      { signal },
+    );
+    if (
+      columns.some(
+        (column) =>
+          column.path.startsWith(`${obsPath}/`) && column.path !== obsIndexPath,
+      )
+    ) {
+      groups.push({
+        name: "Annotations",
+        subgroups: [
+          {
+            id: obsPath,
+            name: "obs",
+            ...(obsIndexPath !== undefined && { indexPath: obsIndexPath }),
+          },
+        ],
+      });
+    }
+    const matrixLeaves: {
+      leaf: HierarchicalTableQueryGroupLeaf;
+      relativePath: string;
+    }[] = [];
+    for (const column of columns) {
+      if (column.kind !== "matrix") {
+        continue;
+      }
+      const featurePath = AnnDataUtils._getVariableDataFramePath(
+        column.path,
+        annDataPath,
+      );
+      if (featurePath === undefined) {
+        continue;
+      }
+      const relativePath =
+        annDataPath === ""
+          ? column.path
+          : column.path.slice(annDataPath.length + 1);
+      const layerName = relativePath.startsWith("layers/")
+        ? relativePath.slice("layers/".length)
+        : undefined;
+      matrixLeaves.push({
+        leaf: {
+          id: column.path,
+          // a layer named like X or raw keeps its path, so labels stay distinct
+          name:
+            layerName === undefined
+              ? relativePath === "X"
+                ? "X"
+                : "raw"
+              : layerName === "X" || layerName === "raw"
+                ? relativePath
+                : layerName,
+        },
+        relativePath,
+      });
+    }
+    const rank = (relativePath: string) =>
+      relativePath === "X" ? 0 : relativePath.startsWith("raw/") ? 2 : 1;
+    matrixLeaves.sort((a, b) => rank(a.relativePath) - rank(b.relativePath));
+    if (matrixLeaves.length > 0) {
+      groups.push({
+        name: "Features",
+        subgroups: matrixLeaves.map(({ leaf }) => leaf),
+      });
+    }
+    return groups;
   }
 
   /**

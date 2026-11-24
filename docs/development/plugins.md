@@ -140,6 +140,10 @@ teardown callbacks are only ever called for a plugin whose `setup` succeeded;
 errors they throw are caught and logged. If `mount` throws, the error is logged
 and the plugin is not mounted, but it stays registered.
 
+## Table data
+
+Query groups and labels are optional facts of the table data (see `TableData.loadQueryGroups`); the application decides how to present them.
+
 ## Stores
 
 `setup` and `mount` receive the application's four Zustand stores:

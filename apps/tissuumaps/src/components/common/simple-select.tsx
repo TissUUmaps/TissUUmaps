@@ -1,9 +1,15 @@
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { cva } from "class-variance-authority";
-import { CheckIcon, ChevronsUpDownIcon, Trash2Icon } from "lucide-react";
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  ChevronsUpDownIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { type ReactNode, useMemo } from "react";
 
 import { IconButton } from "@/components/common/icon-button";
+import { cn } from "@/lib/utils";
 
 export type SimpleSelectProps<
   TItem,
@@ -18,8 +24,15 @@ export type SimpleSelectProps<
   placeholder?: string;
   onItemDelete?: (item: TItem) => void;
   isItemDeletable?: (item: TItem) => boolean;
-  /** `inline` shows the trigger as text, e.g. within a label */
-  variant?: "default" | "inline";
+  /**
+   * `inline` shows the trigger as text, e.g. within a label; `compact` as a
+   * small control, e.g. within a dense row
+   */
+  variant?: "default" | "inline" | "compact";
+  /** The accessible name and tooltip of the trigger */
+  triggerLabel?: string;
+  /** Classes of the trigger, e.g. to style the shown value */
+  triggerClassName?: string;
 } & Omit<
   SelectPrimitive.Root.Props<TValue, TMultiple>,
   "items" | "itemToStringLabel" | "itemToStringValue"
@@ -34,6 +47,8 @@ const triggerVariants = cva(
           "flex w-full h-10 min-w-40 items-center justify-between gap-3 rounded-md border border-input pr-3 pl-3.5 bg-[canvas] hover:bg-gray-100 data-popup-open:bg-gray-100 dark:bg-input/30",
         inline:
           "flex min-w-0 max-w-full rounded-sm underline decoration-muted-foreground decoration-dotted underline-offset-4",
+        compact:
+          "flex w-full h-8 min-w-0 items-center justify-between gap-1.5 rounded-md border border-input px-2 text-sm bg-[canvas] hover:bg-gray-100 data-popup-open:bg-gray-100 dark:bg-input/30",
       },
     },
   },
@@ -44,6 +59,7 @@ const valueVariants = cva("data-placeholder:opacity-60", {
     variant: {
       default: "flex flex-row items-center gap-2",
       inline: "truncate",
+      compact: "flex min-w-0 flex-1 flex-row items-center gap-2 truncate",
     },
   },
 });
@@ -62,6 +78,8 @@ export function SimpleSelect<
   onItemDelete,
   isItemDeletable,
   variant = "default",
+  triggerLabel,
+  triggerClassName,
   ...props
 }: SimpleSelectProps<TItem, TNullable, TValue, TMultiple>) {
   const memoizedItems = useMemo(() => {
@@ -81,11 +99,20 @@ export function SimpleSelect<
   // - set trigger width to w-full
   return (
     <SelectPrimitive.Root items={memoizedItems} {...props}>
-      <SelectPrimitive.Trigger className={triggerVariants({ variant })}>
+      <SelectPrimitive.Trigger
+        className={cn(triggerVariants({ variant }), triggerClassName)}
+        aria-label={triggerLabel}
+        title={triggerLabel}
+      >
         <SelectPrimitive.Value className={valueVariants({ variant })} />
         {variant === "default" && (
           <SelectPrimitive.Icon className="flex">
             <ChevronsUpDownIcon />
+          </SelectPrimitive.Icon>
+        )}
+        {variant === "compact" && (
+          <SelectPrimitive.Icon className="flex text-muted-foreground">
+            <ChevronDownIcon className="size-3.5" />
           </SelectPrimitive.Icon>
         )}
       </SelectPrimitive.Trigger>

@@ -467,6 +467,42 @@ describe("TableUtils", () => {
     });
   });
 
+  describe("loadColumnDataType", () => {
+    it("uses the declared type of the table", async () => {
+      const { data, loadValues } = createMockTableData(
+        new Uint32Array([0, 1]),
+        new Float32Array([0, 1]),
+      );
+      data.loadColumnDataType = vi.fn().mockResolvedValue("category");
+      await expect(TableUtils.loadColumnDataType(data, "col1")).resolves.toBe(
+        "category",
+      );
+      expect(loadValues).not.toHaveBeenCalled();
+    });
+
+    it("derives the type from the values otherwise", async () => {
+      const { data } = createMockTableData(
+        new Uint32Array([0, 1]),
+        new Float32Array([0, 1]),
+      );
+      data.loadColumnDataType = vi.fn().mockResolvedValue(undefined);
+      await expect(TableUtils.loadColumnDataType(data, "col1")).resolves.toBe(
+        "number",
+      );
+    });
+  });
+
+  describe("computeColumnDataType", () => {
+    it("derives the type from the array type and values", () => {
+      expect(TableUtils.computeColumnDataType(new Float32Array([1]))).toBe(
+        "number",
+      );
+      expect(TableUtils.computeColumnDataType(["a", "b"])).toBe("category");
+      expect(TableUtils.computeColumnDataType([true, false])).toBe("boolean");
+      expect(TableUtils.computeColumnDataType([])).toBe("category");
+    });
+  });
+
   describe("fillFromTableGroups", () => {
     it("fills the buffer by grouping table values and mapping groups", async () => {
       const ids = new Uint32Array([1, 2, 3]);

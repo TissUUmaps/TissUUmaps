@@ -5,6 +5,7 @@ import type { Shapes } from "@tissuumaps/core";
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
 import { AddDataObjectButton } from "@/components/controls/AddDataObjectButton";
+import { AdvancedSettings } from "@/components/controls/AdvancedSettings";
 import {
   SortableObjectList,
   SortableObjectListItem,
@@ -18,6 +19,7 @@ import { useProjectStore } from "@/stores/project";
 
 import { ShapesAnnotationsWidget } from "./ShapesAnnotationsWidget";
 import { ShapesSettingsWidget } from "./ShapesSettingsWidget";
+import { ShapesStyleWidget } from "./ShapesStyleWidget";
 import type { ShapesSettingsCategory } from "./category";
 
 export type ShapesPanelProps = {
@@ -98,20 +100,7 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
       }
       onDelete={() => deleteShapes(shapes.id)}
     >
-      <DataSourceWidget
-        dataSource={shapes.dataSource}
-        dataProviders={shapesDataProviders}
-        onDataSourceChange={(newDataSource) => {
-          updateShapes(shapes.id, { dataSource: newDataSource });
-        }}
-        className="bg-card"
-      />
-      <ShapesSettingsWidget
-        shapes={shapes}
-        activeCategory={activeSettingsCategory}
-        onActiveCategoryChange={setActiveSettingsCategory}
-        className="bg-card"
-      />
+      <ShapesStyleWidget shapes={shapes} className="bg-card" />
       {shapesData !== null && (
         <ShapesAnnotationsWidget
           shapes={shapes}
@@ -120,6 +109,22 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
           className="bg-card"
         />
       )}
+      <AdvancedSettings>
+        <DataSourceWidget
+          dataSource={shapes.dataSource}
+          dataProviders={shapesDataProviders}
+          onDataSourceChange={(newDataSource) => {
+            updateShapes(shapes.id, { dataSource: newDataSource });
+          }}
+          className="bg-card"
+        />
+        <ShapesSettingsWidget
+          shapes={shapes}
+          activeCategory={activeSettingsCategory}
+          onActiveCategoryChange={setActiveSettingsCategory}
+          className="bg-card"
+        />
+      </AdvancedSettings>
     </SortableObjectListItem>
   );
 }

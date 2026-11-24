@@ -9,6 +9,11 @@ import { type FileMetaData, parquetSchema } from "hyparquet";
  */
 type PandasMetadata = {
   index_columns?: (string | { kind: string })[];
+  columns?: {
+    name?: string | null;
+    field_name?: string;
+    pandas_type?: string;
+  }[];
 };
 
 /** Helpers for the `pandas` metadata of a Parquet file written by pandas */
@@ -46,5 +51,31 @@ export class PandasMetadataUtils {
       ({ element }) => element.name === indexColumn,
     );
     return isWritten ? indexColumn : undefined;
+  }
+
+  /**
+   * Reads the columns written from a pandas `category` dtype
+   *
+   * Parquet stores categories as their values (dictionary encoded), so only
+   * the `pandas` metadata tells them apart from other columns of those
+   * values, e.g. numerically coded clusters.
+   *
+   * @param metadata - The file metadata
+   * @returns The names of the categorical columns, empty for files without
+   * pandas metadata
+   */
+  static readCategoricalColumns(metadata: FileMetaData): string[] {
+    const pandas = metadata.key_value_metadata?.find(
+      ({ key }) => key === "pandas",
+    );
+    if (pandas?.value === undefined) {
+      return [];
+    }
+    const { columns = [] } = JSON.parse(pandas.value) as PandasMetadata;
+    // field_name is the column's name in the file, name its pandas label
+    return columns
+      .filter((column) => column.pandas_type === "categorical")
+      .map((column) => column.field_name ?? column.name)
+      .filter((name) => typeof name === "string");
   }
 }

@@ -34,7 +34,7 @@ One profile is detected from the store's attributes:
 
 ### AnnData
 
-AnnData objects are recognized and decoded as in [HDF5](./hdf5.md#anndata) files, whether the source points at one or at a store containing them.
+AnnData objects are recognized and decoded as in [HDF5](./hdf5.md#anndata) files, whether the source points at one or at a store containing them, including their [column groups](./hdf5.md#column-groups) (annotations and features).
 
 ## Example
 
@@ -61,7 +61,9 @@ A project showing the spots of the table of a SpatialData store as points, place
         "x": "obsm/spatial[0]",
         "y": "obsm/spatial[1]"
       },
-      "pointColor": { "groupBy": { "column": "obs/cluster" } }
+      "pointColor": {
+        "groupBy": { "column": "obs/cluster", "palette": "distinct" }
+      }
     }
   ]
 }

@@ -32,8 +32,26 @@ export type TableColumnInputProps = {
   tableId: string | null;
   value: string | null;
   onValueChange: (value: string | null) => void;
+  /**
+   * The `id` of the leaf query group to pick a column of (see
+   * `TableData.loadQueryGroups`); the input then searches the query group's
+   * columns by name, and a column is
+   * picked from the suggestions rather than typed as a query
+   */
+  groupId?: string;
+  /** The name to show for the value, if it is not the query itself */
+  valueName?: string;
+  placeholder?: string;
   className?: string;
 };
+
+/**
+ * @param suggestion - A suggestion
+ * @returns The text to show for the suggestion
+ */
+function getSuggestionText(suggestion: TableColumnQuerySuggestion): string {
+  return suggestion.name ?? suggestion.query;
+}
 
 /** The height of a suggestion, in pixels */
 const rowHeight = 32;
@@ -144,7 +162,10 @@ function SuggestionList({ suggestions, query, ref }: SuggestionListProps) {
               {suggestion.group && (
                 <FolderIcon className="size-3.5 shrink-0 text-muted-foreground" />
               )}
-              <SuggestionText suggestion={suggestion.query} query={query} />
+              <SuggestionText
+                suggestion={getSuggestionText(suggestion)}
+                query={query}
+              />
             </AutocompleteItem>
           );
         })}
@@ -157,11 +178,15 @@ export function TableColumnInput({
   tableId,
   value,
   onValueChange,
+  groupId,
+  valueName,
+  placeholder,
   className,
 }: TableColumnInputProps) {
   const loadTableData = useLazyTableData(tableId);
 
-  const query = value ?? "";
+  // within a query group, the input shows and searches names, not queries
+  const query = (value !== null ? valueName : undefined) ?? value ?? "";
 
   const [text, setText] = useState(query);
   const [invalid, setInvalid] = useState(false);
@@ -199,6 +224,7 @@ export function TableColumnInput({
         });
         const newSuggestions =
           (await tableData?.suggestColumnQueries(text, {
+            groupId,
             signal: abortController.signal,
           })) ?? [];
         if (!abortController.signal.aborted) {
@@ -211,12 +237,15 @@ export function TableColumnInput({
       }
     });
     return () => abortController.abort();
-  }, [open, text, loadTableData, startSuggestTransition]);
+  }, [open, text, groupId, loadTableData, startSuggestTransition]);
 
   const handleCommitResolved = useEffectEvent((column: string | null) => {
     setPendingQuery(null);
     if (column !== null) {
-      setText(column);
+      // within a query group, the input keeps showing the picked name
+      if (groupId === undefined) {
+        setText(column);
+      }
       setInvalid(false);
       onValueChange(column);
     } else {
@@ -260,6 +289,23 @@ export function TableColumnInput({
       onValueChange(null);
       return;
     }
+    if (groupId !== undefined) {
+      // a name is no query: it has to match a suggestion exactly, as names
+      // differing in case may name different columns (e.g. human and mouse
+      // gene symbols)
+      const match = suggestions?.find(
+        (suggestion) => getSuggestionText(suggestion) === newQuery,
+      );
+      if (match !== undefined) {
+        // a suggestion is a query, which is resolved to its column first
+        setText(getSuggestionText(match));
+        setInvalid(false);
+        setPendingQuery(match.query);
+      } else {
+        setInvalid(true);
+      }
+      return;
+    }
     setPendingQuery(newQuery);
   }
 
@@ -286,9 +332,14 @@ export function TableColumnInput({
     setText(newText);
     setInvalid(false);
     if (details.reason === "item-press") {
-      const pressed = suggestions?.find((s) => s.query === newText);
+      const pressed = suggestions?.find(
+        (s) => getSuggestionText(s) === newText,
+      );
       if (pressed?.group) {
         reopenRef.current = true;
+      } else if (groupId !== undefined && pressed !== undefined) {
+        // a suggestion is a query, which is resolved to its column first
+        setPendingQuery(pressed.query);
       } else {
         commit(newText);
       }
@@ -331,7 +382,7 @@ export function TableColumnInput({
       mode="none"
       items={suggestions ?? []}
       virtualized
-      itemToStringValue={(suggestion) => suggestion.query}
+      itemToStringValue={getSuggestionText}
       openOnInputClick
       open={open}
       onOpenChange={handleOpenChange}
@@ -347,6 +398,7 @@ export function TableColumnInput({
     >
       <AutocompleteInputGroup className={className}>
         <AutocompleteInput
+          placeholder={placeholder}
           aria-invalid={invalid || undefined}
           aria-busy={pendingQuery !== null || undefined}
           onKeyDown={(event) => {
@@ -357,7 +409,15 @@ export function TableColumnInput({
               commit(text);
             }
           }}
-          onBlur={() => commit(text)}
+          onBlur={() => {
+            // a name left half-typed within a query group falls back to the value
+            if (groupId !== undefined) {
+              setText(query);
+              setInvalid(false);
+            } else {
+              commit(text);
+            }
+          }}
         />
         <InputGroupAddon align="inline-end">
           <AutocompleteClear />
