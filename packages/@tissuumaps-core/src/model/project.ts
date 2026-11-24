@@ -29,12 +29,12 @@ export const physicalUnits: Record<
   PhysicalUnit,
   { symbol: string; size: number }
 > = {
-  [PhysicalUnit.picometer]: { symbol: "pm", size: 1e-12 },
-  [PhysicalUnit.nanometer]: { symbol: "nm", size: 1e-9 },
-  [PhysicalUnit.micrometer]: { symbol: "µm", size: 1e-6 },
-  [PhysicalUnit.millimeter]: { symbol: "mm", size: 1e-3 },
-  [PhysicalUnit.meter]: { symbol: "m", size: 1 },
-  [PhysicalUnit.kilometer]: { symbol: "km", size: 1e3 },
+  picometer: { symbol: "pm", size: 1e-12 },
+  nanometer: { symbol: "nm", size: 1e-9 },
+  micrometer: { symbol: "µm", size: 1e-6 },
+  millimeter: { symbol: "mm", size: 1e-3 },
+  meter: { symbol: "m", size: 1 },
+  kilometer: { symbol: "km", size: 1e3 },
 };
 
 /**
@@ -92,7 +92,6 @@ export const projectDefaults = {
     },
   },
   viewerBackgroundColor: { r: 0, g: 0, b: 0 },
-  physicalUnit: PhysicalUnit.micrometer,
   scaleBarVisibility: true,
 } as const satisfies Partial<RawProject>;
 
@@ -209,7 +208,8 @@ export interface RawProject extends RawModel {
   /**
    * Physical size of one world unit, in the physical unit
    *
-   * The scale bar is in world units unless this is set to a positive value.
+   * The scale bar is in world units unless this is set to a positive value
+   * and the physical unit is set.
    */
   physicalUnitSize?: number;
 
@@ -218,8 +218,6 @@ export interface RawProject extends RawModel {
    *
    * Either one of the {@link PhysicalUnit} names, between which the scale bar
    * converts, or any other text, which the scale bar shows as is.
-   *
-   * @defaultValue {@link projectDefaults.physicalUnit}
    */
   physicalUnit?: string;
 

@@ -40,22 +40,27 @@ export function ScaleBarViewerControl({
       ) {
         return;
       }
-      const hasPhysicalUnitSize =
-        physicalUnitSize !== undefined && physicalUnitSize > 0;
       const knownPhysicalUnit = Object.values(PhysicalUnit).find(
         (unit) => unit === physicalUnit,
       );
-      // the label is in world units until the physical unit size is set, then
-      // in meters for a known physical unit and in the unit as typed otherwise
+      // the label is in world units until the physical unit size and the
+      // physical unit are set, then in meters for a known physical unit and in
+      // the unit as typed otherwise
       let labelUnit = "units";
       let labelUnitsPerWorldUnit = 1;
-      if (hasPhysicalUnitSize && knownPhysicalUnit !== undefined) {
-        labelUnit = PhysicalUnit.meter;
-        labelUnitsPerWorldUnit =
-          physicalUnitSize * physicalUnits[knownPhysicalUnit].size;
-      } else if (hasPhysicalUnitSize) {
-        labelUnit = physicalUnit;
-        labelUnitsPerWorldUnit = physicalUnitSize;
+      if (
+        physicalUnitSize !== undefined &&
+        physicalUnitSize > 0 &&
+        physicalUnit !== undefined
+      ) {
+        if (knownPhysicalUnit !== undefined) {
+          labelUnit = PhysicalUnit.meter;
+          labelUnitsPerWorldUnit =
+            physicalUnitSize * physicalUnits[knownPhysicalUnit].size;
+        } else {
+          labelUnit = physicalUnit;
+          labelUnitsPerWorldUnit = physicalUnitSize;
+        }
       }
       const worldUnitsPerCssPixel = viewport.width / containerSize.width;
       const labelUnitsPerCssPixel =

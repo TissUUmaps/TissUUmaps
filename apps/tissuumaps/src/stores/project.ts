@@ -219,8 +219,9 @@ export function useProjectStore<T>(selector: (state: ProjectStore) => T): T {
 function createInitialProjectStoreState(): ProjectStoreState {
   return {
     ...structuredClone(projectDefaults),
-    // has no default, but clear() merges this state into the store
+    // have no default, but clear() merges this state into the store
     physicalUnitSize: undefined,
+    physicalUnit: undefined,
     name: "New project",
     layers: [createLayer({ id: crypto.randomUUID(), name: "Default" })],
     images: [],
