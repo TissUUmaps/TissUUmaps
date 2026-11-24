@@ -254,14 +254,18 @@ export abstract class OpenSeadragonRendererBase<
     signal?.throwIfAborted();
     const bounds = await this._enqueueAnchorTask(async () => {
       signal?.throwIfAborted();
+      // getBounds() of a rotated tiled image keeps the rotation in `degrees`,
+      // which GeometryUtils.union ignores
       const tiledImageBounds = [];
       for (const renderedObject of this._renderedObjects) {
         if (renderedObject.backdrop !== undefined) {
-          tiledImageBounds.push(renderedObject.backdrop.getBounds());
+          tiledImageBounds.push(
+            renderedObject.backdrop.getBounds().getBoundingBox(),
+          );
         }
         if (renderedObject.tiledImages !== undefined) {
           for (const tiledImage of renderedObject.tiledImages) {
-            tiledImageBounds.push(tiledImage.getBounds());
+            tiledImageBounds.push(tiledImage.getBounds().getBoundingBox());
           }
         }
       }

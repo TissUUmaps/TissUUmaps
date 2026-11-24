@@ -467,7 +467,8 @@ export type ProjectStoreActions = {
   /**
    * Sets the unit of the project's physical unit size
    *
-   * @param physicalUnit - The physical unit
+   * @param physicalUnit - The physical unit, one of the `PhysicalUnit` names
+   * or any other text, or `undefined` if it is unknown
    */
   setPhysicalUnit: (physicalUnit: Project["physicalUnit"]) => void;
 

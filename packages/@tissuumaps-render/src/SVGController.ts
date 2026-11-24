@@ -38,7 +38,8 @@ export class SVGController {
   public readonly container: SVGSVGElement;
   public readonly transformNode: SVGGElement;
   public readonly shapeCompleteHandler?: (shape: MultiPolygon) => void;
-  private static readonly _previewFillColor = "rgba(255, 0, 0, 0.2)";
+  private static readonly _previewFillColor = "#FF0000";
+  private static readonly _previewFillOpacity = 0.2;
   private static readonly _previewStrokeColor = "#FF0000";
   private static readonly _previewStrokeWidthFactor = 0.0005;
   private static readonly _minShapeSizeFactor = 0.001;
@@ -469,6 +470,10 @@ export class SVGController {
     rect.setAttribute("width", "0");
     rect.setAttribute("height", "0");
     rect.setAttribute("fill", SVGController._previewFillColor);
+    rect.setAttribute(
+      "fill-opacity",
+      SVGController._previewFillOpacity.toString(),
+    );
     rect.setAttribute("stroke", SVGController._previewStrokeColor);
     rect.setAttribute(
       "stroke-width",

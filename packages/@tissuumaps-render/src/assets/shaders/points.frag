@@ -16,10 +16,10 @@ precision highp sampler2D; // defaults to lowp otherwise
 // and quantized into unsigned 8-bit integers
 uniform sampler2D u_markerAtlas;
 
-flat in vec4 v_color;
+flat in vec4 v_rgba;
 flat in uvec3 v_marker;
 
-out vec4 fragColor;
+out vec4 fragRgba;
 
 void main() {
     vec2 uv = (vec2(v_marker.xy) + gl_PointCoord.xy) / float(MARKER_ATLAS_GRID_SIZE);
@@ -28,9 +28,9 @@ void main() {
     // Beyond MAX_DISTANCE from the outline, the atlas stores the same distance for all texels.
     // Capping the anti-aliasing width keeps that background transparent at small point sizes.
     float aaWidth = min(pixelWidth, 2.0 * MAX_DISTANCE);
-    float alpha = v_color.a * clamp(dist / aaWidth + 0.5, 0.0, 1.0);
+    float alpha = v_rgba.a * clamp(dist / aaWidth + 0.5, 0.0, 1.0);
     if(alpha < ALPHA_THRESHOLD) {
         discard;
     }
-    fragColor = vec4(v_color.rgb * alpha, alpha);
+    fragRgba = vec4(v_rgba.rgb * alpha, alpha);
 }

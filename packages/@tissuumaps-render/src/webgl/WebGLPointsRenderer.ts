@@ -55,7 +55,7 @@ import { WebGLUtils } from "./WebGLUtils";
  *
  * Manages a shader program, a marker atlas texture, and per-object GPU
  * buffers. Points are rendered as `gl.POINTS` using per-vertex attributes (x,
- * y, size, color, marker), one draw call per object.
+ * y, size, rgba, marker), one draw call per object.
  *
  * Every object owns its vertex array and attribute buffers. Synchronizing
  * compares the current model against the snapshot those buffers were loaded
@@ -79,7 +79,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     X: 0,
     Y: 1,
     SIZE: 2,
-    COLOR: 3,
+    RGBA: 3,
     MARKER: 4,
   };
   private static readonly _textureUnits = {
@@ -253,7 +253,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         opacityFactor,
       );
       this.context.gl.bindVertexArray(renderedPoints.vao);
-      const { marker, size, color } = renderedPoints.attributes;
+      const { marker, size, rgba } = renderedPoints.attributes;
       if (typeof marker === "number") {
         this.context.gl.vertexAttribI4ui(
           WebGLPointsRenderer._attribLocations.MARKER,
@@ -269,10 +269,10 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           size,
         );
       }
-      if (typeof color === "number") {
+      if (typeof rgba === "number") {
         this.context.gl.vertexAttribI4ui(
-          WebGLPointsRenderer._attribLocations.COLOR,
-          color,
+          WebGLPointsRenderer._attribLocations.RGBA,
+          rgba,
           0,
           0,
           0,
@@ -332,9 +332,10 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * and the markers, sizes and colors whose configurations or referenced maps
    * changed (see {@link _createRenderConfigSnapshot}) - requests all of it
    * before the first `await`, and then computes the bounds and folds the
-   * resolved visibilities and opacities into the colors. An attribute whose
-   * configuration is a constant is not resolved per point: it is prepared as
-   * the one packed value all points share (see {@link _backAttribute}).
+   * resolved visibilities and opacities into the colors as alpha. An attribute
+   * whose configuration is a constant is not resolved per point: it is
+   * prepared as the one packed value all points share (see
+   * {@link _backAttribute}).
    *
    * See {@link WebGLRendererBase.prepareRenderedObject} for when this runs.
    *
@@ -370,8 +371,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         renderedPoints,
         renderConfigSnapshot,
       );
-    const pointColorBufferChanged =
-      WebGLPointsRenderer._checkPointColorBufferChanged(
+    const pointRgbaBufferChanged =
+      WebGLPointsRenderer._checkPointRgbaBufferChanged(
         renderedPoints,
         renderConfigSnapshot,
       );
@@ -385,7 +386,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     const constantPointSize = SizeResolver.resolveConstantSize(
       newRef.object.pointSize,
     );
-    const constantPointColor = WebGLPointsRenderer._resolveConstantColor(
+    const constantPointRgba = WebGLPointsRenderer._resolveConstantRgba(
       newRef.object.pointColor,
       newRef.object.pointVisibility,
       newRef.object.pointOpacity,
@@ -412,19 +413,19 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           { signal },
         ))
       : undefined;
-    const packedPointColorsPromise = pointColorBufferChanged
-      ? (constantPointColor ??
-        ColorResolver.resolveColors(
-          newRef.itemIds,
-          newRef.object.pointColor,
-          syncContext.colorMaps,
-          defaultPointColor,
-          loadTable,
-          { signal },
-        ))
-      : undefined;
+    const packedPointColorsPromise =
+      pointRgbaBufferChanged && constantPointRgba === undefined
+        ? ColorResolver.resolveColors(
+            newRef.itemIds,
+            newRef.object.pointColor,
+            syncContext.colorMaps,
+            defaultPointColor,
+            loadTable,
+            { signal },
+          )
+        : undefined;
     const packedPointVisibilitiesPromise =
-      pointColorBufferChanged && constantPointColor === undefined
+      pointRgbaBufferChanged && constantPointRgba === undefined
         ? VisibilityResolver.resolveVisibilities(
             newRef.itemIds,
             newRef.object.pointVisibility,
@@ -435,7 +436,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           )
         : undefined;
     const packedPointOpacitiesPromise =
-      pointColorBufferChanged && constantPointColor === undefined
+      pointRgbaBufferChanged && constantPointRgba === undefined
         ? OpacityResolver.resolveOpacities(
             newRef.itemIds,
             newRef.object.pointOpacity,
@@ -495,7 +496,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       throw new Error("Geometry must be loaded for new points object");
     }
     if (
-      typeof packedPointColors === "object" &&
+      packedPointColors !== undefined &&
       packedPointVisibilities !== undefined &&
       packedPointOpacities !== undefined
     ) {
@@ -511,12 +512,16 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         { signal },
       );
     }
+    // per-point colors were folded into RGBA values in place above
+    const packedPointRgbas = pointRgbaBufferChanged
+      ? (constantPointRgba ?? packedPointColors)
+      : undefined;
     return {
       maskedGeometry,
       objectBounds,
       packedPointMarkers,
       packedPointSizes,
-      packedPointColors,
+      packedPointRgbas,
       renderConfigSnapshot,
     };
   }
@@ -536,7 +541,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       prepared.maskedGeometry === undefined ||
       prepared.packedPointMarkers === undefined ||
       prepared.packedPointSizes === undefined ||
-      prepared.packedPointColors === undefined
+      prepared.packedPointRgbas === undefined
     ) {
       throw new Error("All attributes must be resolved for new points object");
     }
@@ -548,7 +553,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         prepared.maskedGeometry,
         prepared.packedPointMarkers,
         prepared.packedPointSizes,
-        prepared.packedPointColors,
+        prepared.packedPointRgbas,
       ),
     };
   }
@@ -586,20 +591,20 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         attributes.size,
       );
     }
-    if (prepared.packedPointColors !== undefined) {
-      attributes.color = this._backAttribute(
+    if (prepared.packedPointRgbas !== undefined) {
+      attributes.rgba = this._backAttribute(
         vao,
-        WebGLPointsRenderer._attribLocations.COLOR,
+        WebGLPointsRenderer._attribLocations.RGBA,
         WebGL2RenderingContext.UNSIGNED_INT,
-        prepared.packedPointColors,
-        attributes.color,
+        prepared.packedPointRgbas,
+        attributes.rgba,
       );
     }
     renderedPoints.renderConfigSnapshot = prepared.renderConfigSnapshot;
     return (
       prepared.packedPointMarkers !== undefined ||
       prepared.packedPointSizes !== undefined ||
-      prepared.packedPointColors !== undefined
+      prepared.packedPointRgbas !== undefined
     );
   }
 
@@ -633,7 +638,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * @param geometry - X and Y coordinates of the points, in data coordinates
    * @param packedPointMarkers - The marker index of every point, or of all points
    * @param packedPointSizes - The size of every point, or of all points
-   * @param packedPointColors - The packed RGBA color of every point, or of all points
+   * @param packedPointRgbas - The packed RGBA color of every point, or of all points
    * @returns The vertex array, the coordinate buffers and the per-point
    * attributes it is configured with
    */
@@ -641,7 +646,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     geometry: PointsGeometry,
     packedPointMarkers: Uint8Array | number,
     packedPointSizes: Float32Array | number,
-    packedPointColors: Uint32Array | number,
+    packedPointRgbas: Uint32Array | number,
   ): Pick<RenderedPoints, "vao" | "buffers" | "attributes"> {
     const vao = this.context.createVertexArray();
     const buffers = {
@@ -689,11 +694,11 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
         WebGL2RenderingContext.FLOAT,
         packedPointSizes,
       ),
-      color: this._backAttribute(
+      rgba: this._backAttribute(
         vao,
-        WebGLPointsRenderer._attribLocations.COLOR,
+        WebGLPointsRenderer._attribLocations.RGBA,
         WebGL2RenderingContext.UNSIGNED_INT,
-        packedPointColors,
+        packedPointRgbas,
       ),
     };
     return { vao, buffers, attributes };
@@ -912,14 +917,14 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   }
 
   /**
-   * Returns whether the colors of an object have to be resolved again
+   * Returns whether the RGBA colors of an object have to be resolved again
    *
-   * Colors carry the resolved point visibilities and opacities in their alpha
-   * channel, so they also depend on those configurations. The layer- and
-   * object-level visibility and opacity are shader uniforms (see
+   * Their alpha channel carries the resolved point visibilities and opacities,
+   * so they also depend on those configurations. The layer- and object-level
+   * visibility and opacity are shader uniforms (see
    * {@link WebGLRendererBase.computeOpacityFactor}) and do not matter here.
    */
-  private static _checkPointColorBufferChanged(
+  private static _checkPointRgbaBufferChanged(
     renderedPoints: RenderedPoints | undefined,
     newSnapshot: RenderedPoints["renderConfigSnapshot"],
   ): boolean {
@@ -953,7 +958,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * The three fold into one attribute (see {@link ColorUtils.withAlpha}), so
    * it is only constant if all of them are.
    */
-  private static _resolveConstantColor(
+  private static _resolveConstantRgba(
     colorConfig: ColorConfig,
     visibilityConfig: VisibilityConfig,
     opacityConfig: OpacityConfig,
@@ -1038,7 +1043,7 @@ type PreparedPoints = {
   maskedGeometry: PointsGeometry | undefined;
   packedPointMarkers: Uint8Array | number | undefined;
   packedPointSizes: Float32Array | number | undefined;
-  packedPointColors: Uint32Array | number | undefined;
+  packedPointRgbas: Uint32Array | number | undefined;
   renderConfigSnapshot: RenderedPoints["renderConfigSnapshot"];
 };
 
@@ -1063,7 +1068,7 @@ type RenderedPoints = RenderedObjectBase<Points, PointsData> & {
   attributes: {
     marker: WebGLBuffer | number;
     size: WebGLBuffer | number;
-    color: WebGLBuffer | number;
+    rgba: WebGLBuffer | number;
   };
   renderConfigSnapshot: Pick<
     Points,
