@@ -305,7 +305,7 @@ export function markerByCategory(
 }
 
 /**
- * Returns the marker configuration of "Shapes by category" switched off: a
+ * Returns the marker configuration of "Markers by category" switched off: a
  * constant marker to all points, without the grouping
  *
  * Unlike the constant marker of a gradient (see {@link markerFollowingColor}),
@@ -351,7 +351,7 @@ function getConstantMarker(
 
 /**
  * Returns the marker configuration that keeps the point marker in step with
- * the color while "Shapes by category" is on, i.e. while the marker groups by
+ * the color while "Markers by category" is on, i.e. while the marker groups by
  * the column colored by categories
  *
  * Coloring another column by categories moves the grouping to that column;

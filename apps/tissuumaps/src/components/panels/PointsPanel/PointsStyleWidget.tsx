@@ -29,7 +29,7 @@ export type PointsStyleWidgetProps = {
  * The always available settings of points: what they are colored by and, for
  * categories, whether their shapes tell them apart
  *
- * "Shapes by category" is off by default; once switched on, the marker
+ * "Markers by category" is off by default; once switched on, the marker
  * follows the column colored by categories (see `markerFollowingColor`).
  */
 export function PointsStyleWidget({
@@ -103,7 +103,7 @@ type MarkerByCategoryFieldProps = {
   className?: string;
 };
 
-/** The "Shapes by category" switch, which groups the marker by the column */
+/** The "Markers by category" switch, which groups the marker by the column */
 function MarkerByCategoryField({
   points,
   column,
@@ -135,7 +135,7 @@ function MarkerByCategoryField({
         }
       />
       <FieldLabel className="truncate text-sm font-normal">
-        Shapes by category
+        Markers by category
       </FieldLabel>
     </Field>
   );
