@@ -11,7 +11,7 @@ The built-in **SpatialData project provider** opens [SpatialData](https://spatia
 A store is opened or imported like any project (see [Projects](../concepts/projects.md#opening-importing-and-downloading)):
 
 - From a URL, with Open or Import, or with the `spatialdata` GET parameter, e.g. `?spatialdata=https://example.org/data.zarr`.
-- From a folder, by dropping the store's folder on the Project panel: inside the workspace, it is opened or imported; otherwise, it is opened as the workspace and as a project at once.
+- From a folder, by dropping the store's folder on the Project panel: inside the workspace, it is opened or imported; otherwise, it can be opened as the workspace and as a project at once.
 
 A store is recognized by the SpatialData attributes of its root group. Its elements are listed from its consolidated metadata, which spatialdata writes by default.
 
