@@ -473,12 +473,12 @@ export type ProjectStoreActions = {
   setPhysicalUnit: (physicalUnit: Project["physicalUnit"]) => void;
 
   /**
-   * Shows or hides the scale bar
+   * Shows or hides the scalebar
    *
-   * @param scaleBarVisibility - Whether the viewer shows the scale bar
+   * @param scalebarVisibility - Whether the viewer shows the scalebar
    */
-  setScaleBarVisibility: (
-    scaleBarVisibility: Project["scaleBarVisibility"],
+  setScalebarVisibility: (
+    scalebarVisibility: Project["scalebarVisibility"],
   ) => void;
 
   /**

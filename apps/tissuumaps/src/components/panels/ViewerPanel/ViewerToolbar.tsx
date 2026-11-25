@@ -8,7 +8,7 @@ import { ColorbarsToggle } from "./ColorbarsToggle";
 import { InteractionModeMenu } from "./InteractionModeMenu";
 import { NavigatorToggle } from "./NavigatorToggle";
 import { PointSizePopover } from "./PointSizePopover";
-import { ScaleBarToggle } from "./ScaleBarToggle";
+import { ScalebarToggle } from "./ScalebarToggle";
 
 /**
  * Whether the toolbar shows the interaction mode menu
@@ -47,7 +47,7 @@ export function ViewerToolbar({
       <PointSizePopover />
       <Separator orientation="vertical" className="mx-0.5" />
       <NavigatorToggle />
-      <ScaleBarToggle />
+      <ScalebarToggle />
       <ColorbarsToggle />
     </div>
   );

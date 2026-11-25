@@ -92,7 +92,7 @@ export const projectDefaults = {
     },
   },
   viewerBackgroundColor: { r: 0, g: 0, b: 0 },
-  scaleBarVisibility: true,
+  scalebarVisibility: true,
   colorbarsVisibility: true,
 } as const satisfies Partial<RawProject>;
 
@@ -209,7 +209,7 @@ export interface RawProject extends RawModel {
   /**
    * Physical size of one world unit, in the physical unit
    *
-   * The scale bar is in world units unless this is set to a positive value
+   * The scalebar is in world units unless this is set to a positive value
    * and the physical unit is set.
    */
   physicalUnitSize?: number;
@@ -217,17 +217,17 @@ export interface RawProject extends RawModel {
   /**
    * Unit of the physical unit size
    *
-   * Either one of the {@link PhysicalUnit} names, between which the scale bar
-   * converts, or any other text, which the scale bar shows as is.
+   * Either one of the {@link PhysicalUnit} names, between which the scalebar
+   * converts, or any other text, which the scalebar shows as is.
    */
   physicalUnit?: string;
 
   /**
-   * Whether the viewer shows the scale bar
+   * Whether the viewer shows the scalebar
    *
-   * @defaultValue {@link projectDefaults.scaleBarVisibility}
+   * @defaultValue {@link projectDefaults.scalebarVisibility}
    */
-  scaleBarVisibility?: boolean;
+  scalebarVisibility?: boolean;
 
   /**
    * Whether the viewer shows the colorbars of colors taken from table columns
