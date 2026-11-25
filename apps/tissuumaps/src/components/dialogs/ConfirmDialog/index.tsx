@@ -31,7 +31,7 @@ export type ConfirmDialogProps = {
   onConfirm: () => void;
 };
 
-/** Yes/no dialog with a cancel and an action button. */
+/** Confirmation dialog with a cancel and an action button. */
 export function ConfirmDialog({
   title,
   body,
@@ -56,9 +56,9 @@ export function ConfirmDialog({
           ) : null}
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{cancelLabel ?? "No"}</AlertDialogCancel>
+          <AlertDialogCancel>{cancelLabel ?? "Cancel"}</AlertDialogCancel>
           <AlertDialogAction onClick={onConfirm}>
-            {actionLabel ?? "Yes"}
+            {actionLabel ?? "OK"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -48,7 +48,7 @@ export function AlertDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogAction onClick={onDismiss}>
-            {actionLabel ?? "Okay"}
+            {actionLabel ?? "OK"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

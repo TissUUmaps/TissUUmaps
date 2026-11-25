@@ -33,6 +33,7 @@ const subpathEntries = {
   parquet: resolve(import.meta.dirname, "src/parquet/index.ts"),
   table: resolve(import.meta.dirname, "src/table/index.ts"),
   tiff: resolve(import.meta.dirname, "src/tiff/index.ts"),
+  tissuumaps: resolve(import.meta.dirname, "src/tissuumaps/index.ts"),
   zarr: resolve(import.meta.dirname, "src/hierarchical/zarr/index.ts"),
 };
 
