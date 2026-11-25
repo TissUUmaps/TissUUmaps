@@ -84,7 +84,7 @@ export function PromptDialog({
               {cancelLabel ?? "Cancel"}
             </AlertDialogCancel>
             <AlertDialogAction type="submit">
-              {actionLabel ?? "Okay"}
+              {actionLabel ?? "OK"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </form>

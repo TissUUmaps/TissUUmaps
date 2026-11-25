@@ -13,7 +13,7 @@ This project is structured as a pnpm monorepo as follows:
 - packages
   - @tissuumaps-core     # The TissUUmaps JavaScript library (models, storage interfaces, types, utilities)
   - @tissuumaps-render   # Rendering backends (OpenSeadragon, WebGL, SVG)
-  - @tissuumaps-storage  # Officially supported data providers
+  - @tissuumaps-storage  # Officially supported data providers and project providers
   - @tissuumaps-plugins  # Officially supported TissUUmaps plugins
   - @tissuumaps-react    # The TissUUmaps viewer (React component)
 - patches                # pnpm patches of dependencies
@@ -95,6 +95,8 @@ A data provider first `normalize()`s a data source: it applies the defaults and 
 
 Data objects are added from a source, with optional help from the data providers: they can tell whether they support a source, read its name from its metadata, and prepare the data source before the data object is added, e.g. by adding a table that the data source then references. The app renders the `source` itself, so it is not part of any data provider's UI schema.
 
+`ProjectProvider` is the project-level counterpart of `DataProvider`: a project provider reads whole projects of a format (`load`), writes them to a file (`toFile`), or both. It recognizes sources with `supports()`, and local files, within the workspace or not, by their `fileTypes`. It may also name a GET parameter (`urlParam`). A loaded project carries its data sources as authored, relative to the source the project provider reports. Project providers are registered in the application state (`registerProjectProvider(type, provider)`).
+
 ### Types
 
 The `types` module holds the contracts shared between packages and the application: the state and action types of the four application stores (`types/stores`), the plugin contract (`Plugin`, `PluginRegistry`, `PluginStores` in `types/plugins`), and the OpenSeadragon and WebGL option types, along with generic array, geometry, interaction and callback types. `palettes.ts` holds the built-in color palettes.
@@ -122,7 +124,7 @@ This package contains the rendering backends and exposes the core TissUUmaps ren
 
   The OpenSeadragon and WebGL renderers share this lifecycle, but not their structure: each base class keeps its own names and implements the shared logic itself, as the two technologies differ too much (e.g. in how the draw order is changed).
 
-**Data transfers** recolor tiled images whose tiles carry values rather than colors: channels of image data implementing `getTileData()` (scaled between their contrast limits and multiplied with the channel color, see [Rendering](./rendering.md#images)) and label IDs (looked up in a per-object color table, with visibility and opacity folded into alpha). A `DataTransfer` is a `getTileData`/`transferValues` pair installed via `OpenSeadragonContext.updateTiledImageDataTransfer` and applied in a `tile-invalidated` handler. Transfers are kept per tile source, which also covers the navigator, and are compared by identity, so tiles are only recolored when the transfer changes. A change recolors the tiles in the viewport right away and every other cached tile once it is drawn again; tiles are recolored one at a time, yielding to the event loop in between, and recolorings made outdated by a newer change are abandoned.
+**Data transfers** recolor tiled images whose tiles carry values rather than colors: channels of image data implementing `getTileData()` (scaled between their contrast limits and multiplied with the channel color, see [Rendering](./rendering.md#images)) and label IDs (looked up in a per-object RGBA color table, with visibility and opacity folded into alpha). A `DataTransfer` is a `getTileData`/`transferValues` pair installed via `OpenSeadragonContext.updateTiledImageDataTransfer` and applied in a `tile-invalidated` handler. Transfers are kept per tile source, which also covers the navigator, and are compared by identity, so tiles are only recolored when the transfer changes. A change recolors the tiles in the viewport right away and every other cached tile once it is drawn again; tiles are recolored one at a time, yielding to the event loop in between, and recolorings made outdated by a newer change are abandoned.
 
 **Resolvers** (`ColorResolver`, `SizeResolver`, `MarkerResolver`, `OpacityResolver`, `VisibilityResolver`) translate the model's `Config` types (constant, from-column, group-by, random) into per-item numeric values written into typed arrays for upload to the GPU. Each resolver also has a synchronous single-item counterpart (`resolve...WithoutTable`) that resolves an ID without loading any table data - constant and random sources exactly, from-column and group-by sources to the default value - which the labels renderer uses for labels that are not known up front (see [Rendering](./rendering.md#labels)), and a `resolveConstant...` counterpart that returns the one packed value of a constant configuration, which the points renderer supplies as a generic vertex attribute instead of a buffer (see [Rendering](./rendering.md#points)). `ColorResolver.resolveColorOrder` resolves the order the points renderer draws items with a from-column color in (see [Rendering](./rendering.md#points)). The shapes renderer uses only the color, opacity and visibility resolvers.
 
@@ -140,7 +142,7 @@ Variants of a format that its plain form already reads are profiles. They live i
 
 Conventions, single aspects of a format or a profile, follow the same shape: a dedicated file in the format directory when they apply to the format (`parquet/PandasMetadataUtils.ts` reads the pandas index column of any Parquet file), or inside the profile file when they apply to that profile only (the `bbox` ranges of GeoParquet columns in `GeoParquetUtils`), as an `XParser` when they hold state and as an `XUtils` otherwise.
 
-Composite formats, which combine several formats into one dataset (SpatialData: OME-Zarr images and labels, GeoParquet shapes and points, AnnData tables, and per-element transforms), are not data providers. They are import plugins outside this package, which read the layout of the dataset and add data objects of the existing types to the project.
+Composite formats combine several formats into one dataset. SpatialData, for example, combines OME-Zarr images and labels, GeoParquet shapes and points, AnnData tables, and per-element transforms. Composite formats are not data providers but project providers: they read the layout of the dataset and return a project of data objects of the existing types. Project providers live in a directory named after their format as well (`tissuumaps/` for TissUUmaps project files), which is exported likewise.
 
 Data providers convert what a file holds to the array types of the storage API (see [Storage](#storage)): 64-bit integers are read as 64-bit floats, and a value beyond the safe integer range fails the load rather than losing precision; numeric columns with missing values are read as floating-point typed arrays with `NaN` for a missing value; ID columns have to hold integers or strings without missing values, which fail the load (see `ArrayUtils.toIDArray` in `@tissuumaps/core`), and position columns are read as 32-bit floats.
 
@@ -156,7 +158,7 @@ Each plugin has its own dedicated directory and is separately exported in the `p
 
 The TissUUmaps `Viewer` component uses an adapter pattern facilitated by the `ViewerAdapter` interface, which decouples rendering from any particular application state management. It makes use of custom hooks that each encapsulate one rendering backend from `@tissuumaps/render` (separation of concerns): `useOpenSeadragon` (image and labels renderers), `useWebGL` (points and shapes renderers, including WebGL context loss and restoration), and `useSVG` (interactive drawing overlay). The WebGL canvas element and the SVG overlay element are appended as children to the `viewer.canvas` div element (child of the `viewer.container` div element, parent of the `viewer.drawer.canvas` canvas element) to allow for proper compositioning, where `viewer` is the `OpenSeadragon.Viewer` instance. The WebGL renderers' bounds are fed back into the OpenSeadragon world bounds, so that points and shapes count towards the navigable area.
 
-The package exports `Viewer`, `ViewerAdapter`, and `ViewerControl`/`ViewerControlAnchor` for overlaying controls on the viewer. A `Viewer` ref exposes the active `OpenSeadragonContext` (`null` until the viewer is ready), e.g. to call `resetViewport()`. Internally, the active `OpenSeadragonContext` is exposed to descendant components via a React context (`OpenSeadragonContextProvider`), which is not part of the public API. The package is styling-agnostic and forwards `className` verbatim.
+The package exports `Viewer`, `ViewerAdapter`, `ViewerControl`/`ViewerControlAnchor` for overlaying controls on the viewer, and the `useViewportChange` hook. A `Viewer` ref exposes the active `OpenSeadragonContext` (`null` until the viewer is ready), e.g. to call `resetViewport()`. Components inside the `Viewer` follow viewport changes with `useViewportChange`, outside of React state. Internally, the active `OpenSeadragonContext` is exposed to descendant components via a React context (`OpenSeadragonContextProvider`), which is not part of the public API. The package is styling-agnostic and forwards `className` verbatim.
 
 ## TissUUmaps (tissuumaps)
 
@@ -164,13 +166,28 @@ In the TissUUmaps React app, absolute (`@/`) imports are used for imports across
 
 ### App
 
-`bootstrap` starts up the parts of the application that live outside of React, in this order: the built-in data providers are registered (`data/providers.ts`), the data caches are started, the plugin registry is started and exposed as `window.tissuumaps` (`plugins.ts`), the plugins shipped in `@tissuumaps/plugins` are registered (`enableBuiltInPlugins` in `plugins.ts`), the project is set to be marked open as soon as it has a source or data, the expanded objects of the panels are set to be collapsed whenever another project is loaded or the project is closed (i.e. whenever the project store's `instanceId` changes), loading of the project is _started_ — from the URL given in the `project` GET parameter, or from `project.tm4` if that parameter is absent or empty — and finally a `tissuumaps-loaded` event is dispatched on `window` (`events.ts`), after which other plugins register themselves (see [Plugins](./plugins.md)). `bootstrap` returns a teardown function that cancels the project load, stops marking the project open and collapsing its expanded objects, and stops the registry and the caches, in that order; it is invoked on hot module replacement.
+`bootstrap` starts up the parts of the application that live outside of React, in this order:
+
+1. It registers the built-in data providers and project providers (`data/providers.ts`).
+2. It starts the data caches.
+3. It starts the plugin registry and exposes it as `window.tissuumaps` (`plugins.ts`).
+4. It registers the plugins shipped in `@tissuumaps/plugins` (`enableBuiltInPlugins` in `plugins.ts`).
+5. It marks the project open as soon as the project has a source or data.
+6. It collapses the expanded objects of the panels whenever another project is loaded or the project is closed, i.e. whenever the project store's `instanceId` changes.
+7. It _starts_ loading the initial projects (see [Project I/O](#project-io)).
+8. It dispatches a `tissuumaps-loaded` event on `window` (`events.ts`), after which other plugins register themselves (see [Plugins](./plugins.md)).
+
+`bootstrap` returns a teardown function, which is invoked on hot module replacement. The teardown cancels loading the initial projects, stops marking the project open and collapsing its expanded objects, and stops the registry and the caches, in that order.
 
 `App` lays out the built-in panels and the plugin panels (`usePluginPanels`) with Dockview, wrapped in the `DialogProvider`, and keeps Dockview's active panel in sync with the app store's `activePanelId` in both directions (`useActivePanelSync`).
 
 ### Project I/O
 
-`data/io/project.ts` loads a project into the stores (`loadProject`, `loadProjectFromURL`, `loadProjectFromFile`), serializes it back (`saveProject`, `saveProjectToJSON`, `saveAndDownloadProjectToJSON`), and keeps the `project` GET parameter in sync with the loaded project (`setProjectURLParam`, `clearProjectURLParam`).
+`data/io/project.ts` holds the project I/O, which is generic over the project providers. A project is loaded from a URL, or from a local file or directory. A local file or directory within the workspace is loaded through its workspace path. The loaded project is then either opened, replacing the open project, or merged into it. Merging resolves the merged project's relative sources against where it was loaded from. It rejects the project as a whole if one of its IDs is taken, and ignores its project-level settings. Downloading writes the project with a project provider. The project is cleaned of store state first, so that nothing but the project itself is saved.
+
+The module also finds the project providers for a source or a local file, and keeps the project GET parameters in sync. Opening a project from a URL replaces them, and importing one from a URL appends a parameter if the open project came from them or has no data yet. Opening anything else clears them. This way, a reload reproduces what came from URLs. On startup, the first GET parameter of a project provider opens a project, and the following ones import projects, in order. Without such parameters, `project.tm4` is opened.
+
+The project panel's actions and drops pick the project provider automatically. If several match, or none does and more than one can load projects, the user chooses one.
 
 ### Plugin registry
 
@@ -203,7 +220,7 @@ A React context is split into two files: `context.ts` holds the context object a
 
 Four separate Zustand vanilla stores are used, one per file in `src/stores`, all typed in `@tissuumaps/core` (`types/stores`) so that plugins can consume them:
 
-- `appStore` - transient application state: workspace, whether a project is open, interaction mode, registered data providers and plugins
+- `appStore` - transient application state: workspace, whether a project is open, interaction mode, registered data providers, project providers and plugins
 - `dataStore` - derived state: a data reference (`DataRef`) per project object, reconciled by the data caches (see below); treat as read-only
 - `projectStore` - the loaded project (layers, images, labels, points, shapes, tables, maps, render options)
 - `settingsStore` - user settings, persisted across sessions

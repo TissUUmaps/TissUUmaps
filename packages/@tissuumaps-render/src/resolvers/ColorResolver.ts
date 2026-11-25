@@ -379,7 +379,7 @@ export class ColorResolver {
    * Loads color data by assigning each ID a random color from the configured palette
    *
    * The colors are drawn per ID (see {@link pickRandomColor}) and packed
-   * without alpha, which {@link resolveColors} adds.
+   * without alpha, which the caller adds.
    *
    * @param ids - Ordered list of item IDs
    * @param config - Random configuration specifying the palette to sample from
