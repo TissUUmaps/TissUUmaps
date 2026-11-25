@@ -62,6 +62,8 @@ type ShapesAccordionItemProps = {
 
 function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
   const shapesDataProviders = useAppStore((state) => state.shapesDataProviders);
+  const loadedShapesIds = useAppStore((state) => state.loadedShapesIds);
+  const setLoadedShapesIds = useAppStore((state) => state.setLoadedShapesIds);
 
   const updateShapes = useProjectStore((state) => state.updateShapes);
   const deleteShapes = useProjectStore((state) => state.deleteShapes);
@@ -96,6 +98,11 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
           onOpacityChange={(opacity) => updateShapes(shapes.id, { opacity })}
         />
       }
+      unloadDisabled={!loadedShapesIds.includes(shapes.id)}
+      onUnload={() => {
+        updateShapes(shapes.id, { visibility: false });
+        setLoadedShapesIds(loadedShapesIds.filter((id) => id !== shapes.id));
+      }}
       onDelete={() => deleteShapes(shapes.id)}
     >
       <DataSourceWidget

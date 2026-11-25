@@ -1,4 +1,4 @@
-import { EllipsisIcon, PencilIcon, Trash2Icon } from "lucide-react";
+import { EllipsisIcon, PencilIcon, Trash2Icon, UnplugIcon } from "lucide-react";
 
 import { IconButton } from "@/components/common/icon-button";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
@@ -16,6 +16,8 @@ export type ObjectListItemMenuProps = {
   name: string;
   objectLabel: string;
   onRename: (name: string) => void;
+  unloadDisabled?: boolean;
+  onUnload?: () => void;
   deleteDisabledReason?: string;
   onDelete: () => void;
   className?: string;
@@ -25,6 +27,8 @@ export function ObjectListItemMenu({
   name,
   objectLabel,
   onRename,
+  unloadDisabled = false,
+  onUnload,
   deleteDisabledReason,
   onDelete,
   className,
@@ -62,6 +66,12 @@ export function ObjectListItemMenu({
           <PencilIcon />
           Rename…
         </DropdownMenuItem>
+        {onUnload !== undefined && (
+          <DropdownMenuItem disabled={unloadDisabled} onClick={onUnload}>
+            <UnplugIcon />
+            Unload
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"

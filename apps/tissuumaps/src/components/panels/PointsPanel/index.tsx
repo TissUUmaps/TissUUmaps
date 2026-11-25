@@ -62,6 +62,8 @@ type PointsAccordionItemProps = {
 
 function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
   const pointsDataProviders = useAppStore((state) => state.pointsDataProviders);
+  const loadedPointsIds = useAppStore((state) => state.loadedPointsIds);
+  const setLoadedPointsIds = useAppStore((state) => state.setLoadedPointsIds);
 
   const updatePoints = useProjectStore((state) => state.updatePoints);
   const deletePoints = useProjectStore((state) => state.deletePoints);
@@ -96,6 +98,11 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
           onOpacityChange={(opacity) => updatePoints(points.id, { opacity })}
         />
       }
+      unloadDisabled={!loadedPointsIds.includes(points.id)}
+      onUnload={() => {
+        updatePoints(points.id, { visibility: false });
+        setLoadedPointsIds(loadedPointsIds.filter((id) => id !== points.id));
+      }}
       onDelete={() => deletePoints(points.id)}
     >
       <DataSourceWidget

@@ -61,6 +61,8 @@ type LabelsAccordionItemProps = {
 
 function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
   const labelsDataProviders = useAppStore((state) => state.labelsDataProviders);
+  const loadedLabelsIds = useAppStore((state) => state.loadedLabelsIds);
+  const setLoadedLabelsIds = useAppStore((state) => state.setLoadedLabelsIds);
 
   const updateLabels = useProjectStore((state) => state.updateLabels);
   const deleteLabels = useProjectStore((state) => state.deleteLabels);
@@ -93,6 +95,11 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
           onOpacityChange={(opacity) => updateLabels(labels.id, { opacity })}
         />
       }
+      unloadDisabled={!loadedLabelsIds.includes(labels.id)}
+      onUnload={() => {
+        updateLabels(labels.id, { visibility: false });
+        setLoadedLabelsIds(loadedLabelsIds.filter((id) => id !== labels.id));
+      }}
       onDelete={() => deleteLabels(labels.id)}
     >
       <DataSourceWidget

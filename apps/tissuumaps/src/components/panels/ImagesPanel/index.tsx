@@ -53,6 +53,8 @@ type ImageAccordionItemProps = {
 
 function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
   const imageDataProviders = useAppStore((state) => state.imageDataProviders);
+  const loadedImageIds = useAppStore((state) => state.loadedImageIds);
+  const setLoadedImageIds = useAppStore((state) => state.setLoadedImageIds);
 
   const updateImage = useProjectStore((state) => state.updateImage);
   const deleteImage = useProjectStore((state) => state.deleteImage);
@@ -85,6 +87,11 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
           onOpacityChange={(opacity) => updateImage(image.id, { opacity })}
         />
       }
+      unloadDisabled={!loadedImageIds.includes(image.id)}
+      onUnload={() => {
+        updateImage(image.id, { visibility: false });
+        setLoadedImageIds(loadedImageIds.filter((id) => id !== image.id));
+      }}
       onDelete={() => deleteImage(image.id)}
     >
       <DataSourceWidget

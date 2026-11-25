@@ -23,6 +23,8 @@ export type ObjectListItemProps = {
   leadingControls?: ReactNode;
   trailingControls?: ReactNode;
   onRename: (name: string) => void;
+  unloadDisabled?: boolean;
+  onUnload?: () => void;
   deleteDisabledReason?: string;
   onDelete: () => void;
   children: ReactNode;
@@ -39,6 +41,8 @@ export function ObjectListItem({
   leadingControls,
   trailingControls,
   onRename,
+  unloadDisabled,
+  onUnload,
   deleteDisabledReason,
   onDelete,
   children,
@@ -70,6 +74,8 @@ export function ObjectListItem({
             name={name}
             objectLabel={objectLabel}
             onRename={onRename}
+            unloadDisabled={unloadDisabled}
+            onUnload={onUnload}
             deleteDisabledReason={deleteDisabledReason}
             onDelete={onDelete}
           />
