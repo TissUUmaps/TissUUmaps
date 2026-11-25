@@ -101,11 +101,40 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
     [labels, points, shapes, opacityMaps, highlightedItemGroup],
   );
 
+  // Filtered last, so that loading or unloading an object leaves the inputs of
+  // the highlight memo unchanged; plain filters keep the project order.
+  const loadedImageIds = useAppStore((state) => state.loadedImageIds);
+  const loadedLabelsIds = useAppStore((state) => state.loadedLabelsIds);
+  const loadedPointsIds = useAppStore((state) => state.loadedPointsIds);
+  const loadedShapesIds = useAppStore((state) => state.loadedShapesIds);
+  const loadedImages = useMemo(
+    () => previewedImages.filter(({ id }) => loadedImageIds.includes(id)),
+    [previewedImages, loadedImageIds],
+  );
+  const loadedLabels = useMemo(
+    () =>
+      highlightedState.labels.filter(({ id }) => loadedLabelsIds.includes(id)),
+    [highlightedState.labels, loadedLabelsIds],
+  );
+  const loadedPoints = useMemo(
+    () =>
+      highlightedState.points.filter(({ id }) => loadedPointsIds.includes(id)),
+    [highlightedState.points, loadedPointsIds],
+  );
+  const loadedShapes = useMemo(
+    () =>
+      highlightedState.shapes.filter(({ id }) => loadedShapesIds.includes(id)),
+    [highlightedState.shapes, loadedShapesIds],
+  );
+
   const viewerAdapter: ViewerAdapter = useMemo(
     () => ({
       ...projectState,
       ...highlightedState,
-      images: previewedImages,
+      images: loadedImages,
+      labels: loadedLabels,
+      points: loadedPoints,
+      shapes: loadedShapes,
       interactionMode,
       loadImage,
       loadLabels,
@@ -115,8 +144,11 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
     }),
     [
       projectState,
-      previewedImages,
       highlightedState,
+      loadedImages,
+      loadedLabels,
+      loadedPoints,
+      loadedShapes,
       interactionMode,
       loadImage,
       loadLabels,

@@ -123,9 +123,11 @@ export const shapesDataCache = new AnnotatedDataCache<
 /**
  * Starts keeping the data caches in sync with the app and the project store
  *
- * Whenever the workspace, the project source, a data provider or one of the
- * project's objects changes, the caches release the data that is no longer
- * referenced or no longer valid, and the data store is updated accordingly.
+ * Whenever the workspace, the project source, a data provider, one of the
+ * project's objects or the loaded objects change, the caches release the data
+ * that is no longer referenced or no longer valid, and the data store is
+ * updated accordingly. Only loaded images, labels, points and shapes keep
+ * their data.
  *
  * @returns A callback that stops the synchronization and releases all cached
  * data
@@ -153,10 +155,12 @@ export function startDataCaches(): () => void {
  * Releases the data that the given state does not reference anymore, and
  * updates the data store accordingly
  *
- * Each cache is only sanitized if the state it depends on has changed with
- * respect to the given previous state, when initializing, or when cleaning up;
- * the annotated data caches are additionally sanitized whenever the table data
- * cache was.
+ * Images, labels, points and shapes are only referenced while they are loaded
+ * (see `AppStoreState.loadedImageIds` etc.); tables are referenced while they
+ * are in the project. Each cache is only sanitized if the state it depends on
+ * has changed with respect to the given previous state, when initializing, or
+ * when cleaning up; the annotated data caches are additionally sanitized
+ * whenever the table data cache was.
  *
  * @param options - Whether the caches are being initialized (`init`) or emptied
  * (`cleanup`), the app and project state to sanitize for, defaulting to the
@@ -215,10 +219,16 @@ function sanitizeDataCaches(options?: {
     (prevProjectState !== undefined &&
       projectState.images !== prevProjectState.images) ||
     (prevAppState !== undefined &&
-      appState.imageDataProviders !== prevAppState.imageDataProviders)
+      appState.imageDataProviders !== prevAppState.imageDataProviders) ||
+    (prevAppState !== undefined &&
+      appState.loadedImageIds !== prevAppState.loadedImageIds)
   ) {
     newImageDataRefs = imageDataCache.retainOnly(
-      cleanup ? [] : projectState.images,
+      cleanup
+        ? []
+        : projectState.images.filter(({ id }) =>
+            appState.loadedImageIds.includes(id),
+          ),
       {
         workspace: appState.workspace,
         projectSource: projectState.source,
@@ -237,10 +247,16 @@ function sanitizeDataCaches(options?: {
     (prevProjectState !== undefined &&
       projectState.labels !== prevProjectState.labels) ||
     (prevAppState !== undefined &&
-      appState.labelsDataProviders !== prevAppState.labelsDataProviders)
+      appState.labelsDataProviders !== prevAppState.labelsDataProviders) ||
+    (prevAppState !== undefined &&
+      appState.loadedLabelsIds !== prevAppState.loadedLabelsIds)
   ) {
     newLabelsDataRefs = labelsDataCache.retainOnly(
-      cleanup ? [] : projectState.labels,
+      cleanup
+        ? []
+        : projectState.labels.filter(({ id }) =>
+            appState.loadedLabelsIds.includes(id),
+          ),
       {
         workspace: appState.workspace,
         projectSource: projectState.source,
@@ -261,10 +277,16 @@ function sanitizeDataCaches(options?: {
     (prevProjectState !== undefined &&
       projectState.points !== prevProjectState.points) ||
     (prevAppState !== undefined &&
-      appState.pointsDataProviders !== prevAppState.pointsDataProviders)
+      appState.pointsDataProviders !== prevAppState.pointsDataProviders) ||
+    (prevAppState !== undefined &&
+      appState.loadedPointsIds !== prevAppState.loadedPointsIds)
   ) {
     newPointsDataRefs = pointsDataCache.retainOnly(
-      cleanup ? [] : projectState.points,
+      cleanup
+        ? []
+        : projectState.points.filter(({ id }) =>
+            appState.loadedPointsIds.includes(id),
+          ),
       {
         workspace: appState.workspace,
         projectSource: projectState.source,
@@ -285,10 +307,16 @@ function sanitizeDataCaches(options?: {
     (prevProjectState !== undefined &&
       projectState.shapes !== prevProjectState.shapes) ||
     (prevAppState !== undefined &&
-      appState.shapesDataProviders !== prevAppState.shapesDataProviders)
+      appState.shapesDataProviders !== prevAppState.shapesDataProviders) ||
+    (prevAppState !== undefined &&
+      appState.loadedShapesIds !== prevAppState.loadedShapesIds)
   ) {
     newShapesDataRefs = shapesDataCache.retainOnly(
-      cleanup ? [] : projectState.shapes,
+      cleanup
+        ? []
+        : projectState.shapes.filter(({ id }) =>
+            appState.loadedShapesIds.includes(id),
+          ),
       {
         workspace: appState.workspace,
         projectSource: projectState.source,

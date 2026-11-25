@@ -12,6 +12,7 @@ import type {
   TableData,
 } from "@tissuumaps/core";
 
+import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
 import {
@@ -27,8 +28,8 @@ import {
  *
  * @param imageId - The ID of the image whose data to load, if any
  * @returns A callback that takes an optional abort signal and resolves to the
- * image's data, or to `null` if the ID does not identify an image of the
- * current project
+ * image's data, or to `null` if the image is not in `loadedImageIds` or if the
+ * ID does not identify an image of the current project
  */
 export function useLazyImageData(
   imageId: string | null,
@@ -36,8 +37,11 @@ export function useLazyImageData(
   const image = useProjectStore(
     (state) => state.images.find((image) => image.id === imageId) ?? null,
   );
+  const loaded = useAppStore(
+    (state) => imageId !== null && state.loadedImageIds.includes(imageId),
+  );
   const loadImage = useImageDataLoader();
-  return useLazyData(image, loadImage);
+  return useLazyData(loaded ? image : null, loadImage);
 }
 
 /**
@@ -45,8 +49,8 @@ export function useLazyImageData(
  *
  * @param labelsId - The ID of the labels whose data to load, if any
  * @returns A callback that takes an optional abort signal and resolves to the
- * labels' data, or to `null` if the ID does not identify labels of the current
- * project
+ * labels' data, or to `null` if the labels are not in `loadedLabelsIds` or if
+ * the ID does not identify labels of the current project
  */
 export function useLazyLabelsData(
   labelsId: string | null,
@@ -54,8 +58,11 @@ export function useLazyLabelsData(
   const labels = useProjectStore(
     (state) => state.labels.find((labels) => labels.id === labelsId) ?? null,
   );
+  const loaded = useAppStore(
+    (state) => labelsId !== null && state.loadedLabelsIds.includes(labelsId),
+  );
   const loadLabels = useLabelsDataLoader();
-  return useLazyData(labels, loadLabels);
+  return useLazyData(loaded ? labels : null, loadLabels);
 }
 
 /**
@@ -63,8 +70,8 @@ export function useLazyLabelsData(
  *
  * @param pointsId - The ID of the points whose data to load, if any
  * @returns A callback that takes an optional abort signal and resolves to the
- * points' data, or to `null` if the ID does not identify points of the current
- * project
+ * points' data, or to `null` if the points are not in `loadedPointsIds` or if
+ * the ID does not identify points of the current project
  */
 export function useLazyPointsData(
   pointsId: string | null,
@@ -72,8 +79,11 @@ export function useLazyPointsData(
   const points = useProjectStore(
     (state) => state.points.find((points) => points.id === pointsId) ?? null,
   );
+  const loaded = useAppStore(
+    (state) => pointsId !== null && state.loadedPointsIds.includes(pointsId),
+  );
   const loadPoints = usePointsDataLoader();
-  return useLazyData(points, loadPoints);
+  return useLazyData(loaded ? points : null, loadPoints);
 }
 
 /**
@@ -81,8 +91,8 @@ export function useLazyPointsData(
  *
  * @param shapesId - The ID of the shapes whose data to load, if any
  * @returns A callback that takes an optional abort signal and resolves to the
- * shapes' data, or to `null` if the ID does not identify shapes of the current
- * project
+ * shapes' data, or to `null` if the shapes are not in `loadedShapesIds` or if
+ * the ID does not identify shapes of the current project
  */
 export function useLazyShapesData(
   shapesId: string | null,
@@ -90,8 +100,11 @@ export function useLazyShapesData(
   const shapes = useProjectStore(
     (state) => state.shapes.find((shapes) => shapes.id === shapesId) ?? null,
   );
+  const loaded = useAppStore(
+    (state) => shapesId !== null && state.loadedShapesIds.includes(shapesId),
+  );
   const loadShapes = useShapesDataLoader();
-  return useLazyData(shapes, loadShapes);
+  return useLazyData(loaded ? shapes : null, loadShapes);
 }
 
 /**
