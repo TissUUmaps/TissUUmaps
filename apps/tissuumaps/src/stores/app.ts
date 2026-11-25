@@ -60,11 +60,10 @@ export const appStore: AppStoreApi = createStore<AppStore>()(
         set((draft) => {
           draft.tableDataProviders.set(type, dataProvider);
         }),
-      registerProjectProvider: (type, projectProvider) => {
+      registerProjectProvider: (type, projectProvider) =>
         set((draft) => {
           draft.projectProviders.set(type, projectProvider);
-        });
-      },
+        }),
     })),
     { name: "app", enabled: import.meta.env.DEV },
   ),

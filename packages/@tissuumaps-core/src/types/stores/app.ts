@@ -316,8 +316,6 @@ export type AppStoreActions = {
    *
    * @param type - The project type the provider handles
    * @param projectProvider - The project provider to register
-   * @throws Error if the project provider implements neither `load` nor
-   * `toFile`
    */
   registerProjectProvider: (
     type: string,
