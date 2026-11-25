@@ -11,6 +11,7 @@ import {
   TIFFImageDataProvider,
   TIFFLabelsDataProvider,
   TablePointsDataProvider,
+  TissUUmapsProjectProvider,
   ZarrTableDataProvider,
   csvTableDataSourceType,
   geoJSONShapesDataSourceType,
@@ -23,6 +24,7 @@ import {
   tablePointsDataSourceType,
   tiffImageDataSourceType,
   tiffLabelsDataSourceType,
+  tissuumapsProjectType,
   zarrTableDataSourceType,
 } from "@tissuumaps/storage";
 
@@ -144,4 +146,18 @@ export function enableBuiltInDataProviders(): void {
     zarrTableDataSourceType,
     new ZarrTableDataProvider(),
   );
+}
+
+/**
+ * Registers the project providers shipped with TissUUmaps with the app store
+ *
+ * Called once during application startup, before any project is loaded.
+ */
+export function enableBuiltInProjectProviders(): void {
+  appStore
+    .getState()
+    .registerProjectProvider(
+      tissuumapsProjectType,
+      new TissUUmapsProjectProvider(),
+    );
 }

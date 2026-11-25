@@ -386,6 +386,50 @@ describe("SourceUtils", () => {
     });
   });
 
+  describe("rebaseSource", () => {
+    it("keeps URLs, app-relative and workspace-relative paths", () => {
+      for (const source of [
+        "https://data.example/x.csv",
+        "//data/x.csv",
+        "/data/x.csv",
+      ]) {
+        expect(SourceUtils.rebaseSource(source, null)).toBe(source);
+        expect(SourceUtils.rebaseSource(source, projectUrl)).toBe(source);
+        expect(SourceUtils.rebaseSource(source, projectPath)).toBe(source);
+      }
+    });
+
+    it("resolves against a project URL", () => {
+      expect(SourceUtils.rebaseSource("../shared/x.csv", projectUrl)).toBe(
+        "https://data.example/projects/shared/x.csv",
+      );
+    });
+
+    it("resolves within the project file's directory in the workspace", () => {
+      expect(SourceUtils.rebaseSource("./sub/../points.csv", projectPath)).toBe(
+        "/proj/points.csv",
+      );
+      expect(SourceUtils.rebaseSource("../shared/x.csv", projectPath)).toBe(
+        "/shared/x.csv",
+      );
+    });
+
+    it("makes the path workspace-relative without a project source", () => {
+      expect(SourceUtils.rebaseSource("images/a.tif", null)).toBe(
+        "/images/a.tif",
+      );
+      expect(SourceUtils.rebaseSource("./s:c.tif", null)).toBe("/s:c.tif");
+    });
+
+    it("throws for empty sources and paths leaving the workspace", () => {
+      expect(() => SourceUtils.rebaseSource("", null)).toThrow();
+      expect(() => SourceUtils.rebaseSource("../x.csv", null)).toThrow();
+      expect(() =>
+        SourceUtils.rebaseSource("../../x.csv", projectPath),
+      ).toThrow();
+    });
+  });
+
   describe("resolveSource", () => {
     it("returns URLs as is", async () => {
       await expect(
@@ -869,6 +913,35 @@ describe("SourceUtils", () => {
     it("returns an empty string for URLs without a path", () => {
       expect(SourceUtils.getStem("data:image/png;base64,AAAA")).toBe("");
       expect(SourceUtils.getStem("https://data.example/")).toBe("");
+    });
+  });
+
+  describe("createID", () => {
+    const uuid = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+
+    it("names the ID after the file name, with hyphens for dots and a UUID", () => {
+      expect(SourceUtils.createID("/a/cells.ome.zarr")).toMatch(
+        new RegExp(`^cells-ome-zarr-${uuid}$`),
+      );
+      expect(SourceUtils.createID("/a/x.zarr/labels/cells")).toMatch(
+        new RegExp(`^cells-${uuid}$`),
+      );
+      expect(
+        SourceUtils.createID("https://data.example/a/my%20cells.v2.csv?x=1"),
+      ).toMatch(new RegExp(`^my cells-v2-csv-${uuid}$`));
+    });
+
+    it("falls back to the UUID alone", () => {
+      expect(SourceUtils.createID(undefined)).toMatch(new RegExp(`^${uuid}$`));
+      expect(SourceUtils.createID("data:text/csv,a")).toMatch(
+        new RegExp(`^${uuid}$`),
+      );
+    });
+
+    it("creates a new ID for the same source every time", () => {
+      expect(SourceUtils.createID("/a/cells.csv")).not.toBe(
+        SourceUtils.createID("/a/cells.csv"),
+      );
     });
   });
 });

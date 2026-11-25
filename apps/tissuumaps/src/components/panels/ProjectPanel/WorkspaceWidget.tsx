@@ -44,7 +44,7 @@ export function WorkspaceWidget({ className }: WorkspaceWidgetProps) {
             <DropdownMenuTrigger
               render={
                 <IconButton
-                  label="Folder actions"
+                  label="Workspace actions"
                   size="icon-xs"
                   className="ml-auto"
                 />
@@ -55,25 +55,25 @@ export function WorkspaceWidget({ className }: WorkspaceWidgetProps) {
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={openWorkspace}>
                 <FolderOpenIcon />
-                Change folder…
+                Change workspace…
               </DropdownMenuItem>
               <DropdownMenuItem variant="destructive" onClick={closeWorkspace}>
                 <XIcon />
-                Disconnect
+                Close workspace…
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </>
       ) : (
         <>
-          <span className="text-muted-foreground">No folder connected</span>
+          <span className="text-muted-foreground">No workspace</span>
           <Button
             variant="link"
             size="xs"
             className="ml-auto h-auto p-0"
             onClick={openWorkspace}
           >
-            Open folder…
+            Open workspace…
           </Button>
         </>
       )}

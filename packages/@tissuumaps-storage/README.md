@@ -1,9 +1,9 @@
 # @tissuumaps/storage
 
-Official data provider distribution for
+Official storage distribution for
 [TissUUmaps](https://github.com/TissUUmaps/TissUUmaps): implementations of the
-data provider interfaces of `@tissuumaps/core` for images, labels, points,
-shapes and tables.
+provider interfaces of `@tissuumaps/core`, i.e. data providers for images,
+labels, points, shapes and tables, and project providers for project formats.
 
 ## Installation
 
@@ -20,7 +20,7 @@ install them yourself.
 Each format has its own entry point, so that only the providers you use are
 bundled; the package root exports all of them.
 
-| Entry point                         | Data providers                                                                        |
+| Entry point                         | Providers                                                                             |
 | ----------------------------------- | ------------------------------------------------------------------------------------- |
 | `@tissuumaps/storage/csv`           | [CSV](https://tissuumaps.github.io/docs/supported-data/csv/) tables                   |
 | `@tissuumaps/storage/geojson`       | [GeoJSON](https://tissuumaps.github.io/docs/supported-data/geojson/) shapes           |
@@ -29,6 +29,7 @@ bundled; the package root exports all of them.
 | `@tissuumaps/storage/openseadragon` | OpenSeadragon [images](https://tissuumaps.github.io/docs/supported-data/image/)       |
 | `@tissuumaps/storage/parquet`       | [Parquet](https://tissuumaps.github.io/docs/supported-data/parquet/) shapes, tables   |
 | `@tissuumaps/storage/table`         | [points from tables](https://tissuumaps.github.io/docs/supported-data/table/)         |
+| `@tissuumaps/storage/tissuumaps`    | [TissUUmaps](https://tissuumaps.github.io/docs/concepts/projects/) projects (`.tm4`)  |
 | `@tissuumaps/storage/tiff`          | [TIFF](https://tissuumaps.github.io/docs/supported-data/tiff/) images, labels         |
 | `@tissuumaps/storage/zarr`          | [Zarr](https://tissuumaps.github.io/docs/supported-data/zarr/) tables                 |
 

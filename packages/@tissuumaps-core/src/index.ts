@@ -162,6 +162,7 @@ export {
   type PointsDataProvider,
   type PointsGeometry,
 } from "./storage/points";
+export { type ProjectProvider } from "./storage/project";
 export {
   type ShapesData,
   type ShapesDataProvider,
