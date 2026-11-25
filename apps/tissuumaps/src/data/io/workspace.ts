@@ -14,6 +14,12 @@ declare global {
       multiple?: boolean;
       types?: { description?: string; accept: Record<string, string[]> }[];
     }) => Promise<FileSystemFileHandle[]>;
+    showSaveFilePicker?: (options?: {
+      id?: string;
+      startIn?: FileSystemHandle;
+      suggestedName?: string;
+      types?: { description?: string; accept: Record<string, string[]> }[];
+    }) => Promise<FileSystemFileHandle>;
   }
 
   /** The drag and drop API missing from `lib.dom.d.ts` */
@@ -97,6 +103,45 @@ export async function pickProjectFile(
     }
     throw error;
   }
+}
+
+/**
+ * Lets the user pick a new project file within the workspace
+ *
+ * @param workspace - The directory handle of the open workspace, which the
+ * picker opens in
+ * @param suggestedName - The file name to suggest
+ * @param fileTypes - The types of project files to offer, as filters in the
+ * order given (see {@link pickProjectFile})
+ * @returns The file handle and its workspace-relative path (with `/` prefix),
+ * or `null` if the user cancelled the picker
+ * @throws Error if the browser does not support saving a file, if access to
+ * the file was denied, or if it does not lie within the workspace
+ */
+export async function pickWorkspaceSaveFile(
+  workspace: FileSystemDirectoryHandle,
+  suggestedName: string,
+  fileTypes: { description: string; accept: Record<string, string[]> }[],
+): Promise<{ handle: FileSystemFileHandle; source: string } | null> {
+  if (window.showSaveFilePicker === undefined) {
+    throw new Error("Saving a file is not supported by this browser");
+  }
+  let handle: FileSystemFileHandle;
+  try {
+    // Called as a method: the picker throws if it loses its receiver
+    handle = await window.showSaveFilePicker({
+      id: workspacePickerId,
+      startIn: workspace,
+      suggestedName,
+      types: fileTypes,
+    });
+  } catch (error) {
+    if (isAbortError(error)) {
+      return null;
+    }
+    throw error;
+  }
+  return { handle, source: await resolveWorkspacePath(handle, workspace) };
 }
 
 /**

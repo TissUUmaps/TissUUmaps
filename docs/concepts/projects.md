@@ -18,13 +18,15 @@ A project can be **opened**, which replaces the open project, or **imported**, w
 
 Open and import projects with the actions in the Project tab's menu, or by dropping a project file on the Project panel. A dropped folder is opened as the workspace, unless it is a project of a known format. Such a folder is opened or imported like a project file if it is inside the workspace. Otherwise, it can be opened as the workspace and as a project at once.
 
+A project file opened from the workspace can be saved back to it with "Save project", which writes it in the format it was opened in. Any project can be saved as a new file in the workspace with "Save as…", which rewrites the paths of its data sources in the workspace relative to the new file; it is saved in the format of its file if that can be written, and as a TissUUmaps project file otherwise. Saving to the workspace asks for write access. After another workspace is opened or the workspace is closed, a project can no longer be saved back to its file. For a project with a file in the workspace, the Project tab marks unsaved changes. Opening another project or closing the project asks for confirmation only when there are unsaved changes.
+
 "Download project" saves the open project as a TissUUmaps project file. The file keeps the name of the file or URL the project was opened from, unless that was a file outside the workspace; otherwise, it is named after the project. A downloaded project keeps its project-relative paths, so store it next to the file it was opened from; the paths of imported projects were resolved on import and stay valid wherever it is stored. If several formats can be written, "Download as" offers each of them.
 
 ### Links
 
 Each project format has its own GET parameter, which is `project` for TissUUmaps project files. The first such parameter in the URL opens a project, and every following one imports a project into it, in order. For example, `?project=liver.tm4&project=annotations.tm4` opens `liver.tm4` and imports `annotations.tm4`. Without such parameters, `project.tm4` next to the TissUUmaps application is opened.
 
-Opening or importing a project from a URL updates the address bar accordingly, so that reloading the page loads the same projects again. Projects opened or imported from local files cannot be recorded there. A project imported from a URL into one that was opened from a local file is not recorded either, so that reloading does not open it alone.
+Opening or importing a project from a URL updates the address bar accordingly, so that reloading the page loads the same projects again. "Copy share link" in the Project tab's menu copies that address. Projects opened or imported from local files cannot be recorded there. A project imported from a URL into one that was opened from a local file is not recorded either, so that reloading does not open it alone.
 
 ## Workspaces
 

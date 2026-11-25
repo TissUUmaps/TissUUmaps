@@ -174,16 +174,17 @@ In the TissUUmaps React app, absolute (`@/`) imports are used for imports across
 4. It registers the plugins shipped in `@tissuumaps/plugins` (`enableBuiltInPlugins` in `plugins.ts`).
 5. It marks the project open as soon as the project has a source or data.
 6. It collapses the expanded objects of the panels whenever another project is loaded or the project is closed, i.e. whenever the project store's `instanceId` changes.
-7. It _starts_ loading the initial projects (see [Project I/O](#project-io)).
-8. It dispatches a `tissuumaps-loaded` event on `window` (`events.ts`), after which other plugins register themselves (see [Plugins](./plugins.md)).
+7. It forgets the project's file whenever the workspace changes, as the project can no longer be saved back to it.
+8. It _starts_ loading the initial projects (see [Project I/O](#project-io)).
+9. It dispatches a `tissuumaps-loaded` event on `window` (`events.ts`), after which other plugins register themselves (see [Plugins](./plugins.md)).
 
-`bootstrap` returns a teardown function, which is invoked on hot module replacement. The teardown cancels loading the initial projects, stops marking the project open and collapsing its expanded objects, and stops the registry and the caches, in that order.
+`bootstrap` returns a teardown function, which is invoked on hot module replacement. The teardown cancels loading the initial projects, stops forgetting the project's file, collapsing its expanded objects and marking it open, and stops the registry and the caches, in that order.
 
 `App` lays out the built-in panels and the plugin panels (`usePluginPanels`) with Dockview, wrapped in the `DialogProvider`, and keeps Dockview's active panel in sync with the app store's `activePanelId` in both directions (`useActivePanelSync`).
 
 ### Project I/O
 
-`data/io/project.ts` holds the project I/O, which is generic over the project providers. A project is loaded from a URL, or from a local file or directory. A local file or directory within the workspace is loaded through its workspace path. The loaded project is then either opened, replacing the open project, or merged into it. Merging resolves the merged project's relative sources against where it was loaded from. It rejects the project as a whole if one of its IDs is taken, and ignores its project-level settings. Downloading writes the project with a project provider. The project is cleaned of store state first, so that nothing but the project itself is saved.
+`data/io/project.ts` holds the project I/O, which is generic over the project providers. A project is loaded from a URL, or from a local file or directory. A local file or directory within the workspace is loaded through its workspace path. The loaded project is then either opened, replacing the open project, or merged into it. Merging resolves the merged project's relative sources against where it was loaded from. It rejects the project as a whole if one of its IDs is taken, and ignores its project-level settings. Downloading writes the project with a project provider. Saving writes it to its file in the workspace with the project provider it was opened with, and saving as a new file rewrites its sources relative to the new file. Either way, the project is cleaned of store state first, so that nothing but the project itself is saved. The project as last loaded or saved is kept in the project store, and a part that differs from it by reference has unsaved changes.
 
 The module also finds the project providers for a source or a local file, and keeps the project GET parameters in sync. Opening a project from a URL replaces them, and importing one from a URL appends a parameter if the open project came from them or has no data yet. Opening anything else clears them. This way, a reload reproduces what came from URLs. On startup, the first GET parameter of a project provider opens a project, and the following ones import projects, in order. Without such parameters, `project.tm4` is opened.
 
