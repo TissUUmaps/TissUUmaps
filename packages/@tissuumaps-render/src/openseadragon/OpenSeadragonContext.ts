@@ -142,6 +142,7 @@ export class OpenSeadragonContext {
     viewerOptions?: OpenSeadragonViewerOptions,
   ) {
     OpenSeadragonUtils.fixTileCacheCounter();
+    OpenSeadragonUtils.fixTileAtPoint();
     // OpenSeadragon reads showNavigator only here, so the navigator is always
     // created and then shown or hidden; this keeps the option live.
     this.viewer = new OpenSeadragon.Viewer({
