@@ -24,7 +24,7 @@ Open and import projects with the actions in the Project tab's menu, or by dropp
 
 Each project format has its own GET parameter, which is `project` for TissUUmaps project files. The first such parameter in the URL opens a project, and every following one imports a project into it, in order. For example, `?project=liver.tm4&project=annotations.tm4` opens `liver.tm4` and imports `annotations.tm4`. Without such parameters, `project.tm4` next to the TissUUmaps application is opened.
 
-Opening or importing a project from a URL updates the address bar accordingly, so that reloading the page loads the same projects again. Projects opened or imported from local files cannot be recorded there.
+Opening or importing a project from a URL updates the address bar accordingly, so that reloading the page loads the same projects again. Projects opened or imported from local files cannot be recorded there. A project imported from a URL into one that was opened from a local file is not recorded either, so that reloading does not open it alone.
 
 ## Workspaces
 

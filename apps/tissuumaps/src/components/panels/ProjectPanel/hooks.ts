@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 
-import type { ProjectProvider } from "@tissuumaps/core";
+import { type ProjectProvider, ProjectUtils } from "@tissuumaps/core";
 import { tissuumapsProjectType } from "@tissuumaps/storage";
 
 import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
@@ -20,13 +20,14 @@ import {
   loadProjectFromURL,
   mergeProject,
   openProject,
+  readProjectURLParams,
   resolveProjectSource,
   setProjectURLParam,
 } from "@/data/io/project";
 import { pickProjectFile, pickWorkspace } from "@/data/io/workspace";
 import { pickFileFromInput } from "@/lib/pickFileFromInput";
 import { useAppStore } from "@/stores/app";
-import { useProjectStore } from "@/stores/project";
+import { projectStore, useProjectStore } from "@/stores/project";
 
 /** Why a workspace cannot be opened, for browsers without the folder picker */
 export const workspaceUnsupportedMessage =
@@ -304,7 +305,9 @@ export function useLoadProjectFile(): (
  * `useChooseProjectProvider`)
  *
  * The imported project is recorded in the address bar (see
- * `appendProjectURLParam`). Failures are logged and shown, as the callback is
+ * `appendProjectURLParam`) if the open project was loaded from URLs recorded
+ * there, or has no data yet, so that a reload never opens the imported
+ * project alone. Failures are logged and shown, as the callback is
  * called from event handlers.
  *
  * @returns The callback
@@ -335,8 +338,17 @@ export function useImportProjectFromURL(): () => void {
         if (projectProvider === null) {
           return;
         }
-        mergeProject(await loadProjectFromURL(projectProvider, projectUrl));
-        appendProjectURLParam(projectProvider, projectUrl);
+        const loadedProject = await loadProjectFromURL(
+          projectProvider,
+          projectUrl,
+        );
+        const recordProject =
+          readProjectURLParams(window.location.search).length > 0 ||
+          !ProjectUtils.hasData(projectStore.getState());
+        mergeProject(loadedProject);
+        if (recordProject) {
+          appendProjectURLParam(projectProvider, projectUrl);
+        }
       })
       .catch(async (error: unknown) => {
         console.error("Failed to import project from URL", error);
