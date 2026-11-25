@@ -42,7 +42,7 @@ describe("ColorUtils", () => {
     it("throws on invalid line", () => {
       const str = "0 0\n1 1 1";
       expect(() => ColorUtils.parsePalette(str)).toThrow(
-        /Invalid color palette line 0/,
+        /Invalid color palette line '.*' at index 0/,
       );
     });
 

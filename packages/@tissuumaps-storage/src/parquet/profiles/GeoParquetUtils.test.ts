@@ -306,7 +306,7 @@ describe("GeoParquetUtils", () => {
     it("rejects a requested column that is missing or not WKB", () => {
       expect(() =>
         GeoParquetUtils.getShapesColumn(polygons, "outline"),
-      ).toThrow('Geometry column "outline" is missing or not encoded as WKB');
+      ).toThrow("Geometry column 'outline' is missing or not encoded as WKB");
     });
 
     it("rejects a file without geometry columns", () => {
@@ -317,8 +317,8 @@ describe("GeoParquetUtils", () => {
 
     it("rejects a column of points, pointing to its coordinate columns", () => {
       expect(() => GeoParquetUtils.getShapesColumn(points, undefined)).toThrow(
-        'Geometry column "geometry" holds points, which are read as the ' +
-          '"geometry[x]" and "geometry[y]" columns of a table',
+        "Geometry column 'geometry' holds points, which are read as the " +
+          "'geometry[x]' and 'geometry[y]' columns of a table",
       );
     });
   });
@@ -424,7 +424,7 @@ describe("GeoParquetUtils", () => {
           "geometry",
           () => {},
         ),
-      ).rejects.toThrow('Missing geometry in column "geometry"');
+      ).rejects.toThrow("Missing geometry in column 'geometry'");
     });
 
     it("rejects a row that is not a point", async () => {
@@ -435,7 +435,9 @@ describe("GeoParquetUtils", () => {
           "geometry",
           () => {},
         ),
-      ).rejects.toThrow('Column "geometry" contains a Polygon geometry');
+      ).rejects.toThrow(
+        "Column 'geometry' contains a geometry of type 'Polygon'",
+      );
     });
   });
 
@@ -487,8 +489,8 @@ describe("GeoParquetUtils", () => {
       const { ids } = await readShapes();
       expect([...ids]).toEqual([2]);
       expect(warn.mock.calls).toEqual([
-        ["Skipping row without geometry."],
-        ['Skipped 1 points in column "geometry", which are not shapes.'],
+        ["Skipping row without geometry"],
+        ["Skipped 1 points in column 'geometry', which are not shapes"],
       ]);
     });
 
@@ -509,7 +511,7 @@ describe("GeoParquetUtils", () => {
       const { ids } = await readShapes();
       expect([...ids]).toEqual([1]);
       expect(warn).toHaveBeenCalledWith(
-        "Unsupported geometry type: LineString",
+        "Geometry type 'LineString' is not supported",
       );
     });
 
@@ -517,8 +519,8 @@ describe("GeoParquetUtils", () => {
       vi.spyOn(console, "warn").mockImplementation(() => {});
       fakeGeometryChunks([[point(1, 2), point(3, 4)]]);
       await expect(readShapes()).rejects.toThrow(
-        'Geometry column "geometry" holds points, which are read as the ' +
-          '"geometry[x]" and "geometry[y]" columns of a table',
+        "Geometry column 'geometry' holds points, which are read as the " +
+          "'geometry[x]' and 'geometry[y]' columns of a table",
       );
     });
 
@@ -526,7 +528,7 @@ describe("GeoParquetUtils", () => {
       vi.spyOn(console, "warn").mockImplementation(() => {});
       fakeGeometryChunks([[null, null]]);
       await expect(readShapes()).rejects.toThrow(
-        'No valid geometries found in column "geometry"',
+        "No valid geometries found in column 'geometry'",
       );
     });
 

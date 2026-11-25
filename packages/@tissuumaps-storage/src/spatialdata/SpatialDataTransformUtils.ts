@@ -195,7 +195,7 @@ export class SpatialDataTransformUtils {
         break;
       default:
         throw new Error(
-          `Unknown coordinate transformation type '${(transformation as { type: string }).type}'`,
+          `Coordinate transformation type '${(transformation as { type: string }).type}' is not supported`,
         );
     }
     return {

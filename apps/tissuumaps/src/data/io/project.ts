@@ -56,7 +56,7 @@ function cleanProject(project: Project): Project {
 export function getProjectProvider(type: string): ProjectProvider {
   const projectProvider = appStore.getState().projectProviders.get(type);
   if (projectProvider === undefined) {
-    throw new Error(`No project provider for type ${type}.`);
+    throw new Error(`No project provider for type '${type}'`);
   }
   return projectProvider;
 }
@@ -150,7 +150,9 @@ export function mergeProject(loadedProject: {
     const baseIds = new Set(baseItems.map((item) => item.id));
     const takenItem = mergedItems.find((item) => baseIds.has(item.id));
     if (takenItem !== undefined) {
-      throw new Error(`Cannot merge project: ID ${takenItem.id} is taken.`);
+      throw new Error(
+        `ID '${takenItem.id}' is already taken in the open project`,
+      );
     }
   }
   const adoptName = !ProjectUtils.hasData(baseProject);
@@ -277,9 +279,7 @@ export async function loadLocalProject(
     });
   }
   if (projectFile.kind === "directory") {
-    throw new Error(
-      `The folder "${projectFile.name}" is not in the workspace.`,
-    );
+    throw new Error(`The folder '${projectFile.name}' is not in the workspace`);
   }
   const file = await projectFile.getFile();
   signal?.throwIfAborted(); // getFile() does not throw on abort
@@ -335,7 +335,7 @@ function loadWithProjectProvider(
   if (projectProvider.load === undefined) {
     return Promise.reject(
       new Error(
-        `Project provider ${projectProvider.name} cannot load projects.`,
+        `Project provider '${projectProvider.name}' cannot load projects`,
       ),
     );
   }
@@ -367,7 +367,7 @@ export async function downloadProject(
   signal?.throwIfAborted();
   if (projectProvider.toFile === undefined) {
     throw new Error(
-      `Project provider ${projectProvider.name} cannot write projects.`,
+      `Project provider '${projectProvider.name}' cannot write projects`,
     );
   }
   const projectState = projectStore.getState();

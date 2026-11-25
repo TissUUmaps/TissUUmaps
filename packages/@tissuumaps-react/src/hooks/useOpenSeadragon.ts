@@ -75,7 +75,9 @@ export function useOpenSeadragon(
                 );
               } catch (error) {
                 reject(
-                  new Error("Error creating image renderer", { cause: error }),
+                  new Error("Failed to create the image renderer", {
+                    cause: error,
+                  }),
                 );
               }
             },
@@ -101,7 +103,9 @@ export function useOpenSeadragon(
                 );
               } catch (error) {
                 reject(
-                  new Error("Error creating labels renderer", { cause: error }),
+                  new Error("Failed to create the labels renderer", {
+                    cause: error,
+                  }),
                 );
               }
             },
@@ -139,7 +143,7 @@ export function useOpenSeadragon(
         .then(startOS)
         .catch((error) => {
           if (!abortController.signal.aborted) {
-            console.error("Error starting OpenSeadragon", error);
+            console.error("Failed to start OpenSeadragon", error);
           }
           return null;
         });
@@ -151,7 +155,7 @@ export function useOpenSeadragon(
             return null;
           })
           .catch((error) => {
-            console.error("Error stopping OpenSeadragon", error);
+            console.error("Failed to stop OpenSeadragon", error);
             return null;
           });
       };
@@ -185,7 +189,7 @@ export function useOpenSeadragon(
         .catch((error) => {
           if (!abortController.signal.aborted) {
             console.error(
-              "Error updating OpenSeadragon image world bounds",
+              "Failed to update the OpenSeadragon image world bounds",
               error,
             );
           }
@@ -209,7 +213,7 @@ export function useOpenSeadragon(
         .catch((error) => {
           if (!abortController.signal.aborted) {
             console.error(
-              "Error updating OpenSeadragon labels world bounds",
+              "Failed to update the OpenSeadragon labels world bounds",
               error,
             );
           }
@@ -238,7 +242,7 @@ export function useOpenSeadragon(
         )
         .catch((error) => {
           if (!abortController.signal.aborted) {
-            console.error("Error synchronizing OpenSeadragon images", error);
+            console.error("Failed to synchronize OpenSeadragon images", error);
           }
         });
     }
@@ -268,7 +272,7 @@ export function useOpenSeadragon(
         )
         .catch((error) => {
           if (!abortController.signal.aborted) {
-            console.error("Error synchronizing OpenSeadragon labels", error);
+            console.error("Failed to synchronize OpenSeadragon labels", error);
           }
         });
     }
@@ -297,7 +301,7 @@ export function useOpenSeadragon(
           .catch((error) => {
             if (!abortController.signal.aborted) {
               console.error(
-                "Error updating OpenSeadragon content bounds",
+                "Failed to update the OpenSeadragon content bounds",
                 error,
               );
             }

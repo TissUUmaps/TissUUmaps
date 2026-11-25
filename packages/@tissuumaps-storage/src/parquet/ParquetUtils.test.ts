@@ -463,7 +463,7 @@ describe("ParquetUtils", () => {
       fakeChunks(new Map([[metadata, [new BigInt64Array([2n ** 60n])]]]));
       await expect(
         ParquetUtils.readColumn([{ buffer, metadata }], "c", () => {}),
-      ).rejects.toThrow("Value is not a safe integer");
+      ).rejects.toThrow("is not a safe integer");
     });
 
     it("reads other columns as plain arrays with null for missing values", async () => {
@@ -484,7 +484,7 @@ describe("ParquetUtils", () => {
           "missing",
           () => {},
         ),
-      ).rejects.toThrow('Column "missing" not found in Parquet file');
+      ).rejects.toThrow("Column 'missing' not found in the Parquet file");
     });
   });
 });

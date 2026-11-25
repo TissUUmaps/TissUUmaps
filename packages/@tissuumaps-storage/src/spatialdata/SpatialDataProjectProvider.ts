@@ -228,7 +228,9 @@ export class SpatialDataProjectProvider implements ProjectProvider {
     let directory: string | FileSystemDirectoryHandle;
     if (normalizedSource === "/") {
       if (workspace === null) {
-        throw new Error("Cannot open the workspace root without workspace");
+        throw new Error(
+          "The workspace root cannot be opened without a workspace",
+        );
       }
       directory = workspace;
     } else {

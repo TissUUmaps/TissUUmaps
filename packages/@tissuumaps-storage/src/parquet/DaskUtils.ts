@@ -56,7 +56,7 @@ export class DaskUtils {
     const gap = parts.findIndex(({ number }, i) => number !== i);
     if (gap >= 0) {
       throw new Error(
-        `The Dask dataset directory "${directory.name}" lacks partition file part.${gap}.parquet.`,
+        `The Dask dataset directory '${directory.name}' lacks partition file 'part.${gap}.parquet'`,
       );
     }
     const files = await Promise.all(
@@ -154,7 +154,7 @@ export class DaskUtils {
     if (!response.ok) {
       await response.body?.cancel();
       throw new Error(
-        `Failed to check ${url}: ${response.status} ${response.statusText}`,
+        `Failed to check '${url}': ${response.status} ${response.statusText}`,
       );
     }
     if (response.body === null) {

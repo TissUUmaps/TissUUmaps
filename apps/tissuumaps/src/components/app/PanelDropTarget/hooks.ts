@@ -341,7 +341,10 @@ export function usePanelDrop(panelId: string): {
               );
               return SourceUtils.makeProjectPath(workspacePath, projectSource);
             } catch (error) {
-              console.warn(`Skipped the dropped "${item.handle.name}"`, error);
+              console.warn(
+                `Skipped the dropped item '${item.handle.name}'`,
+                error,
+              );
               return null;
             }
           }),

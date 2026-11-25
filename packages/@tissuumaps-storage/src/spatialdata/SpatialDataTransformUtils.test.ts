@@ -313,7 +313,7 @@ describe("SpatialDataTransformUtils", () => {
           input: xy,
           output: global,
         } as unknown as CoordinateTransformation),
-      ).toThrow("Unknown coordinate transformation type 'bspline'");
+      ).toThrow("Coordinate transformation type 'bspline' is not supported");
     });
   });
 });

@@ -21,7 +21,7 @@ export class PlainTIFFParser implements TIFFParser {
     const { z = 0, t = 0, signal } = options ?? {};
     signal?.throwIfAborted();
     if (z !== 0 || t !== 0) {
-      throw new Error("z and t require an OME-TIFF file.");
+      throw new Error("z and t require an OME-TIFF file");
     }
     const images = await TIFFUtils.readImages(tiff, { signal });
     const { full, reduced } = TIFFUtils.partitionBySize(images);
