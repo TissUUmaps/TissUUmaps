@@ -187,7 +187,7 @@ In the TissUUmaps React app, absolute (`@/`) imports are used for imports across
 
 The module also finds the project providers for a source or a local file, and keeps the project GET parameters in sync. Opening a project from a URL replaces them, and importing one from a URL appends a parameter. Opening anything else clears them. This way, a reload reproduces what came from URLs. On startup, the first GET parameter of a project provider opens a project, and the following ones import projects, in order. Without such parameters, `project.tm4` is opened.
 
-The project panel's actions and drops pick the project provider automatically. If none or several match, the user chooses one.
+The project panel's actions and drops pick the project provider automatically. If several match, or none does and more than one can load projects, the user chooses one.
 
 ### Plugin registry
 

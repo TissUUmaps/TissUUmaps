@@ -12,7 +12,7 @@ Project files and their data may be stored locally (client-side) or hosted remot
 
 ## Opening, importing and downloading
 
-Projects are read and written by **project providers**, one per project format. The TissUUmaps project provider handles TissUUmaps project files. Further formats are handled by other project providers, built into TissUUmaps or added by plugins. The format of a file, folder or URL is recognized automatically. If none or several formats match, TissUUmaps asks which one it is.
+Projects are read and written by **project providers**, one per project format. The TissUUmaps project provider handles TissUUmaps project files. Further formats are handled by other project providers, built into TissUUmaps or added by plugins. The format of a file, folder or URL is recognized automatically. If several formats match, or none does and more than one is available, TissUUmaps asks which one it is.
 
 A project can be **opened**, which replaces the open project, or **imported**, which adds its layers, data objects, tables and maps to the open project. An imported project's name is used only if the open project has no data yet, and its viewer settings are ignored. Its project-relative paths are resolved against where the imported project was loaded from (see [Referencing data](#referencing-data)). A project whose IDs are already taken in the open project, e.g. one that was imported before, cannot be imported.
 

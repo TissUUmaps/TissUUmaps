@@ -49,10 +49,9 @@ import { projectStore, useProjectStore } from "@/stores/project";
  * supports is handled like a project file if it lies within the workspace;
  * otherwise, the user can open it as the workspace, and as a project from the
  * workspace root, too. Any other directory is opened as the workspace.
- * Without an open project, a project file that no project provider or several
- * load by its extension is confirmed by choosing the project provider (see
- * `useChooseProjectProvider`). It warns about project files outside the
- * workspace when asking.
+ * Without an open project, a project file with several project providers to
+ * choose from is confirmed by choosing one (see `useChooseProjectProvider`).
+ * It warns about project files outside the workspace when asking.
  * The data panels accept files and directories within the workspace, and
  * open one add data object dialog per item, also while no project is open,
  * which then opens once a data object is added. They accept nothing while no
@@ -71,6 +70,7 @@ export function usePanelDrop(panelId: string): {
 } | null {
   const workspace = useAppStore((state) => state.workspace);
   const isProjectOpen = useAppStore((state) => state.projectOpen);
+  const projectProviders = useAppStore((state) => state.projectProviders);
   const setWorkspace = useAppStore((state) => state.setWorkspace);
   const setProjectOpen = useAppStore((state) => state.setProjectOpen);
 
@@ -186,6 +186,12 @@ export function usePanelDrop(panelId: string): {
   ) => {
     let action: string | null;
     let projectProvider: ProjectProvider | null;
+    const projectProviderChoices =
+      foundProjectProviders.length > 0
+        ? foundProjectProviders
+        : Array.from(projectProviders.values()).filter(
+            (projectProvider) => projectProvider.load !== undefined,
+          );
     if (isProjectOpen) {
       const question = `Import "${projectFile.name}" into the open project, or open it instead? Opening it replaces the open project, and unsaved changes are lost.`;
       action = await ask({
@@ -207,7 +213,7 @@ export function usePanelDrop(panelId: string): {
         foundProjectProviders,
         { actionLabel: action === "import" ? "Import" : "Open" },
       );
-    } else if (foundProjectProviders.length === 1) {
+    } else if (projectProviderChoices.length === 1) {
       action = "open";
       const question = `Open the project "${projectFile.name}"?`;
       const confirmed = await confirm({
@@ -218,7 +224,7 @@ export function usePanelDrop(panelId: string): {
             : question,
         actionLabel: "Open",
       });
-      projectProvider = confirmed ? (foundProjectProviders[0] ?? null) : null;
+      projectProvider = confirmed ? (projectProviderChoices[0] ?? null) : null;
     } else {
       // choosing the format confirms the drop, too
       action = "open";

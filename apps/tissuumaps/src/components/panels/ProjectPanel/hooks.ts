@@ -96,7 +96,7 @@ export function useOpenEmptyProject(): () => void {
 
 /**
  * Returns a function that settles on the project provider to load a project
- * with, asking the user unless exactly one project provider was found
+ * with, asking the user unless there is exactly one to choose from
  *
  * If several were found, the user chooses one of them, the first one
  * preselected; if none was, the user chooses one of all registered project
@@ -118,9 +118,6 @@ export function useChooseProjectProvider(): (
 
   return useCallback(
     async (name, foundProjectProviders, options) => {
-      if (foundProjectProviders.length === 1) {
-        return foundProjectProviders[0]!;
-      }
       const choices = Array.from(projectProviders).filter(
         ([, projectProvider]) =>
           foundProjectProviders.length > 0
@@ -129,6 +126,10 @@ export function useChooseProjectProvider(): (
       );
       if (choices.length === 0) {
         throw new Error("No project provider can load projects.");
+      }
+      if (choices.length === 1) {
+        const choice = choices[0]!;
+        return choice[1];
       }
       const question =
         foundProjectProviders.length > 0
