@@ -68,7 +68,7 @@ export class SpatialDataTransformUtils {
    * transformations that do not name their input axes
    * @returns The transform by coordinate system name, in the order of the
    * transformations, and whether it is exact rather than approximated
-   * @throws Error if a transformation has an unknown type
+   * @throws Error if a transformation has no output or an unknown type
    */
   static getSimilarityTransforms(
     transformations: CoordinateTransformation[],
@@ -79,7 +79,10 @@ export class SpatialDataTransformUtils {
       { transform: SimilarityTransform; exact: boolean }
     >();
     for (const transformation of transformations) {
-      const coordinateSystem = transformation.output!.name;
+      const coordinateSystem = transformation.output?.name;
+      if (coordinateSystem === undefined) {
+        throw new Error("Coordinate transformation without output");
+      }
       if (!transforms.has(coordinateSystem)) {
         transforms.set(
           coordinateSystem,

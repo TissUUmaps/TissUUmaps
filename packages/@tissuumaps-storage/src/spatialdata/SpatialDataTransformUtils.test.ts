@@ -300,6 +300,12 @@ describe("SpatialDataTransformUtils", () => {
       });
     });
 
+    it("rejects a transformation without output", () => {
+      expect(() => getTransform({ type: "identity", input: xy })).toThrow(
+        "Coordinate transformation without output",
+      );
+    });
+
     it("rejects an unknown transformation type", () => {
       expect(() =>
         getTransform({
