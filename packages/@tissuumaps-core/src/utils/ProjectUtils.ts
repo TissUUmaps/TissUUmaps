@@ -3,8 +3,10 @@ import type {
   MarkerConfig,
   OpacityConfig,
   SizeConfig,
+  TableColumnRef,
   VisibilityConfig,
 } from "../model/configs";
+import type { Layer } from "../model/layer";
 import type { Project } from "../model/project";
 
 /** Utility methods for projects */
@@ -28,6 +30,63 @@ export class ProjectUtils {
       project.shapes.length > 0 ||
       project.tables.length > 0
     );
+  }
+
+  /**
+   * Returns whether an object is visible
+   *
+   * An object is visible if it is visible itself and its layer is visible. An
+   * object whose items are assigned to layers by a table column is visible if
+   * it is visible itself.
+   *
+   * @param object - The object, or only its visibility and layer
+   * @param layers - The layers of the project
+   * @returns `true` if the object is visible
+   */
+  static isObjectVisible(
+    object: { visibility: boolean; layer: string | TableColumnRef },
+    layers: Layer[],
+  ): boolean {
+    return (
+      object.visibility &&
+      (typeof object.layer !== "string" ||
+        layers.find(({ id }) => id === object.layer)?.visibility !== false)
+    );
+  }
+
+  /**
+   * Returns the IDs of the loaded objects of one kind after a project change
+   *
+   * The loaded objects are the previously loaded objects that are still in the
+   * project, and every visible object (see {@link ProjectUtils.isObjectVisible}).
+   *
+   * @param objects - The objects of one kind, e.g. the project's images
+   * @param layers - The layers of the project
+   * @param loadedObjectIds - The IDs of the previously loaded objects
+   * @returns The IDs of the loaded objects, in project order, or
+   * `loadedObjectIds` itself if they are the same objects
+   */
+  static getLoadedObjectIds(
+    objects: {
+      id: string;
+      visibility: boolean;
+      layer: string | TableColumnRef;
+    }[],
+    layers: Layer[],
+    loadedObjectIds: string[],
+  ): string[] {
+    const prevLoadedObjectIds = new Set(loadedObjectIds);
+    const newLoadedObjectIds = objects
+      .filter(
+        (object) =>
+          prevLoadedObjectIds.has(object.id) ||
+          ProjectUtils.isObjectVisible(object, layers),
+      )
+      .map((object) => object.id);
+    return newLoadedObjectIds.length === prevLoadedObjectIds.size &&
+      newLoadedObjectIds.every((id) => prevLoadedObjectIds.has(id))
+      ? loadedObjectIds
+      : newLoadedObjectIds;
   }
 
   /**
