@@ -213,9 +213,9 @@ format can be opened, imported and downloaded like TissUUmaps project files:
 appStore.getState().registerProjectProvider("my-format", myProjectProvider);
 ```
 
-Plugins register after the initial projects have started loading, so the GET
-parameter of a plugin's project provider is not served when the page is first
-loaded.
+Built-in plugins register before the initial projects start loading, so their
+GET parameters are served. Other plugins register later, so the GET parameter
+of their project provider is not served when the page is first loaded.
 
 ## User interface plugins
 
