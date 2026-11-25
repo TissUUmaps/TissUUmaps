@@ -24,9 +24,7 @@ const externalPackages = [
 ];
 
 // the entry points besides the root one, which only re-exports them
-const subpathEntries = {
-  spatialdata: resolve(import.meta.dirname, "src/spatialdata/index.ts"),
-};
+const subpathEntries = {};
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -42,7 +40,7 @@ export default defineConfig(({ mode }) => ({
           resolve(import.meta.dirname, "dist/index.d.ts"),
           Object.keys(subpathEntries)
             .map((name) => `export * from "./${name}.js";\n`)
-            .join(""),
+            .join("") || "export {};\n",
         ),
     }),
   ],
