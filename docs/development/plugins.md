@@ -205,6 +205,14 @@ setActivePanelId("images");
 
 The entry is expanded but not scrolled into view.
 
+`appStore`'s `loadedImageIds`, `loadedLabelsIds`, `loadedPointsIds` and
+`loadedShapesIds` are the IDs of the objects whose data is held in memory or
+being loaded, and are set with `setLoadedImageIds` etc. The application adds
+every visible object to them, so an object is loaded the first time it is
+visible, and stays loaded until its ID is removed. To unload an object, hide it
+first, then remove its ID. They are reset whenever another project is loaded or
+the project is closed.
+
 A plugin adds support for a project format by registering a project provider
 (see `ProjectProvider` in `@tissuumaps/core`) in `setup`, after which the
 format can be opened, imported and downloaded like TissUUmaps project files:

@@ -174,10 +174,11 @@ In the TissUUmaps React app, absolute (`@/`) imports are used for imports across
 4. It registers the plugins shipped in `@tissuumaps/plugins` (`enableBuiltInPlugins` in `plugins.ts`).
 5. It marks the project open as soon as the project has a source or data.
 6. It collapses the expanded objects of the panels whenever another project is loaded or the project is closed, i.e. whenever the project store's `instanceId` changes.
-7. It _starts_ loading the initial projects (see [Project I/O](#project-io)).
-8. It dispatches a `tissuumaps-loaded` event on `window` (`events.ts`), after which other plugins register themselves (see [Plugins](./plugins.md)).
+7. It loads every object the first time it is visible, by adding the visible objects to the app store's loaded objects (`loadedImageIds` etc.) whenever the project's layers or objects change. The loaded objects start over whenever the project store's `instanceId` changes.
+8. It _starts_ loading the initial projects (see [Project I/O](#project-io)).
+9. It dispatches a `tissuumaps-loaded` event on `window` (`events.ts`), after which other plugins register themselves (see [Plugins](./plugins.md)).
 
-`bootstrap` returns a teardown function, which is invoked on hot module replacement. The teardown cancels loading the initial projects, stops marking the project open and collapsing its expanded objects, and stops the registry and the caches, in that order.
+`bootstrap` returns a teardown function, which is invoked on hot module replacement. The teardown cancels loading the initial projects, stops loading the visible objects, collapsing the expanded objects and marking the project open, and stops the registry and the caches, in that order.
 
 `App` lays out the built-in panels and the plugin panels (`usePluginPanels`) with Dockview, wrapped in the `DialogProvider`, and keeps Dockview's active panel in sync with the app store's `activePanelId` in both directions (`useActivePanelSync`).
 
@@ -220,7 +221,7 @@ A React context is split into two files: `context.ts` holds the context object a
 
 Four separate Zustand vanilla stores are used, one per file in `src/stores`, all typed in `@tissuumaps/core` (`types/stores`) so that plugins can consume them:
 
-- `appStore` - transient application state: workspace, whether a project is open, interaction mode, registered data providers, project providers and plugins
+- `appStore` - transient application state: workspace, whether a project is open, interaction mode, registered data providers, project providers and plugins, and the loaded objects
 - `dataStore` - derived state: a data reference (`DataRef`) per project object, reconciled by the data caches (see below); treat as read-only
 - `projectStore` - the loaded project (layers, images, labels, points, shapes, tables, maps, render options)
 - `settingsStore` - user settings, persisted across sessions
