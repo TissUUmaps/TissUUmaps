@@ -109,6 +109,8 @@ export class SpatialDataProjectProvider implements ProjectProvider {
    * @param options - Optional abort signal
    * @returns A promise that resolves to whether the source is a SpatialData
    * store, `false` if it is no Zarr group
+   * @throws Error if the source is the workspace root without workspace, if
+   * it cannot be resolved or read, or if the operation is aborted
    */
   async supports(
     normalizedSource: string,
