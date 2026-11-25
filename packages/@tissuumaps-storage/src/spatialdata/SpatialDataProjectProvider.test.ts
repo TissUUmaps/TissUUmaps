@@ -84,12 +84,15 @@ function tableAttrs(
 }
 
 /**
- * Stubs `fetch` to serve a Zarr v3 store at {@link storeUrl}, with
+ * Stubs `fetch` to serve a Zarr v3 store, by default at {@link storeUrl}, with
  * consolidated metadata, whose groups have the given attributes by path
  *
  * The groups listing the elements of a kind are added as needed.
  */
-function stubStore(groups: Record<string, Record<string, unknown>>) {
+function stubStore(
+  groups: Record<string, Record<string, unknown>>,
+  url = storeUrl,
+) {
   const nodes = new Map<string, Record<string, unknown>>();
   for (const [path, attributes] of Object.entries(groups)) {
     const segments = path.split("/");
@@ -116,10 +119,10 @@ function stubStore(groups: Record<string, Record<string, unknown>>) {
     },
   };
   const files = new Map<string, string>([
-    [`${storeUrl}/zarr.json`, JSON.stringify(root)],
+    [`${url}/zarr.json`, JSON.stringify(root)],
     ...[...nodes].map(
       ([path, node]) =>
-        [`${storeUrl}/${path}/zarr.json`, JSON.stringify(node)] as const,
+        [`${url}/${path}/zarr.json`, JSON.stringify(node)] as const,
     ),
   ]);
   const fetchMock = vi.fn((input: RequestInfo | URL) => {
@@ -445,6 +448,22 @@ describe("SpatialDataProjectProvider", () => {
       expect(project.images![0]!.dataSource.source).toBe(
         "data.zarr/images/image",
       );
+    });
+
+    it("loads a store served at an origin root, named after the host", async () => {
+      const originUrl = "http://localhost:8000";
+      stubStore(
+        {
+          "images/image": rasterAttrs([
+            transformation("global", ["c", "y", "x"]),
+          ]),
+        },
+        originUrl,
+      );
+      const { project, source } = await provider.load(`${originUrl}/`);
+      expect(source).toBe(originUrl);
+      expect(project.name).toBe("localhost:8000");
+      expect(project.images![0]!.dataSource.source).toBe("images/image");
     });
 
     it("throws if aborted", async () => {

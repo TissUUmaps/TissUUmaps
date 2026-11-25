@@ -189,7 +189,10 @@ export class SpatialDataProjectProvider implements ProjectProvider {
     const layerIDs = new Map(layers.map(({ id, name }) => [name, id]));
     const project: RawProject = {
       name:
-        source === "/" ? (workspace?.name ?? "") : SourceUtils.getStem(source),
+        source === "/"
+          ? (workspace?.name ?? "")
+          : // a store served at an origin root has no stem
+            SourceUtils.getStem(source) || new URL(source).host,
       layers,
       images: images.map(({ coordinateSystem, object }) => ({
         ...object,
@@ -759,17 +762,17 @@ export class SpatialDataProjectProvider implements ProjectProvider {
 
   /**
    * Returns the source of an element relative to the store's source, i.e. to
-   * its parent directory, or to the workspace root if the store is the
-   * workspace
+   * its parent directory, to the workspace root if the store is the
+   * workspace, or to the origin if it is served at the root of one
    *
    * @param source - The source of the store, without trailing slash
    * @param path - The path of the element within the store
    * @returns The relative source (e.g. `data.zarr/images/a`)
    */
   private static _getElementSource(source: string, path: string): string {
-    return source === "/"
-      ? path
-      : `${SourceUtils.getPathSegments(source).at(-1)!}/${path}`;
+    const name =
+      source === "/" ? undefined : SourceUtils.getPathSegments(source).at(-1);
+    return name === undefined ? path : `${name}/${path}`;
   }
 
   /**
