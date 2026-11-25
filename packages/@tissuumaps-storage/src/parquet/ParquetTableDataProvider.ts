@@ -131,9 +131,11 @@ export class ParquetTableDataProvider implements TableDataProvider<
       parts = files.map((file) => ({ file }));
     }
     if (parts.length === 0) {
-      throw new Error(
-        `No Parquet file or Dask dataset directory found at ${source}`,
-      );
+      let message = `No Parquet file or Dask dataset directory found at '${source}'`;
+      if (typeof resolvedSource === "string") {
+        message += ", or access to it was denied";
+      }
+      throw new Error(message);
     }
     const { idColumn, nameColumn } = normalizedDataSource;
     const { numRows, columns, coordinateColumns, ids, names } =
