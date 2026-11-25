@@ -41,9 +41,10 @@ export interface ProjectProvider {
    * media type, in lowercase and with leading dot (e.g.
    * `{ "application/json": [".tm4"] }`)
    *
-   * Used to pick a project provider for a local file, which has no source to
-   * pass to {@link ProjectProvider.supports}, matching its name regardless of
-   * case, and to filter file pickers.
+   * Used to pick a project provider for a local file, matching its name
+   * regardless of case, and to filter file pickers. Local files are matched
+   * this way also within the workspace, as those outside of it have no source
+   * to pass to {@link ProjectProvider.supports}.
    */
   readonly fileTypes?: Record<string, string[]>;
 

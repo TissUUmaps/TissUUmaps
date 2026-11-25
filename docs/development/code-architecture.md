@@ -95,7 +95,7 @@ A data provider first `normalize()`s a data source: it applies the defaults and 
 
 Data objects are added from a source, with optional help from the data providers: they can tell whether they support a source, read its name from its metadata, and prepare the data source before the data object is added, e.g. by adding a table that the data source then references. The app renders the `source` itself, so it is not part of any data provider's UI schema.
 
-`ProjectProvider` is the project-level counterpart of `DataProvider`: a project provider reads whole projects of a format (`load`), writes them to a file (`toFile`), or both. It recognizes sources with `supports()`, and local files, which have no source, by their `fileTypes`. It may also name a GET parameter (`urlParam`). A loaded project carries its data sources as authored, relative to the source the project provider reports. Project providers are registered in the application state (`registerProjectProvider(type, provider)`).
+`ProjectProvider` is the project-level counterpart of `DataProvider`: a project provider reads whole projects of a format (`load`), writes them to a file (`toFile`), or both. It recognizes sources with `supports()`, and local files, within the workspace or not, by their `fileTypes`. It may also name a GET parameter (`urlParam`). A loaded project carries its data sources as authored, relative to the source the project provider reports. Project providers are registered in the application state (`registerProjectProvider(type, provider)`).
 
 ### Types
 
