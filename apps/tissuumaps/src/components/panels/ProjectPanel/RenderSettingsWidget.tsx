@@ -139,7 +139,7 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
           </Field>
         </div>
         <FieldDescription className="text-muted-foreground text-xs">
-          Physical size of one world unit and its unit, for the scale bar; a
+          Physical size of one world unit and its unit, for the scalebar; a
           world unit is an image pixel, unless transformed
         </FieldDescription>
       </Field>

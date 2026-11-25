@@ -41,7 +41,8 @@ function cleanProject(project: Project): Project {
     viewerBackgroundColor: structuredClone(project.viewerBackgroundColor),
     physicalUnitSize: project.physicalUnitSize,
     physicalUnit: project.physicalUnit,
-    scaleBarVisibility: project.scaleBarVisibility,
+    scalebarVisibility: project.scalebarVisibility,
+    colorbarsVisibility: project.colorbarsVisibility,
   };
 }
 

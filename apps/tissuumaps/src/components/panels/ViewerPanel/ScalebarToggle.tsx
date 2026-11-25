@@ -1,9 +1,9 @@
 import { IconToggle } from "@/components/common/icon-toggle";
 import { useProjectStore } from "@/stores/project";
 
-type ScaleBarIconProps = { filled: boolean };
+type ScalebarIconProps = { filled: boolean };
 
-function ScaleBarIcon({ filled }: ScaleBarIconProps) {
+function ScalebarIcon({ filled }: ScalebarIconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -29,24 +29,24 @@ function ScaleBarIcon({ filled }: ScaleBarIconProps) {
   );
 }
 
-export type ScaleBarToggleProps = { className?: string };
+export type ScalebarToggleProps = { className?: string };
 
-export function ScaleBarToggle({ className }: ScaleBarToggleProps) {
-  const scaleBarVisibility = useProjectStore(
-    (state) => state.scaleBarVisibility,
+export function ScalebarToggle({ className }: ScalebarToggleProps) {
+  const scalebarVisibility = useProjectStore(
+    (state) => state.scalebarVisibility,
   );
-  const setScaleBarVisibility = useProjectStore(
-    (state) => state.setScaleBarVisibility,
+  const setScalebarVisibility = useProjectStore(
+    (state) => state.setScalebarVisibility,
   );
 
   return (
     <IconToggle
-      label="Scale bar"
+      label="Scalebar"
       className={className}
-      pressed={scaleBarVisibility}
-      onPressedChange={setScaleBarVisibility}
+      pressed={scalebarVisibility}
+      onPressedChange={setScalebarVisibility}
     >
-      <ScaleBarIcon filled={scaleBarVisibility} />
+      <ScalebarIcon filled={scalebarVisibility} />
     </IconToggle>
   );
 }
