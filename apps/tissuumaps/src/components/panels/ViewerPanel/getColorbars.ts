@@ -73,9 +73,7 @@ function isOnHiddenLayer(
  * Lists the colorbars of the shown objects whose colors come from a table
  * column
  *
- * Colors with the same column, palette and range share one colorbar. Without
- * both range ends, they also need the same table, whose column sets the
- * missing ends.
+ * Colors with the same table, column, palette and range share one colorbar.
  * A colorbar is named after the objects that use it. The fill or stroke of
  * shapes is named unless both use the colorbar.
  *
@@ -94,14 +92,14 @@ export function getColorbars(state: {
   const { layers, tables, labels, points, shapes } = state;
   const objectColors = [
     ...labels
-      // without a table of their own, the renderer draws labels in default
-      // colors, even if the color column is in another table; mirrors
-      // OpenSeadragonLabelsRenderer._resolveDataTransfer
+      // without a table of their own in the project, the renderer draws labels
+      // in default colors, even if the color column is in another table;
+      // mirrors OpenSeadragonLabelsRenderer._resolveDataTransfer
       .filter(
         (labels) =>
           labels.visibility &&
           !isOnHiddenLayer(labels.layer, layers) &&
-          labels.dataSource.table !== undefined,
+          tables.some(({ id }) => id === labels.dataSource.table),
       )
       .map((labels) => ({
         objectKey: `labels:${labels.id}`,
@@ -168,13 +166,14 @@ export function getColorbars(state: {
     ) {
       continue;
     }
-    // with both range ends, the colorbar does not depend on the table
     const [rangeMin, rangeMax] = from.range ?? [null, null];
-    const scaleKey =
-      rangeMin !== null && rangeMax !== null
-        ? `${rangeMin},${rangeMax}`
-        : `${tableId}:${rangeMin ?? ""},${rangeMax ?? ""}`;
-    const key = `${scaleKey}:${from.palette}:${from.column}`;
+    const key = JSON.stringify([
+      tableId,
+      rangeMin,
+      rangeMax,
+      from.palette,
+      from.column,
+    ]);
     const colorbar = colorbars.get(key);
     if (colorbar === undefined) {
       colorbars.set(key, { from, tableId, colors: [objectColor] });

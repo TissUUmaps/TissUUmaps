@@ -100,7 +100,7 @@ describe("getColorbars", () => {
     ).toEqual(["from-column"]);
   });
 
-  it("leaves out labels without a table", () => {
+  it("leaves out labels without a table in the project", () => {
     expect(
       getColorbarNames({
         labels: [
@@ -117,6 +117,15 @@ describe("getColorbars", () => {
             layer: "shown",
             dataSource: { type: "tiff" },
             labelColor: fromColor,
+          }),
+          createLabels({
+            id: "missing-table",
+            name: "Missing table",
+            layer: "shown",
+            dataSource: { type: "tiff", table: "missing" },
+            labelColor: {
+              from: { table: "cells", column: "score", palette: "viridis" },
+            },
           }),
         ],
       }),
@@ -198,13 +207,10 @@ describe("getColorbars", () => {
     ]);
   });
 
-  it("shares one colorbar between tables for the same column, palette and range", () => {
+  it("keeps one colorbar per table for the same column, palette and range", () => {
     const range: [number, number] = [0, 1];
     expect(
-      getColorbars({
-        layers,
-        tables,
-        labels: [],
+      getColorbarNames({
         points: [
           createPointsWith("cells", {
             pointColor: {
@@ -223,9 +229,8 @@ describe("getColorbars", () => {
             },
           }),
         ],
-        shapes: [],
-      }).map(({ name, from }) => ({ name, table: from.table })),
-    ).toEqual([{ name: "cells, nuclei", table: undefined }]);
+      }),
+    ).toEqual(["cells", "nuclei"]);
   });
 
   it("keeps one colorbar per table for a range with only one end", () => {
