@@ -1,6 +1,7 @@
 import { castDraft } from "immer";
 
 import type { Plugin, PluginRegistry, PluginStores } from "@tissuumaps/core";
+import { aiChatPlugin } from "@tissuumaps/plugins/ai-chat";
 
 import { appStore } from "./stores/app";
 import { dataStore } from "./stores/data";
@@ -162,7 +163,7 @@ export const pluginRegistry: PluginRegistry = {
  * The plugins shipped with TissUUmaps in `@tissuumaps/plugins`, registered by
  * {@link enableBuiltInPlugins}
  */
-const builtInPlugins: Plugin[] = [];
+const builtInPlugins: Plugin[] = [aiChatPlugin];
 
 /**
  * Exposes the {@link pluginRegistry} to plugins as `window.tissuumaps`
