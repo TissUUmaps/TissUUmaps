@@ -4,12 +4,6 @@ import { type TableData, TableUtils } from "@tissuumaps/core";
 
 import { useTableData } from "./useData";
 
-type LoadedValueRange = {
-  tableData: TableData;
-  column: string;
-  valueRange: [number, number] | undefined;
-};
-
 /**
  * Loads the range of the values of a numerical table column
  *
@@ -27,8 +21,11 @@ export function useTableColumnValueRange(
 
   // the range is kept with what it was loaded from, so that the one of a
   // previous table or column is not returned as the current one
-  const [loadedValueRange, setLoadedValueRange] =
-    useState<LoadedValueRange | null>(null);
+  const [loadedValueRange, setLoadedValueRange] = useState<{
+    tableData: TableData;
+    column: string;
+    valueRange: [number, number] | undefined;
+  } | null>(null);
 
   useEffect(() => {
     if (tableData === null || column === null) {
