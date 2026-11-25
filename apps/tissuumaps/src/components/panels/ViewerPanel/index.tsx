@@ -20,6 +20,7 @@ import {
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
+import { ScaleBarViewerControl } from "./ScaleBarViewerControl";
 import { ViewerToolbar } from "./ViewerToolbar";
 import { highlightItemGroup } from "./highlightItemGroup";
 
@@ -30,6 +31,9 @@ export type ViewerPanelProps = {
 export function ViewerPanel({ className }: ViewerPanelProps) {
   const viewerRef = useRef<OpenSeadragonContext>(null);
   const interactionMode = useAppStore((state) => state.interactionMode);
+  const scaleBarVisibility = useProjectStore(
+    (state) => state.scaleBarVisibility,
+  );
   const imageChannelPreview = useAppStore((state) => state.imageChannelPreview);
   const viewerBackgroundColor = useProjectStore(
     (state) => state.viewerBackgroundColor,
@@ -133,6 +137,16 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
           onResetViewport={() => viewerRef.current?.resetViewport()}
         />
       </ViewerControl>
+      {/* lines up to the right of the navigator while that keeps its default
+          position, bottom left */}
+      {scaleBarVisibility && (
+        <ViewerControl
+          anchor={ViewerControlAnchor.BOTTOM_LEFT}
+          autoFade={false}
+        >
+          <ScaleBarViewerControl />
+        </ViewerControl>
+      )}
     </Viewer>
   );
 }

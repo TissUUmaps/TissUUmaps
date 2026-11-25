@@ -9,6 +9,7 @@ import type { TableDataSource } from "../../model/table";
 import type { ImageData, ImageDataProvider } from "../../storage/image";
 import type { LabelsData, LabelsDataProvider } from "../../storage/labels";
 import type { PointsData, PointsDataProvider } from "../../storage/points";
+import type { ProjectProvider } from "../../storage/project";
 import type { ShapesData, ShapesDataProvider } from "../../storage/shapes";
 import type { TableData, TableDataProvider } from "../../storage/table";
 import type { InteractionMode } from "../interaction";
@@ -93,6 +94,9 @@ export type AppStoreState = {
     TableDataProvider<TableDataSource, TableData>
   >;
 
+  /** The registered project providers, by project type */
+  projectProviders: Map<string, ProjectProvider>;
+
   /**
    * The registered plugins, by plugin ID, each as its human-readable name,
    * whether it has a user interface that can be mounted, and the element its
@@ -159,7 +163,8 @@ export type AppStoreState = {
  *
  * Registering a data provider for a data source type that is already taken
  * replaces the previously registered provider, which invalidates the data
- * loaded through it.
+ * loaded through it. Registering a project provider for a project type that is
+ * already taken replaces the previously registered project provider.
  */
 export type AppStoreActions = {
   /**
@@ -304,6 +309,17 @@ export type AppStoreActions = {
   registerTableDataProvider: (
     type: string,
     dataProvider: TableDataProvider<TableDataSource, TableData>,
+  ) => void;
+
+  /**
+   * Registers a project provider
+   *
+   * @param type - The project type the provider handles
+   * @param projectProvider - The project provider to register
+   */
+  registerProjectProvider: (
+    type: string,
+    projectProvider: ProjectProvider,
   ) => void;
 };
 

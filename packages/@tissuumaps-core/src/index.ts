@@ -47,6 +47,8 @@ export {
   type VisibilityConfig,
 } from "./model/configs";
 export {
+  PhysicalUnit,
+  physicalUnits,
   createProject,
   projectDefaults,
   type Project,
@@ -160,6 +162,7 @@ export {
   type PointsDataProvider,
   type PointsGeometry,
 } from "./storage/points";
+export { type ProjectProvider } from "./storage/project";
 export {
   type ShapesData,
   type ShapesDataProvider,

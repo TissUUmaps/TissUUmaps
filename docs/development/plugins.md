@@ -148,12 +148,12 @@ Query groups are optional facts of the table data (see `TableData.getQueryGroups
 
 `setup` and `mount` receive the application's four Zustand stores:
 
-| Store           | Contents                                                                                              |
-| --------------- | ----------------------------------------------------------------------------------------------------- |
-| `appStore`      | Application state: workspace, whether a project is open, interaction mode, data providers, plugins    |
-| `dataStore`     | Data references (`DataRef`) for the loaded data of each project object                                |
-| `projectStore`  | The currently loaded project (name, layers, images, labels, points, shapes, tables, maps) and its URL |
-| `settingsStore` | User settings that are persisted across sessions                                                      |
+| Store           | Contents                                                                                                       |
+| --------------- | -------------------------------------------------------------------------------------------------------------- |
+| `appStore`      | Application state: workspace, whether a project is open, interaction mode, data and project providers, plugins |
+| `dataStore`     | Data references (`DataRef`) for the loaded data of each project object                                         |
+| `projectStore`  | The currently loaded project (name, layers, images, labels, points, shapes, tables, maps) and its URL          |
+| `settingsStore` | User settings that are persisted across sessions                                                               |
 
 Each store is a Zustand store API. Using `appStore` as an example, a plugin can
 read the current value of `myProperty` using `appStore.getState().myProperty`,
@@ -208,6 +208,18 @@ setActivePanelId("images");
 ```
 
 The entry is expanded but not scrolled into view.
+
+A plugin adds support for a project format by registering a project provider
+(see `ProjectProvider` in `@tissuumaps/core`) in `setup`, after which the
+format can be opened, imported and downloaded like TissUUmaps project files:
+
+```javascript
+appStore.getState().registerProjectProvider("my-format", myProjectProvider);
+```
+
+Built-in plugins register before the initial projects start loading, so their
+GET parameters are served. Other plugins register later, so the GET parameter
+of their project provider is not served when the page is first loaded.
 
 ## User interface plugins
 
