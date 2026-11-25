@@ -46,9 +46,9 @@ export type OpenSeadragonLabelsSyncContext = {
  * The tiles of a labels object carry label IDs rather than colors, and are
  * recolored by a data transfer (see
  * {@link OpenSeadragonContext.updateTiledImageDataTransfer}) that looks each
- * ID up in a color lookup table, which folds the visibility and opacity into
- * the alpha channel. Layer and object opacity are not part of it; OpenSeadragon
- * applies them when drawing the tiled image.
+ * ID up in an RGBA color lookup table, which folds the visibility and opacity
+ * into the alpha channel. Layer and object opacity are not part of it;
+ * OpenSeadragon applies them when drawing the tiled image.
  *
  * A label image does not enumerate its labels (see {@link LabelsData}), so the
  * lookup table is resolved per object for the labels that the referenced table
@@ -188,9 +188,9 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
    * referenced table, the table is loaded and the appearance of every label it
    * lists is resolved up front, in the same way as the WebGL renderers resolve
    * the appearance of their items, into a lookup table from label ID to packed
-   * pixel. Every other label - those the table does not list, and all labels
-   * if no configuration needs the table - is resolved as it is first drawn
-   * (see {@link _createDataTransfer}).
+   * RGBA color. Every other label - those the table does not list, and all
+   * labels if no configuration needs the table - is resolved as it is first
+   * drawn (see {@link _createDataTransfer}).
    *
    * If the table cannot be loaded or a configuration cannot be resolved from
    * it, the failure is logged and the lookup table is left empty, so that all
@@ -210,7 +210,7 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
   ): Promise<DataTransfer> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
-    const labelPixelValues = new Map<number, number>();
+    const labelRgbas = new Map<number, number>();
     const requiresTable = [
       labels.labelColor,
       labels.labelVisibility,
@@ -285,7 +285,7 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
           await AsyncUtils.forEach(
             labelIds,
             (labelId, i) => {
-              labelPixelValues.set(
+              labelRgbas.set(
                 labelId,
                 ColorUtils.withAlpha(
                   packedLabelColors[i]!,
@@ -302,14 +302,14 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
             `Failed to resolve labels ${labels.id} from table ${labels.dataSource.table}, resolving without table`,
             error,
           );
-          labelPixelValues.clear();
+          labelRgbas.clear();
         }
       }
     }
     return OpenSeadragonLabelsRenderer._createDataTransfer(
       labels,
       data,
-      labelPixelValues,
+      labelRgbas,
     );
   }
 
@@ -326,14 +326,14 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
    *
    * @param labels - The labels object whose configurations unlisted labels are resolved from
    * @param data - The loaded data of the labels object
-   * @param labelPixelValues - The lookup table from label ID to packed pixel,
+   * @param labelRgbas - The lookup table from label ID to packed RGBA color,
    * extended as labels are drawn
    * @returns The data transfer
    */
   private static _createDataTransfer(
     labels: Labels,
     data: LabelsData,
-    labelPixelValues: Map<number, number>,
+    labelRgbas: Map<number, number>,
   ): DataTransfer {
     return {
       getTileData: (event) => data.getTileData(event),
@@ -343,9 +343,9 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
           if (labelId === 0) {
             pixelBuffer[i] = 0;
           } else {
-            let labelPixelValue = labelPixelValues.get(labelId);
-            if (labelPixelValue === undefined) {
-              labelPixelValue = ColorUtils.withAlpha(
+            let labelRgba = labelRgbas.get(labelId);
+            if (labelRgba === undefined) {
+              labelRgba = ColorUtils.withAlpha(
                 ColorResolver.resolveColorWithoutTable(
                   labelId,
                   labels.labelColor,
@@ -362,9 +362,9 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
                   defaultLabelOpacity,
                 ),
               );
-              labelPixelValues.set(labelId, labelPixelValue);
+              labelRgbas.set(labelId, labelRgba);
             }
-            pixelBuffer[i] = labelPixelValue;
+            pixelBuffer[i] = labelRgba;
           }
         }
       },

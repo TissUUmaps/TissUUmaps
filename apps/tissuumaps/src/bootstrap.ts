@@ -1,42 +1,52 @@
 import { ProjectUtils } from "@tissuumaps/core";
 
 import { startDataCaches } from "./data/cache";
-import { loadProjectFromURL, projectURLParam } from "./data/io/project";
-import { enableBuiltInDataProviders } from "./data/providers";
+import {
+  findProjectProviders,
+  loadProjectFromURL,
+  mergeProject,
+  openProject,
+  readProjectURLParams,
+} from "./data/io/project";
+import {
+  enableBuiltInDataProviders,
+  enableBuiltInProjectProviders,
+} from "./data/providers";
 import { notifyTissUUmapsLoaded } from "./events";
 import { enableBuiltInPlugins, startPluginRegistry } from "./plugins";
 import { appStore } from "./stores/app";
 import { projectStore } from "./stores/project";
 
-/** The project loaded on startup when the URL does not name one */
+/** The project opened on startup when the URL does not name one */
 const fallbackProjectUrl = "project.tm4";
 
 /**
  * Starts up the parts of the application that live outside of React
  *
- * Registers the built-in data providers, starts the data caches and the plugin
- * registry, registers the built-in plugins, marks the project open once it has
- * a source or data, collapses the expanded objects whenever another project is
- * loaded or the project is closed,
- * starts loading the initial project, and finally announces that the
- * application has loaded.
- * The project is only loading, not loaded, by the time this returns.
+ * Registers the built-in data providers and project providers, starts the data
+ * caches and the plugin registry, registers the built-in plugins, marks the
+ * project open once it has a source or data, collapses the expanded objects
+ * whenever another project is loaded or the project is closed, starts loading
+ * the initial projects, and finally announces that the application has loaded.
+ * The projects are only loading, not loaded, by the time this returns.
  *
- * @returns A callback that cancels the initial project loading, stops
+ * @returns A callback that cancels loading the initial projects, stops
  * collapsing the expanded objects and marking the project open, and stops the
  * plugin registry and the data caches, invoked on hot module replacement
  */
 export function bootstrap(): () => void {
   enableBuiltInDataProviders();
+  enableBuiltInProjectProviders();
   const stopDataCaches = startDataCaches();
   const stopPluginRegistry = startPluginRegistry();
   enableBuiltInPlugins();
   const stopMarkingProjectOpen = startMarkingProjectOpen();
   const stopCollapsingOnProjectSwitch = startCollapsingOnProjectSwitch();
-  const cancelInitialProjectLoading = loadInitialProject();
+  const initialProjectsLoading = new AbortController();
+  void loadInitialProjects({ signal: initialProjectsLoading.signal });
   notifyTissUUmapsLoaded();
   return () => {
-    cancelInitialProjectLoading();
+    initialProjectsLoading.abort();
     stopCollapsingOnProjectSwitch();
     stopMarkingProjectOpen();
     stopPluginRegistry();
@@ -86,23 +96,75 @@ function startCollapsingOnProjectSwitch(): () => void {
 }
 
 /**
- * Starts loading the project named by the {@link projectURLParam} GET
- * parameter, falling back to {@link fallbackProjectUrl} if it is absent or empty
+ * Opens the project named by the first GET parameter of a registered project
+ * provider, and imports the projects named by the following ones, in order
  *
- * Failures are logged, unless loading was cancelled.
+ * Without such parameters, {@link fallbackProjectUrl} is opened with the first
+ * project provider that supports it, without asking. Failures are logged,
+ * unless loading was cancelled; the projects that follow a failed one are
+ * still loaded, into the empty project if opening failed.
  *
- * @returns A callback that cancels the loading
+ * @param options - Optional abort signal
  */
-function loadInitialProject(): () => void {
-  const abortController = new AbortController();
-  const params = new URLSearchParams(window.location.search);
-  const projectUrl = params.get(projectURLParam) || fallbackProjectUrl;
-  loadProjectFromURL(projectUrl, { signal: abortController.signal }).catch(
-    (error) => {
-      if (!abortController.signal.aborted) {
-        console.error(`Failed to load project from ${projectUrl}:`, error);
-      }
-    },
+async function loadInitialProjects(options?: {
+  signal?: AbortSignal;
+}): Promise<void> {
+  const { signal } = options ?? {};
+  const [baseProject, ...projectsToImport] = readProjectURLParams(
+    window.location.search,
   );
-  return () => abortController.abort();
+  if (baseProject === undefined) {
+    try {
+      const [fallbackProjectProvider] = await findProjectProviders(
+        new URL(fallbackProjectUrl, document.baseURI).href,
+        null,
+        { signal },
+      );
+      if (fallbackProjectProvider === undefined) {
+        throw new Error(`No project provider supports ${fallbackProjectUrl}.`);
+      }
+      openProject(
+        await loadProjectFromURL(fallbackProjectProvider, fallbackProjectUrl, {
+          signal,
+        }),
+      );
+    } catch (error) {
+      if (!signal?.aborted) {
+        console.error(
+          `Failed to load project from ${fallbackProjectUrl}:`,
+          error,
+        );
+      }
+    }
+    return;
+  }
+  try {
+    openProject(
+      await loadProjectFromURL(
+        baseProject.projectProvider,
+        baseProject.projectUrl,
+        { signal },
+      ),
+    );
+  } catch (error) {
+    if (signal?.aborted) {
+      return;
+    }
+    console.error(
+      `Failed to load project from ${baseProject.projectUrl}:`,
+      error,
+    );
+  }
+  for (const { projectProvider, projectUrl } of projectsToImport) {
+    try {
+      mergeProject(
+        await loadProjectFromURL(projectProvider, projectUrl, { signal }),
+      );
+    } catch (error) {
+      if (signal?.aborted) {
+        return;
+      }
+      console.error(`Failed to import project from ${projectUrl}:`, error);
+    }
+  }
 }

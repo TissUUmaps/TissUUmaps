@@ -96,7 +96,7 @@ export function SourceInput({
       {workspace !== null && (
         <InputGroupAddon align="inline-end">
           <IconButton
-            label="Choose a file in the connected folder"
+            label="Choose a file in the workspace"
             render={<InputGroupButton size="icon-xs" />}
             disabled={disabled}
             onClick={() => pick(workspace, "file")}
@@ -104,7 +104,7 @@ export function SourceInput({
             <FileIcon />
           </IconButton>
           <IconButton
-            label="Choose a folder in the connected folder"
+            label="Choose a folder in the workspace"
             render={<InputGroupButton size="icon-xs" />}
             disabled={disabled}
             onClick={() => pick(workspace, "directory")}

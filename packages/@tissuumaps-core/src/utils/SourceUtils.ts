@@ -38,14 +38,6 @@
  * URL's path are dropped silently. Resolving within the workspace collapses the
  * segments and fails if the path leaves the workspace.
  *
- * Helpers work on normalized sources: {@link SourceUtils.isWorkspacePath}
- * classifies them, {@link SourceUtils.makeWorkspacePath} builds them,
- * {@link SourceUtils.getPathSegments}, {@link SourceUtils.getParentSource},
- * {@link SourceUtils.getStem} and {@link SourceUtils.getExtension} take them
- * apart, and
- * {@link SourceUtils.makeProjectPath} turns them back into project-relative
- * paths.
- *
  * A relative path whose first segment contains a colon (e.g.
  * `sample1:ch2.tif`) is taken for a URL; write it as `./sample1:ch2.tif`
  * instead.
@@ -106,6 +98,56 @@ export class SourceUtils {
       workspace,
       projectSource,
       options,
+    );
+  }
+
+  /**
+   * Resolves a project-relative source against where its project was loaded
+   * from, so that it no longer depends on the project
+   *
+   * Unlike {@link SourceUtils.normalizeSource}, this applies no fallbacks for
+   * a missing workspace, so the source keeps its meaning wherever it is used:
+   * URLs, app-relative and workspace-relative paths are returned unchanged, and
+   * a project-relative path becomes an absolute URL against a project URL, or a
+   * workspace-relative path otherwise. This is how data sources move from one
+   * project into another.
+   *
+   * @param source - The source
+   * @param projectSource - Where the source's project was loaded from (see
+   *   {@link SourceUtils.normalizeSource})
+   * @returns The source unchanged, the absolute URL, or the collapsed
+   *   workspace-relative path (with `/` prefix)
+   * @throws Error if the source is empty, if a project-relative path does not
+   *   form a valid URL with the project URL, or if it leaves the workspace
+   */
+  static rebaseSource(source: string, projectSource: string | null): string {
+    if (source === "") {
+      throw new Error("Empty source");
+    }
+    if (
+      SourceUtils._urlSchemePattern.test(source) ||
+      source.startsWith(SourceUtils._workspacePathPrefix)
+    ) {
+      return source;
+    }
+    if (
+      projectSource !== null &&
+      SourceUtils._urlSchemePattern.test(projectSource)
+    ) {
+      try {
+        return new URL(source, projectSource).toString();
+      } catch (error) {
+        throw new Error(`Invalid project-relative path: ${source}`, {
+          cause: error,
+        });
+      }
+    }
+    const projectDirSegments =
+      projectSource !== null
+        ? SourceUtils._getWorkspaceSegments(projectSource).slice(0, -1)
+        : [];
+    return SourceUtils.makeWorkspacePath(
+      SourceUtils._collapseSegments(source, projectDirSegments),
     );
   }
 
@@ -471,14 +513,36 @@ export class SourceUtils {
   }
 
   /**
+   * Creates a unique ID for an object, named after its source
+   *
+   * The ID is the file name of the source with every `.` replaced by `-`,
+   * followed by a random UUID, so `cells.ome.zarr` gives e.g.
+   * `cells-ome-zarr-0f8e…`. The UUID keeps the ID unique, also against the IDs
+   * of deleted objects that may still be referenced, and against the IDs of
+   * objects of other projects. Without a source, or for URLs without a path,
+   * the ID is the UUID alone.
+   *
+   * @param normalizedSource - The normalized source of the object (see
+   *   {@link SourceUtils.normalizeSource}), if any
+   * @returns The ID
+   * @throws See {@link SourceUtils.getPathSegments}
+   */
+  static createID(normalizedSource: string | undefined): string {
+    const fileName =
+      normalizedSource !== undefined
+        ? SourceUtils.getPathSegments(normalizedSource).at(-1)
+        : undefined;
+    const uuid = crypto.randomUUID();
+    return fileName ? `${fileName.replaceAll(".", "-")}-${uuid}` : uuid;
+  }
+
+  /**
    * Normalizes a project-relative path
    *
-   * Against a project URL, the path is resolved to an absolute URL. Against a
-   * workspace-relative project path, the path is resolved within the project
-   * file's directory to a workspace-relative path. Without a project source,
-   * the path is normalized as a workspace-relative path as is. Both of the
-   * latter go through {@link SourceUtils._normalizeWorkspacePath}, including
-   * its fallback for when no workspace is open.
+   * The path is first resolved against the project source (see
+   * {@link SourceUtils.rebaseSource}). A resulting workspace-relative path then
+   * goes through {@link SourceUtils._normalizeWorkspacePath}, including its
+   * fallback for when no workspace is open.
    *
    * @param projectPath - The project-relative path (without prefix)
    * @param workspace - The directory handle of the open workspace, if any
@@ -486,9 +550,9 @@ export class SourceUtils {
    * @param options - Optional base URL for the app-relative fallback (see
    *   {@link SourceUtils._normalizeAppPath})
    * @returns The absolute URL, or the normalized workspace-relative path
-   * @throws Error if the path does not form a valid URL with the project URL,
-   *   if it leaves the workspace, or if it cannot be normalized as a
-   *   workspace-relative path (see {@link SourceUtils._normalizeWorkspacePath})
+   * @throws Error if the path cannot be resolved against the project source
+   *   (see {@link SourceUtils.rebaseSource}), or if it cannot be normalized as
+   *   a workspace-relative path (see {@link SourceUtils._normalizeWorkspacePath})
    */
   private static _normalizeProjectPath(
     projectPath: string,
@@ -496,31 +560,12 @@ export class SourceUtils {
     projectSource: string | null,
     options?: { baseUrl?: string },
   ): string {
-    if (projectSource !== null) {
-      if (SourceUtils._urlSchemePattern.test(projectSource)) {
-        try {
-          return new URL(projectPath, projectSource).toString();
-        } catch (error) {
-          throw new Error(`Invalid project-relative path: ${projectPath}`, {
-            cause: error,
-          });
-        }
-      }
-      const projectDirSegments = SourceUtils._getWorkspaceSegments(
-        projectSource,
-      ).slice(0, -1);
-      const segments = SourceUtils._collapseSegments(
-        projectPath,
-        projectDirSegments,
-      );
-      return SourceUtils._normalizeWorkspacePath(
-        SourceUtils.makeWorkspacePath(segments),
-        workspace,
-        options,
-      );
+    const rebasedSource = SourceUtils.rebaseSource(projectPath, projectSource);
+    if (SourceUtils._urlSchemePattern.test(rebasedSource)) {
+      return rebasedSource;
     }
     return SourceUtils._normalizeWorkspacePath(
-      SourceUtils._workspacePathPrefix + projectPath,
+      rebasedSource,
       workspace,
       options,
     );
