@@ -228,7 +228,7 @@ export class SpatialDataProjectProvider implements ProjectProvider {
     let directory: string | FileSystemDirectoryHandle;
     if (normalizedSource === "/") {
       if (workspace === null) {
-        throw new Error("Cannot open the workspace root without workspace.");
+        throw new Error("Cannot open the workspace root without workspace");
       }
       directory = workspace;
     } else {
@@ -665,20 +665,30 @@ export class SpatialDataProjectProvider implements ProjectProvider {
    * @param axes - The names of the element's axes, in order
    * @returns The transform by coordinate system name, in the order of the
    * element's transformations
+   * @throws Error if the transformations cannot be read, naming the element
    */
   private static _getTransforms(
     path: string,
     transformations: CoordinateTransformation[],
     axes: string[],
   ): [string, SimilarityTransform][] {
-    const transforms = SpatialDataTransformUtils.getSimilarityTransforms(
-      transformations,
-      axes,
-    );
+    let transforms: ReturnType<
+      typeof SpatialDataTransformUtils.getSimilarityTransforms
+    >;
+    try {
+      transforms = SpatialDataTransformUtils.getSimilarityTransforms(
+        transformations,
+        axes,
+      );
+    } catch (error) {
+      throw new Error(`Failed to read the transformations of '${path}'`, {
+        cause: error,
+      });
+    }
     return [...transforms].map(([coordinateSystem, { transform, exact }]) => {
       if (!exact) {
         console.warn(
-          `The transformation of ${path} into "${coordinateSystem}" is approximated, as it scales the axes differently or shears them.`,
+          `The transformation of '${path}' into '${coordinateSystem}' is approximated, as it scales the axes differently or shears them`,
         );
       }
       return [coordinateSystem, transform];
@@ -717,7 +727,7 @@ export class SpatialDataProjectProvider implements ProjectProvider {
       const elementKind = SpatialDataProjectProvider._getElementKind(attrs);
       if (elementKind !== kind) {
         console.warn(
-          `Skipping ${kind}/${name}, whose metadata ${elementKind !== undefined ? `marks it as ${elementKind}` : "marks no SpatialData element"}.`,
+          `Skipping '${kind}/${name}', whose metadata ${elementKind !== undefined ? `marks it as '${elementKind}'` : "marks no SpatialData element"}`,
         );
         return false;
       }

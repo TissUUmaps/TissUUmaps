@@ -420,7 +420,7 @@ describe("SpatialDataProjectProvider", () => {
       expect(project.images!.map(({ name }) => name)).toEqual(["image"]);
       expect(project.points).toEqual([]);
       expect(warn).toHaveBeenCalledWith(
-        "Skipping images/transcripts, whose metadata marks it as points.",
+        "Skipping 'images/transcripts', whose metadata marks it as 'points'",
       );
     });
 
@@ -433,7 +433,26 @@ describe("SpatialDataProjectProvider", () => {
       });
       await provider.load(storeUrl);
       expect(warn).toHaveBeenCalledWith(
-        'The transformation of images/image into "global" is approximated, as it scales the axes differently or shears them.',
+        "The transformation of 'images/image' into 'global' is approximated, as it scales the axes differently or shears them",
+      );
+    });
+
+    it("names the element whose transformations cannot be read", async () => {
+      stubStore({
+        "images/image": rasterAttrs([
+          {
+            ...transformation("global", ["c", "y", "x"]),
+            type: "bogus",
+          } as unknown as CoordinateTransformation,
+        ]),
+      });
+      const promise = provider.load(storeUrl);
+      await expect(promise).rejects.toThrow(
+        "Failed to read the transformations of 'images/image'",
+      );
+      await expect(promise).rejects.toHaveProperty(
+        "cause.message",
+        "Unknown coordinate transformation type 'bogus'",
       );
     });
 
