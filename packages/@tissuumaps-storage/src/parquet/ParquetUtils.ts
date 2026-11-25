@@ -20,9 +20,8 @@ import type { ParquetPart } from "./types";
  *
  * A table may be split into several files, its parts, whose rows follow one
  * another in order and which share the schema of the first part. A table has
- * at least one part. Methods that
- * read the rows of a table take its parts; methods that read the metadata of a
- * single file take that file's metadata.
+ * at least one part. Methods that read the rows of a table take its parts;
+ * methods that read the metadata of a single file take that file's metadata.
  */
 export class ParquetUtils {
   /**
