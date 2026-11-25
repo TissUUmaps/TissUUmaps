@@ -82,6 +82,7 @@ Every export carries a TSDoc comment, from which API documentation is generated 
 - Callback props are named `onX` for events (`onClose`) and `onXChange` for controlled values (`onValueChange`).
 - Every component that renders an element of its own accepts `className?: string`. In the application, it is merged into the root element via `cn()`; components in publishable packages are styling-agnostic and forward it verbatim.
 - In the application, styling uses Tailwind (v4) utility classes and `cva` variants; there are no CSS modules. Inline styles are limited to values that cannot be expressed as classes (e.g. measured pixel sizes, CSS custom properties).
+- Components and hooks select the state they render with the store hooks (e.g. `useAppStore`). `getState()` is for event handlers and non-React code, as it does not subscribe to changes.
 - Icons come from `lucide-react`.
 - There is no internationalization; user-facing strings are inline English literals.
 

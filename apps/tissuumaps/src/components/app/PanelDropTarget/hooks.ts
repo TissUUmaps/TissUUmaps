@@ -70,6 +70,7 @@ export function usePanelDrop(panelId: string): {
 } | null {
   const workspace = useAppStore((state) => state.workspace);
   const isProjectOpen = useAppStore((state) => state.projectOpen);
+  // also re-renders the drop label when project providers are registered
   const projectProviders = useAppStore((state) => state.projectProviders);
   const setWorkspace = useAppStore((state) => state.setWorkspace);
   const setProjectOpen = useAppStore((state) => state.setProjectOpen);
