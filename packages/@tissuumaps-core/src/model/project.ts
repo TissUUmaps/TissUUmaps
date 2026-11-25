@@ -10,6 +10,34 @@ import { type RawShapes, type Shapes, createShapes } from "./shapes";
 import { type RawTable, type Table, createTable } from "./table";
 
 /**
+ * Units of physical length, named as in OME-NGFF
+ */
+export const PhysicalUnit = {
+  picometer: "picometer",
+  nanometer: "nanometer",
+  micrometer: "micrometer",
+  millimeter: "millimeter",
+  meter: "meter",
+  kilometer: "kilometer",
+} as const;
+
+/** One of the physical units of the {@link PhysicalUnit} object */
+export type PhysicalUnit = (typeof PhysicalUnit)[keyof typeof PhysicalUnit];
+
+/** Symbol and size, in meters, of every physical unit, small first */
+export const physicalUnits: Record<
+  PhysicalUnit,
+  { symbol: string; size: number }
+> = {
+  picometer: { symbol: "pm", size: 1e-12 },
+  nanometer: { symbol: "nm", size: 1e-9 },
+  micrometer: { symbol: "µm", size: 1e-6 },
+  millimeter: { symbol: "mm", size: 1e-3 },
+  meter: { symbol: "m", size: 1 },
+  kilometer: { symbol: "km", size: 1e3 },
+};
+
+/**
  * Default values for {@link RawProject}
  */
 export const projectDefaults = {
@@ -64,6 +92,7 @@ export const projectDefaults = {
     },
   },
   viewerBackgroundColor: { r: 0, g: 0, b: 0 },
+  scaleBarVisibility: true,
 } as const satisfies Partial<RawProject>;
 
 /**
@@ -175,6 +204,29 @@ export interface RawProject extends RawModel {
    * @defaultValue {@link projectDefaults.viewerBackgroundColor}
    */
   viewerBackgroundColor?: Color;
+
+  /**
+   * Physical size of one world unit, in the physical unit
+   *
+   * The scale bar is in world units unless this is set to a positive value
+   * and the physical unit is set.
+   */
+  physicalUnitSize?: number;
+
+  /**
+   * Unit of the physical unit size
+   *
+   * Either one of the {@link PhysicalUnit} names, between which the scale bar
+   * converts, or any other text, which the scale bar shows as is.
+   */
+  physicalUnit?: string;
+
+  /**
+   * Whether the viewer shows the scale bar
+   *
+   * @defaultValue {@link projectDefaults.scaleBarVisibility}
+   */
+  scaleBarVisibility?: boolean;
 }
 
 /**

@@ -192,7 +192,7 @@ export class OpenSeadragonUtils {
   }
 
   /**
-   * Creates a PNG data URL of a single pixel in the given color
+   * Creates a PNG data URL of a single pixel in the given RGBA color
    *
    * The pixel is drawn onto a 1x1 canvas and exported as PNG, so this requires
    * a DOM with canvas support. As canvases store premultiplied colors, the

@@ -1,7 +1,7 @@
 #version 300 es
 
 #define SCANLINE_DATA_TEXTURE_WIDTH 4096u  // see WebGLShapesRenderer
-#define SHAPE_COLORS_TEXTURE_WIDTH 4096u  // see WebGLShapesRenderer
+#define SHAPE_RGBAS_TEXTURE_WIDTH 4096u  // see WebGLShapesRenderer
 
 // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices#implicit_defaults
 precision highp float; // no default otherwise
@@ -41,16 +41,16 @@ uniform float u_devicePixelSize; // size of a device pixel, in data dimensions
  */
 uniform usampler2D u_scanlineData;
 
-// Shape fill colors (R32UI texture)
-uniform usampler2D u_shapeFillColors;
+// Shape fill RGBA colors (R32UI texture)
+uniform usampler2D u_shapeFillRgbas;
 
-// Shape stroke colors (R32UI texture)
-uniform usampler2D u_shapeStrokeColors;
+// Shape stroke RGBA colors (R32UI texture)
+uniform usampler2D u_shapeStrokeRgbas;
 
 in vec2 v_pos; // in data dimensions
 in float v_scanline; // in [0, u_numScanlines]
 
-out vec4 fragColor;
+out vec4 fragRgba;
 
 // fetches a texel from the given uint texture at a given offset
 uvec4 utexel(usampler2D sampler, uint textureWidth, uint offset) {
@@ -107,11 +107,11 @@ int windingNumber(vec2 p, usampler2D sampler, uint textureWidth, uint offset, ui
 }
 
 // Unpacks a uint-packed 8-bit RGBA color, 0xAABBGGRR (red in the lowest byte)
-vec4 unpackColor(uint color) {
-    float r = float((color >> 0) & 0xFFu) / 255.0;
-    float g = float((color >> 8) & 0xFFu) / 255.0;
-    float b = float((color >> 16) & 0xFFu) / 255.0;
-    float a = float((color >> 24) & 0xFFu) / 255.0;
+vec4 unpackRgba(uint rgba) {
+    float r = float((rgba >> 0) & 0xFFu) / 255.0;
+    float g = float((rgba >> 8) & 0xFFu) / 255.0;
+    float b = float((rgba >> 16) & 0xFFu) / 255.0;
+    float a = float((rgba >> 24) & 0xFFu) / 255.0;
     return vec4(r, g, b, a);
 }
 
@@ -135,7 +135,7 @@ void main() {
         discard; // no shapes on this scanline near the given x coordinate
     }
     // iterate over the bin's shapes
-    fragColor = vec4(0.0);
+    fragRgba = vec4(0.0);
     uvec4 shapeRefs4;
     for(uint i = 0u; i < numShapes; ++i) {
         uint shapeRefIndex = shapeRefOffset + i;
@@ -155,24 +155,24 @@ void main() {
             float fillCoverage = clamp(signedDist / u_devicePixelSize + 0.5, 0.0, 1.0);
             float strokeCoverage = strokeFade * clamp((hsw - minDist) / u_devicePixelSize + 0.5, 0.0, 1.0);
             // only fetch the colors of covered areas (most fragments are covered by the fill only)
-            vec4 fillColor = vec4(0.0);
+            vec4 fillRgba = vec4(0.0);
             if(fillCoverage > 0.0) {
-                uvec4 fillColorTexel = utexel(u_shapeFillColors, SHAPE_COLORS_TEXTURE_WIDTH, shapeIndex);
-                fillColor = unpackColor(fillColorTexel[0]);
-                fillColor.rgb = fillColor.rgb * fillColor.a; // premultiply
-                fillColor *= fillCoverage;
+                uvec4 fillRgbaTexel = utexel(u_shapeFillRgbas, SHAPE_RGBAS_TEXTURE_WIDTH, shapeIndex);
+                fillRgba = unpackRgba(fillRgbaTexel[0]);
+                fillRgba.rgb = fillRgba.rgb * fillRgba.a; // premultiply
+                fillRgba *= fillCoverage;
             }
-            vec4 strokeColor = vec4(0.0);
+            vec4 strokeRgba = vec4(0.0);
             if(strokeCoverage > 0.0) {
-                uvec4 strokeColorTexel = utexel(u_shapeStrokeColors, SHAPE_COLORS_TEXTURE_WIDTH, shapeIndex);
-                strokeColor = unpackColor(strokeColorTexel[0]);
-                strokeColor.rgb = strokeColor.rgb * strokeColor.a; // premultiply
-                strokeColor *= strokeCoverage;
+                uvec4 strokeRgbaTexel = utexel(u_shapeStrokeRgbas, SHAPE_RGBAS_TEXTURE_WIDTH, shapeIndex);
+                strokeRgba = unpackRgba(strokeRgbaTexel[0]);
+                strokeRgba.rgb = strokeRgba.rgb * strokeRgba.a; // premultiply
+                strokeRgba *= strokeCoverage;
             }
-            vec4 shapeColor = strokeColor + (1.0 - strokeColor.a) * fillColor;
-            fragColor = shapeColor + (1.0 - shapeColor.a) * fragColor;
+            vec4 shapeRgba = strokeRgba + (1.0 - strokeRgba.a) * fillRgba;
+            fragRgba = shapeRgba + (1.0 - shapeRgba.a) * fragRgba;
         }
     }
     // apply the layer and object opacity to the composited shapes (premultiplied)
-    fragColor *= u_opacityFactor;
+    fragRgba *= u_opacityFactor;
 }

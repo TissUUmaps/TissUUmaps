@@ -28,9 +28,6 @@ declare global {
  */
 const workspacePickerId = "tissuumaps-workspace";
 
-/** The file extensions of project files */
-export const projectFileExtensions = [".tm4"];
-
 /**
  * Returns whether the browser can pick a workspace directory
  *
@@ -70,15 +67,18 @@ export async function pickWorkspace(): Promise<FileSystemDirectoryHandle | null>
 /**
  * Lets the user pick a project file
  *
+ * @param fileTypes - The types of project files to offer, as filters in the
+ * order given: a description, and the file extensions by media type
  * @param options - Optional directory to open the picker in, instead of the
  * one it was last used in
  * @returns The file handle, or `null` if the user cancelled the picker
  * @throws Error if the browser does not support picking a file, or if access
  * to the file was denied
  */
-export async function pickProjectFile(options?: {
-  startIn?: FileSystemDirectoryHandle;
-}): Promise<FileSystemFileHandle | null> {
+export async function pickProjectFile(
+  fileTypes: { description: string; accept: Record<string, string[]> }[],
+  options?: { startIn?: FileSystemDirectoryHandle },
+): Promise<FileSystemFileHandle | null> {
   if (window.showOpenFilePicker === undefined) {
     throw new Error("Picking a file is not supported by this browser");
   }
@@ -88,12 +88,7 @@ export async function pickProjectFile(options?: {
       id: workspacePickerId,
       startIn: options?.startIn,
       multiple: false,
-      types: [
-        {
-          description: "TissUUmaps project",
-          accept: { "application/json": projectFileExtensions },
-        },
-      ],
+      types: fileTypes,
     });
     return projectFiles[0] ?? null;
   } catch (error) {
@@ -168,12 +163,12 @@ export async function resolveWorkspacePath(
   const segments = await workspace.resolve(handle);
   if (segments === null) {
     throw new Error(
-      `The ${handle.kind === "file" ? "file" : "folder"} is not in the connected folder`,
+      `The ${handle.kind === "file" ? "file" : "folder"} is not in the workspace`,
     );
   }
   if (segments.length === 0) {
     throw new Error(
-      "The connected folder itself cannot be a data source; pick a folder inside it",
+      "The workspace itself cannot be a data source; pick a folder inside it",
     );
   }
   return SourceUtils.makeWorkspacePath(segments);

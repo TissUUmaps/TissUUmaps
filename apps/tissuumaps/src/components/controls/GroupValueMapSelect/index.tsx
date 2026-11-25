@@ -33,6 +33,7 @@ export function GroupValueMapSelect({
         void confirm({
           title: "Delete map",
           body: `Are you sure you want to delete the map "${map.name}"? This action cannot be undone.`,
+          actionLabel: "Delete",
         }).then((confirmed) => {
           if (confirmed) {
             if (map.id === value) {
