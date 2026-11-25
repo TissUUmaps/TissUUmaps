@@ -1,7 +1,21 @@
 import { RotateCcwIcon, SquareIcon } from "lucide-react";
 
-import { ColorUtils, projectDefaults } from "@tissuumaps/core";
+import {
+  ColorUtils,
+  PhysicalUnit,
+  physicalUnits,
+  projectDefaults,
+} from "@tissuumaps/core";
 
+import {
+  Autocomplete,
+  AutocompleteInput,
+  AutocompleteInputGroup,
+  AutocompleteItem,
+  AutocompleteList,
+  AutocompletePopup,
+  AutocompleteTrigger,
+} from "@/components/common/autocomplete";
 import {
   Collapsible,
   CollapsiblePanel,
@@ -17,7 +31,7 @@ import {
 } from "@/components/common/field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+import { InputGroupAddon } from "@/components/ui/input-group";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
@@ -34,12 +48,18 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
   const setViewerBackgroundColor = useProjectStore(
     (state) => state.setViewerBackgroundColor,
   );
-  const osOptions = useProjectStore((state) => state.osOptions);
-  const setOSOptions = useProjectStore((state) => state.setOSOptions);
+  const physicalUnitSize = useProjectStore((state) => state.physicalUnitSize);
+  const setPhysicalUnitSize = useProjectStore(
+    (state) => state.setPhysicalUnitSize,
+  );
+  const physicalUnit = useProjectStore((state) => state.physicalUnit);
+  const setPhysicalUnit = useProjectStore((state) => state.setPhysicalUnit);
 
+  const knownPhysicalUnit = Object.values(PhysicalUnit).find(
+    (unit) => unit === physicalUnit,
+  );
   const { globalPointSizeFactor } = glOptions.pointsRenderOptions;
   const viewerBackgroundColorHex = ColorUtils.toHex(viewerBackgroundColor);
-  const navigatorVisible = osOptions.viewerOptions.showNavigator !== false;
 
   return (
     <div className={cn("flex flex-col gap-2 pl-6", className)}>
@@ -56,22 +76,72 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
         </ColorPicker>
       </Field>
       <Field>
-        <FieldLabel>Navigator</FieldLabel>
-        <div className="flex flex-row items-center gap-x-2">
-          <Switch
-            checked={navigatorVisible}
-            onCheckedChange={(checked) =>
-              setOSOptions({
-                ...osOptions,
-                viewerOptions: {
-                  ...osOptions.viewerOptions,
-                  showNavigator: checked,
-                },
-              })
+        <FieldLabel>World unit size</FieldLabel>
+        <div className="flex flex-row gap-x-1">
+          <FieldControl
+            render={
+              <Input
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="any"
+                placeholder="Unknown"
+                className="min-w-0 flex-1"
+                value={physicalUnitSize ?? ""}
+                onChange={(event) => {
+                  const newValue = event.target.valueAsNumber;
+                  setPhysicalUnitSize(
+                    isNaN(newValue) ? undefined : Math.max(0, newValue),
+                  );
+                }}
+              />
             }
           />
-          {navigatorVisible ? "Shown" : "Hidden"}
+          <Field className="flex w-24 shrink-0">
+            <FieldLabel className="sr-only">Physical unit</FieldLabel>
+            <Autocomplete
+              value={
+                knownPhysicalUnit !== undefined
+                  ? physicalUnits[knownPhysicalUnit].symbol
+                  : (physicalUnit ?? "")
+              }
+              onValueChange={(text) => {
+                // the micro sign and the Greek letter mu are the same symbol
+                const symbol = text.trim().normalize("NFKC");
+                setPhysicalUnit(
+                  Object.values(PhysicalUnit).find(
+                    (unit) =>
+                      physicalUnits[unit].symbol.normalize("NFKC") === symbol,
+                  ) ?? (symbol === "" ? undefined : text),
+                );
+              }}
+              mode="none"
+              items={Object.values(PhysicalUnit)}
+              itemToStringValue={(unit) => physicalUnits[unit].symbol}
+              openOnInputClick
+            >
+              <AutocompleteInputGroup>
+                <AutocompleteInput placeholder="Unit" />
+                <InputGroupAddon align="inline-end">
+                  <AutocompleteTrigger label="Show units" />
+                </InputGroupAddon>
+              </AutocompleteInputGroup>
+              <AutocompletePopup>
+                <AutocompleteList>
+                  {(unit: PhysicalUnit) => (
+                    <AutocompleteItem key={unit} value={unit}>
+                      {physicalUnits[unit].symbol}
+                    </AutocompleteItem>
+                  )}
+                </AutocompleteList>
+              </AutocompletePopup>
+            </Autocomplete>
+          </Field>
         </div>
+        <FieldDescription className="text-muted-foreground text-xs">
+          Physical size of one world unit and its unit, for the scale bar; a
+          world unit is an image pixel, unless transformed
+        </FieldDescription>
       </Field>
       <Field>
         <FieldLabel>Point size factor</FieldLabel>
@@ -105,6 +175,8 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
           render={
             <Input
               type="number"
+              inputMode="decimal"
+              step={0.1}
               min={0}
               value={glOptions.shapesRenderOptions.strokeWidth}
               onChange={(event) => {
@@ -114,7 +186,7 @@ export function RenderSettingsWidget({ className }: RenderSettingsWidgetProps) {
                     ...glOptions,
                     shapesRenderOptions: {
                       ...glOptions.shapesRenderOptions,
-                      strokeWidth: Math.max(0, Math.trunc(newValue)),
+                      strokeWidth: Math.max(0, newValue),
                     },
                   });
                 }

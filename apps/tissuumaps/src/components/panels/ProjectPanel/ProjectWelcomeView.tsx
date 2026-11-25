@@ -43,15 +43,15 @@ export function ProjectWelcomeView({ className }: ProjectWelcomeViewProps) {
         <EmptyTitle>Welcome to TissUUmaps</EmptyTitle>
         <EmptyDescription>
           {workspaceName !== null
-            ? `Open a project from ${workspaceName}, or start an empty project and add images, labels, points or shapes from the folder.`
-            : "Load a TissUUmaps project (.tm4) from your computer or from a link, or open a folder with your data."}
+            ? `Open a project from ${workspaceName}, or start an empty project and add images, labels, points or shapes from the workspace.`
+            : "Open a project from your computer or from a link, or open a workspace with your data."}
         </EmptyDescription>
       </EmptyHeader>
       {workspaceName !== null ? (
         <EmptyContent>
           <Button className="w-full" onClick={openProjectFromFile}>
             <FileIcon />
-            Open project from this folder…
+            Open project from the workspace…
           </Button>
           <div className="grid w-full grid-cols-2 gap-2">
             <Button variant="outline" onClick={openEmptyProject}>
@@ -81,7 +81,7 @@ export function ProjectWelcomeView({ className }: ProjectWelcomeViewProps) {
               onClick={openWorkspace}
             >
               <FolderIcon />
-              Open folder…
+              Open workspace…
             </Button>
           </div>
           {!workspaceSupported && (

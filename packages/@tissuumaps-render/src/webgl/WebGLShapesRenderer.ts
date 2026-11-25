@@ -64,15 +64,15 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   RenderedShapes
 > {
   private static readonly _scanlineDataTextureWidth = 4096; // see fragment shader
-  private static readonly _shapeColorsTextureWidth = 4096; // see fragment shader
+  private static readonly _shapeRgbasTextureWidth = 4096; // see fragment shader
   private static readonly _numValuesPerScanlineDataTextureLine =
     4 * WebGLShapesRenderer._scanlineDataTextureWidth; // 4 values per RGBA32UI texel
-  private static readonly _numValuesPerShapeColorsTextureLine =
-    1 * WebGLShapesRenderer._shapeColorsTextureWidth; // 1 value per R32UI texel
+  private static readonly _numValuesPerShapeRgbasTextureLine =
+    1 * WebGLShapesRenderer._shapeRgbasTextureWidth; // 1 value per R32UI texel
   private static readonly _textureUnits = {
     SCANLINE_DATA: 1, // unit 0 is used by the points renderer
-    SHAPE_FILL_COLORS: 2,
-    SHAPE_STROKE_COLORS: 3,
+    SHAPE_FILL_RGBAS: 2,
+    SHAPE_STROKE_RGBAS: 3,
   };
 
   renderOptions: WebGLShapesRenderOptions =
@@ -134,12 +134,12 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       WebGLShapesRenderer._textureUnits.SCANLINE_DATA,
     );
     context.gl.uniform1i(
-      context.getUniformLocation(this._program, "u_shapeFillColors"),
-      WebGLShapesRenderer._textureUnits.SHAPE_FILL_COLORS,
+      context.getUniformLocation(this._program, "u_shapeFillRgbas"),
+      WebGLShapesRenderer._textureUnits.SHAPE_FILL_RGBAS,
     );
     context.gl.uniform1i(
-      context.getUniformLocation(this._program, "u_shapeStrokeColors"),
-      WebGLShapesRenderer._textureUnits.SHAPE_STROKE_COLORS,
+      context.getUniformLocation(this._program, "u_shapeStrokeRgbas"),
+      WebGLShapesRenderer._textureUnits.SHAPE_STROKE_RGBAS,
     );
     context.gl.useProgram(null);
   }
@@ -252,19 +252,19 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       );
       this.context.gl.activeTexture(
         WebGL2RenderingContext.TEXTURE0 +
-          WebGLShapesRenderer._textureUnits.SHAPE_FILL_COLORS,
+          WebGLShapesRenderer._textureUnits.SHAPE_FILL_RGBAS,
       );
       this.context.gl.bindTexture(
         WebGL2RenderingContext.TEXTURE_2D,
-        renderedShapes.shapeFillColorsTexture,
+        renderedShapes.shapeFillRgbasTexture,
       );
       this.context.gl.activeTexture(
         WebGL2RenderingContext.TEXTURE0 +
-          WebGLShapesRenderer._textureUnits.SHAPE_STROKE_COLORS,
+          WebGLShapesRenderer._textureUnits.SHAPE_STROKE_RGBAS,
       );
       this.context.gl.bindTexture(
         WebGL2RenderingContext.TEXTURE_2D,
-        renderedShapes.shapeStrokeColorsTexture,
+        renderedShapes.shapeStrokeRgbasTexture,
       );
       this.context.gl.drawArrays(WebGL2RenderingContext.TRIANGLE_STRIP, 0, 4);
     }
@@ -317,7 +317,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
    * maps changed (see {@link _createRenderConfigSnapshot}) -
    * requests all of it before the first `await`, and then computes the bounds,
    * the grid size and the paddings, rasterizes the scanline data and folds the
-   * resolved visibilities and opacities into the colors.
+   * resolved visibilities and opacities into the colors as alpha.
    *
    * See {@link WebGLRendererBase.prepareRenderedObject} for when this runs.
    *
@@ -351,21 +351,21 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       renderedShapes.shapePadding !== shapePadding;
     const renderConfigSnapshot =
       WebGLShapesRenderer._createRenderConfigSnapshot(newRef, syncContext);
-    const fillColorsChanged =
-      WebGLShapesRenderer._checkShapeFillColorsTextureChanged(
+    const fillRgbasChanged =
+      WebGLShapesRenderer._checkShapeFillRgbasTextureChanged(
         renderedShapes,
         renderConfigSnapshot,
       );
-    const strokeColorsChanged =
-      WebGLShapesRenderer._checkShapeStrokeColorsTextureChanged(
+    const strokeRgbasChanged =
+      WebGLShapesRenderer._checkShapeStrokeRgbasTextureChanged(
         renderedShapes,
         renderConfigSnapshot,
       );
     const geometryPromise = geometryChanged
       ? newRef.data.loadGeometry({ signal })
       : undefined;
-    const colorsChanged = fillColorsChanged || strokeColorsChanged;
-    const packedShapeVisibilitiesPromise = colorsChanged
+    const rgbasChanged = fillRgbasChanged || strokeRgbasChanged;
+    const packedShapeVisibilitiesPromise = rgbasChanged
       ? VisibilityResolver.resolveVisibilities(
           newRef.itemIds,
           newRef.object.shapeVisibility,
@@ -374,11 +374,11 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           loadTable,
           {
             signal,
-            align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
+            align: WebGLShapesRenderer._numValuesPerShapeRgbasTextureLine,
           },
         )
       : undefined;
-    const packedShapeOpacitiesPromise = colorsChanged
+    const packedShapeOpacitiesPromise = rgbasChanged
       ? OpacityResolver.resolveOpacities(
           newRef.itemIds,
           newRef.object.shapeOpacity,
@@ -387,11 +387,11 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           loadTable,
           {
             signal,
-            align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
+            align: WebGLShapesRenderer._numValuesPerShapeRgbasTextureLine,
           },
         )
       : undefined;
-    const packedShapeFillColorsPromise = fillColorsChanged
+    const packedShapeFillColorsPromise = fillRgbasChanged
       ? ColorResolver.resolveColors(
           newRef.itemIds,
           newRef.object.shapeFillColor,
@@ -400,11 +400,11 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           loadTable,
           {
             signal,
-            align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
+            align: WebGLShapesRenderer._numValuesPerShapeRgbasTextureLine,
           },
         )
       : undefined;
-    const packedShapeFillVisibilitiesPromise = fillColorsChanged
+    const packedShapeFillVisibilitiesPromise = fillRgbasChanged
       ? VisibilityResolver.resolveVisibilities(
           newRef.itemIds,
           newRef.object.shapeFillVisibility,
@@ -413,11 +413,11 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           loadTable,
           {
             signal,
-            align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
+            align: WebGLShapesRenderer._numValuesPerShapeRgbasTextureLine,
           },
         )
       : undefined;
-    const packedShapeFillOpacitiesPromise = fillColorsChanged
+    const packedShapeFillOpacitiesPromise = fillRgbasChanged
       ? OpacityResolver.resolveOpacities(
           newRef.itemIds,
           newRef.object.shapeFillOpacity,
@@ -426,11 +426,11 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           loadTable,
           {
             signal,
-            align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
+            align: WebGLShapesRenderer._numValuesPerShapeRgbasTextureLine,
           },
         )
       : undefined;
-    const packedShapeStrokeColorsPromise = strokeColorsChanged
+    const packedShapeStrokeColorsPromise = strokeRgbasChanged
       ? ColorResolver.resolveColors(
           newRef.itemIds,
           newRef.object.shapeStrokeColor,
@@ -439,11 +439,11 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           loadTable,
           {
             signal,
-            align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
+            align: WebGLShapesRenderer._numValuesPerShapeRgbasTextureLine,
           },
         )
       : undefined;
-    const packedShapeStrokeVisibilitiesPromise = strokeColorsChanged
+    const packedShapeStrokeVisibilitiesPromise = strokeRgbasChanged
       ? VisibilityResolver.resolveVisibilities(
           newRef.itemIds,
           newRef.object.shapeStrokeVisibility,
@@ -452,11 +452,11 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           loadTable,
           {
             signal,
-            align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
+            align: WebGLShapesRenderer._numValuesPerShapeRgbasTextureLine,
           },
         )
       : undefined;
-    const packedShapeStrokeOpacitiesPromise = strokeColorsChanged
+    const packedShapeStrokeOpacitiesPromise = strokeRgbasChanged
       ? OpacityResolver.resolveOpacities(
           newRef.itemIds,
           newRef.object.shapeStrokeOpacity,
@@ -465,7 +465,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
           loadTable,
           {
             signal,
-            align: WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
+            align: WebGLShapesRenderer._numValuesPerShapeRgbasTextureLine,
           },
         )
       : undefined;
@@ -546,10 +546,10 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     ]) {
       if (packedShapeColors !== undefined) {
         this._checkDataTextureSize(
-          "shape colors",
-          WebGLShapesRenderer._shapeColorsTextureWidth,
+          "shape RGBA colors",
+          WebGLShapesRenderer._shapeRgbasTextureWidth,
           packedShapeColors.length /
-            WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
+            WebGLShapesRenderer._numValuesPerShapeRgbasTextureLine,
         );
       }
     }
@@ -609,8 +609,9 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       numScanlines,
       numBins,
       scanlineBuffer,
-      packedShapeFillColors,
-      packedShapeStrokeColors,
+      // the colors were folded into RGBA values in place
+      packedShapeFillRgbas: packedShapeFillColors,
+      packedShapeStrokeRgbas: packedShapeStrokeColors,
       renderConfigSnapshot,
     };
   }
@@ -628,8 +629,8 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   ): RenderedShapes {
     if (
       prepared.scanlineBuffer === undefined ||
-      prepared.packedShapeFillColors === undefined ||
-      prepared.packedShapeStrokeColors === undefined
+      prepared.packedShapeFillRgbas === undefined ||
+      prepared.packedShapeStrokeRgbas === undefined
     ) {
       throw new Error("All textures must be prepared for new shapes object");
     }
@@ -645,11 +646,11 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       scanlineDataTexture: this._createScanlineDataTexture(
         prepared.scanlineBuffer,
       ),
-      shapeFillColorsTexture: this._createShapeColorsTexture(
-        prepared.packedShapeFillColors,
+      shapeFillRgbasTexture: this._createShapeRgbasTexture(
+        prepared.packedShapeFillRgbas,
       ),
-      shapeStrokeColorsTexture: this._createShapeColorsTexture(
-        prepared.packedShapeStrokeColors,
+      shapeStrokeRgbasTexture: this._createShapeRgbasTexture(
+        prepared.packedShapeStrokeRgbas,
       ),
     };
   }
@@ -657,7 +658,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   /**
    * Reloads the textures of an object whose data was prepared again
    *
-   * Refills the colors textures in place, and creates a new scanline data
+   * Refills the RGBA textures in place, and creates a new scanline data
    * texture before releasing the one it replaces, so that the old one survives
    * if creating the new one throws. The snapshot is adopted last, so that an
    * update that throws is retried by the next synchronization.
@@ -683,23 +684,23 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       renderedShapes.numScanlines = prepared.numScanlines;
       renderedShapes.numBins = prepared.numBins;
     }
-    if (prepared.packedShapeFillColors !== undefined) {
-      this._loadShapeColorsTexture(
-        renderedShapes.shapeFillColorsTexture,
-        prepared.packedShapeFillColors,
+    if (prepared.packedShapeFillRgbas !== undefined) {
+      this._loadShapeRgbasTexture(
+        renderedShapes.shapeFillRgbasTexture,
+        prepared.packedShapeFillRgbas,
       );
     }
-    if (prepared.packedShapeStrokeColors !== undefined) {
-      this._loadShapeColorsTexture(
-        renderedShapes.shapeStrokeColorsTexture,
-        prepared.packedShapeStrokeColors,
+    if (prepared.packedShapeStrokeRgbas !== undefined) {
+      this._loadShapeRgbasTexture(
+        renderedShapes.shapeStrokeRgbasTexture,
+        prepared.packedShapeStrokeRgbas,
       );
     }
     renderedShapes.renderConfigSnapshot = prepared.renderConfigSnapshot;
     return (
       prepared.scanlineBuffer !== undefined ||
-      prepared.packedShapeFillColors !== undefined ||
-      prepared.packedShapeStrokeColors !== undefined
+      prepared.packedShapeFillRgbas !== undefined ||
+      prepared.packedShapeStrokeRgbas !== undefined
     );
   }
 
@@ -712,8 +713,8 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     renderedShapes: RenderedShapes,
   ): void {
     this.context.gl.deleteTexture(renderedShapes.scanlineDataTexture);
-    this.context.gl.deleteTexture(renderedShapes.shapeFillColorsTexture);
-    this.context.gl.deleteTexture(renderedShapes.shapeStrokeColorsTexture);
+    this.context.gl.deleteTexture(renderedShapes.shapeFillRgbasTexture);
+    this.context.gl.deleteTexture(renderedShapes.shapeStrokeRgbasTexture);
   }
 
   /**
@@ -808,49 +809,49 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   }
 
   /**
-   * Uploads packed fill or stroke colors as a new R32UI texture
+   * Uploads packed fill or stroke RGBA colors as a new R32UI texture
    *
-   * @param packedShapeColors - The packed RGBA colors, one per shape, aligned
+   * @param packedShapeRgbas - The packed RGBA colors, one per shape, aligned
    * to the texture width
-   * @returns The colors texture
+   * @returns The RGBA texture
    */
-  private _createShapeColorsTexture(
-    packedShapeColors: Uint32Array,
+  private _createShapeRgbasTexture(
+    packedShapeRgbas: Uint32Array,
   ): WebGLTexture {
     return this.context.createDataTexture(
       WebGL2RenderingContext.R32UI,
-      WebGLShapesRenderer._shapeColorsTextureWidth,
-      packedShapeColors.length /
-        WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
+      WebGLShapesRenderer._shapeRgbasTextureWidth,
+      packedShapeRgbas.length /
+        WebGLShapesRenderer._numValuesPerShapeRgbasTextureLine,
       WebGL2RenderingContext.RED_INTEGER,
       WebGL2RenderingContext.UNSIGNED_INT,
-      packedShapeColors,
+      packedShapeRgbas,
     );
   }
 
   /**
-   * Refills an existing colors texture with packed fill or stroke colors
+   * Refills an existing RGBA texture with packed fill or stroke RGBA colors
    *
-   * The texture has to have been created by {@link _createShapeColorsTexture}
+   * The texture has to have been created by {@link _createShapeRgbasTexture}
    * for the same number of shapes: its storage is immutable, so the colors
    * have to fill it exactly.
    *
-   * @param texture - The colors texture to refill
-   * @param packedShapeColors - The packed RGBA colors, one per shape, aligned
+   * @param texture - The RGBA texture to refill
+   * @param packedShapeRgbas - The packed RGBA colors, one per shape, aligned
    * to the texture width
    */
-  private _loadShapeColorsTexture(
+  private _loadShapeRgbasTexture(
     texture: WebGLTexture,
-    packedShapeColors: Uint32Array,
+    packedShapeRgbas: Uint32Array,
   ): void {
     this.context.loadDataTexture(
       texture,
-      WebGLShapesRenderer._shapeColorsTextureWidth,
-      packedShapeColors.length /
-        WebGLShapesRenderer._numValuesPerShapeColorsTextureLine,
+      WebGLShapesRenderer._shapeRgbasTextureWidth,
+      packedShapeRgbas.length /
+        WebGLShapesRenderer._numValuesPerShapeRgbasTextureLine,
       WebGL2RenderingContext.RED_INTEGER,
       WebGL2RenderingContext.UNSIGNED_INT,
-      packedShapeColors,
+      packedShapeRgbas,
     );
   }
 
@@ -959,17 +960,17 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   }
 
   /**
-   * Returns whether the fill colors of an object have to be resolved again
+   * Returns whether the fill RGBA colors of an object have to be resolved again
    *
-   * Colors carry the resolved shape and fill visibilities and opacities in
-   * their alpha channel, so they also depend on those configurations. The
-   * layer- and object-level visibility and opacity are shader uniforms (see
+   * Their alpha channel carries the resolved shape and fill visibilities and
+   * opacities, so they also depend on those configurations. The layer- and
+   * object-level visibility and opacity are shader uniforms (see
    * {@link WebGLRendererBase.computeOpacityFactor}) and do not matter here.
    * Also true for an object that has not been rendered yet, like the other
    * predicate. Configurations are compared by value, maps by identity (see
    * {@link _createRenderConfigSnapshot}).
    */
-  private static _checkShapeFillColorsTextureChanged(
+  private static _checkShapeFillRgbasTextureChanged(
     renderedShapes: RenderedShapes | undefined,
     newSnapshot: RenderedShapes["renderConfigSnapshot"],
   ): boolean {
@@ -1009,11 +1010,12 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
   }
 
   /**
-   * Returns whether the stroke colors of an object have to be resolved again
+   * Returns whether the stroke RGBA colors of an object have to be resolved
+   * again
    *
-   * See {@link _checkShapeFillColorsTextureChanged}.
+   * See {@link _checkShapeFillRgbasTextureChanged}.
    */
-  private static _checkShapeStrokeColorsTextureChanged(
+  private static _checkShapeStrokeRgbasTextureChanged(
     renderedShapes: RenderedShapes | undefined,
     newSnapshot: RenderedShapes["renderConfigSnapshot"],
   ): boolean {
@@ -1157,17 +1159,17 @@ type PreparedShapes = {
   numScanlines: number;
   numBins: number;
   scanlineBuffer: Uint32Array | undefined;
-  packedShapeFillColors: Uint32Array | undefined;
-  packedShapeStrokeColors: Uint32Array | undefined;
+  packedShapeFillRgbas: Uint32Array | undefined;
+  packedShapeStrokeRgbas: Uint32Array | undefined;
   renderConfigSnapshot: RenderedShapes["renderConfigSnapshot"];
 };
 
 /**
  * GPU state for a single shapes object
  *
- * Holds the texture handles for scanline data, fill colors and stroke colors,
- * plus a snapshot of the model values they were built from, which the change
- * predicates compare against (see
+ * Holds the texture handles for scanline data, fill RGBA colors and stroke
+ * RGBA colors, plus a snapshot of the model values they were built from, which
+ * the change predicates compare against (see
  * {@link WebGLShapesRenderer._createRenderConfigSnapshot}). Layer- and
  * object-level properties are read from the current model when drawing (see
  * {@link WebGLRendererBase.getRenderPasses}), and are not part of the
@@ -1184,8 +1186,8 @@ type RenderedShapes = RenderedObjectBase<Shapes, ShapesData> & {
   numScanlines: number;
   numBins: number;
   scanlineDataTexture: WebGLTexture;
-  shapeFillColorsTexture: WebGLTexture;
-  shapeStrokeColorsTexture: WebGLTexture;
+  shapeFillRgbasTexture: WebGLTexture;
+  shapeStrokeRgbasTexture: WebGLTexture;
   renderConfigSnapshot: Pick<
     Shapes,
     | "shapeVisibility"

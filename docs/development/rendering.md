@@ -24,7 +24,7 @@ The image's channel view mode selects what is shown: `composite` blends every vi
 
 Custom tile sources are used to enable loading of 8/16/32-bit signed or unsigned integer label masks (TIFF/Zarr).
 
-Label tiles carry label IDs rather than colors. They are recolored by a data transfer that looks each ID up in a color table resolved per object from the label color, visibility and opacity configurations, with visibility and opacity folded into the alpha channel; ID `0` is transparent. A label image does not enumerate its labels (which would require scanning it), so the color table is resolved for the labels listed in the referenced table, if a configuration reads from it; every other label is resolved as it is first drawn - from the configurations that need no table (constant values, and random colors hashed from the ID), or with the default appearance - and memoized. Transfers are kept per tile source, so the navigator is recolored as well, and are only rebuilt when the data, a configuration or a group-to-value map a configuration references changes.
+Label tiles carry label IDs rather than colors. They are recolored by a data transfer that looks each ID up in an RGBA color table resolved per object from the label color, visibility and opacity configurations, with visibility and opacity folded into the alpha channel; ID `0` is transparent. A label image does not enumerate its labels (which would require scanning it), so the RGBA color table is resolved for the labels listed in the referenced table, if a configuration reads from it; every other label is resolved as it is first drawn - from the configurations that need no table (constant values, and random colors hashed from the ID), or with the default appearance - and memoized. Transfers are kept per tile source, so the navigator is recolored as well, and are only rebuilt when the data, a configuration or a group-to-value map a configuration references changes.
 
 ## Points
 
@@ -36,7 +36,7 @@ To enable partial attribute updates, data is loaded using separate buffers for e
 
 Shapes are rendered in multiple passes (i.e., one draw call per shape cloud) using separate data textures for each shape cloud. A "compute shader approach" is employed, where the vertex shader merely runs on the four corners of a quad covering the shape cloud's bounds (dilated by how far the anti-aliased strokes reach beyond them) within the viewport, and the fragment shader implements a custom rendering pipeline (i.e., executed for all fragments of that quad). Shape clouds outside the viewport are skipped entirely.
 
-Partial updates are enabled implicitly by using separate data textures for each shape cloud (update individual shape clouds) and each property (update individual shape cloud properties), including changes to the group-to-value maps a property references. However, shape fill/stroke color, visibility and opacity values are packed into joint 32-bit RGBA values for memory efficiency. As for points, the world → data transform and the layer and object opacity and visibility are per-pass uniforms rather than baked into the textures, so changing them never rebuilds a texture.
+Partial updates are enabled implicitly by using separate data textures for each shape cloud (update individual shape clouds) and each property (update individual shape cloud properties), including changes to the group-to-value maps a property references. However, shape fill/stroke color, visibility and opacity values are packed into joint 32-bit RGBA values for memory efficiency. As for points, the world → data transform and the layer and object opacity and visibility are per-pass uniforms rather than baked into the textures, so changing them never rebuilds a texture. For the same reason, the textures are built from data-space inputs only: nothing that depends on a transform, the zoom or world units (such as the stroke width) may affect them.
 
 The custom rendering pipeline is based on scanline rendering, with the following modifications/optimizations:
 
@@ -64,7 +64,7 @@ The numbers of scanlines and of bins per scanline are chosen independently for e
 - **Scanline height** bounds the number of edges a fragment tests per shape, as edges are only assigned to scanlines. It is chosen so that a scanline holds a given number of edges (a render option) of a typical shape, plus the edges within the padding. The typical shape is determined by the median height per edge, weighted by shape area: fragments are distributed by area, so when zoomed in, a few large, detailed shapes among many small ones cover most of them.
 - **Bin width** bounds the number of shapes a fragment considers. It is the median shape width times a bin width factor (a render option): bins about as wide as the shapes keep both the number of shapes per fragment and the number of bins each shape is listed in small.
 
-The stroke width is a single uniform per shape cloud, shared by all of its shapes. Per-shape stroke widths are therefore not supported, as the bounding boxes and bins are computed without them. Scanline data is stored as `RGBA32UI` and the packed colors as `R32UI`, in textures of a fixed width. A shape cloud whose textures would need more lines than the GPU's maximum texture size is skipped with an error.
+The stroke width is a single uniform per shape cloud, shared by all of its shapes. Per-shape stroke widths are therefore not supported, as the bounding boxes and bins are computed without them. Scanline data is stored as `RGBA32UI` and the packed RGBA colors as `R32UI`, in textures of a fixed width. A shape cloud whose textures would need more lines than the GPU's maximum texture size is skipped with an error.
 
 This approach has been chosen over a "standard approach" primarily to avoid CPU-side triangulation, reduce memory usage (no need to store triangles), enable thick outlines (strokes), allow for high-quality anti-aliasing, and for legacy (TissUUmaps 3) reasons.
 
@@ -86,5 +86,5 @@ Standard approach (dismissed):
    - If necessary, only re-triangulate when necessary (e.g. drawing)
 2. Transfer triangle coordinates into a flat element array buffer on the GPU (cf. points rendering)
 3. Call `gl.drawElements()` with `gl.TRIANGLES` and `count = # triangles`
-   - The vertex shader will run once for every vertex and output shape-specific (flat) varyings such as `v_color`
+   - The vertex shader will run once for every vertex and output shape-specific (flat) varyings such as `v_rgba`
    - The fragment shader will run once for every triangle fragment (i.e., overdraw will result in several runs for the same pixel)

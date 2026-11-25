@@ -1,6 +1,6 @@
 import {
   GeometryUtils,
-  type InteractionMode,
+  InteractionMode,
   type MultiPolygon,
   type Rect,
   type Vertex,
@@ -36,7 +36,8 @@ type FreehandDrawingState = {
 export class SVGController {
   public readonly container: SVGSVGElement;
   public readonly shapeCompleteHandler?: (shape: MultiPolygon) => void;
-  private static readonly _previewFillColor = "rgba(255, 0, 0, 0.2)";
+  private static readonly _previewFillColor = "#FF0000";
+  private static readonly _previewFillOpacity = 0.2;
   private static readonly _previewStrokeColor = "#FF0000";
   private static readonly _previewStrokeWidthFactor = 0.0005;
   private static readonly _minShapeSizeFactor = 0.001;
@@ -108,10 +109,16 @@ export class SVGController {
    * @param newInteractionMode - New interaction mode
    */
   setInteractionMode(newInteractionMode: InteractionMode) {
-    if (this._freehandDrawingState && newInteractionMode !== "drawFreehand") {
+    if (
+      this._freehandDrawingState &&
+      newInteractionMode !== InteractionMode.drawFreehand
+    ) {
       this._cancelFreehand();
     }
-    if (this._polygonDrawingState && newInteractionMode !== "drawPolygon") {
+    if (
+      this._polygonDrawingState &&
+      newInteractionMode !== InteractionMode.drawPolygon
+    ) {
       this._cancelPolygon();
     }
     this._interactionMode = newInteractionMode;
@@ -140,13 +147,13 @@ export class SVGController {
     if (event.shiftKey || event.button !== 0) return;
 
     switch (this._interactionMode) {
-      case "drawRectangle":
+      case InteractionMode.drawRectangle:
         this._handleRectanglePointerDown(event);
         break;
-      case "drawPolygon":
+      case InteractionMode.drawPolygon:
         this._handlePolygonPointerDown(event);
         break;
-      case "drawFreehand":
+      case InteractionMode.drawFreehand:
         this._handleFreehandPointerDown(event);
         break;
     }
@@ -430,6 +437,10 @@ export class SVGController {
     rect.setAttribute("width", "0");
     rect.setAttribute("height", "0");
     rect.setAttribute("fill", SVGController._previewFillColor);
+    rect.setAttribute(
+      "fill-opacity",
+      SVGController._previewFillOpacity.toString(),
+    );
     rect.setAttribute("stroke", SVGController._previewStrokeColor);
     rect.setAttribute(
       "stroke-width",

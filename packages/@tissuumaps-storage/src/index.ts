@@ -7,3 +7,4 @@ export * from "./openseadragon";
 export * from "./parquet";
 export * from "./table";
 export * from "./tiff";
+export * from "./tissuumaps";

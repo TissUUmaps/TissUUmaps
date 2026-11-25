@@ -220,9 +220,23 @@ export class ColorResolver {
       });
     }
     const data = await loadTable(config.from.table, { signal });
-    const valueRange =
-      config.from.range ??
-      (await TableUtils.loadValueRange(data, config.from.column, { signal }));
+    const [rangeMin, rangeMax] = config.from.range ?? [null, null];
+    let valueRange: [number, number] | undefined = undefined;
+    if (rangeMin !== null && rangeMax !== null) {
+      valueRange = [rangeMin, rangeMax];
+    } else {
+      const columnValueRange = await TableUtils.loadValueRange(
+        data,
+        config.from.column,
+        { signal },
+      );
+      if (columnValueRange !== undefined) {
+        valueRange = [
+          rangeMin ?? columnValueRange[0],
+          rangeMax ?? columnValueRange[1],
+        ];
+      }
+    }
     const packedColors = ColorResolver.createColorBuffer(ids.length, { align });
     await TableUtils.fillFromTableValues(
       packedColors,
@@ -315,7 +329,7 @@ export class ColorResolver {
    * Loads color data by assigning each ID a random color from the configured palette
    *
    * The colors are drawn per ID (see {@link pickRandomColor}) and packed
-   * without alpha, which {@link resolveColors} adds.
+   * without alpha, which the caller adds.
    *
    * @param ids - Ordered list of item IDs
    * @param config - Random configuration specifying the palette to sample from

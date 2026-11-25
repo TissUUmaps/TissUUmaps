@@ -21,6 +21,8 @@ The documentation is rendered by the [website](https://github.com/TissUUmaps/Tis
 
 Type checking is part of each package's `build` (`tsc -b`); `pnpm run typecheck` type-checks all projects (emitting only the packages' declaration files into `build/`), including the configuration files and the release scripts.
 
+To type-check a single package that references other projects, use `tsc -b` rather than `tsc -p`. With `-p`, TypeScript resolves the referenced packages through their declaration files in `build/`, which are stale as soon as their sources change.
+
 ## Linting
 
 The code can be linted using ESLint:
@@ -44,6 +46,8 @@ The code can be formatted using Prettier:
 pnpm run fmt
 pnpm run fmt:check
 ```
+
+ESLint does not format: its Prettier config only disables conflicting rules, so `pnpm run lint:fix` leaves formatting as it is.
 
 ## Testing
 
@@ -80,13 +84,13 @@ The repository has a single `main` branch, into which feature branches are merge
 
 Versions and changelogs are managed with [changesets](https://github.com/changesets/changesets). The published `@tissuumaps/*` packages are versioned independently of each other; the `tissuumaps` application has its own version (4.x). The documentation is versioned with the application.
 
-Every pull request that changes a published package or the application adds a changeset describing the change from a user's perspective:
+Every pull request adds a changeset describing the change from a user's perspective, in one or two sentences:
 
 ```sh
 pnpm changeset
 ```
 
-The command asks which packages are affected and whether the change is a `patch` (bug fix), `minor` (new, backwards-compatible functionality) or `major` (breaking change) bump, and writes a markdown file to `.changeset/`, which is committed along with the change. Pull requests that touch neither a package nor the application (documentation, root tooling) need no changeset. Changes inside a package or the application that need no release (e.g. tests only) add an empty changeset instead (`pnpm changeset --empty`), since continuous integration fails for changed packages without a changeset.
+The command asks which packages are affected and whether the change is a `patch` (bug fix), `minor` (new, backwards-compatible functionality) or `major` (breaking change) bump, and writes a markdown file to `.changeset/`, which is committed along with the change. Changes that need no release (e.g. tests, documentation or root tooling only) add an empty changeset instead (`pnpm changeset --empty`). Continuous integration fails for changed packages without a changeset.
 
 `pnpm changeset version` consumes the pending changesets: it bumps the affected versions, updates the version ranges between the packages, and prepends the entries to each package's `CHANGELOG.md`. The changelogs are generated; do not edit them by hand. `pnpm run release` builds the packages and publishes those whose version is not on npm yet (`changeset publish`).
 

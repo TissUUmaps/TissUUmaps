@@ -251,6 +251,40 @@ describe("ColorResolver", () => {
       expect(Array.from(packedColors)).toEqual([firstColor, firstColor]);
     });
 
+    it("takes a missing end of the configured range from the loaded value range", async () => {
+      const palette = colorPalettes[0]!;
+      const ids = new Uint32Array([1, 2, 3]);
+      const loadValueRange = vi.fn().mockResolvedValue([-10, 30]);
+      const data = {
+        ...createMockTableData(ids, [-10, 20, 30]),
+        loadValueRange,
+      };
+      const loadTable = vi.fn().mockResolvedValue(data);
+      const config = {
+        from: { column: "col1", palette: palette.id, range: [null, 20] },
+      } satisfies ColorConfig;
+
+      const packedColors = await ColorResolver.resolveColorsFromTableValues(
+        ids,
+        config,
+        black,
+        loadTable,
+      );
+
+      expect(loadValueRange).toHaveBeenCalledWith("col1", {
+        signal: undefined,
+      });
+      // the range is [-10, 20], so 30 clamps to the last color like 20
+      const lastColor = ColorResolver.packColor(
+        palette.colors[palette.colors.length - 1]!,
+      );
+      expect(Array.from(packedColors)).toEqual([
+        ColorResolver.packColor(palette.colors[0]!),
+        lastColor,
+        lastColor,
+      ]);
+    });
+
     it("returns uniform default color when the palette is not found", async () => {
       const loadTable = vi.fn();
       const config = {
