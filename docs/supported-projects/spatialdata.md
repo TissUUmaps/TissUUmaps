@@ -47,6 +47,9 @@ An object is placed by the element's transformation into the coordinate system. 
 - Transformations that scale the axes differently or shear them are approximated.
 - Axes other than x and y, e.g. the z coordinates of points, are ignored.
 - A remote points directory is read up to its first missing partition (see [Dask](../supported-data/parquet.md#dask)).
+- Format versions are not checked. Stores from before format versioning (no root SpatialData attributes, shapes as Zarr arrays) are not supported.
+- Shapes written with geoarrow encoding are not supported (spatialdata writes WKB by default).
+- The points and shapes of hidden coordinate systems are loaded too.
 
 ## API
 
