@@ -18,7 +18,7 @@ A project can be **opened**, which replaces the open project, or **imported**, w
 
 Open and import projects with the actions in the Project tab's menu, or by dropping a project file on the Project panel. A dropped folder is opened as the workspace, unless it is a project of a known format. Such a folder is opened or imported like a project file if it is inside the workspace. Otherwise, it can be opened as the workspace and as a project at once.
 
-"Download project" saves the open project as a TissUUmaps project file. The file is named after the file the project was opened from, or else after the project. If several formats can be written, "Download as" offers each of them.
+"Download project" saves the open project as a TissUUmaps project file. The file keeps the name of the file or URL the project was opened from, unless that was a file outside the workspace; otherwise, it is named after the project. If several formats can be written, "Download as" offers each of them.
 
 ### Links
 
