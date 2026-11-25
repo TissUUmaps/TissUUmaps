@@ -92,9 +92,10 @@ export function openProject(loadedProject: {
 /**
  * Merges a loaded project into the open project
  *
- * The data sources of the merged project are normalized (see
- * `SourceUtils.normalizeSource`), so relative sources become absolute URLs or
- * workspace-relative paths. The layers, data objects, tables and maps of the
+ * The project-relative data sources of the merged project are resolved
+ * against where it was loaded from (see `SourceUtils.rebaseSource`), so they
+ * become absolute URLs or workspace-relative paths; other data sources are
+ * kept as is, so that their fallbacks apply when they are loaded. The layers, data objects, tables and maps of the
  * merged project are appended to those of the open project, in a single
  * update. Its name is adopted only if the open project has no data objects;
  * its viewer options and background color are ignored. The open project keeps
@@ -104,7 +105,7 @@ export function openProject(loadedProject: {
  * @param loadedProject - The project to merge, and where it was loaded from
  * (see {@link openProject})
  * @throws Error if an ID of the merged project is already taken in the open
- * project, or if one of its data sources cannot be normalized; the open
+ * project, or if one of its data sources cannot be resolved; the open
  * project is left unchanged in either case
  */
 export function mergeProject(loadedProject: {
@@ -112,7 +113,6 @@ export function mergeProject(loadedProject: {
   source: string | null;
 }): void {
   const project = createProject(loadedProject.project);
-  const { workspace } = appStore.getState();
   // resolve against where the merged project was loaded from, as its relative
   // sources would resolve against the open project's source otherwise
   for (const dataObject of [
@@ -123,9 +123,8 @@ export function mergeProject(loadedProject: {
     ...project.tables,
   ]) {
     if (dataObject.dataSource.source !== undefined) {
-      dataObject.dataSource.source = SourceUtils.normalizeSource(
+      dataObject.dataSource.source = SourceUtils.rebaseSource(
         dataObject.dataSource.source,
-        workspace,
         loadedProject.source,
       );
     }
