@@ -20,7 +20,8 @@ import {
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
-import { ScaleBarViewerControl } from "./ScaleBarViewerControl";
+import { ColorbarsViewerControl } from "./ColorbarsViewerControl";
+import { ScalebarViewerControl } from "./ScalebarViewerControl";
 import { ViewerToolbar } from "./ViewerToolbar";
 import { highlightItemGroup } from "./highlightItemGroup";
 
@@ -31,8 +32,11 @@ export type ViewerPanelProps = {
 export function ViewerPanel({ className }: ViewerPanelProps) {
   const viewerRef = useRef<OpenSeadragonContext>(null);
   const interactionMode = useAppStore((state) => state.interactionMode);
-  const scaleBarVisibility = useProjectStore(
-    (state) => state.scaleBarVisibility,
+  const scalebarVisibility = useProjectStore(
+    (state) => state.scalebarVisibility,
+  );
+  const colorbarsVisibility = useProjectStore(
+    (state) => state.colorbarsVisibility,
   );
   const imageChannelPreview = useAppStore((state) => state.imageChannelPreview);
   const viewerBackgroundColor = useProjectStore(
@@ -139,12 +143,21 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
       </ViewerControl>
       {/* lines up to the right of the navigator while that keeps its default
           position, bottom left */}
-      {scaleBarVisibility && (
+      {scalebarVisibility && (
         <ViewerControl
           anchor={ViewerControlAnchor.BOTTOM_LEFT}
           autoFade={false}
         >
-          <ScaleBarViewerControl />
+          <ScalebarViewerControl />
+        </ViewerControl>
+      )}
+      {/* never fades out, as the colorbars explain what the viewer shows */}
+      {colorbarsVisibility && (
+        <ViewerControl
+          anchor={ViewerControlAnchor.BOTTOM_RIGHT}
+          autoFade={false}
+        >
+          <ColorbarsViewerControl />
         </ViewerControl>
       )}
     </Viewer>

@@ -260,7 +260,7 @@ describe("HierarchicalTableReader", () => {
         group({ tables: group({ a: annData({}), b: annData({}) }) }),
       );
       await expect(HierarchicalTableReader.open(store)).rejects.toThrow(
-        '2 AnnData objects ("/tables/a", "/tables/b")',
+        "2 AnnData objects ('/tables/a', '/tables/b')",
       );
       expect(store.closed).toBe(true);
     });
@@ -276,7 +276,7 @@ describe("HierarchicalTableReader", () => {
             { "encoding-type": "anndata" },
           ),
         ),
-      ).rejects.toThrow('"obs/_index" is a group, not a column');
+      ).rejects.toThrow("Path 'obs/_index' is a group, not a column");
     });
 
     it("rejects stores without columns and closes them", async () => {

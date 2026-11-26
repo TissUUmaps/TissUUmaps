@@ -210,7 +210,7 @@ export class TablePointsDataProvider implements PointsDataProvider<
       }
     }
     if (type === undefined) {
-      throw new Error(`No table data provider supports ${source}`);
+      throw new Error(`No table data provider supports '${source}'`);
     }
     const table = await this._addTable({ type, source }, { signal });
     return { ...dataSourceWithoutSource, table };

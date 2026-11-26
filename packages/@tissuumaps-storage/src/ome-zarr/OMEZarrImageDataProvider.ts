@@ -202,10 +202,7 @@ export class OMEZarrImageDataProvider implements ImageDataProvider<
             if (signal?.aborted) {
               throw error;
             }
-            console.warn(
-              `Failed to compute histogram for channel ${c}:`,
-              error,
-            );
+            console.warn(`Failed to compute histogram for channel ${c}`, error);
           }
           return { tileSource, histogram };
         }),

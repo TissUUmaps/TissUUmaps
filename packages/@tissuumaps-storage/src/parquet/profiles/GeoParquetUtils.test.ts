@@ -306,7 +306,7 @@ describe("GeoParquetUtils", () => {
     it("rejects a requested column that is missing or not WKB", () => {
       expect(() =>
         GeoParquetUtils.getShapesColumn(polygons, "outline"),
-      ).toThrow('Geometry column "outline" is missing or not encoded as WKB');
+      ).toThrow("Geometry column 'outline' is missing or not encoded as WKB");
     });
 
     it("rejects a file without geometry columns", () => {
@@ -317,8 +317,8 @@ describe("GeoParquetUtils", () => {
 
     it("rejects a column of points, pointing to its coordinate columns", () => {
       expect(() => GeoParquetUtils.getShapesColumn(points, undefined)).toThrow(
-        'Geometry column "geometry" holds points, which are read as the ' +
-          '"geometry[x]" and "geometry[y]" columns of a table',
+        "Geometry column 'geometry' holds points, which are read as the " +
+          "'geometry[x]' and 'geometry[y]' columns of a table",
       );
     });
   });
@@ -357,6 +357,7 @@ describe("GeoParquetUtils", () => {
 
   describe("readCoordinateColumns", () => {
     const threePoints = fakeMetadata(pointsGeo, 3);
+    const onePoint = fakeMetadata(pointsGeo, 1);
 
     it("reads both axes of a point column in one pass", async () => {
       const readColumnChunks = fakeGeometryChunks([
@@ -365,8 +366,7 @@ describe("GeoParquetUtils", () => {
       ]);
       await expect(
         GeoParquetUtils.readCoordinateColumns(
-          buffer,
-          threePoints,
+          [{ buffer, metadata: threePoints }],
           "geometry",
           () => {},
         ),
@@ -377,28 +377,67 @@ describe("GeoParquetUtils", () => {
       expect(readColumnChunks).toHaveBeenCalledTimes(1);
     });
 
+    it("reads the parts of a table one after another", async () => {
+      const chunksByPart = new Map([
+        [threePoints, [[point(1, 2), point(3, 4)], [point(5, 6)]]],
+        [onePoint, [[point(7, 8)]]],
+      ]);
+      const readColumnChunks = vi
+        .spyOn(ParquetUtils, "readColumnChunks")
+        .mockImplementation(
+          (buffer, metadata, _column, onChunk, onProgress) => {
+            let rowStart = 0;
+            for (const chunk of chunksByPart.get(metadata)!) {
+              onChunk(chunk, rowStart);
+              rowStart += chunk.length;
+            }
+            onProgress(buffer.byteLength, buffer.byteLength);
+            return Promise.resolve();
+          },
+        );
+      const onProgress = vi.fn();
+      await expect(
+        GeoParquetUtils.readCoordinateColumns(
+          [
+            { buffer, metadata: threePoints },
+            { buffer, metadata: onePoint },
+          ],
+          "geometry",
+          onProgress,
+        ),
+      ).resolves.toEqual({
+        x: new Float32Array([1, 3, 5, 7]),
+        y: new Float32Array([2, 4, 6, 8]),
+      });
+      expect(readColumnChunks).toHaveBeenCalledTimes(2);
+      expect(onProgress.mock.calls).toEqual([
+        [8, 16],
+        [16, 16],
+      ]);
+    });
+
     it("rejects a row without a geometry", async () => {
       fakeGeometryChunks([[point(1, 2), null, point(5, 6)]]);
       await expect(
         GeoParquetUtils.readCoordinateColumns(
-          buffer,
-          threePoints,
+          [{ buffer, metadata: threePoints }],
           "geometry",
           () => {},
         ),
-      ).rejects.toThrow('Missing geometry in column "geometry"');
+      ).rejects.toThrow("Missing geometry in column 'geometry'");
     });
 
     it("rejects a row that is not a point", async () => {
       fakeGeometryChunks([[point(1, 2), polygon, point(5, 6)]]);
       await expect(
         GeoParquetUtils.readCoordinateColumns(
-          buffer,
-          threePoints,
+          [{ buffer, metadata: threePoints }],
           "geometry",
           () => {},
         ),
-      ).rejects.toThrow('Column "geometry" contains a Polygon geometry');
+      ).rejects.toThrow(
+        "Column 'geometry' contains a geometry of type 'Polygon'",
+      );
     });
   });
 
@@ -450,8 +489,8 @@ describe("GeoParquetUtils", () => {
       const { ids } = await readShapes();
       expect([...ids]).toEqual([2]);
       expect(warn.mock.calls).toEqual([
-        ["Skipping row without geometry."],
-        ['Skipped 1 points in column "geometry", which are not shapes.'],
+        ["Skipping row without geometry"],
+        ["Skipped 1 points in column 'geometry', which are not shapes"],
       ]);
     });
 
@@ -472,7 +511,7 @@ describe("GeoParquetUtils", () => {
       const { ids } = await readShapes();
       expect([...ids]).toEqual([1]);
       expect(warn).toHaveBeenCalledWith(
-        "Unsupported geometry type: LineString",
+        "Geometry type 'LineString' is not supported",
       );
     });
 
@@ -480,8 +519,8 @@ describe("GeoParquetUtils", () => {
       vi.spyOn(console, "warn").mockImplementation(() => {});
       fakeGeometryChunks([[point(1, 2), point(3, 4)]]);
       await expect(readShapes()).rejects.toThrow(
-        'Geometry column "geometry" holds points, which are read as the ' +
-          '"geometry[x]" and "geometry[y]" columns of a table',
+        "Geometry column 'geometry' holds points, which are read as the " +
+          "'geometry[x]' and 'geometry[y]' columns of a table",
       );
     });
 
@@ -489,7 +528,7 @@ describe("GeoParquetUtils", () => {
       vi.spyOn(console, "warn").mockImplementation(() => {});
       fakeGeometryChunks([[null, null]]);
       await expect(readShapes()).rejects.toThrow(
-        'No valid geometries found in column "geometry"',
+        "No valid geometries found in column 'geometry'",
       );
     });
 

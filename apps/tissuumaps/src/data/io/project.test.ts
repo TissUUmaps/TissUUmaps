@@ -452,7 +452,7 @@ describe("loadProjectFromURL", () => {
   it("rejects for a project provider that cannot load projects", async () => {
     await expect(
       loadProjectFromURL({ name: "Test" }, "https://data.example/p.tm4"),
-    ).rejects.toThrow("Project provider Test cannot load projects.");
+    ).rejects.toThrow("Project provider 'Test' cannot load projects");
   });
 });
 
@@ -634,7 +634,7 @@ describe("downloadProject", () => {
 
   it("rejects for a project provider that cannot write projects", async () => {
     await expect(downloadProject({ name: "Test" })).rejects.toThrow(
-      "Project provider Test cannot write projects.",
+      "Project provider 'Test' cannot write projects",
     );
   });
 });
@@ -762,7 +762,7 @@ describe("mergeProject", () => {
     rawProject.layers = [{ id: "fresh-layer", name: "Fresh" }];
     expect(() => {
       mergeProject({ project: rawProject, source: mergedProjectUrl });
-    }).toThrow("ID merged-image is taken");
+    }).toThrow("ID 'merged-image' is already taken in the open project");
     expect(projectStore.getState()).toBe(projectState);
   });
 

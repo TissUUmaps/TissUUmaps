@@ -164,7 +164,9 @@ export function useWebGL(adapter: ViewerAdapter) {
         );
       } catch (error) {
         context.destroy();
-        throw new Error("Error creating points renderer", { cause: error });
+        throw new Error("Failed to create the points renderer", {
+          cause: error,
+        });
       }
       try {
         await pointsRendererInitPromise;
@@ -180,7 +182,9 @@ export function useWebGL(adapter: ViewerAdapter) {
       } catch (error) {
         pointsRenderer.destroy();
         context.destroy();
-        throw new Error("Error creating shapes renderer", { cause: error });
+        throw new Error("Failed to create the shapes renderer", {
+          cause: error,
+        });
       }
       // set only now, as it may have changed while awaiting the renderers
       if (viewportRef.current !== null) {
@@ -214,7 +218,7 @@ export function useWebGL(adapter: ViewerAdapter) {
 
     glPromiseRef.current = glPromiseRef.current.then(startGL).catch((error) => {
       if (!abortController.signal.aborted) {
-        console.error("Error starting WebGL", error);
+        console.error("Failed to start WebGL", error);
       }
       return null;
     });
@@ -226,7 +230,7 @@ export function useWebGL(adapter: ViewerAdapter) {
           return null;
         })
         .catch((error) => {
-          console.error("Error stopping WebGL", error);
+          console.error("Failed to stop WebGL", error);
           return null;
         });
     };
@@ -235,7 +239,7 @@ export function useWebGL(adapter: ViewerAdapter) {
         .then(startGL)
         .catch((error) => {
           if (!abortController.signal.aborted) {
-            console.error("Error starting WebGL", error);
+            console.error("Failed to start WebGL", error);
           }
           return null;
         });
@@ -252,7 +256,7 @@ export function useWebGL(adapter: ViewerAdapter) {
           return null;
         })
         .catch((error) => {
-          console.error("Error stopping WebGL", error);
+          console.error("Failed to stop WebGL", error);
           return null;
         });
       parentOrNull.removeChild(canvas);
@@ -350,7 +354,7 @@ export function useWebGL(adapter: ViewerAdapter) {
         )
         .catch((error) => {
           if (!abortController.signal.aborted) {
-            console.error("Error synchronizing WebGL points", error);
+            console.error("Failed to synchronize WebGL points", error);
           }
         });
     }
@@ -402,7 +406,7 @@ export function useWebGL(adapter: ViewerAdapter) {
         )
         .catch((error) => {
           if (!abortController.signal.aborted) {
-            console.error("Error synchronizing WebGL shapes", error);
+            console.error("Failed to synchronize WebGL shapes", error);
           }
         });
     }

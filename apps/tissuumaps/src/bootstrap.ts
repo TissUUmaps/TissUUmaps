@@ -143,7 +143,7 @@ async function loadInitialProjects(options?: {
         { signal },
       );
       if (fallbackProjectProvider === undefined) {
-        throw new Error(`No project provider supports ${fallbackProjectUrl}.`);
+        throw new Error(`No project provider supports '${fallbackProjectUrl}'`);
       }
       openProject(
         await loadProjectFromURL(fallbackProjectProvider, fallbackProjectUrl, {
@@ -153,7 +153,7 @@ async function loadInitialProjects(options?: {
     } catch (error) {
       if (!signal?.aborted) {
         console.error(
-          `Failed to load project from ${fallbackProjectUrl}:`,
+          `Failed to load project from '${fallbackProjectUrl}'`,
           error,
         );
       }
@@ -173,7 +173,7 @@ async function loadInitialProjects(options?: {
       return;
     }
     console.error(
-      `Failed to load project from ${baseProject.projectUrl}:`,
+      `Failed to load project from '${baseProject.projectUrl}'`,
       error,
     );
   }
@@ -186,7 +186,7 @@ async function loadInitialProjects(options?: {
       if (signal?.aborted) {
         return;
       }
-      console.error(`Failed to import project from ${projectUrl}:`, error);
+      console.error(`Failed to import project from '${projectUrl}'`, error);
     }
   }
 }

@@ -115,6 +115,7 @@ Both the image and the labels are OME-Zarr images served next to the project fil
 - 64-bit integer image arrays and 64-bit or floating-point label arrays are not supported. Convert them to a narrower integer type when writing the OME-Zarr.
 - Plate and `bioformats2raw.layout` groups have to be referenced by one of their contained images.
 - `image-label` metadata is not read.
+- Coordinate transformations (e.g. physical pixel sizes) are not applied: images and labels are placed in the pixel grid of their full-resolution level. Place them with the object's `transform` instead.
 
 ## API
 

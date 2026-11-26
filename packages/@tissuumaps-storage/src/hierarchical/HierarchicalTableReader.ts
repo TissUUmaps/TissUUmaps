@@ -64,14 +64,14 @@ export class HierarchicalTableReader implements HierarchicalTable {
       signal?.throwIfAborted();
       const root = await store.get("", { signal });
       if (root === null || root.kind !== "group") {
-        throw new Error("The store has no root group.");
+        throw new Error("The store has no root group");
       }
       const columns: HierarchicalTableColumn[] = [];
       const annDataPaths = AnnDataUtils.isAnnDataObject(root) ? [""] : [];
       await collectColumns(store, root, "", columns, annDataPaths, { signal });
       if (annDataPaths.length > 1) {
         throw new Error(
-          `The store holds ${annDataPaths.length} AnnData objects (${annDataPaths.map((path) => `"/${path}"`).join(", ")}); point the source at one of them.`,
+          `The store holds ${annDataPaths.length} AnnData objects (${annDataPaths.map((path) => `'/${path}'`).join(", ")}); point the source at one of them`,
         );
       }
       const annDataPath = annDataPaths[0];
@@ -110,7 +110,7 @@ export class HierarchicalTableReader implements HierarchicalTable {
     signal?.throwIfAborted();
     const resolved = ColumnQueryUtils.resolveColumn(this.columns, query);
     if (resolved === null) {
-      throw new Error(`Column query "${query}" addresses no column`);
+      throw new Error(`Column query '${query}' addresses no column`);
     }
     const { column, index } = resolved;
     const values = await readColumnValues(this._store, column.path, index, {
@@ -118,7 +118,7 @@ export class HierarchicalTableReader implements HierarchicalTable {
     });
     if (numRows !== undefined && values.length !== numRows) {
       throw new Error(
-        `Column "${query}" has ${values.length} rows, but the table has ${numRows}`,
+        `Column '${query}' has ${values.length} rows, but the table has ${numRows}`,
       );
     }
     return values;
@@ -201,7 +201,7 @@ async function inferNumRows(
   }
   const firstColumn = columns[0];
   if (firstColumn === undefined) {
-    throw new Error("No columns found in the store.");
+    throw new Error("No columns found in the store");
   }
   return await getNumRows(store, firstColumn.path, { signal });
 }
@@ -215,13 +215,13 @@ async function getNumRows(
   signal?.throwIfAborted();
   const node = await store.get(path, { signal });
   if (node === null) {
-    throw new Error(`Column "${path}" does not exist`);
+    throw new Error(`Column '${path}' not found`);
   }
   if (node.kind === "array") {
     return node.shape[0]!;
   }
   if (!AnnDataUtils.isColumnGroup(node)) {
-    throw new Error(`"${path}" is a group, not a column`);
+    throw new Error(`Path '${path}' is a group, not a column`);
   }
   return await AnnDataUtils.getNumRows(store, node, path, { signal });
 }
@@ -249,7 +249,7 @@ async function readColumnValues(
   signal?.throwIfAborted();
   const node = await store.get(path, { signal });
   if (node === null) {
-    throw new Error(`Column "${path}" does not exist`);
+    throw new Error(`Column '${path}' not found`);
   }
   if (node.kind === "array") {
     return index === undefined
@@ -257,7 +257,7 @@ async function readColumnValues(
       : await node.slice([null, [index, index + 1]], { signal });
   }
   if (!AnnDataUtils.isColumnGroup(node)) {
-    throw new Error(`"${path}" is a group, not a column`);
+    throw new Error(`Path '${path}' is a group, not a column`);
   }
   return await AnnDataUtils.readColumn(store, node, path, index, { signal });
 }

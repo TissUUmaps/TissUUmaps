@@ -220,6 +220,29 @@ describe("OpenSeadragonUtils", () => {
     });
   });
 
+  describe("fixTileAtPoint", () => {
+    it("never returns a tile index past the last tile of a level", () => {
+      OpenSeadragonUtils.fixTileAtPoint();
+      // A single-level pyramid whose level shape is rounded down, as in an
+      // OME-Zarr level of 719 x 858 px for a scaled size of 719 x 858.43 px
+      const tileSource = new OpenSeadragon.TileSource({
+        width: 11505,
+        height: 13736,
+        tileSize: 1024,
+        minLevel: 0,
+        maxLevel: 0,
+      });
+      tileSource.getLevelScale = () => 719 / 11505;
+      tileSource.getTileHeight = () => 858;
+      tileSource.getNumTiles = () => new OpenSeadragon.Point(1, 1);
+      // the bottom-right corner of the draw area of a rotated tiled image,
+      // which misses the image edge by a rounding error
+      const point = new OpenSeadragon.Point(1 - 3e-16, 13736 / 11505 - 5e-13);
+      const tile = tileSource.getTileAtPoint(0, point);
+      expect([tile.x, tile.y]).toEqual([0, 0]);
+    });
+  });
+
   describe("getTiledImageTransform", () => {
     it("returns the content size at the origin for identity transforms", () => {
       const geom = OpenSeadragonUtils.getTiledImageTransform(

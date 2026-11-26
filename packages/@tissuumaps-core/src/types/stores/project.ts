@@ -488,12 +488,22 @@ export type ProjectStoreActions = {
   setPhysicalUnit: (physicalUnit: Project["physicalUnit"]) => void;
 
   /**
-   * Shows or hides the scale bar
+   * Shows or hides the scalebar
    *
-   * @param scaleBarVisibility - Whether the viewer shows the scale bar
+   * @param scalebarVisibility - Whether the viewer shows the scalebar
    */
-  setScaleBarVisibility: (
-    scaleBarVisibility: Project["scaleBarVisibility"],
+  setScalebarVisibility: (
+    scalebarVisibility: Project["scalebarVisibility"],
+  ) => void;
+
+  /**
+   * Shows or hides the colorbars
+   *
+   * @param colorbarsVisibility - Whether the viewer shows the colorbars of colors
+   * taken from table columns
+   */
+  setColorbarsVisibility: (
+    colorbarsVisibility: Project["colorbarsVisibility"],
   ) => void;
 
   /**
