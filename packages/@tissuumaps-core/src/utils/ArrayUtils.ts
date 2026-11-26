@@ -32,7 +32,7 @@ export class ArrayUtils {
       const ids = Array.isArray(values) ? values : Array.from(values);
       for (const id of ids) {
         if (typeof id !== "string") {
-          throw new Error(`ID is not a string: ${String(id)}`);
+          throw new Error(`ID ${String(id)} is not a string`);
         }
       }
       return ids as string[];
@@ -42,7 +42,9 @@ export class ArrayUtils {
     for (let i = 0; i < values.length; i++) {
       const id = values[i];
       if (typeof id !== "number" || !Number.isSafeInteger(id)) {
-        throw new Error(`ID is not a safe integer: ${String(id)}`);
+        throw new Error(
+          `ID ${typeof id === "string" ? `'${id}'` : String(id)} is not a safe integer`,
+        );
       }
       ids[i] = id;
     }

@@ -4,7 +4,7 @@ import { ParquetTableData } from "./ParquetTableData";
 
 describe("ParquetTableData", () => {
   function createTableData(columns: string[]) {
-    return new ParquetTableData({}, 0, columns, [], undefined, undefined, []);
+    return new ParquetTableData([], 0, columns, [], undefined, undefined, []);
   }
 
   function suggestions(...queries: string[]) {

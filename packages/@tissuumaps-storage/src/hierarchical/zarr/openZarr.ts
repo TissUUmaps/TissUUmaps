@@ -62,7 +62,7 @@ export async function openZarr(
     groupSegments.unshift(parent.name);
   }
   throw new Error(
-    `No Zarr store with consolidated metadata found at "${normalizedSource}" or above it.`,
+    `No Zarr store with consolidated metadata found at '${normalizedSource}' or above it`,
     { cause: sourceError },
   );
 }

@@ -45,7 +45,7 @@ export function runParquetWorker<TRequest extends ParquetWorkerRequest>(
     worker.onmessageerror = () => {
       worker.terminate();
       signal?.removeEventListener("abort", onAbort);
-      reject(new Error("Failed to deserialize worker response."));
+      reject(new Error("Failed to deserialize the worker response"));
     };
     worker.postMessage(request);
   });

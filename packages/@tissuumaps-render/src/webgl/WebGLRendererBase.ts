@@ -449,7 +449,7 @@ export abstract class WebGLRendererBase<
               );
               if (tableLayers.length !== tableData.getSize()) {
                 throw new Error(
-                  `Table with ID '${layerTableId}' has inconsistent size for column '${tableLayersColumn}'`,
+                  `Column '${tableLayersColumn}' of table with ID '${layerTableId}' must have the same length as the table`,
                 );
               }
               return tableLayers;

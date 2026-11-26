@@ -163,7 +163,7 @@ describe("HierarchicalTableWorkerClient", () => {
       const data = client.readColumn("a");
       worker.onmessageerror!({} as MessageEvent);
       await expect(data).rejects.toThrow(
-        "Failed to deserialize worker response.",
+        "Failed to deserialize the worker response",
       );
       expect(worker.terminateCalls).toBe(1);
     });

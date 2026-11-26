@@ -194,8 +194,10 @@ export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
         set({ viewerBackgroundColor }),
       setPhysicalUnitSize: (physicalUnitSize) => set({ physicalUnitSize }),
       setPhysicalUnit: (physicalUnit) => set({ physicalUnit }),
-      setScaleBarVisibility: (scaleBarVisibility) =>
-        set({ scaleBarVisibility }),
+      setScalebarVisibility: (scalebarVisibility) =>
+        set({ scalebarVisibility }),
+      setColorbarsVisibility: (colorbarsVisibility) =>
+        set({ colorbarsVisibility }),
       clear: () => set(createInitialProjectStoreState()),
     })),
     { name: "project", enabled: import.meta.env.DEV },
@@ -249,10 +251,10 @@ function addCollectionItem<T extends { id: string }>(
   index?: number,
 ): void {
   if (items.some((existingItem) => existingItem.id === item.id)) {
-    throw new Error(`Item with ID ${item.id} already exists.`);
+    throw new Error(`Item with ID '${item.id}' already exists`);
   }
   if (index !== undefined && (index < 0 || index > items.length)) {
-    throw new Error(`Index ${index} out of bounds.`);
+    throw new Error(`Index ${index} is out of bounds`);
   }
   items.splice(index ?? items.length, 0, item as Draft<T>);
 }
@@ -272,7 +274,7 @@ function updateCollectionItem<T extends { id: string }>(
 ): void {
   const index = items.findIndex((item) => item.id === itemId);
   if (index === -1) {
-    throw new Error(`Item with ID ${itemId} not found.`);
+    throw new Error(`Item with ID '${itemId}' not found`);
   }
   Object.assign(items[index]!, updates);
 }
@@ -292,11 +294,11 @@ function moveCollectionItem<T extends { id: string }>(
   newIndex: number,
 ): void {
   if (newIndex < 0 || newIndex >= items.length) {
-    throw new Error(`Index ${newIndex} out of bounds.`);
+    throw new Error(`Index ${newIndex} is out of bounds`);
   }
   const oldIndex = items.findIndex((item) => item.id === itemId);
   if (oldIndex === -1) {
-    throw new Error(`Item with ID ${itemId} not found.`);
+    throw new Error(`Item with ID '${itemId}' not found`);
   }
   if (oldIndex !== newIndex) {
     const item = items.splice(oldIndex, 1)[0]!;
@@ -317,7 +319,7 @@ function deleteCollectionItem<T extends { id: string }>(
 ): void {
   const index = items.findIndex((item) => item.id === itemId);
   if (index === -1) {
-    throw new Error(`Item with ID ${itemId} not found.`);
+    throw new Error(`Item with ID '${itemId}' not found`);
   }
   items.splice(index, 1);
 }

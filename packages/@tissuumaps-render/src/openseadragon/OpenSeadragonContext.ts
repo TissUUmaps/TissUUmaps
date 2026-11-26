@@ -142,6 +142,7 @@ export class OpenSeadragonContext {
     viewerOptions?: OpenSeadragonViewerOptions,
   ) {
     OpenSeadragonUtils.fixTileCacheCounter();
+    OpenSeadragonUtils.fixTileAtPoint();
     // OpenSeadragon reads showNavigator only here, so the navigator is always
     // created and then shown or hidden; this keeps the option live.
     this.viewer = new OpenSeadragon.Viewer({
@@ -206,7 +207,7 @@ export class OpenSeadragonContext {
     });
     this.viewer.addHandler("tile-invalidated", (event) =>
       this._applyDataTransfer(event).catch((error) => {
-        console.error(`Failed to transfer tile data: ${error}`);
+        console.error("Failed to transfer tile data", error);
       }),
     );
     this.viewer.addHandler("update-viewport", () => this._recolorStaleTiles());
@@ -562,7 +563,7 @@ export class OpenSeadragonContext {
               dataTransfer !== undefined,
           )
           .catch((error) => {
-            console.error(`Failed to invalidate tiles: ${error}`);
+            console.error("Failed to invalidate tiles", error);
           });
       }
     }
@@ -884,7 +885,7 @@ export class OpenSeadragonContext {
           /* restoreTiles */ true,
         )
         .catch((error) => {
-          console.error(`Failed to invalidate tiles: ${error}`);
+          console.error("Failed to invalidate tiles", error);
         });
     }
   }

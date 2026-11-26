@@ -49,25 +49,25 @@ describe("ArrayUtils", () => {
 
     it("throws for values that are neither strings nor safe integers", () => {
       expect(() => ArrayUtils.toIDArray([1.5, 2])).toThrow(
-        "ID is not a safe integer: 1.5",
+        "ID 1.5 is not a safe integer",
       );
       expect(() => ArrayUtils.toIDArray(new Float64Array([NaN, 2]))).toThrow(
-        "ID is not a safe integer: NaN",
+        "ID NaN is not a safe integer",
       );
       expect(() => ArrayUtils.toIDArray([1, null])).toThrow(
-        "ID is not a safe integer: null",
+        "ID null is not a safe integer",
       );
       expect(() => ArrayUtils.toIDArray([2 ** 53])).toThrow(
-        "ID is not a safe integer",
+        "ID 9007199254740992 is not a safe integer",
       );
     });
 
     it("throws for mixed strings and integers", () => {
       expect(() => ArrayUtils.toIDArray([1, "2"])).toThrow(
-        "ID is not a safe integer: 2",
+        "ID '2' is not a safe integer",
       );
       expect(() => ArrayUtils.toIDArray(["1", 2])).toThrow(
-        "ID is not a string: 2",
+        "ID 2 is not a string",
       );
     });
   });

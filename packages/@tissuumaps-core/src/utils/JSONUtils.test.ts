@@ -86,28 +86,28 @@ describe("JSONUtils", () => {
 
     it("throws for values that cannot be represented", () => {
       expect(() => JSONUtils.stringify(undefined)).toThrow(
-        "Value of type undefined is not stringifiable",
+        "Value of type 'undefined' is not stringifiable",
       );
       expect(() => JSONUtils.stringify(() => 0)).toThrow(
-        "Value of type function is not stringifiable",
+        "Value of type 'function' is not stringifiable",
       );
       expect(() => JSONUtils.stringify(Symbol("a"))).toThrow(
-        "Value of type symbol is not stringifiable",
+        "Value of type 'symbol' is not stringifiable",
       );
     });
 
     it("throws for array elements that cannot be represented", () => {
       expect(() => JSONUtils.stringify([1, undefined])).toThrow(
-        "Value of type undefined is not stringifiable",
+        "Value of type 'undefined' is not stringifiable",
       );
       expect(() => JSONUtils.stringify([() => 0])).toThrow(
-        "Value of type function is not stringifiable",
+        "Value of type 'function' is not stringifiable",
       );
     });
 
     it("throws when toJSON returns a value that cannot be represented", () => {
       expect(() => JSONUtils.stringify({ toJSON: () => undefined })).toThrow(
-        "Value of type undefined is not stringifiable",
+        "Value of type 'undefined' is not stringifiable",
       );
     });
   });

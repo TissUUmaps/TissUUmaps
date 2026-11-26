@@ -144,7 +144,7 @@ export class AnnDataUtils {
       default: {
         const shape = AnnDataUtils._getShapeAttribute(group);
         if (shape === undefined) {
-          throw new Error(`"${path}" is a group, not a column`);
+          throw new Error(`Path '${path}' is a group, not a column`);
         }
         return shape[0]!;
       }
@@ -195,10 +195,10 @@ export class AnnDataUtils {
         );
       case "csr_matrix":
         throw new Error(
-          `Matrix "${path}" is stored as CSR; only CSC matrices support column reads`,
+          `Matrix '${path}' is stored as CSR; only CSC matrices support column reads`,
         );
       default:
-        throw new Error(`"${path}" is a group, not a column`);
+        throw new Error(`Path '${path}' is a group, not a column`);
     }
   }
 
@@ -478,7 +478,7 @@ export class AnnDataUtils {
     signal?.throwIfAborted();
     const child = await store.get(`${path}/${name}`, { signal });
     if (child === null || child.kind !== "array") {
-      throw new Error(`Column "${path}" is missing its "${name}" dataset`);
+      throw new Error(`Column '${path}' is missing its '${name}' dataset`);
     }
     return child;
   }
@@ -577,7 +577,7 @@ export class AnnDataUtils {
     const shape = AnnDataUtils._getShapeAttribute(group);
     if (shape === undefined) {
       throw new Error(
-        `Matrix "${path}" has no two-dimensional shape attribute`,
+        `Matrix '${path}' has no two-dimensional shape attribute`,
       );
     }
     const indptr = await AnnDataUtils._getChildArray(store, path, "indptr", {

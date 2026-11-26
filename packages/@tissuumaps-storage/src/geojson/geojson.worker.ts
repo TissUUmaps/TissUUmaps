@@ -137,11 +137,11 @@ async function handleFileRequest(
     const r = await fetch(request.url);
     if (!r.ok) {
       throw new Error(
-        `Failed to load GeoJSON from ${request.url}: ${r.status} ${r.statusText}`,
+        `Failed to load GeoJSON from '${request.url}': ${r.status} ${r.statusText}`,
       );
     }
     if (r.body === null) {
-      throw new Error(`Response for ${request.url} has no body.`);
+      throw new Error(`Response for '${request.url}' has no body`);
     }
     const contentLength = r.headers.get("Content-Length");
     const byteLength = contentLength !== null ? Number(contentLength) : null;
@@ -162,7 +162,7 @@ async function handleFileRequest(
     const blob = await new Blob(blobParts).arrayBuffer();
     text = new TextDecoder().decode(blob);
   } else {
-    throw new Error("A URL or file is required to load data.");
+    throw new Error("A URL or file is required to load data");
   }
   const geo = JSON.parse(text) as GeoJSON; // TODO Validate GeoJSON
   const { ids, names, geometry } = parseGeoJSON(
@@ -198,7 +198,7 @@ function toPolygons(geometry: Geometry): readonly ShapesPolygon[] | undefined {
   if (geometry.type === "MultiPolygon") {
     return geometry.coordinates;
   }
-  console.warn(`Unsupported geometry type: ${geometry.type}`);
+  console.warn(`Geometry type '${geometry.type}' is not supported`);
   return undefined;
 }
 
@@ -243,7 +243,7 @@ function readFeatureName(
 ): string {
   const name = feature.properties?.[nameProperty] as unknown;
   if (name === undefined) {
-    throw new Error(`Feature is missing name '${nameProperty}'.`);
+    throw new Error(`Feature is missing name '${nameProperty}'`);
   }
   // eslint-disable-next-line @typescript-eslint/no-base-to-string
   return String(name);
@@ -260,16 +260,16 @@ function parseGeoJSON(
   geometry: ShapesGeometry;
 } {
   if (geo === null) {
-    throw new Error("GeoJSON data must not be null.");
+    throw new Error("GeoJSON data must not be null");
   }
   if (idProperty !== undefined && geo.type !== "FeatureCollection") {
     throw new Error(
-      "ID properties can only be used with GeoJSON FeatureCollections.",
+      "ID properties can only be used with GeoJSON FeatureCollections",
     );
   }
   if (nameProperty !== undefined && geo.type !== "FeatureCollection") {
     throw new Error(
-      "Name properties can only be used with GeoJSON FeatureCollections.",
+      "Name properties can only be used with GeoJSON FeatureCollections",
     );
   }
 
@@ -279,7 +279,7 @@ function parseGeoJSON(
       for (let i = 0; i < geo.features.length; i++) {
         const feature = geo.features[i]!;
         if (feature.geometry === null) {
-          console.warn("Skipping feature with null geometry.");
+          console.warn("Skipping feature with null geometry");
           continue;
         }
         const polygons = toPolygons(feature.geometry);
@@ -311,7 +311,7 @@ function parseGeoJSON(
       break;
   }
   if (builder.size === 0) {
-    throw new Error("No valid geometries found in GeoJSON data.");
+    throw new Error("No valid geometries found in GeoJSON data");
   }
 
   const { geometry, ids, names } = builder.build();

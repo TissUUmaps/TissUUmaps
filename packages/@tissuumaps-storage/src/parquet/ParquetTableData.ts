@@ -11,8 +11,12 @@ import type { CoordinateColumn } from "./profiles/GeoParquetUtils";
 import { runParquetWorker } from "./runParquetWorker";
 import type { ParquetSource } from "./types";
 
+/**
+ * A table read from one or more Parquet files, such as the partitions of a
+ * Dask dataset, whose rows follow one another in the order of the files
+ */
 export class ParquetTableData implements TableData {
-  private readonly _source: ParquetSource;
+  private readonly _parts: ParquetSource[];
   private readonly _numRows: number;
   private readonly _columns: string[];
   // The coordinate columns of the file, by name: a column is derived only if
@@ -30,7 +34,7 @@ export class ParquetTableData implements TableData {
   >();
 
   constructor(
-    source: ParquetSource,
+    parts: ParquetSource[],
     numRows: number,
     columns: string[],
     coordinateColumns: CoordinateColumn[],
@@ -38,7 +42,7 @@ export class ParquetTableData implements TableData {
     names: string[] | undefined,
     categoricalColumns: string[],
   ) {
-    this._source = source;
+    this._parts = parts;
     this._numRows = numRows;
     this._columns = columns;
     this._coordinateColumns = new Map(
@@ -125,7 +129,7 @@ export class ParquetTableData implements TableData {
       return (coordinateColumn.axis === "x" ? x : y) as TypedArrayOrArray<T>;
     }
     const { data } = await runParquetWorker(
-      { op: "column", source: this._source, column },
+      { op: "column", parts: this._parts, column },
       { signal, onProgress },
     );
     return data as TypedArrayOrArray<T>;
@@ -142,7 +146,7 @@ export class ParquetTableData implements TableData {
     let coordinates = this._coordinates.get(geometryColumn);
     if (coordinates === undefined) {
       coordinates = runParquetWorker(
-        { op: "coordinates", source: this._source, geometryColumn },
+        { op: "coordinates", parts: this._parts, geometryColumn },
         { onProgress },
       ).then(({ x, y }) => ({ x, y }));
       coordinates.catch(() => this._coordinates.delete(geometryColumn));
@@ -161,7 +165,7 @@ export class ParquetTableData implements TableData {
     const { range } = await runParquetWorker(
       {
         op: "range",
-        source: this._source,
+        parts: this._parts,
         column: coordinateColumn?.geometryColumn ?? column,
         axis: coordinateColumn?.axis,
       },
