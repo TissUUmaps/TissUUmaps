@@ -1,4 +1,4 @@
-import type { TableData } from "../storage/table";
+import type { TableColumnType, TableData } from "../storage/table";
 import type { IDArray, TypedArray, TypedArrayOrArray } from "../types/arrays";
 import type { ProgressCallback } from "../types/callbacks";
 import { AsyncUtils } from "./AsyncUtils";
@@ -218,28 +218,28 @@ export class TableUtils {
   }
 
   /**
-   * Loads whether a table column holds categories
+   * Loads the type of a table column
    *
    * Uses what the table declares, if it declares anything (see
-   * `TableData.isColumnCategorical`), and otherwise inspects the loaded column
+   * `TableData.getColumnType`), and otherwise inspects the loaded column
    * values: numeric typed arrays hold numbers, plain arrays categories.
    *
    * @param tableData - The table holding the column
    * @param column - Name of the table column
    * @param options - Optional abort signal and progress callback
-   * @returns Whether the column is categorical
+   * @returns The column type
    */
-  static async loadIsColumnCategorical(
+  static async loadColumnType(
     tableData: TableData,
     column: string,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
-  ): Promise<boolean> {
-    const isCategorical = tableData.isColumnCategorical?.(column);
-    if (isCategorical !== undefined) {
-      return isCategorical;
+  ): Promise<TableColumnType> {
+    const columnType = tableData.getColumnType?.(column);
+    if (columnType !== undefined) {
+      return columnType;
     }
     const values = await tableData.loadValues<unknown>(column, options);
-    return !ArrayBuffer.isView(values);
+    return ArrayBuffer.isView(values) ? "numerical" : "categorical";
   }
 
   /**

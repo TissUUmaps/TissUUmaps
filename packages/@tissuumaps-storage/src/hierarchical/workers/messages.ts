@@ -2,7 +2,7 @@ import type { TypedArrayOrArray } from "@tissuumaps/core";
 
 import type {
   HierarchicalTableColumn,
-  HierarchicalTableQueryGroup,
+  HierarchicalTableSection,
 } from "../HierarchicalTable";
 
 /** Opens the table of a file or URL; sent once, first */
@@ -16,7 +16,7 @@ export type HierarchicalTableOpenResponse = {
   op: "open";
   columns: HierarchicalTableColumn[];
   numRows: number;
-  queryGroups: HierarchicalTableQueryGroup[];
+  sections: HierarchicalTableSection[];
 };
 
 /** Reads the values of a column, see {@link HierarchicalTable.readColumn} */

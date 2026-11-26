@@ -236,7 +236,7 @@ describe("HierarchicalTableReader", () => {
       expect(byPath.get("obs/score")).not.toHaveProperty("categorical");
     });
 
-    it("lists the query groups of an AnnData object", async () => {
+    it("lists the sections of an AnnData object", async () => {
       const reader = await openReader(
         annData({
           raw: group({
@@ -250,12 +250,12 @@ describe("HierarchicalTableReader", () => {
           obsp: group({ distances: array(new Float32Array(9), [3, 3]) }),
         }),
       );
-      expect(reader.queryGroups).toEqual([
-        { id: "obs", name: "Annotations", indexPath: "obs/_index" },
+      expect(reader.sections).toEqual([
+        { id: "obs", name: "Observations", indexPath: "obs/_index" },
         {
           id: "var",
           name: "Features",
-          subgroups: [
+          subsections: [
             { id: "X", name: "X" },
             { id: "layers/csr", name: "csr" },
             { id: "raw/X", name: "raw" },
@@ -264,7 +264,7 @@ describe("HierarchicalTableReader", () => {
         {
           id: "obsm",
           name: "Embeddings",
-          subgroups: [{ id: "obsm/X_umap", name: "X_umap" }],
+          subsections: [{ id: "obsm/X_umap", name: "X_umap" }],
         },
       ]);
     });
@@ -282,9 +282,9 @@ describe("HierarchicalTableReader", () => {
         }),
       );
       expect(
-        reader.queryGroups
+        reader.sections
           .find(({ name }) => name === "Features")
-          ?.subgroups?.map(({ id, name }) => [id, name]),
+          ?.subsections?.map(({ id, name }) => [id, name]),
       ).toEqual([
         ["X", "X"],
         ["layers/raw", "layers/raw"],
@@ -302,7 +302,7 @@ describe("HierarchicalTableReader", () => {
           { "encoding-type": "anndata" },
         ),
       );
-      expect(reader.queryGroups.map(({ name }) => name)).toEqual(["Features"]);
+      expect(reader.sections.map(({ name }) => name)).toEqual(["Features"]);
     });
 
     it("takes the row count from the obs index of an AnnData object", async () => {

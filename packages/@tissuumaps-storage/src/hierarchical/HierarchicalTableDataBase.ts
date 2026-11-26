@@ -1,8 +1,9 @@
 import type {
   IDArray,
   ProgressCallback,
-  TableColumnQueryGroup,
   TableColumnQuerySuggestion,
+  TableColumnSection,
+  TableColumnType,
   TableData,
   TypedArrayOrArray,
 } from "@tissuumaps/core";
@@ -11,7 +12,7 @@ import { ColumnQueryUtils } from "./ColumnQueryUtils";
 import type {
   HierarchicalTable,
   HierarchicalTableColumn,
-  HierarchicalTableQueryGroup,
+  HierarchicalTableSection,
 } from "./HierarchicalTable";
 
 /**
@@ -20,7 +21,7 @@ import type {
  * Extended by every container format, see
  * {@link HierarchicalTableDataProviderBase.createTableData}.
  *
- * The store's query groups (see {@link getQueryGroups}) come from its format,
+ * The store's sections (see {@link getColumnSections}) come from its format,
  * e.g. AnnData. A leaf is either a group of the store whose dataset columns
  * lie directly below it (e.g. the AnnData `obs`), or a matrix whose columns
  * are named by their selectors (e.g. `X`).
@@ -67,29 +68,29 @@ export abstract class HierarchicalTableDataBase implements TableData {
 
   /**
    * Suggests column queries for the current query, or the columns of a leaf
-   * query group
+   * section
    *
-   * Without a query group, the query is continued as a path (see
-   * {@link ColumnQueryUtils.suggestColumnQueries}). Within a leaf query group,
+   * Without a section, the query is continued as a path (see
+   * {@link ColumnQueryUtils.suggestColumnQueries}). Within a leaf section,
    * its columns are suggested with their names, best name matches first (see
    * {@link ColumnQueryUtils.rankByName}).
    *
    * @param currentQuery - The partial column query, or the text to search for
-   * within the leaf query group
-   * @param options - The `id` of a leaf query group, if any, and an optional
+   * within the leaf section
+   * @param options - The `id` of a leaf section, if any, and an optional
    * abort signal
    * @returns A list of suggested column queries
-   * @throws Error if the table has no leaf query group with the given `id`
+   * @throws Error if the table has no leaf section with the given `id`
    */
   suggestColumnQueries(
     currentQuery: string,
-    options?: { queryGroupId?: string; signal?: AbortSignal },
+    options?: { sectionId?: string; signal?: AbortSignal },
   ): Promise<TableColumnQuerySuggestion[]> {
-    const { queryGroupId, signal } = options ?? {};
+    const { sectionId, signal } = options ?? {};
     if (signal?.aborted) {
       return Promise.reject(signal.reason as Error);
     }
-    if (queryGroupId === undefined) {
+    if (sectionId === undefined) {
       return Promise.resolve(
         ColumnQueryUtils.suggestColumnQueries(
           this._table.columns,
@@ -97,11 +98,9 @@ export abstract class HierarchicalTableDataBase implements TableData {
         ),
       );
     }
-    const found = this._findLeaf((leaf) => leaf.id === queryGroupId);
+    const found = this._findLeaf((leaf) => leaf.id === sectionId);
     if (found === undefined) {
-      return Promise.reject(
-        new Error(`Query group '${queryGroupId}' not found`),
-      );
+      return Promise.reject(new Error(`Section '${sectionId}' not found`));
     }
     const matrix = this._getMatrix(found.leaf);
     const suggestions =
@@ -126,25 +125,25 @@ export abstract class HierarchicalTableDataBase implements TableData {
     );
   }
 
-  getQueryGroups(): TableColumnQueryGroup[] {
-    const toQueryGroup = ({
+  getColumnSections(): TableColumnSection[] {
+    const toSection = ({
       id,
       name,
-      subgroups,
-    }: HierarchicalTableQueryGroup): TableColumnQueryGroup => ({
+      subsections,
+    }: HierarchicalTableSection): TableColumnSection => ({
       id,
       name,
-      ...(subgroups !== undefined && {
-        subgroups: subgroups.map(toQueryGroup),
+      ...(subsections !== undefined && {
+        subsections: subsections.map(toSection),
       }),
     });
-    return this._table.queryGroups.map(toQueryGroup);
+    return this._table.sections.map(toSection);
   }
 
   describeColumn(
     column: string,
     options?: { signal?: AbortSignal },
-  ): Promise<{ queryGroupId: string; name: string } | null> {
+  ): Promise<{ sectionId: string; name: string } | null> {
     const { signal } = options ?? {};
     if (signal?.aborted) {
       return Promise.reject(signal.reason as Error);
@@ -163,7 +162,7 @@ export abstract class HierarchicalTableDataBase implements TableData {
     }
     const { leaf } = found;
     return Promise.resolve({
-      queryGroupId: leaf.id,
+      sectionId: leaf.id,
       name:
         tableColumn.kind === "matrix"
           ? (tableColumn.selectors?.[index!] ?? String(index))
@@ -172,36 +171,34 @@ export abstract class HierarchicalTableDataBase implements TableData {
   }
 
   /**
-   * Loads the column of another leaf query group that holds the same entity
+   * Loads the column of another leaf section that holds the same entity
    *
    * Within a leaf of dataset columns, a column maps to itself if it belongs
    * to the leaf. Between matrix leaves, a column maps to the column with the
    * same selector: a selector names the same feature in every matrix of a
-   * query group (e.g. a gene of the AnnData `var` index in `X`, the layers and
+   * section (e.g. a gene of the AnnData `var` index in `X`, the layers and
    * `raw/X`). Matrices with the same selectors map by position, so that
    * columns selected by their index map too. Matrices without selectors map
    * to nothing, as nothing tells that their columns hold the same entities.
    *
    * @param column - The column name
-   * @param options - The `id` of the leaf query group to map the column to,
+   * @param options - The `id` of the leaf section to map the column to,
    * and an optional abort signal
-   * @returns The column of the leaf query group, or `null` if it has none for
+   * @returns The column of the leaf section, or `null` if it has none for
    * the entity
-   * @throws Error if the table has no leaf query group with the given `id`
+   * @throws Error if the table has no leaf section with the given `id`
    */
   mapColumn(
     column: string,
-    options: { queryGroupId: string; signal?: AbortSignal },
+    options: { sectionId: string; signal?: AbortSignal },
   ): Promise<string | null> {
-    const { queryGroupId, signal } = options;
+    const { sectionId, signal } = options;
     if (signal?.aborted) {
       return Promise.reject(signal.reason as Error);
     }
-    const target = this._findLeaf((leaf) => leaf.id === queryGroupId);
+    const target = this._findLeaf((leaf) => leaf.id === sectionId);
     if (target === undefined) {
-      return Promise.reject(
-        new Error(`Query group '${queryGroupId}' not found`),
-      );
+      return Promise.reject(new Error(`Section '${sectionId}' not found`));
     }
     const resolved = ColumnQueryUtils.resolveColumn(
       this._table.columns,
@@ -212,7 +209,7 @@ export abstract class HierarchicalTableDataBase implements TableData {
     }
     const { column: tableColumn, index } = resolved;
     const origin = this._findLeafOfColumn(tableColumn);
-    // columns only map between the leaves of one top-level query group
+    // columns only map between the leaves of one top-level section
     if (origin === undefined || origin.group !== target.group) {
       return Promise.resolve(null);
     }
@@ -245,13 +242,13 @@ export abstract class HierarchicalTableDataBase implements TableData {
     );
   }
 
-  isColumnCategorical(column: string): boolean | undefined {
+  getColumnType(column: string): TableColumnType | undefined {
     const resolved = ColumnQueryUtils.resolveColumn(
       this._table.columns,
       column,
     );
-    return resolved?.column.kind === "dataset"
-      ? resolved.column.categorical
+    return resolved?.column.kind === "dataset" && resolved.column.categorical
+      ? "categorical"
       : undefined;
   }
 
@@ -274,20 +271,20 @@ export abstract class HierarchicalTableDataBase implements TableData {
   }
 
   /**
-   * @param predicate - Tests a leaf query group
-   * @returns The first leaf query group passing the test and the top-level
-   * query group above it (or the leaf itself), if any
+   * @param predicate - Tests a leaf section
+   * @returns The first leaf section passing the test and the top-level
+   * section above it (or the leaf itself), if any
    */
   private _findLeaf(
-    predicate: (leaf: HierarchicalTableQueryGroup) => boolean,
+    predicate: (leaf: HierarchicalTableSection) => boolean,
   ):
-    | { group: HierarchicalTableQueryGroup; leaf: HierarchicalTableQueryGroup }
+    | { group: HierarchicalTableSection; leaf: HierarchicalTableSection }
     | undefined {
     const getLeaves = (
-      queryGroup: HierarchicalTableQueryGroup,
-    ): HierarchicalTableQueryGroup[] =>
-      queryGroup.subgroups?.flatMap(getLeaves) ?? [queryGroup];
-    for (const group of this._table.queryGroups) {
+      section: HierarchicalTableSection,
+    ): HierarchicalTableSection[] =>
+      section.subsections?.flatMap(getLeaves) ?? [section];
+    for (const group of this._table.sections) {
       const leaf = getLeaves(group).find(predicate);
       if (leaf !== undefined) {
         return { group, leaf };
@@ -298,7 +295,7 @@ export abstract class HierarchicalTableDataBase implements TableData {
 
   /**
    * @param column - A column of the table
-   * @returns The leaf query group holding the column and the top-level query
+   * @returns The leaf section holding the column and the top-level query
    * group above it, if any
    */
   private _findLeafOfColumn(column: HierarchicalTableColumn) {
@@ -310,12 +307,12 @@ export abstract class HierarchicalTableDataBase implements TableData {
   }
 
   /**
-   * @param leaf - A leaf query group
+   * @param leaf - A leaf section
    * @returns The matrix column of a matrix leaf, `undefined` for a leaf of
    * dataset columns
    */
   private _getMatrix(
-    leaf: HierarchicalTableQueryGroup,
+    leaf: HierarchicalTableSection,
   ): Extract<HierarchicalTableColumn, { kind: "matrix" }> | undefined {
     const column = this._table.columns.find(
       (column) => column.path === leaf.id,
@@ -325,13 +322,13 @@ export abstract class HierarchicalTableDataBase implements TableData {
 
   /**
    * @param column - A column of the table
-   * @param leaf - A leaf query group
+   * @param leaf - A leaf section
    * @returns Whether the column is a dataset column directly below the leaf,
    * but for its index
    */
   private _isLeafColumn(
     column: HierarchicalTableColumn,
-    leaf: HierarchicalTableQueryGroup,
+    leaf: HierarchicalTableSection,
   ): boolean {
     const prefix = `${leaf.id}/`;
     return (
@@ -343,11 +340,11 @@ export abstract class HierarchicalTableDataBase implements TableData {
   }
 
   /**
-   * @param leaf - A leaf query group of dataset columns
+   * @param leaf - A leaf section of dataset columns
    * @returns The leaf's columns, named by their path below the leaf
    */
   private _suggestLeafColumns(
-    leaf: HierarchicalTableQueryGroup,
+    leaf: HierarchicalTableSection,
   ): TableColumnQuerySuggestion[] {
     return this._table.columns
       .filter((column) => this._isLeafColumn(column, leaf))

@@ -1,5 +1,4 @@
 export const ShapesSettingsCategory = {
-  layer: "layer",
   transform: "transform",
   shapeVisibility: "shapeVisibility",
   shapeOpacity: "shapeOpacity",

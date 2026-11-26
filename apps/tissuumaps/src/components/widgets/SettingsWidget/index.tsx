@@ -1,5 +1,7 @@
 import { Fragment, type ReactNode, useId } from "react";
 
+import type { TableColumnType } from "@tissuumaps/core";
+
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -13,7 +15,6 @@ import { ColumnTypeMenu } from "./ColumnTypeMenu";
 import { StyleByPicker } from "./StyleByPicker";
 import { StyleRow } from "./StyleRow";
 import {
-  type ColumnType,
   type StyleBy,
   type StyleProperty,
   getFollowingNames,
@@ -25,10 +26,10 @@ import {
 import { useStyleBy } from "./useStyleBy";
 
 /**
- * A property of an object that can follow the column of the style widget,
+ * A property of an object that can follow the column of the settings widget,
  * with its toggle and options
  */
-export type StyleWidgetProperty = StyleProperty & {
+export type SettingsWidgetProperty = StyleProperty & {
   /** The name shown to the user, e.g. "Color" */
   label: string;
 
@@ -56,7 +57,7 @@ export type StyleWidgetProperty = StyleProperty & {
  * Its own toggles are shown for numerical columns only; for categorical
  * columns, the part stands for its first property.
  */
-export type StyleWidgetPart = {
+export type SettingsWidgetPart = {
   /** Tells the part apart from the properties of the object */
   name: string;
 
@@ -67,12 +68,12 @@ export type StyleWidgetPart = {
   icon: ReactNode;
 
   /** The properties of the part; the first one follows a newly toggled part */
-  properties: [StyleWidgetProperty, ...StyleWidgetProperty[]];
+  properties: [SettingsWidgetProperty, ...SettingsWidgetProperty[]];
 };
 
-type StyleWidgetItem = StyleWidgetProperty | StyleWidgetPart;
+type SettingsWidgetItem = SettingsWidgetProperty | SettingsWidgetPart;
 
-export type StyleWidgetProps = {
+export type SettingsWidgetProps = {
   /** The ID of the object's own table, if it has one */
   tableId: string | null;
 
@@ -84,7 +85,7 @@ export type StyleWidgetProps = {
    * their toggles; the first one follows a newly picked column if none
    * follows the column
    */
-  items: [StyleWidgetItem, ...StyleWidgetItem[]];
+  items: [SettingsWidgetItem, ...SettingsWidgetItem[]];
 
   /**
    * Writes what the object is styled by and which properties follow it, to
@@ -119,7 +120,7 @@ export type StyleWidgetProps = {
  * can follow it. The values of the categories are edited in the group table
  * below the widget; the other settings in the advanced settings.
  */
-export function StyleWidget({
+export function SettingsWidget({
   tableId,
   styleBy,
   items,
@@ -127,7 +128,7 @@ export function StyleWidget({
   noneLabel = "None",
   children,
   className,
-}: StyleWidgetProps) {
+}: SettingsWidgetProps) {
   const { isCategorical, isPending, pick, setColumnType } = useStyleBy(
     tableId,
     styleBy,
@@ -152,7 +153,7 @@ export function StyleWidget({
         disabled={tableId === null}
         className="grid grid-cols-[5rem_1fr] items-center gap-x-2 gap-y-1.5"
       >
-        <FieldsetLegend className="sr-only">Style</FieldsetLegend>
+        <FieldsetLegend className="sr-only">Settings</FieldsetLegend>
         <StyleByPicker
           tableId={tableId}
           column={styleBy.kind === "column" ? styleBy.column : null}
@@ -248,8 +249,8 @@ export function StyleWidget({
 }
 
 type ItemToggleGroupProps = {
-  items: StyleWidgetItem[];
-  columnType: ColumnType;
+  items: SettingsWidgetItem[];
+  columnType: TableColumnType;
   disabled: boolean;
   /** Called with the names of the items toggled on */
   onValueChange: (value: string[]) => void;

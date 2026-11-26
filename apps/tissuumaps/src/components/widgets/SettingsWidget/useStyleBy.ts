@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 
-import { MathUtils, TableUtils } from "@tissuumaps/core";
+import { MathUtils, type TableColumnType, TableUtils } from "@tissuumaps/core";
 
 import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { useLazyTableData } from "@/data/hooks/useLazyData";
 
-import type { ColumnType, StyleBy } from "./styleBy";
+import type { StyleBy } from "./styleBy";
 
 /**
  * Distinct values beyond which using a numerical column as categorical asks
@@ -30,7 +30,7 @@ export type StyleByState = {
   pick: (column: string | null) => void;
 
   /** Switches the column between categorical and numerical */
-  setColumnType: (columnType: ColumnType) => void;
+  setColumnType: (columnType: TableColumnType) => void;
 };
 
 /**
@@ -38,12 +38,12 @@ export type StyleByState = {
  * numerical, loading what that takes from the object's own table
  *
  * Categorical columns start as categorical, all others as numerical (see
- * `TableUtils.loadIsColumnCategorical`). Using a column as categorical,
+ * `TableUtils.loadColumnType`). Using a column as categorical,
  * whether picked or switched to, counts its distinct values first, and asks
  * for confirmation beyond {@link maxCategoryCount}. A failed pick or switch
  * is shown in an alert. Nothing is written until the user picks or switches;
  * the write happens once the column is loaded, so the caller must apply it to
- * the object as it is then (see `PointsStyleWidget`).
+ * the object as it is then (see `PointsSettingsWidget`).
  *
  * @param tableId - The ID of the object's own table, if any
  * @param styleBy - What the object is styled by
@@ -90,9 +90,8 @@ export function useStyleBy(
         return;
       }
       setCategorical(
-        await TableUtils.loadIsColumnCategorical(tableData, column, {
-          signal,
-        }),
+        (await TableUtils.loadColumnType(tableData, column, { signal })) ===
+          "categorical",
       );
     })().catch((error: unknown) => {
       if (!signal.aborted) {
@@ -159,7 +158,7 @@ export function useStyleBy(
   ) => {
     const tableData = await loadTable(options);
     const values = await tableData.loadValues(column, options);
-    const count = await MathUtils.countDistinct(
+    const count = await MathUtils.countUniqueValues(
       values,
       maxCategoryCount,
       options,
@@ -183,23 +182,22 @@ export function useStyleBy(
     }
     run(async (options) => {
       const tableData = await loadTable(options);
-      const isNewCategorical = await TableUtils.loadIsColumnCategorical(
+      const columnType = await TableUtils.loadColumnType(
         tableData,
         newColumn,
         options,
       );
-      if (isNewCategorical && !(await confirmCategorical(newColumn, options))) {
+      if (
+        columnType === "categorical" &&
+        !(await confirmCategorical(newColumn, options))
+      ) {
         return null;
       }
-      return {
-        kind: "column",
-        column: newColumn,
-        columnType: isNewCategorical ? "categorical" : "numerical",
-      };
+      return { kind: "column", column: newColumn, columnType };
     });
   };
 
-  const setColumnType = (newColumnType: ColumnType) => {
+  const setColumnType = (newColumnType: TableColumnType) => {
     if (column === null || newColumnType === columnType) {
       return;
     }

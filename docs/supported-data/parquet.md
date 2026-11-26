@@ -62,7 +62,7 @@ IDs must be unique. An ID column with duplicate values is ignored with a warning
 
 Dask numbers the partitions without gaps. A directory in the workspace is listed, and fails to load if a partition file is missing. A server cannot list a directory, so a remote source is first checked to be a Parquet file, from its first bytes, and otherwise its partition files are requested in order until the server answers that one is missing (Not Found, Gone, or Forbidden, which object stores answer for missing files); a remote dataset with a gap is therefore read up to the gap. Any other error response, except one saying that the file is too short to be a Parquet file, fails the load rather than reading part of the dataset.
 
-Columns of the pandas `category` dtype are categorical (see `TableData.isColumnCategorical`), even when their values are numbers.
+Columns of the pandas `category` dtype are categorical (see `TableData.getColumnType`), even when their values are numbers.
 
 ## Example
 

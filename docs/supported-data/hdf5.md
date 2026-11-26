@@ -23,7 +23,7 @@ Any HDF5 file is read as a table of its datasets. A column is addressed by the p
 
 - One-dimensional datasets are columns.
 - Two-dimensional datasets expose one column per matrix column as `path[i]`, for example `obsm/spatial[0]` and `obsm/spatial[1]` for spatial coordinates.
-- Boolean datasets are categorical columns (see `TableData.isColumnCategorical`).
+- Boolean datasets are categorical columns (see `TableData.getColumnType`).
 
 ## Profiles
 
@@ -42,9 +42,9 @@ Groups with an AnnData `encoding-type` attribute are decoded wherever they are i
 
 A group whose `encoding-type` is `anndata` is an [AnnData object](https://anndata.readthedocs.io/). A file may hold only one. Its `obs` index gives the number of rows. Its `X`, `layers` and their `raw` counterparts are addressed by variable name as well as by index, for example `X[CD3]` besides `X[12]`. The names are the index of the `var` dataframe of the object, and `raw/var` for `raw/X`. Names are matched exactly, or ignoring case if that matches a single name. A number between the brackets is always an index, so numeric, duplicate and empty names are addressed by index.
 
-The style section of the TissUUmaps application picks the columns of an AnnData object by query group (see [Style section](../concepts/style-section.md)):
+The Settings box of the TissUUmaps application picks the columns of an AnnData object by section (see [Settings](../concepts/settings.md)):
 
-- **Annotations**: the columns of `obs`, but its index.
+- **Observations**: the columns of `obs`, but its index.
 - **Features**: the columns of `X`, each of the `layers` and `raw/X`, named by the `var` index (`raw/var` for `raw/X`). Switching between them keeps a feature with the same `var` index name.
 - **Embeddings**: the matrices of `obsm`, for example `X_umap` or `spatial`.
 

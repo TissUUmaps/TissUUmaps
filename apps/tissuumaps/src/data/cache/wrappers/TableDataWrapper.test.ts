@@ -92,41 +92,41 @@ describe("TableDataWrapper", () => {
     it("forwards the optional methods only if the wrapped data has them", async () => {
       const { data } = createTestTableData([]);
       const wrapperWithout = new TableDataWrapper(data);
-      expect(wrapperWithout.getQueryGroups).toBeUndefined();
+      expect(wrapperWithout.getColumnSections).toBeUndefined();
       expect(wrapperWithout.describeColumn).toBeUndefined();
       expect(wrapperWithout.mapColumn).toBeUndefined();
-      expect(wrapperWithout.isColumnCategorical).toBeUndefined();
+      expect(wrapperWithout.getColumnType).toBeUndefined();
 
       const groups = [
         {
           id: "var",
           name: "Features",
-          subgroups: [
+          subsections: [
             { id: "X", name: "X" },
             { id: "raw/X", name: "raw" },
           ],
         },
       ];
       const mapColumn = vi.fn().mockResolvedValue("raw/X[CD3]");
-      data.getQueryGroups = vi.fn().mockReturnValue(groups);
+      data.getColumnSections = vi.fn().mockReturnValue(groups);
       data.describeColumn = vi
         .fn()
-        .mockResolvedValue({ queryGroupId: "X", name: "CD3" });
+        .mockResolvedValue({ sectionId: "X", name: "CD3" });
       data.mapColumn = mapColumn;
-      data.isColumnCategorical = vi.fn().mockReturnValue(true);
+      data.getColumnType = vi.fn().mockReturnValue("categorical");
       const wrapper = new TableDataWrapper(data);
-      expect(wrapper.getQueryGroups!()).toBe(groups);
+      expect(wrapper.getColumnSections!()).toBe(groups);
       await expect(wrapper.describeColumn!("X[CD3]")).resolves.toEqual({
-        queryGroupId: "X",
+        sectionId: "X",
         name: "CD3",
       });
       await expect(
-        wrapper.mapColumn!("X[CD3]", { queryGroupId: "raw/X" }),
+        wrapper.mapColumn!("X[CD3]", { sectionId: "raw/X" }),
       ).resolves.toBe("raw/X[CD3]");
       expect(mapColumn).toHaveBeenCalledWith("X[CD3]", {
-        queryGroupId: "raw/X",
+        sectionId: "raw/X",
       });
-      expect(wrapper.isColumnCategorical!("obs/cluster")).toBe(true);
+      expect(wrapper.getColumnType!("obs/cluster")).toBe("categorical");
     });
   });
 });

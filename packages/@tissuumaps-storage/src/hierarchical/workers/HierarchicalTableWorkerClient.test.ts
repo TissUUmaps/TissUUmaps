@@ -38,7 +38,7 @@ async function openClient() {
     op: "open",
     columns,
     numRows: 3,
-    queryGroups: [],
+    sections: [],
   });
   return { worker, client: await client };
 }

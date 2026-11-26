@@ -5,6 +5,7 @@ import {
   type CoordinateSpace,
   type MarkerConfig,
   type TableColumnRef,
+  type TableColumnType,
   type VisibilityConfig,
   defaultLabelColorPalette,
   getActiveConfigSource,
@@ -21,13 +22,7 @@ const defaultCategoricalColorPalette = defaultLabelColorPalette;
 const defaultContinuousColorPalette = "viridis";
 
 /**
- * How the values of a column are used: as categories, each with its own
- * value (`groupBy`), or as numbers (`from`)
- */
-export type ColumnType = "categorical" | "numerical";
-
-/**
- * What a property follows, as the style widget shows it
+ * What a property follows, as the settings widget shows it
  *
  * `none` is the property's default without a column. `custom` stands for
  * configurations the widget does not edit, such as a single color where
@@ -36,12 +31,12 @@ export type ColumnType = "categorical" | "numerical";
  */
 export type StyleBy =
   | { kind: "none" }
-  | { kind: "column"; column: string; columnType: ColumnType }
+  | { kind: "column"; column: string; columnType: TableColumnType }
   | { kind: "custom"; label: string };
 
 /**
  * Returns whether a table column reference names a column of the object's
- * own table, the only table the style widget styles by
+ * own table, the only table the settings widget styles by
  *
  * @param ref - The table column reference
  * @param tableId - The ID of the object's own table, if it has one
@@ -113,11 +108,11 @@ export function readStyleBy<TConfig extends Config<string>>(
 }
 
 /**
- * Returns what the style widget follows: the column of the first property
+ * Returns what the settings widget follows: the column of the first property
  * that follows one, or else what the first property follows
  *
  * @param styleBys - What the properties follow, in the order of the widget
- * @returns What the style widget follows
+ * @returns What the settings widget follows
  */
 export function findStyleBy(styleBys: StyleBy[]): StyleBy {
   return (
@@ -128,7 +123,7 @@ export function findStyleBy(styleBys: StyleBy[]): StyleBy {
 
 /**
  * @param styleBy - What a property follows
- * @param other - What the style widget follows
+ * @param other - What the settings widget follows
  * @returns Whether both follow the same column as the same column type
  */
 export function isSameColumnStyleBy(styleBy: StyleBy, other: StyleBy): boolean {
@@ -140,7 +135,7 @@ export function isSameColumnStyleBy(styleBy: StyleBy, other: StyleBy): boolean {
   );
 }
 
-/** What a property of the style widget does when the widget is changed */
+/** What a property of the settings widget does when the widget is changed */
 export type FollowState = {
   /** The column that the property follows from now on, if any */
   column: Extract<StyleBy, { kind: "column" }> | null;
@@ -150,7 +145,7 @@ export type FollowState = {
 };
 
 /**
- * Returns what the properties of the style widget do when the widget is
+ * Returns what the properties of the settings widget do when the widget is
  * changed
  *
  * @param previousStyleBys - What each property followed until now, by name,
@@ -173,7 +168,7 @@ export function getFollowState<TName extends string>(
 }
 
 /**
- * Returns the configuration of a property after the style widget changed: it
+ * Returns the configuration of a property after the settings widget changed: it
  * follows its new column, or returns to its default if it stops following
  * the widget's column; anything else is left unchanged
  *
@@ -197,7 +192,7 @@ export function followColumn<TConfig>(
   return state.wasFollowing ? options.withoutColumn() : config;
 }
 
-/** A property that can follow the column of the style widget */
+/** A property that can follow the column of the settings widget */
 export type StyleProperty = {
   /** Tells the property apart from the other properties of the object */
   name: string;
@@ -206,9 +201,9 @@ export type StyleProperty = {
    * The column types the property can follow, e.g. only categorical columns
    * for markers
    */
-  columnTypes: ColumnType[];
+  columnTypes: TableColumnType[];
 
-  /** Whether the property follows the column of the style widget */
+  /** Whether the property follows the column of the settings widget */
   isOn: boolean;
 };
 
@@ -249,7 +244,7 @@ export function isStyleItemOn(item: StyleProperty | StylePart): boolean {
  */
 export function isStyleItemSupported(
   item: StyleProperty | StylePart,
-  columnType: ColumnType,
+  columnType: TableColumnType,
 ): boolean {
   return getStyleProperties(item).some(({ columnTypes }) =>
     columnTypes.includes(columnType),
@@ -267,7 +262,7 @@ export function isStyleItemSupported(
  */
 export function getFollowingNames(
   items: (StyleProperty | StylePart)[],
-  columnType: ColumnType,
+  columnType: TableColumnType,
 ): string[] {
   const supported = items
     .flatMap(getStyleProperties)
@@ -293,7 +288,7 @@ export function getFollowingNames(
 export function getToggledNames(
   items: (StyleProperty | StylePart)[],
   toggledNames: string[],
-  columnType: ColumnType,
+  columnType: TableColumnType,
 ): string[] | null {
   const names = items.flatMap((item) => {
     if (!toggledNames.includes(item.name)) {
@@ -354,7 +349,7 @@ export function getPartToggledNames(
 export function withColorColumn(
   config: ColorConfig,
   column: string,
-  columnType: ColumnType,
+  columnType: TableColumnType,
   tableId: string | null,
 ): ColorConfig {
   const isSameColumn = (ref: TableColumnRef) =>

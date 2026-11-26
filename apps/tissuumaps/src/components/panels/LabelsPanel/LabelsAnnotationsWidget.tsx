@@ -16,44 +16,24 @@ import { useOpacityGroupValues } from "@/components/widgets/AnnotationsWidget/us
 import { useVisibilityGroupValues } from "@/components/widgets/AnnotationsWidget/useVisibilityGroupValues";
 import { useProjectStore } from "@/stores/project";
 
-import { LabelsSettingsCategory } from "./category";
-
 export type LabelsAnnotationsWidgetProps = {
   labels: Labels;
-  activeSettingsCategory: LabelsSettingsCategory | null;
   className?: string;
 };
 
 export function LabelsAnnotationsWidget({
   labels,
-  activeSettingsCategory,
   className,
 }: LabelsAnnotationsWidgetProps) {
   const updateLabels = useProjectStore((state) => state.updateLabels);
 
   const tableId = labels.dataSource.table ?? null;
   const annotatedObject = useMemo(() => ({ labelsId: labels.id }), [labels.id]);
-  const groupTable = useGroupTable(
-    labels.name,
-    tableId,
-    // in the order of the style section, whose first property that groups by
-    // a column the group table follows while no settings category is open
-    [
-      {
-        category: LabelsSettingsCategory.labelColor,
-        config: labels.labelColor,
-      },
-      {
-        category: LabelsSettingsCategory.labelOpacity,
-        config: labels.labelOpacity,
-      },
-      {
-        category: LabelsSettingsCategory.labelVisibility,
-        config: labels.labelVisibility,
-      },
-    ],
-    activeSettingsCategory,
-  );
+  const groupTable = useGroupTable(labels.name, tableId, [
+    labels.labelColor,
+    labels.labelVisibility,
+    labels.labelOpacity,
+  ]);
 
   const colorAdapter = useColorGroupValues();
   const visibilityAdapter = useVisibilityGroupValues();

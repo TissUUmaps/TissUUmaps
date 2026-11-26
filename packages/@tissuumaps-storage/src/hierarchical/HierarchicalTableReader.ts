@@ -8,7 +8,7 @@ import type {
 import type {
   HierarchicalTable,
   HierarchicalTableColumn,
-  HierarchicalTableQueryGroup,
+  HierarchicalTableSection,
 } from "./HierarchicalTable";
 import { AnnDataUtils } from "./profiles/AnnDataUtils";
 
@@ -27,19 +27,19 @@ const readableDataTypes = new Set(["integer", "float", "string", "boolean"]);
 export class HierarchicalTableReader implements HierarchicalTable {
   readonly columns: HierarchicalTableColumn[];
   readonly numRows: number;
-  readonly queryGroups: HierarchicalTableQueryGroup[];
+  readonly sections: HierarchicalTableSection[];
   private readonly _store: HierarchicalStore;
 
   private constructor(
     store: HierarchicalStore,
     columns: HierarchicalTableColumn[],
     numRows: number,
-    queryGroups: HierarchicalTableQueryGroup[],
+    sections: HierarchicalTableSection[],
   ) {
     this._store = store;
     this.columns = columns;
     this.numRows = numRows;
-    this.queryGroups = queryGroups;
+    this.sections = sections;
   }
 
   /**
@@ -89,7 +89,7 @@ export class HierarchicalTableReader implements HierarchicalTable {
         store,
         columns,
         numRows,
-        await AnnDataUtils.loadQueryGroups(store, columns, annDataPath, {
+        await AnnDataUtils.loadSections(store, columns, annDataPath, {
           signal,
         }),
       );

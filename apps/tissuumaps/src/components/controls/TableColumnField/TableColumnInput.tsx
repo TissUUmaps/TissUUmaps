@@ -33,16 +33,16 @@ export type TableColumnInputProps = {
   value: string | null;
   onValueChange: (value: string | null) => void;
   /**
-   * The `id` of the leaf query group to pick a column of (see
-   * `TableData.getQueryGroups`); the input then shows and searches the leaf's
+   * The `id` of the leaf section to pick a column of (see
+   * `TableData.getColumnSections`); the input then shows and searches the leaf's
    * columns by name, and a typed name has to match a column's name exactly
    */
-  queryGroupId?: string;
+  sectionId?: string;
   /** The name to show for the value, if it is not the query itself */
   valueName?: string;
   /**
-   * Called with a text that matches the name of no column of the query group when
-   * it is committed (e.g. to search other query groups for it)
+   * Called with a text that matches the name of no column of the section when
+   * it is committed (e.g. to search other sections for it)
    */
   onNoMatch?: (text: string) => void;
   placeholder?: string;
@@ -202,7 +202,7 @@ export function TableColumnInput({
   tableId,
   value,
   onValueChange,
-  queryGroupId,
+  sectionId,
   valueName,
   onNoMatch,
   placeholder,
@@ -210,7 +210,7 @@ export function TableColumnInput({
 }: TableColumnInputProps) {
   const loadTableData = useLazyTableData(tableId);
 
-  // within a query group, the input shows and searches names, not queries
+  // within a section, the input shows and searches names, not queries
   const valueText = (value !== null ? valueName : undefined) ?? value ?? "";
 
   const [text, setText] = useState(valueText);
@@ -251,7 +251,7 @@ export function TableColumnInput({
         });
         const newSuggestions =
           (await tableData?.suggestColumnQueries(text, {
-            queryGroupId,
+            sectionId,
             signal: abortController.signal,
           })) ?? [];
         if (!abortController.signal.aborted) {
@@ -267,19 +267,19 @@ export function TableColumnInput({
       }
     });
     return () => abortController.abort();
-  }, [open, text, queryGroupId, loadTableData, startSuggestTransition]);
+  }, [open, text, sectionId, loadTableData, startSuggestTransition]);
 
   // every suggestion is listed, matches first, as the table ranks them; within
-  // a query group, a text that no suggestion matches is reported (see below)
+  // a section, a text that no suggestion matches is reported (see below)
   const hasNoMatch =
-    queryGroupId !== undefined &&
+    sectionId !== undefined &&
     text.trim() !== "" &&
     text !== valueText &&
     suggestionsText === text &&
     suggestions !== null &&
     !suggestions.some((suggestion) => matchesText(suggestion, text));
 
-  // a text matching nothing in the query group is reported once typing pauses,
+  // a text matching nothing in the section is reported once typing pauses,
   // and never before its suggestions have loaded; a committed one right away
   const reportNoMatch = useEffectEvent((noMatchText: string) => {
     onNoMatch?.(noMatchText);
@@ -295,8 +295,8 @@ export function TableColumnInput({
   const handleCommitResolved = useEffectEvent((column: string | null) => {
     setPendingQuery(null);
     if (column !== null) {
-      // within a query group, the input keeps showing the picked name
-      if (queryGroupId === undefined) {
+      // within a section, the input keeps showing the picked name
+      if (sectionId === undefined) {
         setText(column);
       }
       setInvalid(false);
@@ -314,13 +314,13 @@ export function TableColumnInput({
     loadTableData({ signal })
       .then(async (tableData) => {
         let query: string | undefined = pendingQuery;
-        if (queryGroupId !== undefined) {
+        if (sectionId !== undefined) {
           // a name is no query: it has to match a column's name exactly, as
           // names differing in case may name different columns (e.g. human
           // and mouse gene symbols)
           const leafSuggestions = await tableData?.suggestColumnQueries(
             pendingQuery,
-            { queryGroupId, signal },
+            { sectionId, signal },
           );
           query = leafSuggestions?.find(
             (suggestion) => getSuggestionText(suggestion) === pendingQuery,
@@ -344,7 +344,7 @@ export function TableColumnInput({
         }
       });
     return () => abortController.abort();
-  }, [pendingQuery, queryGroupId, loadTableData]);
+  }, [pendingQuery, sectionId, loadTableData]);
 
   function commit(newQuery: string) {
     if (newQuery === valueText && !invalid) {

@@ -48,6 +48,7 @@ export function ImageSettingsWidget({
       <FieldsetLegend className="font-medium text-foreground">
         Settings
       </FieldsetLegend>
+      <ImageLayerSettingsWidget image={image} />
       <Accordion
         value={activeCategory !== null ? [activeCategory] : []}
         onValueChange={(value) =>
@@ -56,15 +57,6 @@ export function ImageSettingsWidget({
           )
         }
       >
-        <AccordionItem value={ImageSettingsCategory.layer}>
-          <AccordionHeader>
-            <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>Layer</AccordionTrigger>
-          </AccordionHeader>
-          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <ImageLayerSettingsWidget image={image} />
-          </AccordionPanel>
-        </AccordionItem>
         <AccordionItem value={ImageSettingsCategory.transform}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
@@ -98,8 +90,8 @@ function ImageLayerSettingsWidget({
 
   return (
     <div className={className}>
-      <Field>
-        <FieldLabel className="sr-only">Layer</FieldLabel>
+      <Field className="flex flex-row items-center gap-x-2">
+        <FieldLabel>Layer</FieldLabel>
         <SimpleSelect
           items={layers}
           itemLabel={(l) => l.name}

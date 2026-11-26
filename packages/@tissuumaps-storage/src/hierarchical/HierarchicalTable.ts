@@ -10,7 +10,7 @@ import type { TypedArrayOrArray } from "@tissuumaps/core";
  * `path[selector]` (see {@link ColumnQueryUtils}).
  *
  * `categorical` is what the encoding declares, if anything (see
- * `TableData.isColumnCategorical`).
+ * `TableData.getColumnType`).
  */
 export type HierarchicalTableColumn =
   | {
@@ -31,17 +31,17 @@ export type HierarchicalTableColumn =
     };
 
 /**
- * A query group of the store (see `TableData.getQueryGroups`)
+ * A section of the store (see `TableData.getColumnSections`)
  *
  * A leaf at the path of a matrix column holds the matrix's columns, named by
  * their selectors. Any other leaf holds the dataset columns directly below its
  * path, but for the dataframe index at `indexPath`.
  */
-export type HierarchicalTableQueryGroup = {
+export type HierarchicalTableSection = {
   id: string;
   name: string;
   indexPath?: string;
-  subgroups?: HierarchicalTableQueryGroup[];
+  subsections?: HierarchicalTableSection[];
 };
 
 /** An open hierarchical table: the columns of a store and a way to read them */
@@ -50,8 +50,8 @@ export interface HierarchicalTable {
   readonly columns: HierarchicalTableColumn[];
   /** The row count inferred from the store */
   readonly numRows: number;
-  /** The query groups, in the canonical order of the format */
-  readonly queryGroups: HierarchicalTableQueryGroup[];
+  /** The sections, in the canonical order of the format */
+  readonly sections: HierarchicalTableSection[];
 
   /**
    * Reads the values of a column

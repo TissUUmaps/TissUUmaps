@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import type { Labels } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
@@ -16,10 +14,9 @@ import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
+import { LabelsAdvancedSettingsWidget } from "./LabelsAdvancedSettingsWidget";
 import { LabelsAnnotationsWidget } from "./LabelsAnnotationsWidget";
 import { LabelsSettingsWidget } from "./LabelsSettingsWidget";
-import { LabelsStyleWidget } from "./LabelsStyleWidget";
-import type { LabelsSettingsCategory } from "./category";
 
 export type LabelsPanelProps = {
   className?: string;
@@ -67,9 +64,6 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
   const updateLabels = useProjectStore((state) => state.updateLabels);
   const deleteLabels = useProjectStore((state) => state.deleteLabels);
 
-  const [activeSettingsCategory, setActiveSettingsCategory] =
-    useState<LabelsSettingsCategory | null>(null);
-
   return (
     <SortableObjectListItem
       id={labels.id}
@@ -105,29 +99,13 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
         }}
         className="bg-card"
       />
-      <LabelsStyleWidget labels={labels} className="bg-card">
-        <AdvancedSettings
-          // a hidden settings category would keep the group table from
-          // following the style section
-          onOpenChange={(open) => {
-            if (!open) {
-              setActiveSettingsCategory(null);
-            }
-          }}
-        >
-          <LabelsSettingsWidget
-            labels={labels}
-            activeCategory={activeSettingsCategory}
-            onActiveCategoryChange={setActiveSettingsCategory}
-          />
+      <LabelsSettingsWidget labels={labels} className="bg-card">
+        <AdvancedSettings>
+          <LabelsAdvancedSettingsWidget labels={labels} />
         </AdvancedSettings>
-      </LabelsStyleWidget>
+      </LabelsSettingsWidget>
       {labels.dataSource.table !== undefined && (
-        <LabelsAnnotationsWidget
-          labels={labels}
-          activeSettingsCategory={activeSettingsCategory}
-          className="bg-card"
-        />
+        <LabelsAnnotationsWidget labels={labels} className="bg-card" />
       )}
     </SortableObjectListItem>
   );

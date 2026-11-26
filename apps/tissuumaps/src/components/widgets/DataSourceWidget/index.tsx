@@ -30,8 +30,8 @@ export type DataSourceWidgetProps<TDataSource extends DataSource> = {
 };
 
 /**
- * Shows the type of a data source, the rest of it when expanded, and edits it
- * on demand
+ * Shows the type and source of a data source, the rest of it when expanded,
+ * and edits it on demand
  *
  * The source is not part of any data provider's UI schema, but rendered here.
  */
@@ -90,10 +90,15 @@ function DataSourceView({
         <div className="flex flex-row items-center gap-x-1 text-xs">
           <CollapsibleTriggerRightDownIcon />
           <CollapsibleTrigger className="flex min-w-0 flex-1 flex-row gap-x-3 text-left">
-            <span className="text-muted-foreground">Type</span>
-            <span className="truncate">
+            <span className="shrink-0 text-muted-foreground">Type</span>
+            <span className="shrink-0">
               {dataProvider?.name ?? dataSource.type}
             </span>
+            {showSource && dataSource.source !== undefined && (
+              <span className="truncate" title={dataSource.source}>
+                {dataSource.source}
+              </span>
+            )}
           </CollapsibleTrigger>
           <IconButton label="Edit" size="icon-xs" onClick={onEdit}>
             <EditIcon className="size-4" />
@@ -101,12 +106,6 @@ function DataSourceView({
         </div>
         <CollapsiblePanel>
           <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 pl-5 text-xs">
-            {showSource && dataSource.source !== undefined && (
-              <div className="contents">
-                <dt className="text-muted-foreground">Source</dt>
-                <dd className="wrap-anywhere">{dataSource.source}</dd>
-              </div>
-            )}
             {dataProvider !== undefined && (
               <JsonForms
                 ajv={ajv}

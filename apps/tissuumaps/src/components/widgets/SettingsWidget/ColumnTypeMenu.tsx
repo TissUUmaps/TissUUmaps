@@ -1,5 +1,7 @@
 import { HashIcon, TagIcon } from "lucide-react";
 
+import type { TableColumnType } from "@tissuumaps/core";
+
 import { IconButton } from "@/components/common/icon-button";
 import {
   DropdownMenu,
@@ -10,21 +12,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import type { ColumnType } from "./styleBy";
-
-const columnTypeLabels: Record<ColumnType, string> = {
+const columnTypeLabels: Record<TableColumnType, string> = {
   categorical: "Categorical",
   numerical: "Numerical",
 };
 
-const columnTypeIcons: Record<ColumnType, typeof TagIcon> = {
+const columnTypeIcons: Record<TableColumnType, typeof TagIcon> = {
   categorical: TagIcon,
   numerical: HashIcon,
 };
 
 export type ColumnTypeMenuProps = {
-  value: ColumnType;
-  onValueChange: (value: ColumnType) => void;
+  value: TableColumnType;
+  onValueChange: (value: TableColumnType) => void;
   /** Whether the column can only be categorical, e.g. a text column */
   isCategoricalOnly: boolean;
   disabled?: boolean;
@@ -54,10 +54,12 @@ export function ColumnTypeMenu({
       <DropdownMenuContent align="start" className="w-64">
         <DropdownMenuRadioGroup
           value={value}
-          onValueChange={(newValue) => onValueChange(newValue as ColumnType)}
+          onValueChange={(newValue) =>
+            onValueChange(newValue as TableColumnType)
+          }
         >
           <DropdownMenuRadioItem
-            value={"categorical" satisfies ColumnType}
+            value={"categorical" satisfies TableColumnType}
             closeOnClick
             className="flex-wrap"
           >
@@ -68,7 +70,7 @@ export function ColumnTypeMenu({
             </DropdownMenuItemDescription>
           </DropdownMenuRadioItem>
           <DropdownMenuRadioItem
-            value={"numerical" satisfies ColumnType}
+            value={"numerical" satisfies TableColumnType}
             disabled={isCategoricalOnly}
             closeOnClick
             className="flex-wrap"

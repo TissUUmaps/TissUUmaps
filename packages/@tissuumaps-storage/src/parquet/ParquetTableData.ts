@@ -3,6 +3,7 @@ import {
   type IDArray,
   type ProgressCallback,
   type TableColumnQuerySuggestion,
+  type TableColumnType,
   type TableData,
   type TypedArrayOrArray,
 } from "@tissuumaps/core";
@@ -72,8 +73,8 @@ export class ParquetTableData implements TableData {
     return this._names;
   }
 
-  isColumnCategorical(column: string): boolean | undefined {
-    return this._categoricalColumns.has(column) || undefined;
+  getColumnType(column: string): TableColumnType | undefined {
+    return this._categoricalColumns.has(column) ? "categorical" : undefined;
   }
 
   suggestColumnQueries(

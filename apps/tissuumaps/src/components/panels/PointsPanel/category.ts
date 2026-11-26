@@ -1,5 +1,4 @@
 export const PointsSettingsCategory = {
-  layer: "layer",
   transform: "transform",
   pointMarker: "pointMarker",
   pointSize: "pointSize",

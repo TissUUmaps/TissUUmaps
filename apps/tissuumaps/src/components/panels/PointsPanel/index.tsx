@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import type { Points } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
@@ -22,10 +20,9 @@ import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
+import { PointsAdvancedSettingsWidget } from "./PointsAdvancedSettingsWidget";
 import { PointsAnnotationsWidget } from "./PointsAnnotationsWidget";
 import { PointsSettingsWidget } from "./PointsSettingsWidget";
-import { PointsStyleWidget } from "./PointsStyleWidget";
-import type { PointsSettingsCategory } from "./category";
 
 export type PointsPanelProps = {
   className?: string;
@@ -74,9 +71,6 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
   const deletePoints = useProjectStore((state) => state.deletePoints);
 
   const pointsData = usePointsData(points.id);
-
-  const [activeSettingsCategory, setActiveSettingsCategory] =
-    useState<PointsSettingsCategory | null>(null);
 
   return (
     <SortableObjectListItem
@@ -138,28 +132,15 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
         }}
         className="bg-card"
       />
-      <PointsStyleWidget points={points} className="bg-card">
-        <AdvancedSettings
-          // a hidden settings category would keep the group table from
-          // following the style section
-          onOpenChange={(open) => {
-            if (!open) {
-              setActiveSettingsCategory(null);
-            }
-          }}
-        >
-          <PointsSettingsWidget
-            points={points}
-            activeCategory={activeSettingsCategory}
-            onActiveCategoryChange={setActiveSettingsCategory}
-          />
+      <PointsSettingsWidget points={points} className="bg-card">
+        <AdvancedSettings>
+          <PointsAdvancedSettingsWidget points={points} />
         </AdvancedSettings>
-      </PointsStyleWidget>
+      </PointsSettingsWidget>
       {pointsData !== null && (
         <PointsAnnotationsWidget
           points={points}
           data={pointsData}
-          activeSettingsCategory={activeSettingsCategory}
           className="bg-card"
         />
       )}

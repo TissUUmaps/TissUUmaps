@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import type { Shapes } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
@@ -17,10 +15,9 @@ import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
+import { ShapesAdvancedSettingsWidget } from "./ShapesAdvancedSettingsWidget";
 import { ShapesAnnotationsWidget } from "./ShapesAnnotationsWidget";
 import { ShapesSettingsWidget } from "./ShapesSettingsWidget";
-import { ShapesStyleWidget } from "./ShapesStyleWidget";
-import type { ShapesSettingsCategory } from "./category";
 
 export type ShapesPanelProps = {
   className?: string;
@@ -70,9 +67,6 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
 
   const shapesData = useShapesData(shapes.id);
 
-  const [activeSettingsCategory, setActiveSettingsCategory] =
-    useState<ShapesSettingsCategory | null>(null);
-
   return (
     <SortableObjectListItem
       id={shapes.id}
@@ -108,28 +102,15 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
         }}
         className="bg-card"
       />
-      <ShapesStyleWidget shapes={shapes} className="bg-card">
-        <AdvancedSettings
-          // a hidden settings category would keep the group table from
-          // following the style section
-          onOpenChange={(open) => {
-            if (!open) {
-              setActiveSettingsCategory(null);
-            }
-          }}
-        >
-          <ShapesSettingsWidget
-            shapes={shapes}
-            activeCategory={activeSettingsCategory}
-            onActiveCategoryChange={setActiveSettingsCategory}
-          />
+      <ShapesSettingsWidget shapes={shapes} className="bg-card">
+        <AdvancedSettings>
+          <ShapesAdvancedSettingsWidget shapes={shapes} />
         </AdvancedSettings>
-      </ShapesStyleWidget>
+      </ShapesSettingsWidget>
       {shapesData !== null && (
         <ShapesAnnotationsWidget
           shapes={shapes}
           data={shapesData}
-          activeSettingsCategory={activeSettingsCategory}
           className="bg-card"
         />
       )}

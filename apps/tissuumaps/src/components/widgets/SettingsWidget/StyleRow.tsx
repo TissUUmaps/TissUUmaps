@@ -14,7 +14,7 @@ export type StyleRowProps = {
 };
 
 /**
- * A row of the style section: a muted label and its controls, in a grid of a
+ * A row of the settings widget: a muted label and its controls, in a grid of a
  * label column and a control column
  *
  * The controls are kept compact (`h-8`) by their containers.

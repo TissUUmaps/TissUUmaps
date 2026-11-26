@@ -38,18 +38,18 @@ export class TableDataWrapper
   >();
 
   readonly getNames?: TableData["getNames"];
-  readonly getQueryGroups?: TableData["getQueryGroups"];
+  readonly getColumnSections?: TableData["getColumnSections"];
   readonly describeColumn?: TableData["describeColumn"];
   readonly mapColumn?: TableData["mapColumn"];
-  readonly isColumnCategorical?: TableData["isColumnCategorical"];
+  readonly getColumnType?: TableData["getColumnType"];
 
   constructor(data: TableData) {
     super(data);
     if (data.getNames !== undefined) {
       this.getNames = () => this.data.getNames!();
     }
-    if (data.getQueryGroups !== undefined) {
-      this.getQueryGroups = () => this.data.getQueryGroups!();
+    if (data.getColumnSections !== undefined) {
+      this.getColumnSections = () => this.data.getColumnSections!();
     }
     if (data.describeColumn !== undefined) {
       this.describeColumn = (column, options) =>
@@ -59,9 +59,8 @@ export class TableDataWrapper
       this.mapColumn = (column, options) =>
         this.data.mapColumn!(column, options);
     }
-    if (data.isColumnCategorical !== undefined) {
-      this.isColumnCategorical = (column) =>
-        this.data.isColumnCategorical!(column);
+    if (data.getColumnType !== undefined) {
+      this.getColumnType = (column) => this.data.getColumnType!(column);
     }
   }
 
@@ -75,7 +74,7 @@ export class TableDataWrapper
 
   suggestColumnQueries(
     currentQuery: string,
-    options?: { queryGroupId?: string; signal?: AbortSignal },
+    options?: { sectionId?: string; signal?: AbortSignal },
   ): Promise<TableColumnQuerySuggestion[]> {
     return this.data.suggestColumnQueries(currentQuery, options);
   }

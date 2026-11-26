@@ -22,66 +22,31 @@ import { useOpacityGroupValues } from "@/components/widgets/AnnotationsWidget/us
 import { useVisibilityGroupValues } from "@/components/widgets/AnnotationsWidget/useVisibilityGroupValues";
 import { useProjectStore } from "@/stores/project";
 
-import { ShapesSettingsCategory } from "./category";
-
 export type ShapesAnnotationsWidgetProps = {
   shapes: Shapes;
   data: ItemsData;
-  activeSettingsCategory: ShapesSettingsCategory | null;
   className?: string;
 };
 
 export function ShapesAnnotationsWidget({
   shapes,
   data,
-  activeSettingsCategory,
   className,
 }: ShapesAnnotationsWidgetProps) {
   const updateShapes = useProjectStore((state) => state.updateShapes);
 
   const tableId = shapes.dataSource.table ?? null;
   const annotatedObject = useMemo(() => ({ shapesId: shapes.id }), [shapes.id]);
-  const groupTable = useGroupTable(
-    shapes.name,
-    tableId,
-    // in the order of the style section, whose first property that groups by
-    // a column the group table follows while no settings category is open
-    [
-      {
-        category: ShapesSettingsCategory.shapeFillColor,
-        config: shapes.shapeFillColor,
-      },
-      {
-        category: ShapesSettingsCategory.shapeFillOpacity,
-        config: shapes.shapeFillOpacity,
-      },
-      {
-        category: ShapesSettingsCategory.shapeFillVisibility,
-        config: shapes.shapeFillVisibility,
-      },
-      {
-        category: ShapesSettingsCategory.shapeStrokeColor,
-        config: shapes.shapeStrokeColor,
-      },
-      {
-        category: ShapesSettingsCategory.shapeStrokeOpacity,
-        config: shapes.shapeStrokeOpacity,
-      },
-      {
-        category: ShapesSettingsCategory.shapeStrokeVisibility,
-        config: shapes.shapeStrokeVisibility,
-      },
-      {
-        category: ShapesSettingsCategory.shapeOpacity,
-        config: shapes.shapeOpacity,
-      },
-      {
-        category: ShapesSettingsCategory.shapeVisibility,
-        config: shapes.shapeVisibility,
-      },
-    ],
-    activeSettingsCategory,
-  );
+  const groupTable = useGroupTable(shapes.name, tableId, [
+    shapes.shapeVisibility,
+    shapes.shapeOpacity,
+    shapes.shapeFillColor,
+    shapes.shapeFillVisibility,
+    shapes.shapeFillOpacity,
+    shapes.shapeStrokeColor,
+    shapes.shapeStrokeVisibility,
+    shapes.shapeStrokeOpacity,
+  ]);
 
   const colorAdapter = useColorGroupValues();
   const visibilityAdapter = useVisibilityGroupValues();

@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
-import type { TableColumnQueryGroup } from "@tissuumaps/core";
+import type { TableColumnSection } from "@tissuumaps/core";
 
 import { SimpleSelect } from "@/components/common/simple-select";
 import { TableColumnInput } from "@/components/controls/TableColumnField/TableColumnInput";
@@ -10,42 +10,42 @@ import { useTableData } from "@/data/hooks/useData";
 import { StyleRow } from "./StyleRow";
 import { findColumnByText } from "./findColumnByText";
 
-/** A row of the picker: a top-level query group and its leaves */
+/** A row of the picker: a top-level section and its leaves */
 type Row = {
   id: string;
   name: string;
-  leaves: Pick<TableColumnQueryGroup, "id" | "name">[];
+  leaves: Pick<TableColumnSection, "id" | "name">[];
   hasFrom: boolean;
 };
 
 /**
- * Lays out query groups as rows: each top-level query group is a row titled
- * by its name; a leaf is the row's only set of columns, any other query group
+ * Lays out sections as rows: each top-level section is a row titled
+ * by its name; a leaf is the row's only set of columns, any other section
  * offers its leaves under "from", those of deeper levels named by their path
  *
- * @param groups - The top-level query groups
+ * @param groups - The top-level sections
  * @returns The rows
  */
-function toRows(groups: TableColumnQueryGroup[]): Row[] {
+function toRows(groups: TableColumnSection[]): Row[] {
   const getLeaves = (
-    group: TableColumnQueryGroup,
+    group: TableColumnSection,
     prefix: string,
   ): Row["leaves"] =>
-    group.subgroups === undefined
+    group.subsections === undefined
       ? [{ id: group.id, name: `${prefix}${group.name}` }]
-      : group.subgroups.flatMap((subgroup) =>
+      : group.subsections.flatMap((subsection) =>
           getLeaves(
-            subgroup,
-            subgroup.subgroups === undefined
+            subsection,
+            subsection.subsections === undefined
               ? prefix
-              : `${prefix}${subgroup.name} › `,
+              : `${prefix}${subsection.name} › `,
           ),
         );
   return groups.map((group) => ({
     id: group.id,
     name: group.name,
     leaves: getLeaves(group, ""),
-    hasFrom: group.subgroups !== undefined,
+    hasFrom: group.subsections !== undefined,
   }));
 }
 
@@ -61,7 +61,7 @@ export type StyleByPickerProps = {
 
   /**
    * The text shown while no column is styled by, in the first row for tables
-   * with query groups
+   * with sections
    */
   placeholder: string;
 
@@ -75,19 +75,19 @@ export type StyleByPickerProps = {
 };
 
 /**
- * Picks the column to style by, by its query group rather than by its query,
+ * Picks the column to style by, by its section rather than by its query,
  * as rows of the {@link StyleRow} grid
  *
- * Tables with query groups (see `TableData.getQueryGroups`) get one row per
- * top-level query group, titled by its name (e.g. "Annotations",
- * "Features"); the table names its query groups, the app only lays them out.
+ * Tables with sections (see `TableData.getColumnSections`) get one row per
+ * top-level section, titled by its name (e.g. "Observations",
+ * "Features"); the table names its sections, the app only lays them out.
  * A top-level leaf is the row's set of columns; any other top-level query
  * group gets a "from" menu of its leaves (e.g. `X`, a layer or `raw`), whose
  * first leaf is the default. The row of the column styled by is filled, the
  * others empty; picking in any applies right away. Switching "from" keeps the
  * entity styled by if the table maps it to the new leaf (see
  * `TableData.mapColumn`). A text matching no column of a leaf is looked up in
- * the other leaves of its row and offered there. Tables without query groups
+ * the other leaves of its row and offered there. Tables without sections
  * get one "Column" row.
  */
 export function StyleByPicker({
@@ -99,12 +99,12 @@ export function StyleByPicker({
   className,
 }: StyleByPickerProps) {
   const tableData = useTableData(tableId);
-  const rows = toRows(tableData?.getQueryGroups?.() ?? []);
+  const rows = toRows(tableData?.getColumnSections?.() ?? []);
   // the description of the column styled by, kept until the next one resolves,
   // so that the row does not empty in between
   const [description, setDescription] = useState<{
     column: string;
-    queryGroupId: string;
+    sectionId: string;
     name: string;
   } | null>(null);
   // the leaf chosen under "from", by row ID, for this session only
@@ -145,8 +145,8 @@ export function StyleByPicker({
           newDescription !== null ? { column, ...newDescription } : null,
         );
         // the row of the column styled by shows its leaf
-        const row = toRows(tableData.getQueryGroups?.() ?? []).find((row) =>
-          row.leaves.some((leaf) => leaf.id === newDescription?.queryGroupId),
+        const row = toRows(tableData.getColumnSections?.() ?? []).find((row) =>
+          row.leaves.some((leaf) => leaf.id === newDescription?.sectionId),
         );
         if (row !== undefined) {
           setSelectedLeafIds((selected) => ({
@@ -190,7 +190,7 @@ export function StyleByPicker({
   }
 
   const styledRow = rows.find((row) =>
-    row.leaves.some((leaf) => leaf.id === description?.queryGroupId),
+    row.leaves.some((leaf) => leaf.id === description?.sectionId),
   );
 
   const startSwitch = () => {
@@ -202,19 +202,19 @@ export function StyleByPicker({
     return abortController.signal;
   };
 
-  const switchLeaf = async (row: Row, queryGroupId: string) => {
+  const switchLeaf = async (row: Row, sectionId: string) => {
     const signal = startSwitch();
-    const newLeaf = row.leaves.find((leaf) => leaf.id === queryGroupId);
+    const newLeaf = row.leaves.find((leaf) => leaf.id === sectionId);
     if (
       newLeaf === undefined ||
       column === null ||
       styledRow?.id !== row.id ||
-      newLeaf.id === description?.queryGroupId ||
+      newLeaf.id === description?.sectionId ||
       tableData?.mapColumn === undefined
     ) {
       setSelectedLeafIds((selected) => ({
         ...selected,
-        [row.id]: queryGroupId,
+        [row.id]: sectionId,
       }));
       return;
     }
@@ -222,7 +222,7 @@ export function StyleByPicker({
     // row keeps showing the column styled by and its leaf
     try {
       const mappedColumn = await tableData.mapColumn(column, {
-        queryGroupId,
+        sectionId,
         signal,
       });
       if (signal.aborted) {
@@ -231,7 +231,7 @@ export function StyleByPicker({
       if (mappedColumn !== null) {
         setSelectedLeafIds((selected) => ({
           ...selected,
-          [row.id]: queryGroupId,
+          [row.id]: sectionId,
         }));
         onColumnChange(mappedColumn);
       } else {
@@ -239,25 +239,21 @@ export function StyleByPicker({
       }
     } catch (error) {
       if (!signal.aborted) {
-        console.error("Failed to find the column in the query group", error);
+        console.error("Failed to find the column in the section", error);
       }
     }
   };
 
   // a text matching no column of a leaf is searched for in the other leaves of
   // its row, by exact name or query only, and offered rather than applied
-  const searchElsewhere = async (
-    text: string,
-    row: Row,
-    queryGroupId: string,
-  ) => {
+  const searchElsewhere = async (text: string, row: Row, sectionId: string) => {
     const signal = startSwitch();
     if (tableData === null) {
       return;
     }
     try {
       for (const leaf of row.leaves) {
-        if (leaf.id === queryGroupId) {
+        if (leaf.id === sectionId) {
           continue;
         }
         const found = await findColumnByText(tableData, leaf.id, text, {
@@ -273,7 +269,7 @@ export function StyleByPicker({
       }
     } catch (error) {
       if (!signal.aborted) {
-        console.error("Failed to search the other query groups", error);
+        console.error("Failed to search the other sections", error);
       }
     }
   };
@@ -285,7 +281,7 @@ export function StyleByPicker({
         // the chosen leaf, else the styled one, else the first one
         const preferredLeafId =
           selectedLeafIds[row.id] ??
-          (isActive ? description?.queryGroupId : undefined);
+          (isActive ? description?.sectionId : undefined);
         const leaf =
           row.leaves.find((leaf) => leaf.id === preferredLeafId) ??
           row.leaves[0];
@@ -295,7 +291,7 @@ export function StyleByPicker({
         const isDescriptionStale = description?.column !== column;
         const showsStyledColumn =
           isActive &&
-          (leaf.id === description?.queryGroupId || isDescriptionStale);
+          (leaf.id === description?.sectionId || isDescriptionStale);
         return (
           <StyleRow
             key={row.id}
@@ -307,7 +303,7 @@ export function StyleByPicker({
               {showsStyledColumn && columnControls}
               <TableColumnInput
                 tableId={tableId}
-                queryGroupId={leaf.id}
+                sectionId={leaf.id}
                 value={showsStyledColumn ? column : null}
                 valueName={showsStyledColumn ? description?.name : undefined}
                 onValueChange={onColumnChange}
@@ -330,9 +326,9 @@ export function StyleByPicker({
                       itemLabel={(item) => item.name}
                       itemValue={(item) => item.id}
                       value={leaf.id}
-                      onValueChange={(queryGroupId) => {
-                        if (queryGroupId !== null) {
-                          void switchLeaf(row, queryGroupId);
+                      onValueChange={(sectionId) => {
+                        if (sectionId !== null) {
+                          void switchLeaf(row, sectionId);
                         }
                       }}
                       variant="compact"

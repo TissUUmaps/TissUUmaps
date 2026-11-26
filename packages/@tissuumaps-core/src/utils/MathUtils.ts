@@ -335,7 +335,7 @@ export class MathUtils {
    * `limit + 1` if there are more than `limit`
    * @throws Error if `limit` is negative
    */
-  static async countDistinct<T>(
+  static async countUniqueValues<T>(
     values: TypedArrayOrArray<T>,
     limit: number,
     options?: { signal?: AbortSignal },

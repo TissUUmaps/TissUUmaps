@@ -23,7 +23,7 @@ describe("findColumnByText", () => {
       { column: "raw/X[ENSG00000198851]", name: "CD3E" },
     );
     expect(tableData.suggestColumnQueries).toHaveBeenCalledWith("CD3E", {
-      queryGroupId: "raw/X",
+      sectionId: "raw/X",
       signal: undefined,
     });
   });

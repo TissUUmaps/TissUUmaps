@@ -1,5 +1,4 @@
 export const ImageSettingsCategory = {
-  layer: "layer",
   transform: "transform",
 } as const;
 

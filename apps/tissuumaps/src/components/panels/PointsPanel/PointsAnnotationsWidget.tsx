@@ -21,51 +21,28 @@ import { useSizeGroupValues } from "@/components/widgets/AnnotationsWidget/useSi
 import { useVisibilityGroupValues } from "@/components/widgets/AnnotationsWidget/useVisibilityGroupValues";
 import { useProjectStore } from "@/stores/project";
 
-import { PointsSettingsCategory } from "./category";
-
 export type PointsAnnotationsWidgetProps = {
   points: Points;
   data: ItemsData;
-  activeSettingsCategory: PointsSettingsCategory | null;
   className?: string;
 };
 
 export function PointsAnnotationsWidget({
   points,
   data,
-  activeSettingsCategory,
   className,
 }: PointsAnnotationsWidgetProps) {
   const updatePoints = useProjectStore((state) => state.updatePoints);
 
   const tableId = points.dataSource.table ?? null;
   const annotatedObject = useMemo(() => ({ pointsId: points.id }), [points.id]);
-  const groupTable = useGroupTable(
-    points.name,
-    tableId,
-    // in the order of the style section, whose first property that groups by
-    // a column the group table follows while no settings category is open
-    [
-      {
-        category: PointsSettingsCategory.pointColor,
-        config: points.pointColor,
-      },
-      {
-        category: PointsSettingsCategory.pointMarker,
-        config: points.pointMarker,
-      },
-      { category: PointsSettingsCategory.pointSize, config: points.pointSize },
-      {
-        category: PointsSettingsCategory.pointOpacity,
-        config: points.pointOpacity,
-      },
-      {
-        category: PointsSettingsCategory.pointVisibility,
-        config: points.pointVisibility,
-      },
-    ],
-    activeSettingsCategory,
-  );
+  const groupTable = useGroupTable(points.name, tableId, [
+    points.pointMarker,
+    points.pointSize,
+    points.pointColor,
+    points.pointVisibility,
+    points.pointOpacity,
+  ]);
 
   const markerAdapter = useMarkerGroupValues();
   const sizeAdapter = useSizeGroupValues();

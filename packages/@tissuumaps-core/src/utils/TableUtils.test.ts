@@ -467,16 +467,16 @@ describe("TableUtils", () => {
     });
   });
 
-  describe("loadIsColumnCategorical", () => {
+  describe("loadColumnType", () => {
     it("uses what the table declares", async () => {
       const { data, loadValues } = createMockTableData(
         new Uint32Array([0, 1]),
         new Float32Array([0, 1]),
       );
-      data.isColumnCategorical = vi.fn().mockReturnValue(true);
-      await expect(
-        TableUtils.loadIsColumnCategorical(data, "col1"),
-      ).resolves.toBe(true);
+      data.getColumnType = vi.fn().mockReturnValue("categorical");
+      await expect(TableUtils.loadColumnType(data, "col1")).resolves.toBe(
+        "categorical",
+      );
       expect(loadValues).not.toHaveBeenCalled();
     });
 
@@ -485,10 +485,10 @@ describe("TableUtils", () => {
         new Uint32Array([0, 1]),
         new Float32Array([0, 1]),
       );
-      data.isColumnCategorical = vi.fn().mockReturnValue(undefined);
-      await expect(
-        TableUtils.loadIsColumnCategorical(data, "col1"),
-      ).resolves.toBe(false);
+      data.getColumnType = vi.fn().mockReturnValue(undefined);
+      await expect(TableUtils.loadColumnType(data, "col1")).resolves.toBe(
+        "numerical",
+      );
     });
   });
 

@@ -142,7 +142,7 @@ and the plugin is not mounted, but it stays registered.
 
 ## Table data
 
-Query groups are optional facts of the table data (see `TableData.getQueryGroups`); the application decides how to present them.
+Sections are optional facts of the table data (see `TableData.getColumnSections`); the application decides how to present them.
 
 ## Stores
 

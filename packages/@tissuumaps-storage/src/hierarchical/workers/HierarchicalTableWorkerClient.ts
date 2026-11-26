@@ -3,7 +3,7 @@ import type { TypedArrayOrArray } from "@tissuumaps/core";
 import type {
   HierarchicalTable,
   HierarchicalTableColumn,
-  HierarchicalTableQueryGroup,
+  HierarchicalTableSection,
 } from "../HierarchicalTable";
 import type {
   HierarchicalTableWorkerRequest,
@@ -22,19 +22,19 @@ import type {
 export class HierarchicalTableWorkerClient implements HierarchicalTable {
   readonly columns: HierarchicalTableColumn[];
   readonly numRows: number;
-  readonly queryGroups: HierarchicalTableQueryGroup[];
+  readonly sections: HierarchicalTableSection[];
   private readonly _channel: WorkerChannel;
 
   private constructor(
     channel: WorkerChannel,
     columns: HierarchicalTableColumn[],
     numRows: number,
-    queryGroups: HierarchicalTableQueryGroup[],
+    sections: HierarchicalTableSection[],
   ) {
     this._channel = channel;
     this.columns = columns;
     this.numRows = numRows;
-    this.queryGroups = queryGroups;
+    this.sections = sections;
   }
 
   /**
@@ -56,7 +56,7 @@ export class HierarchicalTableWorkerClient implements HierarchicalTable {
     const channel = new WorkerChannel(worker);
     try {
       signal?.throwIfAborted();
-      const { columns, numRows, queryGroups } = await channel.request(
+      const { columns, numRows, sections } = await channel.request(
         { op: "open", source },
         { signal },
       );
@@ -64,7 +64,7 @@ export class HierarchicalTableWorkerClient implements HierarchicalTable {
         channel,
         columns,
         numRows,
-        queryGroups,
+        sections,
       );
     } catch (error) {
       channel.terminate();

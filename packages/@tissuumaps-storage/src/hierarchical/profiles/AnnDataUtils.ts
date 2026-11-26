@@ -8,7 +8,7 @@ import type {
 } from "../HierarchicalStore";
 import type {
   HierarchicalTableColumn,
-  HierarchicalTableQueryGroup,
+  HierarchicalTableSection,
 } from "../HierarchicalTable";
 
 /**
@@ -203,9 +203,9 @@ export class AnnDataUtils {
   }
 
   /**
-   * Loads the query groups of an AnnData object
+   * Loads the sections of an AnnData object
    *
-   * "Annotations" is the `obs` dataframe. "Features" holds `X`, each of the
+   * "Observations" is the `obs` dataframe. "Features" holds `X`, each of the
    * `layers` and `raw/X`: matrices whose columns are the features described by
    * `var` (or `raw/var`), so that a feature maps between them. "Embeddings"
    * holds the matrices of `obsm` (e.g. `X_umap` or `spatial`).
@@ -214,21 +214,21 @@ export class AnnDataUtils {
    * @param columns - The columns of the store
    * @param annDataPath - The path of the AnnData object of the store, if any
    * @param options - Optional abort signal
-   * @returns The query groups that have columns, in this order: annotations,
+   * @returns The sections that have columns, in this order: observations,
    * features (`X`, the layers, `raw/X`), embeddings
    */
-  static async loadQueryGroups(
+  static async loadSections(
     store: HierarchicalStore,
     columns: HierarchicalTableColumn[],
     annDataPath: string | undefined,
     options?: { signal?: AbortSignal },
-  ): Promise<HierarchicalTableQueryGroup[]> {
+  ): Promise<HierarchicalTableSection[]> {
     const { signal } = options ?? {};
     signal?.throwIfAborted();
     if (annDataPath === undefined) {
       return [];
     }
-    const groups: HierarchicalTableQueryGroup[] = [];
+    const groups: HierarchicalTableSection[] = [];
     const obsPath = ColumnQueryUtils.joinPath(annDataPath, "obs");
     const obsIndexPath = await AnnDataUtils.getDataFrameIndexPath(
       store,
@@ -243,13 +243,13 @@ export class AnnDataUtils {
     ) {
       groups.push({
         id: obsPath,
-        name: "Annotations",
+        name: "Observations",
         ...(obsIndexPath !== undefined && { indexPath: obsIndexPath }),
       });
     }
     const matrices = columns.filter((column) => column.kind === "matrix");
     const featureLeaves: {
-      leaf: HierarchicalTableQueryGroup;
+      leaf: HierarchicalTableSection;
       relativePath: string;
     }[] = [];
     for (const matrix of matrices) {
@@ -289,7 +289,7 @@ export class AnnDataUtils {
       groups.push({
         id: ColumnQueryUtils.joinPath(annDataPath, "var"),
         name: "Features",
-        subgroups: featureLeaves.map(({ leaf }) => leaf),
+        subsections: featureLeaves.map(({ leaf }) => leaf),
       });
     }
     const obsmPath = ColumnQueryUtils.joinPath(annDataPath, "obsm");
@@ -307,7 +307,7 @@ export class AnnDataUtils {
       groups.push({
         id: obsmPath,
         name: "Embeddings",
-        subgroups: embeddingLeaves,
+        subsections: embeddingLeaves,
       });
     }
     return groups;

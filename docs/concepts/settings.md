@@ -2,12 +2,12 @@
 sidebar_position: 5
 ---
 
-# Style section
+# Settings
 
 Each point cloud, label image and shape cloud shows a **Settings** box in its entry in the Points, Labels or Shapes panel, below its data source. Without a table, the style rows are disabled. The other settings are under **Advanced**, collapsed at the end of the box.
 
 - **Column** picks a column of the object's own table.
-  - Tables with query groups, such as AnnData, show one row per group, for example **Annotations**, **Features** and **Embeddings**. Each row searches its columns by name. **from** chooses the set of columns of a row, for example `X`, a layer or `raw`; switching it keeps the feature if that set has it. A name found only in another set of the row is offered there, to switch to.
+  - Tables with sections, such as AnnData, show one row per group, for example **Observations**, **Features** and **Embeddings**. Each row searches its columns by name. **from** chooses the set of columns of a row, for example `X`, a layer or `raw`; switching it keeps the feature if that set has it. A name found only in another set of the row is offered there, to switch to.
   - Other tables, such as CSV files, show one **Column** row.
   - Clearing the column returns every property that follows it to its single value: one color for points, random colors for labels. It also hides the fill of shapes. Settings made under **Advanced**, for example "Single color", show as such.
 - The icon at the start of the picked column sets its **column type**: **Categorical** (tag) gives each value of the column its own color or marker. Its colors, and the sizes, opacities and visibility of its categories, are edited in the group table below the box. **Numerical** (#) uses the values themselves: colors through a palette, sizes and opacities as they are, and visibility hides items whose value is 0 or less. Categorical columns start as categorical, all others as numerical. Text columns, and columns the table declares categorical, can only be categorical. Using more than 1,000 distinct values as categorical asks first.

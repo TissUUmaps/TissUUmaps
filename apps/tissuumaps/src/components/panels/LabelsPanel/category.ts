@@ -1,5 +1,4 @@
 export const LabelsSettingsCategory = {
-  layer: "layer",
   transform: "transform",
   labelColor: "labelColor",
   labelVisibility: "labelVisibility",
