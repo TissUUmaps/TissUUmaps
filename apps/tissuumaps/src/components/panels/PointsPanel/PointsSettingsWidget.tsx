@@ -40,6 +40,12 @@ import {
 } from "@/components/widgets/OpacityConfigWidget";
 import { useOpacityConfigWidget } from "@/components/widgets/OpacityConfigWidget/hooks";
 import {
+  ActiveOrderConfigValue,
+  OrderConfigSourceToggleGroup,
+  OrderConfigWidget,
+} from "@/components/widgets/OrderConfigWidget";
+import { useOrderConfigWidget } from "@/components/widgets/OrderConfigWidget/hooks";
+import {
   ActiveSizeConfigValue,
   SizeConfigSourceToggleGroup,
   SizeConfigWidget,
@@ -113,6 +119,11 @@ export function PointsSettingsWidget({
     (newOpacityConfig) =>
       updatePoints(points.id, { pointOpacity: newOpacityConfig }),
     defaultPointOpacity,
+    points.dataSource.table ?? null,
+  );
+  const pointOrderConfigWidgetAdapter = useOrderConfigWidget(
+    points.pointOrder,
+    (newOrderConfig) => updatePoints(points.id, { pointOrder: newOrderConfig }),
     points.dataSource.table ?? null,
   );
 
@@ -246,6 +257,24 @@ export function PointsSettingsWidget({
               className="border rounded"
             />
             <OpacityConfigWidget adapter={pointOpacityConfigWidgetAdapter} />
+          </AccordionPanel>
+        </AccordionItem>
+        {/* Point order */}
+        <AccordionItem value={PointsSettingsCategory.pointOrder}>
+          <AccordionHeader>
+            <AccordionTriggerRightDownIcon />
+            <AccordionTrigger>Point order</AccordionTrigger>
+            <ActiveOrderConfigValue
+              adapter={pointOrderConfigWidgetAdapter}
+              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
+            />
+          </AccordionHeader>
+          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
+            <OrderConfigSourceToggleGroup
+              adapter={pointOrderConfigWidgetAdapter}
+              className="border rounded"
+            />
+            <OrderConfigWidget adapter={pointOrderConfigWidgetAdapter} />
           </AccordionPanel>
         </AccordionItem>
       </Accordion>
