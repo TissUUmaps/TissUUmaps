@@ -40,6 +40,7 @@ import pointsVertexShader from "../assets/shaders/points.vert?raw";
 import { ColorResolver } from "../resolvers/ColorResolver";
 import { MarkerResolver } from "../resolvers/MarkerResolver";
 import { OpacityResolver } from "../resolvers/OpacityResolver";
+import { OrderResolver } from "../resolvers/OrderResolver";
 import { SizeResolver } from "../resolvers/SizeResolver";
 import { VisibilityResolver } from "../resolvers/VisibilityResolver";
 import type { WebGLContext } from "./WebGLContext";
@@ -55,9 +56,9 @@ import { WebGLUtils } from "./WebGLUtils";
  *
  * Manages a shader program, a marker atlas texture, and per-object GPU
  * buffers. Points are rendered as `gl.POINTS` using per-vertex attributes (x,
- * y, size, rgba, marker), one draw call per object. Points colored `from` a
- * table column are drawn in ascending order of its values, so that high
- * values are on top (see {@link ColorResolver.resolveColorOrder}).
+ * y, size, rgba, marker), one draw call per object. Points with an order
+ * configuration are drawn in ascending order of its column's values, so that
+ * high values are on top (see {@link OrderResolver.resolveOrder}).
  *
  * Every object owns its vertex array and attribute buffers. Synchronizing
  * compares the current model against the snapshot those buffers were loaded
@@ -346,7 +347,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
    * resolved visibilities and opacities into the colors as alpha. An attribute
    * whose configuration is a constant is not resolved per point: it is
    * prepared as the one packed value all points share (see
-   * {@link _backAttribute}). The draw order is resolved again when the color
+   * {@link _backAttribute}). The draw order is resolved again when the order
    * configuration changed.
    *
    * See {@link WebGLRendererBase.prepareRenderedObject} for when this runs.
@@ -463,9 +464,9 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
           )
         : undefined;
     const pointOrderPromise = pointOrderChanged
-      ? ColorResolver.resolveColorOrder(
+      ? OrderResolver.resolveOrder(
           newRef.itemIds,
-          newRef.object.pointColor,
+          newRef.object.pointOrder,
           loadTable,
           { signal },
         )
@@ -934,6 +935,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       pointColor: newRef.object.pointColor,
       pointVisibility: newRef.object.pointVisibility,
       pointOpacity: newRef.object.pointOpacity,
+      pointOrder: newRef.object.pointOrder,
       pointMarkerMap: ConfigUtils.findGroupByMap(
         newRef.object.pointMarker,
         syncContext.markerMaps,
@@ -1039,8 +1041,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
   /**
    * Returns whether the draw order of an object has to be resolved again
    *
-   * The order only depends on the color configuration (see
-   * {@link ColorResolver.resolveColorOrder}).
+   * The order only depends on the order configuration (see
+   * {@link OrderResolver.resolveOrder}).
    */
   private static _checkPointOrderChanged(
     renderedPoints: RenderedPoints | undefined,
@@ -1049,8 +1051,8 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
     return (
       renderedPoints === undefined ||
       !deepEqual(
-        renderedPoints.renderConfigSnapshot.pointColor,
-        newSnapshot.pointColor,
+        renderedPoints.renderConfigSnapshot.pointOrder,
+        newSnapshot.pointOrder,
       )
     );
   }
@@ -1185,6 +1187,7 @@ type RenderedPoints = RenderedObjectBase<Points, PointsData> & {
     | "pointColor"
     | "pointVisibility"
     | "pointOpacity"
+    | "pointOrder"
   > & {
     pointMarkerMap: GroupValueMap<Marker> | undefined;
     pointSizeMap: GroupValueMap<number> | undefined;
