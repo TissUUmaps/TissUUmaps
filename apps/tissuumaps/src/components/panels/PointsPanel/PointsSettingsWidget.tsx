@@ -21,6 +21,7 @@ import { ColorRangeRows } from "@/components/widgets/SettingsWidget/ColorRangeRo
 import { OpacityIcon } from "@/components/widgets/SettingsWidget/OpacityIcon";
 import { StyleRow } from "@/components/widgets/SettingsWidget/StyleRow";
 import {
+  describeColorWithoutColumn,
   findStyleBy,
   followColumn,
   getFollowState,
@@ -80,6 +81,10 @@ export function PointsSettingsWidget({
     <SettingsWidget
       tableId={tableId}
       styleBy={styleBy}
+      placeholder={describeColorWithoutColumn(
+        points.pointColor,
+        pointsDefaults.pointColor,
+      )}
       items={[
         {
           name: PointsSettingsCategory.pointColor,

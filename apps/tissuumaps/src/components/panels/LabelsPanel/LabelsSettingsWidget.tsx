@@ -16,6 +16,7 @@ import { CategoricalColorPaletteRow } from "@/components/widgets/SettingsWidget/
 import { ColorRangeRows } from "@/components/widgets/SettingsWidget/ColorRangeRows";
 import { OpacityIcon } from "@/components/widgets/SettingsWidget/OpacityIcon";
 import {
+  describeColorWithoutColumn,
   findStyleBy,
   followColumn,
   getFollowState,
@@ -67,6 +68,10 @@ export function LabelsSettingsWidget({
     <SettingsWidget
       tableId={tableId}
       styleBy={styleBy}
+      placeholder={describeColorWithoutColumn(
+        labels.labelColor,
+        labelsDefaults.labelColor,
+      )}
       items={[
         {
           name: LabelsSettingsCategory.labelColor,
@@ -158,7 +163,6 @@ export function LabelsSettingsWidget({
           ),
         });
       }}
-      noneLabel="Random colors"
       className={className}
     >
       {children}
@@ -177,9 +181,6 @@ function readStyleBys(labels: Labels) {
     [LabelsSettingsCategory.labelColor]: readStyleBy(
       labels.labelColor,
       tableId,
-      {
-        defaultConfig: labelsDefaults.labelColor,
-      },
     ),
     [LabelsSettingsCategory.labelOpacity]: readStyleBy(
       labels.labelOpacity,

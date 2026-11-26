@@ -12,6 +12,7 @@ import {
 import {
   type StylePart,
   type StyleProperty,
+  describeColorWithoutColumn,
   findStyleBy,
   followColumn,
   getFollowState,
@@ -39,7 +40,6 @@ describe("readStyleBy", () => {
       groupBy: { column: "gene", map: "m1" },
     } as ColorConfig;
     expect(readStyleBy<ColorConfig>(config, "t1")).toEqual({
-      kind: "column",
       column: "gene",
       columnType: "categorical",
     });
@@ -48,7 +48,7 @@ describe("readStyleBy", () => {
         { ...config, groupBy: { table: "t1", column: "gene", map: undefined } },
         "t1",
       ),
-    ).toMatchObject({ kind: "column", column: "gene" });
+    ).toMatchObject({ column: "gene" });
   });
 
   it("reads a column of the own table taken as values as numerical", () => {
@@ -57,47 +57,52 @@ describe("readStyleBy", () => {
         { source: "from", from: { column: "qv", palette: "viridis" } },
         "t1",
       ),
-    ).toEqual({ kind: "column", column: "qv", columnType: "numerical" });
+    ).toEqual({ column: "qv", columnType: "numerical" });
   });
 
-  it("reads the default coloring without a column, and a hidden one, as none", () => {
+  it("reads a coloring without an own-table column as no column", () => {
     expect(
       readStyleBy<ColorConfig>({ constant: { value: white } }, "t1"),
-    ).toEqual({
-      kind: "none",
-    });
+    ).toBeNull();
     expect(
-      readStyleBy<ColorConfig>(labelsDefaults.labelColor, "t1", {
-        defaultConfig: labelsDefaults.labelColor,
-      }),
-    ).toEqual({ kind: "none" });
-  });
-
-  it("reads another coloring without a column as custom", () => {
-    expect(
-      readStyleBy<ColorConfig>({ constant: { value: white } }, "t1", {
-        defaultConfig: labelsDefaults.labelColor,
-      }),
-    ).toEqual({ kind: "custom", label: "Single color" });
-    expect(readStyleBy<ColorConfig>(labelsDefaults.labelColor, "t1")).toEqual({
-      kind: "custom",
-      label: "Random colors",
-    });
-  });
-
-  it("reads columns of other tables, or without a table, as custom", () => {
+      readStyleBy<ColorConfig>(labelsDefaults.labelColor, "t1"),
+    ).toBeNull();
     expect(
       readStyleBy<ColorConfig>(
         { groupBy: { table: "t2", column: "gene", map: undefined } },
         "t1",
       ),
-    ).toMatchObject({ kind: "custom" });
+    ).toBeNull();
     expect(
       readStyleBy<ColorConfig>(
         { groupBy: { column: "gene", map: undefined } },
         null,
       ),
-    ).toMatchObject({ kind: "custom" });
+    ).toBeNull();
+  });
+});
+
+describe("describeColorWithoutColumn", () => {
+  it("describes the color shown while no column is picked", () => {
+    const constant: ColorConfig = { constant: { value: white } };
+    expect(
+      describeColorWithoutColumn(constant, pointsDefaults.pointColor),
+    ).toBe("None");
+    expect(
+      describeColorWithoutColumn(constant, labelsDefaults.labelColor),
+    ).toBe("Single color");
+    expect(
+      describeColorWithoutColumn(
+        labelsDefaults.labelColor,
+        labelsDefaults.labelColor,
+      ),
+    ).toBe("Random colors");
+    expect(
+      describeColorWithoutColumn(
+        { groupBy: { table: "t2", column: "gene", map: undefined } },
+        pointsDefaults.pointColor,
+      ),
+    ).toBe("Custom (see Advanced)");
   });
 });
 
@@ -216,30 +221,17 @@ describe("withoutColumn for colors", () => {
 
 describe("findStyleBy", () => {
   it("follows the first column, else the first property", () => {
-    const gene = {
-      kind: "column",
-      column: "gene",
-      columnType: "categorical",
-    } as const;
-    expect(findStyleBy([{ kind: "none" }, gene])).toBe(gene);
-    expect(
-      findStyleBy([
-        { kind: "custom", label: "Single color" },
-        { kind: "none" },
-      ]),
-    ).toEqual({ kind: "custom", label: "Single color" });
+    const gene = { column: "gene", columnType: "categorical" } as const;
+    expect(findStyleBy([null, gene])).toBe(gene);
+    expect(findStyleBy([null, null])).toBeNull();
   });
 
   it("tells a property apart that follows the same column as another type", () => {
-    const categorical = {
-      kind: "column",
-      column: "qv",
-      columnType: "categorical",
-    } as const;
+    const categorical = { column: "qv", columnType: "categorical" } as const;
     const numerical = { ...categorical, columnType: "numerical" } as const;
     expect(isSameColumnStyleBy(categorical, { ...categorical })).toBe(true);
     expect(isSameColumnStyleBy(categorical, numerical)).toBe(false);
-    expect(isSameColumnStyleBy({ kind: "none" }, { kind: "none" })).toBe(false);
+    expect(isSameColumnStyleBy(null, null)).toBe(false);
   });
 });
 
@@ -320,16 +312,12 @@ describe("withoutColumn", () => {
 });
 
 describe("getFollowState", () => {
-  const gene = {
-    kind: "column",
-    column: "gene",
-    columnType: "categorical",
-  } as const;
-  const qv = { kind: "column", column: "qv", columnType: "numerical" } as const;
+  const gene = { column: "gene", columnType: "categorical" } as const;
+  const qv = { column: "qv", columnType: "numerical" } as const;
 
   it("follows the new column with the named properties only", () => {
     const followState = getFollowState(
-      { color: gene, marker: gene, size: { kind: "none" } },
+      { color: gene, marker: gene, size: null },
       qv,
       ["color"],
     );
@@ -339,11 +327,7 @@ describe("getFollowState", () => {
   });
 
   it("does not count a property on another column as following", () => {
-    const followState = getFollowState(
-      { color: gene, opacity: qv },
-      { kind: "none" },
-      [],
-    );
+    const followState = getFollowState({ color: gene, opacity: qv }, null, []);
     expect(followState("opacity")).toEqual({
       column: null,
       wasFollowing: false,
@@ -356,7 +340,7 @@ describe("followColumn", () => {
     withColumn: ({ column }: { column: string }) => `with ${column}`,
     withoutColumn: () => "without",
   };
-  const qv = { kind: "column", column: "qv", columnType: "numerical" } as const;
+  const qv = { column: "qv", columnType: "numerical" } as const;
 
   it("follows a column, stops following, or keeps the configuration", () => {
     expect(

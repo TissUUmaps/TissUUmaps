@@ -83,8 +83,8 @@ export type SettingsWidgetProps = {
   /** The ID of the object's own table, if it has one */
   tableId: string | null;
 
-  /** What the object is styled by (see `findStyleBy`) */
-  styleBy: StyleBy;
+  /** The column the object is styled by, if any (see `findStyleBy`) */
+  styleBy: StyleBy | null;
 
   /**
    * The properties and parts that can follow the column, in the order of
@@ -97,19 +97,17 @@ export type SettingsWidgetProps = {
    * Writes what the object is styled by and which properties follow it, to
    * the object as it is when called (the call may follow a load)
    *
-   * @param styleBy - What the object is styled by
+   * @param styleBy - The column the object is styled by, if any
    * @param propertyNames - The names of the properties that follow the
    * column, empty for none; parts are named by their properties
    */
-  onStyleChange: (styleBy: StyleBy, propertyNames: string[]) => void;
+  onStyleChange: (styleBy: StyleBy | null, propertyNames: string[]) => void;
 
   /**
    * What the object looks like while styled by no column, e.g. "Random
-   * colors" for labels
-   *
-   * @defaultValue "None"
+   * colors" (see `describeColorWithoutColumn`)
    */
-  noneLabel?: string;
+  placeholder: string;
 
   /** The settings below the style, e.g. the advanced settings */
   children?: ReactNode;
@@ -131,7 +129,7 @@ export function SettingsWidget({
   styleBy,
   items,
   onStyleChange,
-  noneLabel = "None",
+  placeholder,
   children,
   className,
 }: SettingsWidgetProps) {
@@ -141,7 +139,7 @@ export function SettingsWidget({
     (newStyleBy) => {
       onStyleChange(
         newStyleBy,
-        newStyleBy.kind === "column"
+        newStyleBy !== null
           ? getFollowingNames(items, newStyleBy.columnType)
           : [],
       );
@@ -162,17 +160,11 @@ export function SettingsWidget({
         <FieldsetLegend className="sr-only">Settings</FieldsetLegend>
         <StyleByPicker
           tableId={tableId}
-          column={styleBy.kind === "column" ? styleBy.column : null}
+          column={styleBy?.column ?? null}
           onColumnChange={pick}
-          placeholder={
-            tableId === null
-              ? "No table"
-              : styleBy.kind === "custom"
-                ? styleBy.label
-                : noneLabel
-          }
+          placeholder={tableId === null ? "No table" : placeholder}
           columnControls={
-            styleBy.kind === "column" ? (
+            styleBy !== null ? (
               <ColumnTypeMenu
                 value={styleBy.columnType}
                 onValueChange={setColumnType}
@@ -183,7 +175,7 @@ export function SettingsWidget({
             ) : undefined
           }
         />
-        {styleBy.kind === "column" && (
+        {styleBy !== null && (
           <>
             <StyleRow label="Applies to">
               <ItemToggleGroup

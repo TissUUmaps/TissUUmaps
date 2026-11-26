@@ -20,18 +20,8 @@ const defaultCategoricalColorPalette = defaultLabelColorPalette;
 /** ID of the color palette of a newly colored numerical column */
 const defaultContinuousColorPalette = "viridis";
 
-/**
- * What a property follows, as the settings widget shows it
- *
- * `none` is the property's default without a column. `custom` stands for
- * configurations the widget does not edit, such as a single color where
- * random colors are the default, or a column of another table; they are
- * edited in the advanced settings, and `label` describes them.
- */
-export type StyleBy =
-  | { kind: "none" }
-  | { kind: "column"; column: string; columnType: TableColumnType }
-  | { kind: "custom"; label: string };
+/** The column of the object's own table that a property follows */
+export type StyleBy = { column: string; columnType: TableColumnType };
 
 /**
  * Returns whether a table column reference names a column of the object's
@@ -49,82 +39,82 @@ function isOwnTableColumn(
 }
 
 /**
- * Reads what a configuration follows
- *
- * Following a column of the object's own table reads as that column,
- * categorical or numerical; the property's default without a column reads as
- * none, so that the widget and the map agree; anything
- * else is custom.
+ * Reads the column that a configuration follows: a column of the object's
+ * own table, categorical or numerical
  *
  * @param config - The configuration
  * @param tableId - The ID of the object's own table, if it has one
- * @param options - `defaultConfig` is the property's default configuration,
- * whose source (a constant if none is given) reads as none, e.g. random
- * colors for labels
- * @returns What the configuration follows
+ * @returns The column, or `null` if the configuration follows none
  */
 export function readStyleBy<TConfig extends Config<string>>(
   config: TConfig,
   tableId: string | null,
-  options?: { defaultConfig?: TConfig },
-): StyleBy {
-  const { defaultConfig } = options ?? {};
-  const noneSource =
-    defaultConfig !== undefined
-      ? getActiveConfigSource(defaultConfig)
-      : "constant";
-  const source = getActiveConfigSource(config) ?? "constant";
-  switch (source) {
+): StyleBy | null {
+  switch (getActiveConfigSource(config)) {
     case "groupBy":
       return isGroupByConfig(config) &&
         isOwnTableColumn(config.groupBy, tableId)
-        ? {
-            kind: "column",
-            column: config.groupBy.column,
-            columnType: "categorical",
-          }
-        : { kind: "custom", label: "Custom (see Advanced)" };
+        ? { column: config.groupBy.column, columnType: "categorical" }
+        : null;
     case "from":
       return isFromConfig(config) && isOwnTableColumn(config.from, tableId)
-        ? {
-            kind: "column",
-            column: config.from.column,
-            columnType: "numerical",
-          }
-        : { kind: "custom", label: "Custom (see Advanced)" };
+        ? { column: config.from.column, columnType: "numerical" }
+        : null;
     default:
-      return source === noneSource
-        ? { kind: "none" }
-        : {
-            kind: "custom",
-            label: source === "constant" ? "Single color" : "Random colors",
-          };
+      return null;
   }
 }
 
 /**
- * Returns what the settings widget follows: the column of the first property
- * that follows one, or else what the first property follows
+ * Describes a color that follows no column of the object's own table, as the
+ * settings widget shows it while no column is picked
  *
- * @param styleBys - What the properties follow, in the order of the widget
- * @returns What the settings widget follows
+ * @param config - The color configuration
+ * @param defaultConfig - The default color configuration of the object
+ * @returns "None" for the default single color, else what the color is, e.g.
+ * "Random colors"
  */
-export function findStyleBy(styleBys: StyleBy[]): StyleBy {
-  return (
-    styleBys.find((styleBy) => styleBy.kind === "column") ??
-    styleBys[0] ?? { kind: "none" }
-  );
+export function describeColorWithoutColumn(
+  config: ColorConfig,
+  defaultConfig: ColorConfig,
+): string {
+  switch (getActiveConfigSource(config) ?? "constant") {
+    case "groupBy":
+    case "from":
+      return "Custom (see Advanced)";
+    case "random":
+      return "Random colors";
+    default:
+      return getActiveConfigSource(defaultConfig) === "constant"
+        ? "None"
+        : "Single color";
+  }
 }
 
 /**
- * @param styleBy - What a property follows
- * @param other - What the settings widget follows
+ * Returns the column that the settings widget follows: the column of the
+ * first property that follows one
+ *
+ * @param styleBys - The columns the properties follow, in the order of the
+ * widget
+ * @returns The column, or `null` if no property follows one
+ */
+export function findStyleBy(styleBys: (StyleBy | null)[]): StyleBy | null {
+  return styleBys.find((styleBy) => styleBy !== null) ?? null;
+}
+
+/**
+ * @param styleBy - The column a property follows, if any
+ * @param other - The column the settings widget follows, if any
  * @returns Whether both follow the same column as the same column type
  */
-export function isSameColumnStyleBy(styleBy: StyleBy, other: StyleBy): boolean {
+export function isSameColumnStyleBy(
+  styleBy: StyleBy | null,
+  other: StyleBy | null,
+): boolean {
   return (
-    styleBy.kind === "column" &&
-    other.kind === "column" &&
+    styleBy !== null &&
+    other !== null &&
     styleBy.column === other.column &&
     styleBy.columnType === other.columnType
   );
@@ -133,7 +123,7 @@ export function isSameColumnStyleBy(styleBy: StyleBy, other: StyleBy): boolean {
 /** What a property of the settings widget does when the widget is changed */
 export type FollowState = {
   /** The column that the property follows from now on, if any */
-  column: Extract<StyleBy, { kind: "column" }> | null;
+  column: StyleBy | null;
 
   /** Whether the property followed the column of the widget until now */
   wasFollowing: boolean;
@@ -143,21 +133,22 @@ export type FollowState = {
  * Returns what the properties of the settings widget do when the widget is
  * changed
  *
- * @param previousStyleBys - What each property followed until now, by name,
- * in the order of the widget
- * @param styleBy - What the widget follows from now on
+ * @param previousStyleBys - The column each property followed until now, if
+ * any, by name, in the order of the widget
+ * @param styleBy - The column the widget follows from now on, if any
  * @param propertyNames - The names of the properties that follow it
  * @returns What a property does, by name
  */
 export function getFollowState<TName extends string>(
-  previousStyleBys: Record<TName, StyleBy>,
-  styleBy: StyleBy,
+  previousStyleBys: Record<TName, StyleBy | null>,
+  styleBy: StyleBy | null,
   propertyNames: string[],
 ): (name: TName) => FollowState {
-  const previousStyleBy = findStyleBy(Object.values<StyleBy>(previousStyleBys));
-  const column = styleBy.kind === "column" ? styleBy : null;
+  const previousStyleBy = findStyleBy(
+    Object.values<StyleBy | null>(previousStyleBys),
+  );
   return (name) => ({
-    column: propertyNames.includes(name) ? column : null,
+    column: propertyNames.includes(name) ? styleBy : null,
     wasFollowing: isSameColumnStyleBy(previousStyleBys[name], previousStyleBy),
   });
 }
@@ -177,7 +168,7 @@ export function followColumn<TConfig>(
   config: TConfig,
   state: FollowState,
   options: {
-    withColumn: (column: Extract<StyleBy, { kind: "column" }>) => TConfig;
+    withColumn: (column: StyleBy) => TConfig;
     withoutColumn: () => TConfig;
   },
 ): TConfig {

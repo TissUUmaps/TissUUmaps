@@ -17,6 +17,7 @@ import { CategoricalColorPaletteRow } from "@/components/widgets/SettingsWidget/
 import { ColorRangeRows } from "@/components/widgets/SettingsWidget/ColorRangeRows";
 import { OpacityIcon } from "@/components/widgets/SettingsWidget/OpacityIcon";
 import {
+  describeColorWithoutColumn,
   findStyleBy,
   followColumn,
   getFollowState,
@@ -76,6 +77,10 @@ export function ShapesSettingsWidget({
     <SettingsWidget
       tableId={tableId}
       styleBy={styleBy}
+      placeholder={describeColorWithoutColumn(
+        shapes.shapeFillColor,
+        shapesDefaults.shapeFillColor,
+      )}
       items={[
         {
           name: "shapeFill",

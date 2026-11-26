@@ -47,14 +47,14 @@ export type StyleByState = {
  * the object as it is then (see `PointsSettingsWidget`).
  *
  * @param tableId - The ID of the object's own table, if any
- * @param styleBy - What the object is styled by
- * @param onStyleByChange - Writes what the object is styled by
+ * @param styleBy - The column the object is styled by, if any
+ * @param onStyleByChange - Writes the column the object is styled by, if any
  * @returns The state of styling by a column
  */
 export function useStyleBy(
   tableId: string | null,
-  styleBy: StyleBy,
-  onStyleByChange: (styleBy: StyleBy) => void,
+  styleBy: StyleBy | null,
+  onStyleByChange: (styleBy: StyleBy | null) => void,
 ): StyleByState {
   const loadTableData = useLazyTableData(tableId);
   const confirm = useConfirmDialog();
@@ -63,8 +63,8 @@ export function useStyleBy(
   const [isPending, setPending] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const column = styleBy.kind === "column" ? styleBy.column : null;
-  const columnType = styleBy.kind === "column" ? styleBy.columnType : null;
+  const column = styleBy?.column ?? null;
+  const columnType = styleBy?.columnType ?? null;
 
   // a new table or column is unknown until loaded, so that nothing stale is
   // shown meanwhile
@@ -182,7 +182,7 @@ export function useStyleBy(
   const pick = (newColumn: string | null) => {
     if (newColumn === null) {
       abortControllerRef.current?.abort();
-      onStyleByChange({ kind: "none" });
+      onStyleByChange(null);
       return Promise.resolve(true);
     }
     return run(async (options) => {
@@ -198,7 +198,7 @@ export function useStyleBy(
       ) {
         return null;
       }
-      return { kind: "column", column: newColumn, columnType };
+      return { column: newColumn, columnType };
     });
   };
 
@@ -213,7 +213,7 @@ export function useStyleBy(
       ) {
         return null;
       }
-      return { kind: "column", column, columnType: newColumnType };
+      return { column, columnType: newColumnType };
     });
   };
 
