@@ -220,8 +220,8 @@ export class ColumnQueryUtils {
   /**
    * Ranks suggestions by how well their name (or query) matches a text,
    * ignoring case: equal names first, then names starting with the text,
-   * then names or queries containing it, then the other suggestions, each in
-   * the given order
+   * then names containing it, then the other suggestions, each in the given
+   * order
    *
    * @param suggestions - The suggestions to rank
    * @param text - The text to match
@@ -234,15 +234,10 @@ export class ColumnQueryUtils {
     const lowerCaseText = text.toLowerCase();
     const ranked: TableColumnQuerySuggestion[][] = [[], [], [], []];
     for (const suggestion of suggestions) {
-      const nameRank = ColumnQueryUtils._rankMatch(
+      const rank = ColumnQueryUtils._rankMatch(
         suggestion.name ?? suggestion.query,
         lowerCaseText,
       );
-      // the query matches too, e.g. the gene ID behind a gene symbol
-      const rank =
-        nameRank >= 0 || !suggestion.query.toLowerCase().includes(lowerCaseText)
-          ? nameRank
-          : 2;
       ranked[rank >= 0 ? rank : 3]!.push(suggestion);
     }
     return ranked.flat();
