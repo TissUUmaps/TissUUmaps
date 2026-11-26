@@ -369,10 +369,10 @@ describe("ZarrStore", () => {
     it("rejects a path that is not a group", async () => {
       const map = writeV2Fixture();
       await expect(openFixture(map, "obs/int32")).rejects.toThrow(
-        'no group at "obs/int32"',
+        "no group at 'obs/int32'",
       );
       await expect(openFixture(map, "missing")).rejects.toThrow(
-        'no group at "missing"',
+        "no group at 'missing'",
       );
     });
 

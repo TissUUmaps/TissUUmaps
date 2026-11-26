@@ -429,7 +429,7 @@ describe("DataCache", () => {
 
       await expect(
         dataCache.load(object, createContext(undefined)),
-      ).rejects.toThrow("Data type not supported: test");
+      ).rejects.toThrow("Data type 'test' is not supported");
     });
 
     it("rejects with the data provider failure unchanged", async () => {
@@ -1365,7 +1365,7 @@ describe("AnnotatedDataCache", () => {
 
     await expect(
       annotatedDataCache.load(object, createAnnotatedContext({ dataProvider })),
-    ).rejects.toThrow("Table not found: missing");
+    ).rejects.toThrow("Table with ID 'missing' not found");
     expect(load).not.toHaveBeenCalled();
   });
 

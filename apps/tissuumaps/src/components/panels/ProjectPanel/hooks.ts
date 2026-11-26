@@ -36,12 +36,15 @@ export const workspaceUnsupportedMessage =
 /**
  * Returns a callback that lets the user pick the workspace
  *
- * Failures are logged, as the callback is called from event handlers.
+ * Failures are logged and shown, as the callback is called from event
+ * handlers.
  *
  * @returns The callback
  */
 export function useOpenWorkspace(): () => void {
   const setWorkspace = useAppStore((state) => state.setWorkspace);
+
+  const alert = useAlertDialog();
 
   return useCallback(() => {
     void pickWorkspace()
@@ -50,10 +53,14 @@ export function useOpenWorkspace(): () => void {
           setWorkspace(directory);
         }
       })
-      .catch((error) => {
+      .catch(async (error: unknown) => {
         console.error("Failed to open workspace", error);
+        await alert({
+          title: "Cannot open the workspace",
+          body: error instanceof Error ? error.message : String(error),
+        });
       });
-  }, [setWorkspace]);
+  }, [setWorkspace, alert]);
 }
 
 /**
@@ -126,7 +133,7 @@ export function useChooseProjectProvider(): (
             : projectProvider.load !== undefined,
       );
       if (choices.length === 0) {
-        throw new Error("No project provider can load projects.");
+        throw new Error("No project provider can load projects");
       }
       if (choices.length === 1) {
         const choice = choices[0]!;
@@ -173,7 +180,7 @@ export function useOpenProjectFromURL(): () => void {
   const prompt = usePromptDialog();
 
   return useCallback(() => {
-    void prompt({ title: "Enter project URL to load", actionLabel: "Open" })
+    void prompt({ title: "Open project from URL", actionLabel: "Open" })
       .then(async (value) => {
         const projectUrl = value?.trim();
         if (!projectUrl) {
@@ -321,7 +328,7 @@ export function useImportProjectFromURL(): () => void {
   const prompt = usePromptDialog();
 
   return useCallback(() => {
-    void prompt({ title: "Enter project URL to import", actionLabel: "Import" })
+    void prompt({ title: "Import project from URL", actionLabel: "Import" })
       .then(async (value) => {
         const projectUrl = value?.trim();
         if (!projectUrl) {

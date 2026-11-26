@@ -207,7 +207,7 @@ The entry is expanded but not scrolled into view.
 
 A plugin adds support for a project format by registering a project provider
 (see `ProjectProvider` in `@tissuumaps/core`) in `setup`, after which the
-format can be opened, imported and downloaded like TissUUmaps project files:
+format can be opened, imported and downloaded like `.tm4` files:
 
 ```javascript
 appStore.getState().registerProjectProvider("my-format", myProjectProvider);

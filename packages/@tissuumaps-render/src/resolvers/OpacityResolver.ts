@@ -249,7 +249,7 @@ export class OpacityResolver {
     const opacityMap = ConfigUtils.findGroupByMap(config, opacityMaps);
     if (opacityMap === undefined) {
       console.warn(
-        `Opacity map ${config.groupBy.map} not found, using default opacity`,
+        `Opacity map '${config.groupBy.map}' not found, using default opacity`,
       );
       return OpacityResolver.createUniformOpacities(
         ids.length,

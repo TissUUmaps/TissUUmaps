@@ -84,13 +84,13 @@ describe("NumberUtils", () => {
 
     it("throws for non-finite values", () => {
       expect(() => NumberUtils.parseFinite("abc")).toThrow(
-        "Value is not a finite number: abc",
+        "Value 'abc' is not a finite number",
       );
       expect(() => NumberUtils.parseFinite(NaN)).toThrow(
-        "Value is not a finite number",
+        "Value NaN is not a finite number",
       );
       expect(() => NumberUtils.parseFinite(undefined)).toThrow(
-        "Value is not a finite number",
+        "Value undefined is not a finite number",
       );
     });
   });
@@ -136,10 +136,10 @@ describe("NumberUtils", () => {
 
     it("throws for non-safe-integer values", () => {
       expect(() => NumberUtils.parseSafeInt(3.14)).toThrow(
-        "Value is not a safe integer: 3.14",
+        "Value 3.14 is not a safe integer",
       );
       expect(() => NumberUtils.parseSafeInt("abc")).toThrow(
-        "Value is not a safe integer",
+        "Value 'abc' is not a safe integer",
       );
     });
   });

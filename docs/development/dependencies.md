@@ -84,6 +84,14 @@ their own copy. These are worked around at runtime instead:
   `@tissuumaps/render` wraps `injectCache` to count the record, for 6.1.1 only.
   Remove it, and raise the `openseadragon` version ranges, once a release
   includes the fix.
+- **OpenSeadragon 6.1.1**: `TileSource.getTileAtPoint` can return a tile index
+  past the last tile of a level whose size is rounded down, as in OME-Zarr and
+  TIFF pyramids. Rotated tiled images then show a copy of their first tile row
+  or column next to them. Not reported upstream yet.
+  `OpenSeadragonUtils.fixTileAtPoint` in `@tissuumaps/render` wraps
+  `getTileAtPoint` to clamp the index, for every version, as the clamp does
+  nothing once the bug is fixed. Remove it once a release keeps the index below
+  `getNumTiles`.
 
 ## Forked dependencies
 

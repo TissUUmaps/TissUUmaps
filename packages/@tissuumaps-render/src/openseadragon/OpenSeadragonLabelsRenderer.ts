@@ -225,10 +225,10 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
       );
       if (labels.dataSource.table === undefined) {
         console.warn(
-          `Labels ${labels.id} has no table, but a configuration requires one`,
+          `Labels with ID '${labels.id}' has no table, but a configuration requires one`,
         );
       } else if (table === undefined) {
-        console.warn(`Table with ID ${labels.dataSource.table} not found`);
+        console.warn(`Table with ID '${labels.dataSource.table}' not found`);
       } else {
         try {
           const tableData = await context.loadTable(table, { signal });
@@ -299,7 +299,7 @@ export class OpenSeadragonLabelsRenderer extends OpenSeadragonRendererBase<
         } catch (error) {
           signal?.throwIfAborted();
           console.warn(
-            `Failed to resolve labels ${labels.id} from table ${labels.dataSource.table}, resolving without table`,
+            `Failed to resolve labels with ID '${labels.id}' from table with ID '${labels.dataSource.table}', resolving without table`,
             error,
           );
           labelRgbas.clear();

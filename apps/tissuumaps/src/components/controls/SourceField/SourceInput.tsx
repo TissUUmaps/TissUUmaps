@@ -69,7 +69,7 @@ export function SourceInput({
       .catch((error: unknown) => {
         console.error("Failed to pick a data source", error);
         void alert({
-          title: "Cannot choose a source",
+          title: "Cannot choose the source",
           body: error instanceof Error ? error.message : String(error),
         });
       });

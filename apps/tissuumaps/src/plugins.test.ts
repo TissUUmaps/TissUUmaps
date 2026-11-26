@@ -173,7 +173,7 @@ describe("loadPluginFromURL", () => {
       'export default { id: "failing", name: "Failing", setup: () => { throw new Error("setup failed"); } };',
     );
     await expect(loadPluginFromURL(url)).rejects.toThrow(
-      "Error during setup of plugin failing",
+      "Failed to set up plugin 'failing'",
     );
     expect(appStore.getState().plugins.has("failing")).toBe(false);
   });
