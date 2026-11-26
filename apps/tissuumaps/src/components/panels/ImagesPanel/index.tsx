@@ -1,4 +1,4 @@
-import type { Image } from "@tissuumaps/core";
+import { type Image, ProjectUtils } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
@@ -59,6 +59,9 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
   const updateImage = useProjectStore((state) => state.updateImage);
   const deleteImage = useProjectStore((state) => state.deleteImage);
   const loaded = useDataStore((state) => state.imageDataRefs.has(image.id));
+  const visible = useProjectStore((state) =>
+    ProjectUtils.mayBeVisible(image, state.layers),
+  );
 
   const imageData = useImageData(image.id);
   const sizeC = imageData?.getSizeC();
@@ -111,6 +114,11 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
           sizeC={sizeC}
           className="bg-card"
         />
+      )}
+      {!loaded && !visible && (
+        <p className="text-muted-foreground text-sm">
+          Show the image to load its channels.
+        </p>
       )}
     </SortableObjectListItem>
   );

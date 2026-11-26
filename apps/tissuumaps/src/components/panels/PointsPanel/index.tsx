@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import type { Points } from "@tissuumaps/core";
+import { type Points, ProjectUtils } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
@@ -68,6 +68,9 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
   const updatePoints = useProjectStore((state) => state.updatePoints);
   const deletePoints = useProjectStore((state) => state.deletePoints);
   const loaded = useDataStore((state) => state.pointsDataRefs.has(points.id));
+  const visible = useProjectStore((state) =>
+    ProjectUtils.mayBeVisible(points, state.layers),
+  );
 
   const pointsData = usePointsData(points.id);
 
@@ -127,6 +130,11 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
           activeSettingsCategory={activeSettingsCategory}
           className="bg-card"
         />
+      )}
+      {!loaded && !visible && (
+        <p className="text-muted-foreground text-sm">
+          Show the points to load their annotations.
+        </p>
       )}
     </SortableObjectListItem>
   );

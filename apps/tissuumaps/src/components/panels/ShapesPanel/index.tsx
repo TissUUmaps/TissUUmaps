@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import type { Shapes } from "@tissuumaps/core";
+import { ProjectUtils, type Shapes } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
@@ -68,6 +68,9 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
   const updateShapes = useProjectStore((state) => state.updateShapes);
   const deleteShapes = useProjectStore((state) => state.deleteShapes);
   const loaded = useDataStore((state) => state.shapesDataRefs.has(shapes.id));
+  const visible = useProjectStore((state) =>
+    ProjectUtils.mayBeVisible(shapes, state.layers),
+  );
 
   const shapesData = useShapesData(shapes.id);
 
@@ -127,6 +130,11 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
           activeSettingsCategory={activeSettingsCategory}
           className="bg-card"
         />
+      )}
+      {!loaded && !visible && (
+        <p className="text-muted-foreground text-sm">
+          Show the shapes to load their annotations.
+        </p>
       )}
     </SortableObjectListItem>
   );
