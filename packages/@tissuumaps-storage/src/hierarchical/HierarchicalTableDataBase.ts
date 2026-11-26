@@ -99,7 +99,9 @@ export abstract class HierarchicalTableDataBase implements TableData {
     }
     const found = this._findLeaf((leaf) => leaf.id === queryGroupId);
     if (found === undefined) {
-      return Promise.reject(new Error(`No query group "${queryGroupId}"`));
+      return Promise.reject(
+        new Error(`Query group '${queryGroupId}' not found`),
+      );
     }
     const matrix = this._getMatrix(found.leaf);
     const suggestions =
@@ -197,7 +199,9 @@ export abstract class HierarchicalTableDataBase implements TableData {
     }
     const target = this._findLeaf((leaf) => leaf.id === queryGroupId);
     if (target === undefined) {
-      return Promise.reject(new Error(`No query group "${queryGroupId}"`));
+      return Promise.reject(
+        new Error(`Query group '${queryGroupId}' not found`),
+      );
     }
     const resolved = ColumnQueryUtils.resolveColumn(
       this._table.columns,

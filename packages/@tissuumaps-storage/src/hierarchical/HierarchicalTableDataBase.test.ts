@@ -223,10 +223,10 @@ describe("HierarchicalTableDataBase", () => {
       const tableData = createTableData();
       await expect(
         tableData.mapColumn("X[ENSG1]", { queryGroupId: "nope" }),
-      ).rejects.toThrow('No query group "nope"');
+      ).rejects.toThrow("Query group 'nope' not found");
       await expect(
         tableData.suggestColumnQueries("", { queryGroupId: "nope" }),
-      ).rejects.toThrow('No query group "nope"');
+      ).rejects.toThrow("Query group 'nope' not found");
     });
 
     it("finds a column in its own query group of columns only", async () => {
