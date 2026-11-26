@@ -171,6 +171,8 @@ export function SettingsWidget({
       >
         <FieldsetLegend className="sr-only">Settings</FieldsetLegend>
         <StyleByPicker
+          // the leaves, messages and searches of the picker are per table
+          key={tableId ?? ""}
           tableId={tableId}
           column={styleBy?.column ?? null}
           onColumnChange={pick}
