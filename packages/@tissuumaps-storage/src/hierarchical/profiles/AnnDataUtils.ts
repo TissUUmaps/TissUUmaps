@@ -203,45 +203,36 @@ export class AnnDataUtils {
   }
 
   /**
-   * Loads the sections of an AnnData object
+   * Gets the sections of an AnnData object
    *
    * "Observations" is the `obs` dataframe. "Features" holds `X`, each of the
    * `layers` and `raw/X`: matrices whose columns are the features described by
    * `var` (or `raw/var`), so that a feature maps between them. "Embeddings"
    * holds the matrices of `obsm` (e.g. `X_umap` or `spatial`).
    *
-   * @param store - The store to read from
    * @param columns - The columns of the store
    * @param annDataPath - The path of the AnnData object of the store, if any
-   * @param options - Optional abort signal
+   * @param obsIndexPath - The path of the `obs` index, if any
    * @returns The sections that have columns, in this order: observations,
    * features (`X`, the layers, `raw/X`), embeddings
    */
-  static async loadSections(
-    store: HierarchicalStore,
+  static getSections(
     columns: HierarchicalTableColumn[],
     annDataPath: string | undefined,
-    options?: { signal?: AbortSignal },
-  ): Promise<HierarchicalTableSection[]> {
-    const { signal } = options ?? {};
-    signal?.throwIfAborted();
+    obsIndexPath: string | undefined,
+  ): HierarchicalTableSection[] {
     if (annDataPath === undefined) {
       return [];
     }
-    const groups: HierarchicalTableSection[] = [];
+    const sections: HierarchicalTableSection[] = [];
     const obsPath = ColumnQueryUtils.joinPath(annDataPath, "obs");
-    const obsIndexPath = await AnnDataUtils.getDataFrameIndexPath(
-      store,
-      obsPath,
-      { signal },
-    );
     if (
       columns.some(
         (column) =>
           column.path.startsWith(`${obsPath}/`) && column.path !== obsIndexPath,
       )
     ) {
-      groups.push({
+      sections.push({
         id: obsPath,
         name: "Observations",
         ...(obsIndexPath !== undefined && { indexPath: obsIndexPath }),
@@ -286,7 +277,7 @@ export class AnnDataUtils {
       relativePath === "X" ? 0 : relativePath.startsWith("raw/") ? 2 : 1;
     featureLeaves.sort((a, b) => rank(a.relativePath) - rank(b.relativePath));
     if (featureLeaves.length > 0) {
-      groups.push({
+      sections.push({
         id: ColumnQueryUtils.joinPath(annDataPath, "var"),
         name: "Features",
         subsections: featureLeaves.map(({ leaf }) => leaf),
@@ -304,13 +295,13 @@ export class AnnDataUtils {
         name: matrix.path.slice(obsmPath.length + 1),
       }));
     if (embeddingLeaves.length > 0) {
-      groups.push({
+      sections.push({
         id: obsmPath,
         name: "Embeddings",
         subsections: embeddingLeaves,
       });
     }
-    return groups;
+    return sections;
   }
 
   /**

@@ -210,7 +210,7 @@ export abstract class HierarchicalTableDataBase implements TableData {
     const { column: tableColumn, index } = resolved;
     const origin = this._findLeafOfColumn(tableColumn);
     // columns only map between the leaves of one top-level section
-    if (origin === undefined || origin.group !== target.group) {
+    if (origin === undefined || origin.section !== target.section) {
       return Promise.resolve(null);
     }
     const targetMatrix = this._getMatrix(target.leaf);
@@ -278,16 +278,16 @@ export abstract class HierarchicalTableDataBase implements TableData {
   private _findLeaf(
     predicate: (leaf: HierarchicalTableSection) => boolean,
   ):
-    | { group: HierarchicalTableSection; leaf: HierarchicalTableSection }
+    | { section: HierarchicalTableSection; leaf: HierarchicalTableSection }
     | undefined {
     const getLeaves = (
       section: HierarchicalTableSection,
     ): HierarchicalTableSection[] =>
       section.subsections?.flatMap(getLeaves) ?? [section];
-    for (const group of this._table.sections) {
-      const leaf = getLeaves(group).find(predicate);
+    for (const section of this._table.sections) {
+      const leaf = getLeaves(section).find(predicate);
       if (leaf !== undefined) {
-        return { group, leaf };
+        return { section, leaf };
       }
     }
     return undefined;
@@ -295,10 +295,14 @@ export abstract class HierarchicalTableDataBase implements TableData {
 
   /**
    * @param column - A column of the table
-   * @returns The leaf section holding the column and the top-level query
-   * group above it, if any
+   * @returns The leaf section holding the column and the top-level section
+   * above it (or the leaf itself), if any
    */
-  private _findLeafOfColumn(column: HierarchicalTableColumn) {
+  private _findLeafOfColumn(
+    column: HierarchicalTableColumn,
+  ):
+    | { section: HierarchicalTableSection; leaf: HierarchicalTableSection }
+    | undefined {
     return this._findLeaf((leaf) =>
       column.kind === "matrix"
         ? column.path === leaf.id

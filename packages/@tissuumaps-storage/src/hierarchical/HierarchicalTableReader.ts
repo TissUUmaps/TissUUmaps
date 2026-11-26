@@ -79,7 +79,15 @@ export class HierarchicalTableReader implements HierarchicalTable {
         );
       }
       const annDataPath = annDataPaths[0];
-      const numRows = await inferNumRows(store, columns, annDataPath, {
+      const obsIndexPath =
+        annDataPath === undefined
+          ? undefined
+          : await AnnDataUtils.getDataFrameIndexPath(
+              store,
+              ColumnQueryUtils.joinPath(annDataPath, "obs"),
+              { signal },
+            );
+      const numRows = await inferNumRows(store, columns, obsIndexPath, {
         signal,
       });
       await AnnDataUtils.assignMatrixSelectors(store, columns, annDataPath, {
@@ -89,9 +97,7 @@ export class HierarchicalTableReader implements HierarchicalTable {
         store,
         columns,
         numRows,
-        await AnnDataUtils.loadSections(store, columns, annDataPath, {
-          signal,
-        }),
+        AnnDataUtils.getSections(columns, annDataPath, obsIndexPath),
       );
     } catch (error) {
       store.close();
@@ -199,20 +205,13 @@ async function collectColumns(
 async function inferNumRows(
   store: HierarchicalStore,
   columns: HierarchicalTableColumn[],
-  annDataPath: string | undefined,
+  obsIndexPath: string | undefined,
   options?: { signal?: AbortSignal },
 ): Promise<number> {
   const { signal } = options ?? {};
   signal?.throwIfAborted();
-  if (annDataPath !== undefined) {
-    const indexPath = await AnnDataUtils.getDataFrameIndexPath(
-      store,
-      ColumnQueryUtils.joinPath(annDataPath, "obs"),
-      { signal },
-    );
-    if (indexPath !== undefined) {
-      return await getNumRows(store, indexPath, { signal });
-    }
+  if (obsIndexPath !== undefined) {
+    return await getNumRows(store, obsIndexPath, { signal });
   }
   const firstColumn = columns[0];
   if (firstColumn === undefined) {
