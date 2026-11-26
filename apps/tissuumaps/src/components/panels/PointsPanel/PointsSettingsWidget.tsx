@@ -25,6 +25,7 @@ import {
   withColorColumn,
   withFromColumn,
   withMarkerColumn,
+  withOpacityColumn,
 } from "@/components/widgets/SettingsWidget/styleBy";
 import { SizeUnitRadioGroup } from "@/components/widgets/SizeConfigWidget";
 import { useSizeConfigWidget } from "@/components/widgets/SizeConfigWidget/hooks";
@@ -187,7 +188,7 @@ export function PointsSettingsWidget({
             current.pointOpacity,
             pointsDefaults.pointOpacity,
             ({ column }) =>
-              withFromColumn(current.pointOpacity, column, currentTableId),
+              withOpacityColumn(current.pointOpacity, column, currentTableId),
           ),
           pointVisibility: follow(
             PointsSettingsCategory.pointVisibility,

@@ -21,6 +21,7 @@ import {
   readStyleBy,
   withColorColumn,
   withFromColumn,
+  withOpacityColumn,
 } from "@/components/widgets/SettingsWidget/styleBy";
 import { projectStore, useProjectStore } from "@/stores/project";
 
@@ -137,7 +138,7 @@ export function LabelsSettingsWidget({
             current.labelOpacity,
             labelsDefaults.labelOpacity,
             ({ column }) =>
-              withFromColumn(current.labelOpacity, column, currentTableId),
+              withOpacityColumn(current.labelOpacity, column, currentTableId),
           ),
           labelVisibility: follow(
             LabelsSettingsCategory.labelVisibility,

@@ -22,6 +22,7 @@ import {
   readStyleBy,
   withColorColumn,
   withFromColumn,
+  withOpacityColumn,
 } from "@/components/widgets/SettingsWidget/styleBy";
 import { projectStore, useProjectStore } from "@/stores/project";
 
@@ -233,7 +234,11 @@ export function ShapesSettingsWidget({
             current.shapeFillOpacity,
             shapesDefaults.shapeFillOpacity,
             ({ column }) =>
-              withFromColumn(current.shapeFillOpacity, column, currentTableId),
+              withOpacityColumn(
+                current.shapeFillOpacity,
+                column,
+                currentTableId,
+              ),
           ),
           shapeFillVisibility: follow(
             ShapesSettingsCategory.shapeFillVisibility,
@@ -263,7 +268,7 @@ export function ShapesSettingsWidget({
             current.shapeStrokeOpacity,
             shapesDefaults.shapeStrokeOpacity,
             ({ column }) =>
-              withFromColumn(
+              withOpacityColumn(
                 current.shapeStrokeOpacity,
                 column,
                 currentTableId,
@@ -285,7 +290,7 @@ export function ShapesSettingsWidget({
             current.shapeOpacity,
             shapesDefaults.shapeOpacity,
             ({ column }) =>
-              withFromColumn(current.shapeOpacity, column, currentTableId),
+              withOpacityColumn(current.shapeOpacity, column, currentTableId),
           ),
           shapeVisibility: follow(
             ShapesSettingsCategory.shapeVisibility,

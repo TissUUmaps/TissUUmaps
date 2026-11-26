@@ -4,6 +4,7 @@ import {
   ConfigUtils,
   type CoordinateSpace,
   type MarkerConfig,
+  type OpacityConfig,
   type TableColumnRef,
   type TableColumnType,
   defaultLabelColorPalette,
@@ -364,6 +365,39 @@ export function withMarkerColumn(
       )
         ? config.groupBy
         : { column, map: undefined },
+  };
+}
+
+/**
+ * Returns the opacity configuration that takes its values from a numerical
+ * column of the object's own table
+ *
+ * The column branch is kept if it already names the column, with its range. A
+ * new one starts its range at 0, as in the advanced settings, so that the
+ * lowest values are not transparent.
+ *
+ * @param config - The opacity configuration to update
+ * @param column - The column to take the opacities from
+ * @param tableId - The ID of the object's own table
+ * @returns The updated opacity configuration
+ */
+export function withOpacityColumn(
+  config: OpacityConfig,
+  column: string,
+  tableId: string | null,
+): OpacityConfig {
+  return {
+    ...config,
+    source: "from",
+    from:
+      isFromConfig(config) &&
+      ConfigUtils.isSameTableColumn(
+        config.from,
+        { column },
+        tableId ?? undefined,
+      )
+        ? config.from
+        : { column, range: [0, null] },
   };
 }
 

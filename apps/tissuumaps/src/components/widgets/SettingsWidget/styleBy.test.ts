@@ -5,6 +5,7 @@ import {
   type Config,
   Marker,
   type MarkerConfig,
+  type OpacityConfig,
   type SizeConfig,
   type TableColumnType,
   type VisibilityConfig,
@@ -28,6 +29,7 @@ import {
   withColorColumn,
   withFromColumn,
   withMarkerColumn,
+  withOpacityColumn,
 } from "./styleBy";
 
 const white = { r: 255, g: 255, b: 255 };
@@ -293,6 +295,40 @@ describe("withFromColumn", () => {
       ...config,
       source: "from",
     });
+  });
+});
+
+describe("withOpacityColumn", () => {
+  it("starts a new column at the range from 0 to the column's maximum", () => {
+    expect(withOpacityColumn({ constant: { value: 0.5 } }, "qv", "t1")).toEqual(
+      {
+        constant: { value: 0.5 },
+        source: "from",
+        from: { column: "qv", range: [0, null] },
+      },
+    );
+  });
+
+  it("keeps the branch of the same column with its range", () => {
+    const config = {
+      source: "constant",
+      constant: { value: 0.5 },
+      from: { column: "qv", range: [2, 8] },
+    } as OpacityConfig;
+    expect(withOpacityColumn(config, "qv", "t1")).toEqual({
+      ...config,
+      source: "from",
+    });
+  });
+
+  it("restarts another column at the range from 0", () => {
+    expect(
+      withOpacityColumn(
+        { source: "from", from: { column: "qv", range: [2, 8] } },
+        "area",
+        "t1",
+      ),
+    ).toEqual({ source: "from", from: { column: "area", range: [0, null] } });
   });
 });
 
