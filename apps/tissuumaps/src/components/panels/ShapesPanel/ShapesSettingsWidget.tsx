@@ -131,12 +131,8 @@ export function ShapesSettingsWidget({
   );
 
   return (
-    <Fieldset
-      className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
-    >
-      <FieldsetLegend className="font-medium text-foreground">
-        Settings
-      </FieldsetLegend>
+    <Fieldset className={cn("flex flex-col gap-y-2", className)}>
+      <FieldsetLegend className="sr-only">Advanced settings</FieldsetLegend>
       <Accordion
         value={activeCategory !== null ? [activeCategory] : []}
         onValueChange={(value) =>
@@ -145,14 +141,14 @@ export function ShapesSettingsWidget({
           )
         }
       >
-        {/* General */}
-        <AccordionItem value={ShapesSettingsCategory.general}>
+        {/* Layer */}
+        <AccordionItem value={ShapesSettingsCategory.layer}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>General</AccordionTrigger>
+            <AccordionTrigger>Layer</AccordionTrigger>
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <GeneralShapesSettingsWidget shapes={shapes} />
+            <ShapesLayerSettingsWidget shapes={shapes} />
           </AccordionPanel>
         </AccordionItem>
         {/* Transform */}
@@ -329,15 +325,15 @@ export function ShapesSettingsWidget({
   );
 }
 
-type GeneralShapesSettingsWidgetProps = {
+type ShapesLayerSettingsWidgetProps = {
   shapes: Shapes;
   className?: string;
 };
 
-function GeneralShapesSettingsWidget({
+function ShapesLayerSettingsWidget({
   shapes,
   className,
-}: GeneralShapesSettingsWidgetProps) {
+}: ShapesLayerSettingsWidgetProps) {
   const layers = useProjectStore((state) => state.layers);
   const tables = useProjectStore((state) => state.tables);
   const updateShapes = useProjectStore((state) => state.updateShapes);
@@ -345,7 +341,7 @@ function GeneralShapesSettingsWidget({
   return (
     <div className={className}>
       <Field>
-        <FieldLabel>Layer</FieldLabel>
+        <FieldLabel className="sr-only">Layer</FieldLabel>
         {typeof shapes.layer === "string" ? (
           <SimpleSelect
             items={layers}

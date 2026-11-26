@@ -2,4 +2,4 @@
 "tissuumaps": minor
 ---
 
-Coloring shapes by "None" in the style section hides their fill, and picking a column shows it again.
+Clearing the column of the style section hides the fill of shapes, and picking one shows it again.

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 import type { TableColumnQueryGroup } from "@tissuumaps/core";
 
@@ -49,25 +49,33 @@ function toRows(groups: TableColumnQueryGroup[]): Row[] {
   }));
 }
 
-export type ColorByPickerProps = {
+export type StyleByPickerProps = {
   /** The ID of the object's own table, if it has one */
   tableId: string | null;
 
-  /** The colored column, if any */
+  /** The column styled by, if any */
   column: string | null;
 
-  /** Colors by a column, or by none */
+  /** Styles by a column, or by none */
   onColumnChange: (column: string | null) => void;
 
-  /** The text shown while no column is colored, for tables without groups */
+  /**
+   * The text shown while no column is styled by, in the first row for tables
+   * with query groups
+   */
   placeholder: string;
+
+  /**
+   * Controls shown before the input of the column styled by, e.g. its type
+   */
+  columnControls?: ReactNode;
 
   /** Classes of the control cells of the rows */
   className?: string;
 };
 
 /**
- * Picks the column to color by, by its query group rather than by its query,
+ * Picks the column to style by, by its query group rather than by its query,
  * as rows of the {@link StyleRow} grid
  *
  * Tables with query groups (see `TableData.getQueryGroups`) get one row per
@@ -75,23 +83,24 @@ export type ColorByPickerProps = {
  * "Features"); the table names its query groups, the app only lays them out.
  * A top-level leaf is the row's set of columns; any other top-level query
  * group gets a "from" menu of its leaves (e.g. `X`, a layer or `raw`), whose
- * first leaf is the default. The row of the colored column is filled, the
+ * first leaf is the default. The row of the column styled by is filled, the
  * others empty; picking in any applies right away. Switching "from" keeps the
- * colored entity if the table maps it to the new leaf (see
+ * entity styled by if the table maps it to the new leaf (see
  * `TableData.mapColumn`). A text matching no column of a leaf is looked up in
  * the other leaves of its row and offered there. Tables without query groups
  * get one "Column" row.
  */
-export function ColorByPicker({
+export function StyleByPicker({
   tableId,
   column,
   onColumnChange,
   placeholder,
+  columnControls,
   className,
-}: ColorByPickerProps) {
+}: StyleByPickerProps) {
   const tableData = useTableData(tableId);
   const rows = toRows(tableData?.getQueryGroups?.() ?? []);
-  // the description of the colored column, kept until the next one resolves,
+  // the description of the column styled by, kept until the next one resolves,
   // so that the row does not empty in between
   const [description, setDescription] = useState<{
     column: string;
@@ -112,10 +121,16 @@ export function ColorByPicker({
   const abortControllerRef = useRef<AbortController | null>(null);
   useEffect(() => () => abortControllerRef.current?.abort(), []);
 
+  // nothing to describe
+  if (
+    (tableData?.describeColumn === undefined || column === null) &&
+    description !== null
+  ) {
+    setDescription(null);
+  }
+
   useEffect(() => {
     if (tableData?.describeColumn === undefined || column === null) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- nothing to describe
-      setDescription(null);
       return;
     }
     const abortController = new AbortController();
@@ -129,7 +144,7 @@ export function ColorByPicker({
         setDescription(
           newDescription !== null ? { column, ...newDescription } : null,
         );
-        // the row of the colored column shows its leaf
+        // the row of the column styled by shows its leaf
         const row = toRows(tableData.getQueryGroups?.() ?? []).find((row) =>
           row.leaves.some((leaf) => leaf.id === newDescription?.queryGroupId),
         );
@@ -148,7 +163,7 @@ export function ColorByPicker({
     return () => abortController.abort();
   }, [tableData, column]);
 
-  // a newly colored column takes back the messages
+  // a new column to style by takes back the messages
   // https://react.dev/reference/react/useState#storing-information-from-previous-renders
   const [prevColumn, setPrevColumn] = useState(column);
   if (column !== prevColumn) {
@@ -160,17 +175,21 @@ export function ColorByPicker({
   if (rows.length === 0) {
     return (
       <StyleRow label="Column" className={className}>
-        <TableColumnInput
-          tableId={tableId}
-          value={column}
-          onValueChange={onColumnChange}
-          placeholder={placeholder}
-        />
+        <div className="flex min-w-0 flex-row items-center gap-1">
+          {columnControls}
+          <TableColumnInput
+            tableId={tableId}
+            value={column}
+            onValueChange={onColumnChange}
+            placeholder={placeholder}
+            className="min-w-0 flex-1"
+          />
+        </div>
       </StyleRow>
     );
   }
 
-  const coloredRow = rows.find((row) =>
+  const styledRow = rows.find((row) =>
     row.leaves.some((leaf) => leaf.id === description?.queryGroupId),
   );
 
@@ -189,7 +208,7 @@ export function ColorByPicker({
     if (
       newLeaf === undefined ||
       column === null ||
-      coloredRow?.id !== row.id ||
+      styledRow?.id !== row.id ||
       newLeaf.id === description?.queryGroupId ||
       tableData?.mapColumn === undefined
     ) {
@@ -200,7 +219,7 @@ export function ColorByPicker({
       return;
     }
     // the same entity, if the table maps it to the new leaf; otherwise the
-    // row keeps showing the colored column and its leaf
+    // row keeps showing the column styled by and its leaf
     try {
       const mappedColumn = await tableData.mapColumn(column, {
         queryGroupId,
@@ -262,8 +281,8 @@ export function ColorByPicker({
   return (
     <>
       {rows.map((row) => {
-        const isActive = coloredRow?.id === row.id;
-        // the chosen leaf, else the colored one, else the first one
+        const isActive = styledRow?.id === row.id;
+        // the chosen leaf, else the styled one, else the first one
         const preferredLeafId =
           selectedLeafIds[row.id] ??
           (isActive ? description?.queryGroupId : undefined);
@@ -274,7 +293,7 @@ export function ColorByPicker({
           return null;
         }
         const isDescriptionStale = description?.column !== column;
-        const showsColoredColumn =
+        const showsStyledColumn =
           isActive &&
           (leaf.id === description?.queryGroupId || isDescriptionStale);
         return (
@@ -285,14 +304,19 @@ export function ColorByPicker({
             className={className}
           >
             <div className="flex min-w-0 flex-row items-center gap-1">
+              {showsStyledColumn && columnControls}
               <TableColumnInput
                 tableId={tableId}
                 queryGroupId={leaf.id}
-                value={showsColoredColumn ? column : null}
-                valueName={showsColoredColumn ? description?.name : undefined}
+                value={showsStyledColumn ? column : null}
+                valueName={showsStyledColumn ? description?.name : undefined}
                 onValueChange={onColumnChange}
                 onNoMatch={(text) => void searchElsewhere(text, row, leaf.id)}
-                placeholder="Search…"
+                // the first row tells what the object looks like without a
+                // column
+                placeholder={
+                  column === null && row === rows[0] ? placeholder : "Search…"
+                }
                 className="min-w-0 flex-1"
               />
               {row.hasFrom && (

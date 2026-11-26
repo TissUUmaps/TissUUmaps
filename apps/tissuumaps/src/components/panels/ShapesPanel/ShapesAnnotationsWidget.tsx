@@ -44,43 +44,43 @@ export function ShapesAnnotationsWidget({
   const groupTable = useGroupTable(
     shapes.name,
     tableId,
+    // in the order of the style section, whose first property that groups by
+    // a column the group table follows while no settings category is open
     [
-      {
-        category: ShapesSettingsCategory.shapeVisibility,
-        config: shapes.shapeVisibility,
-      },
-      {
-        category: ShapesSettingsCategory.shapeOpacity,
-        config: shapes.shapeOpacity,
-      },
       {
         category: ShapesSettingsCategory.shapeFillColor,
         config: shapes.shapeFillColor,
-      },
-      {
-        category: ShapesSettingsCategory.shapeFillVisibility,
-        config: shapes.shapeFillVisibility,
       },
       {
         category: ShapesSettingsCategory.shapeFillOpacity,
         config: shapes.shapeFillOpacity,
       },
       {
+        category: ShapesSettingsCategory.shapeFillVisibility,
+        config: shapes.shapeFillVisibility,
+      },
+      {
         category: ShapesSettingsCategory.shapeStrokeColor,
         config: shapes.shapeStrokeColor,
+      },
+      {
+        category: ShapesSettingsCategory.shapeStrokeOpacity,
+        config: shapes.shapeStrokeOpacity,
       },
       {
         category: ShapesSettingsCategory.shapeStrokeVisibility,
         config: shapes.shapeStrokeVisibility,
       },
       {
-        category: ShapesSettingsCategory.shapeStrokeOpacity,
-        config: shapes.shapeStrokeOpacity,
+        category: ShapesSettingsCategory.shapeOpacity,
+        config: shapes.shapeOpacity,
+      },
+      {
+        category: ShapesSettingsCategory.shapeVisibility,
+        config: shapes.shapeVisibility,
       },
     ],
-    // without an open settings category, the group table follows the color,
-    // which the style section edits
-    activeSettingsCategory ?? ShapesSettingsCategory.shapeFillColor,
+    activeSettingsCategory,
   );
 
   const colorAdapter = useColorGroupValues();

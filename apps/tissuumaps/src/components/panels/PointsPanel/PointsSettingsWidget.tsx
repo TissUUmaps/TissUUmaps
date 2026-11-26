@@ -117,12 +117,8 @@ export function PointsSettingsWidget({
   );
 
   return (
-    <Fieldset
-      className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
-    >
-      <FieldsetLegend className="font-medium text-foreground">
-        Settings
-      </FieldsetLegend>
+    <Fieldset className={cn("flex flex-col gap-y-2", className)}>
+      <FieldsetLegend className="sr-only">Advanced settings</FieldsetLegend>
       <Accordion
         value={activeCategory !== null ? [activeCategory] : []}
         onValueChange={(value) =>
@@ -131,14 +127,14 @@ export function PointsSettingsWidget({
           )
         }
       >
-        {/* General */}
-        <AccordionItem value={PointsSettingsCategory.general}>
+        {/* Layer */}
+        <AccordionItem value={PointsSettingsCategory.layer}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>General</AccordionTrigger>
+            <AccordionTrigger>Layer</AccordionTrigger>
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <GeneralPointsSettingsWidget points={points} />
+            <PointsLayerSettingsWidget points={points} />
           </AccordionPanel>
         </AccordionItem>
         {/* Transform */}
@@ -253,15 +249,15 @@ export function PointsSettingsWidget({
   );
 }
 
-type GeneralPointsSettingsWidgetProps = {
+type PointsLayerSettingsWidgetProps = {
   points: Points;
   className?: string;
 };
 
-function GeneralPointsSettingsWidget({
+function PointsLayerSettingsWidget({
   points,
   className,
-}: GeneralPointsSettingsWidgetProps) {
+}: PointsLayerSettingsWidgetProps) {
   const layers = useProjectStore((state) => state.layers);
   const tables = useProjectStore((state) => state.tables);
   const updatePoints = useProjectStore((state) => state.updatePoints);
@@ -269,7 +265,7 @@ function GeneralPointsSettingsWidget({
   return (
     <div className={className}>
       <Field>
-        <FieldLabel>Layer</FieldLabel>
+        <FieldLabel className="sr-only">Layer</FieldLabel>
         {typeof points.layer === "string" ? (
           <SimpleSelect
             items={layers}
@@ -289,24 +285,6 @@ function GeneralPointsSettingsWidget({
             readOnly
           />
         )}
-      </Field>
-      <Field>
-        <FieldLabel>Point size factor</FieldLabel>
-        <Input
-          type="number"
-          inputMode="decimal"
-          step={0.1}
-          min={0}
-          value={points.pointSizeFactor}
-          onChange={(event) => {
-            const newValue = event.target.valueAsNumber;
-            if (!isNaN(newValue)) {
-              updatePoints(points.id, {
-                pointSizeFactor: Math.max(0, newValue),
-              });
-            }
-          }}
-        />
       </Field>
     </div>
   );

@@ -4,12 +4,13 @@ sidebar_position: 5
 
 # Style section
 
-Each point cloud, label image and shape cloud shows a **style section** at the top of its entry in the Points, Labels or Shapes panel. Without a table, it is disabled. The other settings are under **Advanced settings**, collapsed below it.
+Each point cloud, label image and shape cloud shows a **Settings** box in its entry in the Points, Labels or Shapes panel, below its data source. Without a table, the style rows are disabled. The other settings are under **Advanced**, collapsed at the end of the box.
 
-- **Color by** picks a column of the object's own table.
-  - Tables with query groups, such as AnnData, show one row per group, for example **Annotations**, **Features** and **Embeddings**. Each row searches its columns by name. **from** chooses the set of columns of a row, for example `X`, a layer or `raw`; switching it keeps the colored feature if that set has it. A name found only in another set of the row is offered there, to switch to.
+- **Column** picks a column of the object's own table.
+  - Tables with query groups, such as AnnData, show one row per group, for example **Annotations**, **Features** and **Embeddings**. Each row searches its columns by name. **from** chooses the set of columns of a row, for example `X`, a layer or `raw`; switching it keeps the feature if that set has it. A name found only in another set of the row is offered there, to switch to.
   - Other tables, such as CSV files, show one **Column** row.
-  - Clearing the column colors points with one color and labels with random colors, and hides the fill of shapes. Other colorings set in the advanced settings show as such, for example "Single color".
-- **Show as**: **Categories** gives each value a color, edited in the group table below the section. **Gradient** maps numeric values to a palette. Categorical columns start as categories, all others as a gradient. Categorical columns cannot be shown as a gradient. Showing more than 1,000 distinct values as categories asks first. Picking another column keeps the palette.
-- **Markers by category** (points, categories only): gives each category its own marker too. Once switched on, the markers follow the colored column.
-- **Palette** and **Range** set the gradient. An empty range end is the column's minimum or maximum.
+  - Clearing the column returns every property that follows it to its single value: one color for points, random colors for labels. It also hides the fill of shapes. Settings made under **Advanced**, for example "Single color", show as such.
+- The icon at the start of the picked column sets its **column type**: **Categorical** (tag) gives each value of the column its own color or marker. Its colors, and the sizes, opacities and visibility of its categories, are edited in the group table below the box. **Numerical** (#) uses the values themselves: colors through a palette, sizes and opacities as they are, and visibility hides items whose value is 0 or less. Categorical columns start as categorical, all others as numerical. Text columns, and columns the table declares categorical, can only be categorical. Using more than 1,000 distinct values as categorical asks first.
+- **Applies to** chooses which properties follow the column: color, marker, size, opacity and visibility for points; shape fill, shape stroke, opacity and visibility for shapes; color, opacity and visibility for labels. The properties that follow the column keep following a newly picked one, as far as its type allows; if none can, the color (the fill color for shapes) starts. Markers need a categorical column; size, opacity and visibility a numerical one. One property always follows the column; clear the column to stop.
+- For shapes, **Shape fill** and **Shape stroke** have their own toggles in their header for numerical columns: their color, opacity and visibility. For categorical columns, they follow by their color. Turning Shape fill off hides the fill.
+- A property that follows a numerical column shows its options below: **Palette** and **Range** for colors (an empty range end is the column's minimum or maximum), **Unit** for sizes.

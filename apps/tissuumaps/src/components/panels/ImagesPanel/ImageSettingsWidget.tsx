@@ -56,13 +56,13 @@ export function ImageSettingsWidget({
           )
         }
       >
-        <AccordionItem value={ImageSettingsCategory.general}>
+        <AccordionItem value={ImageSettingsCategory.layer}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>General</AccordionTrigger>
+            <AccordionTrigger>Layer</AccordionTrigger>
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <GeneralImageSettingsWidget image={image} />
+            <ImageLayerSettingsWidget image={image} />
           </AccordionPanel>
         </AccordionItem>
         <AccordionItem value={ImageSettingsCategory.transform}>
@@ -84,22 +84,22 @@ export function ImageSettingsWidget({
   );
 }
 
-type GeneralImageSettingsWidgetProps = {
+type ImageLayerSettingsWidgetProps = {
   image: Image;
   className?: string;
 };
 
-function GeneralImageSettingsWidget({
+function ImageLayerSettingsWidget({
   image,
   className,
-}: GeneralImageSettingsWidgetProps) {
+}: ImageLayerSettingsWidgetProps) {
   const layers = useProjectStore((state) => state.layers);
   const updateImage = useProjectStore((state) => state.updateImage);
 
   return (
     <div className={className}>
       <Field>
-        <FieldLabel>Layer</FieldLabel>
+        <FieldLabel className="sr-only">Layer</FieldLabel>
         <SimpleSelect
           items={layers}
           itemLabel={(l) => l.name}

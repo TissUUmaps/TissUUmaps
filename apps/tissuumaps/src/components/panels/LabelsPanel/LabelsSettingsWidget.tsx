@@ -86,12 +86,8 @@ export function LabelsSettingsWidget({
   );
 
   return (
-    <Fieldset
-      className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
-    >
-      <FieldsetLegend className="font-medium text-foreground">
-        Settings
-      </FieldsetLegend>
+    <Fieldset className={cn("flex flex-col gap-y-2", className)}>
+      <FieldsetLegend className="sr-only">Advanced settings</FieldsetLegend>
       <Accordion
         value={activeCategory !== null ? [activeCategory] : []}
         onValueChange={(value) =>
@@ -100,14 +96,14 @@ export function LabelsSettingsWidget({
           )
         }
       >
-        {/* General */}
-        <AccordionItem value={LabelsSettingsCategory.general}>
+        {/* Layer */}
+        <AccordionItem value={LabelsSettingsCategory.layer}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>General</AccordionTrigger>
+            <AccordionTrigger>Layer</AccordionTrigger>
           </AccordionHeader>
           <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <GeneralLabelsSettingsWidget labels={labels} />
+            <LabelsLayerSettingsWidget labels={labels} />
           </AccordionPanel>
         </AccordionItem>
         {/* Transform */}
@@ -186,22 +182,22 @@ export function LabelsSettingsWidget({
   );
 }
 
-type GeneralLabelsSettingsWidgetProps = {
+type LabelsLayerSettingsWidgetProps = {
   labels: Labels;
   className?: string;
 };
 
-function GeneralLabelsSettingsWidget({
+function LabelsLayerSettingsWidget({
   labels,
   className,
-}: GeneralLabelsSettingsWidgetProps) {
+}: LabelsLayerSettingsWidgetProps) {
   const layers = useProjectStore((state) => state.layers);
   const updateLabels = useProjectStore((state) => state.updateLabels);
 
   return (
     <div className={className}>
       <Field>
-        <FieldLabel>Layer</FieldLabel>
+        <FieldLabel className="sr-only">Layer</FieldLabel>
         <SimpleSelect
           items={layers}
           itemLabel={(l) => l.name}

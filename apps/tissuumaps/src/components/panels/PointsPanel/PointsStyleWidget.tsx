@@ -1,39 +1,57 @@
+import { EyeIcon, PaletteIcon, ShapesIcon } from "lucide-react";
+import type { ReactNode } from "react";
+
 import {
+  type ColorConfig,
+  type MarkerConfig,
+  type OpacityConfig,
   type Points,
+  type SizeConfig,
+  type VisibilityConfig,
   defaultPointColor,
+  defaultPointSize,
+  defaultPointSizeUnit,
   pointsDefaults,
 } from "@tissuumaps/core";
 
-import { Field, FieldLabel } from "@/components/common/field";
-import { Switch } from "@/components/ui/switch";
 import { useColorConfigWidget } from "@/components/widgets/ColorConfigWidget/hooks";
+import { SizeUnitRadioGroup } from "@/components/widgets/SizeConfigWidget";
+import { useSizeConfigWidget } from "@/components/widgets/SizeConfigWidget/hooks";
 import { StyleWidget } from "@/components/widgets/StyleWidget";
+import { ColorRangeRows } from "@/components/widgets/StyleWidget/ColorRangeRows";
+import { OpacityIcon } from "@/components/widgets/StyleWidget/OpacityIcon";
+import { StyleRow } from "@/components/widgets/StyleWidget/StyleRow";
 import {
-  isMarkerByCategory,
-  markerByCategory,
-  markerFollowingColor,
-  markerWithoutCategories,
-  readColorBy,
+  findStyleBy,
+  followColumn,
+  getFollowState,
+  isSameColumnStyleBy,
+  readStyleBy,
   withColorColumn,
-  withoutColorColumn,
-} from "@/components/widgets/StyleWidget/colorBy";
-import { cn } from "@/lib/utils";
+  withFromColumn,
+  withMarkerColumn,
+  withoutColumn,
+} from "@/components/widgets/StyleWidget/styleBy";
 import { projectStore, useProjectStore } from "@/stores/project";
+
+import { PointsSettingsCategory } from "./category";
 
 export type PointsStyleWidgetProps = {
   points: Points;
+  /** The settings below the style, e.g. the advanced settings */
+  children?: ReactNode;
   className?: string;
 };
 
 /**
- * The always available settings of points: what they are colored by and, for
- * categories, whether their shapes tell them apart
+ * The always available settings of points: the column that their color,
+ * marker, size, opacity and visibility follow
  *
- * "Markers by category" is off by default; once switched on, the marker
- * follows the column colored by categories (see `markerFollowingColor`).
+ * If no property follows the column, a newly picked one styles the color.
  */
 export function PointsStyleWidget({
   points,
+  children,
   className,
 }: PointsStyleWidgetProps) {
   const updatePoints = useProjectStore((state) => state.updatePoints);
@@ -44,13 +62,74 @@ export function PointsStyleWidget({
     defaultPointColor,
     tableId,
   );
-  const colorBy = readColorBy(points.pointColor, tableId);
+  const sizeAdapter = useSizeConfigWidget(
+    points.pointSize,
+    (newSizeConfig) => updatePoints(points.id, { pointSize: newSizeConfig }),
+    defaultPointSize,
+    defaultPointSizeUnit,
+    tableId,
+  );
+
+  const styleBys = readStyleBys(points);
+  const styleBy = findStyleBy(Object.values(styleBys));
+  const isOn = (name: keyof typeof styleBys) =>
+    isSameColumnStyleBy(styleBys[name], styleBy);
 
   return (
     <StyleWidget
       tableId={tableId}
-      colorBy={colorBy}
-      onColorByChange={(newColorBy) => {
+      styleBy={styleBy}
+      items={[
+        {
+          name: PointsSettingsCategory.pointColor,
+          label: "Color",
+          icon: <PaletteIcon />,
+          columnTypes: ["categorical", "numerical"],
+          isOn: isOn(PointsSettingsCategory.pointColor),
+          numericalOptions: <ColorRangeRows adapter={colorAdapter} />,
+        },
+        {
+          name: PointsSettingsCategory.pointMarker,
+          label: "Marker",
+          icon: <ShapesIcon />,
+          columnTypes: ["categorical"],
+          isOn: isOn(PointsSettingsCategory.pointMarker),
+        },
+        {
+          name: PointsSettingsCategory.pointSize,
+          label: "Size",
+          icon: <SizeIcon filled={isOn(PointsSettingsCategory.pointSize)} />,
+          columnTypes: ["numerical"],
+          isOn: isOn(PointsSettingsCategory.pointSize),
+          numericalOptions: (
+            <StyleRow label="Unit">
+              <SizeUnitRadioGroup
+                value={sizeAdapter.currentFromUnit}
+                onValueChange={sizeAdapter.setCurrentFromUnit}
+                className="text-xs"
+              />
+            </StyleRow>
+          ),
+        },
+        {
+          name: PointsSettingsCategory.pointOpacity,
+          label: "Opacity",
+          icon: (
+            <OpacityIcon filled={isOn(PointsSettingsCategory.pointOpacity)} />
+          ),
+          columnTypes: ["numerical"],
+          isOn: isOn(PointsSettingsCategory.pointOpacity),
+        },
+        {
+          name: PointsSettingsCategory.pointVisibility,
+          label: "Visibility",
+          icon: <EyeIcon />,
+          columnTypes: ["numerical"],
+          hint: "hides items whose value is 0 or less",
+          isOn: isOn(PointsSettingsCategory.pointVisibility),
+        },
+      ]}
+      onStyleChange={(newStyleBy, propertyNames) => {
         // the points as they are now: the change may follow a column load
         const current = projectStore
           .getState()
@@ -59,84 +138,145 @@ export function PointsStyleWidget({
           return;
         }
         const currentTableId = current.dataSource.table ?? null;
+        const followState = getFollowState(
+          readStyleBys(current),
+          newStyleBy,
+          propertyNames,
+        );
         updatePoints(current.id, {
-          pointColor:
-            newColorBy.kind === "column"
-              ? withColorColumn(
+          pointColor: followColumn(
+            current.pointColor,
+            followState(PointsSettingsCategory.pointColor),
+            {
+              withColumn: ({ column, columnType }) =>
+                withColorColumn(
                   current.pointColor,
-                  newColorBy.column,
-                  newColorBy.encoding,
+                  column,
+                  columnType,
                   currentTableId,
-                )
-              : withoutColorColumn(
+                ),
+              withoutColumn: () =>
+                withoutColumn<ColorConfig>(
                   current.pointColor,
                   pointsDefaults.pointColor,
                 ),
-          pointMarker: markerFollowingColor(
+            },
+          ),
+          pointMarker: followColumn(
             current.pointMarker,
-            current.pointColor,
-            newColorBy,
-            pointsDefaults.pointMarker,
-            currentTableId,
+            followState(PointsSettingsCategory.pointMarker),
+            {
+              withColumn: ({ column }) =>
+                withMarkerColumn(current.pointMarker, column, currentTableId),
+              withoutColumn: () =>
+                withoutColumn<MarkerConfig>(
+                  current.pointMarker,
+                  pointsDefaults.pointMarker,
+                ),
+            },
+          ),
+          pointSize: followColumn(
+            current.pointSize,
+            followState(PointsSettingsCategory.pointSize),
+            {
+              withColumn: ({ column }) =>
+                withFromColumn(current.pointSize, column, currentTableId),
+              withoutColumn: () =>
+                withoutColumn<SizeConfig>(
+                  current.pointSize,
+                  pointsDefaults.pointSize,
+                ),
+            },
+          ),
+          pointOpacity: followColumn(
+            current.pointOpacity,
+            followState(PointsSettingsCategory.pointOpacity),
+            {
+              withColumn: ({ column }) =>
+                withFromColumn(current.pointOpacity, column, currentTableId),
+              withoutColumn: () =>
+                withoutColumn<OpacityConfig>(
+                  current.pointOpacity,
+                  pointsDefaults.pointOpacity,
+                ),
+            },
+          ),
+          pointVisibility: followColumn(
+            current.pointVisibility,
+            followState(PointsSettingsCategory.pointVisibility),
+            {
+              withColumn: ({ column }) =>
+                withFromColumn(current.pointVisibility, column, currentTableId),
+              withoutColumn: () =>
+                withoutColumn<VisibilityConfig>(
+                  current.pointVisibility,
+                  pointsDefaults.pointVisibility,
+                ),
+            },
           ),
         });
       }}
-      colorAdapter={colorAdapter}
-      categoryOptions={
-        colorBy.kind === "column" && (
-          <MarkerByCategoryField
-            points={points}
-            column={colorBy.column}
-            className="col-span-2"
-          />
-        )
-      }
       className={className}
-    />
+    >
+      {children}
+    </StyleWidget>
   );
 }
 
-type MarkerByCategoryFieldProps = {
-  points: Points;
-  /** The column colored by categories */
-  column: string;
-  className?: string;
-};
-
-/** The "Markers by category" switch, which groups the marker by the column */
-function MarkerByCategoryField({
-  points,
-  column,
-  className,
-}: MarkerByCategoryFieldProps) {
-  const updatePoints = useProjectStore((state) => state.updatePoints);
+/**
+ * @param points - The points
+ * @returns What the properties of the points follow, by name, in the order
+ * of the style widget
+ */
+function readStyleBys(points: Points) {
   const tableId = points.dataSource.table ?? null;
-  const isOn = isMarkerByCategory(points.pointMarker, column, tableId);
+  return {
+    [PointsSettingsCategory.pointColor]: readStyleBy(
+      points.pointColor,
+      tableId,
+    ),
+    [PointsSettingsCategory.pointMarker]: readStyleBy(
+      points.pointMarker,
+      tableId,
+    ),
+    [PointsSettingsCategory.pointSize]: readStyleBy(points.pointSize, tableId),
+    [PointsSettingsCategory.pointOpacity]: readStyleBy(
+      points.pointOpacity,
+      tableId,
+    ),
+    [PointsSettingsCategory.pointVisibility]: readStyleBy(
+      points.pointVisibility,
+      tableId,
+    ),
+  };
+}
+
+type SizeIconProps = { filled: boolean };
+
+/** A small and a large point, filled while sizes follow the column */
+function SizeIcon({ filled }: SizeIconProps) {
   return (
-    <Field
-      className={cn("flex min-w-0 flex-row items-center gap-x-2", className)}
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
     >
-      <Switch
-        checked={isOn}
-        onCheckedChange={(checked) =>
-          updatePoints(points.id, {
-            pointMarker: checked
-              ? markerByCategory(
-                  points.pointMarker,
-                  column,
-                  pointsDefaults.pointMarker,
-                  tableId,
-                )
-              : markerWithoutCategories(
-                  points.pointMarker,
-                  pointsDefaults.pointMarker,
-                ),
-          })
-        }
+      <circle
+        cx="6.5"
+        cy="17.5"
+        r="2.5"
+        className={filled ? "fill-current" : undefined}
       />
-      <FieldLabel className="truncate text-sm font-normal">
-        Markers by category
-      </FieldLabel>
-    </Field>
+      <circle
+        cx="15"
+        cy="9"
+        r="6"
+        className={filled ? "fill-current" : undefined}
+      />
+    </svg>
   );
 }

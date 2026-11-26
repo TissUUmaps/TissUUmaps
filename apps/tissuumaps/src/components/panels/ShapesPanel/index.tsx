@@ -100,7 +100,31 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
       }
       onDelete={() => deleteShapes(shapes.id)}
     >
-      <ShapesStyleWidget shapes={shapes} className="bg-card" />
+      <DataSourceWidget
+        dataSource={shapes.dataSource}
+        dataProviders={shapesDataProviders}
+        onDataSourceChange={(newDataSource) => {
+          updateShapes(shapes.id, { dataSource: newDataSource });
+        }}
+        className="bg-card"
+      />
+      <ShapesStyleWidget shapes={shapes} className="bg-card">
+        <AdvancedSettings
+          // a hidden settings category would keep the group table from
+          // following the style section
+          onOpenChange={(open) => {
+            if (!open) {
+              setActiveSettingsCategory(null);
+            }
+          }}
+        >
+          <ShapesSettingsWidget
+            shapes={shapes}
+            activeCategory={activeSettingsCategory}
+            onActiveCategoryChange={setActiveSettingsCategory}
+          />
+        </AdvancedSettings>
+      </ShapesStyleWidget>
       {shapesData !== null && (
         <ShapesAnnotationsWidget
           shapes={shapes}
@@ -109,30 +133,6 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
           className="bg-card"
         />
       )}
-      <AdvancedSettings
-        // a hidden settings category would keep the group table from
-        // following the style section
-        onOpenChange={(open) => {
-          if (!open) {
-            setActiveSettingsCategory(null);
-          }
-        }}
-      >
-        <DataSourceWidget
-          dataSource={shapes.dataSource}
-          dataProviders={shapesDataProviders}
-          onDataSourceChange={(newDataSource) => {
-            updateShapes(shapes.id, { dataSource: newDataSource });
-          }}
-          className="bg-card"
-        />
-        <ShapesSettingsWidget
-          shapes={shapes}
-          activeCategory={activeSettingsCategory}
-          onActiveCategoryChange={setActiveSettingsCategory}
-          className="bg-card"
-        />
-      </AdvancedSettings>
     </SortableObjectListItem>
   );
 }

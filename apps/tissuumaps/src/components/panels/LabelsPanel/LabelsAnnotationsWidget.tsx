@@ -36,23 +36,23 @@ export function LabelsAnnotationsWidget({
   const groupTable = useGroupTable(
     labels.name,
     tableId,
+    // in the order of the style section, whose first property that groups by
+    // a column the group table follows while no settings category is open
     [
       {
         category: LabelsSettingsCategory.labelColor,
         config: labels.labelColor,
       },
       {
-        category: LabelsSettingsCategory.labelVisibility,
-        config: labels.labelVisibility,
-      },
-      {
         category: LabelsSettingsCategory.labelOpacity,
         config: labels.labelOpacity,
       },
+      {
+        category: LabelsSettingsCategory.labelVisibility,
+        config: labels.labelVisibility,
+      },
     ],
-    // without an open settings category, the group table follows the color,
-    // which the style section edits
-    activeSettingsCategory ?? LabelsSettingsCategory.labelColor,
+    activeSettingsCategory,
   );
 
   const colorAdapter = useColorGroupValues();

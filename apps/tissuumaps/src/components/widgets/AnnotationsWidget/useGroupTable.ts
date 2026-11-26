@@ -48,26 +48,33 @@ function isSameGroupBy(
  * Chooses the table column that the group table groups by, and counts its
  * groups
  *
- * The group table follows the column that the open settings category groups
- * by, and is emptied when that category stops grouping. Otherwise it starts
- * from the column that most settings group by, and keeps the column picked by
- * the user until the table changes.
+ * The group table follows the column that the followed settings category
+ * groups by, and is emptied when that category stops grouping: the open
+ * category, else the first one that groups by a column, else the first one.
+ * Otherwise it starts from the column that most settings group by, and keeps
+ * the column picked by the user until the table changes.
  *
  * @param objectName - The name of the annotated object
  * @param tableId - The ID of the annotated object's table
  * @param settings - The settings of the annotated object, in order of priority
- * @param activeSettingsCategory - The settings category the group table
- * follows: the open one, else the one the style section edits
+ * @param activeSettingsCategory - The open settings category, if any
  * @returns The state of the group table, shared by its columns
  */
 export function useGroupTable(
   objectName: string,
   tableId: string | null,
   settings: GroupTableSetting[],
-  activeSettingsCategory: string,
+  activeSettingsCategory: string | null,
 ): GroupTableState {
+  const followedCategory =
+    activeSettingsCategory ??
+    (
+      settings.find(
+        ({ config }) => ConfigUtils.getGroupByColumn(config) !== undefined,
+      ) ?? settings[0]
+    )?.category;
   const activeConfig = settings.find(
-    (setting) => setting.category === activeSettingsCategory,
+    (setting) => setting.category === followedCategory,
   )?.config;
   const activeGroupBy =
     tableId !== null && activeConfig !== undefined
@@ -93,24 +100,23 @@ export function useGroupTable(
   }
 
   const [prevActiveGroupBy, setPrevActiveGroupBy] = useState(activeGroupBy);
-  const [prevActiveCategory, setPrevActiveCategory] = useState(
-    activeSettingsCategory,
-  );
+  const [prevFollowedCategory, setPrevFollowedCategory] =
+    useState(followedCategory);
   if (
     !isSameGroupBy(activeGroupBy, prevActiveGroupBy) ||
-    activeSettingsCategory !== prevActiveCategory
+    followedCategory !== prevFollowedCategory
   ) {
     setPrevActiveGroupBy(activeGroupBy);
-    setPrevActiveCategory(activeSettingsCategory);
+    setPrevFollowedCategory(followedCategory);
     if (activeGroupBy !== null) {
       setGroupBy(activeGroupBy);
     } else if (
-      activeSettingsCategory === prevActiveCategory &&
+      followedCategory === prevFollowedCategory &&
       prevActiveGroupBy !== null &&
       isSameGroupBy(groupBy, prevActiveGroupBy)
     ) {
-      // the open category stopped grouping (e.g. the color became a
-      // gradient): its groups would be stale
+      // the followed category stopped grouping (e.g. the color became
+      // numerical): its groups would be stale
       setGroupBy(null);
     }
   }

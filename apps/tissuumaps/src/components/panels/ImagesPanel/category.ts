@@ -1,7 +1,7 @@
 export const ImageSettingsCategory = {
-  general: "general",
+  layer: "layer",
   transform: "transform",
-};
+} as const;
 
 export type ImageSettingsCategory =
   (typeof ImageSettingsCategory)[keyof typeof ImageSettingsCategory];

@@ -97,7 +97,31 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
       }
       onDelete={() => deleteLabels(labels.id)}
     >
-      <LabelsStyleWidget labels={labels} className="bg-card" />
+      <DataSourceWidget
+        dataSource={labels.dataSource}
+        dataProviders={labelsDataProviders}
+        onDataSourceChange={(newDataSource) => {
+          updateLabels(labels.id, { dataSource: newDataSource });
+        }}
+        className="bg-card"
+      />
+      <LabelsStyleWidget labels={labels} className="bg-card">
+        <AdvancedSettings
+          // a hidden settings category would keep the group table from
+          // following the style section
+          onOpenChange={(open) => {
+            if (!open) {
+              setActiveSettingsCategory(null);
+            }
+          }}
+        >
+          <LabelsSettingsWidget
+            labels={labels}
+            activeCategory={activeSettingsCategory}
+            onActiveCategoryChange={setActiveSettingsCategory}
+          />
+        </AdvancedSettings>
+      </LabelsStyleWidget>
       {labels.dataSource.table !== undefined && (
         <LabelsAnnotationsWidget
           labels={labels}
@@ -105,30 +129,6 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
           className="bg-card"
         />
       )}
-      <AdvancedSettings
-        // a hidden settings category would keep the group table from
-        // following the style section
-        onOpenChange={(open) => {
-          if (!open) {
-            setActiveSettingsCategory(null);
-          }
-        }}
-      >
-        <DataSourceWidget
-          dataSource={labels.dataSource}
-          dataProviders={labelsDataProviders}
-          onDataSourceChange={(newDataSource) => {
-            updateLabels(labels.id, { dataSource: newDataSource });
-          }}
-          className="bg-card"
-        />
-        <LabelsSettingsWidget
-          labels={labels}
-          activeCategory={activeSettingsCategory}
-          onActiveCategoryChange={setActiveSettingsCategory}
-          className="bg-card"
-        />
-      </AdvancedSettings>
     </SortableObjectListItem>
   );
 }

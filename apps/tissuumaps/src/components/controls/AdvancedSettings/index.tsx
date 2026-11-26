@@ -29,7 +29,7 @@ export function AdvancedSettings({
       <div className="flex flex-row items-center gap-x-1 text-sm">
         <CollapsibleTriggerRightDownIcon />
         <CollapsibleTrigger className="font-medium">
-          Advanced settings
+          Advanced
         </CollapsibleTrigger>
       </div>
       <CollapsiblePanel className="flex flex-col gap-y-2">
