@@ -21,6 +21,7 @@ import {
   getFollower,
   isSameFollowedColumn,
   readFollowedColumn,
+  startsFollowingNumerical,
   withColorColumn,
   withFromColumn,
   withMarkerColumn,
@@ -40,6 +41,7 @@ const columnTypes = {
   [PointsSettingsCategory.pointSize]: ["numerical"],
   [PointsSettingsCategory.pointOpacity]: ["numerical"],
   [PointsSettingsCategory.pointVisibility]: ["numerical"],
+  [PointsSettingsCategory.pointOrder]: ["numerical"],
 } satisfies Record<string, TableColumnType[]>;
 
 export type PointsSettingsWidgetProps = {
@@ -49,9 +51,10 @@ export type PointsSettingsWidgetProps = {
 
 /**
  * The always available settings of points: the column that their color,
- * marker, size, opacity and visibility follow
+ * marker, size, opacity, visibility and draw order follow
  *
  * If no property follows the column, the color follows a newly picked one.
+ * The draw order starts together with the color on a numerical column.
  */
 export function PointsSettingsWidget({
   points,
@@ -138,6 +141,14 @@ export function PointsSettingsWidget({
           hint: "hides items whose value is 0 or less",
           isOn: isOn(PointsSettingsCategory.pointVisibility),
         },
+        {
+          name: PointsSettingsCategory.pointOrder,
+          label: "Order",
+          icon: <OrderIcon filled={isOn(PointsSettingsCategory.pointOrder)} />,
+          columnTypes: columnTypes[PointsSettingsCategory.pointOrder],
+          hint: "draws items with higher values on top",
+          isOn: isOn(PointsSettingsCategory.pointOrder),
+        },
       ]}
       onFollowedColumnChange={(newFollowedColumn, propertyNames) => {
         // the points as they are now: the change may come after a column load
@@ -148,10 +159,19 @@ export function PointsSettingsWidget({
           return;
         }
         const currentTableId = current.dataSource.table ?? null;
+        const previousFollowedColumns = readFollowedColumns(current);
         const follow = getFollower(
-          readFollowedColumns(current),
+          previousFollowedColumns,
           newFollowedColumn,
-          propertyNames,
+          // the order starts with the color: higher values are drawn on top
+          startsFollowingNumerical(
+            previousFollowedColumns,
+            newFollowedColumn,
+            propertyNames,
+            PointsSettingsCategory.pointColor,
+          )
+            ? [...propertyNames, PointsSettingsCategory.pointOrder]
+            : propertyNames,
         );
         updatePoints(current.id, {
           pointColor: follow(
@@ -194,6 +214,12 @@ export function PointsSettingsWidget({
             ({ column }) =>
               withFromColumn(current.pointVisibility, column, currentTableId),
           ),
+          pointOrder: follow(
+            PointsSettingsCategory.pointOrder,
+            current.pointOrder,
+            undefined,
+            ({ column }) => ({ source: "from", from: { column } }),
+          ),
         });
       }}
       advancedSettings={<PointsAdvancedSettingsWidget points={points} />}
@@ -235,6 +261,11 @@ function readFollowedColumns(points: Points) {
       tableId,
       columnTypes[PointsSettingsCategory.pointVisibility],
     ),
+    [PointsSettingsCategory.pointOrder]: readFollowedColumn(
+      points.pointOrder,
+      tableId,
+      columnTypes[PointsSettingsCategory.pointOrder],
+    ),
   };
 }
 
@@ -262,6 +293,32 @@ function SizeIcon({ filled }: SizeIconProps) {
         cx="15"
         cy="9"
         r="6"
+        className={filled ? "fill-current" : undefined}
+      />
+    </svg>
+  );
+}
+
+type OrderIconProps = { filled: boolean };
+
+/** Three overlapping points, the top one filled while the draw order follows the column */
+function OrderIcon({ filled }: OrderIconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M7.08 11.08A5 5 0 1 0 12.92 16.92" />
+      <path d="M11.08 7.08A5 5 0 1 0 16.92 12.92" />
+      <circle
+        cx="16"
+        cy="8"
+        r="5"
         className={filled ? "fill-current" : undefined}
       />
     </svg>

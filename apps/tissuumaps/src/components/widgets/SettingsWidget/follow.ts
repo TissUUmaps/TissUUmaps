@@ -52,16 +52,19 @@ function isOwnTableColumn(
  * A column the property cannot follow as that type is not followed, e.g. the
  * values per category of a size from the group table.
  *
- * @param config - The configuration
+ * @param config - The configuration, if any
  * @param tableId - The ID of the object's own table, if it has one
  * @param columnTypes - The column types the property can follow
  * @returns The column, or `null` if the configuration follows none
  */
 export function readFollowedColumn<TConfig extends Config<string>>(
-  config: TConfig,
+  config: TConfig | undefined,
   tableId: string | null,
   columnTypes: TableColumnType[],
 ): FollowedColumn | null {
+  if (config === undefined) {
+    return null;
+  }
   switch (getActiveConfigSource(config)) {
     case "groupBy":
       return columnTypes.includes("categorical") &&
@@ -149,8 +152,8 @@ export function isSameFollowedColumn(
  * @param followedColumn - The column the widget follows from now on, if any
  * @param propertyNames - The names of the properties that follow it
  * @returns A function that returns the new configuration of a property, given
- * its name, configuration, default configuration, and `withColumn`, which
- * returns the configuration that follows a column
+ * its name, configuration, default configuration (if it has one), and
+ * `withColumn`, which returns the configuration that follows a column
  */
 export function getFollower<TName extends string>(
   previousFollowedColumns: Record<TName, FollowedColumn | null>,
@@ -160,7 +163,7 @@ export function getFollower<TName extends string>(
   const previousFollowedColumn = findFollowedColumn(
     Object.values<FollowedColumn | null>(previousFollowedColumns),
   );
-  return <TConfig extends Config<string>>(
+  return <TConfig extends Config<string> | undefined>(
     name: TName,
     config: TConfig,
     defaultConfig: TConfig,
@@ -176,6 +179,28 @@ export function getFollower<TName extends string>(
       ? withoutColumn(config, defaultConfig)
       : config;
   };
+}
+
+/**
+ * @param previousFollowedColumns - The column each property followed until
+ * now, if any, by name
+ * @param followedColumn - The column the widget follows from now on, if any
+ * @param propertyNames - The names of the properties that follow it
+ * @param name - The name of the property
+ * @returns Whether the property starts following a numerical column: it
+ * follows one from now on and followed none until now
+ */
+export function startsFollowingNumerical<TName extends string>(
+  previousFollowedColumns: Record<TName, FollowedColumn | null>,
+  followedColumn: FollowedColumn | null,
+  propertyNames: string[],
+  name: TName,
+): boolean {
+  return (
+    followedColumn?.columnType === "numerical" &&
+    propertyNames.includes(name) &&
+    previousFollowedColumns[name]?.columnType !== "numerical"
+  );
 }
 
 /**
@@ -441,21 +466,26 @@ export function withFromColumn<TConfig extends Config<string>>(
 /**
  * Returns the configuration that follows no column, i.e. the source of the
  * property's default: a constant value, or random values (e.g. the colors of
- * labels)
+ * labels), or none for a property without a default (e.g. the draw order of
+ * points)
  *
  * The branch of that source is kept if the configuration has one, and taken
  * from the default configuration otherwise; the other branches are kept
  * inactive.
  *
  * @param config - The configuration to update
- * @param defaultConfig - The default configuration of the property
+ * @param defaultConfig - The default configuration of the property, if it
+ * has one
  * @returns The updated configuration
  * @throws Error if the default configuration is not a constant or random one
  */
-function withoutColumn<TConfig extends Config<string>>(
+function withoutColumn<TConfig extends Config<string> | undefined>(
   config: TConfig,
   defaultConfig: TConfig,
 ): TConfig {
+  if (config === undefined || defaultConfig === undefined) {
+    return defaultConfig;
+  }
   if (getActiveConfigSource(defaultConfig) === "random") {
     if (isRandomConfig(config)) {
       return { ...config, source: "random" };

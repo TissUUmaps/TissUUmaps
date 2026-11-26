@@ -6,6 +6,7 @@ import {
   Marker,
   type MarkerConfig,
   type OpacityConfig,
+  type OrderConfig,
   type SizeConfig,
   type TableColumnType,
   type VisibilityConfig,
@@ -26,6 +27,7 @@ import {
   isItemSupported,
   isSameFollowedColumn,
   readFollowedColumn,
+  startsFollowingNumerical,
   withColorColumn,
   withFromColumn,
   withMarkerColumn,
@@ -119,6 +121,12 @@ describe("readFollowedColumn", () => {
         "t1",
         ["categorical"],
       ),
+    ).toBeNull();
+  });
+
+  it("reads a property without a configuration as no column", () => {
+    expect(
+      readFollowedColumn<OrderConfig>(undefined, "t1", ["numerical"]),
     ).toBeNull();
   });
 });
@@ -472,6 +480,72 @@ describe("getFollower", () => {
         labelsDefaults.labelColor,
       ),
     ).toMatchObject({ source: "random", random: { palette: "distinct" } });
+  });
+
+  it("removes the configuration of a property without a default", () => {
+    const order: OrderConfig = { from: { column: "qv" } };
+    const withColumn = ({ column }: FollowedColumn): OrderConfig => ({
+      source: "from",
+      from: { column },
+    });
+    expect(
+      getFollower({ color: qv, order: qv }, null, [])(
+        "order",
+        order,
+        undefined,
+        withColumn,
+      ),
+    ).toBeUndefined();
+    expect(
+      getFollower({ color: gene, order: null }, qv, ["color", "order"])(
+        "order",
+        undefined,
+        undefined,
+        withColumn,
+      ),
+    ).toEqual({ source: "from", from: { column: "qv" } });
+    // set to another column under Advanced
+    expect(
+      getFollower({ color: gene, order: qv }, null, [])(
+        "order",
+        order,
+        undefined,
+        withColumn,
+      ),
+    ).toBe(order);
+  });
+});
+
+describe("startsFollowingNumerical", () => {
+  const gene = { column: "gene", columnType: "categorical" } as const;
+  const qv = { column: "qv", columnType: "numerical" } as const;
+  const area = { column: "area", columnType: "numerical" } as const;
+
+  it("starts when the property newly follows a numerical column", () => {
+    expect(
+      startsFollowingNumerical({ color: null }, qv, ["color"], "color"),
+    ).toBe(true);
+    expect(
+      startsFollowingNumerical({ color: gene }, qv, ["color"], "color"),
+    ).toBe(true);
+  });
+
+  it("does not start when the property followed a numerical column", () => {
+    expect(
+      startsFollowingNumerical({ color: area }, qv, ["color"], "color"),
+    ).toBe(false);
+  });
+
+  it("does not start without the property or a numerical column", () => {
+    expect(
+      startsFollowingNumerical({ color: null }, qv, ["size"], "color"),
+    ).toBe(false);
+    expect(
+      startsFollowingNumerical({ color: null }, gene, ["color"], "color"),
+    ).toBe(false);
+    expect(startsFollowingNumerical({ color: gene }, null, [], "color")).toBe(
+      false,
+    );
   });
 });
 
