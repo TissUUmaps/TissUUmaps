@@ -248,3 +248,11 @@ export type VisibilityConfig =
  */
 export type OpacityConfig =
   ConstantConfig<number> | FromConfig | GroupByConfig<true>;
+
+/**
+ * Draw order configuration
+ *
+ * Items are drawn in ascending order of the numerical table values, so that
+ * high values are on top. Items without a value are drawn first.
+ */
+export type OrderConfig = FromConfig;

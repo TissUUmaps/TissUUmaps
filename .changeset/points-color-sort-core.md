@@ -2,4 +2,4 @@
 "@tissuumaps/core": minor
 ---
 
-Add `MathUtils.computeBinnedSortOrder`, which computes the indices that visit values in ascending order.
+Add `RawPoints.pointOrder`, which draws points in ascending order of a table column's values, and `MathUtils.computeBinnedSortOrder`, which computes the indices that visit values in ascending order.
