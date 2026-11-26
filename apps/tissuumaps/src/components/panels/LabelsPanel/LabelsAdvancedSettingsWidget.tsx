@@ -13,9 +13,8 @@ import {
   AccordionTrigger,
   AccordionTriggerRightDownIcon,
 } from "@/components/common/accordion";
-import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
-import { SimpleSelect } from "@/components/common/simple-select";
+import { LayerField } from "@/components/controls/LayerField";
 import {
   ActiveColorConfigValue,
   ColorConfigSourceToggleGroup,
@@ -75,7 +74,10 @@ export function LabelsAdvancedSettingsWidget({
   return (
     <Fieldset className={cn("flex flex-col gap-y-2", className)}>
       <FieldsetLegend className="sr-only">Advanced settings</FieldsetLegend>
-      <LabelsLayerSettingsWidget labels={labels} />
+      <LayerField
+        value={labels.layer}
+        onValueChange={(layer) => updateLabels(labels.id, { layer })}
+      />
       <Accordion>
         {/* Transform */}
         <AccordionItem value={LabelsSettingsCategory.transform}>
@@ -150,37 +152,5 @@ export function LabelsAdvancedSettingsWidget({
         </AccordionItem>
       </Accordion>
     </Fieldset>
-  );
-}
-
-type LabelsLayerSettingsWidgetProps = {
-  labels: Labels;
-  className?: string;
-};
-
-function LabelsLayerSettingsWidget({
-  labels,
-  className,
-}: LabelsLayerSettingsWidgetProps) {
-  const layers = useProjectStore((state) => state.layers);
-  const updateLabels = useProjectStore((state) => state.updateLabels);
-
-  return (
-    <div className={className}>
-      <Field className="flex flex-row items-center gap-x-2">
-        <FieldLabel>Layer</FieldLabel>
-        <SimpleSelect
-          items={layers}
-          itemLabel={(l) => l.name}
-          itemValue={(l) => l.id}
-          value={labels.layer}
-          onValueChange={(value) => {
-            if (value !== null) {
-              updateLabels(labels.id, { layer: value });
-            }
-          }}
-        />
-      </Field>
-    </div>
   );
 }

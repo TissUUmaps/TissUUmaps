@@ -16,11 +16,8 @@ import {
   AccordionTrigger,
   AccordionTriggerRightDownIcon,
 } from "@/components/common/accordion";
-import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
-import { SimpleSelect } from "@/components/common/simple-select";
-import { formatTableColumn } from "@/components/controls/TableColumnField/formatTableColumn";
-import { Input } from "@/components/ui/input";
+import { LayerField } from "@/components/controls/LayerField";
 import {
   ActiveColorConfigValue,
   ColorConfigSourceToggleGroup,
@@ -106,7 +103,10 @@ export function PointsAdvancedSettingsWidget({
   return (
     <Fieldset className={cn("flex flex-col gap-y-2", className)}>
       <FieldsetLegend className="sr-only">Advanced settings</FieldsetLegend>
-      <PointsLayerSettingsWidget points={points} />
+      <LayerField
+        value={points.layer}
+        onValueChange={(layer) => updatePoints(points.id, { layer })}
+      />
       <Accordion>
         {/* Transform */}
         <AccordionItem value={PointsSettingsCategory.transform}>
@@ -217,46 +217,5 @@ export function PointsAdvancedSettingsWidget({
         </AccordionItem>
       </Accordion>
     </Fieldset>
-  );
-}
-
-type PointsLayerSettingsWidgetProps = {
-  points: Points;
-  className?: string;
-};
-
-function PointsLayerSettingsWidget({
-  points,
-  className,
-}: PointsLayerSettingsWidgetProps) {
-  const layers = useProjectStore((state) => state.layers);
-  const tables = useProjectStore((state) => state.tables);
-  const updatePoints = useProjectStore((state) => state.updatePoints);
-
-  return (
-    <div className={className}>
-      <Field className="flex flex-row items-center gap-x-2">
-        <FieldLabel>Layer</FieldLabel>
-        {typeof points.layer === "string" ? (
-          <SimpleSelect
-            items={layers}
-            itemLabel={(l) => l.name}
-            itemValue={(l) => l.id}
-            value={points.layer}
-            onValueChange={(value) => {
-              if (value !== null) {
-                updatePoints(points.id, { layer: value });
-              }
-            }}
-          />
-        ) : (
-          <Input
-            disabled
-            value={`column: ${formatTableColumn(points.layer, tables)}`}
-            readOnly
-          />
-        )}
-      </Field>
-    </div>
   );
 }

@@ -18,11 +18,8 @@ import {
   AccordionTrigger,
   AccordionTriggerRightDownIcon,
 } from "@/components/common/accordion";
-import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
-import { SimpleSelect } from "@/components/common/simple-select";
-import { formatTableColumn } from "@/components/controls/TableColumnField/formatTableColumn";
-import { Input } from "@/components/ui/input";
+import { LayerField } from "@/components/controls/LayerField";
 import {
   ActiveColorConfigValue,
   ColorConfigSourceToggleGroup,
@@ -120,7 +117,10 @@ export function ShapesAdvancedSettingsWidget({
   return (
     <Fieldset className={cn("flex flex-col gap-y-2", className)}>
       <FieldsetLegend className="sr-only">Advanced settings</FieldsetLegend>
-      <ShapesLayerSettingsWidget shapes={shapes} />
+      <LayerField
+        value={shapes.layer}
+        onValueChange={(layer) => updateShapes(shapes.id, { layer })}
+      />
       <Accordion>
         {/* Transform */}
         <AccordionItem value={ShapesSettingsCategory.transform}>
@@ -293,46 +293,5 @@ export function ShapesAdvancedSettingsWidget({
         </AccordionItem>
       </Accordion>
     </Fieldset>
-  );
-}
-
-type ShapesLayerSettingsWidgetProps = {
-  shapes: Shapes;
-  className?: string;
-};
-
-function ShapesLayerSettingsWidget({
-  shapes,
-  className,
-}: ShapesLayerSettingsWidgetProps) {
-  const layers = useProjectStore((state) => state.layers);
-  const tables = useProjectStore((state) => state.tables);
-  const updateShapes = useProjectStore((state) => state.updateShapes);
-
-  return (
-    <div className={className}>
-      <Field className="flex flex-row items-center gap-x-2">
-        <FieldLabel>Layer</FieldLabel>
-        {typeof shapes.layer === "string" ? (
-          <SimpleSelect
-            items={layers}
-            itemLabel={(l) => l.name}
-            itemValue={(l) => l.id}
-            value={shapes.layer}
-            onValueChange={(value) => {
-              if (value !== null) {
-                updateShapes(shapes.id, { layer: value });
-              }
-            }}
-          />
-        ) : (
-          <Input
-            disabled
-            value={`column: ${formatTableColumn(shapes.layer, tables)}`}
-            readOnly
-          />
-        )}
-      </Field>
-    </div>
   );
 }
