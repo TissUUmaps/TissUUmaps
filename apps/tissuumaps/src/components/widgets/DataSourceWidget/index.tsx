@@ -30,8 +30,8 @@ export type DataSourceWidgetProps<TDataSource extends DataSource> = {
 };
 
 /**
- * Shows the type and source of a data source, the rest of it when expanded,
- * and edits it on demand
+ * Shows the type and source of a data source, the full source and the rest of
+ * it when expanded, and edits it on demand
  *
  * The source is not part of any data provider's UI schema, but rendered here.
  */
@@ -83,42 +83,67 @@ function DataSourceView({
   const showSource =
     dataProvider === undefined ||
     dataProvider.schema.properties?.source !== undefined;
+  const hasSource = showSource && dataSource.source !== undefined;
+  const hasFields =
+    dataProvider !== undefined &&
+    (!("elements" in dataProvider.uischema) ||
+      dataProvider.uischema.elements.length > 0);
+  const canExpand = hasSource || hasFields;
+  const summary = (
+    <>
+      <span className="shrink-0 text-muted-foreground">Type</span>
+      <span className="shrink-0">{dataProvider?.name ?? dataSource.type}</span>
+      {hasSource && (
+        <span className="truncate" title={dataSource.source}>
+          {dataSource.source}
+        </span>
+      )}
+    </>
+  );
   return (
     <>
       <FieldsetLegend className="sr-only">Data source</FieldsetLegend>
       <Collapsible className="flex flex-col gap-y-1">
         <div className="flex flex-row items-center gap-x-1 text-xs">
-          <CollapsibleTriggerRightDownIcon />
-          <CollapsibleTrigger className="flex min-w-0 flex-1 flex-row gap-x-3 text-left">
-            <span className="shrink-0 text-muted-foreground">Type</span>
-            <span className="shrink-0">
-              {dataProvider?.name ?? dataSource.type}
+          {canExpand ? (
+            <>
+              <CollapsibleTriggerRightDownIcon />
+              <CollapsibleTrigger className="flex min-w-0 flex-1 flex-row gap-x-3 text-left">
+                {summary}
+              </CollapsibleTrigger>
+            </>
+          ) : (
+            <span className="flex min-w-0 flex-1 flex-row gap-x-3 pl-5">
+              {summary}
             </span>
-            {showSource && dataSource.source !== undefined && (
-              <span className="truncate" title={dataSource.source}>
-                {dataSource.source}
-              </span>
-            )}
-          </CollapsibleTrigger>
+          )}
           <IconButton label="Edit" size="icon-xs" onClick={onEdit}>
             <EditIcon className="size-4" />
           </IconButton>
         </div>
-        <CollapsiblePanel>
-          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 pl-5 text-xs">
-            {dataProvider !== undefined && (
-              <JsonForms
-                ajv={ajv}
-                data={dataSource}
-                schema={dataProvider.schema}
-                uischema={dataProvider.uischema}
-                renderers={listRenderers}
-                cells={cells}
-                readonly
-              />
-            )}
-          </dl>
-        </CollapsiblePanel>
+        {canExpand && (
+          <CollapsiblePanel>
+            <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 pl-5 text-xs">
+              {hasSource && (
+                <div className="contents">
+                  <dt className="text-muted-foreground">Source</dt>
+                  <dd className="wrap-anywhere">{dataSource.source}</dd>
+                </div>
+              )}
+              {hasFields && (
+                <JsonForms
+                  ajv={ajv}
+                  data={dataSource}
+                  schema={dataProvider.schema}
+                  uischema={dataProvider.uischema}
+                  renderers={listRenderers}
+                  cells={cells}
+                  readonly
+                />
+              )}
+            </dl>
+          </CollapsiblePanel>
+        )}
       </Collapsible>
       {dataProvider === undefined && <MissingDataProviderHint />}
     </>
