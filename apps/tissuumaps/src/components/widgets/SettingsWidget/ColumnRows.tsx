@@ -8,7 +8,7 @@ import { findColumnByName } from "@/components/controls/TableColumnField/findCol
 import { Button } from "@/components/ui/button";
 import { useTableData } from "@/data/hooks/useData";
 
-import { StyleRow } from "./StyleRow";
+import { SettingsRow } from "./SettingsRow";
 
 /** A row of the picker: a top-level section and its leaves */
 type Row = {
@@ -49,24 +49,24 @@ function toRows(groups: TableColumnSection[]): Row[] {
   }));
 }
 
-export type StyleByPickerProps = {
+export type ColumnRowsProps = {
   /** The ID of the object's own table, if it has one */
   tableId: string | null;
 
-  /** The column styled by, if any */
+  /** The followed column, if any */
   column: string | null;
 
-  /** Styles by a column, or by none; resolves to whether it applied */
+  /** Follows a column, or none; resolves to whether it applied */
   onColumnChange: (column: string | null) => Promise<boolean>;
 
   /**
-   * The text shown while no column is styled by, in the first row for tables
+   * The text shown while no column is followed, in the first row for tables
    * with sections
    */
   placeholder: string;
 
   /**
-   * Controls shown before the input of the column styled by, e.g. its type
+   * Controls shown before the input of the followed column, e.g. its type
    */
   columnControls?: ReactNode;
 
@@ -75,32 +75,32 @@ export type StyleByPickerProps = {
 };
 
 /**
- * Picks the column to style by, by its section rather than by its query,
- * as rows of the {@link StyleRow} grid
+ * Picks the column to follow, by its section rather than by its query, as
+ * rows of the {@link SettingsRow} grid
  *
  * Tables with sections (see `TableData.getColumnSections`) get one row per
  * top-level section, titled by its name (e.g. "Observations",
  * "Features"); the table names its sections, the app only lays them out.
- * A top-level leaf is the row's set of columns; any other top-level query
- * group gets a "from" menu of its leaves (e.g. `X`, a layer or `raw`), whose
- * first leaf is the default. The row of the column styled by is filled, the
+ * A top-level leaf is the row's set of columns; any other top-level
+ * section gets a "from" menu of its leaves (e.g. `X`, a layer or `raw`), whose
+ * first leaf is the default. The row of the followed column is filled, the
  * others empty; picking in any applies right away. Switching "from" keeps the
- * entity styled by if the table maps it to the new leaf (see
+ * followed entity if the table maps it to the new leaf (see
  * `TableData.mapColumn`). A text matching no column of a leaf is looked up in
  * the other leaves of its row and offered there. Tables without sections
  * get one "Column" row.
  */
-export function StyleByPicker({
+export function ColumnRows({
   tableId,
   column,
   onColumnChange,
   placeholder,
   columnControls,
   className,
-}: StyleByPickerProps) {
+}: ColumnRowsProps) {
   const tableData = useTableData(tableId);
   const rows = toRows(tableData?.getColumnSections?.() ?? []);
-  // the description of the column styled by, kept until the next one resolves,
+  // the description of the followed column, kept until the next one resolves,
   // so that the row does not empty in between
   const [description, setDescription] = useState<{
     column: string;
@@ -143,7 +143,7 @@ export function StyleByPicker({
         setDescription(
           newDescription !== null ? { column, ...newDescription } : null,
         );
-        // the row of the column styled by shows its leaf
+        // the row of the followed column shows its leaf
         const row = toRows(tableData.getColumnSections?.() ?? []).find((row) =>
           row.leaves.some((leaf) => leaf.id === newDescription?.sectionId),
         );
@@ -162,7 +162,7 @@ export function StyleByPicker({
     return () => abortController.abort();
   }, [tableData, column]);
 
-  // a new column to style by takes back the messages
+  // a new column to follow takes back the messages
   // https://react.dev/reference/react/useState#storing-information-from-previous-renders
   const [prevColumn, setPrevColumn] = useState(column);
   if (column !== prevColumn) {
@@ -173,7 +173,7 @@ export function StyleByPicker({
 
   if (rows.length === 0) {
     return (
-      <StyleRow label="Column" className={className}>
+      <SettingsRow label="Column" className={className}>
         <div className="flex min-w-0 flex-row items-center gap-1">
           {columnControls}
           <TableColumnInput
@@ -184,11 +184,11 @@ export function StyleByPicker({
             className="min-w-0 flex-1"
           />
         </div>
-      </StyleRow>
+      </SettingsRow>
     );
   }
 
-  const styledRow = rows.find((row) =>
+  const followedRow = rows.find((row) =>
     row.leaves.some((leaf) => leaf.id === description?.sectionId),
   );
 
@@ -207,7 +207,7 @@ export function StyleByPicker({
     if (
       newLeaf === undefined ||
       column === null ||
-      styledRow?.id !== row.id ||
+      followedRow?.id !== row.id ||
       newLeaf.id === description?.sectionId ||
       tableData?.mapColumn === undefined
     ) {
@@ -218,7 +218,7 @@ export function StyleByPicker({
       return;
     }
     // the same entity, if the table maps it to the new leaf; otherwise the
-    // row keeps showing the column styled by and its leaf
+    // row keeps showing the followed column and its leaf
     try {
       const mappedColumn = await tableData.mapColumn(column, {
         sectionId,
@@ -272,8 +272,8 @@ export function StyleByPicker({
   return (
     <>
       {rows.map((row) => {
-        const isActive = styledRow?.id === row.id;
-        // the chosen leaf, else the styled one, else the first one
+        const isActive = followedRow?.id === row.id;
+        // the chosen leaf, else the followed one, else the first one
         const preferredLeafId =
           selectedLeafIds[row.id] ??
           (isActive ? description?.sectionId : undefined);
@@ -284,23 +284,23 @@ export function StyleByPicker({
           return null;
         }
         const isDescriptionStale = description?.column !== column;
-        const showsStyledColumn =
+        const showsFollowedColumn =
           isActive &&
           (leaf.id === description?.sectionId || isDescriptionStale);
         return (
-          <StyleRow
+          <SettingsRow
             key={row.id}
             label={row.name}
             isActive={isActive}
             className={className}
           >
             <div className="flex min-w-0 flex-row items-center gap-1">
-              {showsStyledColumn && columnControls}
+              {showsFollowedColumn && columnControls}
               <TableColumnInput
                 tableId={tableId}
                 sectionId={leaf.id}
-                value={showsStyledColumn ? column : null}
-                valueName={showsStyledColumn ? description?.name : undefined}
+                value={showsFollowedColumn ? column : null}
+                valueName={showsFollowedColumn ? description?.name : undefined}
                 onValueChange={onColumnChange}
                 onNoMatch={(text) => void searchElsewhere(text, row, leaf.id)}
                 // the first row tells what the object looks like without a
@@ -333,16 +333,16 @@ export function StyleByPicker({
                 </>
               )}
             </div>
-          </StyleRow>
+          </SettingsRow>
         );
       })}
       {notice !== null && (
-        <StyleRow className={className}>
+        <SettingsRow className={className}>
           <span className="text-xs text-muted-foreground">{notice}</span>
-        </StyleRow>
+        </SettingsRow>
       )}
       {elsewhere !== null && (
-        <StyleRow className={className}>
+        <SettingsRow className={className}>
           <span className="text-xs text-muted-foreground">
             {elsewhere.name} is in {elsewhere.leaf.name} —{" "}
             <Button
@@ -357,7 +357,7 @@ export function StyleByPicker({
               switch?
             </Button>
           </span>
-        </StyleRow>
+        </SettingsRow>
       )}
     </>
   );

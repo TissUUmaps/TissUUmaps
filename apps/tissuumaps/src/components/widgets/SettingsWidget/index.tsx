@@ -17,18 +17,18 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
+import { ColumnRows } from "./ColumnRows";
 import { ColumnTypeMenu } from "./ColumnTypeMenu";
-import { StyleByPicker } from "./StyleByPicker";
-import { StyleRow } from "./StyleRow";
+import { SettingsRow } from "./SettingsRow";
 import {
-  type StyleBy,
+  type FollowedColumn,
   getFollowingNames,
   getPartToggledNames,
   getToggledNames,
-  isStyleItemOn,
-  isStyleItemSupported,
-} from "./styleBy";
-import { useStyleBy } from "./useStyleBy";
+  isItemOn,
+  isItemSupported,
+} from "./follow";
+import { useFollowedColumn } from "./useFollowedColumn";
 
 /**
  * A property of an object that can follow the column of the settings widget,
@@ -101,8 +101,8 @@ export type SettingsWidgetProps = {
   /** The ID of the object's own table, if it has one */
   tableId: string | null;
 
-  /** The column the object is styled by, if any (see `findStyleBy`) */
-  styleBy: StyleBy | null;
+  /** The column the properties follow, if any (see `findFollowedColumn`) */
+  followedColumn: FollowedColumn | null;
 
   /**
    * The properties and parts that can follow the column, in the order of
@@ -112,17 +112,20 @@ export type SettingsWidgetProps = {
   items: [SettingsWidgetItem, ...SettingsWidgetItem[]];
 
   /**
-   * Writes what the object is styled by and which properties follow it, to
-   * the object as it is when called (the call may follow a load)
+   * Writes the column to follow and which properties follow it, to the
+   * object as it is when called (the call may come after a load)
    *
-   * @param styleBy - The column the object is styled by, if any
+   * @param followedColumn - The column to follow, if any
    * @param propertyNames - The names of the properties that follow the
    * column, empty for none; parts are named by their properties
    */
-  onStyleChange: (styleBy: StyleBy | null, propertyNames: string[]) => void;
+  onFollowedColumnChange: (
+    followedColumn: FollowedColumn | null,
+    propertyNames: string[],
+  ) => void;
 
   /**
-   * What the object looks like while styled by no column, e.g. "Random
+   * What the object looks like while it follows no column, e.g. "Random
    * colors" (see `describeColorWithoutColumn`)
    */
   placeholder: string;
@@ -135,30 +138,30 @@ export type SettingsWidgetProps = {
 
 /**
  * The always available settings of an object annotated by a table: the
- * column to style it by, its type, and which properties follow it, in compact
+ * column to follow, its type, and which properties follow it, in compact
  * labelled rows
  *
- * The column type follows the picked column and determines which properties
+ * The picked column sets the column type, which determines which properties
  * can follow it. The values of the categories are edited in the group table
  * below the widget; the other settings in the advanced settings.
  */
 export function SettingsWidget({
   tableId,
-  styleBy,
+  followedColumn,
   items,
-  onStyleChange,
+  onFollowedColumnChange,
   placeholder,
   advancedSettings,
   className,
 }: SettingsWidgetProps) {
-  const { isCategorical, isPending, pick, setColumnType } = useStyleBy(
+  const { isCategorical, isPending, pick, setColumnType } = useFollowedColumn(
     tableId,
-    styleBy,
-    (newStyleBy) => {
-      onStyleChange(
-        newStyleBy,
-        newStyleBy !== null
-          ? getFollowingNames(items, newStyleBy.columnType)
+    followedColumn,
+    (newFollowedColumn) => {
+      onFollowedColumnChange(
+        newFollowedColumn,
+        newFollowedColumn !== null
+          ? getFollowingNames(items, newFollowedColumn.columnType)
           : [],
       );
     },
@@ -176,17 +179,17 @@ export function SettingsWidget({
         className="grid grid-cols-[5rem_1fr] items-center gap-x-2 gap-y-1.5"
       >
         <FieldsetLegend className="sr-only">Settings</FieldsetLegend>
-        <StyleByPicker
+        <ColumnRows
           // the leaves, messages and searches of the picker are per table
           key={tableId ?? ""}
           tableId={tableId}
-          column={styleBy?.column ?? null}
+          column={followedColumn?.column ?? null}
           onColumnChange={pick}
           placeholder={tableId === null ? "No table" : placeholder}
           columnControls={
-            styleBy !== null ? (
+            followedColumn !== null ? (
               <ColumnTypeMenu
-                value={styleBy.columnType}
+                value={followedColumn.columnType}
                 onValueChange={setColumnType}
                 isCategoricalOnly={isCategorical === true}
                 // the column types a column allows are known with its type
@@ -195,54 +198,54 @@ export function SettingsWidget({
             ) : undefined
           }
         />
-        {styleBy !== null && (
+        {followedColumn !== null && (
           <>
-            <StyleRow label="Applies to">
+            <SettingsRow label="Applies to">
               <ItemToggleGroup
                 items={items}
-                columnType={styleBy.columnType}
+                columnType={followedColumn.columnType}
                 disabled={isPending}
                 onValueChange={(value) => {
                   const names = getToggledNames(
                     items,
                     value,
-                    styleBy.columnType,
+                    followedColumn.columnType,
                   );
-                  // the column always styles something; None clears it
+                  // some property always follows the column; None clears it
                   if (names !== null) {
-                    onStyleChange(styleBy, names);
+                    onFollowedColumnChange(followedColumn, names);
                   }
                 }}
               />
-            </StyleRow>
-            {styleBy.columnType === "categorical" &&
-              items.filter(isStyleItemOn).map((item) => {
+            </SettingsRow>
+            {followedColumn.columnType === "categorical" &&
+              items.filter(isItemOn).map((item) => {
                 // a part follows a categorical column by its first property
                 const { categoricalOptions } =
                   "properties" in item ? item.properties[0] : item;
                 return (
                   categoricalOptions !== undefined && (
-                    <StyleGroup key={item.name} label={item.label}>
+                    <ItemOptions key={item.name} label={item.label}>
                       {categoricalOptions}
-                    </StyleGroup>
+                    </ItemOptions>
                   )
                 );
               })}
-            {styleBy.columnType === "numerical" &&
-              items.filter(isStyleItemOn).map((item) =>
+            {followedColumn.columnType === "numerical" &&
+              items.filter(isItemOn).map((item) =>
                 "properties" in item ? (
-                  <StyleGroup
+                  <ItemOptions
                     key={item.name}
                     label={item.label}
                     actions={
                       <ItemToggleGroup
                         items={item.properties}
-                        columnType={styleBy.columnType}
+                        columnType={followedColumn.columnType}
                         disabled={isPending}
                         onValueChange={(value) => {
                           const names = getPartToggledNames(items, item, value);
                           if (names !== null) {
-                            onStyleChange(styleBy, names);
+                            onFollowedColumnChange(followedColumn, names);
                           }
                         }}
                       />
@@ -255,23 +258,23 @@ export function SettingsWidget({
                           {property.numericalOptions}
                         </Fragment>
                       ))}
-                  </StyleGroup>
+                  </ItemOptions>
                 ) : (
                   item.numericalOptions !== undefined && (
-                    <StyleGroup key={item.name} label={item.label}>
+                    <ItemOptions key={item.name} label={item.label}>
                       {item.numericalOptions}
-                    </StyleGroup>
+                    </ItemOptions>
                   )
                 ),
               )}
           </>
         )}
         {isPending && (
-          <StyleRow>
+          <SettingsRow>
             <span className="text-xs text-muted-foreground">
               Loading column…
             </span>
-          </StyleRow>
+          </SettingsRow>
         )}
       </Fieldset>
       <Collapsible className="flex flex-col gap-y-2">
@@ -310,7 +313,7 @@ function ItemToggleGroup({
   return (
     <ToggleGroup
       multiple
-      value={items.filter(isStyleItemOn).map(({ name }) => name)}
+      value={items.filter(isItemOn).map(({ name }) => name)}
       onValueChange={onValueChange}
       size="sm"
       className="border rounded"
@@ -325,7 +328,7 @@ function ItemToggleGroup({
                 <ToggleGroupItem
                   value={item.name}
                   aria-label={item.label}
-                  disabled={!isStyleItemSupported(item, columnType)}
+                  disabled={!isItemSupported(item, columnType)}
                   className="px-2"
                 />
               }
@@ -342,7 +345,7 @@ function ItemToggleGroup({
   );
 }
 
-type StyleGroupProps = {
+type ItemOptionsProps = {
   label: string;
   /** Controls shown at the right of the name, e.g. the toggles of a part */
   actions?: ReactNode;
@@ -350,7 +353,7 @@ type StyleGroupProps = {
 };
 
 /** The options of one property or part, under its name, as rows of the grid */
-function StyleGroup({ label, actions, children }: StyleGroupProps) {
+function ItemOptions({ label, actions, children }: ItemOptionsProps) {
   const labelId = useId();
   return (
     <div

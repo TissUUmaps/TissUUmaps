@@ -33,7 +33,7 @@ export type ColumnTypeMenuProps = {
 };
 
 /**
- * The type of the column styled by, as an icon button before its input that
+ * The type of the followed column, as an icon button before its input that
  * opens a menu of both types
  */
 export function ColumnTypeMenu({

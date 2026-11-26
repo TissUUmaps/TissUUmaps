@@ -4,7 +4,7 @@ import { ColorPaletteSelect } from "@/components/controls/ColorPaletteSelect";
 import { RangeEndInput } from "@/components/controls/RangeEndInput";
 import type { ColorConfigWidgetAdapter } from "@/components/widgets/ColorConfigWidget/adapter";
 
-import { StyleRow } from "./StyleRow";
+import { SettingsRow } from "./SettingsRow";
 
 export type ColorRangeRowsProps = {
   /** The color configuration, whose palette and range the rows edit */
@@ -13,19 +13,19 @@ export type ColorRangeRowsProps = {
 
 /**
  * The palette and value range of a color that follows a numerical column, as
- * rows of the {@link StyleRow} grid
+ * rows of the {@link SettingsRow} grid
  */
 export function ColorRangeRows({ adapter }: ColorRangeRowsProps) {
   return (
     <>
-      <StyleRow label="Palette">
+      <SettingsRow label="Palette">
         <ColorPaletteSelect
           colorPalettes={continuousColorPalettes}
           value={adapter.currentFromPalette}
           onValueChange={adapter.setCurrentFromPalette}
         />
-      </StyleRow>
-      <StyleRow label="Range" className="grid grid-cols-2 gap-x-1">
+      </SettingsRow>
+      <SettingsRow label="Range" className="grid grid-cols-2 gap-x-1">
         <RangeEndInput
           value={adapter.currentFromRangeMin}
           onValueChange={adapter.setCurrentFromRangeMin}
@@ -42,7 +42,7 @@ export function ColorRangeRows({ adapter }: ColorRangeRowsProps) {
           title="Max. value"
           className="h-8 min-w-0"
         />
-      </StyleRow>
+      </SettingsRow>
     </>
   );
 }

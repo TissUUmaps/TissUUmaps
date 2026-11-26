@@ -15,26 +15,26 @@ import {
 
 import type { SettingsWidgetPart, SettingsWidgetProperty } from ".";
 import {
-  type StyleBy,
+  type FollowedColumn,
   describeColorWithoutColumn,
-  findStyleBy,
+  findFollowedColumn,
   getFollower,
   getFollowingNames,
   getPartToggledNames,
   getToggledNames,
-  isSameColumnStyleBy,
-  isStyleItemOn,
-  isStyleItemSupported,
-  readStyleBy,
+  isItemOn,
+  isItemSupported,
+  isSameFollowedColumn,
+  readFollowedColumn,
   withColorColumn,
   withFromColumn,
   withMarkerColumn,
   withOpacityColumn,
-} from "./styleBy";
+} from "./follow";
 
 const white = { r: 255, g: 255, b: 255 };
 
-describe("readStyleBy", () => {
+describe("readFollowedColumn", () => {
   const colorColumnTypes: TableColumnType[] = ["categorical", "numerical"];
 
   it("reads a column of the own table grouped into categories as categorical", () => {
@@ -44,12 +44,14 @@ describe("readStyleBy", () => {
       source: "groupBy",
       groupBy: { column: "gene", map: "m1" },
     } as ColorConfig;
-    expect(readStyleBy<ColorConfig>(config, "t1", colorColumnTypes)).toEqual({
+    expect(
+      readFollowedColumn<ColorConfig>(config, "t1", colorColumnTypes),
+    ).toEqual({
       column: "gene",
       columnType: "categorical",
     });
     expect(
-      readStyleBy<ColorConfig>(
+      readFollowedColumn<ColorConfig>(
         { ...config, groupBy: { table: "t1", column: "gene", map: undefined } },
         "t1",
         colorColumnTypes,
@@ -59,7 +61,7 @@ describe("readStyleBy", () => {
 
   it("reads a column of the own table taken as values as numerical", () => {
     expect(
-      readStyleBy<ColorConfig>(
+      readFollowedColumn<ColorConfig>(
         { source: "from", from: { column: "qv", palette: "viridis" } },
         "t1",
         colorColumnTypes,
@@ -69,28 +71,28 @@ describe("readStyleBy", () => {
 
   it("reads a coloring without an own-table column as no column", () => {
     expect(
-      readStyleBy<ColorConfig>(
+      readFollowedColumn<ColorConfig>(
         { constant: { value: white } },
         "t1",
         colorColumnTypes,
       ),
     ).toBeNull();
     expect(
-      readStyleBy<ColorConfig>(
+      readFollowedColumn<ColorConfig>(
         labelsDefaults.labelColor,
         "t1",
         colorColumnTypes,
       ),
     ).toBeNull();
     expect(
-      readStyleBy<ColorConfig>(
+      readFollowedColumn<ColorConfig>(
         { groupBy: { table: "t2", column: "gene", map: undefined } },
         "t1",
         colorColumnTypes,
       ),
     ).toBeNull();
     expect(
-      readStyleBy<ColorConfig>(
+      readFollowedColumn<ColorConfig>(
         { groupBy: { column: "gene", map: undefined } },
         null,
         colorColumnTypes,
@@ -101,7 +103,7 @@ describe("readStyleBy", () => {
   it("reads a column the property cannot follow as that type as no column", () => {
     // values per category from the group table
     expect(
-      readStyleBy<VisibilityConfig>(
+      readFollowedColumn<VisibilityConfig>(
         {
           source: "groupBy",
           constant: { value: true },
@@ -112,7 +114,7 @@ describe("readStyleBy", () => {
       ),
     ).toBeNull();
     expect(
-      readStyleBy<MarkerConfig>(
+      readFollowedColumn<MarkerConfig>(
         { source: "from", from: { column: "marker" } },
         "t1",
         ["categorical"],
@@ -234,19 +236,19 @@ describe("withColorColumn", () => {
   });
 });
 
-describe("findStyleBy", () => {
+describe("findFollowedColumn", () => {
   it("follows the first column, else the first property", () => {
     const gene = { column: "gene", columnType: "categorical" } as const;
-    expect(findStyleBy([null, gene])).toBe(gene);
-    expect(findStyleBy([null, null])).toBeNull();
+    expect(findFollowedColumn([null, gene])).toBe(gene);
+    expect(findFollowedColumn([null, null])).toBeNull();
   });
 
   it("tells a property apart that follows the same column as another type", () => {
     const categorical = { column: "qv", columnType: "categorical" } as const;
     const numerical = { ...categorical, columnType: "numerical" } as const;
-    expect(isSameColumnStyleBy(categorical, { ...categorical })).toBe(true);
-    expect(isSameColumnStyleBy(categorical, numerical)).toBe(false);
-    expect(isSameColumnStyleBy(null, null)).toBe(false);
+    expect(isSameFollowedColumn(categorical, { ...categorical })).toBe(true);
+    expect(isSameFollowedColumn(categorical, numerical)).toBe(false);
+    expect(isSameFollowedColumn(null, null)).toBe(false);
   });
 });
 
@@ -399,15 +401,15 @@ describe("getFollower", () => {
       source: "groupBy",
       groupBy: { column: "cluster", map: "m1" },
     } as VisibilityConfig;
-    const previousStyleBys = {
-      color: readStyleBy(color, "t1", ["categorical", "numerical"]),
-      visibility: readStyleBy(visibility, "t1", ["numerical"]),
+    const previousFollowedColumns = {
+      color: readFollowedColumn(color, "t1", ["categorical", "numerical"]),
+      visibility: readFollowedColumn(visibility, "t1", ["numerical"]),
     };
-    const withColumn = ({ column }: StyleBy) =>
+    const withColumn = ({ column }: FollowedColumn) =>
       withFromColumn(visibility, column, "t1");
     // a new column, or none
     expect(
-      getFollower(previousStyleBys, qv, ["color"])(
+      getFollower(previousFollowedColumns, qv, ["color"])(
         "visibility",
         visibility,
         pointsDefaults.pointVisibility,
@@ -415,7 +417,7 @@ describe("getFollower", () => {
       ),
     ).toBe(visibility);
     expect(
-      getFollower(previousStyleBys, null, [])(
+      getFollower(previousFollowedColumns, null, [])(
         "visibility",
         visibility,
         pointsDefaults.pointVisibility,
@@ -473,7 +475,7 @@ describe("getFollower", () => {
   });
 });
 
-describe("style items", () => {
+describe("items", () => {
   const color = {
     name: "color",
     label: "",
@@ -550,9 +552,9 @@ describe("style items", () => {
     expect(getToggledNames([fillOn, size], ["fill"], "numerical")).toEqual([
       "fillOpacity",
     ]);
-    expect(isStyleItemOn(fillOn)).toBe(true);
-    expect(isStyleItemSupported(fill, "categorical")).toBe(true);
-    expect(isStyleItemSupported(size, "categorical")).toBe(false);
+    expect(isItemOn(fillOn)).toBe(true);
+    expect(isItemSupported(fill, "categorical")).toBe(true);
+    expect(isItemSupported(size, "categorical")).toBe(false);
   });
 
   it("sets the toggles of a part, keeping the other properties", () => {

@@ -6,7 +6,7 @@ import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
 import { useConfirmDialog } from "@/components/dialogs/ConfirmDialog/hooks";
 import { useLazyTableData } from "@/data/hooks/useLazyData";
 
-import type { StyleBy } from "./styleBy";
+import type { FollowedColumn } from "./follow";
 
 /**
  * Distinct values beyond which using a numerical column as categorical asks
@@ -16,7 +16,7 @@ import type { StyleBy } from "./styleBy";
 const maxCategoryCount = 1000;
 
 /**
- * Picks the column to style by and switches between categorical and
+ * Picks the column to follow and switches between categorical and
  * numerical, loading what that takes from the object's own table
  *
  * Categorical columns start as categorical, all others as numerical (see
@@ -28,16 +28,16 @@ const maxCategoryCount = 1000;
  * the object as it is then (see `PointsSettingsWidget`).
  *
  * @param tableId - The ID of the object's own table, if any
- * @param styleBy - The column the object is styled by, if any
- * @param onStyleByChange - Writes the column the object is styled by, if any
+ * @param followedColumn - The column the properties follow, if any
+ * @param onFollowedColumnChange - Writes the column to follow, if any
  * @returns Whether the column is categorical once known, whether a pick or
- * switch is loading, `pick`, which styles by a column or none and resolves to
+ * switch is loading, `pick`, which follows a column or none and resolves to
  * whether it applied, and `setColumnType`
  */
-export function useStyleBy(
+export function useFollowedColumn(
   tableId: string | null,
-  styleBy: StyleBy | null,
-  onStyleByChange: (styleBy: StyleBy | null) => void,
+  followedColumn: FollowedColumn | null,
+  onFollowedColumnChange: (followedColumn: FollowedColumn | null) => void,
 ) {
   const loadTableData = useLazyTableData(tableId);
   const confirm = useConfirmDialog();
@@ -46,8 +46,8 @@ export function useStyleBy(
   const [isPending, setPending] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const column = styleBy?.column ?? null;
-  const columnType = styleBy?.columnType ?? null;
+  const column = followedColumn?.column ?? null;
+  const columnType = followedColumn?.columnType ?? null;
 
   // a new table or column is unknown until loaded, so that nothing stale is
   // shown meanwhile
@@ -60,7 +60,7 @@ export function useStyleBy(
     setCategorical(null);
   }
 
-  // follows the configuration, e.g. when the column is edited in the
+  // tracks the configuration, e.g. when the column is edited in the
   // advanced settings; the column is loaded anyway to render it
   useEffect(() => {
     if (column === null) {
@@ -79,7 +79,7 @@ export function useStyleBy(
       );
     })().catch((error: unknown) => {
       if (!signal.aborted) {
-        console.error("Failed to load the column to style by", error);
+        console.error("Failed to load the column", error);
       }
     });
     return () => abortController.abort();
@@ -91,7 +91,9 @@ export function useStyleBy(
   // an action resolving to null changes nothing, e.g. when the user cancels;
   // resolves to whether it applied
   const run = (
-    action: (options: { signal: AbortSignal }) => Promise<StyleBy | null>,
+    action: (options: {
+      signal: AbortSignal;
+    }) => Promise<FollowedColumn | null>,
   ): Promise<boolean> => {
     abortControllerRef.current?.abort();
     const abortController = new AbortController();
@@ -103,14 +105,14 @@ export function useStyleBy(
         if (signal.aborted || result === null) {
           return false;
         }
-        onStyleByChange(result);
+        onFollowedColumnChange(result);
         return true;
       })
       .catch(async (error: unknown) => {
         if (!signal.aborted) {
-          console.error("Failed to style by the column", error);
+          console.error("Failed to use the column", error);
           await alert({
-            title: "Cannot style by the column",
+            title: "Cannot use the column",
             body: error instanceof Error ? error.message : String(error),
           });
         }
@@ -165,7 +167,7 @@ export function useStyleBy(
   const pick = (newColumn: string | null) => {
     if (newColumn === null) {
       abortControllerRef.current?.abort();
-      onStyleByChange(null);
+      onFollowedColumnChange(null);
       return Promise.resolve(true);
     }
     return run(async (options) => {

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Field, FieldLabel } from "@/components/common/field";
 import { cn } from "@/lib/utils";
 
-export type StyleRowProps = {
+export type SettingsRowProps = {
   /** The label of the row, if any */
   label?: string;
   /** Whether the row holds the value in use, e.g. the colored column */
@@ -21,13 +21,13 @@ export type StyleRowProps = {
  *
  * The controls are kept compact (`h-8`) by their containers.
  */
-export function StyleRow({
+export function SettingsRow({
   label,
   isActive = false,
   disabled = false,
   children,
   className,
-}: StyleRowProps) {
+}: SettingsRowProps) {
   return (
     <Field className="contents" disabled={disabled}>
       {label !== undefined ? (

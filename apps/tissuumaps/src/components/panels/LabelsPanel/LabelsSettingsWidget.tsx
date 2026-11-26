@@ -14,14 +14,14 @@ import { ColorRangeRows } from "@/components/widgets/SettingsWidget/ColorRangeRo
 import { OpacityIcon } from "@/components/widgets/SettingsWidget/OpacityIcon";
 import {
   describeColorWithoutColumn,
-  findStyleBy,
+  findFollowedColumn,
   getFollower,
-  isSameColumnStyleBy,
-  readStyleBy,
+  isSameFollowedColumn,
+  readFollowedColumn,
   withColorColumn,
   withFromColumn,
   withOpacityColumn,
-} from "@/components/widgets/SettingsWidget/styleBy";
+} from "@/components/widgets/SettingsWidget/follow";
 import { projectStore, useProjectStore } from "@/stores/project";
 
 import { LabelsAdvancedSettingsWidget } from "./LabelsAdvancedSettingsWidget";
@@ -43,7 +43,7 @@ export type LabelsSettingsWidgetProps = {
  * The always available settings of labels: the column that their color,
  * opacity and visibility follow
  *
- * If no property follows the column, a newly picked one styles the color.
+ * If no property follows the column, the color follows a newly picked one.
  * The color stopping to follow
  * returns to the default random colors of labels.
  */
@@ -60,15 +60,15 @@ export function LabelsSettingsWidget({
     tableId,
   );
 
-  const styleBys = readStyleBys(labels);
-  const styleBy = findStyleBy(Object.values(styleBys));
-  const isOn = (name: keyof typeof styleBys) =>
-    isSameColumnStyleBy(styleBys[name], styleBy);
+  const followedColumns = readFollowedColumns(labels);
+  const followedColumn = findFollowedColumn(Object.values(followedColumns));
+  const isOn = (name: keyof typeof followedColumns) =>
+    isSameFollowedColumn(followedColumns[name], followedColumn);
 
   return (
     <SettingsWidget
       tableId={tableId}
-      styleBy={styleBy}
+      followedColumn={followedColumn}
       placeholder={describeColorWithoutColumn(
         labels.labelColor,
         labelsDefaults.labelColor,
@@ -103,8 +103,8 @@ export function LabelsSettingsWidget({
           isOn: isOn(LabelsSettingsCategory.labelVisibility),
         },
       ]}
-      onStyleChange={(newStyleBy, propertyNames) => {
-        // the labels as they are now: the change may follow a column load
+      onFollowedColumnChange={(newFollowedColumn, propertyNames) => {
+        // the labels as they are now: the change may come after a column load
         const current = projectStore
           .getState()
           .labels.find(({ id }) => id === labels.id);
@@ -113,8 +113,8 @@ export function LabelsSettingsWidget({
         }
         const currentTableId = current.dataSource.table ?? null;
         const follow = getFollower(
-          readStyleBys(current),
-          newStyleBy,
+          readFollowedColumns(current),
+          newFollowedColumn,
           propertyNames,
         );
         updateLabels(current.id, {
@@ -157,20 +157,20 @@ export function LabelsSettingsWidget({
  * @returns What the properties of the labels follow, by name, in the order
  * of the settings widget
  */
-function readStyleBys(labels: Labels) {
+function readFollowedColumns(labels: Labels) {
   const tableId = labels.dataSource.table ?? null;
   return {
-    [LabelsSettingsCategory.labelColor]: readStyleBy(
+    [LabelsSettingsCategory.labelColor]: readFollowedColumn(
       labels.labelColor,
       tableId,
       columnTypes[LabelsSettingsCategory.labelColor],
     ),
-    [LabelsSettingsCategory.labelOpacity]: readStyleBy(
+    [LabelsSettingsCategory.labelOpacity]: readFollowedColumn(
       labels.labelOpacity,
       tableId,
       columnTypes[LabelsSettingsCategory.labelOpacity],
     ),
-    [LabelsSettingsCategory.labelVisibility]: readStyleBy(
+    [LabelsSettingsCategory.labelVisibility]: readFollowedColumn(
       labels.labelVisibility,
       tableId,
       columnTypes[LabelsSettingsCategory.labelVisibility],

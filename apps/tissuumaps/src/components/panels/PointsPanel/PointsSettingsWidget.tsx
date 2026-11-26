@@ -14,18 +14,18 @@ import { SettingsWidget } from "@/components/widgets/SettingsWidget";
 import { CategoricalColorPaletteRow } from "@/components/widgets/SettingsWidget/CategoricalColorPaletteRow";
 import { ColorRangeRows } from "@/components/widgets/SettingsWidget/ColorRangeRows";
 import { OpacityIcon } from "@/components/widgets/SettingsWidget/OpacityIcon";
-import { StyleRow } from "@/components/widgets/SettingsWidget/StyleRow";
+import { SettingsRow } from "@/components/widgets/SettingsWidget/SettingsRow";
 import {
   describeColorWithoutColumn,
-  findStyleBy,
+  findFollowedColumn,
   getFollower,
-  isSameColumnStyleBy,
-  readStyleBy,
+  isSameFollowedColumn,
+  readFollowedColumn,
   withColorColumn,
   withFromColumn,
   withMarkerColumn,
   withOpacityColumn,
-} from "@/components/widgets/SettingsWidget/styleBy";
+} from "@/components/widgets/SettingsWidget/follow";
 import { SizeUnitRadioGroup } from "@/components/widgets/SizeConfigWidget";
 import { useSizeConfigWidget } from "@/components/widgets/SizeConfigWidget/hooks";
 import { projectStore, useProjectStore } from "@/stores/project";
@@ -51,7 +51,7 @@ export type PointsSettingsWidgetProps = {
  * The always available settings of points: the column that their color,
  * marker, size, opacity and visibility follow
  *
- * If no property follows the column, a newly picked one styles the color.
+ * If no property follows the column, the color follows a newly picked one.
  */
 export function PointsSettingsWidget({
   points,
@@ -73,15 +73,15 @@ export function PointsSettingsWidget({
     tableId,
   );
 
-  const styleBys = readStyleBys(points);
-  const styleBy = findStyleBy(Object.values(styleBys));
-  const isOn = (name: keyof typeof styleBys) =>
-    isSameColumnStyleBy(styleBys[name], styleBy);
+  const followedColumns = readFollowedColumns(points);
+  const followedColumn = findFollowedColumn(Object.values(followedColumns));
+  const isOn = (name: keyof typeof followedColumns) =>
+    isSameFollowedColumn(followedColumns[name], followedColumn);
 
   return (
     <SettingsWidget
       tableId={tableId}
-      styleBy={styleBy}
+      followedColumn={followedColumn}
       placeholder={describeColorWithoutColumn(
         points.pointColor,
         pointsDefaults.pointColor,
@@ -112,13 +112,13 @@ export function PointsSettingsWidget({
           columnTypes: columnTypes[PointsSettingsCategory.pointSize],
           isOn: isOn(PointsSettingsCategory.pointSize),
           numericalOptions: (
-            <StyleRow label="Unit">
+            <SettingsRow label="Unit">
               <SizeUnitRadioGroup
                 value={sizeAdapter.currentFromUnit}
                 onValueChange={sizeAdapter.setCurrentFromUnit}
                 className="text-xs"
               />
-            </StyleRow>
+            </SettingsRow>
           ),
         },
         {
@@ -139,8 +139,8 @@ export function PointsSettingsWidget({
           isOn: isOn(PointsSettingsCategory.pointVisibility),
         },
       ]}
-      onStyleChange={(newStyleBy, propertyNames) => {
-        // the points as they are now: the change may follow a column load
+      onFollowedColumnChange={(newFollowedColumn, propertyNames) => {
+        // the points as they are now: the change may come after a column load
         const current = projectStore
           .getState()
           .points.find(({ id }) => id === points.id);
@@ -149,8 +149,8 @@ export function PointsSettingsWidget({
         }
         const currentTableId = current.dataSource.table ?? null;
         const follow = getFollower(
-          readStyleBys(current),
-          newStyleBy,
+          readFollowedColumns(current),
+          newFollowedColumn,
           propertyNames,
         );
         updatePoints(current.id, {
@@ -207,30 +207,30 @@ export function PointsSettingsWidget({
  * @returns What the properties of the points follow, by name, in the order
  * of the settings widget
  */
-function readStyleBys(points: Points) {
+function readFollowedColumns(points: Points) {
   const tableId = points.dataSource.table ?? null;
   return {
-    [PointsSettingsCategory.pointColor]: readStyleBy(
+    [PointsSettingsCategory.pointColor]: readFollowedColumn(
       points.pointColor,
       tableId,
       columnTypes[PointsSettingsCategory.pointColor],
     ),
-    [PointsSettingsCategory.pointMarker]: readStyleBy(
+    [PointsSettingsCategory.pointMarker]: readFollowedColumn(
       points.pointMarker,
       tableId,
       columnTypes[PointsSettingsCategory.pointMarker],
     ),
-    [PointsSettingsCategory.pointSize]: readStyleBy(
+    [PointsSettingsCategory.pointSize]: readFollowedColumn(
       points.pointSize,
       tableId,
       columnTypes[PointsSettingsCategory.pointSize],
     ),
-    [PointsSettingsCategory.pointOpacity]: readStyleBy(
+    [PointsSettingsCategory.pointOpacity]: readFollowedColumn(
       points.pointOpacity,
       tableId,
       columnTypes[PointsSettingsCategory.pointOpacity],
     ),
-    [PointsSettingsCategory.pointVisibility]: readStyleBy(
+    [PointsSettingsCategory.pointVisibility]: readFollowedColumn(
       points.pointVisibility,
       tableId,
       columnTypes[PointsSettingsCategory.pointVisibility],

@@ -15,14 +15,14 @@ import { ColorRangeRows } from "@/components/widgets/SettingsWidget/ColorRangeRo
 import { OpacityIcon } from "@/components/widgets/SettingsWidget/OpacityIcon";
 import {
   describeColorWithoutColumn,
-  findStyleBy,
+  findFollowedColumn,
   getFollower,
-  isSameColumnStyleBy,
-  readStyleBy,
+  isSameFollowedColumn,
+  readFollowedColumn,
   withColorColumn,
   withFromColumn,
   withOpacityColumn,
-} from "@/components/widgets/SettingsWidget/styleBy";
+} from "@/components/widgets/SettingsWidget/follow";
 import { projectStore, useProjectStore } from "@/stores/project";
 
 import { ShapesAdvancedSettingsWidget } from "./ShapesAdvancedSettingsWidget";
@@ -50,8 +50,8 @@ export type ShapesSettingsWidgetProps = {
  * stroke (each with its color, opacity and visibility), opacity and
  * visibility follow
  *
- * If no property follows the column, a newly picked one styles the fill
- * color.
+ * If no property follows the column, the fill color follows a newly picked
+ * one.
  */
 export function ShapesSettingsWidget({
   shapes,
@@ -74,15 +74,15 @@ export function ShapesSettingsWidget({
     tableId,
   );
 
-  const styleBys = readStyleBys(shapes);
-  const styleBy = findStyleBy(Object.values(styleBys));
-  const isOn = (name: keyof typeof styleBys) =>
-    isSameColumnStyleBy(styleBys[name], styleBy);
+  const followedColumns = readFollowedColumns(shapes);
+  const followedColumn = findFollowedColumn(Object.values(followedColumns));
+  const isOn = (name: keyof typeof followedColumns) =>
+    isSameFollowedColumn(followedColumns[name], followedColumn);
 
   return (
     <SettingsWidget
       tableId={tableId}
-      styleBy={styleBy}
+      followedColumn={followedColumn}
       placeholder={describeColorWithoutColumn(
         shapes.shapeFillColor,
         shapesDefaults.shapeFillColor,
@@ -199,8 +199,8 @@ export function ShapesSettingsWidget({
           isOn: isOn(ShapesSettingsCategory.shapeVisibility),
         },
       ]}
-      onStyleChange={(newStyleBy, propertyNames) => {
-        // the shapes as they are now: the change may follow a column load
+      onFollowedColumnChange={(newFollowedColumn, propertyNames) => {
+        // the shapes as they are now: the change may come after a column load
         const current = projectStore
           .getState()
           .shapes.find(({ id }) => id === shapes.id);
@@ -209,8 +209,8 @@ export function ShapesSettingsWidget({
         }
         const currentTableId = current.dataSource.table ?? null;
         const follow = getFollower(
-          readStyleBys(current),
-          newStyleBy,
+          readFollowedColumns(current),
+          newFollowedColumn,
           propertyNames,
         );
         updateShapes(current.id, {
@@ -309,45 +309,45 @@ export function ShapesSettingsWidget({
  * @returns What the properties of the shapes follow, by name, in the order of
  * the settings widget
  */
-function readStyleBys(shapes: Shapes) {
+function readFollowedColumns(shapes: Shapes) {
   const tableId = shapes.dataSource.table ?? null;
   return {
-    [ShapesSettingsCategory.shapeFillColor]: readStyleBy(
+    [ShapesSettingsCategory.shapeFillColor]: readFollowedColumn(
       shapes.shapeFillColor,
       tableId,
       columnTypes[ShapesSettingsCategory.shapeFillColor],
     ),
-    [ShapesSettingsCategory.shapeFillOpacity]: readStyleBy(
+    [ShapesSettingsCategory.shapeFillOpacity]: readFollowedColumn(
       shapes.shapeFillOpacity,
       tableId,
       columnTypes[ShapesSettingsCategory.shapeFillOpacity],
     ),
-    [ShapesSettingsCategory.shapeFillVisibility]: readStyleBy(
+    [ShapesSettingsCategory.shapeFillVisibility]: readFollowedColumn(
       shapes.shapeFillVisibility,
       tableId,
       columnTypes[ShapesSettingsCategory.shapeFillVisibility],
     ),
-    [ShapesSettingsCategory.shapeStrokeColor]: readStyleBy(
+    [ShapesSettingsCategory.shapeStrokeColor]: readFollowedColumn(
       shapes.shapeStrokeColor,
       tableId,
       columnTypes[ShapesSettingsCategory.shapeStrokeColor],
     ),
-    [ShapesSettingsCategory.shapeStrokeOpacity]: readStyleBy(
+    [ShapesSettingsCategory.shapeStrokeOpacity]: readFollowedColumn(
       shapes.shapeStrokeOpacity,
       tableId,
       columnTypes[ShapesSettingsCategory.shapeStrokeOpacity],
     ),
-    [ShapesSettingsCategory.shapeStrokeVisibility]: readStyleBy(
+    [ShapesSettingsCategory.shapeStrokeVisibility]: readFollowedColumn(
       shapes.shapeStrokeVisibility,
       tableId,
       columnTypes[ShapesSettingsCategory.shapeStrokeVisibility],
     ),
-    [ShapesSettingsCategory.shapeOpacity]: readStyleBy(
+    [ShapesSettingsCategory.shapeOpacity]: readFollowedColumn(
       shapes.shapeOpacity,
       tableId,
       columnTypes[ShapesSettingsCategory.shapeOpacity],
     ),
-    [ShapesSettingsCategory.shapeVisibility]: readStyleBy(
+    [ShapesSettingsCategory.shapeVisibility]: readFollowedColumn(
       shapes.shapeVisibility,
       tableId,
       columnTypes[ShapesSettingsCategory.shapeVisibility],

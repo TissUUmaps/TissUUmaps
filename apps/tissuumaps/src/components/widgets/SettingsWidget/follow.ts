@@ -28,11 +28,11 @@ const defaultCategoricalColorPalette = defaultLabelColorPalette;
 const defaultContinuousColorPalette = "viridis";
 
 /** The column of the object's own table that a property follows */
-export type StyleBy = { column: string; columnType: TableColumnType };
+export type FollowedColumn = { column: string; columnType: TableColumnType };
 
 /**
  * Returns whether a table column reference names a column of the object's
- * own table, the only table the settings widget styles by
+ * own table, the only table whose columns the settings widget follows
  *
  * @param ref - The table column reference
  * @param tableId - The ID of the object's own table, if it has one
@@ -57,11 +57,11 @@ function isOwnTableColumn(
  * @param columnTypes - The column types the property can follow
  * @returns The column, or `null` if the configuration follows none
  */
-export function readStyleBy<TConfig extends Config<string>>(
+export function readFollowedColumn<TConfig extends Config<string>>(
   config: TConfig,
   tableId: string | null,
   columnTypes: TableColumnType[],
-): StyleBy | null {
+): FollowedColumn | null {
   switch (getActiveConfigSource(config)) {
     case "groupBy":
       return columnTypes.includes("categorical") &&
@@ -110,62 +110,69 @@ export function describeColorWithoutColumn(
  * Returns the column that the settings widget follows: the column of the
  * first property that follows one
  *
- * @param styleBys - The columns the properties follow, in the order of the
- * widget
+ * @param followedColumns - The columns the properties follow, in the order of
+ * the widget
  * @returns The column, or `null` if no property follows one
  */
-export function findStyleBy(styleBys: (StyleBy | null)[]): StyleBy | null {
-  return styleBys.find((styleBy) => styleBy !== null) ?? null;
-}
-
-/**
- * @param styleBy - The column a property follows, if any
- * @param other - The column the settings widget follows, if any
- * @returns Whether both follow the same column as the same column type
- */
-export function isSameColumnStyleBy(
-  styleBy: StyleBy | null,
-  other: StyleBy | null,
-): boolean {
+export function findFollowedColumn(
+  followedColumns: (FollowedColumn | null)[],
+): FollowedColumn | null {
   return (
-    styleBy !== null &&
-    other !== null &&
-    styleBy.column === other.column &&
-    styleBy.columnType === other.columnType
+    followedColumns.find((followedColumn) => followedColumn !== null) ?? null
   );
 }
 
 /**
- * Returns how the properties of the settings widget follow its change: a
+ * @param followedColumn - The column a property follows, if any
+ * @param other - The column the settings widget follows, if any
+ * @returns Whether both follow the same column as the same column type
+ */
+export function isSameFollowedColumn(
+  followedColumn: FollowedColumn | null,
+  other: FollowedColumn | null,
+): boolean {
+  return (
+    followedColumn !== null &&
+    other !== null &&
+    followedColumn.column === other.column &&
+    followedColumn.columnType === other.columnType
+  );
+}
+
+/**
+ * Returns how a change of the settings widget updates its properties: a
  * named property follows the new column, a property that stops following the
  * widget's column returns to its default, and any other is left unchanged
  *
- * @param previousStyleBys - The column each property followed until now, if
- * any, by name, in the order of the widget
- * @param styleBy - The column the widget follows from now on, if any
+ * @param previousFollowedColumns - The column each property followed until
+ * now, if any, by name, in the order of the widget
+ * @param followedColumn - The column the widget follows from now on, if any
  * @param propertyNames - The names of the properties that follow it
  * @returns A function that returns the new configuration of a property, given
  * its name, configuration, default configuration, and `withColumn`, which
  * returns the configuration that follows a column
  */
 export function getFollower<TName extends string>(
-  previousStyleBys: Record<TName, StyleBy | null>,
-  styleBy: StyleBy | null,
+  previousFollowedColumns: Record<TName, FollowedColumn | null>,
+  followedColumn: FollowedColumn | null,
   propertyNames: string[],
 ) {
-  const previousStyleBy = findStyleBy(
-    Object.values<StyleBy | null>(previousStyleBys),
+  const previousFollowedColumn = findFollowedColumn(
+    Object.values<FollowedColumn | null>(previousFollowedColumns),
   );
   return <TConfig extends Config<string>>(
     name: TName,
     config: TConfig,
     defaultConfig: TConfig,
-    withColumn: (styleBy: StyleBy) => TConfig,
+    withColumn: (followedColumn: FollowedColumn) => TConfig,
   ): TConfig => {
-    if (styleBy !== null && propertyNames.includes(name)) {
-      return withColumn(styleBy);
+    if (followedColumn !== null && propertyNames.includes(name)) {
+      return withColumn(followedColumn);
     }
-    return isSameColumnStyleBy(previousStyleBys[name], previousStyleBy)
+    return isSameFollowedColumn(
+      previousFollowedColumns[name],
+      previousFollowedColumn,
+    )
       ? withoutColumn(config, defaultConfig)
       : config;
   };
@@ -175,9 +182,7 @@ export function getFollower<TName extends string>(
  * @param item - A property or a part
  * @returns The properties of the item: the property, or those of the part
  */
-function getStyleProperties(
-  item: SettingsWidgetItem,
-): SettingsWidgetProperty[] {
+function getItemProperties(item: SettingsWidgetItem): SettingsWidgetProperty[] {
   return "properties" in item ? item.properties : [item];
 }
 
@@ -185,8 +190,8 @@ function getStyleProperties(
  * @param item - A property or a part
  * @returns Whether the item follows the column
  */
-export function isStyleItemOn(item: SettingsWidgetItem): boolean {
-  return getStyleProperties(item).some(({ isOn }) => isOn);
+export function isItemOn(item: SettingsWidgetItem): boolean {
+  return getItemProperties(item).some(({ isOn }) => isOn);
 }
 
 /**
@@ -194,11 +199,11 @@ export function isStyleItemOn(item: SettingsWidgetItem): boolean {
  * @param columnType - A column type
  * @returns Whether the item can follow a column of the type
  */
-export function isStyleItemSupported(
+export function isItemSupported(
   item: SettingsWidgetItem,
   columnType: TableColumnType,
 ): boolean {
-  return getStyleProperties(item).some(({ columnTypes }) =>
+  return getItemProperties(item).some(({ columnTypes }) =>
     columnTypes.includes(columnType),
   );
 }
@@ -217,7 +222,7 @@ export function getFollowingNames(
   columnType: TableColumnType,
 ): string[] {
   const supported = items
-    .flatMap(getStyleProperties)
+    .flatMap(getItemProperties)
     .filter(({ columnTypes }) => columnTypes.includes(columnType));
   const following = supported.filter(({ isOn }) => isOn);
   return (following.length > 0 ? following : supported.slice(0, 1)).map(
@@ -235,7 +240,7 @@ export function getFollowingNames(
  * @param toggledNames - The names of the items toggled on
  * @param columnType - The column type
  * @returns The names of the properties that follow, or `null` if no item is
- * toggled on, since the column always styles something
+ * toggled on, since some property always follows the column
  */
 export function getToggledNames(
   items: SettingsWidgetItem[],
@@ -246,9 +251,9 @@ export function getToggledNames(
     if (!toggledNames.includes(item.name)) {
       return [];
     }
-    const properties = getStyleProperties(item);
+    const properties = getItemProperties(item);
     return (
-      isStyleItemOn(item)
+      isItemOn(item)
         ? properties.filter(({ isOn }) => isOn)
         : properties
             .filter(({ columnTypes }) => columnTypes.includes(columnType))
@@ -266,7 +271,7 @@ export function getToggledNames(
  * @param part - The part
  * @param toggledNames - The names of the part's properties toggled on
  * @returns The names of the properties that follow, or `null` if none would,
- * since the column always styles something
+ * since some property always follows the column
  */
 export function getPartToggledNames(
   items: SettingsWidgetItem[],
@@ -276,7 +281,7 @@ export function getPartToggledNames(
   const names = items.flatMap((item) =>
     (item === part
       ? part.properties.filter(({ name }) => toggledNames.includes(name))
-      : getStyleProperties(item).filter(({ isOn }) => isOn)
+      : getItemProperties(item).filter(({ isOn }) => isOn)
     ).map(({ name }) => name),
   );
   return names.length > 0 ? names : null;
