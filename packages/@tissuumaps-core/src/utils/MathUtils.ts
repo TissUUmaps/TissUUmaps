@@ -7,6 +7,14 @@ import { RandomUtils } from "./RandomUtils";
  * medians, histograms and counts
  */
 export class MathUtils {
+  /** Float scratch value of {@link toSortKey} */
+  private static readonly _sortKeyFloat = new Float32Array(1);
+
+  /** Bits of {@link _sortKeyFloat} */
+  private static readonly _sortKeyBits = new Uint32Array(
+    MathUtils._sortKeyFloat.buffer,
+  );
+
   /**
    * Clamps a value to the range `[min, max]`
    *
@@ -358,5 +366,78 @@ export class MathUtils {
       }
     }
     return distinctValues.size;
+  }
+
+  /**
+   * Maps a finite value to a key for {@link computeSortOrder}
+   *
+   * Keys compare like the values rounded to 32-bit floats, so values that
+   * differ by less than the float precision get the same key. Key `0` is left
+   * free for missing values, which then come first.
+   *
+   * @param value - The finite value
+   * @returns The key, at least 1
+   */
+  static toSortKey(value: number): number {
+    // tiny negative values round to -0, so -0 is turned into +0 after rounding
+    MathUtils._sortKeyFloat[0] = Math.fround(value) + 0;
+    const bits = MathUtils._sortKeyBits[0]!;
+    // negative values flip all bits, positive values only the sign bit
+    return (bits ^ ((bits >> 31) | 0x80000000)) >>> 0;
+  }
+
+  /**
+   * Computes the indices that visit the keys in ascending order
+   *
+   * The keys are radix-sorted with two 16-bit counting-sort passes, so the
+   * sort is linear in the number of keys and stable, i.e. equal keys keep
+   * their relative order. Numbers are mapped to keys with
+   * {@link toSortKey}.
+   *
+   * @param keys - The keys to sort
+   * @param options - Optional abort signal
+   * @returns A promise that resolves to the indices of the keys, in ascending
+   * order of the keys
+   */
+  static async computeSortOrder(
+    keys: Uint32Array,
+    options?: { signal?: AbortSignal },
+  ): Promise<Uint32Array> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    const radix = 65536;
+    // offsets of the low and high 16 bits, shifted by one for the prefix sum
+    const lowOffsets = new Uint32Array(radix + 1);
+    const highOffsets = new Uint32Array(radix + 1);
+    await AsyncUtils.forEach(
+      keys,
+      (key) => {
+        lowOffsets[(key & 0xffff) + 1]! += 1;
+        highOffsets[(key >>> 16) + 1]! += 1;
+      },
+      { signal },
+    );
+    for (let digit = 1; digit <= radix; digit++) {
+      lowOffsets[digit]! += lowOffsets[digit - 1]!;
+      highOffsets[digit]! += highOffsets[digit - 1]!;
+    }
+    const lowOrder = new Uint32Array(keys.length);
+    await AsyncUtils.forEach(
+      keys,
+      (key, i) => {
+        lowOrder[lowOffsets[key & 0xffff]!++] = i;
+      },
+      { signal },
+    );
+    // the second pass walks the order of the first, which keeps it stable
+    const order = new Uint32Array(keys.length);
+    await AsyncUtils.forEach(
+      lowOrder,
+      (i) => {
+        order[highOffsets[keys[i]! >>> 16]!++] = i;
+      },
+      { signal },
+    );
+    return order;
   }
 }

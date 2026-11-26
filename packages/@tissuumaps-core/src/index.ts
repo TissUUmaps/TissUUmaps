@@ -41,6 +41,7 @@ export {
   type GroupByConfig,
   type MarkerConfig,
   type OpacityConfig,
+  type OrderConfig,
   type RandomConfig,
   type SizeConfig,
   type TableColumnRef,

@@ -5,6 +5,7 @@ export const PointsSettingsCategory = {
   pointColor: "pointColor",
   pointVisibility: "pointVisibility",
   pointOpacity: "pointOpacity",
+  pointOrder: "pointOrder",
 } as const;
 
 export type PointsSettingsCategory =

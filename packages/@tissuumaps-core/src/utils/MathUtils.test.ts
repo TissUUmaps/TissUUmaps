@@ -579,4 +579,56 @@ describe("MathUtils", () => {
       ).rejects.toThrow("aborted");
     });
   });
+
+  describe("toSortKey", () => {
+    it("orders keys like the values", () => {
+      const values = [-Infinity, -1e40, -2, -1e-50, 0, 1e-50, 1, 2.5, 1e40];
+      const keys = values.map((v) => MathUtils.toSortKey(v));
+      // -1e40 and 1e40 round to infinities, tiny values to zero
+      expect(keys).toEqual([...keys].sort((a, b) => a - b));
+      expect(keys[0]).toBeGreaterThanOrEqual(1);
+      expect(keys[1]).toBe(keys[0]);
+      expect(keys[3]).toBe(keys[4]);
+      expect(keys[5]).toBe(keys[4]);
+      expect(new Set(keys).size).toBe(6);
+    });
+
+    it("gives -0 and +0 the same key", () => {
+      expect(MathUtils.toSortKey(-0)).toBe(MathUtils.toSortKey(0));
+    });
+  });
+
+  describe("computeSortOrder", () => {
+    it("returns the indices in ascending order of the keys", async () => {
+      const keys = new Uint32Array(
+        [3, 0, -2, 1e6].map((v) => MathUtils.toSortKey(v)),
+      );
+      const order = await MathUtils.computeSortOrder(keys);
+      expect(Array.from(order)).toEqual([2, 1, 0, 3]);
+    });
+
+    it("sorts by the high and the low 16 bits", async () => {
+      const order = await MathUtils.computeSortOrder(
+        new Uint32Array([0x10001, 0x20000, 0x10000, 0xffff]),
+      );
+      expect(Array.from(order)).toEqual([3, 2, 0, 1]);
+    });
+
+    it("keeps the order of equal keys", async () => {
+      const order = await MathUtils.computeSortOrder(
+        new Uint32Array([0x10002, 0, 0x10002, 0, 0x10001]),
+      );
+      expect(Array.from(order)).toEqual([1, 3, 4, 0, 2]);
+    });
+
+    it("rejects with the reason of an aborted signal", async () => {
+      const controller = new AbortController();
+      controller.abort(new Error("aborted"));
+      await expect(
+        MathUtils.computeSortOrder(new Uint32Array(10), {
+          signal: controller.signal,
+        }),
+      ).rejects.toThrow("aborted");
+    });
+  });
 });
