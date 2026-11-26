@@ -61,7 +61,7 @@ classDiagram
     Points : data source
     Points : visibility, opacity
     Points : data-to-layer transform
-    Points : point marker/size/color/visibility/opacity
+    Points : point marker/size/color/visibility/opacity/order
     Points "0..*" --> "0..*" Layer
     Points "0..*" ..> "1" Table
 
