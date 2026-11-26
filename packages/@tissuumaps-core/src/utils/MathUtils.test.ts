@@ -534,52 +534,52 @@ describe("MathUtils", () => {
     });
   });
 
-  describe("computeBinnedSortOrder", () => {
-    it("returns the indices in ascending order of the values", async () => {
-      const order = await MathUtils.computeBinnedSortOrder(
-        new Float64Array([3, 0, 2, 1]),
-        [0, 3],
-      );
-      expect(Array.from(order)).toEqual([1, 3, 2, 0]);
+  describe("toSortKey", () => {
+    it("orders keys like the values", () => {
+      const values = [-Infinity, -1e40, -2, -1e-50, 0, 1e-50, 1, 2.5, 1e40];
+      const keys = values.map((v) => MathUtils.toSortKey(v));
+      // -1e40 and 1e40 round to infinities, tiny values to zero
+      expect(keys).toEqual([...keys].sort((a, b) => a - b));
+      expect(keys[0]).toBeGreaterThanOrEqual(1);
+      expect(keys[1]).toBe(keys[0]);
+      expect(keys[3]).toBe(keys[4]);
+      expect(keys[5]).toBe(keys[4]);
+      expect(new Set(keys).size).toBe(6);
     });
 
-    it("keeps the order of values in the same bin", async () => {
-      const order = await MathUtils.computeBinnedSortOrder(
-        new Float64Array([0.4, 0.2, 1, 0]),
-        [0, 65535],
+    it("gives -0 and +0 the same key", () => {
+      expect(MathUtils.toSortKey(-0)).toBe(MathUtils.toSortKey(0));
+    });
+  });
+
+  describe("computeSortOrder", () => {
+    it("returns the indices in ascending order of the keys", async () => {
+      const keys = new Uint32Array(
+        [3, 0, -2, 1e6].map((v) => MathUtils.toSortKey(v)),
       );
-      expect(Array.from(order)).toEqual([0, 1, 3, 2]);
+      const order = await MathUtils.computeSortOrder(keys);
+      expect(Array.from(order)).toEqual([2, 1, 0, 3]);
     });
 
-    it("puts values outside the range in the edge bins", async () => {
-      const order = await MathUtils.computeBinnedSortOrder(
-        new Float64Array([20, -10, 5]),
-        [0, 10],
+    it("sorts by the high and the low 16 bits", async () => {
+      const order = await MathUtils.computeSortOrder(
+        new Uint32Array([0x10001, 0x20000, 0x10000, 0xffff]),
       );
-      expect(Array.from(order)).toEqual([1, 2, 0]);
+      expect(Array.from(order)).toEqual([3, 2, 0, 1]);
     });
 
-    it("puts non-finite values first", async () => {
-      const order = await MathUtils.computeBinnedSortOrder(
-        new Float64Array([2, NaN, 1, Infinity]),
-        [1, 2],
+    it("keeps the order of equal keys", async () => {
+      const order = await MathUtils.computeSortOrder(
+        new Uint32Array([0x10002, 0, 0x10002, 0, 0x10001]),
       );
-      expect(Array.from(order)).toEqual([1, 3, 2, 0]);
-    });
-
-    it("keeps the order if the range is degenerate", async () => {
-      const order = await MathUtils.computeBinnedSortOrder(
-        new Float64Array([3, 1, 2]),
-        [1, 1],
-      );
-      expect(Array.from(order)).toEqual([0, 1, 2]);
+      expect(Array.from(order)).toEqual([1, 3, 4, 0, 2]);
     });
 
     it("rejects with the reason of an aborted signal", async () => {
       const controller = new AbortController();
       controller.abort(new Error("aborted"));
       await expect(
-        MathUtils.computeBinnedSortOrder(new Float64Array(10), [0, 1], {
+        MathUtils.computeSortOrder(new Uint32Array(10), {
           signal: controller.signal,
         }),
       ).rejects.toThrow("aborted");

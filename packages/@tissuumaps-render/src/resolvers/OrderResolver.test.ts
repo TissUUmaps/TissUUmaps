@@ -4,18 +4,13 @@ import type { IDArray, OrderConfig, TableData } from "@tissuumaps/core";
 
 import { OrderResolver } from "./OrderResolver";
 
-function createMockTableData(
-  ids: IDArray,
-  values: unknown[],
-  valueRange?: [number, number],
-): TableData {
+function createMockTableData(ids: IDArray, values: unknown[]): TableData {
   return {
     getIds: () => ids,
     getSize: () => ids.length,
     getNames: () => undefined,
     close: vi.fn(),
     loadValues: vi.fn().mockResolvedValue(values),
-    loadValueRange: vi.fn().mockResolvedValue(valueRange),
     loadUniqueValueCounts: vi.fn(),
     suggestColumnQueries: vi.fn(),
     resolveColumnQuery: vi.fn(),
@@ -26,7 +21,7 @@ describe("OrderResolver", () => {
   describe("resolveOrder", () => {
     it("orders the items by ascending value of the column", async () => {
       const ids = new Uint32Array([1, 2, 3, 4]);
-      const data = createMockTableData(ids, [3, "x", 1, 2], [1, 3]);
+      const data = createMockTableData(ids, [3, "x", 1, 2]);
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies OrderConfig;
 
@@ -36,11 +31,21 @@ describe("OrderResolver", () => {
       expect(order).toEqual(new Uint32Array([1, 2, 3, 0]));
     });
 
+    it("orders the items exactly despite outliers", async () => {
+      const ids = new Uint32Array([1, 2, 3, 4]);
+      const data = createMockTableData(ids, [1e6, 2, 1, 1.5]);
+      const loadTable = vi.fn().mockResolvedValue(data);
+      const config = { from: { column: "col1" } } satisfies OrderConfig;
+
+      const order = await OrderResolver.resolveOrder(ids, config, loadTable);
+
+      expect(order).toEqual(new Uint32Array([2, 3, 1, 0]));
+    });
+
     it("looks the values up by ID", async () => {
       const data = createMockTableData(
         new Uint32Array([1, 2, 3]),
         [30, 10, 20],
-        [10, 30],
       );
       const loadTable = vi.fn().mockResolvedValue(data);
       const config = { from: { column: "col1" } } satisfies OrderConfig;
@@ -57,7 +62,7 @@ describe("OrderResolver", () => {
 
     it("rejects with the reason of an aborted signal", async () => {
       const ids = new Uint32Array([1, 2]);
-      const data = createMockTableData(ids, [2, 1], [1, 2]);
+      const data = createMockTableData(ids, [2, 1]);
       const controller = new AbortController();
       controller.abort(new Error("aborted"));
       const config = { from: { column: "col1" } } satisfies OrderConfig;
@@ -99,7 +104,7 @@ describe("OrderResolver", () => {
     it("returns null if the column cannot be loaded", async () => {
       const ids = new Uint32Array([1, 2]);
       const data: TableData = {
-        ...createMockTableData(ids, [], [0, 1]),
+        ...createMockTableData(ids, []),
         loadValues: vi
           .fn()
           .mockRejectedValue(
