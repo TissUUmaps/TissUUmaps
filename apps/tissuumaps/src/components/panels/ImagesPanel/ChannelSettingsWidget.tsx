@@ -55,14 +55,6 @@ export function ChannelSettingsWidget({
     ImageUtils.getChannelVisibility(image, data, c),
   );
 
-  const updateAllChannels = (updates: Partial<ImageChannel>) => {
-    const channels = Array.from(
-      { length: Math.max(sizeC, image.channels?.length ?? 0) },
-      (_, c) => ({ ...image.channels?.[c], ...updates }),
-    );
-    updateImage(image.id, { channels });
-  };
-
   // Base UI's accordion would take the radios from the radio group, which then
   // no longer moves the active channel on arrow keys
   const rows = (
@@ -73,7 +65,14 @@ export function ChannelSettingsWidget({
           <span className="size-4" aria-hidden />
           <VisibilityButton
             visible={anyVisible}
-            onVisibleChange={(visibility) => updateAllChannels({ visibility })}
+            onVisibleChange={(visibility) =>
+              updateImage(image.id, {
+                channels: Array.from(
+                  { length: Math.max(sizeC, image.channels?.length ?? 0) },
+                  (_, c) => ({ ...image.channels?.[c], visibility }),
+                ),
+              })
+            }
             objectLabel="all channels"
             size="icon-xs"
           />
