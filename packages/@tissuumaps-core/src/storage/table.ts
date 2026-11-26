@@ -78,11 +78,10 @@ export interface TableData extends ItemsData {
    *
    * @param currentQuery - The partial column query, or the text to search for
    * within a leaf section
-   * @param options - The `id` of a leaf section (`sectionId`), if any,
-   * and an optional abort signal
+   * @param options - The `id` of a leaf section from
+   * {@link getColumnSections} (`sectionId`), if any, and an optional abort
+   * signal
    * @returns A list of suggested column queries
-   * @throws Error if the table has sections but no leaf with the given
-   * `id`; tables without sections ignore the option
    */
   suggestColumnQueries(
     currentQuery: string,
@@ -109,7 +108,8 @@ export interface TableData extends ItemsData {
    * observations and the features of AnnData); callers without it pick columns
    * by query (see {@link suggestColumnQueries}).
    *
-   * @returns The top-level sections, in the canonical order of the format
+   * @returns The top-level sections, in the canonical order of the format;
+   * none if the table has no sections
    */
   getColumnSections?(): TableColumnSection[];
 
@@ -117,8 +117,9 @@ export interface TableData extends ItemsData {
    * Loads the leaf section of a column and the column's name in it (see
    * {@link getColumnSections})
    *
-   * Only implemented by table data with sections. Async, as naming a column
-   * may take a read (e.g. gene names from a column of `var`).
+   * Only implemented by table data that implements {@link getColumnSections}.
+   * Async, as naming a column may take a read (e.g. gene names from a column
+   * of `var`).
    *
    * @param column - The column name
    * @param options - Optional abort signal
@@ -135,9 +136,9 @@ export interface TableData extends ItemsData {
    * (e.g. the same gene in another expression matrix), as far as the format
    * tells
    *
-   * Only implemented by table data with sections. Columns map only between
-   * the leaves below one top-level section (see {@link getColumnSections});
-   * names are never used to decide that.
+   * Only implemented by table data that implements {@link getColumnSections}.
+   * Columns map only between the leaves below one top-level section; names
+   * are never used to decide that.
    *
    * @param column - The column name
    * @param options - The `id` of the leaf section to map the column to
