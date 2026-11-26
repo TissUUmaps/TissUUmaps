@@ -50,11 +50,38 @@ export function ChannelSettingsWidget({
   // End the preview when the widget goes away while a channel is hovered
   useEffect(() => () => setImageChannelPreview(null), [setImageChannelPreview]);
 
+  const channelIndices = Array.from({ length: sizeC }, (_, c) => c);
+  const anyVisible = channelIndices.some((c) =>
+    ImageUtils.getChannelVisibility(image, data, c),
+  );
+
   // Base UI's accordion would take the radios from the radio group, which then
   // no longer moves the active channel on arrow keys
   const rows = (
     <div className="flex flex-col gap-y-1 text-sm">
-      {Array.from({ length: sizeC }, (_, c) => (
+      {image.channelViewMode === ImageChannelViewMode.composite ? (
+        <div className="flex flex-row items-center gap-x-1.5">
+          {/* keeps the eye in the column of the channel rows' eyes */}
+          <span className="size-4" aria-hidden />
+          <VisibilityButton
+            visible={anyVisible}
+            onVisibleChange={(visibility) =>
+              updateImage(image.id, {
+                channels: Array.from(
+                  { length: Math.max(sizeC, image.channels?.length ?? 0) },
+                  (_, c) => ({ ...image.channels?.[c], visibility }),
+                ),
+              })
+            }
+            objectLabel="all channels"
+            size="icon-xs"
+          />
+          <span className="flex-1 min-w-0 truncate text-muted-foreground">
+            All channels
+          </span>
+        </div>
+      ) : null}
+      {channelIndices.map((c) => (
         <ChannelSettingsRow
           key={c}
           image={image}

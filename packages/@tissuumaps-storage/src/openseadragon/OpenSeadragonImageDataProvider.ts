@@ -65,6 +65,11 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
     workspace: FileSystemDirectoryHandle | null,
     projectSource: string | null,
   ): NormalizedOpenSeadragonImageDataSource {
+    // projects are not validated against the schema when they are loaded
+    const rawTileSource: unknown = dataSource.tileSource;
+    if (typeof rawTileSource === "string") {
+      throw new Error(`Tile source '${rawTileSource}' must be given as source`);
+    }
     if (dataSource.tileSource !== undefined) {
       return {
         ...openSeadragonImageDataSourceDefaults,
