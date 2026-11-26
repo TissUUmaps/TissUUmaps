@@ -35,7 +35,6 @@ import {
   VisibilityConfigWidget,
 } from "@/components/widgets/VisibilityConfigWidget";
 import { useVisibilityConfigWidget } from "@/components/widgets/VisibilityConfigWidget/hooks";
-import { useControlled } from "@/hooks/useControlled";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
@@ -43,25 +42,13 @@ import { LabelsSettingsCategory } from "./category";
 
 export type LabelsAdvancedSettingsWidgetProps = {
   labels: Labels;
-  activeCategory?: LabelsSettingsCategory | null;
-  onActiveCategoryChange?: (
-    newActiveCategory: LabelsSettingsCategory | null,
-  ) => void;
   className?: string;
 };
 
 export function LabelsAdvancedSettingsWidget({
   labels,
-  activeCategory: controlledActiveCategory,
-  onActiveCategoryChange: setControlledActiveCategory,
   className,
 }: LabelsAdvancedSettingsWidgetProps) {
-  const [activeCategory, setActiveCategory] = useControlled(
-    controlledActiveCategory,
-    setControlledActiveCategory,
-    null,
-  );
-
   const updateLabels = useProjectStore((state) => state.updateLabels);
 
   const labelColorConfigWidgetAdapter = useColorConfigWidget(
@@ -89,14 +76,7 @@ export function LabelsAdvancedSettingsWidget({
     <Fieldset className={cn("flex flex-col gap-y-2", className)}>
       <FieldsetLegend className="sr-only">Advanced settings</FieldsetLegend>
       <LabelsLayerSettingsWidget labels={labels} />
-      <Accordion
-        value={activeCategory !== null ? [activeCategory] : []}
-        onValueChange={(value) =>
-          setActiveCategory(
-            value.length > 0 ? (value[0] as LabelsSettingsCategory) : null,
-          )
-        }
-      >
+      <Accordion>
         {/* Transform */}
         <AccordionItem value={LabelsSettingsCategory.transform}>
           <AccordionHeader>

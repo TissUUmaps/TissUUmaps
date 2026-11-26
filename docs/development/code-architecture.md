@@ -198,7 +198,7 @@ The project panel's actions and drops pick the project provider automatically. I
 
 ### Hooks
 
-Where possible and useful, React `useEffect` and `useCallback` hooks are encapsulated using custom hooks. Generic, feature-independent hooks live in `src/hooks` (e.g. `useControlled`, `useDraftState`); the hooks through which components and renderers access the data caches live in `src/data/hooks` (e.g. the per-type data hooks `useImageData`, `useTableData`, ... in `useData.ts`); feature-specific hooks are colocated in the feature folder they serve.
+Where possible and useful, React `useEffect` and `useCallback` hooks are encapsulated using custom hooks. Generic, feature-independent hooks live in `src/hooks` (e.g. `useDraftState`, `useLatestCallback`); the hooks through which components and renderers access the data caches live in `src/data/hooks` (e.g. the per-type data hooks `useImageData`, `useTableData`, ... in `useData.ts`); feature-specific hooks are colocated in the feature folder they serve.
 
 ### Components
 

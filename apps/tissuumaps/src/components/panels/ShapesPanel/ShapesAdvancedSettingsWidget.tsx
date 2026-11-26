@@ -42,7 +42,6 @@ import {
   VisibilityConfigWidget,
 } from "@/components/widgets/VisibilityConfigWidget";
 import { useVisibilityConfigWidget } from "@/components/widgets/VisibilityConfigWidget/hooks";
-import { useControlled } from "@/hooks/useControlled";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
@@ -50,25 +49,13 @@ import { ShapesSettingsCategory } from "./category";
 
 export type ShapesAdvancedSettingsWidgetProps = {
   shapes: Shapes;
-  activeCategory?: ShapesSettingsCategory | null;
-  onActiveCategoryChange?: (
-    newActiveCategory: ShapesSettingsCategory | null,
-  ) => void;
   className?: string;
 };
 
 export function ShapesAdvancedSettingsWidget({
   shapes,
-  activeCategory: controlledActiveCategory,
-  onActiveCategoryChange: setControlledActiveCategory,
   className,
 }: ShapesAdvancedSettingsWidgetProps) {
-  const [activeCategory, setActiveCategory] = useControlled(
-    controlledActiveCategory,
-    setControlledActiveCategory,
-    null,
-  );
-
   const updateShapes = useProjectStore((state) => state.updateShapes);
 
   const shapeVisibilityConfigWidgetAdapter = useVisibilityConfigWidget(
@@ -134,14 +121,7 @@ export function ShapesAdvancedSettingsWidget({
     <Fieldset className={cn("flex flex-col gap-y-2", className)}>
       <FieldsetLegend className="sr-only">Advanced settings</FieldsetLegend>
       <ShapesLayerSettingsWidget shapes={shapes} />
-      <Accordion
-        value={activeCategory !== null ? [activeCategory] : []}
-        onValueChange={(value) =>
-          setActiveCategory(
-            value.length > 0 ? (value[0] as ShapesSettingsCategory) : null,
-          )
-        }
-      >
+      <Accordion>
         {/* Transform */}
         <AccordionItem value={ShapesSettingsCategory.transform}>
           <AccordionHeader>

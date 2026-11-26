@@ -12,7 +12,6 @@ import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { TransformSettingsWidget } from "@/components/widgets/TransformSettingsWidget";
-import { useControlled } from "@/hooks/useControlled";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
@@ -20,26 +19,14 @@ import { ImageSettingsCategory } from "./category";
 
 export type ImageSettingsWidgetProps = {
   image: Image;
-  activeCategory?: ImageSettingsCategory | null;
-  onActiveCategoryChange?: (
-    newActiveCategory: ImageSettingsCategory | null,
-  ) => void;
   className?: string;
 };
 
 export function ImageSettingsWidget({
   image,
-  activeCategory: controlledActiveCategory,
-  onActiveCategoryChange: setControlledActiveCategory,
   className,
 }: ImageSettingsWidgetProps) {
   const updateImage = useProjectStore((state) => state.updateImage);
-
-  const [activeCategory, setActiveCategory] = useControlled(
-    controlledActiveCategory,
-    setControlledActiveCategory,
-    null,
-  );
 
   return (
     <Fieldset
@@ -49,14 +36,7 @@ export function ImageSettingsWidget({
         Settings
       </FieldsetLegend>
       <ImageLayerSettingsWidget image={image} />
-      <Accordion
-        value={activeCategory !== null ? [activeCategory] : []}
-        onValueChange={(value) =>
-          setActiveCategory(
-            value.length > 0 ? (value[0] as ImageSettingsCategory) : null,
-          )
-        }
-      >
+      <Accordion>
         <AccordionItem value={ImageSettingsCategory.transform}>
           <AccordionHeader>
             <AccordionTriggerRightDownIcon />

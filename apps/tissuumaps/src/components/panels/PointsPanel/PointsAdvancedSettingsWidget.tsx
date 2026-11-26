@@ -52,7 +52,6 @@ import {
   VisibilityConfigWidget,
 } from "@/components/widgets/VisibilityConfigWidget";
 import { useVisibilityConfigWidget } from "@/components/widgets/VisibilityConfigWidget/hooks";
-import { useControlled } from "@/hooks/useControlled";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
@@ -60,25 +59,13 @@ import { PointsSettingsCategory } from "./category";
 
 export type PointsAdvancedSettingsWidgetProps = {
   points: Points;
-  activeCategory?: PointsSettingsCategory | null;
-  onActiveCategoryChange?: (
-    newActiveCategory: PointsSettingsCategory | null,
-  ) => void;
   className?: string;
 };
 
 export function PointsAdvancedSettingsWidget({
   points,
-  activeCategory: controlledActiveCategory,
-  onActiveCategoryChange: setControlledActiveCategory,
   className,
 }: PointsAdvancedSettingsWidgetProps) {
-  const [activeCategory, setActiveCategory] = useControlled(
-    controlledActiveCategory,
-    setControlledActiveCategory,
-    null,
-  );
-
   const updatePoints = useProjectStore((state) => state.updatePoints);
 
   const pointMarkerConfigWidgetAdapter = useMarkerConfigWidget(
@@ -120,14 +107,7 @@ export function PointsAdvancedSettingsWidget({
     <Fieldset className={cn("flex flex-col gap-y-2", className)}>
       <FieldsetLegend className="sr-only">Advanced settings</FieldsetLegend>
       <PointsLayerSettingsWidget points={points} />
-      <Accordion
-        value={activeCategory !== null ? [activeCategory] : []}
-        onValueChange={(value) =>
-          setActiveCategory(
-            value.length > 0 ? (value[0] as PointsSettingsCategory) : null,
-          )
-        }
-      >
+      <Accordion>
         {/* Transform */}
         <AccordionItem value={PointsSettingsCategory.transform}>
           <AccordionHeader>
