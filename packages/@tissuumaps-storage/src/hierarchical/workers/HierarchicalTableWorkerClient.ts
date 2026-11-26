@@ -120,11 +120,11 @@ class WorkerChannel {
     };
     this._worker.onerror = (event) => {
       // a worker script that fails to load fires an error without message
-      this._rejectAll(new Error(event.message || "The worker failed."));
+      this._rejectAll(new Error(event.message || "Failed to run the worker"));
       this.terminate();
     };
     this._worker.onmessageerror = () => {
-      this._rejectAll(new Error("Failed to deserialize worker response."));
+      this._rejectAll(new Error("Failed to deserialize the worker response"));
       this.terminate();
     };
   }

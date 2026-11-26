@@ -4,6 +4,7 @@ import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 
 import {
+  type Project,
   type ProjectStore,
   type ProjectStoreApi,
   type ProjectStoreState,
@@ -14,11 +15,13 @@ import {
 import "./zustand";
 
 /**
- * The store holding the currently open project, and the URL it was loaded from
+ * The store holding the currently open project, and where it was loaded from
  *
  * Loading a project into this store, and saving it back out, is handled by
- * `@/data/io/project`. The project's URL is only ever set by loading a project,
- * and is never written back out.
+ * `@/data/io/project`. Where the project was loaded from is only ever set by
+ * loading a project or saving it as a new file, and is never written out. The
+ * file it is saved to is forgotten when the workspace changes (see
+ * `bootstrap`).
  */
 export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
   devtools(
@@ -194,8 +197,10 @@ export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
         set({ viewerBackgroundColor }),
       setPhysicalUnitSize: (physicalUnitSize) => set({ physicalUnitSize }),
       setPhysicalUnit: (physicalUnit) => set({ physicalUnit }),
-      setScaleBarVisibility: (scaleBarVisibility) =>
-        set({ scaleBarVisibility }),
+      setScalebarVisibility: (scalebarVisibility) =>
+        set({ scalebarVisibility }),
+      setColorbarsVisibility: (colorbarsVisibility) =>
+        set({ colorbarsVisibility }),
       clear: () => set(createInitialProjectStoreState()),
     })),
     { name: "project", enabled: import.meta.env.DEV },
@@ -217,7 +222,7 @@ export function useProjectStore<T>(selector: (state: ProjectStore) => T): T {
  * was not loaded from a URL
  */
 function createInitialProjectStoreState(): ProjectStoreState {
-  return {
+  const project: Project = {
     ...structuredClone(projectDefaults),
     // have no default, but clear() merges this state into the store
     physicalUnitSize: undefined,
@@ -229,8 +234,13 @@ function createInitialProjectStoreState(): ProjectStoreState {
     points: [],
     shapes: [],
     tables: [],
+  };
+  return {
+    ...project,
     source: null,
+    saveTarget: null,
     instanceId: crypto.randomUUID(),
+    savedProject: project,
   };
 }
 
@@ -249,10 +259,10 @@ function addCollectionItem<T extends { id: string }>(
   index?: number,
 ): void {
   if (items.some((existingItem) => existingItem.id === item.id)) {
-    throw new Error(`Item with ID ${item.id} already exists.`);
+    throw new Error(`Item with ID '${item.id}' already exists`);
   }
   if (index !== undefined && (index < 0 || index > items.length)) {
-    throw new Error(`Index ${index} out of bounds.`);
+    throw new Error(`Index ${index} is out of bounds`);
   }
   items.splice(index ?? items.length, 0, item as Draft<T>);
 }
@@ -272,7 +282,7 @@ function updateCollectionItem<T extends { id: string }>(
 ): void {
   const index = items.findIndex((item) => item.id === itemId);
   if (index === -1) {
-    throw new Error(`Item with ID ${itemId} not found.`);
+    throw new Error(`Item with ID '${itemId}' not found`);
   }
   Object.assign(items[index]!, updates);
 }
@@ -292,11 +302,11 @@ function moveCollectionItem<T extends { id: string }>(
   newIndex: number,
 ): void {
   if (newIndex < 0 || newIndex >= items.length) {
-    throw new Error(`Index ${newIndex} out of bounds.`);
+    throw new Error(`Index ${newIndex} is out of bounds`);
   }
   const oldIndex = items.findIndex((item) => item.id === itemId);
   if (oldIndex === -1) {
-    throw new Error(`Item with ID ${itemId} not found.`);
+    throw new Error(`Item with ID '${itemId}' not found`);
   }
   if (oldIndex !== newIndex) {
     const item = items.splice(oldIndex, 1)[0]!;
@@ -317,7 +327,7 @@ function deleteCollectionItem<T extends { id: string }>(
 ): void {
   const index = items.findIndex((item) => item.id === itemId);
   if (index === -1) {
-    throw new Error(`Item with ID ${itemId} not found.`);
+    throw new Error(`Item with ID '${itemId}' not found`);
   }
   items.splice(index, 1);
 }

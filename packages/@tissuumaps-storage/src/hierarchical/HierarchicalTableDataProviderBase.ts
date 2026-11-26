@@ -104,7 +104,7 @@ export abstract class HierarchicalTableDataProviderBase<
         names.length !== numRows
       ) {
         throw new Error(
-          `ID column "${idColumn}" and name column "${nameColumn}" have different lengths.`,
+          `ID column '${idColumn}' and name column '${nameColumn}' must have the same length`,
         );
       }
       return this.createTableData(table, numRows, ids, names);

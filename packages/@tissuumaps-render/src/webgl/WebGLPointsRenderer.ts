@@ -168,7 +168,7 @@ export class WebGLPointsRenderer extends WebGLRendererBase<
       );
       if (this._destroyed) {
         context.gl.deleteTexture(markerAtlasTexture);
-        throw new Error("Renderer destroyed");
+        throw new Error("Renderer has been destroyed");
       }
       this._markerAtlasTexture = markerAtlasTexture;
     };

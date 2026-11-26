@@ -99,12 +99,12 @@ export class TableUtils {
     );
     if (numMissingIds > 0) {
       console.warn(
-        `${numMissingIds} IDs missing in column ${column}, using default value`,
+        `${numMissingIds} IDs missing in column '${column}', using default value`,
       );
     }
     if (numUnparsedValues > 0) {
       console.warn(
-        `Failed to parse ${numUnparsedValues} values from column ${column}, using default value`,
+        `Failed to parse ${numUnparsedValues} values from column '${column}', using default value`,
       );
     }
   }
@@ -166,7 +166,7 @@ export class TableUtils {
     );
     if (numMissingIds > 0) {
       console.warn(
-        `${numMissingIds} IDs missing in column ${column}, using default value`,
+        `${numMissingIds} IDs missing in column '${column}', using default value`,
       );
     }
   }
@@ -202,7 +202,7 @@ export class TableUtils {
    * @param values - The column values
    * @param options - Optional abort signal
    * @returns The minimum and maximum value, or `undefined` if the values are
-   * not numeric or hold no two distinct finite values
+   * not numeric or hold no finite value
    */
   static async computeValueRange(
     values: TypedArrayOrArray<unknown>,
@@ -214,7 +214,7 @@ export class TableUtils {
       return undefined;
     }
     const [vmin, vmax] = await MathUtils.computeRange(values, { signal });
-    return vmin < vmax ? [vmin, vmax] : undefined;
+    return vmin <= vmax ? [vmin, vmax] : undefined;
   }
 
   /**

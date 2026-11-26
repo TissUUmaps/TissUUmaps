@@ -24,7 +24,7 @@ export class WebGLContext {
       preserveDrawingBuffer: true,
     });
     if (gl === null) {
-      throw new Error("WebGL 2.0 is not supported by the browser.");
+      throw new Error("WebGL 2.0 is not supported by this browser");
     }
     gl.viewport(0, 0, canvas.width, canvas.height);
     this.gl = gl;
@@ -90,18 +90,18 @@ export class WebGLContext {
       WebGL2RenderingContext.VERTEX_SHADER,
     );
     if (vertexShader === null) {
-      throw new Error("Failed to create vertex shader.");
+      throw new Error("Failed to create the vertex shader");
     }
     const fragmentShader = this.gl.createShader(
       WebGL2RenderingContext.FRAGMENT_SHADER,
     );
     if (fragmentShader === null) {
-      throw new Error("Failed to create fragment shader.");
+      throw new Error("Failed to create the fragment shader");
     }
     try {
       const program = this.gl.createProgram();
       if (program === null) {
-        throw new Error("Failed to create shader program.");
+        throw new Error("Failed to create the shader program");
       }
       try {
         for (const [shader, shaderSource] of [
@@ -124,7 +124,7 @@ export class WebGLContext {
           const fragmentShaderInfoLog =
             this.gl.getShaderInfoLog(fragmentShader);
           throw new Error(
-            `Shader program linking failed: ${programInfoLog}\n` +
+            `Failed to link the shader program: ${programInfoLog}\n` +
               `Vertex shader log: ${vertexShaderInfoLog}\n` +
               `Fragment shader log: ${fragmentShaderInfoLog}`,
           );
@@ -155,7 +155,7 @@ export class WebGLContext {
   ): WebGLUniformLocation {
     const uniformLocation = this.gl.getUniformLocation(program, name);
     if (uniformLocation === null) {
-      throw new Error(`Failed to get uniform location for ${name}`);
+      throw new Error(`Failed to get the location of uniform '${name}'`);
     }
     return uniformLocation;
   }
@@ -168,7 +168,7 @@ export class WebGLContext {
   createVertexArray(): WebGLVertexArrayObject {
     const vao = this.gl.createVertexArray();
     if (vao === null) {
-      throw new Error("Failed to create vertex array object.");
+      throw new Error("Failed to create the vertex array object");
     }
     return vao;
   }
@@ -257,7 +257,7 @@ export class WebGLContext {
   ): WebGLTexture {
     const texture = this.gl.createTexture();
     if (texture === null) {
-      throw new Error("Failed to create texture.");
+      throw new Error("Failed to create the texture");
     }
     this.gl.bindTexture(WebGL2RenderingContext.TEXTURE_2D, texture);
     this.gl.texParameteri(
@@ -357,7 +357,7 @@ export class WebGLContext {
     signal?.throwIfAborted();
     const texture = this.gl.createTexture();
     if (texture === null) {
-      throw new Error("Failed to create texture.");
+      throw new Error("Failed to create the texture");
     }
     this.gl.bindTexture(WebGL2RenderingContext.TEXTURE_2D, texture);
     this.gl.texParameteri(
@@ -387,7 +387,7 @@ export class WebGLContext {
     const promise = new Promise<void>((resolve, reject) => {
       img.onload = () => {
         if (signal?.aborted) {
-          reject(new Error("Image load aborted."));
+          reject(new Error("Image load aborted"));
           return;
         }
         this.gl.bindTexture(WebGL2RenderingContext.TEXTURE_2D, texture);
@@ -406,7 +406,7 @@ export class WebGLContext {
         resolve();
       };
       img.onerror = (event) => {
-        reject(new Error(`Failed to load image: ${url}`, { cause: event }));
+        reject(new Error(`Failed to load image '${url}'`, { cause: event }));
       };
       img.src = url;
     });
@@ -428,7 +428,7 @@ export class WebGLContext {
   createBuffer(): WebGLBuffer {
     const buffer = this.gl.createBuffer();
     if (buffer === null) {
-      throw new Error("Failed to create buffer.");
+      throw new Error("Failed to create the buffer");
     }
     return buffer;
   }

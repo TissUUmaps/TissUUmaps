@@ -213,7 +213,7 @@ export class ColorResolver {
     const colorPalette = findColorPalette(config.from.palette);
     if (colorPalette === undefined) {
       console.warn(
-        `Color palette ${config.from.palette} not found, using default color`,
+        `Color palette '${config.from.palette}' not found, using default color`,
       );
       return ColorResolver.createUniformColors(ids.length, defaultColor, {
         align,
@@ -280,7 +280,7 @@ export class ColorResolver {
     const colorPalette = findColorPalette(config.groupBy.palette);
     if (config.groupBy.map !== undefined && colorMap === undefined) {
       console.warn(
-        `Color map ${config.groupBy.map} not found, using default color`,
+        `Color map '${config.groupBy.map}' not found, using default color`,
       );
       return ColorResolver.createUniformColors(ids.length, defaultColor, {
         align,
@@ -289,8 +289,8 @@ export class ColorResolver {
     if (config.groupBy.map === undefined && colorPalette === undefined) {
       console.warn(
         config.groupBy.palette !== undefined
-          ? `Color palette ${config.groupBy.palette} not found, using default color`
-          : `No color map or color palette specified, using default color`,
+          ? `Color palette '${config.groupBy.palette}' not found, using default color`
+          : "No color map or color palette specified, using default color",
       );
       return ColorResolver.createUniformColors(ids.length, defaultColor, {
         align,
@@ -348,7 +348,7 @@ export class ColorResolver {
     const colorPalette = findColorPalette(config.random.palette);
     if (colorPalette === undefined) {
       console.warn(
-        `Color palette ${config.random.palette} not found, using default color`,
+        `Color palette '${config.random.palette}' not found, using default color`,
       );
       return ColorResolver.createUniformColors(ids.length, defaultColor, {
         align,
@@ -437,7 +437,8 @@ export class ColorResolver {
    * The normalized value is clamped to `[0, 1]` and spread over the palette, so
    * that `0` yields its first color and `1` its last. Values falling between two
    * colors are interpolated linearly, which keeps the palette continuous instead
-   * of quantizing it to its number of colors.
+   * of quantizing it to its number of colors. A range that is not increasing is
+   * a step: values below its minimum yield the first color, all others the last.
    *
    * @param value - The raw value to parse (must be a finite number)
    * @param valueRange - The value range `[min, max]` to normalize within,
@@ -457,7 +458,7 @@ export class ColorResolver {
     }
     const { colors } = colorPalette;
     const [vmin, vmax] = valueRange ?? [0, 1];
-    const vnorm = vmax > vmin ? (v - vmin) / (vmax - vmin) : 0;
+    const vnorm = vmax > vmin ? (v - vmin) / (vmax - vmin) : v >= vmin ? 1 : 0;
     const position = MathUtils.clamp(vnorm, 0, 1) * (colors.length - 1);
     const index = Math.floor(position);
     const color = colors[index];

@@ -783,7 +783,7 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     const { maxTextureSize } = this.context;
     if (width > maxTextureSize || height > maxTextureSize) {
       throw new Error(
-        `The ${name} texture needs ${width}x${height} texels, but this GPU supports at most ${maxTextureSize}x${maxTextureSize}`,
+        `Texture '${name}' needs ${width}x${height} texels, but this GPU supports at most ${maxTextureSize}x${maxTextureSize}`,
       );
     }
   }

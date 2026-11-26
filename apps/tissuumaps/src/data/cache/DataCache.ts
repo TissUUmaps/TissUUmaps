@@ -334,7 +334,7 @@ export class DataCache<
     entryDeps: TEntryDependencies,
   ): TDataProvider {
     if (entryDeps.dataProvider === undefined) {
-      throw new Error(`Data type not supported: ${dataSource.type}`);
+      throw new Error(`Data type '${dataSource.type}' is not supported`);
     }
     return entryDeps.dataProvider;
   }
@@ -730,7 +730,7 @@ export class AnnotatedDataCache<
   ): AnnotatedDataProvider<TAnnotatedDataSource, TData> {
     const dataProvider = super.resolveDataProvider(dataSource, entryDeps);
     if (dataSource.table !== undefined && entryDeps.tableLoadOp === undefined) {
-      throw new Error(`Table not found: ${dataSource.table}`);
+      throw new Error(`Table with ID '${dataSource.table}' not found`);
     }
     return dataProvider;
   }

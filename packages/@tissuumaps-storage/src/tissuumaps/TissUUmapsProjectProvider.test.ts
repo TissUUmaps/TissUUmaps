@@ -105,7 +105,7 @@ describe("TissUUmapsProjectProvider", () => {
     it("throws for an unsuccessful response", async () => {
       stubFetch(null, { status: 404, statusText: "Not Found" });
       await expect(provider.load(projectUrl)).rejects.toThrow(
-        `Failed to load project from ${projectUrl}: 404 Not Found`,
+        `Failed to load project from '${projectUrl}': 404 Not Found`,
       );
     });
 

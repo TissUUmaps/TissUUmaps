@@ -11,27 +11,27 @@ import { useViewportChange } from "@tissuumaps/react";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/stores/project";
 
-import { formatScaleBarLength } from "./formatScaleBarLength";
-import { getScaleBarLength } from "./getScaleBarLength";
+import { formatScalebarLength } from "./formatScalebarLength";
+import { getScalebarLength } from "./getScalebarLength";
 
-/** Maximum width of the scale bar, in CSS pixels */
-const maxScaleBarWidth = 200;
+/** Maximum width of the scalebar, in CSS pixels */
+const maxScalebarWidth = 200;
 
-export type ScaleBarViewerControlProps = {
+export type ScalebarViewerControlProps = {
   className?: string;
 };
 
-export function ScaleBarViewerControl({
+export function ScalebarViewerControl({
   className,
-}: ScaleBarViewerControlProps) {
+}: ScalebarViewerControlProps) {
   const physicalUnitSize = useProjectStore((state) => state.physicalUnitSize);
   const physicalUnit = useProjectStore((state) => state.physicalUnit);
   const barRef = useRef<HTMLDivElement>(null);
   const labelRef = useRef<HTMLDivElement>(null);
 
-  // The scale bar changes in every frame of a zoom, so it is written to the
+  // The scalebar changes in every frame of a zoom, so it is written to the
   // DOM directly, in the same frame as the viewer draws.
-  const updateScaleBar = useCallback(
+  const updateScalebar = useCallback(
     (viewport: Rect, containerSize: Dims) => {
       if (
         barRef.current === null ||
@@ -65,18 +65,18 @@ export function ScaleBarViewerControl({
       const worldUnitsPerCssPixel = viewport.width / containerSize.width;
       const labelUnitsPerCssPixel =
         labelUnitsPerWorldUnit * worldUnitsPerCssPixel;
-      const labelLength = getScaleBarLength(
-        labelUnitsPerCssPixel * maxScaleBarWidth,
+      const labelLength = getScalebarLength(
+        labelUnitsPerCssPixel * maxScalebarWidth,
       );
       barRef.current.style.width = `${labelLength / labelUnitsPerCssPixel}px`;
-      labelRef.current.textContent = formatScaleBarLength(
+      labelRef.current.textContent = formatScalebarLength(
         labelLength,
         labelUnit,
       );
     },
     [physicalUnitSize, physicalUnit],
   );
-  useViewportChange(updateScaleBar);
+  useViewportChange(updateScalebar);
 
   // An inline-block that hides its overflow has its baseline at its bottom
   // edge, like the navigator, so that both line up at the bottom.
