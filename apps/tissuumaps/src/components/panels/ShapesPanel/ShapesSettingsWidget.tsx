@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import {
   type Shapes,
+  type TableColumnType,
   defaultShapeFillColor,
   defaultShapeStrokeColor,
   shapesDefaults,
@@ -25,6 +26,18 @@ import {
 import { projectStore, useProjectStore } from "@/stores/project";
 
 import { ShapesSettingsCategory } from "./category";
+
+/** The column types each property can follow */
+const columnTypes = {
+  [ShapesSettingsCategory.shapeFillColor]: ["categorical", "numerical"],
+  [ShapesSettingsCategory.shapeFillOpacity]: ["numerical"],
+  [ShapesSettingsCategory.shapeFillVisibility]: ["numerical"],
+  [ShapesSettingsCategory.shapeStrokeColor]: ["categorical", "numerical"],
+  [ShapesSettingsCategory.shapeStrokeOpacity]: ["numerical"],
+  [ShapesSettingsCategory.shapeStrokeVisibility]: ["numerical"],
+  [ShapesSettingsCategory.shapeOpacity]: ["numerical"],
+  [ShapesSettingsCategory.shapeVisibility]: ["numerical"],
+} satisfies Record<string, TableColumnType[]>;
 
 export type ShapesSettingsWidgetProps = {
   shapes: Shapes;
@@ -94,7 +107,7 @@ export function ShapesSettingsWidget({
               name: ShapesSettingsCategory.shapeFillColor,
               label: "Color",
               icon: <PaletteIcon />,
-              columnTypes: ["categorical", "numerical"],
+              columnTypes: columnTypes[ShapesSettingsCategory.shapeFillColor],
               isOn: isOn(ShapesSettingsCategory.shapeFillColor),
               categoricalOptions: (
                 <CategoricalColorPaletteRow adapter={fillColorAdapter} />
@@ -109,14 +122,15 @@ export function ShapesSettingsWidget({
                   filled={isOn(ShapesSettingsCategory.shapeFillOpacity)}
                 />
               ),
-              columnTypes: ["numerical"],
+              columnTypes: columnTypes[ShapesSettingsCategory.shapeFillOpacity],
               isOn: isOn(ShapesSettingsCategory.shapeFillOpacity),
             },
             {
               name: ShapesSettingsCategory.shapeFillVisibility,
               label: "Visibility",
               icon: <EyeIcon />,
-              columnTypes: ["numerical"],
+              columnTypes:
+                columnTypes[ShapesSettingsCategory.shapeFillVisibility],
               hint: "hides items whose value is 0 or less",
               isOn: isOn(ShapesSettingsCategory.shapeFillVisibility),
             },
@@ -139,7 +153,7 @@ export function ShapesSettingsWidget({
               name: ShapesSettingsCategory.shapeStrokeColor,
               label: "Color",
               icon: <PaletteIcon />,
-              columnTypes: ["categorical", "numerical"],
+              columnTypes: columnTypes[ShapesSettingsCategory.shapeStrokeColor],
               isOn: isOn(ShapesSettingsCategory.shapeStrokeColor),
               categoricalOptions: (
                 <CategoricalColorPaletteRow adapter={strokeColorAdapter} />
@@ -154,14 +168,16 @@ export function ShapesSettingsWidget({
                   filled={isOn(ShapesSettingsCategory.shapeStrokeOpacity)}
                 />
               ),
-              columnTypes: ["numerical"],
+              columnTypes:
+                columnTypes[ShapesSettingsCategory.shapeStrokeOpacity],
               isOn: isOn(ShapesSettingsCategory.shapeStrokeOpacity),
             },
             {
               name: ShapesSettingsCategory.shapeStrokeVisibility,
               label: "Visibility",
               icon: <EyeIcon />,
-              columnTypes: ["numerical"],
+              columnTypes:
+                columnTypes[ShapesSettingsCategory.shapeStrokeVisibility],
               hint: "hides items whose value is 0 or less",
               isOn: isOn(ShapesSettingsCategory.shapeStrokeVisibility),
             },
@@ -173,14 +189,14 @@ export function ShapesSettingsWidget({
           icon: (
             <OpacityIcon filled={isOn(ShapesSettingsCategory.shapeOpacity)} />
           ),
-          columnTypes: ["numerical"],
+          columnTypes: columnTypes[ShapesSettingsCategory.shapeOpacity],
           isOn: isOn(ShapesSettingsCategory.shapeOpacity),
         },
         {
           name: ShapesSettingsCategory.shapeVisibility,
           label: "Visibility",
           icon: <EyeIcon />,
-          columnTypes: ["numerical"],
+          columnTypes: columnTypes[ShapesSettingsCategory.shapeVisibility],
           hint: "hides items whose value is 0 or less",
           isOn: isOn(ShapesSettingsCategory.shapeVisibility),
         },
@@ -298,34 +314,42 @@ function readStyleBys(shapes: Shapes) {
     [ShapesSettingsCategory.shapeFillColor]: readStyleBy(
       shapes.shapeFillColor,
       tableId,
+      columnTypes[ShapesSettingsCategory.shapeFillColor],
     ),
     [ShapesSettingsCategory.shapeFillOpacity]: readStyleBy(
       shapes.shapeFillOpacity,
       tableId,
+      columnTypes[ShapesSettingsCategory.shapeFillOpacity],
     ),
     [ShapesSettingsCategory.shapeFillVisibility]: readStyleBy(
       shapes.shapeFillVisibility,
       tableId,
+      columnTypes[ShapesSettingsCategory.shapeFillVisibility],
     ),
     [ShapesSettingsCategory.shapeStrokeColor]: readStyleBy(
       shapes.shapeStrokeColor,
       tableId,
+      columnTypes[ShapesSettingsCategory.shapeStrokeColor],
     ),
     [ShapesSettingsCategory.shapeStrokeOpacity]: readStyleBy(
       shapes.shapeStrokeOpacity,
       tableId,
+      columnTypes[ShapesSettingsCategory.shapeStrokeOpacity],
     ),
     [ShapesSettingsCategory.shapeStrokeVisibility]: readStyleBy(
       shapes.shapeStrokeVisibility,
       tableId,
+      columnTypes[ShapesSettingsCategory.shapeStrokeVisibility],
     ),
     [ShapesSettingsCategory.shapeOpacity]: readStyleBy(
       shapes.shapeOpacity,
       tableId,
+      columnTypes[ShapesSettingsCategory.shapeOpacity],
     ),
     [ShapesSettingsCategory.shapeVisibility]: readStyleBy(
       shapes.shapeVisibility,
       tableId,
+      columnTypes[ShapesSettingsCategory.shapeVisibility],
     ),
   };
 }

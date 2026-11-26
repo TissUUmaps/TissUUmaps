@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import {
   type Points,
+  type TableColumnType,
   defaultPointColor,
   defaultPointSize,
   defaultPointSizeUnit,
@@ -30,6 +31,15 @@ import { useSizeConfigWidget } from "@/components/widgets/SizeConfigWidget/hooks
 import { projectStore, useProjectStore } from "@/stores/project";
 
 import { PointsSettingsCategory } from "./category";
+
+/** The column types each property can follow */
+const columnTypes = {
+  [PointsSettingsCategory.pointColor]: ["categorical", "numerical"],
+  [PointsSettingsCategory.pointMarker]: ["categorical"],
+  [PointsSettingsCategory.pointSize]: ["numerical"],
+  [PointsSettingsCategory.pointOpacity]: ["numerical"],
+  [PointsSettingsCategory.pointVisibility]: ["numerical"],
+} satisfies Record<string, TableColumnType[]>;
 
 export type PointsSettingsWidgetProps = {
   points: Points;
@@ -83,7 +93,7 @@ export function PointsSettingsWidget({
           name: PointsSettingsCategory.pointColor,
           label: "Color",
           icon: <PaletteIcon />,
-          columnTypes: ["categorical", "numerical"],
+          columnTypes: columnTypes[PointsSettingsCategory.pointColor],
           isOn: isOn(PointsSettingsCategory.pointColor),
           categoricalOptions: (
             <CategoricalColorPaletteRow adapter={colorAdapter} />
@@ -94,14 +104,14 @@ export function PointsSettingsWidget({
           name: PointsSettingsCategory.pointMarker,
           label: "Marker",
           icon: <ShapesIcon />,
-          columnTypes: ["categorical"],
+          columnTypes: columnTypes[PointsSettingsCategory.pointMarker],
           isOn: isOn(PointsSettingsCategory.pointMarker),
         },
         {
           name: PointsSettingsCategory.pointSize,
           label: "Size",
           icon: <SizeIcon filled={isOn(PointsSettingsCategory.pointSize)} />,
-          columnTypes: ["numerical"],
+          columnTypes: columnTypes[PointsSettingsCategory.pointSize],
           isOn: isOn(PointsSettingsCategory.pointSize),
           numericalOptions: (
             <StyleRow label="Unit">
@@ -119,14 +129,14 @@ export function PointsSettingsWidget({
           icon: (
             <OpacityIcon filled={isOn(PointsSettingsCategory.pointOpacity)} />
           ),
-          columnTypes: ["numerical"],
+          columnTypes: columnTypes[PointsSettingsCategory.pointOpacity],
           isOn: isOn(PointsSettingsCategory.pointOpacity),
         },
         {
           name: PointsSettingsCategory.pointVisibility,
           label: "Visibility",
           icon: <EyeIcon />,
-          columnTypes: ["numerical"],
+          columnTypes: columnTypes[PointsSettingsCategory.pointVisibility],
           hint: "hides items whose value is 0 or less",
           isOn: isOn(PointsSettingsCategory.pointVisibility),
         },
@@ -206,19 +216,27 @@ function readStyleBys(points: Points) {
     [PointsSettingsCategory.pointColor]: readStyleBy(
       points.pointColor,
       tableId,
+      columnTypes[PointsSettingsCategory.pointColor],
     ),
     [PointsSettingsCategory.pointMarker]: readStyleBy(
       points.pointMarker,
       tableId,
+      columnTypes[PointsSettingsCategory.pointMarker],
     ),
-    [PointsSettingsCategory.pointSize]: readStyleBy(points.pointSize, tableId),
+    [PointsSettingsCategory.pointSize]: readStyleBy(
+      points.pointSize,
+      tableId,
+      columnTypes[PointsSettingsCategory.pointSize],
+    ),
     [PointsSettingsCategory.pointOpacity]: readStyleBy(
       points.pointOpacity,
       tableId,
+      columnTypes[PointsSettingsCategory.pointOpacity],
     ),
     [PointsSettingsCategory.pointVisibility]: readStyleBy(
       points.pointVisibility,
       tableId,
+      columnTypes[PointsSettingsCategory.pointVisibility],
     ),
   };
 }

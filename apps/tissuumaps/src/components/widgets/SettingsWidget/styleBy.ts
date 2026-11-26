@@ -48,22 +48,30 @@ function isOwnTableColumn(
  * Reads the column that a configuration follows: a column of the object's
  * own table, categorical or numerical
  *
+ * A column the property cannot follow as that type is not followed, e.g. the
+ * values per category of a size from the group table.
+ *
  * @param config - The configuration
  * @param tableId - The ID of the object's own table, if it has one
+ * @param columnTypes - The column types the property can follow
  * @returns The column, or `null` if the configuration follows none
  */
 export function readStyleBy<TConfig extends Config<string>>(
   config: TConfig,
   tableId: string | null,
+  columnTypes: TableColumnType[],
 ): StyleBy | null {
   switch (getActiveConfigSource(config)) {
     case "groupBy":
-      return isGroupByConfig(config) &&
+      return columnTypes.includes("categorical") &&
+        isGroupByConfig(config) &&
         isOwnTableColumn(config.groupBy, tableId)
         ? { column: config.groupBy.column, columnType: "categorical" }
         : null;
     case "from":
-      return isFromConfig(config) && isOwnTableColumn(config.from, tableId)
+      return columnTypes.includes("numerical") &&
+        isFromConfig(config) &&
+        isOwnTableColumn(config.from, tableId)
         ? { column: config.from.column, columnType: "numerical" }
         : null;
     default:

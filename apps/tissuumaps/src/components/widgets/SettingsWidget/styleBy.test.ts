@@ -6,12 +6,15 @@ import {
   Marker,
   type MarkerConfig,
   type SizeConfig,
+  type TableColumnType,
+  type VisibilityConfig,
   labelsDefaults,
   pointsDefaults,
 } from "@tissuumaps/core";
 
 import type { SettingsWidgetPart, SettingsWidgetProperty } from ".";
 import {
+  type StyleBy,
   describeColorWithoutColumn,
   findStyleBy,
   getFollower,
@@ -30,6 +33,8 @@ import {
 const white = { r: 255, g: 255, b: 255 };
 
 describe("readStyleBy", () => {
+  const colorColumnTypes: TableColumnType[] = ["categorical", "numerical"];
+
   it("reads a column of the own table grouped into categories as categorical", () => {
     // configurations keep the branches of their inactive sources
     const config = {
@@ -37,7 +42,7 @@ describe("readStyleBy", () => {
       source: "groupBy",
       groupBy: { column: "gene", map: "m1" },
     } as ColorConfig;
-    expect(readStyleBy<ColorConfig>(config, "t1")).toEqual({
+    expect(readStyleBy<ColorConfig>(config, "t1", colorColumnTypes)).toEqual({
       column: "gene",
       columnType: "categorical",
     });
@@ -45,6 +50,7 @@ describe("readStyleBy", () => {
       readStyleBy<ColorConfig>(
         { ...config, groupBy: { table: "t1", column: "gene", map: undefined } },
         "t1",
+        colorColumnTypes,
       ),
     ).toMatchObject({ column: "gene" });
   });
@@ -54,27 +60,60 @@ describe("readStyleBy", () => {
       readStyleBy<ColorConfig>(
         { source: "from", from: { column: "qv", palette: "viridis" } },
         "t1",
+        colorColumnTypes,
       ),
     ).toEqual({ column: "qv", columnType: "numerical" });
   });
 
   it("reads a coloring without an own-table column as no column", () => {
     expect(
-      readStyleBy<ColorConfig>({ constant: { value: white } }, "t1"),
+      readStyleBy<ColorConfig>(
+        { constant: { value: white } },
+        "t1",
+        colorColumnTypes,
+      ),
     ).toBeNull();
     expect(
-      readStyleBy<ColorConfig>(labelsDefaults.labelColor, "t1"),
+      readStyleBy<ColorConfig>(
+        labelsDefaults.labelColor,
+        "t1",
+        colorColumnTypes,
+      ),
     ).toBeNull();
     expect(
       readStyleBy<ColorConfig>(
         { groupBy: { table: "t2", column: "gene", map: undefined } },
         "t1",
+        colorColumnTypes,
       ),
     ).toBeNull();
     expect(
       readStyleBy<ColorConfig>(
         { groupBy: { column: "gene", map: undefined } },
         null,
+        colorColumnTypes,
+      ),
+    ).toBeNull();
+  });
+
+  it("reads a column the property cannot follow as that type as no column", () => {
+    // values per category from the group table
+    expect(
+      readStyleBy<VisibilityConfig>(
+        {
+          source: "groupBy",
+          constant: { value: true },
+          groupBy: { column: "cluster", map: "m1" },
+        } as VisibilityConfig,
+        "t1",
+        ["numerical"],
+      ),
+    ).toBeNull();
+    expect(
+      readStyleBy<MarkerConfig>(
+        { source: "from", from: { column: "marker" } },
+        "t1",
+        ["categorical"],
       ),
     ).toBeNull();
   });
@@ -313,6 +352,40 @@ describe("getFollower", () => {
     expect(follow("size", size, pointsDefaults.pointSize, notFollowing)).toBe(
       size,
     );
+  });
+
+  it("leaves values per category from the group table alone", () => {
+    const color: ColorConfig = {
+      source: "groupBy",
+      groupBy: { column: "cluster", map: undefined },
+    };
+    const visibility = {
+      source: "groupBy",
+      groupBy: { column: "cluster", map: "m1" },
+    } as VisibilityConfig;
+    const previousStyleBys = {
+      color: readStyleBy(color, "t1", ["categorical", "numerical"]),
+      visibility: readStyleBy(visibility, "t1", ["numerical"]),
+    };
+    const withColumn = ({ column }: StyleBy) =>
+      withFromColumn(visibility, column, "t1");
+    // a new column, or none
+    expect(
+      getFollower(previousStyleBys, qv, ["color"])(
+        "visibility",
+        visibility,
+        pointsDefaults.pointVisibility,
+        withColumn,
+      ),
+    ).toBe(visibility);
+    expect(
+      getFollower(previousStyleBys, null, [])(
+        "visibility",
+        visibility,
+        pointsDefaults.pointVisibility,
+        withColumn,
+      ),
+    ).toBe(visibility);
   });
 
   it("returns to the constant, keeping the other branches", () => {

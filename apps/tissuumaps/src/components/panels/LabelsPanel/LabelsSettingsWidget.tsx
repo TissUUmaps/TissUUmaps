@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import {
   type Labels,
+  type TableColumnType,
   defaultLabelColor,
   labelsDefaults,
 } from "@tissuumaps/core";
@@ -24,6 +25,13 @@ import {
 import { projectStore, useProjectStore } from "@/stores/project";
 
 import { LabelsSettingsCategory } from "./category";
+
+/** The column types each property can follow */
+const columnTypes = {
+  [LabelsSettingsCategory.labelColor]: ["categorical", "numerical"],
+  [LabelsSettingsCategory.labelOpacity]: ["numerical"],
+  [LabelsSettingsCategory.labelVisibility]: ["numerical"],
+} satisfies Record<string, TableColumnType[]>;
 
 export type LabelsSettingsWidgetProps = {
   labels: Labels;
@@ -72,7 +80,7 @@ export function LabelsSettingsWidget({
           name: LabelsSettingsCategory.labelColor,
           label: "Color",
           icon: <PaletteIcon />,
-          columnTypes: ["categorical", "numerical"],
+          columnTypes: columnTypes[LabelsSettingsCategory.labelColor],
           isOn: isOn(LabelsSettingsCategory.labelColor),
           categoricalOptions: (
             <CategoricalColorPaletteRow adapter={colorAdapter} />
@@ -85,14 +93,14 @@ export function LabelsSettingsWidget({
           icon: (
             <OpacityIcon filled={isOn(LabelsSettingsCategory.labelOpacity)} />
           ),
-          columnTypes: ["numerical"],
+          columnTypes: columnTypes[LabelsSettingsCategory.labelOpacity],
           isOn: isOn(LabelsSettingsCategory.labelOpacity),
         },
         {
           name: LabelsSettingsCategory.labelVisibility,
           label: "Visibility",
           icon: <EyeIcon />,
-          columnTypes: ["numerical"],
+          columnTypes: columnTypes[LabelsSettingsCategory.labelVisibility],
           hint: "hides items whose value is 0 or less",
           isOn: isOn(LabelsSettingsCategory.labelVisibility),
         },
@@ -158,14 +166,17 @@ function readStyleBys(labels: Labels) {
     [LabelsSettingsCategory.labelColor]: readStyleBy(
       labels.labelColor,
       tableId,
+      columnTypes[LabelsSettingsCategory.labelColor],
     ),
     [LabelsSettingsCategory.labelOpacity]: readStyleBy(
       labels.labelOpacity,
       tableId,
+      columnTypes[LabelsSettingsCategory.labelOpacity],
     ),
     [LabelsSettingsCategory.labelVisibility]: readStyleBy(
       labels.labelVisibility,
       tableId,
+      columnTypes[LabelsSettingsCategory.labelVisibility],
     ),
   };
 }
