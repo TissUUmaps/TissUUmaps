@@ -60,18 +60,15 @@ function getSuggestionText(suggestion: TableColumnQuerySuggestion): string {
 /**
  * @param suggestion - A suggestion
  * @param text - A searched text
- * @returns Whether the suggestion's name or query contains the text,
- * ignoring case
+ * @returns Whether the suggestion's text contains the text, ignoring case
  */
 function matchesText(
   suggestion: TableColumnQuerySuggestion,
   text: string,
 ): boolean {
-  const lowerCaseText = text.toLowerCase();
-  return (
-    getSuggestionText(suggestion).toLowerCase().includes(lowerCaseText) ||
-    suggestion.query.toLowerCase().includes(lowerCaseText)
-  );
+  return getSuggestionText(suggestion)
+    .toLowerCase()
+    .includes(text.toLowerCase());
 }
 
 /** Milliseconds of no typing after which a text matching nothing is reported */
