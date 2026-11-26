@@ -250,6 +250,7 @@ describe("SpatialDataProjectProvider", () => {
           id: elementID("image"),
           name: "image",
           layer,
+          visibility: true,
           transform: { ...identity, scale: 2 },
           dataSource: { type: "ome-zarr", source: "data.zarr/images/image" },
         },
@@ -259,6 +260,7 @@ describe("SpatialDataProjectProvider", () => {
           id: elementID("cells"),
           name: "cells",
           layer,
+          visibility: false,
           transform: identity,
           dataSource: {
             type: "ome-zarr",
@@ -272,6 +274,7 @@ describe("SpatialDataProjectProvider", () => {
           id: elementID("polygons"),
           name: "polygons",
           layer,
+          visibility: false,
           transform: identity,
           dataSource: {
             type: "parquet",
@@ -285,6 +288,7 @@ describe("SpatialDataProjectProvider", () => {
           id: elementID("circles"),
           name: "circles",
           layer,
+          visibility: false,
           transform: identity,
           dataSource: {
             type: "table",
@@ -299,6 +303,7 @@ describe("SpatialDataProjectProvider", () => {
           id: elementID("transcripts"),
           name: "transcripts",
           layer,
+          visibility: false,
           transform: identity,
           dataSource: {
             type: "table",
@@ -403,6 +408,38 @@ describe("SpatialDataProjectProvider", () => {
         ["one", false],
         ["two", true],
         ["three", false],
+      ]);
+    });
+
+    it("shows only the first object of each layer, images first", async () => {
+      stubStore({
+        "images/a": rasterAttrs([transformation("global", ["c", "y", "x"])]),
+        "images/b": rasterAttrs([
+          transformation("global", ["c", "y", "x"]),
+          transformation("other", ["c", "y", "x"]),
+        ]),
+        "labels/cells": rasterAttrs(
+          [transformation("global", ["y", "x"])],
+          true,
+        ),
+        "points/transcripts": vectorAttrs("points", [
+          transformation("third", ["x", "y"]),
+        ]),
+      });
+      const { project } = await provider.load(storeUrl);
+      const layerIDs = new Map(
+        project.layers!.map(({ id, name }) => [name, id]),
+      );
+      expect(
+        [...project.images!, ...project.labels!, ...project.points!].map(
+          ({ name, layer, visibility }) => [name, layer, visibility],
+        ),
+      ).toEqual([
+        ["a", layerIDs.get("global"), true],
+        ["b", layerIDs.get("global"), false],
+        ["b", layerIDs.get("other"), true],
+        ["cells", layerIDs.get("global"), false],
+        ["transcripts", layerIDs.get("third"), true],
       ]);
     });
 

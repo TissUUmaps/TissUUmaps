@@ -60,7 +60,8 @@ export const spatialDataProjectType = "spatialdata";
  * Each coordinate system becomes a layer, and an element becomes one object
  * per coordinate system it maps into, placed by its transformation into it.
  * Only one layer is visible: `global`, or else the first one holding the most
- * objects.
+ * objects. Each layer shows only its first object, images first, then labels,
+ * shapes and points.
  *
  * @see https://spatialdata-spec.scverse.org/
  */
@@ -189,6 +190,20 @@ export class SpatialDataProjectProvider implements ProjectProvider {
       ),
     );
     const layerIDs = new Map(layers.map(({ id, name }) => [name, id]));
+    // show one object per layer, as a store can hold too many to show at once
+    const shownLayerIDs = new Set<string>();
+    const placeObject = <T>({
+      coordinateSystem,
+      object,
+    }: {
+      coordinateSystem: string;
+      object: T;
+    }) => {
+      const layer = layerIDs.get(coordinateSystem)!;
+      const visibility = !shownLayerIDs.has(layer);
+      shownLayerIDs.add(layer);
+      return { ...object, layer, visibility };
+    };
     const project: RawProject = {
       name:
         source === "/"
@@ -196,22 +211,11 @@ export class SpatialDataProjectProvider implements ProjectProvider {
           : // a store served at an origin root has no stem
             SourceUtils.getStem(source) || new URL(source).host,
       layers,
-      images: images.map(({ coordinateSystem, object }) => ({
-        ...object,
-        layer: layerIDs.get(coordinateSystem)!,
-      })),
-      labels: labels.map(({ coordinateSystem, object }) => ({
-        ...object,
-        layer: layerIDs.get(coordinateSystem)!,
-      })),
-      shapes: shapes.map(({ coordinateSystem, object }) => ({
-        ...object,
-        layer: layerIDs.get(coordinateSystem)!,
-      })),
-      points: [...circles, ...points].map(({ coordinateSystem, object }) => ({
-        ...object,
-        layer: layerIDs.get(coordinateSystem)!,
-      })),
+      // placed in this order, so that a layer shows its first image if any
+      images: images.map(placeObject),
+      labels: labels.map(placeObject),
+      shapes: shapes.map(placeObject),
+      points: [...circles, ...points].map(placeObject),
       tables: [...tables, ...circleTables, ...pointTables],
     };
     return { project, source };
