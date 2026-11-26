@@ -1,6 +1,6 @@
 import { categoricalColorPalettes } from "@tissuumaps/core";
 
-import { ColorPaletteSelect } from "@/components/widgets/ColorConfigWidget/ColorPaletteSelect";
+import { ColorPaletteSelect } from "@/components/controls/ColorPaletteSelect";
 import type { ColorConfigWidgetAdapter } from "@/components/widgets/ColorConfigWidget/adapter";
 
 import { StyleRow } from "./StyleRow";
