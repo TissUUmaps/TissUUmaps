@@ -28,6 +28,8 @@ import { InputGroupAddon } from "@/components/ui/input-group";
 import { useLazyTableData } from "@/data/hooks/useLazyData";
 import { useCompressedRowVirtualizer } from "@/hooks/useCompressedRowVirtualizer";
 
+import { findColumnByName } from "./findColumnByName";
+
 export type TableColumnInputProps = {
   tableId: string | null;
   value: string | null;
@@ -35,7 +37,8 @@ export type TableColumnInputProps = {
   /**
    * The `id` of the leaf section to pick a column of (see
    * `TableData.getColumnSections`); the input then shows and searches the leaf's
-   * columns by name, and a typed name has to match a column's name exactly
+   * columns by name, and a typed name has to match a column's name (see
+   * {@link findColumnByName})
    */
   sectionId?: string;
   /** The name to show for the value, if it is not the query itself */
@@ -310,25 +313,21 @@ export function TableColumnInput({
     const { signal } = abortController;
     loadTableData({ signal })
       .then(async (tableData) => {
-        let query: string | undefined = pendingQuery;
-        if (sectionId !== undefined) {
-          // a name is no query: it has to match a column's name exactly, as
-          // names differing in case may name different columns (e.g. human
-          // and mouse gene symbols)
-          const leafSuggestions = await tableData?.suggestColumnQueries(
+        // within a section, the text is a name, not a query
+        let column: string | null = null;
+        if (tableData !== null && sectionId !== undefined) {
+          const found = await findColumnByName(
+            tableData,
+            sectionId,
             pendingQuery,
-            { sectionId, signal },
+            { signal },
           );
-          query = leafSuggestions?.find(
-            (suggestion) => getSuggestionText(suggestion) === pendingQuery,
-          )?.query;
+          column = found?.column ?? null;
+        } else if (tableData !== null) {
+          column = await tableData.resolveColumnQuery(pendingQuery, { signal });
         }
-        const column =
-          query !== undefined
-            ? ((await tableData?.resolveColumnQuery(query, { signal })) ?? null)
-            : null;
         if (!signal.aborted) {
-          if (query === undefined) {
+          if (sectionId !== undefined && column === null) {
             reportNoMatch(pendingQuery);
           }
           handleCommitResolved(column);

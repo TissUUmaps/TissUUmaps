@@ -4,11 +4,11 @@ import type { TableColumnSection } from "@tissuumaps/core";
 
 import { SimpleSelect } from "@/components/common/simple-select";
 import { TableColumnInput } from "@/components/controls/TableColumnField/TableColumnInput";
+import { findColumnByName } from "@/components/controls/TableColumnField/findColumnByName";
 import { Button } from "@/components/ui/button";
 import { useTableData } from "@/data/hooks/useData";
 
 import { StyleRow } from "./StyleRow";
-import { findColumnByText } from "./findColumnByText";
 
 /** A row of the picker: a top-level section and its leaves */
 type Row = {
@@ -245,7 +245,7 @@ export function StyleByPicker({
   };
 
   // a text matching no column of a leaf is searched for in the other leaves of
-  // its row, by exact name or query only, and offered rather than applied
+  // its row, by name only, and offered rather than applied
   const searchElsewhere = async (text: string, row: Row, sectionId: string) => {
     const signal = startSwitch();
     if (tableData === null) {
@@ -256,7 +256,7 @@ export function StyleByPicker({
         if (leaf.id === sectionId) {
           continue;
         }
-        const found = await findColumnByText(tableData, leaf.id, text, {
+        const found = await findColumnByName(tableData, leaf.id, text, {
           signal,
         });
         if (signal.aborted) {
