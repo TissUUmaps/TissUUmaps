@@ -1,17 +1,18 @@
-import { type CoordinateSpace, ProjectUtils } from "@tissuumaps/core";
+import { ProjectUtils } from "@tissuumaps/core";
 
-import { Field, FieldItem, FieldLabel } from "@/components/common/field";
+import { Field, FieldLabel } from "@/components/common/field";
 import { GroupValueMapSelect } from "@/components/controls/GroupValueMapSelect";
 import { TableColumnField } from "@/components/controls/TableColumnField";
 import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 
+import { SizeUnitRadioGroup } from "./SizeUnitRadioGroup";
 import type { SizeConfigWidgetAdapter } from "./adapter";
 
 export { ActiveSizeConfigValue } from "./ActiveSizeConfigValue";
 export { SizeConfigSourceToggleGroup } from "./SizeConfigSourceToggleGroup";
+export { SizeUnitRadioGroup } from "./SizeUnitRadioGroup";
 
 export type SizeConfigWidgetProps = {
   adapter: SizeConfigWidgetAdapter;
@@ -71,24 +72,7 @@ function ConstantSizeConfigWidget({
       </Field>
       <Field>
         <FieldLabel>Size unit</FieldLabel>
-        <RadioGroup
-          value={unit}
-          onValueChange={(value) => setUnit(value as CoordinateSpace)}
-          className="flex gap-x-4"
-        >
-          <FieldItem className="flex items-center gap-x-2">
-            <RadioGroupItem value={"data" satisfies CoordinateSpace} />
-            <FieldLabel>Data</FieldLabel>
-          </FieldItem>
-          <FieldItem className="flex items-center gap-x-2">
-            <RadioGroupItem value={"layer" satisfies CoordinateSpace} />
-            <FieldLabel>Layer</FieldLabel>
-          </FieldItem>
-          <FieldItem className="flex items-center gap-x-2">
-            <RadioGroupItem value={"world" satisfies CoordinateSpace} />
-            <FieldLabel>World</FieldLabel>
-          </FieldItem>
-        </RadioGroup>
+        <SizeUnitRadioGroup value={unit} onValueChange={setUnit} />
       </Field>
     </div>
   );
@@ -121,24 +105,7 @@ function FromSizeConfigWidget({
       />
       <Field>
         <FieldLabel>Size unit</FieldLabel>
-        <RadioGroup
-          value={unit}
-          onValueChange={(value) => setUnit(value as CoordinateSpace)}
-          className="flex gap-x-4"
-        >
-          <FieldItem className="flex items-center gap-x-2">
-            <RadioGroupItem value={"data" satisfies CoordinateSpace} />
-            <FieldLabel>Data</FieldLabel>
-          </FieldItem>
-          <FieldItem className="flex items-center gap-x-2">
-            <RadioGroupItem value={"layer" satisfies CoordinateSpace} />
-            <FieldLabel>Layer</FieldLabel>
-          </FieldItem>
-          <FieldItem className="flex items-center gap-x-2">
-            <RadioGroupItem value={"world" satisfies CoordinateSpace} />
-            <FieldLabel>World</FieldLabel>
-          </FieldItem>
-        </RadioGroup>
+        <SizeUnitRadioGroup value={unit} onValueChange={setUnit} />
       </Field>
     </div>
   );
@@ -189,24 +156,7 @@ function GroupBySizeConfigWidget({
       </Field>
       <Field>
         <FieldLabel>Size unit</FieldLabel>
-        <RadioGroup
-          value={unit}
-          onValueChange={(value) => setUnit(value as CoordinateSpace)}
-          className="flex gap-x-4"
-        >
-          <FieldItem className="flex items-center gap-x-2">
-            <RadioGroupItem value={"data" satisfies CoordinateSpace} />
-            <FieldLabel>Data</FieldLabel>
-          </FieldItem>
-          <FieldItem className="flex items-center gap-x-2">
-            <RadioGroupItem value={"layer" satisfies CoordinateSpace} />
-            <FieldLabel>Layer</FieldLabel>
-          </FieldItem>
-          <FieldItem className="flex items-center gap-x-2">
-            <RadioGroupItem value={"world" satisfies CoordinateSpace} />
-            <FieldLabel>World</FieldLabel>
-          </FieldItem>
-        </RadioGroup>
+        <SizeUnitRadioGroup value={unit} onValueChange={setUnit} />
       </Field>
     </div>
   );
