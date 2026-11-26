@@ -18,13 +18,10 @@ import {
   getFollowingNames,
   getPartToggledNames,
   getToggledNames,
-  hide,
-  isHiddenByConstant,
   isSameColumnStyleBy,
   isStyleItemOn,
   isStyleItemSupported,
   readStyleBy,
-  showIfHidden,
   withColorColumn,
   withFromColumn,
   withMarkerColumn,
@@ -73,13 +70,6 @@ describe("readStyleBy", () => {
       readStyleBy<ColorConfig>(labelsDefaults.labelColor, "t1", {
         defaultConfig: labelsDefaults.labelColor,
       }),
-    ).toEqual({ kind: "none" });
-    expect(
-      readStyleBy<ColorConfig>(
-        { source: "from", from: { column: "qv", palette: "viridis" } },
-        "t1",
-        { isHidden: true },
-      ),
     ).toEqual({ kind: "none" });
   });
 
@@ -221,23 +211,6 @@ describe("withoutColumn for colors", () => {
         labelsDefaults.labelColor,
       ),
     ).toMatchObject({ source: "random", random: { palette: "distinct" } });
-  });
-});
-
-describe("showIfHidden", () => {
-  it("shows a constantly hidden fill only", () => {
-    expect(isHiddenByConstant({ constant: { value: false } })).toBe(true);
-    expect(showIfHidden({ constant: { value: false } })).toEqual({
-      source: "constant",
-      constant: { value: true },
-    });
-    const fromConfig = { from: { column: "visible" } };
-    expect(showIfHidden(fromConfig)).toBe(fromConfig);
-    expect(hide(fromConfig)).toEqual({
-      ...fromConfig,
-      source: "constant",
-      constant: { value: false },
-    });
   });
 });
 

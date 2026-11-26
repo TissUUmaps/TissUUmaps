@@ -13,17 +13,15 @@ import {
 
 import { useColorConfigWidget } from "@/components/widgets/ColorConfigWidget/hooks";
 import { SettingsWidget } from "@/components/widgets/SettingsWidget";
+import { CategoricalColorPaletteRow } from "@/components/widgets/SettingsWidget/CategoricalColorPaletteRow";
 import { ColorRangeRows } from "@/components/widgets/SettingsWidget/ColorRangeRows";
 import { OpacityIcon } from "@/components/widgets/SettingsWidget/OpacityIcon";
 import {
   findStyleBy,
   followColumn,
   getFollowState,
-  hide,
-  isHiddenByConstant,
   isSameColumnStyleBy,
   readStyleBy,
-  showIfHidden,
   withColorColumn,
   withFromColumn,
   withoutColumn,
@@ -45,8 +43,7 @@ export type ShapesSettingsWidgetProps = {
  * visibility follow
  *
  * If no property follows the column, a newly picked one styles the fill
- * color. Following a column also shows
- * a hidden fill or stroke; the fill stopping to follow hides it again.
+ * color.
  */
 export function ShapesSettingsWidget({
   shapes,
@@ -99,6 +96,9 @@ export function ShapesSettingsWidget({
               icon: <PaletteIcon />,
               columnTypes: ["categorical", "numerical"],
               isOn: isOn(ShapesSettingsCategory.shapeFillColor),
+              categoricalOptions: (
+                <CategoricalColorPaletteRow adapter={fillColorAdapter} />
+              ),
               numericalOptions: <ColorRangeRows adapter={fillColorAdapter} />,
             },
             {
@@ -141,6 +141,9 @@ export function ShapesSettingsWidget({
               icon: <PaletteIcon />,
               columnTypes: ["categorical", "numerical"],
               isOn: isOn(ShapesSettingsCategory.shapeStrokeColor),
+              categoricalOptions: (
+                <CategoricalColorPaletteRow adapter={strokeColorAdapter} />
+              ),
               numericalOptions: <ColorRangeRows adapter={strokeColorAdapter} />,
             },
             {
@@ -196,60 +199,6 @@ export function ShapesSettingsWidget({
           newStyleBy,
           propertyNames,
         );
-        const fillStates = [
-          followState(ShapesSettingsCategory.shapeFillColor),
-          followState(ShapesSettingsCategory.shapeFillOpacity),
-          followState(ShapesSettingsCategory.shapeFillVisibility),
-        ];
-        const strokeStates = [
-          followState(ShapesSettingsCategory.shapeStrokeColor),
-          followState(ShapesSettingsCategory.shapeStrokeOpacity),
-          followState(ShapesSettingsCategory.shapeStrokeVisibility),
-        ];
-        const isFillOn = fillStates.some(({ column }) => column !== null);
-        const wasFillOn = fillStates.some(({ wasFollowing }) => wasFollowing);
-        const isStrokeOn = strokeStates.some(({ column }) => column !== null);
-
-        const fillVisibilityState = followState(
-          ShapesSettingsCategory.shapeFillVisibility,
-        );
-        const fillVisibility = followColumn(
-          current.shapeFillVisibility,
-          fillVisibilityState,
-          {
-            withColumn: ({ column }) =>
-              withFromColumn(
-                current.shapeFillVisibility,
-                column,
-                currentTableId,
-              ),
-            withoutColumn: () =>
-              withoutColumn<VisibilityConfig>(
-                current.shapeFillVisibility,
-                shapesDefaults.shapeFillVisibility,
-              ),
-          },
-        );
-        const strokeVisibilityState = followState(
-          ShapesSettingsCategory.shapeStrokeVisibility,
-        );
-        const strokeVisibility = followColumn(
-          current.shapeStrokeVisibility,
-          strokeVisibilityState,
-          {
-            withColumn: ({ column }) =>
-              withFromColumn(
-                current.shapeStrokeVisibility,
-                column,
-                currentTableId,
-              ),
-            withoutColumn: () =>
-              withoutColumn<VisibilityConfig>(
-                current.shapeStrokeVisibility,
-                shapesDefaults.shapeStrokeVisibility,
-              ),
-          },
-        );
 
         updateShapes(current.id, {
           shapeFillColor: followColumn(
@@ -287,16 +236,23 @@ export function ShapesSettingsWidget({
                 ),
             },
           ),
-          // a fill that follows the column is shown; one that stops is hidden,
-          // the mirror of following a column, which shows a hidden fill
-          shapeFillVisibility:
-            fillVisibilityState.column !== null
-              ? fillVisibility
-              : isFillOn
-                ? showIfHidden(fillVisibility)
-                : wasFillOn
-                  ? hide(fillVisibility)
-                  : fillVisibility,
+          shapeFillVisibility: followColumn(
+            current.shapeFillVisibility,
+            followState(ShapesSettingsCategory.shapeFillVisibility),
+            {
+              withColumn: ({ column }) =>
+                withFromColumn(
+                  current.shapeFillVisibility,
+                  column,
+                  currentTableId,
+                ),
+              withoutColumn: () =>
+                withoutColumn<VisibilityConfig>(
+                  current.shapeFillVisibility,
+                  shapesDefaults.shapeFillVisibility,
+                ),
+            },
+          ),
           shapeStrokeColor: followColumn(
             current.shapeStrokeColor,
             followState(ShapesSettingsCategory.shapeStrokeColor),
@@ -332,11 +288,23 @@ export function ShapesSettingsWidget({
                 ),
             },
           ),
-          // a stroke that follows the column is shown
-          shapeStrokeVisibility:
-            strokeVisibilityState.column === null && isStrokeOn
-              ? showIfHidden(strokeVisibility)
-              : strokeVisibility,
+          shapeStrokeVisibility: followColumn(
+            current.shapeStrokeVisibility,
+            followState(ShapesSettingsCategory.shapeStrokeVisibility),
+            {
+              withColumn: ({ column }) =>
+                withFromColumn(
+                  current.shapeStrokeVisibility,
+                  column,
+                  currentTableId,
+                ),
+              withoutColumn: () =>
+                withoutColumn<VisibilityConfig>(
+                  current.shapeStrokeVisibility,
+                  shapesDefaults.shapeStrokeVisibility,
+                ),
+            },
+          ),
           shapeOpacity: followColumn(
             current.shapeOpacity,
             followState(ShapesSettingsCategory.shapeOpacity),
@@ -375,27 +343,18 @@ export function ShapesSettingsWidget({
 /**
  * @param shapes - The shapes
  * @returns What the properties of the shapes follow, by name, in the order of
- * the settings widget; the color and opacity of a hidden fill or stroke follow
- * none
+ * the settings widget
  */
 function readStyleBys(shapes: Shapes) {
   const tableId = shapes.dataSource.table ?? null;
-  const isFillHidden = isHiddenByConstant(shapes.shapeFillVisibility);
-  const isStrokeHidden = isHiddenByConstant(shapes.shapeStrokeVisibility);
   return {
     [ShapesSettingsCategory.shapeFillColor]: readStyleBy(
       shapes.shapeFillColor,
       tableId,
-      {
-        isHidden: isFillHidden,
-      },
     ),
     [ShapesSettingsCategory.shapeFillOpacity]: readStyleBy(
       shapes.shapeFillOpacity,
       tableId,
-      {
-        isHidden: isFillHidden,
-      },
     ),
     [ShapesSettingsCategory.shapeFillVisibility]: readStyleBy(
       shapes.shapeFillVisibility,
@@ -404,16 +363,10 @@ function readStyleBys(shapes: Shapes) {
     [ShapesSettingsCategory.shapeStrokeColor]: readStyleBy(
       shapes.shapeStrokeColor,
       tableId,
-      {
-        isHidden: isStrokeHidden,
-      },
     ),
     [ShapesSettingsCategory.shapeStrokeOpacity]: readStyleBy(
       shapes.shapeStrokeOpacity,
       tableId,
-      {
-        isHidden: isStrokeHidden,
-      },
     ),
     [ShapesSettingsCategory.shapeStrokeVisibility]: readStyleBy(
       shapes.shapeStrokeVisibility,

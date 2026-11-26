@@ -43,6 +43,12 @@ export type SettingsWidgetProperty = StyleProperty & {
   hint?: string;
 
   /**
+   * Rows of the property's options while it follows a categorical column,
+   * e.g. the palette of a color
+   */
+  categoricalOptions?: ReactNode;
+
+  /**
    * Rows of the property's options while it follows a numerical column, e.g.
    * the palette and range of a color
    */
@@ -197,6 +203,19 @@ export function SettingsWidget({
                 }}
               />
             </StyleRow>
+            {styleBy.columnType === "categorical" &&
+              items.filter(isStyleItemOn).map((item) => {
+                // a part follows a categorical column by its first property
+                const { categoricalOptions } =
+                  "properties" in item ? item.properties[0] : item;
+                return (
+                  categoricalOptions !== undefined && (
+                    <StyleGroup key={item.name} label={item.label}>
+                      {categoricalOptions}
+                    </StyleGroup>
+                  )
+                );
+              })}
             {styleBy.columnType === "numerical" &&
               items.filter(isStyleItemOn).map((item) =>
                 "properties" in item ? (

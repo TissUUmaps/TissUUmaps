@@ -16,6 +16,7 @@ import {
 
 import { useColorConfigWidget } from "@/components/widgets/ColorConfigWidget/hooks";
 import { SettingsWidget } from "@/components/widgets/SettingsWidget";
+import { CategoricalColorPaletteRow } from "@/components/widgets/SettingsWidget/CategoricalColorPaletteRow";
 import { ColorRangeRows } from "@/components/widgets/SettingsWidget/ColorRangeRows";
 import { OpacityIcon } from "@/components/widgets/SettingsWidget/OpacityIcon";
 import { StyleRow } from "@/components/widgets/SettingsWidget/StyleRow";
@@ -86,6 +87,9 @@ export function PointsSettingsWidget({
           icon: <PaletteIcon />,
           columnTypes: ["categorical", "numerical"],
           isOn: isOn(PointsSettingsCategory.pointColor),
+          categoricalOptions: (
+            <CategoricalColorPaletteRow adapter={colorAdapter} />
+          ),
           numericalOptions: <ColorRangeRows adapter={colorAdapter} />,
         },
         {

@@ -12,6 +12,7 @@ import {
 
 import { useColorConfigWidget } from "@/components/widgets/ColorConfigWidget/hooks";
 import { SettingsWidget } from "@/components/widgets/SettingsWidget";
+import { CategoricalColorPaletteRow } from "@/components/widgets/SettingsWidget/CategoricalColorPaletteRow";
 import { ColorRangeRows } from "@/components/widgets/SettingsWidget/ColorRangeRows";
 import { OpacityIcon } from "@/components/widgets/SettingsWidget/OpacityIcon";
 import {
@@ -73,6 +74,9 @@ export function LabelsSettingsWidget({
           icon: <PaletteIcon />,
           columnTypes: ["categorical", "numerical"],
           isOn: isOn(LabelsSettingsCategory.labelColor),
+          categoricalOptions: (
+            <CategoricalColorPaletteRow adapter={colorAdapter} />
+          ),
           numericalOptions: <ColorRangeRows adapter={colorAdapter} />,
         },
         {

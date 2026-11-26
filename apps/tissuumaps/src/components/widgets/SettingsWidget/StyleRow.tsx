@@ -8,6 +8,8 @@ export type StyleRowProps = {
   label?: string;
   /** Whether the row holds the value in use, e.g. the colored column */
   isActive?: boolean;
+  /** Whether the row's controls are disabled */
+  disabled?: boolean;
   children: ReactNode;
   /** Classes of the control cell */
   className?: string;
@@ -22,11 +24,12 @@ export type StyleRowProps = {
 export function StyleRow({
   label,
   isActive = false,
+  disabled = false,
   children,
   className,
 }: StyleRowProps) {
   return (
-    <Field className="contents">
+    <Field className="contents" disabled={disabled}>
       {label !== undefined ? (
         <FieldLabel
           className={cn(

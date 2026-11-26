@@ -6,7 +6,6 @@ import {
   type MarkerConfig,
   type TableColumnRef,
   type TableColumnType,
-  type VisibilityConfig,
   defaultLabelColorPalette,
   getActiveConfigSource,
   isConstantConfig,
@@ -53,31 +52,27 @@ function isOwnTableColumn(
  * Reads what a configuration follows
  *
  * Following a column of the object's own table reads as that column,
- * categorical or numerical; the property's default without a column (or a
- * hidden fill) reads as none, so that the widget and the map agree; anything
+ * categorical or numerical; the property's default without a column reads as
+ * none, so that the widget and the map agree; anything
  * else is custom.
  *
  * @param config - The configuration
  * @param tableId - The ID of the object's own table, if it has one
  * @param options - `defaultConfig` is the property's default configuration,
  * whose source (a constant if none is given) reads as none, e.g. random
- * colors for labels; `isHidden` tells whether what the configuration styles
- * is hidden, e.g. the fill of shapes
+ * colors for labels
  * @returns What the configuration follows
  */
 export function readStyleBy<TConfig extends Config<string>>(
   config: TConfig,
   tableId: string | null,
-  options?: { defaultConfig?: TConfig; isHidden?: boolean },
+  options?: { defaultConfig?: TConfig },
 ): StyleBy {
-  const { defaultConfig, isHidden = false } = options ?? {};
+  const { defaultConfig } = options ?? {};
   const noneSource =
     defaultConfig !== undefined
       ? getActiveConfigSource(defaultConfig)
       : "constant";
-  if (isHidden) {
-    return { kind: "none" };
-  }
   const source = getActiveConfigSource(config) ?? "constant";
   switch (source) {
     case "groupBy":
@@ -490,40 +485,4 @@ export function withoutColumn<TConfig extends Config<string>>(
     }
   }
   throw new Error("The default configuration must be a constant or random one");
-}
-
-/**
- * Shows what a configuration styles, e.g. the fill of shapes, if it is hidden
- * by a constant visibility
- *
- * @param config - The visibility configuration
- * @returns The visibility configuration, visible if it was constantly hidden
- */
-export function showIfHidden(config: VisibilityConfig): VisibilityConfig {
-  return isHiddenByConstant(config)
-    ? { ...config, source: "constant", constant: { value: true } }
-    : config;
-}
-
-/**
- * Hides what a configuration styles, e.g. the fill of shapes
- *
- * @param config - The visibility configuration
- * @returns The visibility configuration, constantly hidden; its other branches
- * are kept
- */
-export function hide(config: VisibilityConfig): VisibilityConfig {
-  return { ...config, source: "constant", constant: { value: false } };
-}
-
-/**
- * @param config - A visibility configuration
- * @returns Whether the configuration constantly hides what it applies to
- */
-export function isHiddenByConstant(config: VisibilityConfig): boolean {
-  return (
-    getActiveConfigSource(config) === "constant" &&
-    isConstantConfig<boolean>(config) &&
-    !config.constant.value
-  );
 }
