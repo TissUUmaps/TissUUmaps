@@ -245,8 +245,8 @@ export type VisibilityConfig =
  * Opacity configuration
  *
  * When sourced from a numerical table column, values are clipped to the
- * configured range and then mapped linearly to opacities between `0` (fully
- * transparent) and `1` (fully opaque).
+ * configured range - or min-max-scaled, if none is given - and then mapped
+ * linearly to opacities between `0` (fully transparent) and `1` (fully opaque).
  */
 export type OpacityConfig =
   | ConstantConfig<number>
@@ -256,13 +256,8 @@ export type OpacityConfig =
        *
        * Values are clipped to this range before mapping them to opacities.
        *
-       * If not specified, the range is from `0` to the maximum value of the
-       * table column. An end that is `null` is `0` for the minimum, or the
-       * maximum value of the table column for the maximum.
-       *
-       * If the maximum is not set and the table column has no value range (it
-       * is not numerical or holds no two distinct finite values), the range is
-       * `[0, 1]` and the minimum is not applied.
+       * If not specified, min-max-scaling is used. An end that is `null` is
+       * the minimum or maximum value of the table column.
        */
       range?: [number | null, number | null];
     }>

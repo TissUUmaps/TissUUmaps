@@ -44,9 +44,10 @@ function configToState(
       ? config.constant.value
       : defaultOpacity,
     currentFromTableColumn: isFromConfig(config) ? config.from : null,
+    // starts at 0, so that the lowest values are not transparent by default
     currentFromRangeMin: isFromConfig(config)
       ? (config.from.range?.[0] ?? null)
-      : null,
+      : 0,
     currentFromRangeMax: isFromConfig(config)
       ? (config.from.range?.[1] ?? null)
       : null,

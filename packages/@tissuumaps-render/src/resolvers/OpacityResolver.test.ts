@@ -124,7 +124,7 @@ describe("OpacityResolver", () => {
       expect(Array.from(packedOpacities)).toEqual([0, 255]);
     });
 
-    it("maps from 0 to the loaded maximum when no range is configured", async () => {
+    it("normalizes within the loaded value range when no range is configured", async () => {
       const ids = new Uint32Array([1, 2, 3]);
       const loadValueRange = vi.fn().mockResolvedValue([50, 200]);
       const data = {
@@ -145,10 +145,9 @@ describe("OpacityResolver", () => {
       expect(loadValueRange).toHaveBeenCalledWith("col1", {
         signal: undefined,
       });
-      // the range is [0, 200], not the column's [50, 200]
       expect(Array.from(packedOpacities)).toEqual([
-        OpacityResolver.packOpacity(0.25),
-        OpacityResolver.packOpacity(0.5),
+        0,
+        OpacityResolver.packOpacity(1 / 3),
         255,
       ]);
     });
@@ -181,7 +180,7 @@ describe("OpacityResolver", () => {
       ]);
     });
 
-    it("takes a missing minimum of the configured range as 0", async () => {
+    it("takes a missing minimum of the configured range from the loaded value range", async () => {
       const ids = new Uint32Array([1, 2]);
       const loadValueRange = vi.fn().mockResolvedValue([50, 200]);
       const data = { ...createMockTableData(ids, [50, 100]), loadValueRange };
@@ -198,11 +197,10 @@ describe("OpacityResolver", () => {
           loadTable,
         );
 
-      expect(loadValueRange).not.toHaveBeenCalled();
-      expect(Array.from(packedOpacities)).toEqual([
-        OpacityResolver.packOpacity(0.5),
-        255,
-      ]);
+      expect(loadValueRange).toHaveBeenCalledWith("col1", {
+        signal: undefined,
+      });
+      expect(Array.from(packedOpacities)).toEqual([0, 255]);
     });
 
     it("takes a missing maximum of the configured range from the loaded value range", async () => {

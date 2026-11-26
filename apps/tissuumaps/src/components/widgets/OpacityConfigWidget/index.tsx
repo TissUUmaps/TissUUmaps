@@ -98,7 +98,11 @@ function FromOpacityConfigWidget({
           <Input
             type="number"
             inputMode="decimal"
-            placeholder="0"
+            placeholder={
+              columnValueRange !== null
+                ? columnValueRange[0].toPrecision(6)
+                : undefined
+            }
             value={rangeMin ?? ""}
             onChange={(event) => {
               if (event.target.value === "") {

@@ -167,9 +167,8 @@ export class OpacityResolver {
    * Loads opacity data by reading numeric values from a table column and mapping
    * them linearly from the configured range to opacities
    *
-   * An unset minimum of the range is `0`; an unset maximum is the maximum value
-   * of the table column. Without a value range of the table column, the range
-   * is `[0, 1]`.
+   * An unset end of the range is the minimum or maximum value of the table
+   * column. Without a value range of the table column, the range is `[0, 1]`.
    *
    * @param ids - Ordered list of item IDs
    * @param config - From configuration specifying the source column and range
@@ -193,8 +192,8 @@ export class OpacityResolver {
     const data = await loadTable(config.from.table, { signal });
     const [rangeMin, rangeMax] = config.from.range ?? [null, null];
     let valueRange: [number, number] | undefined = undefined;
-    if (rangeMax !== null) {
-      valueRange = [rangeMin ?? 0, rangeMax];
+    if (rangeMin !== null && rangeMax !== null) {
+      valueRange = [rangeMin, rangeMax];
     } else {
       const columnValueRange = await TableUtils.loadValueRange(
         data,
@@ -202,7 +201,10 @@ export class OpacityResolver {
         { signal },
       );
       if (columnValueRange !== undefined) {
-        valueRange = [rangeMin ?? 0, columnValueRange[1]];
+        valueRange = [
+          rangeMin ?? columnValueRange[0],
+          rangeMax ?? columnValueRange[1],
+        ];
       }
     }
     const packedOpacities = OpacityResolver.createOpacityBuffer(ids.length, {
