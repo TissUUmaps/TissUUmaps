@@ -156,42 +156,6 @@ export type AppStoreState = {
    * Cleared whenever another project is loaded or the project is closed.
    */
   expandedTableIds: string[];
-
-  /**
-   * The IDs of the images whose data is held in memory or being loaded
-   *
-   * Always includes the visible images, so an image is hidden before it is
-   * unloaded. Reset whenever another project is loaded or the project is
-   * closed.
-   */
-  loadedImageIds: string[];
-
-  /**
-   * The IDs of the labels whose data is held in memory or being loaded
-   *
-   * Always includes the visible labels, so labels are hidden before they are
-   * unloaded. Reset whenever another project is loaded or the project is
-   * closed.
-   */
-  loadedLabelsIds: string[];
-
-  /**
-   * The IDs of the points whose data is held in memory or being loaded
-   *
-   * Always includes the visible points, so points are hidden before they are
-   * unloaded. Reset whenever another project is loaded or the project is
-   * closed.
-   */
-  loadedPointsIds: string[];
-
-  /**
-   * The IDs of the shapes whose data is held in memory or being loaded
-   *
-   * Always includes the visible shapes, so shapes are hidden before they are
-   * unloaded. Reset whenever another project is loaded or the project is
-   * closed.
-   */
-  loadedShapesIds: string[];
 };
 
 /**
@@ -291,34 +255,6 @@ export type AppStoreActions = {
    * @param expandedTableIds - The IDs of the tables, in any order
    */
   setExpandedTableIds: (expandedTableIds: string[]) => void;
-
-  /**
-   * Sets the images whose data is held in memory or being loaded
-   *
-   * @param loadedImageIds - The IDs of the images, in any order
-   */
-  setLoadedImageIds: (loadedImageIds: string[]) => void;
-
-  /**
-   * Sets the labels whose data is held in memory or being loaded
-   *
-   * @param loadedLabelsIds - The IDs of the labels, in any order
-   */
-  setLoadedLabelsIds: (loadedLabelsIds: string[]) => void;
-
-  /**
-   * Sets the points whose data is held in memory or being loaded
-   *
-   * @param loadedPointsIds - The IDs of the points, in any order
-   */
-  setLoadedPointsIds: (loadedPointsIds: string[]) => void;
-
-  /**
-   * Sets the shapes whose data is held in memory or being loaded
-   *
-   * @param loadedShapesIds - The IDs of the shapes, in any order
-   */
-  setLoadedShapesIds: (loadedShapesIds: string[]) => void;
 
   /**
    * Registers an image data provider

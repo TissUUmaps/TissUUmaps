@@ -11,9 +11,11 @@ import {
 } from "@/components/controls/ObjectList";
 import { useAddPointsDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { pointsDataCache } from "@/data/cache";
 import { usePointsData } from "@/data/hooks/useData";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
+import { useDataStore } from "@/stores/data";
 import { useProjectStore } from "@/stores/project";
 
 import { PointsAnnotationsWidget } from "./PointsAnnotationsWidget";
@@ -62,11 +64,10 @@ type PointsAccordionItemProps = {
 
 function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
   const pointsDataProviders = useAppStore((state) => state.pointsDataProviders);
-  const loadedPointsIds = useAppStore((state) => state.loadedPointsIds);
-  const setLoadedPointsIds = useAppStore((state) => state.setLoadedPointsIds);
 
   const updatePoints = useProjectStore((state) => state.updatePoints);
   const deletePoints = useProjectStore((state) => state.deletePoints);
+  const loaded = useDataStore((state) => state.pointsDataRefs.has(points.id));
 
   const pointsData = usePointsData(points.id);
 
@@ -98,10 +99,10 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
           onOpacityChange={(opacity) => updatePoints(points.id, { opacity })}
         />
       }
-      unloadDisabled={!loadedPointsIds.includes(points.id)}
+      unloadDisabled={!loaded}
       onUnload={() => {
         updatePoints(points.id, { visibility: false });
-        setLoadedPointsIds(loadedPointsIds.filter((id) => id !== points.id));
+        pointsDataCache.release(points.id);
       }}
       onDelete={() => deletePoints(points.id)}
     >

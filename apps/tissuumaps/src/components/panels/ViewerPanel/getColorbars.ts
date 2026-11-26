@@ -79,7 +79,7 @@ export function getColorbars(state: {
       // mirrors OpenSeadragonLabelsRenderer._resolveDataTransfer
       .filter(
         (labels) =>
-          ProjectUtils.isObjectVisible(labels, layers) &&
+          ProjectUtils.mayBeVisible(labels, layers) &&
           tables.some(({ id }) => id === labels.dataSource.table),
       )
       .map((labels) => ({
@@ -91,7 +91,7 @@ export function getColorbars(state: {
         objectTableId: labels.dataSource.table,
       })),
     ...points
-      .filter((points) => ProjectUtils.isObjectVisible(points, layers))
+      .filter((points) => ProjectUtils.mayBeVisible(points, layers))
       .map((points) => ({
         objectKey: `points:${points.id}`,
         objectName: points.name,
@@ -103,7 +103,7 @@ export function getColorbars(state: {
     ...shapes
       .filter(
         (shapes) =>
-          ProjectUtils.isObjectVisible(shapes, layers) &&
+          ProjectUtils.mayBeVisible(shapes, layers) &&
           !isConstantlyHidden(shapes.shapeVisibility),
       )
       .flatMap((shapes) => [

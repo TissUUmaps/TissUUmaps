@@ -1,4 +1,4 @@
-import { type ProjectStoreState, ProjectUtils } from "@tissuumaps/core";
+import { ProjectUtils } from "@tissuumaps/core";
 
 import { startDataCaches } from "./data/cache";
 import {
@@ -26,15 +26,13 @@ const fallbackProjectUrl = "project.tm4";
  * Registers the built-in data providers and project providers, starts the data
  * caches and the plugin registry, registers the built-in plugins, marks the
  * project open once it has a source or data, collapses the expanded objects
- * whenever another project is loaded or the project is closed, loads every
- * object the first time it is visible, starts loading the initial projects,
- * and finally announces that the application has loaded. The projects are only
- * loading, not loaded, by the time this returns.
+ * whenever another project is loaded or the project is closed, starts loading
+ * the initial projects, and finally announces that the application has loaded.
+ * The projects are only loading, not loaded, by the time this returns.
  *
- * @returns A callback that cancels loading the initial projects, stops loading
- * the visible objects, collapsing the expanded objects and marking the project
- * open, and stops the plugin registry and the data caches, invoked on hot
- * module replacement
+ * @returns A callback that cancels loading the initial projects, stops
+ * collapsing the expanded objects and marking the project open, and stops the
+ * plugin registry and the data caches, invoked on hot module replacement
  */
 export function bootstrap(): () => void {
   enableBuiltInDataProviders();
@@ -44,13 +42,11 @@ export function bootstrap(): () => void {
   enableBuiltInPlugins();
   const stopMarkingProjectOpen = startMarkingProjectOpen();
   const stopCollapsingOnProjectSwitch = startCollapsingOnProjectSwitch();
-  const stopLoadingVisibleObjects = startLoadingVisibleObjects();
   const initialProjectsLoading = new AbortController();
   void loadInitialProjects({ signal: initialProjectsLoading.signal });
   notifyTissUUmapsLoaded();
   return () => {
     initialProjectsLoading.abort();
-    stopLoadingVisibleObjects();
     stopCollapsingOnProjectSwitch();
     stopMarkingProjectOpen();
     stopPluginRegistry();
@@ -97,78 +93,6 @@ function startCollapsingOnProjectSwitch(): () => void {
       });
     }
   });
-}
-
-/**
- * Loads every object the first time it is visible, i.e. adds it to the loaded
- * objects of its kind in the app store
- *
- * Whenever the project's layers or objects change, the visible objects are
- * added and the IDs of deleted objects are dropped. Whenever another project is
- * loaded or the project is closed, i.e. whenever the project's instance ID
- * changes, the loaded objects start over from the visible ones.
- *
- * @returns A callback that stops watching the project
- */
-function startLoadingVisibleObjects(): () => void {
-  function loadVisibleObjects(
-    projectState: ProjectStoreState,
-    prevProjectState?: ProjectStoreState,
-  ): void {
-    if (
-      prevProjectState !== undefined &&
-      projectState.instanceId === prevProjectState.instanceId &&
-      projectState.layers === prevProjectState.layers &&
-      projectState.images === prevProjectState.images &&
-      projectState.labels === prevProjectState.labels &&
-      projectState.points === prevProjectState.points &&
-      projectState.shapes === prevProjectState.shapes
-    ) {
-      return;
-    }
-    const projectSwitched =
-      prevProjectState !== undefined &&
-      projectState.instanceId !== prevProjectState.instanceId;
-    const appState = appStore.getState();
-    const { layers } = projectState;
-    const loadedImageIds = ProjectUtils.getLoadedObjectIds(
-      projectState.images,
-      layers,
-      projectSwitched ? [] : appState.loadedImageIds,
-    );
-    const loadedLabelsIds = ProjectUtils.getLoadedObjectIds(
-      projectState.labels,
-      layers,
-      projectSwitched ? [] : appState.loadedLabelsIds,
-    );
-    const loadedPointsIds = ProjectUtils.getLoadedObjectIds(
-      projectState.points,
-      layers,
-      projectSwitched ? [] : appState.loadedPointsIds,
-    );
-    const loadedShapesIds = ProjectUtils.getLoadedObjectIds(
-      projectState.shapes,
-      layers,
-      projectSwitched ? [] : appState.loadedShapesIds,
-    );
-    if (
-      loadedImageIds !== appState.loadedImageIds ||
-      loadedLabelsIds !== appState.loadedLabelsIds ||
-      loadedPointsIds !== appState.loadedPointsIds ||
-      loadedShapesIds !== appState.loadedShapesIds
-    ) {
-      // unchanged lists keep their identity, so their readers see no change
-      appStore.setState({
-        loadedImageIds,
-        loadedLabelsIds,
-        loadedPointsIds,
-        loadedShapesIds,
-      });
-    }
-  }
-
-  loadVisibleObjects(projectStore.getState());
-  return projectStore.subscribe(loadVisibleObjects);
 }
 
 /**

@@ -11,9 +11,11 @@ import {
 } from "@/components/controls/ObjectList";
 import { useAddShapesDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { shapesDataCache } from "@/data/cache";
 import { useShapesData } from "@/data/hooks/useData";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
+import { useDataStore } from "@/stores/data";
 import { useProjectStore } from "@/stores/project";
 
 import { ShapesAnnotationsWidget } from "./ShapesAnnotationsWidget";
@@ -62,11 +64,10 @@ type ShapesAccordionItemProps = {
 
 function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
   const shapesDataProviders = useAppStore((state) => state.shapesDataProviders);
-  const loadedShapesIds = useAppStore((state) => state.loadedShapesIds);
-  const setLoadedShapesIds = useAppStore((state) => state.setLoadedShapesIds);
 
   const updateShapes = useProjectStore((state) => state.updateShapes);
   const deleteShapes = useProjectStore((state) => state.deleteShapes);
+  const loaded = useDataStore((state) => state.shapesDataRefs.has(shapes.id));
 
   const shapesData = useShapesData(shapes.id);
 
@@ -98,10 +99,10 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
           onOpacityChange={(opacity) => updateShapes(shapes.id, { opacity })}
         />
       }
-      unloadDisabled={!loadedShapesIds.includes(shapes.id)}
+      unloadDisabled={!loaded}
       onUnload={() => {
         updateShapes(shapes.id, { visibility: false });
-        setLoadedShapesIds(loadedShapesIds.filter((id) => id !== shapes.id));
+        shapesDataCache.release(shapes.id);
       }}
       onDelete={() => deleteShapes(shapes.id)}
     >

@@ -174,11 +174,10 @@ In the TissUUmaps React app, absolute (`@/`) imports are used for imports across
 4. It registers the plugins shipped in `@tissuumaps/plugins` (`enableBuiltInPlugins` in `plugins.ts`).
 5. It marks the project open as soon as the project has a source or data.
 6. It collapses the expanded objects of the panels whenever another project is loaded or the project is closed, i.e. whenever the project store's `instanceId` changes.
-7. It loads every object the first time it is visible, by adding the visible objects to the app store's loaded objects (`loadedImageIds` etc.) whenever the project's layers or objects change. The loaded objects start over whenever the project store's `instanceId` changes.
-8. It _starts_ loading the initial projects (see [Project I/O](#project-io)).
-9. It dispatches a `tissuumaps-loaded` event on `window` (`events.ts`), after which other plugins register themselves (see [Plugins](./plugins.md)).
+7. It _starts_ loading the initial projects (see [Project I/O](#project-io)).
+8. It dispatches a `tissuumaps-loaded` event on `window` (`events.ts`), after which other plugins register themselves (see [Plugins](./plugins.md)).
 
-`bootstrap` returns a teardown function, which is invoked on hot module replacement. The teardown cancels loading the initial projects, stops loading the visible objects, collapsing the expanded objects and marking the project open, and stops the registry and the caches, in that order.
+`bootstrap` returns a teardown function, which is invoked on hot module replacement. The teardown cancels loading the initial projects, stops marking the project open and collapsing its expanded objects, and stops the registry and the caches, in that order.
 
 `App` lays out the built-in panels and the plugin panels (`usePluginPanels`) with Dockview, wrapped in the `DialogProvider`, and keeps Dockview's active panel in sync with the app store's `activePanelId` in both directions (`useActivePanelSync`).
 
@@ -221,7 +220,7 @@ A React context is split into two files: `context.ts` holds the context object a
 
 Four separate Zustand vanilla stores are used, one per file in `src/stores`, all typed in `@tissuumaps/core` (`types/stores`) so that plugins can consume them:
 
-- `appStore` - transient application state: workspace, whether a project is open, interaction mode, registered data providers, project providers and plugins, and the loaded objects
+- `appStore` - transient application state: workspace, whether a project is open, interaction mode, registered data providers, project providers and plugins
 - `dataStore` - derived state: a data reference (`DataRef`) per project object, reconciled by the data caches (see below); treat as read-only
 - `projectStore` - the loaded project (layers, images, labels, points, shapes, tables, maps, render options)
 - `settingsStore` - user settings, persisted across sessions
@@ -236,8 +235,8 @@ Loading and unloading of data is not driven by imperative actions. Instead, the 
 
 Two separate mechanisms drive the caches:
 
-- **Loading happens on demand**: `DataCache.load()` creates the cache entry for an object if necessary and subscribes to its ongoing load. Renderers call it through the per-type loaders of `useDataLoader` (`useImageDataLoader`, `useTableDataLoader`, ...). Components use the per-type hooks of `useData` instead (`useImageData`, `useTableData`, ...), which claim the data for as long as the component is mounted but read it back from `dataStore` rather than holding on to it themselves — so that a component never keeps using data whose entry the cache has meanwhile discarded. A load that all of its callers have aborted is cancelled again, and its entry discarded (see below). Of the images, labels, points and shapes, only the loaded ones (the app store's `loadedImageIds` etc.) are loaded this way: the viewer hands only those to the renderers, and the data hooks treat the others like objects that are not in the project. Loading thus follows visibility, as `bootstrap` adds every visible object to the loaded objects (see [App](#app)). Tables are loaded whenever a caller asks for them.
-- **Unloading is reconciled from state**: `startDataCaches()` (called from `bootstrap`) subscribes to `appStore` and `projectStore`, and every change re-runs `retainOnly()` on those caches whose inputs actually changed (the workspace, the project source, the registered data providers, the project's objects, or the loaded objects). `retainOnly()` is given the project's tables and its loaded images, labels, points and shapes, so an object that leaves the loaded objects no longer references its entry. It keeps entries that are still referenced and whose dependencies are unchanged, destroys all others, and never creates one. An entry that all of its objects have left is destroyed too: objects that resolve to its key but have not loaded it yet do not reference it, so nothing would ever reach it again.
+- **Loading happens on demand**: `DataCache.load()` creates the cache entry for an object if necessary and subscribes to its ongoing load. Renderers call it through the per-type loaders of `useDataLoader` (`useImageDataLoader`, `useTableDataLoader`, ...). Components use the per-type hooks of `useData` instead (`useImageData`, `useTableData`, ...), which claim the data for as long as the component is mounted but read it back from `dataStore` rather than holding on to it themselves — so that a component never keeps using data whose entry the cache has meanwhile discarded. A load that all of its callers have aborted is cancelled again, and its entry discarded (see below). Hidden images, labels, points and shapes are loaded only on first view: the viewer hands them to the renderers only once they have a `DataRef`, and the data hooks start no load for them.
+- **Unloading is reconciled from state**: `startDataCaches()` (called from `bootstrap`) subscribes to `appStore` and `projectStore`, and every change re-runs `retainOnly()` on those caches whose inputs actually changed (the workspace, the project source, the registered data providers, or the project's objects). `retainOnly()` keeps entries that are still referenced and whose dependencies are unchanged, destroys all others, and never creates one. An entry that all of its objects have left is destroyed too: objects that resolve to its key but have not loaded it yet do not reference it, so nothing would ever reach it again. The one imperative exception is `release()`, called by the Unload action after hiding the object: it drops the object's reference, and destroys the entry once no object references it.
 
 The caches are implemented as follows:
 

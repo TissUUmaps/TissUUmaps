@@ -11,8 +11,10 @@ import {
 } from "@/components/controls/ObjectList";
 import { useAddLabelsDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { labelsDataCache } from "@/data/cache";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
+import { useDataStore } from "@/stores/data";
 import { useProjectStore } from "@/stores/project";
 
 import { LabelsAnnotationsWidget } from "./LabelsAnnotationsWidget";
@@ -61,11 +63,10 @@ type LabelsAccordionItemProps = {
 
 function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
   const labelsDataProviders = useAppStore((state) => state.labelsDataProviders);
-  const loadedLabelsIds = useAppStore((state) => state.loadedLabelsIds);
-  const setLoadedLabelsIds = useAppStore((state) => state.setLoadedLabelsIds);
 
   const updateLabels = useProjectStore((state) => state.updateLabels);
   const deleteLabels = useProjectStore((state) => state.deleteLabels);
+  const loaded = useDataStore((state) => state.labelsDataRefs.has(labels.id));
 
   const [activeSettingsCategory, setActiveSettingsCategory] =
     useState<LabelsSettingsCategory | null>(null);
@@ -95,10 +96,10 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
           onOpacityChange={(opacity) => updateLabels(labels.id, { opacity })}
         />
       }
-      unloadDisabled={!loadedLabelsIds.includes(labels.id)}
+      unloadDisabled={!loaded}
       onUnload={() => {
         updateLabels(labels.id, { visibility: false });
-        setLoadedLabelsIds(loadedLabelsIds.filter((id) => id !== labels.id));
+        labelsDataCache.release(labels.id);
       }}
       onDelete={() => deleteLabels(labels.id)}
     >

@@ -9,9 +9,11 @@ import {
 } from "@/components/controls/ObjectList";
 import { useAddImageDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { imageDataCache } from "@/data/cache";
 import { useImageData } from "@/data/hooks/useData";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
+import { useDataStore } from "@/stores/data";
 import { useProjectStore } from "@/stores/project";
 
 import { ChannelSettingsWidget } from "./ChannelSettingsWidget";
@@ -53,11 +55,10 @@ type ImageAccordionItemProps = {
 
 function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
   const imageDataProviders = useAppStore((state) => state.imageDataProviders);
-  const loadedImageIds = useAppStore((state) => state.loadedImageIds);
-  const setLoadedImageIds = useAppStore((state) => state.setLoadedImageIds);
 
   const updateImage = useProjectStore((state) => state.updateImage);
   const deleteImage = useProjectStore((state) => state.deleteImage);
+  const loaded = useDataStore((state) => state.imageDataRefs.has(image.id));
 
   const imageData = useImageData(image.id);
   const sizeC = imageData?.getSizeC();
@@ -87,10 +88,10 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
           onOpacityChange={(opacity) => updateImage(image.id, { opacity })}
         />
       }
-      unloadDisabled={!loadedImageIds.includes(image.id)}
+      unloadDisabled={!loaded}
       onUnload={() => {
         updateImage(image.id, { visibility: false });
-        setLoadedImageIds(loadedImageIds.filter((id) => id !== image.id));
+        imageDataCache.release(image.id);
       }}
       onDelete={() => deleteImage(image.id)}
     >

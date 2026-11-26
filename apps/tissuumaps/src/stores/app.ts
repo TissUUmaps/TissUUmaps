@@ -18,8 +18,8 @@ import "./zustand";
  *
  * This comprises the open workspace, whether a project is open,
  * the current interaction mode, the hovered channel preview, the registered
- * data providers and project providers, the registered plugins, the active panel, the expanded
- * objects of each panel, and the loaded objects.
+ * data providers and project providers, the registered plugins, the active panel, and the expanded
+ * objects of each panel.
  * The plugins are written by the plugin registry, which owns their lifecycle,
  * rather than through an action.
  */
@@ -40,10 +40,6 @@ export const appStore: AppStoreApi = createStore<AppStore>()(
       setExpandedPointsIds: (expandedPointsIds) => set({ expandedPointsIds }),
       setExpandedShapesIds: (expandedShapesIds) => set({ expandedShapesIds }),
       setExpandedTableIds: (expandedTableIds) => set({ expandedTableIds }),
-      setLoadedImageIds: (loadedImageIds) => set({ loadedImageIds }),
-      setLoadedLabelsIds: (loadedLabelsIds) => set({ loadedLabelsIds }),
-      setLoadedPointsIds: (loadedPointsIds) => set({ loadedPointsIds }),
-      setLoadedShapesIds: (loadedShapesIds) => set({ loadedShapesIds }),
       registerImageDataProvider: (type, dataProvider) =>
         set((draft) => {
           draft.imageDataProviders.set(type, dataProvider);
@@ -86,7 +82,7 @@ export function useAppStore<T>(selector: (state: AppStore) => T): T {
 /**
  * Creates the initial {@link appStore} state, with nothing registered, no
  * workspace open, no project open, the project panel active and nothing
- * expanded or loaded
+ * expanded
  */
 function createInitialAppStoreState(): AppStoreState {
   return {
@@ -108,9 +104,5 @@ function createInitialAppStoreState(): AppStoreState {
     expandedPointsIds: [],
     expandedShapesIds: [],
     expandedTableIds: [],
-    loadedImageIds: [],
-    loadedLabelsIds: [],
-    loadedPointsIds: [],
-    loadedShapesIds: [],
   };
 }
