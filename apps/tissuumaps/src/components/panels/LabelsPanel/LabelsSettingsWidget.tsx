@@ -2,10 +2,7 @@ import { EyeIcon, PaletteIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import {
-  type ColorConfig,
   type Labels,
-  type OpacityConfig,
-  type VisibilityConfig,
   defaultLabelColor,
   labelsDefaults,
 } from "@tissuumaps/core";
@@ -18,13 +15,11 @@ import { OpacityIcon } from "@/components/widgets/SettingsWidget/OpacityIcon";
 import {
   describeColorWithoutColumn,
   findStyleBy,
-  followColumn,
-  getFollowState,
+  getFollower,
   isSameColumnStyleBy,
   readStyleBy,
   withColorColumn,
   withFromColumn,
-  withoutColumn,
 } from "@/components/widgets/SettingsWidget/styleBy";
 import { projectStore, useProjectStore } from "@/stores/project";
 
@@ -111,55 +106,37 @@ export function LabelsSettingsWidget({
           return;
         }
         const currentTableId = current.dataSource.table ?? null;
-        const followState = getFollowState(
+        const follow = getFollower(
           readStyleBys(current),
           newStyleBy,
           propertyNames,
         );
         updateLabels(current.id, {
-          labelColor: followColumn(
+          labelColor: follow(
+            LabelsSettingsCategory.labelColor,
             current.labelColor,
-            followState(LabelsSettingsCategory.labelColor),
-            {
-              withColumn: ({ column, columnType }) =>
-                withColorColumn(
-                  current.labelColor,
-                  column,
-                  columnType,
-                  currentTableId,
-                ),
-              withoutColumn: () =>
-                withoutColumn<ColorConfig>(
-                  current.labelColor,
-                  labelsDefaults.labelColor,
-                ),
-            },
+            labelsDefaults.labelColor,
+            ({ column, columnType }) =>
+              withColorColumn(
+                current.labelColor,
+                column,
+                columnType,
+                currentTableId,
+              ),
           ),
-          labelOpacity: followColumn(
+          labelOpacity: follow(
+            LabelsSettingsCategory.labelOpacity,
             current.labelOpacity,
-            followState(LabelsSettingsCategory.labelOpacity),
-            {
-              withColumn: ({ column }) =>
-                withFromColumn(current.labelOpacity, column, currentTableId),
-              withoutColumn: () =>
-                withoutColumn<OpacityConfig>(
-                  current.labelOpacity,
-                  labelsDefaults.labelOpacity,
-                ),
-            },
+            labelsDefaults.labelOpacity,
+            ({ column }) =>
+              withFromColumn(current.labelOpacity, column, currentTableId),
           ),
-          labelVisibility: followColumn(
+          labelVisibility: follow(
+            LabelsSettingsCategory.labelVisibility,
             current.labelVisibility,
-            followState(LabelsSettingsCategory.labelVisibility),
-            {
-              withColumn: ({ column }) =>
-                withFromColumn(current.labelVisibility, column, currentTableId),
-              withoutColumn: () =>
-                withoutColumn<VisibilityConfig>(
-                  current.labelVisibility,
-                  labelsDefaults.labelVisibility,
-                ),
-            },
+            labelsDefaults.labelVisibility,
+            ({ column }) =>
+              withFromColumn(current.labelVisibility, column, currentTableId),
           ),
         });
       }}

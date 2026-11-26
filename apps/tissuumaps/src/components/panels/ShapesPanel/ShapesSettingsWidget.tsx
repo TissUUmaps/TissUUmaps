@@ -2,10 +2,7 @@ import { EyeIcon, PaletteIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import {
-  type ColorConfig,
-  type OpacityConfig,
   type Shapes,
-  type VisibilityConfig,
   defaultShapeFillColor,
   defaultShapeStrokeColor,
   shapesDefaults,
@@ -19,13 +16,11 @@ import { OpacityIcon } from "@/components/widgets/SettingsWidget/OpacityIcon";
 import {
   describeColorWithoutColumn,
   findStyleBy,
-  followColumn,
-  getFollowState,
+  getFollower,
   isSameColumnStyleBy,
   readStyleBy,
   withColorColumn,
   withFromColumn,
-  withoutColumn,
 } from "@/components/widgets/SettingsWidget/styleBy";
 import { projectStore, useProjectStore } from "@/stores/project";
 
@@ -199,142 +194,89 @@ export function ShapesSettingsWidget({
           return;
         }
         const currentTableId = current.dataSource.table ?? null;
-        const followState = getFollowState(
+        const follow = getFollower(
           readStyleBys(current),
           newStyleBy,
           propertyNames,
         );
-
         updateShapes(current.id, {
-          shapeFillColor: followColumn(
+          shapeFillColor: follow(
+            ShapesSettingsCategory.shapeFillColor,
             current.shapeFillColor,
-            followState(ShapesSettingsCategory.shapeFillColor),
-            {
-              withColumn: ({ column, columnType }) =>
-                withColorColumn(
-                  current.shapeFillColor,
-                  column,
-                  columnType,
-                  currentTableId,
-                ),
-              withoutColumn: () =>
-                withoutColumn<ColorConfig>(
-                  current.shapeFillColor,
-                  shapesDefaults.shapeFillColor,
-                ),
-            },
+            shapesDefaults.shapeFillColor,
+            ({ column, columnType }) =>
+              withColorColumn(
+                current.shapeFillColor,
+                column,
+                columnType,
+                currentTableId,
+              ),
           ),
-          shapeFillOpacity: followColumn(
+          shapeFillOpacity: follow(
+            ShapesSettingsCategory.shapeFillOpacity,
             current.shapeFillOpacity,
-            followState(ShapesSettingsCategory.shapeFillOpacity),
-            {
-              withColumn: ({ column }) =>
-                withFromColumn(
-                  current.shapeFillOpacity,
-                  column,
-                  currentTableId,
-                ),
-              withoutColumn: () =>
-                withoutColumn<OpacityConfig>(
-                  current.shapeFillOpacity,
-                  shapesDefaults.shapeFillOpacity,
-                ),
-            },
+            shapesDefaults.shapeFillOpacity,
+            ({ column }) =>
+              withFromColumn(current.shapeFillOpacity, column, currentTableId),
           ),
-          shapeFillVisibility: followColumn(
+          shapeFillVisibility: follow(
+            ShapesSettingsCategory.shapeFillVisibility,
             current.shapeFillVisibility,
-            followState(ShapesSettingsCategory.shapeFillVisibility),
-            {
-              withColumn: ({ column }) =>
-                withFromColumn(
-                  current.shapeFillVisibility,
-                  column,
-                  currentTableId,
-                ),
-              withoutColumn: () =>
-                withoutColumn<VisibilityConfig>(
-                  current.shapeFillVisibility,
-                  shapesDefaults.shapeFillVisibility,
-                ),
-            },
+            shapesDefaults.shapeFillVisibility,
+            ({ column }) =>
+              withFromColumn(
+                current.shapeFillVisibility,
+                column,
+                currentTableId,
+              ),
           ),
-          shapeStrokeColor: followColumn(
+          shapeStrokeColor: follow(
+            ShapesSettingsCategory.shapeStrokeColor,
             current.shapeStrokeColor,
-            followState(ShapesSettingsCategory.shapeStrokeColor),
-            {
-              withColumn: ({ column, columnType }) =>
-                withColorColumn(
-                  current.shapeStrokeColor,
-                  column,
-                  columnType,
-                  currentTableId,
-                ),
-              withoutColumn: () =>
-                withoutColumn<ColorConfig>(
-                  current.shapeStrokeColor,
-                  shapesDefaults.shapeStrokeColor,
-                ),
-            },
+            shapesDefaults.shapeStrokeColor,
+            ({ column, columnType }) =>
+              withColorColumn(
+                current.shapeStrokeColor,
+                column,
+                columnType,
+                currentTableId,
+              ),
           ),
-          shapeStrokeOpacity: followColumn(
+          shapeStrokeOpacity: follow(
+            ShapesSettingsCategory.shapeStrokeOpacity,
             current.shapeStrokeOpacity,
-            followState(ShapesSettingsCategory.shapeStrokeOpacity),
-            {
-              withColumn: ({ column }) =>
-                withFromColumn(
-                  current.shapeStrokeOpacity,
-                  column,
-                  currentTableId,
-                ),
-              withoutColumn: () =>
-                withoutColumn<OpacityConfig>(
-                  current.shapeStrokeOpacity,
-                  shapesDefaults.shapeStrokeOpacity,
-                ),
-            },
+            shapesDefaults.shapeStrokeOpacity,
+            ({ column }) =>
+              withFromColumn(
+                current.shapeStrokeOpacity,
+                column,
+                currentTableId,
+              ),
           ),
-          shapeStrokeVisibility: followColumn(
+          shapeStrokeVisibility: follow(
+            ShapesSettingsCategory.shapeStrokeVisibility,
             current.shapeStrokeVisibility,
-            followState(ShapesSettingsCategory.shapeStrokeVisibility),
-            {
-              withColumn: ({ column }) =>
-                withFromColumn(
-                  current.shapeStrokeVisibility,
-                  column,
-                  currentTableId,
-                ),
-              withoutColumn: () =>
-                withoutColumn<VisibilityConfig>(
-                  current.shapeStrokeVisibility,
-                  shapesDefaults.shapeStrokeVisibility,
-                ),
-            },
+            shapesDefaults.shapeStrokeVisibility,
+            ({ column }) =>
+              withFromColumn(
+                current.shapeStrokeVisibility,
+                column,
+                currentTableId,
+              ),
           ),
-          shapeOpacity: followColumn(
+          shapeOpacity: follow(
+            ShapesSettingsCategory.shapeOpacity,
             current.shapeOpacity,
-            followState(ShapesSettingsCategory.shapeOpacity),
-            {
-              withColumn: ({ column }) =>
-                withFromColumn(current.shapeOpacity, column, currentTableId),
-              withoutColumn: () =>
-                withoutColumn<OpacityConfig>(
-                  current.shapeOpacity,
-                  shapesDefaults.shapeOpacity,
-                ),
-            },
+            shapesDefaults.shapeOpacity,
+            ({ column }) =>
+              withFromColumn(current.shapeOpacity, column, currentTableId),
           ),
-          shapeVisibility: followColumn(
+          shapeVisibility: follow(
+            ShapesSettingsCategory.shapeVisibility,
             current.shapeVisibility,
-            followState(ShapesSettingsCategory.shapeVisibility),
-            {
-              withColumn: ({ column }) =>
-                withFromColumn(current.shapeVisibility, column, currentTableId),
-              withoutColumn: () =>
-                withoutColumn<VisibilityConfig>(
-                  current.shapeVisibility,
-                  shapesDefaults.shapeVisibility,
-                ),
-            },
+            shapesDefaults.shapeVisibility,
+            ({ column }) =>
+              withFromColumn(current.shapeVisibility, column, currentTableId),
           ),
         });
       }}

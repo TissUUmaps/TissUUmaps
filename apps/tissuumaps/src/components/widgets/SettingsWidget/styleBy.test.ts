@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   type ColorConfig,
+  type Config,
   Marker,
   type MarkerConfig,
   type SizeConfig,
@@ -9,13 +10,11 @@ import {
   pointsDefaults,
 } from "@tissuumaps/core";
 
+import type { SettingsWidgetPart, SettingsWidgetProperty } from ".";
 import {
-  type StylePart,
-  type StyleProperty,
   describeColorWithoutColumn,
   findStyleBy,
-  followColumn,
-  getFollowState,
+  getFollower,
   getFollowingNames,
   getPartToggledNames,
   getToggledNames,
@@ -26,7 +25,6 @@ import {
   withColorColumn,
   withFromColumn,
   withMarkerColumn,
-  withoutColumn,
 } from "./styleBy";
 
 const white = { r: 255, g: 255, b: 255 };
@@ -195,30 +193,6 @@ describe("withColorColumn", () => {
   });
 });
 
-describe("withoutColumn for colors", () => {
-  it("returns to the default's color source, keeping its branch", () => {
-    expect(
-      withoutColumn<ColorConfig>(
-        {
-          constant: { value: { r: 1, g: 2, b: 3 } },
-          source: "groupBy",
-          groupBy: { column: "gene", map: undefined },
-        } as ColorConfig,
-        pointsDefaults.pointColor,
-      ),
-    ).toMatchObject({
-      source: "constant",
-      constant: { value: { r: 1, g: 2, b: 3 } },
-    });
-    expect(
-      withoutColumn<ColorConfig>(
-        { groupBy: { column: "gene", map: undefined } },
-        labelsDefaults.labelColor,
-      ),
-    ).toMatchObject({ source: "random", random: { palette: "distinct" } });
-  });
-});
-
 describe("findStyleBy", () => {
   it("follows the first column, else the first property", () => {
     const gene = { column: "gene", columnType: "categorical" } as const;
@@ -283,10 +257,67 @@ describe("withFromColumn", () => {
   });
 });
 
-describe("withoutColumn", () => {
+describe("getFollower", () => {
+  const gene = { column: "gene", columnType: "categorical" } as const;
+  const qv = { column: "qv", columnType: "numerical" } as const;
+  const notFollowing = () => {
+    throw new Error("The property does not follow the column");
+  };
+
+  /**
+   * @returns The configuration of a property that stops following the column
+   * of the widget
+   */
+  const stopFollowing = <TConfig extends Config<string>>(
+    config: TConfig,
+    defaultConfig: TConfig,
+  ) =>
+    getFollower({ property: gene }, null, [])(
+      "property",
+      config,
+      defaultConfig,
+      notFollowing,
+    );
+
+  it("follows the new column with the named properties only", () => {
+    const follow = getFollower({ color: gene, marker: gene, size: null }, qv, [
+      "color",
+    ]);
+    const color: ColorConfig = { constant: { value: white } };
+    expect(
+      follow(
+        "color",
+        color,
+        pointsDefaults.pointColor,
+        ({ column, columnType }) =>
+          withColorColumn(color, column, columnType, "t1"),
+      ),
+    ).toMatchObject({ source: "from", from: { column: "qv" } });
+    const marker = {
+      source: "groupBy",
+      constant: { value: Marker.Cross },
+      groupBy: { column: "gene", map: undefined },
+    } as MarkerConfig;
+    expect(
+      follow("marker", marker, pointsDefaults.pointMarker, notFollowing),
+    ).toMatchObject({ source: "constant" });
+    const size: SizeConfig = { constant: { value: 3 } };
+    expect(follow("size", size, pointsDefaults.pointSize, notFollowing)).toBe(
+      size,
+    );
+  });
+
+  it("does not count a property on another column as following", () => {
+    const follow = getFollower({ color: gene, size: qv }, null, []);
+    const size = { source: "from", from: { column: "qv" } } as SizeConfig;
+    expect(follow("size", size, pointsDefaults.pointSize, notFollowing)).toBe(
+      size,
+    );
+  });
+
   it("returns to the constant, keeping the other branches", () => {
     expect(
-      withoutColumn<MarkerConfig>(
+      stopFollowing<MarkerConfig>(
         {
           source: "groupBy",
           constant: { value: Marker.Cross },
@@ -300,7 +331,7 @@ describe("withoutColumn", () => {
       groupBy: { column: "leiden", map: "m1" },
     });
     expect(
-      withoutColumn<SizeConfig>(
+      stopFollowing<SizeConfig>(
         { source: "from", from: { column: "area" } },
         pointsDefaults.pointSize,
       ),
@@ -309,79 +340,73 @@ describe("withoutColumn", () => {
       constant: pointsDefaults.pointSize.constant,
     });
   });
-});
 
-describe("getFollowState", () => {
-  const gene = { column: "gene", columnType: "categorical" } as const;
-  const qv = { column: "qv", columnType: "numerical" } as const;
-
-  it("follows the new column with the named properties only", () => {
-    const followState = getFollowState(
-      { color: gene, marker: gene, size: null },
-      qv,
-      ["color"],
-    );
-    expect(followState("color")).toEqual({ column: qv, wasFollowing: true });
-    expect(followState("marker")).toEqual({ column: null, wasFollowing: true });
-    expect(followState("size")).toEqual({ column: null, wasFollowing: false });
-  });
-
-  it("does not count a property on another column as following", () => {
-    const followState = getFollowState({ color: gene, opacity: qv }, null, []);
-    expect(followState("opacity")).toEqual({
-      column: null,
-      wasFollowing: false,
+  it("returns to the default's color source, keeping its branch", () => {
+    expect(
+      stopFollowing<ColorConfig>(
+        {
+          constant: { value: { r: 1, g: 2, b: 3 } },
+          source: "groupBy",
+          groupBy: { column: "gene", map: undefined },
+        } as ColorConfig,
+        pointsDefaults.pointColor,
+      ),
+    ).toMatchObject({
+      source: "constant",
+      constant: { value: { r: 1, g: 2, b: 3 } },
     });
-  });
-});
-
-describe("followColumn", () => {
-  const options = {
-    withColumn: ({ column }: { column: string }) => `with ${column}`,
-    withoutColumn: () => "without",
-  };
-  const qv = { column: "qv", columnType: "numerical" } as const;
-
-  it("follows a column, stops following, or keeps the configuration", () => {
     expect(
-      followColumn("config", { column: qv, wasFollowing: false }, options),
-    ).toBe("with qv");
-    expect(
-      followColumn("config", { column: null, wasFollowing: true }, options),
-    ).toBe("without");
-    expect(
-      followColumn("config", { column: null, wasFollowing: false }, options),
-    ).toBe("config");
+      stopFollowing<ColorConfig>(
+        { groupBy: { column: "gene", map: undefined } },
+        labelsDefaults.labelColor,
+      ),
+    ).toMatchObject({ source: "random", random: { palette: "distinct" } });
   });
 });
 
 describe("style items", () => {
   const color = {
     name: "color",
+    label: "",
+    icon: null,
     columnTypes: ["categorical", "numerical"],
     isOn: true,
-  } satisfies StyleProperty;
+  } satisfies SettingsWidgetProperty;
   const marker = {
     name: "marker",
+    label: "",
+    icon: null,
     columnTypes: ["categorical"],
     isOn: true,
-  } satisfies StyleProperty;
+  } satisfies SettingsWidgetProperty;
   const size = {
     name: "size",
+    label: "",
+    icon: null,
     columnTypes: ["numerical"],
     isOn: false,
-  } satisfies StyleProperty;
+  } satisfies SettingsWidgetProperty;
   const fill = {
     name: "fill",
+    label: "",
+    icon: null,
     properties: [
       {
         name: "fillColor",
+        label: "",
+        icon: null,
         columnTypes: ["categorical", "numerical"],
         isOn: false,
       },
-      { name: "fillOpacity", columnTypes: ["numerical"], isOn: false },
+      {
+        name: "fillOpacity",
+        label: "",
+        icon: null,
+        columnTypes: ["numerical"],
+        isOn: false,
+      },
     ],
-  } satisfies StylePart;
+  } satisfies SettingsWidgetPart;
 
   it("keeps the properties that can follow a new column type", () => {
     expect(getFollowingNames([color, marker, size], "numerical")).toEqual([
@@ -412,7 +437,7 @@ describe("style items", () => {
         { ...fill.properties[0], isOn: false },
         { ...fill.properties[1], isOn: true },
       ],
-    } satisfies StylePart;
+    } satisfies SettingsWidgetPart;
     expect(getToggledNames([fillOn, size], ["fill"], "numerical")).toEqual([
       "fillOpacity",
     ]);

@@ -16,7 +16,6 @@ import { StyleByPicker } from "./StyleByPicker";
 import { StyleRow } from "./StyleRow";
 import {
   type StyleBy,
-  type StyleProperty,
   getFollowingNames,
   getPartToggledNames,
   getToggledNames,
@@ -29,7 +28,19 @@ import { useStyleBy } from "./useStyleBy";
  * A property of an object that can follow the column of the settings widget,
  * with its toggle and options
  */
-export type SettingsWidgetProperty = StyleProperty & {
+export type SettingsWidgetProperty = {
+  /** Tells the property apart from the other properties of the object */
+  name: string;
+
+  /**
+   * The column types the property can follow, e.g. only categorical columns
+   * for markers
+   */
+  columnTypes: TableColumnType[];
+
+  /** Whether the property follows the column of the settings widget */
+  isOn: boolean;
+
   /** The name shown to the user, e.g. "Color" */
   label: string;
 
@@ -58,10 +69,10 @@ export type SettingsWidgetProperty = StyleProperty & {
 /**
  * The properties of a part of an object, e.g. the color, opacity and
  * visibility of the fill of shapes, toggled together under the part's name
- * (see {@link StylePart})
  *
- * Its own toggles are shown for numerical columns only; for categorical
- * columns, the part stands for its first property.
+ * The part follows the column while any of its properties does. Its own
+ * toggles are shown for numerical columns only; for categorical columns, the
+ * part stands for its first property.
  */
 export type SettingsWidgetPart = {
   /** Tells the part apart from the properties of the object */
@@ -77,7 +88,8 @@ export type SettingsWidgetPart = {
   properties: [SettingsWidgetProperty, ...SettingsWidgetProperty[]];
 };
 
-type SettingsWidgetItem = SettingsWidgetProperty | SettingsWidgetPart;
+/** A property or a part of the settings widget */
+export type SettingsWidgetItem = SettingsWidgetProperty | SettingsWidgetPart;
 
 export type SettingsWidgetProps = {
   /** The ID of the object's own table, if it has one */

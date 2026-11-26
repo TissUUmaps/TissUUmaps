@@ -15,25 +15,6 @@ import type { StyleBy } from "./styleBy";
  */
 const maxCategoryCount = 1000;
 
-/** The state of styling by a column of the object's own table */
-export type StyleByState = {
-  /** Whether the column is categorical, once it is known */
-  isCategorical: boolean | null;
-
-  /** Whether a column is being loaded for a pick or a switch */
-  isPending: boolean;
-
-  /**
-   * Styles by a column, or by none; categorical or numerical follows from
-   * the type of the column's values. Resolves to whether it applied, `false`
-   * when cancelled, failed or aborted.
-   */
-  pick: (column: string | null) => Promise<boolean>;
-
-  /** Switches the column between categorical and numerical */
-  setColumnType: (columnType: TableColumnType) => void;
-};
-
 /**
  * Picks the column to style by and switches between categorical and
  * numerical, loading what that takes from the object's own table
@@ -49,13 +30,15 @@ export type StyleByState = {
  * @param tableId - The ID of the object's own table, if any
  * @param styleBy - The column the object is styled by, if any
  * @param onStyleByChange - Writes the column the object is styled by, if any
- * @returns The state of styling by a column
+ * @returns Whether the column is categorical once known, whether a pick or
+ * switch is loading, `pick`, which styles by a column or none and resolves to
+ * whether it applied, and `setColumnType`
  */
 export function useStyleBy(
   tableId: string | null,
   styleBy: StyleBy | null,
   onStyleByChange: (styleBy: StyleBy | null) => void,
-): StyleByState {
+) {
   const loadTableData = useLazyTableData(tableId);
   const confirm = useConfirmDialog();
   const alert = useAlertDialog();

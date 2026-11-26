@@ -12,11 +12,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+/** The name of each column type, as shown to the user */
 const columnTypeLabels: Record<TableColumnType, string> = {
   categorical: "Categorical",
   numerical: "Numerical",
 };
 
+/** The icon of each column type */
 const columnTypeIcons: Record<TableColumnType, typeof TagIcon> = {
   categorical: TagIcon,
   numerical: HashIcon,
@@ -41,6 +43,8 @@ export function ColumnTypeMenu({
   disabled = false,
 }: ColumnTypeMenuProps) {
   const ActiveIcon = columnTypeIcons[value];
+  const { categorical: CategoricalIcon, numerical: NumericalIcon } =
+    columnTypeIcons;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -63,7 +67,7 @@ export function ColumnTypeMenu({
             closeOnClick
             className="flex-wrap"
           >
-            <TagIcon />
+            <CategoricalIcon />
             {columnTypeLabels.categorical}
             <DropdownMenuItemDescription>
               Each value gets its own color or marker
@@ -75,7 +79,7 @@ export function ColumnTypeMenu({
             closeOnClick
             className="flex-wrap"
           >
-            <HashIcon />
+            <NumericalIcon />
             {columnTypeLabels.numerical}
             <DropdownMenuItemDescription>
               {isCategoricalOnly

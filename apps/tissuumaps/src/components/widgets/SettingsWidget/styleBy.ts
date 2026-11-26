@@ -14,6 +14,12 @@ import {
   isRandomConfig,
 } from "@tissuumaps/core";
 
+import type {
+  SettingsWidgetItem,
+  SettingsWidgetPart,
+  SettingsWidgetProperty,
+} from ".";
+
 /** ID of the color palette of a newly colored categorical column */
 const defaultCategoricalColorPalette = defaultLabelColorPalette;
 
@@ -120,98 +126,49 @@ export function isSameColumnStyleBy(
   );
 }
 
-/** What a property of the settings widget does when the widget is changed */
-export type FollowState = {
-  /** The column that the property follows from now on, if any */
-  column: StyleBy | null;
-
-  /** Whether the property followed the column of the widget until now */
-  wasFollowing: boolean;
-};
-
 /**
- * Returns what the properties of the settings widget do when the widget is
- * changed
+ * Returns how the properties of the settings widget follow its change: a
+ * named property follows the new column, a property that stops following the
+ * widget's column returns to its default, and any other is left unchanged
  *
  * @param previousStyleBys - The column each property followed until now, if
  * any, by name, in the order of the widget
  * @param styleBy - The column the widget follows from now on, if any
  * @param propertyNames - The names of the properties that follow it
- * @returns What a property does, by name
+ * @returns A function that returns the new configuration of a property, given
+ * its name, configuration, default configuration, and `withColumn`, which
+ * returns the configuration that follows a column
  */
-export function getFollowState<TName extends string>(
+export function getFollower<TName extends string>(
   previousStyleBys: Record<TName, StyleBy | null>,
   styleBy: StyleBy | null,
   propertyNames: string[],
-): (name: TName) => FollowState {
+) {
   const previousStyleBy = findStyleBy(
     Object.values<StyleBy | null>(previousStyleBys),
   );
-  return (name) => ({
-    column: propertyNames.includes(name) ? styleBy : null,
-    wasFollowing: isSameColumnStyleBy(previousStyleBys[name], previousStyleBy),
-  });
+  return <TConfig extends Config<string>>(
+    name: TName,
+    config: TConfig,
+    defaultConfig: TConfig,
+    withColumn: (styleBy: StyleBy) => TConfig,
+  ): TConfig => {
+    if (styleBy !== null && propertyNames.includes(name)) {
+      return withColumn(styleBy);
+    }
+    return isSameColumnStyleBy(previousStyleBys[name], previousStyleBy)
+      ? withoutColumn(config, defaultConfig)
+      : config;
+  };
 }
-
-/**
- * Returns the configuration of a property after the settings widget changed: it
- * follows its new column, or returns to its default if it stops following
- * the widget's column; anything else is left unchanged
- *
- * @param config - The configuration of the property
- * @param state - What the property does (see {@link getFollowState})
- * @param options - `withColumn` and `withoutColumn` return the configuration
- * that follows a column, or none
- * @returns The configuration of the property
- */
-export function followColumn<TConfig>(
-  config: TConfig,
-  state: FollowState,
-  options: {
-    withColumn: (column: StyleBy) => TConfig;
-    withoutColumn: () => TConfig;
-  },
-): TConfig {
-  if (state.column !== null) {
-    return options.withColumn(state.column);
-  }
-  return state.wasFollowing ? options.withoutColumn() : config;
-}
-
-/** A property that can follow the column of the settings widget */
-export type StyleProperty = {
-  /** Tells the property apart from the other properties of the object */
-  name: string;
-
-  /**
-   * The column types the property can follow, e.g. only categorical columns
-   * for markers
-   */
-  columnTypes: TableColumnType[];
-
-  /** Whether the property follows the column of the settings widget */
-  isOn: boolean;
-};
-
-/**
- * The properties of a part of an object, e.g. the color, opacity and
- * visibility of the fill of shapes, toggled together
- *
- * The part follows the column while any of its properties does.
- */
-export type StylePart = {
-  /** Tells the part apart from the properties of the object */
-  name: string;
-
-  /** The properties of the part; the first one follows a newly toggled part */
-  properties: [StyleProperty, ...StyleProperty[]];
-};
 
 /**
  * @param item - A property or a part
  * @returns The properties of the item: the property, or those of the part
  */
-function getStyleProperties(item: StyleProperty | StylePart): StyleProperty[] {
+function getStyleProperties(
+  item: SettingsWidgetItem,
+): SettingsWidgetProperty[] {
   return "properties" in item ? item.properties : [item];
 }
 
@@ -219,7 +176,7 @@ function getStyleProperties(item: StyleProperty | StylePart): StyleProperty[] {
  * @param item - A property or a part
  * @returns Whether the item follows the column
  */
-export function isStyleItemOn(item: StyleProperty | StylePart): boolean {
+export function isStyleItemOn(item: SettingsWidgetItem): boolean {
   return getStyleProperties(item).some(({ isOn }) => isOn);
 }
 
@@ -229,7 +186,7 @@ export function isStyleItemOn(item: StyleProperty | StylePart): boolean {
  * @returns Whether the item can follow a column of the type
  */
 export function isStyleItemSupported(
-  item: StyleProperty | StylePart,
+  item: SettingsWidgetItem,
   columnType: TableColumnType,
 ): boolean {
   return getStyleProperties(item).some(({ columnTypes }) =>
@@ -247,7 +204,7 @@ export function isStyleItemSupported(
  * @returns The names of the properties that follow
  */
 export function getFollowingNames(
-  items: (StyleProperty | StylePart)[],
+  items: SettingsWidgetItem[],
   columnType: TableColumnType,
 ): string[] {
   const supported = items
@@ -272,7 +229,7 @@ export function getFollowingNames(
  * toggled on, since the column always styles something
  */
 export function getToggledNames(
-  items: (StyleProperty | StylePart)[],
+  items: SettingsWidgetItem[],
   toggledNames: string[],
   columnType: TableColumnType,
 ): string[] | null {
@@ -303,8 +260,8 @@ export function getToggledNames(
  * since the column always styles something
  */
 export function getPartToggledNames(
-  items: (StyleProperty | StylePart)[],
-  part: StylePart,
+  items: SettingsWidgetItem[],
+  part: SettingsWidgetPart,
   toggledNames: string[],
 ): string[] | null {
   const names = items.flatMap((item) =>
@@ -448,7 +405,7 @@ export function withFromColumn<TConfig extends Config<string>>(
  * @returns The updated configuration
  * @throws Error if the default configuration is not a constant or random one
  */
-export function withoutColumn<TConfig extends Config<string>>(
+function withoutColumn<TConfig extends Config<string>>(
   config: TConfig,
   defaultConfig: TConfig,
 ): TConfig {

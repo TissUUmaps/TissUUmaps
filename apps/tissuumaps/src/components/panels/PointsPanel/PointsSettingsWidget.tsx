@@ -2,12 +2,7 @@ import { EyeIcon, PaletteIcon, ShapesIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import {
-  type ColorConfig,
-  type MarkerConfig,
-  type OpacityConfig,
   type Points,
-  type SizeConfig,
-  type VisibilityConfig,
   defaultPointColor,
   defaultPointSize,
   defaultPointSizeUnit,
@@ -23,14 +18,12 @@ import { StyleRow } from "@/components/widgets/SettingsWidget/StyleRow";
 import {
   describeColorWithoutColumn,
   findStyleBy,
-  followColumn,
-  getFollowState,
+  getFollower,
   isSameColumnStyleBy,
   readStyleBy,
   withColorColumn,
   withFromColumn,
   withMarkerColumn,
-  withoutColumn,
 } from "@/components/widgets/SettingsWidget/styleBy";
 import { SizeUnitRadioGroup } from "@/components/widgets/SizeConfigWidget";
 import { useSizeConfigWidget } from "@/components/widgets/SizeConfigWidget/hooks";
@@ -147,81 +140,51 @@ export function PointsSettingsWidget({
           return;
         }
         const currentTableId = current.dataSource.table ?? null;
-        const followState = getFollowState(
+        const follow = getFollower(
           readStyleBys(current),
           newStyleBy,
           propertyNames,
         );
         updatePoints(current.id, {
-          pointColor: followColumn(
+          pointColor: follow(
+            PointsSettingsCategory.pointColor,
             current.pointColor,
-            followState(PointsSettingsCategory.pointColor),
-            {
-              withColumn: ({ column, columnType }) =>
-                withColorColumn(
-                  current.pointColor,
-                  column,
-                  columnType,
-                  currentTableId,
-                ),
-              withoutColumn: () =>
-                withoutColumn<ColorConfig>(
-                  current.pointColor,
-                  pointsDefaults.pointColor,
-                ),
-            },
+            pointsDefaults.pointColor,
+            ({ column, columnType }) =>
+              withColorColumn(
+                current.pointColor,
+                column,
+                columnType,
+                currentTableId,
+              ),
           ),
-          pointMarker: followColumn(
+          pointMarker: follow(
+            PointsSettingsCategory.pointMarker,
             current.pointMarker,
-            followState(PointsSettingsCategory.pointMarker),
-            {
-              withColumn: ({ column }) =>
-                withMarkerColumn(current.pointMarker, column, currentTableId),
-              withoutColumn: () =>
-                withoutColumn<MarkerConfig>(
-                  current.pointMarker,
-                  pointsDefaults.pointMarker,
-                ),
-            },
+            pointsDefaults.pointMarker,
+            ({ column }) =>
+              withMarkerColumn(current.pointMarker, column, currentTableId),
           ),
-          pointSize: followColumn(
+          pointSize: follow(
+            PointsSettingsCategory.pointSize,
             current.pointSize,
-            followState(PointsSettingsCategory.pointSize),
-            {
-              withColumn: ({ column }) =>
-                withFromColumn(current.pointSize, column, currentTableId),
-              withoutColumn: () =>
-                withoutColumn<SizeConfig>(
-                  current.pointSize,
-                  pointsDefaults.pointSize,
-                ),
-            },
+            pointsDefaults.pointSize,
+            ({ column }) =>
+              withFromColumn(current.pointSize, column, currentTableId),
           ),
-          pointOpacity: followColumn(
+          pointOpacity: follow(
+            PointsSettingsCategory.pointOpacity,
             current.pointOpacity,
-            followState(PointsSettingsCategory.pointOpacity),
-            {
-              withColumn: ({ column }) =>
-                withFromColumn(current.pointOpacity, column, currentTableId),
-              withoutColumn: () =>
-                withoutColumn<OpacityConfig>(
-                  current.pointOpacity,
-                  pointsDefaults.pointOpacity,
-                ),
-            },
+            pointsDefaults.pointOpacity,
+            ({ column }) =>
+              withFromColumn(current.pointOpacity, column, currentTableId),
           ),
-          pointVisibility: followColumn(
+          pointVisibility: follow(
+            PointsSettingsCategory.pointVisibility,
             current.pointVisibility,
-            followState(PointsSettingsCategory.pointVisibility),
-            {
-              withColumn: ({ column }) =>
-                withFromColumn(current.pointVisibility, column, currentTableId),
-              withoutColumn: () =>
-                withoutColumn<VisibilityConfig>(
-                  current.pointVisibility,
-                  pointsDefaults.pointVisibility,
-                ),
-            },
+            pointsDefaults.pointVisibility,
+            ({ column }) =>
+              withFromColumn(current.pointVisibility, column, currentTableId),
           ),
         });
       }}
