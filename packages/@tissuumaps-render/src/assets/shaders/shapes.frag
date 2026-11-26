@@ -13,6 +13,8 @@ uniform uint u_numScanlines;
 uniform uint u_numBins; // per scanline
 uniform vec4 u_objectBounds; // (x, y, width, height), in data dimensions
 uniform float u_opacityFactor; // layer and object opacity, 0 if the layer or object is invisible
+uniform bool u_fillVisible; // object-level fill visibility
+uniform bool u_strokeVisible; // object-level stroke visibility
 uniform float u_halfStrokeWidth; // in data dimensions
 uniform float u_devicePixelSize; // size of a device pixel, in data dimensions
 
@@ -152,8 +154,8 @@ void main() {
             // pixel coverage of the stroke and fill areas, approximated from the distance to the closest edge
             // (even-odd rule: holes are cut out whatever the orientation of their rings)
             float signedDist = (wn & 1) != 0 ? minDist : -minDist; // positive inside the fill area
-            float fillCoverage = clamp(signedDist / u_devicePixelSize + 0.5, 0.0, 1.0);
-            float strokeCoverage = strokeFade * clamp((hsw - minDist) / u_devicePixelSize + 0.5, 0.0, 1.0);
+            float fillCoverage = u_fillVisible ? clamp(signedDist / u_devicePixelSize + 0.5, 0.0, 1.0) : 0.0;
+            float strokeCoverage = u_strokeVisible ? strokeFade * clamp((hsw - minDist) / u_devicePixelSize + 0.5, 0.0, 1.0) : 0.0;
             // only fetch the colors of covered areas (most fragments are covered by the fill only)
             vec4 fillRgba = vec4(0.0);
             if(fillCoverage > 0.0) {

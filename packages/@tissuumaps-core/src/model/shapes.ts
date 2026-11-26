@@ -30,6 +30,8 @@ export const shapesDefaults = {
   shapeStrokeColor: { constant: { value: defaultShapeStrokeColor } },
   shapeStrokeVisibility: { constant: { value: defaultShapeStrokeVisibility } },
   shapeStrokeOpacity: { constant: { value: defaultShapeStrokeOpacity } },
+  fillVisibility: true,
+  strokeVisibility: true,
 } as const satisfies Partial<RawShapes>;
 
 /**
@@ -98,6 +100,26 @@ export interface RawShapes extends RawRenderedItemsDataObject<
    * @defaultValue {@link shapesDefaults.shapeStrokeOpacity}
    */
   shapeStrokeOpacity?: OpacityConfig;
+
+  /**
+   * Object-level fill visibility
+   *
+   * Hides the fill of every shape of this object when `false`, on top of
+   * {@link shapeFillVisibility}, without touching the individual shapes.
+   *
+   * @defaultValue {@link shapesDefaults.fillVisibility}
+   */
+  fillVisibility?: boolean;
+
+  /**
+   * Object-level stroke visibility
+   *
+   * Hides the stroke of every shape of this object when `false`, on top of
+   * {@link shapeStrokeVisibility}, without touching the individual shapes.
+   *
+   * @defaultValue {@link shapesDefaults.strokeVisibility}
+   */
+  strokeVisibility?: boolean;
 }
 
 /**

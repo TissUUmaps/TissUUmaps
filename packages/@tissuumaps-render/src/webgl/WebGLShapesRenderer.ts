@@ -86,6 +86,8 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
     numBins: WebGLUniformLocation;
     objectBounds: WebGLUniformLocation;
     opacityFactor: WebGLUniformLocation;
+    fillVisible: WebGLUniformLocation;
+    strokeVisible: WebGLUniformLocation;
     halfStrokeWidth: WebGLUniformLocation;
     devicePixelSize: WebGLUniformLocation;
   };
@@ -117,6 +119,11 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       opacityFactor: context.getUniformLocation(
         this._program,
         "u_opacityFactor",
+      ),
+      fillVisible: context.getUniformLocation(this._program, "u_fillVisible"),
+      strokeVisible: context.getUniformLocation(
+        this._program,
+        "u_strokeVisible",
       ),
       halfStrokeWidth: context.getUniformLocation(
         this._program,
@@ -233,6 +240,14 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         this._uniformLocations.opacityFactor,
         opacityFactor,
       );
+      this.context.gl.uniform1i(
+        this._uniformLocations.fillVisible,
+        shapes.fillVisibility ? 1 : 0,
+      );
+      this.context.gl.uniform1i(
+        this._uniformLocations.strokeVisible,
+        shapes.strokeVisibility ? 1 : 0,
+      );
       this.context.gl.uniform1f(
         this._uniformLocations.halfStrokeWidth,
         (0.5 * this.renderOptions.strokeWidth) /
@@ -293,6 +308,23 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
       return null;
     }
     return GeometryUtils.dilate(bounds, 0.5 * this.renderOptions.strokeWidth);
+  }
+
+  /**
+   * Returns the state of a shapes object that a synchronization depends on
+   *
+   * Blanks out the object-level fill and stroke visibility on top of what the
+   * base class blanks out: they are uniforms applied when drawing.
+   *
+   * @param shapes - The shapes object to return the state of
+   * @returns The shapes object without the properties that are applied when drawing
+   */
+  protected override getObjectSyncState(shapes: Shapes): object {
+    return {
+      ...super.getObjectSyncState(shapes),
+      fillVisibility: undefined,
+      strokeVisibility: undefined,
+    };
   }
 
   /**

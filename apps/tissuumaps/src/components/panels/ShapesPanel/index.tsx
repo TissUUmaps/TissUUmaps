@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
+import { FillStrokeToggles } from "./FillStrokeToggles";
 import { ShapesAnnotationsWidget } from "./ShapesAnnotationsWidget";
 import { ShapesSettingsWidget } from "./ShapesSettingsWidget";
 import type { ShapesSettingsCategory } from "./category";
@@ -90,11 +91,14 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
         />
       }
       trailingControls={
-        <OpacityControl
-          opacity={shapes.opacity}
-          name={shapes.name}
-          onOpacityChange={(opacity) => updateShapes(shapes.id, { opacity })}
-        />
+        <>
+          <FillStrokeToggles shapes={shapes} />
+          <OpacityControl
+            opacity={shapes.opacity}
+            name={shapes.name}
+            onOpacityChange={(opacity) => updateShapes(shapes.id, { opacity })}
+          />
+        </>
       }
       onDelete={() => deleteShapes(shapes.id)}
     >
