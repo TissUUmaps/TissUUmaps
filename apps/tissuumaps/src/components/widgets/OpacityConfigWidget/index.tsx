@@ -4,6 +4,7 @@ import { Field, FieldLabel } from "@/components/common/field";
 import { OpacityControl } from "@/components/common/opacity-control";
 import { GroupValueMapSelect } from "@/components/controls/GroupValueMapSelect";
 import { TableColumnField } from "@/components/controls/TableColumnField";
+import { Input } from "@/components/ui/input";
 import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 
@@ -74,8 +75,13 @@ function FromOpacityConfigWidget({
 }: FromOpacityConfigWidgetProps) {
   const {
     tableId,
+    fromColumnValueRange: columnValueRange,
     currentFromTableColumn: from,
+    currentFromRangeMin: rangeMin,
+    currentFromRangeMax: rangeMax,
     setCurrentFromTableColumn: setFrom,
+    setCurrentFromRangeMin: setRangeMin,
+    setCurrentFromRangeMax: setRangeMax,
   } = adapter;
 
   return (
@@ -86,6 +92,54 @@ function FromOpacityConfigWidget({
         value={from}
         onValueChange={setFrom}
       />
+      <div className="grid grid-cols-2 gap-x-2">
+        <Field>
+          <FieldLabel>Min. value</FieldLabel>
+          <Input
+            type="number"
+            inputMode="decimal"
+            placeholder={
+              columnValueRange !== null
+                ? columnValueRange[0].toPrecision(6)
+                : undefined
+            }
+            value={rangeMin ?? ""}
+            onChange={(event) => {
+              if (event.target.value === "") {
+                setRangeMin(null);
+              } else {
+                const newValue = event.target.valueAsNumber;
+                if (!isNaN(newValue)) {
+                  setRangeMin(newValue);
+                }
+              }
+            }}
+          />
+        </Field>
+        <Field>
+          <FieldLabel>Max. value</FieldLabel>
+          <Input
+            type="number"
+            inputMode="decimal"
+            placeholder={
+              columnValueRange !== null
+                ? columnValueRange[1].toPrecision(6)
+                : undefined
+            }
+            value={rangeMax ?? ""}
+            onChange={(event) => {
+              if (event.target.value === "") {
+                setRangeMax(null);
+              } else {
+                const newValue = event.target.valueAsNumber;
+                if (!isNaN(newValue)) {
+                  setRangeMax(newValue);
+                }
+              }
+            }}
+          />
+        </Field>
+      </div>
     </div>
   );
 }
