@@ -22,6 +22,13 @@ declare global {
     }) => Promise<FileSystemFileHandle>;
   }
 
+  /** The permission API missing from `lib.dom.d.ts` */
+  interface FileSystemHandle {
+    requestPermission(descriptor?: {
+      mode?: "read" | "readwrite";
+    }): Promise<PermissionState>;
+  }
+
   /** The drag and drop API missing from `lib.dom.d.ts` */
   interface DataTransferItem {
     getAsFileSystemHandle?: () => Promise<FileSystemHandle | null>;
@@ -106,7 +113,10 @@ export async function pickProjectFile(
 }
 
 /**
- * Lets the user pick a new project file within the workspace
+ * Lets the user pick a new project file, starting in the workspace
+ *
+ * The browser creates the picked file, or empties it if it exists, as soon as
+ * it is picked, so a file outside the workspace is returned as well.
  *
  * @param workspace - The directory handle of the open workspace, which the
  * picker opens in
@@ -114,23 +124,24 @@ export async function pickProjectFile(
  * @param fileTypes - The types of project files to offer, as filters in the
  * order given (see {@link pickProjectFile})
  * @returns The file handle and its workspace-relative path (with `/` prefix),
- * or `null` if the user cancelled the picker
- * @throws Error if the browser does not support saving a file, if access to
- * the file was denied, or if it does not lie within the workspace
+ * or `null` as the path if it does not lie within the workspace; or `null` if
+ * the user cancelled the picker
+ * @throws Error if the browser does not support saving a file, or if access to
+ * the file was denied
  */
-export async function pickWorkspaceSaveFile(
+export async function pickProjectSaveFile(
   workspace: FileSystemDirectoryHandle,
   suggestedName: string,
   fileTypes: { description: string; accept: Record<string, string[]> }[],
-): Promise<{ handle: FileSystemFileHandle; source: string } | null> {
+): Promise<{ handle: FileSystemFileHandle; source: string | null } | null> {
   if (window.showSaveFilePicker === undefined) {
     throw new Error("Saving a file is not supported by this browser");
   }
   let handle: FileSystemFileHandle;
   try {
-    // Called as a method: the picker throws if it loses its receiver
+    // Called as a method: the picker throws if it loses its receiver. No
+    // picker id, so that the workspace picker keeps its own last directory.
     handle = await window.showSaveFilePicker({
-      id: workspacePickerId,
       startIn: workspace,
       suggestedName,
       types: fileTypes,
@@ -141,7 +152,11 @@ export async function pickWorkspaceSaveFile(
     }
     throw error;
   }
-  return { handle, source: await resolveWorkspacePath(handle, workspace) };
+  const segments = await workspace.resolve(handle);
+  return {
+    handle,
+    source: segments !== null ? SourceUtils.makeWorkspacePath(segments) : null,
+  };
 }
 
 /**

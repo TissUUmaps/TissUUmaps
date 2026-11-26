@@ -19,8 +19,9 @@ import "./zustand";
  *
  * Loading a project into this store, and saving it back out, is handled by
  * `@/data/io/project`. Where the project was loaded from is only ever set by
- * loading a project or saving it as a new file, and is never written out. Its
- * file is forgotten when the workspace changes (see `bootstrap`).
+ * loading a project or saving it as a new file, and is never written out. The
+ * file it is saved to is forgotten when the workspace changes (see
+ * `bootstrap`).
  */
 export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
   devtools(
@@ -237,7 +238,7 @@ function createInitialProjectStoreState(): ProjectStoreState {
   return {
     ...project,
     source: null,
-    sourceFile: null,
+    saveTarget: null,
     instanceId: crypto.randomUUID(),
     savedProject: project,
   };

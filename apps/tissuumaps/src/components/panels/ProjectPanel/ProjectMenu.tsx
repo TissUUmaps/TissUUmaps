@@ -24,8 +24,10 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { hasUnsavedChanges } from "@/data/io/project";
 import { isWorkspaceSupported } from "@/data/io/workspace";
 import { useAppStore } from "@/stores/app";
+import { useProjectStore } from "@/stores/project";
 
 import {
   useCloseProject,
@@ -36,16 +38,28 @@ import {
   useOpenProjectFromFile,
   useOpenProjectFromURL,
   useOpenWorkspace,
-  useSaveProjectAs,
-  useSaveProjectToSourceFile,
   workspaceUnsupportedMessage,
 } from "./hooks";
 
 export type ProjectMenuProps = {
+  /** Whether the project is being saved, during which saving is disabled */
+  saving: boolean;
+  onSaveProject: () => void;
+  onSaveProjectAs: () => void;
   className?: string;
 };
 
-export function ProjectMenu({ className }: ProjectMenuProps) {
+export function ProjectMenu({
+  saving,
+  onSaveProject,
+  onSaveProjectAs,
+  className,
+}: ProjectMenuProps) {
+  const unsavedChanges = useProjectStore(hasUnsavedChanges);
+  const canSave = useProjectStore(
+    (state) => state.saveTarget?.projectProvider.toFile !== undefined,
+  );
+  const workspaceOpen = useAppStore((state) => state.workspace !== null);
   const projectProviders = useAppStore((state) => state.projectProviders);
   const writingProjectProviders = Array.from(projectProviders).filter(
     ([, projectProvider]) => projectProvider.toFile !== undefined,
@@ -57,8 +71,6 @@ export function ProjectMenu({ className }: ProjectMenuProps) {
   const importProjectFromURL = useImportProjectFromURL();
   const closeProject = useCloseProject();
   const downloadProject = useDownloadProject();
-  const saveProjectToSourceFile = useSaveProjectToSourceFile();
-  const saveProjectAs = useSaveProjectAs();
   const copyProjectLink = useCopyProjectLink();
   const openWorkspace = useOpenWorkspace();
   const workspaceSupported = isWorkspaceSupported();
@@ -103,24 +115,30 @@ export function ProjectMenu({ className }: ProjectMenuProps) {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          disabled={saveProjectToSourceFile === null}
-          onClick={saveProjectToSourceFile ?? undefined}
+          disabled={!canSave || !unsavedChanges || saving}
+          onClick={onSaveProject}
         >
           <SaveIcon />
           Save project
-          {saveProjectToSourceFile === null && (
+          {!canSave ? (
             <DropdownMenuItemDescription>
-              Only for project files opened from or saved to the workspace
+              Use Save as to save to a file in the workspace
             </DropdownMenuItemDescription>
+          ) : (
+            !unsavedChanges && (
+              <DropdownMenuItemDescription>
+                No unsaved changes
+              </DropdownMenuItemDescription>
+            )
           )}
         </DropdownMenuItem>
         <DropdownMenuItem
-          disabled={saveProjectAs === null}
-          onClick={saveProjectAs ?? undefined}
+          disabled={!workspaceOpen || saving}
+          onClick={onSaveProjectAs}
         >
           <SaveAllIcon />
           Save as…
-          {saveProjectAs === null && (
+          {!workspaceOpen && (
             <DropdownMenuItemDescription>
               Needs an open workspace
             </DropdownMenuItemDescription>
@@ -150,21 +168,15 @@ export function ProjectMenu({ className }: ProjectMenuProps) {
           </DropdownMenuSub>
         )}
         <DropdownMenuItem
-          disabled={copyProjectLink === null || !window.isSecureContext}
-          onClick={copyProjectLink ?? undefined}
+          disabled={!window.isSecureContext}
+          onClick={copyProjectLink}
         >
           <CopyIcon />
           Copy share link
-          {copyProjectLink === null ? (
+          {!window.isSecureContext && (
             <DropdownMenuItemDescription>
-              Only for projects opened from a URL
+              Copying needs a secure (https) connection
             </DropdownMenuItemDescription>
-          ) : (
-            !window.isSecureContext && (
-              <DropdownMenuItemDescription>
-                Copying needs a secure (https) connection
-              </DropdownMenuItemDescription>
-            )
           )}
         </DropdownMenuItem>
         <DropdownMenuSeparator />

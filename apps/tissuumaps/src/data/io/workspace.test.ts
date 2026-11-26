@@ -3,9 +3,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   isWorkspaceSupported,
   pickProjectFile,
+  pickProjectSaveFile,
   pickWorkspace,
   pickWorkspacePath,
-  pickWorkspaceSaveFile,
   readDroppedItems,
   resolveWorkspacePath,
 } from "./workspace";
@@ -190,7 +190,7 @@ describe("workspace", () => {
     });
   });
 
-  describe("pickWorkspaceSaveFile", () => {
+  describe("pickProjectSaveFile", () => {
     const fileTypes = [
       { description: "Test project", accept: { "text/plain": [".tm4"] } },
     ];
@@ -200,22 +200,20 @@ describe("workspace", () => {
       const picker = vi.fn(() => Promise.resolve(projectFile));
       vi.stubGlobal("showSaveFilePicker", picker);
       await expect(
-        pickWorkspaceSaveFile(workspace, "copy.tm4", fileTypes),
+        pickProjectSaveFile(workspace, "copy.tm4", fileTypes),
       ).resolves.toEqual({ handle: projectFile, source: "/study/copy.tm4" });
-      expect(picker).toHaveBeenCalledWith(
-        expect.objectContaining({
-          startIn: workspace,
-          suggestedName: "copy.tm4",
-          types: fileTypes,
-        }),
-      );
+      expect(picker).toHaveBeenCalledWith({
+        startIn: workspace,
+        suggestedName: "copy.tm4",
+        types: fileTypes,
+      });
     });
 
-    it("rejects a file outside the workspace", async () => {
+    it("returns a file outside the workspace without a workspace path", async () => {
       vi.stubGlobal("showSaveFilePicker", () => Promise.resolve(projectFile));
       await expect(
-        pickWorkspaceSaveFile(makeWorkspace(null), "copy.tm4", fileTypes),
-      ).rejects.toThrow(/not in the workspace/);
+        pickProjectSaveFile(makeWorkspace(null), "copy.tm4", fileTypes),
+      ).resolves.toEqual({ handle: projectFile, source: null });
     });
 
     it("returns null when the user cancels", async () => {
@@ -223,11 +221,7 @@ describe("workspace", () => {
         Promise.reject(new DOMException("Aborted", "AbortError")),
       );
       await expect(
-        pickWorkspaceSaveFile(
-          makeWorkspace(["copy.tm4"]),
-          "copy.tm4",
-          fileTypes,
-        ),
+        pickProjectSaveFile(makeWorkspace(["copy.tm4"]), "copy.tm4", fileTypes),
       ).resolves.toBeNull();
     });
   });

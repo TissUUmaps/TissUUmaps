@@ -28,11 +28,12 @@ export type ProjectStoreState = Project & {
    */
   source: string | null;
   /**
-   * The project file within the workspace that the open project was loaded
-   * from or last saved as, with the project provider that reads and writes it,
-   * or `null` if there is no such file or the workspace has changed since
+   * The file that Save writes the open project to: the project file within the
+   * workspace that it was loaded from or last saved as, with the project
+   * provider that reads and writes it, or `null` if there is no such file or
+   * the workspace has changed since; written by the application alone
    */
-  sourceFile: {
+  saveTarget: {
     handle: FileSystemFileHandle;
     projectProvider: ProjectProvider;
   } | null;
@@ -45,7 +46,7 @@ export type ProjectStoreState = Project & {
   /**
    * The open project as it was when it was last loaded or saved, sharing its
    * unchanged parts with the open project, so that a part that differs by
-   * reference has unsaved changes
+   * reference has unsaved changes; written by the application alone
    */
   savedProject: Project;
 };

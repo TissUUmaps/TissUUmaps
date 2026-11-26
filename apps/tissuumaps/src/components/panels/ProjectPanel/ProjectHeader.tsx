@@ -5,6 +5,7 @@ import {
   type LucideIcon,
   SaveIcon,
 } from "lucide-react";
+import { useState } from "react";
 
 import { SourceUtils } from "@tissuumaps/core";
 
@@ -20,7 +21,7 @@ import { useProjectStore } from "@/stores/project";
 
 import { ProjectMenu } from "./ProjectMenu";
 import { formatProjectSource } from "./formatProjectSource";
-import { useDownloadProject, useSaveProjectToSourceFile } from "./hooks";
+import { useDownloadProject, useSaveProject, useSaveProjectAs } from "./hooks";
 
 export type ProjectHeaderProps = {
   className?: string;
@@ -30,9 +31,9 @@ export function ProjectHeader({ className }: ProjectHeaderProps) {
   const name = useProjectStore((state) => state.name);
   const setName = useProjectStore((state) => state.setName);
   const source = useProjectStore((state) => state.source);
-  // Only shown when the project has a file that Save can clear it with
-  const unsavedChanges = useProjectStore(
-    (state) => state.sourceFile !== null && hasUnsavedChanges(state),
+  const unsavedChanges = useProjectStore(hasUnsavedChanges);
+  const canSave = useProjectStore(
+    (state) => state.saveTarget?.projectProvider.toFile !== undefined,
   );
   const workspaceName = useAppStore((state) => state.workspace?.name ?? null);
   const setActivePanelId = useAppStore((state) => state.setActivePanelId);
@@ -43,7 +44,14 @@ export function ProjectHeader({ className }: ProjectHeaderProps) {
   const tableCount = useProjectStore((state) => state.tables.length);
 
   const downloadProject = useDownloadProject();
-  const saveProjectToSourceFile = useSaveProjectToSourceFile();
+  const saveProject = useSaveProject();
+  const saveProjectAs = useSaveProjectAs();
+  // Shared by the header and the menu, so that saves never overlap
+  const [saving, setSaving] = useState(false);
+  const startSaving = (save: () => Promise<void>) => {
+    setSaving(true);
+    void save().finally(() => setSaving(false));
+  };
 
   const dataCounts: DataCount[] = [
     {
@@ -106,29 +114,39 @@ export function ProjectHeader({ className }: ProjectHeaderProps) {
           }}
           className="hover:border-input h-8 flex-1 border-transparent bg-transparent px-1.5 text-base font-semibold shadow-none md:text-base dark:bg-transparent"
         />
-        {saveProjectToSourceFile !== null && (
-          <IconButton label="Save project" onClick={saveProjectToSourceFile}>
+        {canSave && (
+          <IconButton
+            label="Save project"
+            disabled={!unsavedChanges || saving}
+            onClick={() => startSaving(saveProject)}
+          >
             <SaveIcon />
           </IconButton>
         )}
         <IconButton label="Download project" onClick={() => downloadProject()}>
           <DownloadIcon />
         </IconButton>
-        <ProjectMenu />
+        <ProjectMenu
+          saving={saving}
+          onSaveProject={() => startSaving(saveProject)}
+          onSaveProjectAs={() => startSaving(saveProjectAs)}
+        />
       </div>
-      {sourceLabel !== null && (
+      {(sourceLabel !== null || unsavedChanges) && (
         <div className="text-muted-foreground flex min-w-0 items-center gap-1.5 px-1.5 text-xs">
-          <SourceIcon className="size-3.5 shrink-0" />
-          <span className="truncate" title={source ?? undefined}>
-            {sourceLabel}
-          </span>
-          {unsavedChanges && (
+          {sourceLabel !== null && (
             <>
-              <span>·</span>
-              <span className="text-foreground shrink-0 font-medium">
-                Unsaved changes
+              <SourceIcon className="size-3.5 shrink-0" />
+              <span className="truncate" title={source ?? undefined}>
+                {sourceLabel}
               </span>
             </>
+          )}
+          {sourceLabel !== null && unsavedChanges && <span>·</span>}
+          {unsavedChanges && (
+            <span className="text-foreground shrink-0 font-medium">
+              Unsaved changes
+            </span>
           )}
         </div>
       )}
