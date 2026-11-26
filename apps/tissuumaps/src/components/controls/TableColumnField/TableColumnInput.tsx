@@ -33,7 +33,11 @@ import { findColumnByName } from "./findColumnByName";
 export type TableColumnInputProps = {
   tableId: string | null;
   value: string | null;
-  onValueChange: (value: string | null) => void;
+  /**
+   * Applies a column, or none; may resolve to whether it applied, and a refused
+   * column shows the value again
+   */
+  onValueChange: (value: string | null) => void | Promise<boolean>;
   /**
    * The `id` of the leaf section to pick a column of (see
    * `TableData.getColumnSections`); the input then shows and searches the leaf's
@@ -296,11 +300,17 @@ export function TableColumnInput({
     setPendingQuery(null);
     if (column !== null) {
       // within a section, the input keeps showing the picked name
-      if (sectionId === undefined) {
-        setText(column);
-      }
+      const committedText = sectionId === undefined ? column : text;
+      setText(committedText);
       setInvalid(false);
-      onValueChange(column);
+      void Promise.resolve(onValueChange(column)).then((applied) => {
+        // unless typed over since
+        if (applied === false) {
+          setText((currentText) =>
+            currentText === committedText ? valueText : currentText,
+          );
+        }
+      });
     } else {
       setInvalid(true);
     }
@@ -352,7 +362,7 @@ export function TableColumnInput({
       setPendingQuery(null);
       setText("");
       setInvalid(false);
-      onValueChange(null);
+      void onValueChange(null);
       return;
     }
     setPendingQuery(newQuery);
@@ -392,7 +402,7 @@ export function TableColumnInput({
       return;
     }
     if (details.reason === "clear-press") {
-      onValueChange(null);
+      void onValueChange(null);
     }
   }
 

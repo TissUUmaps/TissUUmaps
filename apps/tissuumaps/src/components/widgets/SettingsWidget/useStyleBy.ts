@@ -25,9 +25,10 @@ export type StyleByState = {
 
   /**
    * Styles by a column, or by none; categorical or numerical follows from
-   * the type of the column's values
+   * the type of the column's values. Resolves to whether it applied, `false`
+   * when cancelled, failed or aborted.
    */
-  pick: (column: string | null) => void;
+  pick: (column: string | null) => Promise<boolean>;
 
   /** Switches the column between categorical and numerical */
   setColumnType: (columnType: TableColumnType) => void;
@@ -104,20 +105,23 @@ export function useStyleBy(
   // a pick or switch still loading is for the previous table
   useEffect(() => () => abortControllerRef.current?.abort(), [tableId]);
 
-  // an action resolving to null changes nothing, e.g. when the user cancels
+  // an action resolving to null changes nothing, e.g. when the user cancels;
+  // resolves to whether it applied
   const run = (
     action: (options: { signal: AbortSignal }) => Promise<StyleBy | null>,
-  ) => {
+  ): Promise<boolean> => {
     abortControllerRef.current?.abort();
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
     const { signal } = abortController;
     setPending(true);
-    action({ signal })
+    return action({ signal })
       .then((result) => {
-        if (!signal.aborted && result !== null) {
-          onStyleByChange(result);
+        if (signal.aborted || result === null) {
+          return false;
         }
+        onStyleByChange(result);
+        return true;
       })
       .catch(async (error: unknown) => {
         if (!signal.aborted) {
@@ -127,6 +131,7 @@ export function useStyleBy(
             body: error instanceof Error ? error.message : String(error),
           });
         }
+        return false;
       })
       .finally(() => {
         if (abortControllerRef.current === abortController) {
@@ -178,9 +183,9 @@ export function useStyleBy(
     if (newColumn === null) {
       abortControllerRef.current?.abort();
       onStyleByChange({ kind: "none" });
-      return;
+      return Promise.resolve(true);
     }
-    run(async (options) => {
+    return run(async (options) => {
       const tableData = await loadTable(options);
       const columnType = await TableUtils.loadColumnType(
         tableData,
@@ -201,7 +206,7 @@ export function useStyleBy(
     if (column === null || newColumnType === columnType) {
       return;
     }
-    run(async (options) => {
+    void run(async (options) => {
       if (
         newColumnType === "categorical" &&
         !(await confirmCategorical(column, options))

@@ -56,8 +56,8 @@ export type StyleByPickerProps = {
   /** The column styled by, if any */
   column: string | null;
 
-  /** Styles by a column, or by none */
-  onColumnChange: (column: string | null) => void;
+  /** Styles by a column, or by none; resolves to whether it applied */
+  onColumnChange: (column: string | null) => Promise<boolean>;
 
   /**
    * The text shown while no column is styled by, in the first row for tables
@@ -233,7 +233,7 @@ export function StyleByPicker({
           ...selected,
           [row.id]: sectionId,
         }));
-        onColumnChange(mappedColumn);
+        void onColumnChange(mappedColumn);
       } else {
         setNotice(`No match in ${newLeaf.name}`);
       }
@@ -361,7 +361,7 @@ export function StyleByPicker({
                   ...selected,
                   [rowId]: leaf.id,
                 }));
-                onColumnChange(column);
+                void onColumnChange(column);
               }}
             >
               switch?
