@@ -105,7 +105,7 @@ export abstract class HierarchicalTableDataBase implements TableData {
     const matrix = this._getMatrix(found.leaf);
     const suggestions =
       matrix !== undefined
-        ? this._suggestMatrixColumns(matrix)
+        ? this._suggestMatrixColumns(found.leaf, matrix)
         : this._suggestLeafColumns(found.leaf);
     return Promise.resolve(
       ColumnQueryUtils.rankByName(suggestions, currentQuery),
@@ -163,10 +163,7 @@ export abstract class HierarchicalTableDataBase implements TableData {
     const { leaf } = found;
     return Promise.resolve({
       sectionId: leaf.id,
-      name:
-        tableColumn.kind === "matrix"
-          ? (tableColumn.selectors?.[index!] ?? String(index))
-          : tableColumn.path.slice(leaf.id.length + 1),
+      name: this._getColumnName(tableColumn, index, leaf),
     });
   }
 
@@ -354,20 +351,40 @@ export abstract class HierarchicalTableDataBase implements TableData {
       .filter((column) => this._isLeafColumn(column, leaf))
       .map((column) => ({
         query: column.path,
-        name: column.path.slice(leaf.id.length + 1),
+        name: this._getColumnName(column, undefined, leaf),
       }));
   }
 
   /**
-   * @param matrix - The matrix column of a matrix leaf
+   * @param leaf - A matrix leaf section
+   * @param matrix - The matrix column of the leaf
    * @returns The matrix's columns, named by their selectors
    */
   private _suggestMatrixColumns(
+    leaf: HierarchicalTableSection,
     matrix: Extract<HierarchicalTableColumn, { kind: "matrix" }>,
   ): TableColumnQuerySuggestion[] {
-    return Array.from({ length: matrix.numColumns }, (_, i) => {
-      const selector = matrix.selectors?.[i] ?? String(i);
-      return { query: `${matrix.path}[${selector}]`, name: selector };
-    });
+    return Array.from({ length: matrix.numColumns }, (_, i) => ({
+      query: `${matrix.path}[${matrix.selectors?.[i] ?? i}]`,
+      name: this._getColumnName(matrix, i, leaf),
+    }));
+  }
+
+  /**
+   * @param column - A column of the table
+   * @param index - The index of the matrix column, `undefined` for a dataset
+   * column
+   * @param leaf - The leaf section holding the column
+   * @returns The column's name within the leaf: a matrix column's selector (or
+   * its index without one), a dataset column's path below the leaf
+   */
+  private _getColumnName(
+    column: HierarchicalTableColumn,
+    index: number | undefined,
+    leaf: HierarchicalTableSection,
+  ): string {
+    return column.kind === "matrix"
+      ? (column.selectors?.[index!] ?? String(index))
+      : column.path.slice(leaf.id.length + 1);
   }
 }
