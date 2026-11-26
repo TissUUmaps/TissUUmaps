@@ -10,6 +10,7 @@ import type {
   ColorConfig,
   MarkerConfig,
   OpacityConfig,
+  OrderConfig,
   SizeConfig,
   VisibilityConfig,
 } from "./configs";
@@ -73,6 +74,13 @@ export interface RawPoints extends RawRenderedItemsDataObject<
    * @defaultValue {@link pointsDefaults.pointOpacity}
    */
   pointOpacity?: OpacityConfig;
+
+  /**
+   * Point draw order
+   *
+   * If not specified, points are drawn in item order.
+   */
+  pointOrder?: OrderConfig;
 
   /**
    * Object-level point size scaling factor
