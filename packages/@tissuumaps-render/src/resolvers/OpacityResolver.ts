@@ -314,8 +314,8 @@ export class OpacityResolver {
    * Parses a raw numeric value into an opacity by normalizing it within the
    * given range
    *
-   * The normalized value is clamped to `[0, 1]`. An empty range makes every
-   * value `0`.
+   * The normalized value is clamped to `[0, 1]`. A range that is not increasing
+   * is a step: values below its minimum are `0`, all others `1`.
    *
    * @param value - The raw value to parse (must be a finite number)
    * @param valueRange - The value range `[min, max]` to normalize within,
@@ -331,7 +331,7 @@ export class OpacityResolver {
       return undefined;
     }
     const [vmin, vmax] = valueRange ?? [0, 1];
-    const vnorm = vmax > vmin ? (v - vmin) / (vmax - vmin) : 0;
+    const vnorm = vmax > vmin ? (v - vmin) / (vmax - vmin) : v >= vmin ? 1 : 0;
     return MathUtils.clamp(vnorm, 0, 1);
   }
 

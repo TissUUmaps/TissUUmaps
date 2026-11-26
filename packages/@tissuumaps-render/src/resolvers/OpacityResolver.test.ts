@@ -37,8 +37,11 @@ describe("OpacityResolver", () => {
       expect(OpacityResolver.parseOpacity(300, [0, 200])).toBe(1);
     });
 
-    it("returns 0 for an empty range", () => {
-      expect(OpacityResolver.parseOpacity(5, [5, 5])).toBe(0);
+    it("maps a range that is not increasing as a step at its minimum", () => {
+      expect(OpacityResolver.parseOpacity(4, [5, 5])).toBe(0);
+      expect(OpacityResolver.parseOpacity(5, [5, 5])).toBe(1);
+      expect(OpacityResolver.parseOpacity(1, [2, 1])).toBe(0);
+      expect(OpacityResolver.parseOpacity(2, [2, 1])).toBe(1);
     });
 
     it("uses [0, 1] without a range", () => {
@@ -260,6 +263,24 @@ describe("OpacityResolver", () => {
       expect(loadTable).toHaveBeenCalledWith(undefined, {
         signal: controller.signal,
       });
+    });
+
+    it("applies the configured minimum to a constant table column", async () => {
+      const ids = new Uint32Array([1, 2]);
+      const loadValueRange = vi.fn().mockResolvedValue([5, 5]);
+      const data = { ...createMockTableData(ids, [5, 5]), loadValueRange };
+      const loadTable = vi.fn().mockResolvedValue(data);
+
+      const resolve = (range: [number | null, number | null]) =>
+        OpacityResolver.resolveOpacitiesFromTableValues(
+          ids,
+          { from: { column: "col1", range } },
+          1,
+          loadTable,
+        );
+
+      expect(Array.from(await resolve([2, null]))).toEqual([255, 255]);
+      expect(Array.from(await resolve([8, null]))).toEqual([0, 0]);
     });
 
     it("does not apply the minimum when the table column has no value range", async () => {
