@@ -4,6 +4,12 @@ import { useMemo, useState } from "react";
 
 import type { Data, DataProvider, DataSource } from "@tissuumaps/core";
 
+import {
+  Collapsible,
+  CollapsiblePanel,
+  CollapsibleTrigger,
+  CollapsibleTriggerRightDownIcon,
+} from "@/components/common/collapsible";
 import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { IconButton } from "@/components/common/icon-button";
@@ -24,7 +30,8 @@ export type DataSourceWidgetProps<TDataSource extends DataSource> = {
 };
 
 /**
- * Shows a data source, and edits it on demand
+ * Shows the type of a data source, the rest of it when expanded, and edits it
+ * on demand
  *
  * The source is not part of any data provider's UI schema, but rendered here.
  */
@@ -79,34 +86,41 @@ function DataSourceView({
   return (
     <>
       <FieldsetLegend className="sr-only">Data source</FieldsetLegend>
-      <div className="flex flex-row items-start gap-x-2">
-        <dl className="grid flex-1 grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-xs">
-          <div className="contents">
-            <dt className="text-muted-foreground">Type</dt>
-            <dd>{dataProvider?.name ?? dataSource.type}</dd>
-          </div>
-          {showSource && dataSource.source !== undefined && (
-            <div className="contents">
-              <dt className="text-muted-foreground">Source</dt>
-              <dd className="wrap-anywhere">{dataSource.source}</dd>
-            </div>
-          )}
-          {dataProvider !== undefined && (
-            <JsonForms
-              ajv={ajv}
-              data={dataSource}
-              schema={dataProvider.schema}
-              uischema={dataProvider.uischema}
-              renderers={listRenderers}
-              cells={cells}
-              readonly
-            />
-          )}
-        </dl>
-        <IconButton label="Edit" size="icon-xs" onClick={onEdit}>
-          <EditIcon className="size-4" />
-        </IconButton>
-      </div>
+      <Collapsible className="flex flex-col gap-y-1">
+        <div className="flex flex-row items-center gap-x-1 text-xs">
+          <CollapsibleTriggerRightDownIcon />
+          <CollapsibleTrigger className="flex min-w-0 flex-1 flex-row gap-x-3 text-left">
+            <span className="text-muted-foreground">Type</span>
+            <span className="truncate">
+              {dataProvider?.name ?? dataSource.type}
+            </span>
+          </CollapsibleTrigger>
+          <IconButton label="Edit" size="icon-xs" onClick={onEdit}>
+            <EditIcon className="size-4" />
+          </IconButton>
+        </div>
+        <CollapsiblePanel>
+          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 pl-5 text-xs">
+            {showSource && dataSource.source !== undefined && (
+              <div className="contents">
+                <dt className="text-muted-foreground">Source</dt>
+                <dd className="wrap-anywhere">{dataSource.source}</dd>
+              </div>
+            )}
+            {dataProvider !== undefined && (
+              <JsonForms
+                ajv={ajv}
+                data={dataSource}
+                schema={dataProvider.schema}
+                uischema={dataProvider.uischema}
+                renderers={listRenderers}
+                cells={cells}
+                readonly
+              />
+            )}
+          </dl>
+        </CollapsiblePanel>
+      </Collapsible>
       {dataProvider === undefined && <MissingDataProviderHint />}
     </>
   );
