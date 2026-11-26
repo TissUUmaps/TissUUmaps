@@ -139,7 +139,8 @@ export function AnnotationsWidget({
           >
             {selectedGroupBy?.column ?? "none"}
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-80 p-3">
+          {/* closing must not abort a pending column resolution */}
+          <PopoverContent align="start" keepMounted className="w-80 p-3">
             <TableColumnField
               label="Group by column"
               tableId={tableId}
