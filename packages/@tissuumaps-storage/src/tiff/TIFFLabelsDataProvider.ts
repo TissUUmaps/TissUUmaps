@@ -202,19 +202,19 @@ export function getLabelLevels(structure: TIFFStructure): GeoTIFFImage[] {
   const { channels, pyramids } = structure;
   if (channels === undefined) {
     throw new Error(
-      "The file holds an image drawn in its own colors, whose pixels are colors rather than label IDs.",
+      "The file holds an image drawn in its own colors, whose pixels are colors rather than label IDs",
     );
   }
   if (channels.length !== 1) {
     throw new Error(
-      `The file holds ${channels.length} channels; a label mask has a single one.`,
+      `The file holds ${channels.length} channels; a label mask has a single one`,
     );
   }
   const levels = pyramids[0]!;
   const image = levels[0]!;
   if (TIFFUtils.getIntegerSampleType(image) === undefined) {
     throw new Error(
-      `The image holds ${image.getBitsPerSample(0)}-bit samples of TIFF sample format ${image.getSampleFormat(0)}; label IDs are integers of at most 32 bits.`,
+      `The image holds ${image.getBitsPerSample(0)}-bit samples of TIFF sample format ${image.getSampleFormat(0)}; label IDs are integers of at most 32 bits`,
     );
   }
   return levels;

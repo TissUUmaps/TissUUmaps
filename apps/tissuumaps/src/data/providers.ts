@@ -8,6 +8,7 @@ import {
   OpenSeadragonImageDataProvider,
   ParquetShapesDataProvider,
   ParquetTableDataProvider,
+  SpatialDataProjectProvider,
   TIFFImageDataProvider,
   TIFFLabelsDataProvider,
   TablePointsDataProvider,
@@ -21,6 +22,7 @@ import {
   openSeadragonImageDataSourceType,
   parquetShapesDataSourceType,
   parquetTableDataSourceType,
+  spatialDataProjectType,
   tablePointsDataSourceType,
   tiffImageDataSourceType,
   tiffLabelsDataSourceType,
@@ -76,7 +78,7 @@ export function enableBuiltInDataProviders(): void {
         const tableDataProvider = tableDataProviders.get(dataSource.type);
         if (tableDataProvider === undefined) {
           throw new Error(
-            `No table data provider for type ${dataSource.type}.`,
+            `No table data provider for type '${dataSource.type}'`,
           );
         }
         const projectSource = projectStore.getState().source;
@@ -154,10 +156,15 @@ export function enableBuiltInDataProviders(): void {
  * Called once during application startup, before any project is loaded.
  */
 export function enableBuiltInProjectProviders(): void {
-  appStore
-    .getState()
-    .registerProjectProvider(
-      tissuumapsProjectType,
-      new TissUUmapsProjectProvider(),
-    );
+  const appStoreState = appStore.getState();
+
+  appStoreState.registerProjectProvider(
+    tissuumapsProjectType,
+    new TissUUmapsProjectProvider(),
+  );
+
+  appStoreState.registerProjectProvider(
+    spatialDataProjectType,
+    new SpatialDataProjectProvider(),
+  );
 }

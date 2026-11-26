@@ -457,13 +457,22 @@ describe("TableUtils", () => {
     });
   });
   describe("computeValueRange", () => {
-    it("returns undefined for non-numeric and constant values", async () => {
+    it("returns undefined for non-numeric values and without finite values", async () => {
       await expect(
         TableUtils.computeValueRange(["a", "b"]),
       ).resolves.toBeUndefined();
       await expect(
-        TableUtils.computeValueRange(new Float32Array([1, 1])),
+        TableUtils.computeValueRange(new Float32Array([NaN, Infinity])),
       ).resolves.toBeUndefined();
+      await expect(
+        TableUtils.computeValueRange(new Float32Array([])),
+      ).resolves.toBeUndefined();
+    });
+
+    it("returns an empty range for constant values", async () => {
+      await expect(
+        TableUtils.computeValueRange(new Float32Array([1, 1])),
+      ).resolves.toEqual([1, 1]);
     });
   });
 

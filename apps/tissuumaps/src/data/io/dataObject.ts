@@ -53,7 +53,7 @@ export function addImageDataObject(
   preparedDataSource: ImageDataSource,
 ): string {
   if (layerId === undefined) {
-    throw new Error("Images have to be added to a layer.");
+    throw new Error("Images must be added to a layer");
   }
   const id = SourceUtils.createID(normalizeSource(origSource));
   projectStore
@@ -87,7 +87,7 @@ export function addLabelsDataObject(
   preparedDataSource: LabelsDataSource,
 ): string {
   if (layerId === undefined) {
-    throw new Error("Labels have to be added to a layer.");
+    throw new Error("Labels must be added to a layer");
   }
   const id = SourceUtils.createID(normalizeSource(origSource));
   projectStore.getState().addLabels(
@@ -124,7 +124,7 @@ export function addPointsDataObject(
   preparedDataSource: PointsDataSource,
 ): string {
   if (layerId === undefined) {
-    throw new Error("Points have to be added to a layer.");
+    throw new Error("Points must be added to a layer");
   }
   const id = SourceUtils.createID(normalizeSource(origSource));
   projectStore.getState().addPoints(
@@ -161,7 +161,7 @@ export function addShapesDataObject(
   preparedDataSource: ShapesDataSource,
 ): string {
   if (layerId === undefined) {
-    throw new Error("Shapes have to be added to a layer.");
+    throw new Error("Shapes must be added to a layer");
   }
   const id = SourceUtils.createID(normalizeSource(origSource));
   projectStore.getState().addShapes(

@@ -31,6 +31,7 @@ const subpathEntries = {
   "ome-zarr": resolve(import.meta.dirname, "src/ome-zarr/index.ts"),
   openseadragon: resolve(import.meta.dirname, "src/openseadragon/index.ts"),
   parquet: resolve(import.meta.dirname, "src/parquet/index.ts"),
+  spatialdata: resolve(import.meta.dirname, "src/spatialdata/index.ts"),
   table: resolve(import.meta.dirname, "src/table/index.ts"),
   tiff: resolve(import.meta.dirname, "src/tiff/index.ts"),
   tissuumaps: resolve(import.meta.dirname, "src/tissuumaps/index.ts"),

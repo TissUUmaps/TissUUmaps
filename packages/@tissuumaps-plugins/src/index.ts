@@ -1,1 +1,1 @@
-export * from "./spatialdata";
+export {};

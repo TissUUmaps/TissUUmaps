@@ -90,7 +90,7 @@ describe("HierarchicalTableDataProviderBase", () => {
       const table = createTable();
       await expect(
         load(table, { idColumn: "obs/id", nameColumn: "obs/name" }),
-      ).rejects.toThrow("different lengths");
+      ).rejects.toThrow("must have the same length");
       expect(table.closeCalls).toBe(1);
     });
 

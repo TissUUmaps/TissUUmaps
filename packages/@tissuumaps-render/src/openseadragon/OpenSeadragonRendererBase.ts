@@ -587,7 +587,7 @@ export abstract class OpenSeadragonRendererBase<
               if (signal?.aborted) {
                 throw error;
               }
-              console.error(
+              console.warn(
                 `Failed to resolve object with ID '${currentObject.id}'`,
                 error,
               );

@@ -70,7 +70,7 @@ export class HDF5Store implements HierarchicalStore {
     const file = new h5wasm.File(path, "r");
     // h5wasm reports a file it cannot open with an invalid id, not an error
     if (file.file_id < 0n) {
-      throw new Error("The source is not an HDF5 file.");
+      throw new Error("The source is not an HDF5 file");
     }
     return new HDF5Store(file);
   }

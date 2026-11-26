@@ -196,7 +196,7 @@ export class TIFFImageDataProvider implements ImageDataProvider<
         );
       } catch (error) {
         signal?.throwIfAborted();
-        console.error("Failed to read the TIFF channel histograms:", error);
+        console.warn("Failed to read the TIFF channel histograms", error);
       }
       channelsWithHistograms = channels.map((channel, c) => {
         const sampleType = TIFFUtils.getIntegerSampleType(pyramids[c]![0]!);
@@ -290,7 +290,7 @@ export class TIFFImageDataProvider implements ImageDataProvider<
     const { pool = null, signal } = options ?? {};
     signal?.throwIfAborted();
     if (pyramid.length === 0) {
-      throw new Error("The channel has no pyramid level.");
+      throw new Error("The channel has no pyramid level");
     }
     const largeEnough = pyramid.filter(
       (image) =>
