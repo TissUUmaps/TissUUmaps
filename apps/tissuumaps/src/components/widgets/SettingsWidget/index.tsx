@@ -15,8 +15,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useTableData } from "@/data/hooks/useData";
 import { cn } from "@/lib/utils";
 
+import { ColumnNameBox } from "./ColumnNameBox";
 import { ColumnRows } from "./ColumnRows";
 import { ColumnTypeMenu } from "./ColumnTypeMenu";
 import { SettingsRow } from "./SettingsRow";
@@ -28,6 +30,7 @@ import {
   isItemOn,
   isItemSupported,
 } from "./follow";
+import { useColumnLocation } from "./useColumnLocation";
 import { useFollowedColumn } from "./useFollowedColumn";
 
 /**
@@ -143,7 +146,10 @@ export type SettingsWidgetProps = {
  *
  * The picked column sets the column type, which determines which properties
  * can follow it. The values of the categories are edited in the group table
- * below the widget; the other settings in the advanced settings.
+ * below the widget; the other settings in the advanced settings. For tables
+ * with sections, the title line shows the query of the column and picks any
+ * column by query (see {@link ColumnNameBox}); a column in no section, or not
+ * in the table, shows only there, with its type.
  */
 export function SettingsWidget({
   tableId,
@@ -154,6 +160,9 @@ export function SettingsWidget({
   advancedSettings,
   className,
 }: SettingsWidgetProps) {
+  const tableData = useTableData(tableId);
+  const column = followedColumn?.column ?? null;
+  const location = useColumnLocation(tableData, column);
   const { isCategorical, isPending, pick, setColumnType } = useFollowedColumn(
     tableId,
     followedColumn,
@@ -167,13 +176,40 @@ export function SettingsWidget({
     },
   );
 
+  const columnTypeMenu = followedColumn !== null && (
+    <ColumnTypeMenu
+      value={followedColumn.columnType}
+      onValueChange={setColumnType}
+      isCategoricalOnly={isCategorical === true}
+      // the column types a column allows are known with its type
+      disabled={isPending || isCategorical === null}
+    />
+  );
+  // tables without sections pick any column in their "Column" row
+  const hasSections = (tableData?.getColumnSections?.() ?? []).length > 0;
+  // the rows hold only columns of a section; the header shows any other
+  const isOutsideRows = location !== null && location.kind !== "section";
+
   return (
     <Fieldset
       className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
     >
-      <FieldsetLegend className="font-medium text-foreground">
-        Settings
-      </FieldsetLegend>
+      <div className="flex min-w-0 flex-row items-center gap-x-1">
+        <FieldsetLegend className="font-medium text-foreground">
+          Settings
+        </FieldsetLegend>
+        {tableId !== null && hasSections && (
+          <div className="flex min-w-0 flex-1 flex-row items-center justify-end gap-x-1">
+            {isOutsideRows && columnTypeMenu}
+            <ColumnNameBox
+              tableId={tableId}
+              column={column}
+              isMissing={location?.kind === "missing"}
+              onColumnChange={pick}
+            />
+          </div>
+        )}
+      </div>
       <Fieldset
         disabled={tableId === null}
         className="grid grid-cols-[5rem_1fr] items-center gap-x-2 gap-y-1.5"
@@ -183,20 +219,11 @@ export function SettingsWidget({
           // the leaves, messages and searches of the picker are per table
           key={tableId ?? ""}
           tableId={tableId}
-          column={followedColumn?.column ?? null}
+          column={column}
+          location={location}
           onColumnChange={pick}
           placeholder={tableId === null ? "No table" : placeholder}
-          columnControls={
-            followedColumn !== null ? (
-              <ColumnTypeMenu
-                value={followedColumn.columnType}
-                onValueChange={setColumnType}
-                isCategoricalOnly={isCategorical === true}
-                // the column types a column allows are known with its type
-                disabled={isPending || isCategorical === null}
-              />
-            ) : undefined
-          }
+          columnControls={columnTypeMenu}
         />
         {followedColumn !== null && (
           <>

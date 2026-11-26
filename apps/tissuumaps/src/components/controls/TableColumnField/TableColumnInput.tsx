@@ -53,6 +53,8 @@ export type TableColumnInputProps = {
    */
   onNoMatch?: (text: string) => void;
   placeholder?: string;
+  /** Whether the input takes the focus when it mounts */
+  autoFocus?: boolean;
   className?: string;
 };
 
@@ -210,6 +212,7 @@ export function TableColumnInput({
   valueName,
   onNoMatch,
   placeholder,
+  autoFocus,
   className,
 }: TableColumnInputProps) {
   const loadTableData = useLazyTableData(tableId);
@@ -455,6 +458,7 @@ export function TableColumnInput({
       <AutocompleteInputGroup className={className}>
         <AutocompleteInput
           placeholder={placeholder}
+          autoFocus={autoFocus}
           aria-invalid={invalid || undefined}
           aria-busy={pendingQuery !== null || undefined}
           onKeyDown={(event) => {

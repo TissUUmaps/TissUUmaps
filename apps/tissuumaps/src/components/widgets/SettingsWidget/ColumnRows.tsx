@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useTableData } from "@/data/hooks/useData";
 
 import { SettingsRow } from "./SettingsRow";
+import type { ColumnLocation } from "./useColumnLocation";
 
 /** A row of the picker: a top-level section and its leaves */
 type Row = {
@@ -56,6 +57,9 @@ export type ColumnRowsProps = {
   /** The followed column, if any */
   column: string | null;
 
+  /** Where the followed column is (see `useColumnLocation`) */
+  location: ColumnLocation | null;
+
   /** Follows a column, or none; resolves to whether it applied */
   onColumnChange: (column: string | null) => Promise<boolean>;
 
@@ -87,12 +91,13 @@ export type ColumnRowsProps = {
  * others empty; picking in any applies right away. Switching "from" keeps the
  * followed entity if the table maps it to the new leaf (see
  * `TableData.mapColumn`). A text matching no column of a leaf is looked up in
- * the other leaves of its row and offered there. Tables without sections
- * get one "Column" row.
+ * the other leaves of its row and offered there. A column in no section
+ * fills no row. Tables without sections get one "Column" row.
  */
 export function ColumnRows({
   tableId,
   column,
+  location,
   onColumnChange,
   placeholder,
   columnControls,
@@ -100,13 +105,6 @@ export function ColumnRows({
 }: ColumnRowsProps) {
   const tableData = useTableData(tableId);
   const rows = toRows(tableData?.getColumnSections?.() ?? []);
-  // the description of the followed column, kept until the next one resolves,
-  // so that the row does not empty in between
-  const [description, setDescription] = useState<{
-    column: string;
-    sectionId: string;
-    name: string;
-  } | null>(null);
   // the leaf chosen under "from", by row ID, for this session only
   const [selectedLeafIds, setSelectedLeafIds] = useState<
     Partial<Record<string, string>>
@@ -120,47 +118,21 @@ export function ColumnRows({
   const abortControllerRef = useRef<AbortController | null>(null);
   useEffect(() => () => abortControllerRef.current?.abort(), []);
 
-  // nothing to describe
-  if (
-    (tableData?.describeColumn === undefined || column === null) &&
-    description !== null
-  ) {
-    setDescription(null);
-  }
+  // the leaf of the followed column, while in a section
+  const section = location?.kind === "section" ? location : null;
 
-  useEffect(() => {
-    if (tableData?.describeColumn === undefined || column === null) {
-      return;
+  // the row of the followed column shows its leaf
+  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  const [prevLocation, setPrevLocation] = useState(location);
+  if (location !== prevLocation) {
+    setPrevLocation(location);
+    const row = rows.find((row) =>
+      row.leaves.some((leaf) => leaf.id === section?.sectionId),
+    );
+    if (row !== undefined) {
+      setSelectedLeafIds((selected) => ({ ...selected, [row.id]: undefined }));
     }
-    const abortController = new AbortController();
-    const { signal } = abortController;
-    tableData
-      .describeColumn(column, { signal })
-      .then((newDescription) => {
-        if (signal.aborted) {
-          return;
-        }
-        setDescription(
-          newDescription !== null ? { column, ...newDescription } : null,
-        );
-        // the row of the followed column shows its leaf
-        const row = toRows(tableData.getColumnSections?.() ?? []).find((row) =>
-          row.leaves.some((leaf) => leaf.id === newDescription?.sectionId),
-        );
-        if (row !== undefined) {
-          setSelectedLeafIds((selected) => ({
-            ...selected,
-            [row.id]: undefined,
-          }));
-        }
-      })
-      .catch((error: unknown) => {
-        if (!signal.aborted) {
-          console.error("Failed to describe the column", error);
-        }
-      });
-    return () => abortController.abort();
-  }, [tableData, column]);
+  }
 
   // a new column to follow takes back the messages
   // https://react.dev/reference/react/useState#storing-information-from-previous-renders
@@ -189,7 +161,7 @@ export function ColumnRows({
   }
 
   const followedRow = rows.find((row) =>
-    row.leaves.some((leaf) => leaf.id === description?.sectionId),
+    row.leaves.some((leaf) => leaf.id === section?.sectionId),
   );
 
   const startSwitch = () => {
@@ -208,7 +180,7 @@ export function ColumnRows({
       newLeaf === undefined ||
       column === null ||
       followedRow?.id !== row.id ||
-      newLeaf.id === description?.sectionId ||
+      newLeaf.id === section?.sectionId ||
       tableData?.mapColumn === undefined
     ) {
       setSelectedLeafIds((selected) => ({
@@ -276,17 +248,16 @@ export function ColumnRows({
         // the chosen leaf, else the followed one, else the first one
         const preferredLeafId =
           selectedLeafIds[row.id] ??
-          (isActive ? description?.sectionId : undefined);
+          (isActive ? section?.sectionId : undefined);
         const leaf =
           row.leaves.find((leaf) => leaf.id === preferredLeafId) ??
           row.leaves[0];
         if (leaf === undefined) {
           return null;
         }
-        const isDescriptionStale = description?.column !== column;
+        const isLocationStale = location?.column !== column;
         const showsFollowedColumn =
-          isActive &&
-          (leaf.id === description?.sectionId || isDescriptionStale);
+          isActive && (leaf.id === section?.sectionId || isLocationStale);
         return (
           <SettingsRow
             key={row.id}
@@ -300,7 +271,7 @@ export function ColumnRows({
                 tableId={tableId}
                 sectionId={leaf.id}
                 value={showsFollowedColumn ? column : null}
-                valueName={showsFollowedColumn ? description?.name : undefined}
+                valueName={showsFollowedColumn ? section?.name : undefined}
                 onValueChange={onColumnChange}
                 onNoMatch={(text) => void searchElsewhere(text, row, leaf.id)}
                 // the first row tells what the object looks like without a
