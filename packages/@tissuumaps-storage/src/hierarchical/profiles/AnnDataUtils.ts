@@ -262,13 +262,13 @@ export class AnnDataUtils {
           id: matrix.path,
           // a layer named like X or raw keeps its path, so names stay distinct
           name:
-            layerName === undefined
-              ? relativePath === "X"
-                ? "X"
-                : "raw"
-              : layerName === "X" || layerName === "raw"
-                ? relativePath
-                : layerName,
+            relativePath === "raw/X"
+              ? "raw"
+              : layerName !== undefined &&
+                  layerName !== "X" &&
+                  layerName !== "raw"
+                ? layerName
+                : relativePath,
         },
         relativePath,
       });
