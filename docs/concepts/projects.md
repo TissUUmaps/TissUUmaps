@@ -10,7 +10,7 @@ Projects are stored in **project formats** (see [Supported projects](../supporte
 
 Projects and their data may be stored locally (client-side) or hosted remotely (server-side; together with the TissUUmaps application or elsewhere).
 
-## Opening, importing and downloading
+## Opening, importing and saving
 
 Projects are read and written by **project providers**, one per project format. The TissUUmaps project provider handles the TissUUmaps format. Further formats are handled by other project providers, built into TissUUmaps or added by plugins. The format of a file, folder or URL is recognized automatically. If several formats match, or none does and more than one is available, TissUUmaps asks which one it is.
 
@@ -18,19 +18,29 @@ A project can be **opened**, which replaces the open project, or **imported**, w
 
 Open and import projects with the actions in the Project tab's menu, or by dropping a project file on the Project panel. A dropped folder is opened as the workspace, unless it is a project of a known format. Such a folder is opened or imported like a project file if it is inside the workspace. Otherwise, it can be opened as the workspace and as a project at once.
 
-A project file opened from the workspace can be saved back to it with "Save project", which writes it in the format it was opened in. Any project can be saved as a new file in the workspace with "Save as…", which rewrites the paths of its data sources in the workspace relative to the new file; it is saved in the format of its file if that can be written, and as a TissUUmaps project file otherwise. Saving to the workspace asks for write access. After another workspace is opened or the workspace is closed, a project can no longer be saved back to its file. For a project with a file in the workspace, the Project tab marks unsaved changes. Opening another project or closing the project asks for confirmation only when there are unsaved changes.
+### Saving
 
-"Download project" saves the open project in the TissUUmaps format. If several formats can be written, "Download as" offers each of them.
+"Save project" writes the open project back to its file in the workspace, in the format it was opened in. It is offered for a project file opened from the workspace or saved there with "Save as…", if that format can be written. Once another workspace is opened or the workspace is closed, the project can no longer be saved back to its file.
+
+"Save as…" saves the open project to a new file in the workspace. It is saved in the format of its file if that can be written, and in the TissUUmaps format otherwise. The paths of its data sources are rewritten for the new file: paths to files in the workspace become relative to the new file, paths relative to a project opened from a URL become absolute URLs, and other URLs stay as they are. The new file then becomes the file that "Save project" writes to. A file picked outside the workspace only gets a copy of the project, as for a download: its paths are not rewritten, and the project keeps its own file.
+
+The first "Save project" to a file asks for permission to write it (see [Workspaces](#workspaces)).
+
+"Download project" downloads the open project in the TissUUmaps format, with its paths unchanged. If several formats can be written, "Download as" offers each of them.
+
+### Unsaved changes
+
+The Project tab marks unsaved changes, and "Save project" is offered only while there are some. Opening another project or closing the project asks for confirmation when there are unsaved changes. Opening a project file from outside the workspace always asks (see [Workspaces](#workspaces)), and so does dropping a project file on an open project, which asks whether to open or import it.
 
 ### Links
 
-Each project format has its own GET parameter, e.g. `project` for the TissUUmaps format. The first such parameter in the URL opens a project, and every following one imports a project into it, in order. For example, `?project=liver.tm4&project=annotations.tm4` opens `liver.tm4` and imports `annotations.tm4`. Without such parameters, a default project is opened (see [TissUUmaps](../supported-projects/tissuumaps.md#opening-and-downloading)).
+Each project format has its own GET parameter, e.g. `project` for the TissUUmaps format. The first such parameter in the URL opens a project, and every following one imports a project into it, in order. For example, `?project=liver.tm4&project=annotations.tm4` opens `liver.tm4` and imports `annotations.tm4`. Without such parameters, a default project is opened (see [TissUUmaps](../supported-projects/tissuumaps.md#opening-saving-and-downloading)).
 
-Opening or importing a project from a URL updates the address bar accordingly, so that reloading the page loads the same projects again. "Copy share link" in the Project tab's menu copies that address. Projects opened or imported from local files cannot be recorded there. A project imported from a URL into one that was opened from a local file is not recorded either, so that reloading does not open it alone.
+Opening or importing a project from a URL updates the address bar accordingly, so that reloading the page loads the same projects again. "Copy share link" in the Project tab's menu copies that address; it needs a secure (https) connection. Projects opened or imported from local files cannot be recorded there. A project imported from a URL into one that was opened from a local file is not recorded either, so that reloading does not open it alone.
 
 ## Workspaces
 
-In Chromium-based browsers (e.g. Chrome), a workspace can be opened alongside a project. A workspace is a local folder that TissUUmaps gets read access to, so that file paths within it can be resolved. Other browsers (e.g. Firefox, Safari) do not support workspaces.
+In Chromium-based browsers (e.g. Chrome), a workspace can be opened alongside a project. A workspace is a local folder that TissUUmaps gets read access to, so that file paths within it can be resolved. Saving a project to a file in it asks for write access to that file. Other browsers (e.g. Firefox, Safari) do not support workspaces.
 
 Open a workspace with "Open workspace…" in the welcome view in the Project tab or in the Project tab's menu, then a project with "Open project from the workspace…" in the welcome view, or "Open project file…" in the menu. The workspace is shown at the bottom of the Project panel.
 
