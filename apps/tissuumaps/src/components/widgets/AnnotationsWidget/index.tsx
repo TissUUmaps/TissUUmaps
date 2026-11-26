@@ -1,3 +1,4 @@
+import { SearchIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type {
@@ -6,10 +7,18 @@ import type {
   TableColumnRef,
 } from "@tissuumaps/core";
 
-import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { TableColumnField } from "@/components/controls/TableColumnField";
-import { Input } from "@/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 import {
@@ -114,35 +123,54 @@ export function AnnotationsWidget({
     return { shown, total };
   }, [groupCounts, filteredGroupCounts, isGroupVisible]);
 
+  const isFilterDisabled = selectedGroupBy === null || hasTooManyGroups;
+
   return (
     <Fieldset
       className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
     >
-      <FieldsetLegend className="font-medium text-foreground">
-        Items
+      <FieldsetLegend className="flex flex-row items-center gap-x-1 font-medium text-foreground">
+        <span className="shrink-0">Items by</span>
+        <Popover>
+          <PopoverTrigger
+            disabled={tableId === null}
+            title="Click to group by another column"
+            className="min-w-0 truncate underline decoration-muted-foreground decoration-dotted underline-offset-4 data-disabled:opacity-50"
+          >
+            {selectedGroupBy?.column ?? "none"}
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-80 p-3">
+            <TableColumnField
+              label="Group by column"
+              tableId={tableId}
+              value={selectedGroupBy}
+              onValueChange={onSelectedGroupByChange}
+            />
+          </PopoverContent>
+        </Popover>
         {itemCounts !== null && (
           <span
-            className="ml-1 text-xs font-normal text-muted-foreground"
+            className="ml-auto shrink-0 text-xs font-normal text-muted-foreground"
             title="Items in the shown groups / items in the table"
           >
-            ({itemCounts.shown.toLocaleString()} /{" "}
-            {itemCounts.total.toLocaleString()})
+            {itemCounts.shown.toLocaleString()} /{" "}
+            {itemCounts.total.toLocaleString()}
           </span>
         )}
       </FieldsetLegend>
-      <TableColumnField
-        label="Group by column"
-        tableId={tableId}
-        value={selectedGroupBy}
-        onValueChange={onSelectedGroupByChange}
-      />
-      <Field disabled={selectedGroupBy === null || hasTooManyGroups}>
-        <FieldLabel>Filter groups</FieldLabel>
-        <Input
+      <InputGroup className="h-7" data-disabled={isFilterDisabled}>
+        <InputGroupAddon>
+          <SearchIcon />
+        </InputGroupAddon>
+        <InputGroupInput
+          className="h-full text-xs md:text-xs"
+          aria-label="Filter groups"
+          placeholder="Filter groups"
+          disabled={isFilterDisabled}
           value={nameQuery}
           onChange={(event) => setNameQuery(event.target.value)}
         />
-      </Field>
+      </InputGroup>
       {tableId !== null && selectedGroupBy !== null ? (
         hasTooManyGroups ? (
           <span className="text-xs text-muted-foreground">
