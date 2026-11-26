@@ -1,5 +1,4 @@
 import { EyeIcon, PaletteIcon, ShapesIcon } from "lucide-react";
-import type { ReactNode } from "react";
 
 import {
   type Points,
@@ -31,6 +30,7 @@ import { SizeUnitRadioGroup } from "@/components/widgets/SizeConfigWidget";
 import { useSizeConfigWidget } from "@/components/widgets/SizeConfigWidget/hooks";
 import { projectStore, useProjectStore } from "@/stores/project";
 
+import { PointsAdvancedSettingsWidget } from "./PointsAdvancedSettingsWidget";
 import { PointsSettingsCategory } from "./category";
 
 /** The column types each property can follow */
@@ -44,8 +44,6 @@ const columnTypes = {
 
 export type PointsSettingsWidgetProps = {
   points: Points;
-  /** The settings below the style, e.g. the advanced settings */
-  children?: ReactNode;
   className?: string;
 };
 
@@ -57,7 +55,6 @@ export type PointsSettingsWidgetProps = {
  */
 export function PointsSettingsWidget({
   points,
-  children,
   className,
 }: PointsSettingsWidgetProps) {
   const updatePoints = useProjectStore((state) => state.updatePoints);
@@ -199,10 +196,9 @@ export function PointsSettingsWidget({
           ),
         });
       }}
+      advancedSettings={<PointsAdvancedSettingsWidget points={points} />}
       className={className}
-    >
-      {children}
-    </SettingsWidget>
+    />
   );
 }
 

@@ -3,7 +3,6 @@ import type { Points } from "@tissuumaps/core";
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
 import { AddDataObjectButton } from "@/components/controls/AddDataObjectButton";
-import { AdvancedSettings } from "@/components/controls/AdvancedSettings";
 import {
   SortableObjectList,
   SortableObjectListItem,
@@ -20,7 +19,6 @@ import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
-import { PointsAdvancedSettingsWidget } from "./PointsAdvancedSettingsWidget";
 import { PointsAnnotationsWidget } from "./PointsAnnotationsWidget";
 import { PointsSettingsWidget } from "./PointsSettingsWidget";
 
@@ -132,11 +130,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
         }}
         className="bg-card"
       />
-      <PointsSettingsWidget points={points} className="bg-card">
-        <AdvancedSettings>
-          <PointsAdvancedSettingsWidget points={points} />
-        </AdvancedSettings>
-      </PointsSettingsWidget>
+      <PointsSettingsWidget points={points} className="bg-card" />
       {pointsData !== null && (
         <PointsAnnotationsWidget
           points={points}

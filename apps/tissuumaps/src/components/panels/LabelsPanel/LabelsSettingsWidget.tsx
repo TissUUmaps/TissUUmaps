@@ -1,5 +1,4 @@
 import { EyeIcon, PaletteIcon } from "lucide-react";
-import type { ReactNode } from "react";
 
 import {
   type Labels,
@@ -25,6 +24,7 @@ import {
 } from "@/components/widgets/SettingsWidget/styleBy";
 import { projectStore, useProjectStore } from "@/stores/project";
 
+import { LabelsAdvancedSettingsWidget } from "./LabelsAdvancedSettingsWidget";
 import { LabelsSettingsCategory } from "./category";
 
 /** The column types each property can follow */
@@ -36,8 +36,6 @@ const columnTypes = {
 
 export type LabelsSettingsWidgetProps = {
   labels: Labels;
-  /** The settings below the style, e.g. the advanced settings */
-  children?: ReactNode;
   className?: string;
 };
 
@@ -51,7 +49,6 @@ export type LabelsSettingsWidgetProps = {
  */
 export function LabelsSettingsWidget({
   labels,
-  children,
   className,
 }: LabelsSettingsWidgetProps) {
   const updateLabels = useProjectStore((state) => state.updateLabels);
@@ -149,10 +146,9 @@ export function LabelsSettingsWidget({
           ),
         });
       }}
+      advancedSettings={<LabelsAdvancedSettingsWidget labels={labels} />}
       className={className}
-    >
-      {children}
-    </SettingsWidget>
+    />
   );
 }
 

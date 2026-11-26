@@ -2,6 +2,12 @@ import { Fragment, type ReactNode, useId } from "react";
 
 import type { TableColumnType } from "@tissuumaps/core";
 
+import {
+  Collapsible,
+  CollapsiblePanel,
+  CollapsibleTrigger,
+  CollapsibleTriggerRightDownIcon,
+} from "@/components/common/collapsible";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -121,8 +127,8 @@ export type SettingsWidgetProps = {
    */
   placeholder: string;
 
-  /** The settings below the style, e.g. the advanced settings */
-  children?: ReactNode;
+  /** The advanced settings, collapsed under "Advanced" at the end */
+  advancedSettings: ReactNode;
 
   className?: string;
 };
@@ -142,7 +148,7 @@ export function SettingsWidget({
   items,
   onStyleChange,
   placeholder,
-  children,
+  advancedSettings,
   className,
 }: SettingsWidgetProps) {
   const { isCategorical, isPending, pick, setColumnType } = useStyleBy(
@@ -268,7 +274,17 @@ export function SettingsWidget({
           </StyleRow>
         )}
       </Fieldset>
-      {children}
+      <Collapsible className="flex flex-col gap-y-2">
+        <div className="flex flex-row items-center gap-x-1 text-sm">
+          <CollapsibleTriggerRightDownIcon />
+          <CollapsibleTrigger className="font-medium">
+            Advanced
+          </CollapsibleTrigger>
+        </div>
+        <CollapsiblePanel className="flex flex-col gap-y-2">
+          {advancedSettings}
+        </CollapsiblePanel>
+      </Collapsible>
     </Fieldset>
   );
 }

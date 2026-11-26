@@ -1,5 +1,4 @@
 import { EyeIcon, PaletteIcon } from "lucide-react";
-import type { ReactNode } from "react";
 
 import {
   type Shapes,
@@ -26,6 +25,7 @@ import {
 } from "@/components/widgets/SettingsWidget/styleBy";
 import { projectStore, useProjectStore } from "@/stores/project";
 
+import { ShapesAdvancedSettingsWidget } from "./ShapesAdvancedSettingsWidget";
 import { ShapesSettingsCategory } from "./category";
 
 /** The column types each property can follow */
@@ -42,8 +42,6 @@ const columnTypes = {
 
 export type ShapesSettingsWidgetProps = {
   shapes: Shapes;
-  /** The settings below the style, e.g. the advanced settings */
-  children?: ReactNode;
   className?: string;
 };
 
@@ -57,7 +55,6 @@ export type ShapesSettingsWidgetProps = {
  */
 export function ShapesSettingsWidget({
   shapes,
-  children,
   className,
 }: ShapesSettingsWidgetProps) {
   const updateShapes = useProjectStore((state) => state.updateShapes);
@@ -301,10 +298,9 @@ export function ShapesSettingsWidget({
           ),
         });
       }}
+      advancedSettings={<ShapesAdvancedSettingsWidget shapes={shapes} />}
       className={className}
-    >
-      {children}
-    </SettingsWidget>
+    />
   );
 }
 

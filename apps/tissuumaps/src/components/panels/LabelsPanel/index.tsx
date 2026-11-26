@@ -3,7 +3,6 @@ import type { Labels } from "@tissuumaps/core";
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
 import { AddDataObjectButton } from "@/components/controls/AddDataObjectButton";
-import { AdvancedSettings } from "@/components/controls/AdvancedSettings";
 import {
   SortableObjectList,
   SortableObjectListItem,
@@ -14,7 +13,6 @@ import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
-import { LabelsAdvancedSettingsWidget } from "./LabelsAdvancedSettingsWidget";
 import { LabelsAnnotationsWidget } from "./LabelsAnnotationsWidget";
 import { LabelsSettingsWidget } from "./LabelsSettingsWidget";
 
@@ -99,11 +97,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
         }}
         className="bg-card"
       />
-      <LabelsSettingsWidget labels={labels} className="bg-card">
-        <AdvancedSettings>
-          <LabelsAdvancedSettingsWidget labels={labels} />
-        </AdvancedSettings>
-      </LabelsSettingsWidget>
+      <LabelsSettingsWidget labels={labels} className="bg-card" />
       {labels.dataSource.table !== undefined && (
         <LabelsAnnotationsWidget labels={labels} className="bg-card" />
       )}

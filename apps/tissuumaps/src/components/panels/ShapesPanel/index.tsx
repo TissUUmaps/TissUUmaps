@@ -3,7 +3,6 @@ import type { Shapes } from "@tissuumaps/core";
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
 import { AddDataObjectButton } from "@/components/controls/AddDataObjectButton";
-import { AdvancedSettings } from "@/components/controls/AdvancedSettings";
 import {
   SortableObjectList,
   SortableObjectListItem,
@@ -15,7 +14,6 @@ import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
 import { useProjectStore } from "@/stores/project";
 
-import { ShapesAdvancedSettingsWidget } from "./ShapesAdvancedSettingsWidget";
 import { ShapesAnnotationsWidget } from "./ShapesAnnotationsWidget";
 import { ShapesSettingsWidget } from "./ShapesSettingsWidget";
 
@@ -102,11 +100,7 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
         }}
         className="bg-card"
       />
-      <ShapesSettingsWidget shapes={shapes} className="bg-card">
-        <AdvancedSettings>
-          <ShapesAdvancedSettingsWidget shapes={shapes} />
-        </AdvancedSettings>
-      </ShapesSettingsWidget>
+      <ShapesSettingsWidget shapes={shapes} className="bg-card" />
       {shapesData !== null && (
         <ShapesAnnotationsWidget
           shapes={shapes}
