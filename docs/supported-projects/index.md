@@ -1,6 +1,6 @@
 # Supported projects
 
-Projects are read and written by **project providers**, one per project format (see [Projects](../concepts/projects.md#opening-importing-and-downloading)). A project provider that reads a format opens and imports projects from it, and has its own GET parameter. One that writes a format downloads projects in it.
+Projects are read and written by **project providers**, one per project format (see [Projects](../concepts/projects.md#opening-importing-and-saving)). A project provider that reads a format opens and imports projects from it, and has its own GET parameter. One that writes a format saves and downloads projects in it.
 
 The following table lists the built-in project providers:
 

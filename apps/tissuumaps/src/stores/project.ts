@@ -4,6 +4,7 @@ import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 
 import {
+  type Project,
   type ProjectStore,
   type ProjectStoreApi,
   type ProjectStoreState,
@@ -14,11 +15,13 @@ import {
 import "./zustand";
 
 /**
- * The store holding the currently open project, and the URL it was loaded from
+ * The store holding the currently open project, and where it was loaded from
  *
  * Loading a project into this store, and saving it back out, is handled by
- * `@/data/io/project`. The project's URL is only ever set by loading a project,
- * and is never written back out.
+ * `@/data/io/project`. Where the project was loaded from is only ever set by
+ * loading a project or saving it as a new file, and is never written out. The
+ * file it is saved to is forgotten when the workspace changes (see
+ * `bootstrap`).
  */
 export const projectStore: ProjectStoreApi = createStore<ProjectStore>()(
   devtools(
@@ -219,7 +222,7 @@ export function useProjectStore<T>(selector: (state: ProjectStore) => T): T {
  * was not loaded from a URL
  */
 function createInitialProjectStoreState(): ProjectStoreState {
-  return {
+  const project: Project = {
     ...structuredClone(projectDefaults),
     // have no default, but clear() merges this state into the store
     physicalUnitSize: undefined,
@@ -231,8 +234,13 @@ function createInitialProjectStoreState(): ProjectStoreState {
     points: [],
     shapes: [],
     tables: [],
+  };
+  return {
+    ...project,
     source: null,
+    saveTarget: null,
     instanceId: crypto.randomUUID(),
+    savedProject: project,
   };
 }
 
