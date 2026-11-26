@@ -5,6 +5,7 @@ import {
   type RenderedRasterDataObject,
   createAnnotatedDataSource,
   createRenderedRasterDataObject,
+  omitUndefined,
 } from "./base";
 import type { ColorConfig, OpacityConfig, VisibilityConfig } from "./configs";
 import {
@@ -67,7 +68,7 @@ export function createLabels(rawLabels: RawLabels): Labels {
   return {
     ...createRenderedRasterDataObject(rawLabels),
     ...structuredClone(labelsDefaults),
-    ...structuredClone(rawLabels),
+    ...structuredClone(omitUndefined(rawLabels)),
     dataSource: createLabelsDataSource(rawLabels.dataSource),
   };
 }
@@ -109,6 +110,6 @@ export function createLabelsDataSource<TType extends string>(
   return {
     ...createAnnotatedDataSource(rawLabelsDataSource),
     ...structuredClone(labelsDataSourceDefaults),
-    ...structuredClone(rawLabelsDataSource),
+    ...structuredClone(omitUndefined(rawLabelsDataSource)),
   };
 }

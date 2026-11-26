@@ -5,6 +5,7 @@ import {
   type RawDataSource,
   createDataObject,
   createDataSource,
+  omitUndefined,
 } from "./base";
 
 /**
@@ -35,7 +36,7 @@ export function createTable(rawTable: RawTable): Table {
   return {
     ...createDataObject(rawTable),
     ...structuredClone(tableDefaults),
-    ...structuredClone(rawTable),
+    ...structuredClone(omitUndefined(rawTable)),
     dataSource: createTableDataSource(rawTable.dataSource),
   };
 }
@@ -76,6 +77,6 @@ export function createTableDataSource<TType extends string>(
   return {
     ...createDataSource(rawTableDataSource),
     ...structuredClone(tableDataSourceDefaults),
-    ...structuredClone(rawTableDataSource),
+    ...structuredClone(omitUndefined(rawTableDataSource)),
   };
 }

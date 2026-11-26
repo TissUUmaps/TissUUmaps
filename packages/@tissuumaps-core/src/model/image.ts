@@ -5,6 +5,7 @@ import {
   type RenderedRasterDataObject,
   createDataSource,
   createRenderedRasterDataObject,
+  omitUndefined,
 } from "./base";
 import type { Color } from "./primitives";
 
@@ -141,7 +142,7 @@ export function createImage(rawImage: RawImage): Image {
   return {
     ...createRenderedRasterDataObject(rawImage),
     ...structuredClone(imageDefaults),
-    ...structuredClone(rawImage),
+    ...structuredClone(omitUndefined(rawImage)),
     dataSource: createImageDataSource(rawImage.dataSource),
   };
 }
@@ -182,6 +183,6 @@ export function createImageDataSource<TType extends string>(
   return {
     ...createDataSource(rawImageDataSource),
     ...structuredClone(imageDataSourceDefaults),
-    ...structuredClone(rawImageDataSource),
+    ...structuredClone(omitUndefined(rawImageDataSource)),
   };
 }

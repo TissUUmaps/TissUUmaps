@@ -1,4 +1,4 @@
-import { type Model, type RawModel, createModel } from "./base";
+import { type Model, type RawModel, createModel, omitUndefined } from "./base";
 import { identityTransform } from "./constants";
 import type { SimilarityTransform } from "./primitives";
 
@@ -79,6 +79,6 @@ export function createLayer(rawLayer: RawLayer): Layer {
   return {
     ...createModel(rawLayer),
     ...structuredClone(layerDefaults),
-    ...structuredClone(rawLayer),
+    ...structuredClone(omitUndefined(rawLayer)),
   };
 }

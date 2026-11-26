@@ -5,6 +5,7 @@ import {
   type RenderedItemsDataObject,
   createAnnotatedDataSource,
   createRenderedItemsDataObject,
+  omitUndefined,
 } from "./base";
 import type { ColorConfig, OpacityConfig, VisibilityConfig } from "./configs";
 import {
@@ -117,7 +118,7 @@ export function createShapes(rawShapes: RawShapes): Shapes {
   return {
     ...createRenderedItemsDataObject(rawShapes),
     ...structuredClone(shapesDefaults),
-    ...structuredClone(rawShapes),
+    ...structuredClone(omitUndefined(rawShapes)),
     dataSource: createShapesDataSource(rawShapes.dataSource),
   };
 }
@@ -159,6 +160,6 @@ export function createShapesDataSource<TType extends string>(
   return {
     ...createAnnotatedDataSource(rawShapesDataSource),
     ...structuredClone(shapesDataSourceDefaults),
-    ...structuredClone(rawShapesDataSource),
+    ...structuredClone(omitUndefined(rawShapesDataSource)),
   };
 }

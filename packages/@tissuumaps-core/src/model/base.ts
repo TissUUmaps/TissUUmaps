@@ -21,13 +21,29 @@ export type Model = object &
   Omit<RawModel, keyof typeof modelDefaults>;
 
 /**
+ * Returns a copy of a raw object without its `undefined` properties, so that
+ * spreading it over defaults keeps the defaults of those properties
+ *
+ * @param rawObject - The raw object
+ * @returns The raw object without `undefined` properties
+ */
+export function omitUndefined<T extends object>(rawObject: T): T {
+  return Object.fromEntries(
+    Object.entries(rawObject).filter(([, value]) => value !== undefined),
+  ) as T;
+}
+
+/**
  * Creates a {@link Model} from a {@link RawModel} by applying {@link modelDefaults}
  *
  * @param rawModel - The raw model
  * @returns The complete model with default values applied
  */
 export function createModel(rawModel: RawModel): Model {
-  return { ...structuredClone(modelDefaults), ...structuredClone(rawModel) };
+  return {
+    ...structuredClone(modelDefaults),
+    ...structuredClone(omitUndefined(rawModel)),
+  };
 }
 
 /**
@@ -73,7 +89,7 @@ export function createDataObject<
   return {
     ...createModel(rawDataObject),
     ...structuredClone(dataObjectDefaults),
-    ...structuredClone(rawDataObject),
+    ...structuredClone(omitUndefined(rawDataObject)),
     dataSource: createDataSource(rawDataObject.dataSource),
   };
 }
@@ -150,7 +166,7 @@ export function createRenderedDataObject<
   return {
     ...createDataObject(rawRenderedDataObject),
     ...structuredClone(renderedDataObjectDefaults),
-    ...structuredClone(rawRenderedDataObject),
+    ...structuredClone(omitUndefined(rawRenderedDataObject)),
   };
 }
 
@@ -204,7 +220,7 @@ export function createRenderedRasterDataObject<
   return {
     ...createRenderedDataObject(rawRenderedRasterDataObject),
     ...structuredClone(renderedRasterDataObjectDefaults),
-    ...structuredClone(rawRenderedRasterDataObject),
+    ...structuredClone(omitUndefined(rawRenderedRasterDataObject)),
   };
 }
 
@@ -267,7 +283,7 @@ export function createRenderedItemsDataObject<
   return {
     ...createRenderedDataObject(rawRenderedItemsDataObject),
     ...structuredClone(renderedItemsDataObjectDefaults),
-    ...structuredClone(rawRenderedItemsDataObject),
+    ...structuredClone(omitUndefined(rawRenderedItemsDataObject)),
   };
 }
 
@@ -317,7 +333,7 @@ export function createDataSource<TType extends string>(
   return {
     ...createModel(rawDataSource),
     ...structuredClone(dataSourceDefaults),
-    ...structuredClone(rawDataSource),
+    ...structuredClone(omitUndefined(rawDataSource)),
   };
 }
 
@@ -367,6 +383,6 @@ export function createAnnotatedDataSource<TType extends string>(
   return {
     ...createDataSource(rawAnnotatedDataSource),
     ...structuredClone(annotatedDataSourceDefaults),
-    ...structuredClone(rawAnnotatedDataSource),
+    ...structuredClone(omitUndefined(rawAnnotatedDataSource)),
   };
 }
