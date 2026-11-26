@@ -14,6 +14,19 @@ declare global {
       multiple?: boolean;
       types?: { description?: string; accept: Record<string, string[]> }[];
     }) => Promise<FileSystemFileHandle[]>;
+    showSaveFilePicker?: (options?: {
+      id?: string;
+      startIn?: FileSystemHandle;
+      suggestedName?: string;
+      types?: { description?: string; accept: Record<string, string[]> }[];
+    }) => Promise<FileSystemFileHandle>;
+  }
+
+  /** The permission API missing from `lib.dom.d.ts` */
+  interface FileSystemHandle {
+    requestPermission(descriptor?: {
+      mode?: "read" | "readwrite";
+    }): Promise<PermissionState>;
   }
 
   /** The drag and drop API missing from `lib.dom.d.ts` */
@@ -97,6 +110,53 @@ export async function pickProjectFile(
     }
     throw error;
   }
+}
+
+/**
+ * Lets the user pick a new project file, starting in the workspace
+ *
+ * The browser creates the picked file, or empties it if it exists, as soon as
+ * it is picked, so a file outside the workspace is returned as well.
+ *
+ * @param workspace - The directory handle of the open workspace, which the
+ * picker opens in
+ * @param suggestedName - The file name to suggest
+ * @param fileTypes - The types of project files to offer, as filters in the
+ * order given (see {@link pickProjectFile})
+ * @returns The file handle and its workspace-relative path (with `/` prefix),
+ * or `null` as the path if it does not lie within the workspace; or `null` if
+ * the user cancelled the picker
+ * @throws Error if the browser does not support saving a file, or if access to
+ * the file was denied
+ */
+export async function pickProjectSaveFile(
+  workspace: FileSystemDirectoryHandle,
+  suggestedName: string,
+  fileTypes: { description: string; accept: Record<string, string[]> }[],
+): Promise<{ handle: FileSystemFileHandle; source: string | null } | null> {
+  if (window.showSaveFilePicker === undefined) {
+    throw new Error("Saving a file is not supported by this browser");
+  }
+  let handle: FileSystemFileHandle;
+  try {
+    // Called as a method: the picker throws if it loses its receiver. No
+    // picker id, so that the workspace picker keeps its own last directory.
+    handle = await window.showSaveFilePicker({
+      startIn: workspace,
+      suggestedName,
+      types: fileTypes,
+    });
+  } catch (error) {
+    if (isAbortError(error)) {
+      return null;
+    }
+    throw error;
+  }
+  const segments = await workspace.resolve(handle);
+  return {
+    handle,
+    source: segments !== null ? SourceUtils.makeWorkspacePath(segments) : null,
+  };
 }
 
 /**

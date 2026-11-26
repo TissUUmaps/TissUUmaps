@@ -76,8 +76,11 @@ describe("ColorResolver", () => {
       });
     });
 
-    it("maps every value onto the first color for an empty range", () => {
-      expect(ColorResolver.parseColor(5, [5, 5], testPalette)).toEqual(red);
+    it("maps a range that is not increasing as a step at its minimum", () => {
+      expect(ColorResolver.parseColor(4, [5, 5], testPalette)).toEqual(red);
+      expect(ColorResolver.parseColor(5, [5, 5], testPalette)).toEqual(blue);
+      expect(ColorResolver.parseColor(1, [2, 1], testPalette)).toEqual(red);
+      expect(ColorResolver.parseColor(2, [2, 1], testPalette)).toEqual(blue);
     });
 
     it("normalizes within the given range", () => {

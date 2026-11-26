@@ -26,13 +26,15 @@ const fallbackProjectUrl = "project.tm4";
  * Registers the built-in data providers and project providers, starts the data
  * caches and the plugin registry, registers the built-in plugins, marks the
  * project open once it has a source or data, collapses the expanded objects
- * whenever another project is loaded or the project is closed, starts loading
+ * whenever another project is loaded or the project is closed, forgets the
+ * file the project is saved to whenever the workspace changes, starts loading
  * the initial projects, and finally announces that the application has loaded.
  * The projects are only loading, not loaded, by the time this returns.
  *
  * @returns A callback that cancels loading the initial projects, stops
- * collapsing the expanded objects and marking the project open, and stops the
- * plugin registry and the data caches, invoked on hot module replacement
+ * forgetting the file the project is saved to, collapsing the expanded objects
+ * and marking the project open, and stops the plugin registry and the data
+ * caches, invoked on hot module replacement
  */
 export function bootstrap(): () => void {
   enableBuiltInDataProviders();
@@ -42,11 +44,14 @@ export function bootstrap(): () => void {
   enableBuiltInPlugins();
   const stopMarkingProjectOpen = startMarkingProjectOpen();
   const stopCollapsingOnProjectSwitch = startCollapsingOnProjectSwitch();
+  const stopForgettingSaveTargetOnWorkspaceSwitch =
+    startForgettingSaveTargetOnWorkspaceSwitch();
   const initialProjectsLoading = new AbortController();
   void loadInitialProjects({ signal: initialProjectsLoading.signal });
   notifyTissUUmapsLoaded();
   return () => {
     initialProjectsLoading.abort();
+    stopForgettingSaveTargetOnWorkspaceSwitch();
     stopCollapsingOnProjectSwitch();
     stopMarkingProjectOpen();
     stopPluginRegistry();
@@ -91,6 +96,24 @@ function startCollapsingOnProjectSwitch(): () => void {
         expandedShapesIds: [],
         expandedTableIds: [],
       });
+    }
+  });
+}
+
+/**
+ * Forgets the file the project is saved to (see `ProjectStoreState.saveTarget`)
+ * whenever the workspace changes, i.e. when another workspace is opened or it
+ * is closed
+ *
+ * The file belongs to the previous workspace, so saving the project back to it
+ * would write to a workspace that is no longer open.
+ *
+ * @returns A callback that stops watching the workspace
+ */
+function startForgettingSaveTargetOnWorkspaceSwitch(): () => void {
+  return appStore.subscribe((appState, prevAppState) => {
+    if (appState.workspace !== prevAppState.workspace) {
+      projectStore.setState({ saveTarget: null });
     }
   });
 }

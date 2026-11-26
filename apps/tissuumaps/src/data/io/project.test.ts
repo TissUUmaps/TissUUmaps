@@ -13,12 +13,15 @@ import {
   findProjectProviders,
   getProjectFileExtensions,
   getProjectFileTypes,
+  hasUnsavedChanges,
   loadLocalProject,
   loadProjectFromURL,
   mergeProject,
   openProject,
   readProjectURLParams,
   resolveProjectSource,
+  saveProjectCopyToFile,
+  saveProjectToFile,
   setProjectURLParam,
 } from "./project";
 
@@ -130,6 +133,371 @@ describe("openProject", () => {
     expect(projectState.source).toBe("/p.tm4");
     expect(projectState.instanceId).not.toBe(prevInstanceId);
   });
+
+  it("opens the project with its save target and without unsaved changes", () => {
+    const { saveTarget } = makeSaveTarget(makeWritable());
+    openProject({ project: { name: "Loaded" }, source: "/p.tm4", saveTarget });
+    const projectState = projectStore.getState();
+    expect(projectState.saveTarget).toBe(saveTarget);
+    expect(hasUnsavedChanges(projectState)).toBe(false);
+  });
+
+  it("drops what is not part of the project", () => {
+    openProject({
+      project: { name: "Loaded", unknown: 1 } as RawProject,
+      source: null,
+    });
+    expect(projectStore.getState()).not.toHaveProperty("unknown");
+  });
+});
+
+describe("hasUnsavedChanges", () => {
+  beforeEach(() => {
+    openProject({ project: { name: "Loaded" }, source: "/p.tm4" });
+  });
+
+  it("returns false right after opening a project", () => {
+    expect(hasUnsavedChanges(projectStore.getState())).toBe(false);
+  });
+
+  it("returns true once a part was changed", () => {
+    projectStore.getState().setName("Renamed");
+    expect(hasUnsavedChanges(projectStore.getState())).toBe(true);
+  });
+
+  it("returns true once a part was replaced by an equal copy", () => {
+    const projectState = projectStore.getState();
+    projectStore.setState({ layers: [...projectState.layers] });
+    expect(hasUnsavedChanges(projectStore.getState())).toBe(true);
+  });
+
+  it("ignores where the project was loaded from", () => {
+    projectStore.setState({ source: "https://example.com/p.tm4" });
+    expect(hasUnsavedChanges(projectStore.getState())).toBe(false);
+  });
+});
+
+/**
+ * Creates a writable file stream whose methods resolve, recording their calls
+ */
+function makeWritable() {
+  return {
+    write: vi.fn<(data: Blob) => Promise<void>>(() => Promise.resolve()),
+    close: vi.fn(() => Promise.resolve()),
+    abort: vi.fn(() => Promise.resolve()),
+  };
+}
+
+/**
+ * Creates a project file that grants write permission as given and opens the
+ * given stream, with a project provider that writes the project's name as the
+ * file
+ */
+function makeSaveTarget(
+  writable: ReturnType<typeof makeWritable>,
+  permission: PermissionState = "granted",
+) {
+  const toFile = vi.fn((project: Project) =>
+    Promise.resolve(new File([project.name], "project.tm4")),
+  );
+  const requestPermission = vi.fn(() => Promise.resolve(permission));
+  const saveTarget = {
+    handle: {
+      kind: "file",
+      name: "project.tm4",
+      requestPermission,
+      createWritable: () => Promise.resolve(writable),
+    } as unknown as FileSystemFileHandle,
+    projectProvider: { name: "Test", toFile } as ProjectProvider,
+  };
+  return { toFile, requestPermission, saveTarget };
+}
+
+describe("saveProjectToFile, to the same file", () => {
+  beforeEach(() => {
+    projectStore.getState().clear();
+  });
+
+  it("requests write permission before anything else", async () => {
+    const writable = makeWritable();
+    const { toFile, requestPermission, saveTarget } = makeSaveTarget(writable);
+    openProject({ project: { name: "Project" }, source: "/p.tm4", saveTarget });
+    const saved = saveProjectToFile(saveTarget, "/p.tm4");
+    expect(requestPermission).toHaveBeenCalledWith({ mode: "readwrite" });
+    expect(toFile).not.toHaveBeenCalled();
+    await saved;
+  });
+
+  it("rejects and writes nothing without write permission", async () => {
+    const writable = makeWritable();
+    const { toFile, saveTarget } = makeSaveTarget(writable, "denied");
+    openProject({ project: { name: "Project" }, source: "/p.tm4", saveTarget });
+    projectStore.getState().setName("Renamed");
+    await expect(saveProjectToFile(saveTarget, "/p.tm4")).rejects.toThrow(
+      "Permission to write 'project.tm4' was denied",
+    );
+    expect(toFile).not.toHaveBeenCalled();
+    expect(hasUnsavedChanges(projectStore.getState())).toBe(true);
+  });
+
+  it("writes the project with its project provider and marks it saved", async () => {
+    const writable = makeWritable();
+    const { toFile, saveTarget } = makeSaveTarget(writable);
+    openProject({ project: { name: "Project" }, source: "/p.tm4", saveTarget });
+    projectStore.getState().setName("Renamed");
+    await saveProjectToFile(saveTarget, "/p.tm4");
+    expect(toFile.mock.calls[0]?.[0].name).toBe("Renamed");
+    expect(toFile.mock.calls[0]?.[0]).not.toHaveProperty("source");
+    expect(writable.write).toHaveBeenCalledWith(
+      await toFile.mock.results[0]?.value,
+    );
+    expect(writable.close).toHaveBeenCalled();
+    expect(hasUnsavedChanges(projectStore.getState())).toBe(false);
+  });
+
+  it("leaves the sources and their objects as they are", async () => {
+    const { toFile, saveTarget } = makeSaveTarget(makeWritable());
+    const sources = ["./a.tif", "/data/b.tif", "../c.tif", "https://e.org/d"];
+    openProject({
+      project: makeProjectWithSources(sources),
+      source: "/data/p.tm4",
+      saveTarget,
+    });
+    const { images } = projectStore.getState();
+    await saveProjectToFile(saveTarget, "/data/p.tm4");
+    expect(
+      toFile.mock.calls[0]?.[0].images.map((image) => image.dataSource.source),
+    ).toEqual(sources);
+    expect(projectStore.getState().images).toBe(images);
+  });
+
+  it("aborts the file and keeps the changes when writing fails", async () => {
+    const writable = makeWritable();
+    writable.write.mockRejectedValue(new Error("disk full"));
+    writable.abort.mockRejectedValue(new Error("abort failed"));
+    const { saveTarget } = makeSaveTarget(writable);
+    openProject({ project: { name: "Project" }, source: "/p.tm4", saveTarget });
+    projectStore.getState().setName("Renamed");
+    await expect(saveProjectToFile(saveTarget, "/p.tm4")).rejects.toThrow(
+      "disk full",
+    );
+    expect(writable.abort).toHaveBeenCalled();
+    expect(hasUnsavedChanges(projectStore.getState())).toBe(true);
+  });
+
+  it("does not mark a project opened during the write as saved", async () => {
+    const writable = makeWritable();
+    const { saveTarget } = makeSaveTarget(writable);
+    openProject({ project: { name: "Project" }, source: "/p.tm4", saveTarget });
+    writable.write.mockImplementation(() => {
+      openProject({ project: { name: "Other" }, source: null });
+      projectStore.getState().setName("Other renamed");
+      return Promise.resolve();
+    });
+    await saveProjectToFile(saveTarget, "/p.tm4");
+    expect(hasUnsavedChanges(projectStore.getState())).toBe(true);
+  });
+
+  it("does not mark the project saved once it belongs to another file", async () => {
+    const writable = makeWritable();
+    const { saveTarget } = makeSaveTarget(writable);
+    openProject({ project: { name: "Project" }, source: "/p.tm4", saveTarget });
+    projectStore.getState().setName("Renamed");
+    writable.write.mockImplementation(() => {
+      projectStore.setState({ saveTarget: { ...saveTarget } });
+      return Promise.resolve();
+    });
+    await saveProjectToFile(saveTarget, "/p.tm4");
+    expect(hasUnsavedChanges(projectStore.getState())).toBe(true);
+  });
+});
+
+describe("saveProjectCopyToFile", () => {
+  it("writes the project with its sources unchanged and leaves it open as it is", async () => {
+    const { saveTarget: openTarget } = makeSaveTarget(makeWritable());
+    openProject({
+      project: makeProjectWithSources(["a.tif"]),
+      source: "/data/p.tm4",
+      saveTarget: openTarget,
+    });
+    projectStore.getState().setName("Renamed");
+    const { toFile, saveTarget } = makeSaveTarget(makeWritable());
+    await saveProjectCopyToFile(saveTarget);
+    expect(toFile.mock.calls[0]?.[0].images[0]?.dataSource.source).toBe(
+      "a.tif",
+    );
+    const projectState = projectStore.getState();
+    expect(projectState.source).toBe("/data/p.tm4");
+    expect(projectState.saveTarget).toBe(openTarget);
+    expect(hasUnsavedChanges(projectState)).toBe(true);
+  });
+});
+
+/**
+ * Creates a raw project with one image per source
+ */
+function makeProjectWithSources(sources: string[]): RawProject {
+  return {
+    name: "Project",
+    images: sources.map((source, i) => ({
+      id: `image${i}`,
+      name: `Image ${i}`,
+      layer: "layer",
+      dataSource: { type: "tiff", source },
+    })),
+  };
+}
+
+describe("saveProjectToFile, to a new file", () => {
+  const workspace = makeWorkspace([]).workspace;
+
+  beforeEach(() => {
+    appStore.setState({ projectProviders: new Map() });
+    appStore
+      .getState()
+      .registerProjectProvider("tm4", { name: "TM4", urlParam: "project" });
+    appStore.getState().setWorkspace(workspace);
+    window.history.replaceState({}, "", "/");
+  });
+
+  /**
+   * Opens a project with one image per source, saves it as a new file and
+   * returns the sources the open project switched to
+   */
+  async function saveSourcesAs(
+    sources: string[],
+    fromProjectSource: string | null,
+    toProjectSource: string,
+  ) {
+    const { saveTarget } = makeSaveTarget(makeWritable());
+    openProject({
+      project: makeProjectWithSources(sources),
+      source: fromProjectSource,
+    });
+    await saveProjectToFile(saveTarget, toProjectSource);
+    return projectStore
+      .getState()
+      .images.map((image) => image.dataSource.source);
+  }
+
+  it("makes workspace paths relative to the new file", async () => {
+    await expect(
+      saveSourcesAs(["/data/a.tif", "/shared/b.tif"], null, "/data/study.tm4"),
+    ).resolves.toEqual(["a.tif", "../shared/b.tif"]);
+  });
+
+  it("rebases paths relative to the old file", async () => {
+    await expect(
+      saveSourcesAs(
+        ["images/a.tif"],
+        "/old/project.tm4",
+        "/new/sub/project.tm4",
+      ),
+    ).resolves.toEqual(["../../old/images/a.tif"]);
+  });
+
+  it("keeps URLs and app-relative paths", async () => {
+    await expect(
+      saveSourcesAs(
+        ["https://example.com/a.tif", "//data/b.tif"],
+        null,
+        "/study.tm4",
+      ),
+    ).resolves.toEqual(["https://example.com/a.tif", "//data/b.tif"]);
+  });
+
+  it("makes paths relative to a URL project absolute", async () => {
+    await expect(
+      saveSourcesAs(
+        ["images/a.tif"],
+        "https://example.com/study/project.tm4",
+        "/study.tm4",
+      ),
+    ).resolves.toEqual(["https://example.com/study/images/a.tif"]);
+  });
+
+  it("keeps the objects whose source does not change", async () => {
+    const { saveTarget } = makeSaveTarget(makeWritable());
+    openProject({
+      project: makeProjectWithSources(["https://example.com/a.tif"]),
+      source: null,
+    });
+    const image = projectStore.getState().images[0];
+    await saveProjectToFile(saveTarget, "/study.tm4");
+    expect(projectStore.getState().images[0]).toBe(image);
+  });
+
+  it("writes the rebased project and switches to the new file", async () => {
+    const { toFile, saveTarget } = makeSaveTarget(makeWritable());
+    openProject({
+      project: makeProjectWithSources(["/data/a.tif"]),
+      source: null,
+    });
+    await saveProjectToFile(saveTarget, "/data/study.tm4");
+    const projectState = projectStore.getState();
+    expect(toFile.mock.calls[0]?.[0].images[0]?.dataSource.source).toBe(
+      "a.tif",
+    );
+    expect(projectState.source).toBe("/data/study.tm4");
+    expect(projectState.saveTarget).toBe(saveTarget);
+    expect(hasUnsavedChanges(projectState)).toBe(false);
+  });
+
+  it("keeps changes made during the write, unsaved", async () => {
+    const writable = makeWritable();
+    const { saveTarget } = makeSaveTarget(writable);
+    openProject({
+      project: makeProjectWithSources(["/data/a.tif"]),
+      source: null,
+    });
+    writable.write.mockImplementation(() => {
+      projectStore.getState().setName("Edited");
+      return Promise.resolve();
+    });
+    await saveProjectToFile(saveTarget, "/data/study.tm4");
+    const projectState = projectStore.getState();
+    expect(projectState.name).toBe("Edited");
+    expect(projectState.images[0]?.dataSource.source).toBe("a.tif");
+    expect(hasUnsavedChanges(projectState)).toBe(true);
+  });
+
+  it("removes the project URLs from the address bar", async () => {
+    const { saveTarget } = makeSaveTarget(makeWritable());
+    openProject({ project: { name: "Project" }, source: null });
+    window.history.replaceState({}, "", "/?project=https://example.com/p.tm4");
+    await saveProjectToFile(saveTarget, "/study.tm4");
+    expect(window.location.search).toBe("");
+  });
+
+  it("does not switch over once another workspace is open", async () => {
+    const writable = makeWritable();
+    const { saveTarget } = makeSaveTarget(writable);
+    openProject({ project: { name: "Project" }, source: null });
+    writable.write.mockImplementation(() => {
+      appStore.getState().setWorkspace(makeWorkspace([]).workspace);
+      return Promise.resolve();
+    });
+    await saveProjectToFile(saveTarget, "/study.tm4");
+    expect(projectStore.getState().saveTarget).toBeNull();
+  });
+
+  it("keeps the URL of a project opened during the write", async () => {
+    const writable = makeWritable();
+    const { saveTarget } = makeSaveTarget(writable);
+    openProject({ project: { name: "Project" }, source: null });
+    writable.write.mockImplementation(() => {
+      openProject({ project: { name: "Other" }, source: null });
+      window.history.replaceState(
+        {},
+        "",
+        "/?project=https://example.com/o.tm4",
+      );
+      return Promise.resolve();
+    });
+    await saveProjectToFile(saveTarget, "/study.tm4");
+    expect(window.location.search).not.toBe("");
+    expect(projectStore.getState().saveTarget).toBeNull();
+  });
 });
 
 describe("loadProjectFromURL", () => {
@@ -185,7 +553,11 @@ describe("loadLocalProject", () => {
     const { load, projectProvider } = makeProjectProvider();
     await expect(
       loadLocalProject(projectProvider, new File([], "p.tm4"), null),
-    ).resolves.toEqual({ project: { name: "Loaded" }, source: null });
+    ).resolves.toEqual({
+      project: { name: "Loaded" },
+      source: null,
+      saveTarget: null,
+    });
     expect(load).toHaveBeenCalledWith(objectUrl, { signal: undefined });
     expect(revokeObjectURL).toHaveBeenCalledWith(objectUrl);
   });
@@ -204,7 +576,7 @@ describe("loadLocalProject", () => {
   it("loads a file in the workspace through its workspace-relative path", async () => {
     const { workspace } = makeWorkspace(["study", "project.tm4"]);
     const { load, projectProvider } = makeProjectProvider();
-    const { source } = await loadLocalProject(
+    const { source, saveTarget } = await loadLocalProject(
       projectProvider,
       projectFile,
       workspace,
@@ -214,6 +586,7 @@ describe("loadLocalProject", () => {
       workspace,
     });
     expect(source).toBe("/study/project.tm4");
+    expect(saveTarget).toEqual({ handle: projectFile, projectProvider });
   });
 
   it("loads a file outside the workspace like an uploaded file", async () => {
@@ -223,19 +596,20 @@ describe("loadLocalProject", () => {
       getFile: () => Promise.resolve(new File([], "project.tm4")),
     } as FileSystemFileHandle;
     const { load, projectProvider } = makeProjectProvider();
-    const { source } = await loadLocalProject(
+    const { source, saveTarget } = await loadLocalProject(
       projectProvider,
       outsideFile,
       workspace,
     );
     expect(load).toHaveBeenCalledWith(objectUrl, { signal: undefined });
     expect(source).toBeNull();
+    expect(saveTarget).toBeNull();
   });
 
   it("loads a directory in the workspace through its workspace-relative path", async () => {
     const { workspace } = makeWorkspace(["study", "data.zarr"]);
     const { load, projectProvider } = makeProjectProvider();
-    const { source } = await loadLocalProject(
+    const { source, saveTarget } = await loadLocalProject(
       projectProvider,
       projectDirectory,
       workspace,
@@ -245,6 +619,7 @@ describe("loadLocalProject", () => {
       workspace,
     });
     expect(source).toBe("/study/data.zarr");
+    expect(saveTarget).toBeNull();
   });
 
   it("loads the workspace itself through the workspace root", async () => {

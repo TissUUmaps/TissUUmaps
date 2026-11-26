@@ -12,11 +12,13 @@ A `.tm4` file is a JSON file. It holds the project as described in the [Data mod
 
 Its project-relative data sources are relative to the file's location (see [Referencing data](../concepts/projects.md#referencing-data)).
 
-## Opening and downloading
+## Opening, saving and downloading
 
-A `.tm4` file is opened or imported like any project (see [Projects](../concepts/projects.md#opening-importing-and-downloading)). Its GET parameter is `project`, e.g. `?project=https://example.org/liver/project.tm4`. Without any project parameter in the URL, `project.tm4` next to the TissUUmaps application is opened.
+A `.tm4` file is opened or imported like any project (see [Projects](../concepts/projects.md#opening-importing-and-saving)). Its GET parameter is `project`, e.g. `?project=https://example.org/liver/project.tm4`. Without any project parameter in the URL, `project.tm4` next to the TissUUmaps application is opened.
 
-"Download project" saves the open project as a `.tm4` file, even if it was opened from another format. The file keeps the name of the file or URL the project was opened from, unless that was a file outside the workspace; otherwise, it is named after the project. A downloaded project keeps its project-relative paths, so store it next to the file it was opened from; the paths of imported projects were resolved on import and stay valid wherever it is stored.
+"Save project" writes a project opened from a `.tm4` file in the workspace back to it. "Save as…" saves any project as a new `.tm4` file in the workspace, unless it was opened from another format that can be written, and rewrites its paths for the new file (see [Projects](../concepts/projects.md#saving)).
+
+"Download project" saves the open project as a `.tm4` file, even if it was opened from another format. The file keeps the name of the file or URL the project was opened from, unless that was a file outside the workspace; otherwise, it is named after the project. A downloaded project keeps its project-relative paths, so they only stay valid next to the file it was opened from; to store a project elsewhere in the workspace, use "Save as…" instead. The paths of imported projects were resolved on import and stay valid wherever it is stored.
 
 ## Conventions
 

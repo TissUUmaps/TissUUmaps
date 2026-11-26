@@ -152,7 +152,7 @@ Sections are optional facts of the table data (see `TableData.getColumnSections`
 | --------------- | -------------------------------------------------------------------------------------------------------------- |
 | `appStore`      | Application state: workspace, whether a project is open, interaction mode, data and project providers, plugins |
 | `dataStore`     | Data references (`DataRef`) for the loaded data of each project object                                         |
-| `projectStore`  | The currently loaded project (name, layers, images, labels, points, shapes, tables, maps) and its URL          |
+| `projectStore`  | The open project, and where it was loaded from and is saved to                                                 |
 | `settingsStore` | User settings that are persisted across sessions                                                               |
 
 Each store is a Zustand store API. Using `appStore` as an example, a plugin can
@@ -180,7 +180,8 @@ returns the map and makes Immer reject the update — always use a block body.
 `projectStore` by the application. Plugins should treat it as read-only and drive
 data loading by changing the project instead, for example
 `projectStore.getState().updateTable(tableId, { dataSource })`. Likewise,
-`appStore`'s `plugins` is written by the registry alone.
+`appStore`'s `plugins` is written by the registry alone, and `projectStore`'s
+`saveTarget` and `savedProject` by the application alone.
 
 `appStore`'s `activePanelId` is the ID of the active panel, i.e. the panel whose
 tab the user selected last, and is kept in sync with the panel layout in both

@@ -25,6 +25,7 @@ import {
   findLocalProjectProviders,
   findProjectProviders,
   getProjectFileExtensions,
+  hasUnsavedChanges,
   loadLocalProject,
   mergeProject,
   openProject,
@@ -194,7 +195,7 @@ export function usePanelDrop(panelId: string): {
             (projectProvider) => projectProvider.load !== undefined,
           );
     if (isProjectOpen) {
-      const question = `Import "${projectFile.name}" into the open project, or open it instead? Opening it replaces the open project, and unsaved changes are lost.`;
+      const question = `Import "${projectFile.name}" into the open project, or open it instead? Opening it replaces the open project${hasUnsavedChanges(projectStore.getState()) ? ", and its unsaved changes are lost" : ""}.`;
       action = await ask({
         title: "Open or import project",
         body:
@@ -271,7 +272,7 @@ export function usePanelDrop(panelId: string): {
     const action = await ask({
       title: "Open workspace",
       body: isProjectOpen
-        ? `${question} Opening it as a project replaces the open project, and unsaved changes are lost.`
+        ? `${question} Opening it as a project replaces the open project${hasUnsavedChanges(projectStore.getState()) ? ", and its unsaved changes are lost" : ""}.`
         : question,
       actions: [
         { value: "workspace", label: "Open workspace" },

@@ -484,7 +484,7 @@ async function handleRangeRequest(
   }
   if (hasStatistics) {
     return {
-      response: { op: "range", range: vmin < vmax ? [vmin, vmax] : undefined },
+      response: { op: "range", range: vmin <= vmax ? [vmin, vmax] : undefined },
     };
   }
   const element = ParquetUtils.getColumnElement(

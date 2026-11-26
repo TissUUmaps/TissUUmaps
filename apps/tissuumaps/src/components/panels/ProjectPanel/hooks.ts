@@ -1,6 +1,10 @@
 import { useCallback } from "react";
 
-import { type ProjectProvider, ProjectUtils } from "@tissuumaps/core";
+import {
+  type ProjectProvider,
+  ProjectUtils,
+  SourceUtils,
+} from "@tissuumaps/core";
 import { tissuumapsProjectType } from "@tissuumaps/storage";
 
 import { useAlertDialog } from "@/components/dialogs/AlertDialog/hooks";
@@ -16,15 +20,22 @@ import {
   getProjectFileExtensions,
   getProjectFileTypes,
   getProjectProvider,
+  hasUnsavedChanges,
   loadLocalProject,
   loadProjectFromURL,
   mergeProject,
   openProject,
   readProjectURLParams,
   resolveProjectSource,
+  saveProjectCopyToFile,
+  saveProjectToFile,
   setProjectURLParam,
 } from "@/data/io/project";
-import { pickProjectFile, pickWorkspace } from "@/data/io/workspace";
+import {
+  pickProjectFile,
+  pickProjectSaveFile,
+  pickWorkspace,
+} from "@/data/io/workspace";
 import { pickFileFromInput } from "@/lib/pickFileFromInput";
 import { useAppStore } from "@/stores/app";
 import { projectStore, useProjectStore } from "@/stores/project";
@@ -83,6 +94,142 @@ export function useCloseWorkspace(): () => void {
       }
     });
   }, [confirm, setWorkspace]);
+}
+
+/**
+ * Returns a callback that saves the open project back to the file it is saved
+ * to (see `ProjectStoreState.saveTarget`)
+ *
+ * The caller offers it only if there is such a file and its project provider
+ * can write projects. Failures are logged and shown, as the callback is called
+ * from event handlers.
+ *
+ * @returns The callback, which resolves once the project is saved or the
+ * failure was shown
+ */
+export function useSaveProject(): () => Promise<void> {
+  const alert = useAlertDialog();
+
+  return useCallback(async () => {
+    const { source, saveTarget } = projectStore.getState();
+    try {
+      if (saveTarget === null || source === null) {
+        throw new Error(
+          "The open project was not opened from or saved to the workspace",
+        );
+      }
+      await saveProjectToFile(saveTarget, source);
+    } catch (error) {
+      console.error("Failed to save project", error);
+      await alert({
+        title: "Cannot save the project",
+        body: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }, [alert]);
+}
+
+/**
+ * Returns a callback that lets the user pick a new project file, starting in
+ * the workspace, and saves the open project to it
+ *
+ * The project is written with the project provider of the file it is saved
+ * to if that can write projects, and as a TissUUmaps project file otherwise.
+ * A file within the workspace becomes the one the project is saved to (see
+ * `saveProjectToFile`). A file outside it only gets a copy, as the browser
+ * has already created or emptied it (see `saveProjectCopyToFile`), and the
+ * user is told so. The caller offers it only while a workspace is open.
+ * Failures are logged and shown, as the callback is called from event
+ * handlers.
+ *
+ * @returns The callback, which resolves once the project is saved, the user
+ * cancelled, or the failure was shown
+ */
+export function useSaveProjectAs(): () => Promise<void> {
+  const workspace = useAppStore((state) => state.workspace);
+
+  const alert = useAlertDialog();
+
+  return useCallback(async () => {
+    try {
+      if (workspace === null) {
+        throw new Error("No workspace is open");
+      }
+      const { name, source, saveTarget } = projectStore.getState();
+      const projectProvider =
+        saveTarget?.projectProvider.toFile !== undefined
+          ? saveTarget.projectProvider
+          : getProjectProvider(tissuumapsProjectType);
+      const fileExtension =
+        Object.values(projectProvider.fileTypes ?? {}).flat()[0] ?? "";
+      const stem = source !== null ? SourceUtils.getStem(source) : "";
+      const picked = await pickProjectSaveFile(
+        workspace,
+        `${stem || name || "Untitled"}${fileExtension}`,
+        projectProvider.fileTypes !== undefined
+          ? [
+              {
+                description: `${projectProvider.name} project`,
+                accept: projectProvider.fileTypes,
+              },
+            ]
+          : [],
+      );
+      if (picked === null) {
+        return;
+      }
+      const target = { handle: picked.handle, projectProvider };
+      if (picked.source !== null) {
+        await saveProjectToFile(target, picked.source);
+        return;
+      }
+      await saveProjectCopyToFile(target);
+      await alert({
+        title: "Copy saved outside the workspace",
+        body: `"${picked.handle.name}" is not in the workspace "${workspace.name}", so only a copy was saved to it, as for a download. Its paths were not rewritten, and the open project is unchanged.`,
+      });
+    } catch (error) {
+      console.error("Failed to save project", error);
+      await alert({
+        title: "Cannot save the project",
+        body: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }, [workspace, alert]);
+}
+
+/**
+ * Returns a callback that copies a link that opens the open project, and
+ * shows it
+ *
+ * The link is the current address, which names the projects opened and
+ * imported from URLs (see `setProjectURLParam`); if it names none, the user
+ * is told that there is no link. Copying needs a secure context, where the
+ * clipboard is available, which the caller checks. Failures are logged and
+ * shown, as the callback is called from event handlers.
+ *
+ * @returns The callback
+ */
+export function useCopyProjectLink(): () => void {
+  const alert = useAlertDialog();
+
+  return useCallback(() => {
+    if (readProjectURLParams(window.location.search).length === 0) {
+      void alert({
+        title: "Cannot copy the link",
+        body: "Only projects opened from a URL have a link to share.",
+      });
+      return;
+    }
+    const link = window.location.href;
+    navigator.clipboard
+      .writeText(link)
+      .then(() => alert({ title: "Link copied", body: link }))
+      .catch(async (error: unknown) => {
+        console.error("Failed to copy project link", error);
+        await alert({ title: "Cannot copy the link", body: link });
+      });
+  }, [alert]);
 }
 
 /**
@@ -166,7 +313,8 @@ export function useChooseProjectProvider(): (
  * project from it with the project provider that supports it, or the one the
  * user chooses if none or several do (see `useChooseProjectProvider`)
  *
- * Failures are logged and shown, as the callback is called from event
+ * The project is opened after confirmation if it would replace unsaved
+ * changes. Failures are logged and shown, as the callback is called from event
  * handlers.
  *
  * @returns The callback
@@ -177,6 +325,7 @@ export function useOpenProjectFromURL(): () => void {
   const chooseProjectProvider = useChooseProjectProvider();
 
   const alert = useAlertDialog();
+  const confirm = useConfirmDialog();
   const prompt = usePromptDialog();
 
   return useCallback(() => {
@@ -194,7 +343,15 @@ export function useOpenProjectFromURL(): () => void {
           ),
           { actionLabel: "Open" },
         );
-        if (projectProvider === null) {
+        if (
+          projectProvider === null ||
+          (hasUnsavedChanges(projectStore.getState()) &&
+            !(await confirm({
+              title: "Open project",
+              body: `Are you sure you want to open "${projectUrl}"? The open project's unsaved changes will be lost.`,
+              actionLabel: "Open",
+            })))
+        ) {
           return;
         }
         openProject(await loadProjectFromURL(projectProvider, projectUrl));
@@ -207,7 +364,7 @@ export function useOpenProjectFromURL(): () => void {
           body: error instanceof Error ? error.message : String(error),
         });
       });
-  }, [workspace, chooseProjectProvider, prompt, alert]);
+  }, [workspace, chooseProjectProvider, prompt, confirm, alert]);
 }
 
 /**
@@ -219,8 +376,9 @@ export function useOpenProjectFromURL(): () => void {
  * `useChooseProjectProvider`). A project file picked outside the open
  * workspace is loaded only after confirmation, as its project-relative paths
  * are then resolved against the workspace instead of the project file's
- * directory (see `loadLocalProject`). Failures are logged and shown,
- * as the callback is called from event handlers.
+ * directory (see `loadLocalProject`), as is any project that would replace
+ * unsaved changes. Failures are logged and shown, as the callback is called
+ * from event handlers.
  *
  * @returns The callback
  */
@@ -244,13 +402,28 @@ export function useOpenProjectFromFile(): () => void {
         if (projectFile === null) {
           return;
         }
-        if (
+        const outsideWorkspaceNote =
           workspace !== null &&
           (projectFile instanceof File ||
-            (await resolveProjectSource(projectFile, workspace)) === null) &&
+            (await resolveProjectSource(projectFile, workspace)) === null)
+            ? `"${projectFile.name}" is not in the workspace "${workspace.name}". Its relative paths will be looked up in "${workspace.name}" instead of next to the project file, so some of its data may fail to load.`
+            : null;
+        const question = hasUnsavedChanges(projectStore.getState())
+          ? `Are you sure you want to open "${projectFile.name}"? The open project's unsaved changes will be lost.`
+          : outsideWorkspaceNote !== null
+            ? "Open it anyway?"
+            : null;
+        if (
+          question !== null &&
           !(await confirm({
-            title: "Open project from outside the workspace",
-            body: `"${projectFile.name}" is not in the workspace "${workspace.name}". Its relative paths will be looked up in "${workspace.name}" instead of next to the project file, so some of its data may fail to load. Open it anyway?`,
+            title:
+              outsideWorkspaceNote !== null
+                ? "Open project from outside the workspace"
+                : "Open project",
+            body:
+              outsideWorkspaceNote !== null
+                ? `${outsideWorkspaceNote} ${question}`
+                : question,
             actionLabel: "Open",
           }))
         ) {
@@ -279,7 +452,8 @@ export function useOpenProjectFromFile(): () => void {
  * Returns a function that loads a project from a local file or directory with
  * a project provider and marks it open
  *
- * A file or directory within the workspace is loaded with its source (see
+ * A file or directory within the workspace is loaded with its source, and a
+ * file within it becomes the one the project is saved to (see
  * `loadLocalProject`). The project URL parameters are cleared, as they name
  * other projects.
  *
@@ -434,7 +608,8 @@ export function useImportProjectFromFile(): () => void {
 }
 
 /**
- * Returns a callback that closes the open project, after confirmation
+ * Returns a callback that closes the open project, after confirmation if it
+ * has unsaved changes
  *
  * @returns The callback
  */
@@ -444,11 +619,15 @@ export function useCloseProject(): () => void {
   const confirm = useConfirmDialog();
 
   return useCallback(() => {
-    void confirm({
-      title: "Close project",
-      body: "Are you sure you want to close the project? All unsaved changes will be lost.",
-      actionLabel: "Close",
-    }).then((confirmed) => {
+    void (
+      hasUnsavedChanges(projectStore.getState())
+        ? confirm({
+            title: "Close project",
+            body: "Are you sure you want to close the project? Its unsaved changes will be lost.",
+            actionLabel: "Close",
+          })
+        : Promise.resolve(true)
+    ).then((confirmed) => {
       if (confirmed) {
         clearProject();
         clearProjectURLParams();
