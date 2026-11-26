@@ -4,7 +4,7 @@ sidebar_position: 5
 
 # Settings
 
-Each point cloud, label image and shape cloud shows a **Settings** box in its entry in the Points, Labels or Shapes panel, below its data source. Without a table, the style rows are disabled. The other settings are under **Advanced**, collapsed at the end of the box.
+Each point cloud, label image and shape cloud shows a **Settings** box in its entry in the Points, Labels or Shapes panel, below its data source. Without a table, its rows are disabled. The other settings are under **Advanced**, collapsed at the end of the box.
 
 - **Column** picks a column of the object's own table.
   - Tables with sections, such as AnnData, show one row per group, for example **Observations**, **Features** and **Embeddings**. Each row searches its columns by name. **from** chooses the set of columns of a row, for example `X`, a layer or `raw`; switching it keeps the feature if that set has it. A name found only in another set of the row is offered there, to switch to.
