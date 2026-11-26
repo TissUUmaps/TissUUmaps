@@ -20,7 +20,9 @@ export class NumberUtils {
   static parseFinite(value: unknown): number {
     const v = NumberUtils.tryParseFinite(value);
     if (v === undefined) {
-      throw new Error(`Value is not a finite number: ${String(value)}`);
+      throw new Error(
+        `Value ${typeof value === "string" ? `'${value}'` : String(value)} is not a finite number`,
+      );
     }
     return v;
   }
@@ -35,7 +37,9 @@ export class NumberUtils {
   static parseSafeInt(value: unknown): number {
     const v = NumberUtils.tryParseSafeInt(value);
     if (v === undefined) {
-      throw new Error(`Value is not a safe integer: ${String(value)}`);
+      throw new Error(
+        `Value ${typeof value === "string" ? `'${value}'` : String(value)} is not a safe integer`,
+      );
     }
     return v;
   }

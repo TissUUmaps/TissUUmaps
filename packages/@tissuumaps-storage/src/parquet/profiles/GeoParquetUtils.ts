@@ -5,6 +5,7 @@ import type { IDArray, ShapesGeometry } from "@tissuumaps/core";
 
 import { ShapesGeometryBuilder } from "../../common/ShapesGeometryBuilder";
 import { ParquetUtils } from "../ParquetUtils";
+import type { ParquetPart } from "../types";
 
 /**
  * A geometry column of a GeoParquet file
@@ -238,39 +239,43 @@ export class GeoParquetUtils {
    * The WKB column is decoded once for both axes, so that a point cloud reading
    * its x and y from the same column does not decode it twice.
    *
-   * @param buffer - The file to read from
-   * @param metadata - The file metadata
+   * @param parts - The parts of the table (see {@link ParquetUtils})
    * @param column - The point geometry column to read
-   * @param onProgress - Callback reporting the read progress
+   * @param onProgress - Called with the bytes read so far from all parts and
+   * their total size
    * @returns The x and y coordinates of every row
    * @throws Error if a row holds no geometry, or one that is not a point
    */
   static async readCoordinateColumns(
-    buffer: AsyncBuffer,
-    metadata: FileMetaData,
+    parts: ParquetPart[],
     column: string,
     onProgress: (progress: number, total: number) => void,
   ): Promise<{ x: Float32Array; y: Float32Array }> {
-    const numRows = ParquetUtils.getNumRows(metadata);
+    const numRows = ParquetUtils.getTotalNumRows(parts);
     const x = new Float32Array(numRows);
     const y = new Float32Array(numRows);
-    await GeoParquetUtils.readGeometryColumn(
-      buffer,
-      metadata,
-      column,
-      (geometry, row) => {
-        if (geometry === null) {
-          throw new Error(`Missing geometry in column "${column}"`);
-        }
-        if (geometry.type !== "Point") {
-          throw new Error(
-            `Column "${column}" contains a ${geometry.type} geometry`,
-          );
-        }
-        x[row] = geometry.coordinates[0]!;
-        y[row] = geometry.coordinates[1]!;
-      },
+    await ParquetUtils.readParts(
+      parts,
       onProgress,
+      (part, rowOffset, onPartProgress) =>
+        GeoParquetUtils.readGeometryColumn(
+          part.buffer,
+          part.metadata,
+          column,
+          (geometry, row) => {
+            if (geometry === null) {
+              throw new Error(`Missing geometry in column '${column}'`);
+            }
+            if (geometry.type !== "Point") {
+              throw new Error(
+                `Column '${column}' contains a geometry of type '${geometry.type}'`,
+              );
+            }
+            x[rowOffset + row] = geometry.coordinates[0]!;
+            y[rowOffset + row] = geometry.coordinates[1]!;
+          },
+          onPartProgress,
+        ),
     );
     return { x, y };
   }
@@ -297,7 +302,7 @@ export class GeoParquetUtils {
     if (geoColumn === undefined) {
       throw new Error(
         geometryColumn !== undefined
-          ? `Geometry column "${geometryColumn}" is missing or not encoded as WKB`
+          ? `Geometry column '${geometryColumn}' is missing or not encoded as WKB`
           : "Parquet file has no GeoParquet geometry column",
       );
     }
@@ -346,7 +351,7 @@ export class GeoParquetUtils {
       geoColumn.name,
       (rowGeometry, row) => {
         if (rowGeometry === null) {
-          console.warn("Skipping row without geometry.");
+          console.warn("Skipping row without geometry");
           return;
         }
         if (rowGeometry.type === "Point") {
@@ -366,13 +371,13 @@ export class GeoParquetUtils {
       throw new Error(
         numPoints > 0
           ? GeoParquetUtils._pointColumnMessage(geoColumn.name)
-          : `No valid geometries found in column "${geoColumn.name}"`,
+          : `No valid geometries found in column '${geoColumn.name}'`,
       );
     }
     if (numPoints > 0) {
       console.warn(
-        `Skipped ${numPoints} points in column "${geoColumn.name}", which are ` +
-          `not shapes.`,
+        `Skipped ${numPoints} points in column '${geoColumn.name}', which are ` +
+          `not shapes`,
       );
     }
     return builder.build();
@@ -381,8 +386,8 @@ export class GeoParquetUtils {
   /** The error for a column of points asked for as shapes */
   private static _pointColumnMessage(name: string): string {
     return (
-      `Geometry column "${name}" holds points, which are read as ` +
-      `the "${name}[x]" and "${name}[y]" columns of a table`
+      `Geometry column '${name}' holds points, which are read as ` +
+      `the '${name}[x]' and '${name}[y]' columns of a table`
     );
   }
 
@@ -408,6 +413,6 @@ export class GeoParquetUtils {
       builder.addShape(geometry.coordinates, id, name);
       return;
     }
-    console.warn(`Unsupported geometry type: ${geometry.type}`);
+    console.warn(`Geometry type '${geometry.type}' is not supported`);
   }
 }

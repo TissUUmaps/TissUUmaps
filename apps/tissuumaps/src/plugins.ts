@@ -73,7 +73,7 @@ export const pluginRegistry: PluginRegistry = {
       try {
         teardown = plugin.setup(pluginStores);
       } catch (setupError) {
-        console.error(`Error during setup of plugin ${plugin.id}:`, setupError);
+        console.error(`Failed to set up plugin '${plugin.id}'`, setupError);
         return;
       }
     }
@@ -103,7 +103,7 @@ export const pluginRegistry: PluginRegistry = {
     try {
       registration.unmount = registration.plugin.mount(container, pluginStores);
     } catch (mountError) {
-      console.error(`Error during mount of plugin ${pluginId}:`, mountError);
+      console.error(`Failed to mount plugin '${pluginId}'`, mountError);
       return;
     }
     registration.mounted = true;
@@ -132,10 +132,7 @@ export const pluginRegistry: PluginRegistry = {
     try {
       unmount?.();
     } catch (unmountError) {
-      console.error(
-        `Error during unmount of plugin ${pluginId}:`,
-        unmountError,
-      );
+      console.error(`Failed to unmount plugin '${pluginId}'`, unmountError);
     }
   },
   unregisterPlugin: (pluginId) => {
@@ -150,7 +147,7 @@ export const pluginRegistry: PluginRegistry = {
         registration.teardown?.();
       } catch (teardownError) {
         console.error(
-          `Error during teardown of plugin ${pluginId}:`,
+          `Failed to tear down plugin '${pluginId}'`,
           teardownError,
         );
       }
@@ -247,11 +244,11 @@ export async function loadPluginFromURL(pluginUrl: string): Promise<string> {
     typeof exports !== "object" ||
     !("default" in exports)
   ) {
-    throw new Error(`${pluginUrl} has no default export`);
+    throw new Error(`Plugin module '${pluginUrl}' has no default export`);
   }
   const plugin = exports.default;
   if (!isPlugin(plugin)) {
-    throw new Error(`The default export of ${pluginUrl} is not a plugin`);
+    throw new Error(`The default export of '${pluginUrl}' is not a plugin`);
   }
   // not set up again if the module has registered it itself, or on reloading
   if (pluginRegistrations.get(plugin.id)?.plugin !== plugin) {
@@ -259,7 +256,7 @@ export async function loadPluginFromURL(pluginUrl: string): Promise<string> {
   }
   if (!pluginRegistrations.has(plugin.id)) {
     throw new Error(
-      `Error during setup of plugin ${plugin.id}, see the browser console for details`,
+      `Failed to set up plugin '${plugin.id}'; see the browser console for details`,
     );
   }
   return plugin.id;

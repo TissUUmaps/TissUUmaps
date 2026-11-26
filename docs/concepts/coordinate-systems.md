@@ -27,4 +27,4 @@ User-configurable variables are highlighted in bold.
 
 ## Physical units
 
-The project's physical unit size is the physical size of one world unit, in the project's physical unit: one of the listed units (picometers to kilometers) or any other text. The scale bar converts between the listed units and shows any other unit as typed; until both the size and the unit are set, it is in world units.
+The project's physical unit size is the physical size of one world unit, in the project's physical unit: one of the listed units (picometers to kilometers) or any other text. The scalebar converts between the listed units and shows any other unit as typed; until both the size and the unit are set, it is in world units.

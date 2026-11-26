@@ -222,7 +222,7 @@ export class SizeResolver {
     const sizeMap = ConfigUtils.findGroupByMap(config, sizeMaps);
     if (sizeMap === undefined) {
       console.warn(
-        `Size map ${config.groupBy.map} not found, using default size`,
+        `Size map '${config.groupBy.map}' not found, using default size`,
       );
       return SizeResolver.createUniformSizes(ids.length, defaultSize, {
         align,

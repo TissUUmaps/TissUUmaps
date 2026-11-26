@@ -59,7 +59,7 @@ export class TissUUmapsProjectProvider implements ProjectProvider {
       const response = await fetch(url, { signal });
       if (!response.ok) {
         throw new Error(
-          `Failed to load project from ${url}: ${response.status} ${response.statusText}`,
+          `Failed to load project from '${url}': ${response.status} ${response.statusText}`,
         );
       }
       rawProjectJSON = await response.text(); // throws on abort

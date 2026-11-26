@@ -669,7 +669,7 @@ export class SVGController {
   private _screenToWorld(screenX: number, screenY: number): Vertex {
     const ctm = this.transformNode.getScreenCTM();
     if (!ctm) {
-      throw new Error("Could not get screen CTM");
+      throw new Error("Failed to get the screen CTM");
     }
 
     const inverse = ctm.inverse();

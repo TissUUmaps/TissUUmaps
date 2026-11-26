@@ -74,7 +74,7 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
       };
     }
     if (dataSource.source === undefined) {
-      throw new Error("Either source or tileSource must be specified.");
+      throw new Error("Either source or tileSource must be specified");
     }
     const source = SourceUtils.normalizeSource(
       dataSource.source,
@@ -86,7 +86,7 @@ export class OpenSeadragonImageDataProvider implements ImageDataProvider<
       SourceUtils.isWorkspacePath(source)
     ) {
       throw new Error(
-        `Tile sources cannot be opened from the workspace: ${source}`,
+        `Tile source '${source}' cannot be opened from the workspace`,
       );
     }
     return {

@@ -170,13 +170,13 @@ export class CSVTableDataProvider implements TableDataProvider<
             const columnMeta = columnMetas[c]!;
             const columnChunk = columnChunks[c]!;
             if (columnMeta.index < 0) {
-              parseError = new Error(`Column "${columnMeta.name}" not found`);
+              parseError = new Error(`Column '${columnMeta.name}' not found`);
               parser.abort();
               return;
             }
             if (columnMeta.index >= rowData.length) {
               parseError = new Error(
-                `Missing value for column "${columnMeta.name}"`,
+                `Missing value for column '${columnMeta.name}'`,
               );
               parser.abort();
               return;
@@ -311,7 +311,7 @@ export class CSVTableDataProvider implements TableDataProvider<
     }
 
     if (columnMetas === undefined || columnMetas.length === 0) {
-      throw new Error("No columns found in the CSV file.");
+      throw new Error("No columns found in the CSV file");
     }
 
     const n = columnValues.get(columnMetas[0]!.name)?.length ?? 0;
@@ -321,7 +321,7 @@ export class CSVTableDataProvider implements TableDataProvider<
       const idColumnValues = columnValues.get(normalizedDataSource.idColumn);
       if (idColumnValues === undefined) {
         throw new Error(
-          `ID column "${normalizedDataSource.idColumn}" does not exist in the table.`,
+          `ID column '${normalizedDataSource.idColumn}' not found in the table`,
         );
       }
       if (
@@ -330,7 +330,7 @@ export class CSVTableDataProvider implements TableDataProvider<
           : idColumnValues.some((id) => Number.isNaN(id))
       ) {
         throw new Error(
-          `ID column "${normalizedDataSource.idColumn}" has missing values.`,
+          `ID column '${normalizedDataSource.idColumn}' has missing values`,
         );
       }
       ids = ArrayUtils.toIDArray(idColumnValues);
@@ -343,7 +343,7 @@ export class CSVTableDataProvider implements TableDataProvider<
       );
       if (nameColumnValues === undefined) {
         throw new Error(
-          `Name column "${normalizedDataSource.nameColumn}" does not exist in the table.`,
+          `Name column '${normalizedDataSource.nameColumn}' not found in the table`,
         );
       }
       names = Array.from<string | number, string>(nameColumnValues, String);

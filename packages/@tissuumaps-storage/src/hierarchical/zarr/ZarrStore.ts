@@ -87,7 +87,7 @@ export class ZarrStore implements HierarchicalStore {
     });
     if (listableStore === null) {
       throw new Error(
-        "The Zarr store has no consolidated metadata, so its columns cannot be listed.",
+        "The Zarr store has no consolidated metadata, so its columns cannot be listed",
       );
     }
     const groupPath = group !== "" ? `/${group}` : "";
@@ -113,7 +113,7 @@ export class ZarrStore implements HierarchicalStore {
       }
     }
     if (kinds.get("") !== "group") {
-      throw new Error(`The Zarr store has no group at "${group}".`);
+      throw new Error(`The Zarr store has no group at '${group}'`);
     }
     // probed once: zarr.open() would otherwise request a missing zarr.json
     // for every node of a v2 store
@@ -165,7 +165,7 @@ export class ZarrStore implements HierarchicalStore {
       signal?.throwIfAborted();
       // a node whose metadata zarrita cannot read, such as a structured
       // dtype under "uns", is reported as absent rather than failing the store
-      console.warn(`Skipping node "${path}" of the Zarr store:`, error);
+      console.warn(`Skipping node '${path}' of the Zarr store`, error);
       return null;
     }
   }
