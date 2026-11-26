@@ -571,7 +571,7 @@ export class SpatialDataProjectProvider implements ProjectProvider {
             name,
             transform,
             dataSource,
-            pointColor,
+            ...(pointColor !== undefined && { pointColor }),
           },
         }));
       },
