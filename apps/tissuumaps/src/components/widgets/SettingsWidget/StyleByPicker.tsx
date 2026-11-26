@@ -113,7 +113,6 @@ export function StyleByPicker({
   >({});
   const [notice, setNotice] = useState<string | null>(null);
   const [elsewhere, setElsewhere] = useState<{
-    rowId: string;
     leaf: Row["leaves"][number];
     column: string;
     name: string;
@@ -229,10 +228,6 @@ export function StyleByPicker({
         return;
       }
       if (mappedColumn !== null) {
-        setSelectedLeafIds((selected) => ({
-          ...selected,
-          [row.id]: sectionId,
-        }));
         void onColumnChange(mappedColumn);
       } else {
         setNotice(`No match in ${newLeaf.name}`);
@@ -263,7 +258,7 @@ export function StyleByPicker({
           return;
         }
         if (found !== null) {
-          setElsewhere({ rowId: row.id, leaf, ...found });
+          setElsewhere({ leaf, ...found });
           return;
         }
       }
@@ -355,13 +350,8 @@ export function StyleByPicker({
               size="xs"
               className="h-auto p-0 text-xs"
               onClick={() => {
-                const { rowId, leaf, column } = elsewhere;
                 setElsewhere(null);
-                setSelectedLeafIds((selected) => ({
-                  ...selected,
-                  [rowId]: leaf.id,
-                }));
-                void onColumnChange(column);
+                void onColumnChange(elsewhere.column);
               }}
             >
               switch?
