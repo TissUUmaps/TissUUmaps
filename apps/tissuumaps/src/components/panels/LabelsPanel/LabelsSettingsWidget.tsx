@@ -44,8 +44,7 @@ export type LabelsSettingsWidgetProps = {
  * opacity and visibility follow
  *
  * If no property follows the column, the color follows a newly picked one.
- * The color stopping to follow
- * returns to the default random colors of labels.
+ * The color stopping to follow returns to the default random colors of labels.
  */
 export function LabelsSettingsWidget({
   labels,

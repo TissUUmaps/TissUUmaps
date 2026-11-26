@@ -16,9 +16,9 @@ import { DataWrapperBase } from "./DataWrapperBase";
  *
  * Values, unique value counts and value ranges are each loaded once per
  * column and then kept for as long as this wrapper lives; column queries are
- * delegated to the wrapped data unchanged. The optional names getter, query
- * groups, column descriptions, column mapping and declared categoricals are
- * only provided if the wrapped data provides them.
+ * delegated to the wrapped data unchanged. The optional names getter,
+ * sections, column descriptions, column mapping and column types are only
+ * provided if the wrapped data provides them.
  */
 export class TableDataWrapper
   extends DataWrapperBase<TableData>
