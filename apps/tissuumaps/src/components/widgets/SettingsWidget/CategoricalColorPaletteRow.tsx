@@ -26,6 +26,8 @@ export function CategoricalColorPaletteRow({
         colorPalettes={categoricalColorPalettes}
         value={adapter.currentGroupByPalette}
         onValueChange={adapter.setCurrentGroupByPalette}
+        // the box saves only a complete color, so a palette is required
+        nullable={false}
       />
     </SettingsRow>
   );

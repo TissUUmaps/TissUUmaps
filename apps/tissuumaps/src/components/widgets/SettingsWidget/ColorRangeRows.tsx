@@ -23,6 +23,8 @@ export function ColorRangeRows({ adapter }: ColorRangeRowsProps) {
           colorPalettes={continuousColorPalettes}
           value={adapter.currentFromPalette}
           onValueChange={adapter.setCurrentFromPalette}
+          // the box saves only a complete color, so a palette is required
+          nullable={false}
         />
       </SettingsRow>
       <SettingsRow label="Range" className="grid grid-cols-2 gap-x-1">
