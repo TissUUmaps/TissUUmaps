@@ -16,8 +16,9 @@ import { DataWrapperBase } from "./DataWrapperBase";
  *
  * Values, unique value counts and value ranges are each loaded once per
  * column and then kept for as long as this wrapper lives; column queries are
- * delegated to the wrapped data unchanged. The optional names getter is only
- * provided if the wrapped data provides it.
+ * delegated to the wrapped data unchanged. The optional names getter,
+ * sections, column descriptions, column mapping and column types are only
+ * provided if the wrapped data provides them.
  */
 export class TableDataWrapper
   extends DataWrapperBase<TableData>
@@ -37,11 +38,29 @@ export class TableDataWrapper
   >();
 
   readonly getNames?: TableData["getNames"];
+  readonly getColumnSections?: TableData["getColumnSections"];
+  readonly describeColumn?: TableData["describeColumn"];
+  readonly mapColumn?: TableData["mapColumn"];
+  readonly getColumnType?: TableData["getColumnType"];
 
   constructor(data: TableData) {
     super(data);
     if (data.getNames !== undefined) {
       this.getNames = () => this.data.getNames!();
+    }
+    if (data.getColumnSections !== undefined) {
+      this.getColumnSections = () => this.data.getColumnSections!();
+    }
+    if (data.describeColumn !== undefined) {
+      this.describeColumn = (column, options) =>
+        this.data.describeColumn!(column, options);
+    }
+    if (data.mapColumn !== undefined) {
+      this.mapColumn = (column, options) =>
+        this.data.mapColumn!(column, options);
+    }
+    if (data.getColumnType !== undefined) {
+      this.getColumnType = (column) => this.data.getColumnType!(column);
     }
   }
 
@@ -55,7 +74,7 @@ export class TableDataWrapper
 
   suggestColumnQueries(
     currentQuery: string,
-    options?: { signal?: AbortSignal },
+    options?: { sectionId?: string; signal?: AbortSignal },
   ): Promise<TableColumnQuerySuggestion[]> {
     return this.data.suggestColumnQueries(currentQuery, options);
   }

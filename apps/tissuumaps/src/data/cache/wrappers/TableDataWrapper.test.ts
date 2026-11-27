@@ -87,4 +87,46 @@ describe("TableDataWrapper", () => {
       expect(loadValues).not.toHaveBeenCalled();
     });
   });
+
+  describe("optional methods", () => {
+    it("forwards the optional methods only if the wrapped data has them", async () => {
+      const { data } = createTestTableData([]);
+      const wrapperWithout = new TableDataWrapper(data);
+      expect(wrapperWithout.getColumnSections).toBeUndefined();
+      expect(wrapperWithout.describeColumn).toBeUndefined();
+      expect(wrapperWithout.mapColumn).toBeUndefined();
+      expect(wrapperWithout.getColumnType).toBeUndefined();
+
+      const groups = [
+        {
+          id: "var",
+          name: "Features",
+          subsections: [
+            { id: "X", name: "X" },
+            { id: "raw/X", name: "raw" },
+          ],
+        },
+      ];
+      const mapColumn = vi.fn().mockResolvedValue("raw/X[CD3]");
+      data.getColumnSections = vi.fn().mockReturnValue(groups);
+      data.describeColumn = vi
+        .fn()
+        .mockResolvedValue({ sectionId: "X", name: "CD3" });
+      data.mapColumn = mapColumn;
+      data.getColumnType = vi.fn().mockReturnValue("categorical");
+      const wrapper = new TableDataWrapper(data);
+      expect(wrapper.getColumnSections!()).toBe(groups);
+      await expect(wrapper.describeColumn!("X[CD3]")).resolves.toEqual({
+        sectionId: "X",
+        name: "CD3",
+      });
+      await expect(
+        wrapper.mapColumn!("X[CD3]", { sectionId: "raw/X" }),
+      ).resolves.toBe("raw/X[CD3]");
+      expect(mapColumn).toHaveBeenCalledWith("X[CD3]", {
+        sectionId: "raw/X",
+      });
+      expect(wrapper.getColumnType!("obs/cluster")).toBe("categorical");
+    });
+  });
 });

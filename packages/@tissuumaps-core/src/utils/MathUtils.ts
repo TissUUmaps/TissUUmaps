@@ -321,6 +321,54 @@ export class MathUtils {
   }
 
   /**
+   * Counts the distinct values, stopping early once there are more than
+   * `limit` of them
+   *
+   * Meant as a cheap guard before treating values as categories: the count is
+   * exact up to `limit`, and `limit + 1` stands for "more than `limit`".
+   * Distinctness follows `Set` equality, as in
+   * {@link computeUniqueValueCounts}.
+   *
+   * The values are traversed on the main thread, yielding to the event loop
+   * periodically so the UI stays responsive for large arrays (see
+   * {@link AsyncUtils.createYielder}). Aborting the signal rejects with its
+   * reason.
+   *
+   * @typeParam T - Element type of the values
+   * @param values - The values to count
+   * @param limit - The non-negative number of distinct values beyond which
+   * counting stops
+   * @param options - Optional abort signal
+   * @returns A promise that resolves to the number of distinct values, or to
+   * `limit + 1` if there are more than `limit`
+   * @throws Error if `limit` is negative
+   */
+  static async countUniqueValues<T>(
+    values: TypedArrayOrArray<T>,
+    limit: number,
+    options?: { signal?: AbortSignal },
+  ): Promise<number> {
+    const { signal } = options ?? {};
+    signal?.throwIfAborted();
+    if (limit < 0) {
+      throw new Error("limit must be non-negative");
+    }
+    const distinctValues = new Set<T>();
+    const yielder = AsyncUtils.createYielder();
+    const items = values as ArrayLike<T>;
+    for (let i = 0; i < items.length; i++) {
+      distinctValues.add(items[i]!);
+      if (distinctValues.size > limit) {
+        return limit + 1;
+      }
+      if ((i + 1) % 1024 === 0) {
+        await yielder({ signal });
+      }
+    }
+    return distinctValues.size;
+  }
+
+  /**
    * Maps a finite value to a key for {@link computeSortOrder}
    *
    * Keys compare like the values rounded to 32-bit floats, so values that

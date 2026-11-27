@@ -75,6 +75,7 @@ describe("startHierarchicalTableServer", () => {
       op: "open",
       columns: [{ kind: "dataset", path: "a" }],
       numRows: 3,
+      sections: [],
     });
   });
 

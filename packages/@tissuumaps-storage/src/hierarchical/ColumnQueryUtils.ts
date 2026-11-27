@@ -218,6 +218,32 @@ export class ColumnQueryUtils {
   }
 
   /**
+   * Ranks suggestions by how well their name (or query) matches a text,
+   * ignoring case: equal names first, then names starting with the text,
+   * then names containing it, then the other suggestions, each in the given
+   * order
+   *
+   * @param suggestions - The suggestions to rank
+   * @param text - The text to match
+   * @returns The ranked suggestions
+   */
+  static rankByName(
+    suggestions: TableColumnQuerySuggestion[],
+    text: string,
+  ): TableColumnQuerySuggestion[] {
+    const lowerCaseText = text.toLowerCase();
+    const ranked: TableColumnQuerySuggestion[][] = [[], [], [], []];
+    for (const suggestion of suggestions) {
+      const rank = ColumnQueryUtils._rankMatch(
+        suggestion.name ?? suggestion.query,
+        lowerCaseText,
+      );
+      ranked[rank >= 0 ? rank : 3]!.push(suggestion);
+    }
+    return ranked.flat();
+  }
+
+  /**
    * Ranks how well a name matches a partial name, ignoring case
    *
    * @param name - The name of a node or the selector of a matrix column

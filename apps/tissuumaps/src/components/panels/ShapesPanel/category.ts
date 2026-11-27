@@ -1,5 +1,4 @@
 export const ShapesSettingsCategory = {
-  general: "general",
   transform: "transform",
   shapeVisibility: "shapeVisibility",
   shapeOpacity: "shapeOpacity",
@@ -9,7 +8,7 @@ export const ShapesSettingsCategory = {
   shapeStrokeColor: "shapeStrokeColor",
   shapeStrokeVisibility: "shapeStrokeVisibility",
   shapeStrokeOpacity: "shapeStrokeOpacity",
-};
+} as const;
 
 export type ShapesSettingsCategory =
   (typeof ShapesSettingsCategory)[keyof typeof ShapesSettingsCategory];

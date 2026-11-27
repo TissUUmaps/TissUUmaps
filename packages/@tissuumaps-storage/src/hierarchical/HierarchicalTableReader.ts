@@ -8,6 +8,7 @@ import type {
 import type {
   HierarchicalTable,
   HierarchicalTableColumn,
+  HierarchicalTableSection,
 } from "./HierarchicalTable";
 import { AnnDataUtils } from "./profiles/AnnDataUtils";
 
@@ -26,16 +27,19 @@ const readableDataTypes = new Set(["integer", "float", "string", "boolean"]);
 export class HierarchicalTableReader implements HierarchicalTable {
   readonly columns: HierarchicalTableColumn[];
   readonly numRows: number;
+  readonly sections: HierarchicalTableSection[];
   private readonly _store: HierarchicalStore;
 
   private constructor(
     store: HierarchicalStore,
     columns: HierarchicalTableColumn[],
     numRows: number,
+    sections: HierarchicalTableSection[],
   ) {
     this._store = store;
     this.columns = columns;
     this.numRows = numRows;
+    this.sections = sections;
   }
 
   /**
@@ -75,13 +79,26 @@ export class HierarchicalTableReader implements HierarchicalTable {
         );
       }
       const annDataPath = annDataPaths[0];
-      const numRows = await inferNumRows(store, columns, annDataPath, {
+      const obsIndexPath =
+        annDataPath === undefined
+          ? undefined
+          : await AnnDataUtils.getDataFrameIndexPath(
+              store,
+              ColumnQueryUtils.joinPath(annDataPath, "obs"),
+              { signal },
+            );
+      const numRows = await inferNumRows(store, columns, obsIndexPath, {
         signal,
       });
       await AnnDataUtils.assignMatrixSelectors(store, columns, annDataPath, {
         signal,
       });
-      return new HierarchicalTableReader(store, columns, numRows);
+      return new HierarchicalTableReader(
+        store,
+        columns,
+        numRows,
+        AnnDataUtils.getSections(columns, annDataPath, obsIndexPath),
+      );
     } catch (error) {
       store.close();
       throw error;
@@ -173,7 +190,11 @@ async function collectColumns(
         continue;
       }
       if (shape.length === 1) {
-        columns.push({ kind: "dataset", path });
+        columns.push({
+          kind: "dataset",
+          path,
+          ...(dataType === "boolean" && { categorical: true }),
+        });
       } else if (shape.length === 2) {
         columns.push({ kind: "matrix", path, numColumns: shape[1]! });
       }
@@ -184,20 +205,13 @@ async function collectColumns(
 async function inferNumRows(
   store: HierarchicalStore,
   columns: HierarchicalTableColumn[],
-  annDataPath: string | undefined,
+  obsIndexPath: string | undefined,
   options?: { signal?: AbortSignal },
 ): Promise<number> {
   const { signal } = options ?? {};
   signal?.throwIfAborted();
-  if (annDataPath !== undefined) {
-    const indexPath = await AnnDataUtils.getDataFrameIndexPath(
-      store,
-      ColumnQueryUtils.joinPath(annDataPath, "obs"),
-      { signal },
-    );
-    if (indexPath !== undefined) {
-      return await getNumRows(store, indexPath, { signal });
-    }
+  if (obsIndexPath !== undefined) {
+    return await getNumRows(store, obsIndexPath, { signal });
   }
   const firstColumn = columns[0];
   if (firstColumn === undefined) {

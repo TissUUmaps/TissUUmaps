@@ -26,7 +26,7 @@ A store holding several tables must be opened at one of them. Consolidated metad
 
 ## Tables
 
-Any Zarr store with consolidated metadata is read as a table of its arrays. Columns are addressed as in [HDF5](./hdf5.md#tables) files: a column is the path of an array within the store, and one column of a matrix is `path[i]`, or `path[name]` for an AnnData expression matrix.
+Any Zarr store with consolidated metadata is read as a table of its arrays. Columns are addressed as in [HDF5](./hdf5.md#tables) files: a column is the path of an array within the store, and one column of a matrix is `path[i]`, or `path[name]` for an AnnData expression matrix. Boolean arrays are categorical columns, as there.
 
 ## Profiles
 
@@ -34,7 +34,7 @@ One profile is detected from the store's attributes:
 
 ### AnnData
 
-AnnData objects are recognized and decoded as in [HDF5](./hdf5.md#anndata) files, whether the source points at one or at a store containing them.
+AnnData objects are recognized and decoded as in [HDF5](./hdf5.md#anndata) files, whether the source points at one or at a store containing them, including their sections.
 
 ## Example
 
@@ -61,7 +61,9 @@ A project showing the spots of the table of a SpatialData store as points, place
         "x": "obsm/spatial[0]",
         "y": "obsm/spatial[1]"
       },
-      "pointColor": { "groupBy": { "column": "obs/cluster" } }
+      "pointColor": {
+        "groupBy": { "column": "obs/cluster", "palette": "distinct" }
+      }
     }
   ]
 }

@@ -138,11 +138,17 @@ export class ParquetTableDataProvider implements TableDataProvider<
       throw new Error(message);
     }
     const { idColumn, nameColumn } = normalizedDataSource;
-    const { numRows, columns, coordinateColumns, ids, names } =
-      await runParquetWorker(
-        { op: "file", parts, idColumn, nameColumn },
-        { signal, onProgress },
-      );
+    const {
+      numRows,
+      columns,
+      coordinateColumns,
+      categoricalColumns,
+      ids,
+      names,
+    } = await runParquetWorker(
+      { op: "file", parts, idColumn, nameColumn },
+      { signal, onProgress },
+    );
     return new ParquetTableData(
       parts,
       numRows,
@@ -150,6 +156,7 @@ export class ParquetTableDataProvider implements TableDataProvider<
       coordinateColumns,
       ids,
       names,
+      categoricalColumns,
     );
   }
 }

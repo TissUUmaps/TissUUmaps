@@ -1,7 +1,6 @@
 export const ImageSettingsCategory = {
-  general: "general",
   transform: "transform",
-};
+} as const;
 
 export type ImageSettingsCategory =
   (typeof ImageSettingsCategory)[keyof typeof ImageSettingsCategory];

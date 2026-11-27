@@ -8,9 +8,16 @@ import type { TypedArrayOrArray } from "@tissuumaps/core";
  * addressed by its path. A `matrix` column is a 2-D array or an AnnData
  * `csc_matrix`/`csr_matrix` group, whose columns are addressed as
  * `path[selector]` (see {@link ColumnQueryUtils}).
+ *
+ * `categorical` is what the encoding declares, if anything (see
+ * `TableData.getColumnType`).
  */
 export type HierarchicalTableColumn =
-  | { kind: "dataset"; path: string }
+  | {
+      kind: "dataset";
+      path: string;
+      categorical?: boolean;
+    }
   | {
       kind: "matrix";
       path: string;
@@ -23,12 +30,28 @@ export type HierarchicalTableColumn =
       selectors?: string[];
     };
 
+/**
+ * A section of the store (see `TableData.getColumnSections`)
+ *
+ * A leaf at the path of a matrix column holds the matrix's columns, named by
+ * their selectors. Any other leaf holds the dataset columns directly below its
+ * path, but for the dataframe index at `indexPath`.
+ */
+export type HierarchicalTableSection = {
+  id: string;
+  name: string;
+  indexPath?: string;
+  subsections?: HierarchicalTableSection[];
+};
+
 /** An open hierarchical table: the columns of a store and a way to read them */
 export interface HierarchicalTable {
   /** The columns, in path order */
   readonly columns: HierarchicalTableColumn[];
   /** The row count inferred from the store */
   readonly numRows: number;
+  /** The sections, in the canonical order of the format */
+  readonly sections: HierarchicalTableSection[];
 
   /**
    * Reads the values of a column

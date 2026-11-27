@@ -6,7 +6,10 @@ import type {
   HierarchicalStoreArray,
   HierarchicalStoreGroup,
 } from "../HierarchicalStore";
-import type { HierarchicalTableColumn } from "../HierarchicalTable";
+import type {
+  HierarchicalTableColumn,
+  HierarchicalTableSection,
+} from "../HierarchicalTable";
 
 /**
  * Reads the AnnData on-disk encoding of a hierarchical store
@@ -82,8 +85,8 @@ export class AnnDataUtils {
    *
    * @param group - The group, see {@link AnnDataUtils.isColumnGroup}
    * @param path - The path of the group
-   * @returns The column, or `undefined` for a matrix without a
-   * two-dimensional `shape` attribute
+   * @returns The column, categorical if its encoding says so; `undefined` for
+   * a matrix without a two-dimensional `shape` attribute
    */
   static getColumn(
     group: HierarchicalStoreGroup,
@@ -91,8 +94,9 @@ export class AnnDataUtils {
   ): HierarchicalTableColumn | undefined {
     switch (AnnDataUtils.getEncodingType(group)) {
       case "categorical":
-      case "nullable-integer":
       case "nullable-boolean":
+        return { kind: "dataset", path, categorical: true };
+      case "nullable-integer":
       case "nullable-string-array":
         return { kind: "dataset", path };
       case "csc_matrix":
@@ -196,6 +200,109 @@ export class AnnDataUtils {
       default:
         throw new Error(`Path '${path}' is a group, not a column`);
     }
+  }
+
+  /**
+   * Gets the sections of an AnnData object
+   *
+   * "Observations" is the `obs` dataframe. "Features" holds `X`, each of the
+   * `layers` and `raw/X`: matrices whose columns are the features described by
+   * `var` (or `raw/var`), so that a feature maps between them. "Embeddings"
+   * holds the matrices of `obsm` (e.g. `X_umap` or `spatial`).
+   *
+   * @param columns - The columns of the store
+   * @param annDataPath - The path of the AnnData object of the store, if any
+   * @param obsIndexPath - The path of the `obs` index, if any
+   * @returns The sections that have columns, in this order: observations,
+   * features (`X`, the layers, `raw/X`), embeddings
+   */
+  static getSections(
+    columns: HierarchicalTableColumn[],
+    annDataPath: string | undefined,
+    obsIndexPath: string | undefined,
+  ): HierarchicalTableSection[] {
+    if (annDataPath === undefined) {
+      return [];
+    }
+    const sections: HierarchicalTableSection[] = [];
+    const obsPath = ColumnQueryUtils.joinPath(annDataPath, "obs");
+    if (
+      columns.some(
+        (column) =>
+          column.path.startsWith(`${obsPath}/`) && column.path !== obsIndexPath,
+      )
+    ) {
+      sections.push({
+        id: obsPath,
+        name: "Observations",
+        ...(obsIndexPath !== undefined && { indexPath: obsIndexPath }),
+      });
+    }
+    const matrices = columns.filter((column) => column.kind === "matrix");
+    const featureLeaves: {
+      leaf: HierarchicalTableSection;
+      relativePath: string;
+    }[] = [];
+    for (const matrix of matrices) {
+      if (
+        AnnDataUtils._getVariableDataFramePath(matrix.path, annDataPath) ===
+        undefined
+      ) {
+        continue;
+      }
+      const relativePath =
+        annDataPath === ""
+          ? matrix.path
+          : matrix.path.slice(annDataPath.length + 1);
+      const layerName = relativePath.startsWith("layers/")
+        ? relativePath.slice("layers/".length)
+        : undefined;
+      featureLeaves.push({
+        leaf: {
+          id: matrix.path,
+          // raw/X is "raw" and a layer is its name (unless X or raw); any other
+          // matrix keeps its path, so names stay distinct
+          name:
+            relativePath === "raw/X"
+              ? "raw"
+              : layerName !== undefined &&
+                  layerName !== "X" &&
+                  layerName !== "raw"
+                ? layerName
+                : relativePath,
+        },
+        relativePath,
+      });
+    }
+    const rank = (relativePath: string) =>
+      relativePath === "X" ? 0 : relativePath.startsWith("raw/") ? 2 : 1;
+    featureLeaves.sort((a, b) => rank(a.relativePath) - rank(b.relativePath));
+    if (featureLeaves.length > 0) {
+      sections.push({
+        id: ColumnQueryUtils.joinPath(annDataPath, "var"),
+        name: "Features",
+        subsections: featureLeaves.map(({ leaf }) => leaf),
+      });
+    }
+    const obsmPath = ColumnQueryUtils.joinPath(annDataPath, "obsm");
+    const embeddingLeaves = matrices
+      .filter(
+        (matrix) =>
+          matrix.path.startsWith(`${obsmPath}/`) &&
+          !matrix.path.slice(obsmPath.length + 1).includes("/"),
+      )
+      .map((matrix) => ({
+        id: matrix.path,
+        name: matrix.path.slice(obsmPath.length + 1),
+      }));
+    if (embeddingLeaves.length > 0) {
+      sections.push({
+        id: obsmPath,
+        name: "Embeddings",
+        subsections: embeddingLeaves,
+      });
+    }
+    return sections;
   }
 
   /**
