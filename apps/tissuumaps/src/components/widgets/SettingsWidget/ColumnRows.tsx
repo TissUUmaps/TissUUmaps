@@ -24,17 +24,17 @@ type Row = {
  * by its name; a leaf is the row's only set of columns, any other section
  * offers its leaves under "from", those of deeper levels named by their path
  *
- * @param groups - The top-level sections
+ * @param sections - The top-level sections
  * @returns The rows
  */
-function toRows(groups: TableColumnSection[]): Row[] {
+function toRows(sections: TableColumnSection[]): Row[] {
   const getLeaves = (
-    group: TableColumnSection,
+    section: TableColumnSection,
     prefix: string,
   ): Row["leaves"] =>
-    group.subsections === undefined
-      ? [{ id: group.id, name: `${prefix}${group.name}` }]
-      : group.subsections.flatMap((subsection) =>
+    section.subsections === undefined
+      ? [{ id: section.id, name: `${prefix}${section.name}` }]
+      : section.subsections.flatMap((subsection) =>
           getLeaves(
             subsection,
             subsection.subsections === undefined
@@ -42,11 +42,11 @@ function toRows(groups: TableColumnSection[]): Row[] {
               : `${prefix}${subsection.name} › `,
           ),
         );
-  return groups.map((group) => ({
-    id: group.id,
-    name: group.name,
-    leaves: getLeaves(group, ""),
-    hasFrom: group.subsections !== undefined,
+  return sections.map((section) => ({
+    id: section.id,
+    name: section.name,
+    leaves: getLeaves(section, ""),
+    hasFrom: section.subsections !== undefined,
   }));
 }
 
