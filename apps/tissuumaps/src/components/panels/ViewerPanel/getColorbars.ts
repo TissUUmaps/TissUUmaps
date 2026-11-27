@@ -55,7 +55,7 @@ function isConstantlyHidden(visibilityConfig: VisibilityConfig): boolean {
  *
  * Colors with the same table, column, palette and range share one colorbar.
  * A colorbar is named after the objects that use it. The fill or stroke of
- * shapes is named unless both use the colorbar.
+ * shapes is named unless both use the colorbar, and left out when hidden.
  *
  * @param state - The layers, the tables and the objects of the project
  * @returns One colorbar per color scale, with a unique key, the name to show,
@@ -107,22 +107,30 @@ export function getColorbars(state: {
           !isConstantlyHidden(shapes.shapeVisibility),
       )
       .flatMap((shapes) => [
-        {
-          objectKey: `shapes:${shapes.id}`,
-          objectName: shapes.name,
-          part: "fill" as const,
-          colorConfig: shapes.shapeFillColor,
-          visibilityConfig: shapes.shapeFillVisibility,
-          objectTableId: shapes.dataSource.table,
-        },
-        {
-          objectKey: `shapes:${shapes.id}`,
-          objectName: shapes.name,
-          part: "stroke" as const,
-          colorConfig: shapes.shapeStrokeColor,
-          visibilityConfig: shapes.shapeStrokeVisibility,
-          objectTableId: shapes.dataSource.table,
-        },
+        ...(shapes.fillVisibility
+          ? [
+              {
+                objectKey: `shapes:${shapes.id}`,
+                objectName: shapes.name,
+                part: "fill" as const,
+                colorConfig: shapes.shapeFillColor,
+                visibilityConfig: shapes.shapeFillVisibility,
+                objectTableId: shapes.dataSource.table,
+              },
+            ]
+          : []),
+        ...(shapes.strokeVisibility
+          ? [
+              {
+                objectKey: `shapes:${shapes.id}`,
+                objectName: shapes.name,
+                part: "stroke" as const,
+                colorConfig: shapes.shapeStrokeColor,
+                visibilityConfig: shapes.shapeStrokeVisibility,
+                objectTableId: shapes.dataSource.table,
+              },
+            ]
+          : []),
       ]),
   ];
 

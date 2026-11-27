@@ -69,7 +69,7 @@ classDiagram
     Shapes : id
     Shapes : name
     Shapes : data source
-    Shapes : visibility, opacity
+    Shapes : visibility, opacity, fill/stroke visibility
     Shapes : data-to-layer transform
     Shapes : shape fill color/visibility/opacity
     Shapes : shape stroke color/visibility/opacity
