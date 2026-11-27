@@ -104,7 +104,7 @@ export interface TableData extends ItemsData {
    * Returns the sections of the table's columns, by the conventions of its
    * format
    *
-   * Only implemented by table data whose format groups its columns (e.g. the
+   * Only implemented by table data whose format can group its columns (e.g. the
    * observations and the features of AnnData); callers without it pick columns
    * by query (see {@link suggestColumnQueries}).
    *

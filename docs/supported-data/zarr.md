@@ -26,7 +26,7 @@ A store holding several tables must be opened at one of them. Consolidated metad
 
 ## Tables
 
-Any Zarr store with consolidated metadata is read as a table of its arrays. Columns are addressed as in [HDF5](./hdf5.md#tables) files: a column is the path of an array within the store, and one column of a matrix is `path[i]`, or `path[name]` for an AnnData expression matrix.
+Any Zarr store with consolidated metadata is read as a table of its arrays. Columns are addressed as in [HDF5](./hdf5.md#tables) files: a column is the path of an array within the store, and one column of a matrix is `path[i]`, or `path[name]` for an AnnData expression matrix. Boolean arrays are categorical columns, as there.
 
 ## Profiles
 
