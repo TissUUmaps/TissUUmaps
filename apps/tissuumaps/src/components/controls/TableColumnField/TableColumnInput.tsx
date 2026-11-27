@@ -35,7 +35,7 @@ export type TableColumnInputProps = {
   value: string | null;
   /**
    * Applies a column, or none; may resolve to whether it applied, and a refused
-   * column shows the value again
+   * column shows the value again (must not reject)
    */
   onValueChange: (value: string | null) => void | Promise<boolean>;
   /**
@@ -299,25 +299,31 @@ export function TableColumnInput({
     return () => clearTimeout(timeout);
   }, [hasNoMatch, text]);
 
-  const handleCommitResolved = useEffectEvent((column: string | null) => {
-    setPendingQuery(null);
-    if (column !== null) {
-      // within a section, the input keeps showing the picked name
-      const committedText = sectionId === undefined ? column : text;
-      setText(committedText);
-      setInvalid(false);
-      void Promise.resolve(onValueChange(column)).then((applied) => {
-        // unless typed over since
-        if (applied === false) {
-          setText((currentText) =>
-            currentText === committedText ? valueText : currentText,
-          );
+  const handleCommitResolved = useEffectEvent(
+    (column: string | null, name?: string) => {
+      setPendingQuery(null);
+      if (column !== null) {
+        // within a section, the input shows the found name (e.g. `CD3E` for a
+        // typed `cd3e`), so that committing it again changes nothing
+        const committedText = sectionId === undefined ? column : (name ?? text);
+        setText(committedText);
+        setInvalid(false);
+        if (column === value) {
+          return;
         }
-      });
-    } else {
-      setInvalid(true);
-    }
-  });
+        void Promise.resolve(onValueChange(column)).then((applied) => {
+          // unless typed over since
+          if (applied === false) {
+            setText((currentText) =>
+              currentText === committedText ? valueText : currentText,
+            );
+          }
+        });
+      } else {
+        setInvalid(true);
+      }
+    },
+  );
   useEffect(() => {
     if (pendingQuery === null) {
       return;
@@ -328,6 +334,7 @@ export function TableColumnInput({
       .then(async (tableData) => {
         // within a section, the text is a name, not a query
         let column: string | null = null;
+        let name: string | undefined;
         if (tableData !== null && sectionId !== undefined) {
           const found = await findColumnByName(
             tableData,
@@ -336,6 +343,7 @@ export function TableColumnInput({
             { signal },
           );
           column = found?.column ?? null;
+          name = found?.name;
         } else if (tableData !== null) {
           column = await tableData.resolveColumnQuery(pendingQuery, { signal });
         }
@@ -343,7 +351,7 @@ export function TableColumnInput({
           if (sectionId !== undefined && column === null) {
             reportNoMatch(pendingQuery);
           }
-          handleCommitResolved(column);
+          handleCommitResolved(column, name);
         }
       })
       .catch((error) => {
