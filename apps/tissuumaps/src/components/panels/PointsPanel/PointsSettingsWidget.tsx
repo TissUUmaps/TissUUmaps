@@ -54,7 +54,8 @@ export type PointsSettingsWidgetProps = {
  * marker, size, opacity, visibility and draw order follow
  *
  * If no property follows the column, the color follows a newly picked one.
- * The draw order starts together with the color on a numerical column.
+ * The draw order starts together with the color on a numerical column, unless
+ * an order is set already.
  */
 export function PointsSettingsWidget({
   points,
@@ -163,13 +164,15 @@ export function PointsSettingsWidget({
         const follow = getFollower(
           previousFollowedColumns,
           newFollowedColumn,
-          // the order starts with the color: higher values are drawn on top
-          startsFollowingNumerical(
-            previousFollowedColumns,
-            newFollowedColumn,
-            propertyNames,
-            PointsSettingsCategory.pointColor,
-          )
+          // the order starts with the color (higher values are drawn on top),
+          // unless an order is set already
+          current.pointOrder === undefined &&
+            startsFollowingNumerical(
+              previousFollowedColumns,
+              newFollowedColumn,
+              propertyNames,
+              PointsSettingsCategory.pointColor,
+            )
             ? [...propertyNames, PointsSettingsCategory.pointOrder]
             : propertyNames,
         );

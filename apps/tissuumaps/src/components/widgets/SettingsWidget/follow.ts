@@ -188,7 +188,7 @@ export function getFollower<TName extends string>(
  * @param propertyNames - The names of the properties that follow it
  * @param name - The name of the property
  * @returns Whether the property starts following a numerical column: it
- * follows one from now on and followed none until now
+ * follows one from now on and followed no numerical column until now
  */
 export function startsFollowingNumerical<TName extends string>(
   previousFollowedColumns: Record<TName, FollowedColumn | null>,
