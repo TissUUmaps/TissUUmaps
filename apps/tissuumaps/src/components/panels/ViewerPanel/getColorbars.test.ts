@@ -175,6 +175,27 @@ describe("getColorbars", () => {
     ).toEqual(["Shapes (fill)"]);
   });
 
+  it("leaves out the hidden fill or stroke of shapes", () => {
+    expect(
+      getColorbarNames({
+        shapes: [
+          createShapes({
+            id: "shapes",
+            ...shapes,
+            shapeStrokeColor: { from: { column: "score", palette: "magma" } },
+            fillVisibility: false,
+          }),
+          createShapes({
+            id: "hidden",
+            ...shapes,
+            fillVisibility: false,
+            strokeVisibility: false,
+          }),
+        ],
+      }),
+    ).toEqual(["Shapes (stroke)"]);
+  });
+
   it("shares one colorbar between objects with the same table, column, palette and range", () => {
     expect(
       getColorbarNames({

@@ -196,7 +196,10 @@ export class WebGLShapesRenderer extends WebGLRendererBase<
         layer,
         shapes,
       );
-      if (opacityFactor === 0) {
+      if (
+        opacityFactor === 0 ||
+        (!shapes.fillVisibility && !shapes.strokeVisibility)
+      ) {
         continue;
       }
       const quad = this._computeQuad(
