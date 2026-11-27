@@ -5,6 +5,7 @@ import {
   type RenderedRasterDataObject,
   createDataSource,
   createRenderedRasterDataObject,
+  omitUndefined,
 } from "./base";
 import type { Color } from "./primitives";
 
@@ -135,13 +136,13 @@ export type Image = RenderedRasterDataObject<ImageDataSource<string>> &
  * Creates an {@link Image} from a {@link RawImage} by applying {@link imageDefaults}
  *
  * @param rawImage - The raw image
- * @returns The complete image with default values applied
+ * @returns The complete image with the default values of missing or `undefined` properties
  */
 export function createImage(rawImage: RawImage): Image {
   return {
     ...createRenderedRasterDataObject(rawImage),
     ...structuredClone(imageDefaults),
-    ...structuredClone(rawImage),
+    ...structuredClone(omitUndefined(rawImage)),
     dataSource: createImageDataSource(rawImage.dataSource),
   };
 }
@@ -174,7 +175,7 @@ export type ImageDataSource<TType extends string = string> = DataSource<TType> &
  * Creates an {@link ImageDataSource} from a {@link RawImageDataSource} by applying {@link imageDataSourceDefaults}
  *
  * @param rawImageDataSource - The raw image data source
- * @returns The complete image data source with default values applied
+ * @returns The complete image data source with the default values of missing or `undefined` properties
  */
 export function createImageDataSource<TType extends string>(
   rawImageDataSource: RawImageDataSource<TType>,
@@ -182,6 +183,6 @@ export function createImageDataSource<TType extends string>(
   return {
     ...createDataSource(rawImageDataSource),
     ...structuredClone(imageDataSourceDefaults),
-    ...structuredClone(rawImageDataSource),
+    ...structuredClone(omitUndefined(rawImageDataSource)),
   };
 }

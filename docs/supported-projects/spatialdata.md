@@ -36,7 +36,7 @@ A table that annotates a single labels or polygons element is linked to it, so i
 
 ## Coordinate systems
 
-Every coordinate system becomes a layer named after it. An element is placed in each coordinate system it maps into, as one object per layer. Only one layer is shown at first: `global`, or else the first one that holds the most objects.
+Every coordinate system becomes a layer named after it. An element is placed in each coordinate system it maps into, as one object per layer. Only one layer is shown at first: `global`, or else the first one that holds the most objects. Each layer shows only its first element: its first image, or else its first labels, shapes or points. The other elements are hidden, so opening a store does not show them all at once.
 
 An object is placed by the element's transformation into the coordinate system. Only the x and y axes are kept. TissUUmaps places objects by flipping, scaling uniformly, rotating and translating them, so a transformation that scales the axes differently or shears them is approximated: its uniform scale keeps the area. A warning in the browser console names every approximated transformation.
 
@@ -49,7 +49,7 @@ An object is placed by the element's transformation into the coordinate system. 
 - A remote points directory is read up to its first missing partition (see [Dask](../supported-data/parquet.md#dask)).
 - Format versions are not checked. Stores from before format versioning (no root SpatialData attributes, shapes as Zarr arrays) are not supported.
 - Shapes written with geoarrow encoding are not supported (spatialdata writes WKB by default).
-- The points and shapes of hidden coordinate systems are loaded too.
+- The points and shapes of hidden elements and coordinate systems are loaded too.
 
 ## API
 

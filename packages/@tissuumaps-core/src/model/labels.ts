@@ -5,6 +5,7 @@ import {
   type RenderedRasterDataObject,
   createAnnotatedDataSource,
   createRenderedRasterDataObject,
+  omitUndefined,
 } from "./base";
 import type { ColorConfig, OpacityConfig, VisibilityConfig } from "./configs";
 import {
@@ -61,13 +62,13 @@ export type Labels = RenderedRasterDataObject<LabelsDataSource<string>> &
  * Creates a {@link Labels} from a {@link RawLabels} by applying {@link labelsDefaults}
  *
  * @param rawLabels - The raw labels
- * @returns The complete labels with default values applied
+ * @returns The complete labels with the default values of missing or `undefined` properties
  */
 export function createLabels(rawLabels: RawLabels): Labels {
   return {
     ...createRenderedRasterDataObject(rawLabels),
     ...structuredClone(labelsDefaults),
-    ...structuredClone(rawLabels),
+    ...structuredClone(omitUndefined(rawLabels)),
     dataSource: createLabelsDataSource(rawLabels.dataSource),
   };
 }
@@ -101,7 +102,7 @@ export type LabelsDataSource<TType extends string = string> =
  * Creates a {@link LabelsDataSource} from a {@link RawLabelsDataSource} by applying {@link labelsDataSourceDefaults}
  *
  * @param rawLabelsDataSource - The raw labels data source
- * @returns The complete labels data source with default values applied
+ * @returns The complete labels data source with the default values of missing or `undefined` properties
  */
 export function createLabelsDataSource<TType extends string>(
   rawLabelsDataSource: RawLabelsDataSource<TType>,
@@ -109,6 +110,6 @@ export function createLabelsDataSource<TType extends string>(
   return {
     ...createAnnotatedDataSource(rawLabelsDataSource),
     ...structuredClone(labelsDataSourceDefaults),
-    ...structuredClone(rawLabelsDataSource),
+    ...structuredClone(omitUndefined(rawLabelsDataSource)),
   };
 }

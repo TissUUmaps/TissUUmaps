@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import type { Popover as PopoverPrimitive } from "@base-ui/react/popover";
+import { SearchIcon } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 
 import type {
   HighlightedItemGroup,
@@ -6,11 +8,22 @@ import type {
   TableColumnRef,
 } from "@tissuumaps/core";
 
-import { Field, FieldLabel } from "@/components/common/field";
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { TableColumnField } from "@/components/controls/TableColumnField";
-import { Input } from "@/components/ui/input";
+import type { TableColumnInputStatus } from "@/components/controls/TableColumnField/TableColumnInput";
+import { formatTableColumn } from "@/components/controls/TableColumnField/formatTableColumn";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useProjectStore } from "@/stores/project";
 
 import {
   GroupAnnotationsTable,
@@ -79,7 +92,14 @@ export function AnnotationsWidget({
   groupColumnDefs,
   className,
 }: AnnotationsWidgetProps) {
+  const tables = useProjectStore((state) => state.tables);
   const [nameQuery, setNameQuery] = useState("");
+
+  // the popover stays open while the group-by column is being resolved or
+  // failed to resolve, so that its outcome is shown; Escape always closes it
+  const groupByActionsRef = useRef<PopoverPrimitive.Root.Actions>(null);
+  const groupByStatusRef = useRef<TableColumnInputStatus>("idle");
+  const isGroupByCloseRequestedRef = useRef(false);
 
   // the cap counts every group, as a new map is filled with every group
   const hasTooManyGroups =
@@ -114,35 +134,87 @@ export function AnnotationsWidget({
     return { shown, total };
   }, [groupCounts, filteredGroupCounts, isGroupVisible]);
 
+  const isFilterDisabled = selectedGroupBy === null || hasTooManyGroups;
+
   return (
     <Fieldset
       className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
     >
-      <FieldsetLegend className="font-medium text-foreground">
-        Items
+      <FieldsetLegend className="flex flex-row items-center gap-x-1 font-medium text-foreground">
+        <span className="shrink-0">
+          {selectedGroupBy !== null ? "Items by" : "Items"}
+        </span>
+        <Popover
+          actionsRef={groupByActionsRef}
+          onOpenChange={(open, eventDetails) => {
+            isGroupByCloseRequestedRef.current = false;
+            if (
+              !open &&
+              eventDetails.reason !== "escape-key" &&
+              groupByStatusRef.current !== "idle"
+            ) {
+              eventDetails.cancel();
+              isGroupByCloseRequestedRef.current =
+                groupByStatusRef.current === "pending";
+            }
+          }}
+        >
+          <PopoverTrigger
+            disabled={tableId === null}
+            title="Click to group by another column"
+            className={cn(
+              "min-w-0 truncate underline decoration-muted-foreground decoration-dotted underline-offset-4 data-disabled:opacity-50",
+              selectedGroupBy === null && "font-normal text-muted-foreground",
+            )}
+          >
+            {selectedGroupBy !== null
+              ? formatTableColumn(selectedGroupBy, tables)
+              : "not grouped"}
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-96 p-3">
+            <TableColumnField
+              label="Group by column"
+              tableId={tableId}
+              value={selectedGroupBy}
+              onValueChange={onSelectedGroupByChange}
+              onStatusChange={(status) => {
+                groupByStatusRef.current = status;
+                if (
+                  status !== "pending" &&
+                  isGroupByCloseRequestedRef.current
+                ) {
+                  isGroupByCloseRequestedRef.current = false;
+                  if (status === "idle") {
+                    groupByActionsRef.current?.close();
+                  }
+                }
+              }}
+            />
+          </PopoverContent>
+        </Popover>
         {itemCounts !== null && (
           <span
-            className="ml-1 text-xs font-normal text-muted-foreground"
+            className="ml-auto shrink-0 text-xs font-normal text-muted-foreground"
             title="Items in the shown groups / items in the table"
           >
-            ({itemCounts.shown.toLocaleString()} /{" "}
-            {itemCounts.total.toLocaleString()})
+            {itemCounts.shown.toLocaleString()} /{" "}
+            {itemCounts.total.toLocaleString()}
           </span>
         )}
       </FieldsetLegend>
-      <TableColumnField
-        label="Group by column"
-        tableId={tableId}
-        value={selectedGroupBy}
-        onValueChange={onSelectedGroupByChange}
-      />
-      <Field disabled={selectedGroupBy === null || hasTooManyGroups}>
-        <FieldLabel>Filter groups</FieldLabel>
-        <Input
+      <InputGroup className="h-7" data-disabled={isFilterDisabled}>
+        <InputGroupAddon>
+          <SearchIcon />
+        </InputGroupAddon>
+        <InputGroupInput
+          className="h-full text-xs md:text-xs"
+          aria-label="Filter groups"
+          placeholder="Filter groups"
+          disabled={isFilterDisabled}
           value={nameQuery}
           onChange={(event) => setNameQuery(event.target.value)}
         />
-      </Field>
+      </InputGroup>
       {tableId !== null && selectedGroupBy !== null ? (
         hasTooManyGroups ? (
           <span className="text-xs text-muted-foreground">
