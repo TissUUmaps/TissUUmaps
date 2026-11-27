@@ -11,7 +11,7 @@ import { useTableData } from "@/data/hooks/useData";
 import { SettingsRow } from "./SettingsRow";
 import type { ColumnLocation } from "./useColumnLocation";
 
-/** A row of the picker: a top-level section and its leaves */
+/** A row: a top-level section and its leaves */
 type Row = {
   id: string;
   name: string;
@@ -60,7 +60,7 @@ export type ColumnRowsProps = {
   /** Where the followed column is (see `useColumnLocation`) */
   location: ColumnLocation | null;
 
-  /** Follows a column, or none; resolves to whether it applied */
+  /** Picks the column to follow, or none; resolves to whether it applied */
   onColumnChange: (column: string | null) => Promise<boolean>;
 
   /**
@@ -119,7 +119,7 @@ export function ColumnRows({
   useEffect(() => () => abortControllerRef.current?.abort(), []);
 
   // the leaf of the followed column, while in a section
-  const section = location?.kind === "section" ? location : null;
+  const sectionLocation = location?.kind === "section" ? location : null;
 
   // the row of the followed column shows its leaf
   // https://react.dev/reference/react/useState#storing-information-from-previous-renders
@@ -127,7 +127,7 @@ export function ColumnRows({
   if (location !== prevLocation) {
     setPrevLocation(location);
     const row = rows.find((row) =>
-      row.leaves.some((leaf) => leaf.id === section?.sectionId),
+      row.leaves.some((leaf) => leaf.id === sectionLocation?.sectionId),
     );
     if (row !== undefined) {
       setSelectedLeafIds((selected) => ({ ...selected, [row.id]: undefined }));
@@ -161,7 +161,7 @@ export function ColumnRows({
   }
 
   const followedRow = rows.find((row) =>
-    row.leaves.some((leaf) => leaf.id === section?.sectionId),
+    row.leaves.some((leaf) => leaf.id === sectionLocation?.sectionId),
   );
 
   const startSwitch = () => {
@@ -180,7 +180,7 @@ export function ColumnRows({
       newLeaf === undefined ||
       column === null ||
       followedRow?.id !== row.id ||
-      newLeaf.id === section?.sectionId ||
+      newLeaf.id === sectionLocation?.sectionId ||
       tableData?.mapColumn === undefined
     ) {
       setSelectedLeafIds((selected) => ({
@@ -248,7 +248,7 @@ export function ColumnRows({
         // the chosen leaf, else the followed one, else the first one
         const preferredLeafId =
           selectedLeafIds[row.id] ??
-          (isActive ? section?.sectionId : undefined);
+          (isActive ? sectionLocation?.sectionId : undefined);
         const leaf =
           row.leaves.find((leaf) => leaf.id === preferredLeafId) ??
           row.leaves[0];
@@ -257,7 +257,8 @@ export function ColumnRows({
         }
         const isLocationStale = location?.column !== column;
         const showsFollowedColumn =
-          isActive && (leaf.id === section?.sectionId || isLocationStale);
+          isActive &&
+          (leaf.id === sectionLocation?.sectionId || isLocationStale);
         return (
           <SettingsRow
             key={row.id}
@@ -271,7 +272,9 @@ export function ColumnRows({
                 tableId={tableId}
                 sectionId={leaf.id}
                 value={showsFollowedColumn ? column : null}
-                valueName={showsFollowedColumn ? section?.name : undefined}
+                valueName={
+                  showsFollowedColumn ? sectionLocation?.name : undefined
+                }
                 onValueChange={onColumnChange}
                 onNoMatch={(text) => void searchElsewhere(text, row, leaf.id)}
                 // the first row tells what the object looks like without a

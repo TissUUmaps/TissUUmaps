@@ -93,7 +93,7 @@ export type SettingsWidgetPart = {
   /** The icon of the part's toggle */
   icon: ReactNode;
 
-  /** The properties of the part; the first one follows a newly toggled part */
+  /** The properties of the part; the first one starts when the part is toggled on */
   properties: [SettingsWidgetProperty, ...SettingsWidgetProperty[]];
 };
 
@@ -128,7 +128,7 @@ export type SettingsWidgetProps = {
   ) => void;
 
   /**
-   * What the object looks like while it follows no column, e.g. "Random
+   * What the object looks like while no property follows a column, e.g. "Random
    * colors" (see `describeColorWithoutColumn`)
    */
   placeholder: string;
@@ -219,7 +219,7 @@ export function SettingsWidget({
       >
         <FieldsetLegend className="sr-only">Settings</FieldsetLegend>
         <ColumnRows
-          // the leaves, messages and searches of the picker are per table
+          // the leaves, messages and searches of the column rows are per table
           key={tableId ?? ""}
           tableId={tableId}
           column={column}

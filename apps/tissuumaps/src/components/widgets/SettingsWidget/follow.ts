@@ -32,7 +32,7 @@ export type FollowedColumn = { column: string; columnType: TableColumnType };
 
 /**
  * Returns whether a table column reference names a column of the object's
- * own table, the only table whose columns the settings widget follows
+ * own table, the only table whose columns the settings widget offers
  *
  * @param ref - The table column reference
  * @param tableId - The ID of the object's own table, if it has one
@@ -110,8 +110,8 @@ export function describeColorWithoutColumn(
 }
 
 /**
- * Returns the column that the settings widget follows: the column of the
- * first property that follows one
+ * Returns the column that the settings widget shows: the column of the first
+ * property that follows one
  *
  * @param followedColumns - The columns the properties follow, in the order of
  * the widget
@@ -127,7 +127,7 @@ export function findFollowedColumn(
 
 /**
  * @param followedColumn - The column a property follows, if any
- * @param other - The column the settings widget follows, if any
+ * @param other - The column the settings widget shows, if any
  * @returns Whether both follow the same column as the same column type
  */
 export function isSameFollowedColumn(
@@ -149,7 +149,7 @@ export function isSameFollowedColumn(
  *
  * @param previousFollowedColumns - The column each property followed until
  * now, if any, by name, in the order of the widget
- * @param followedColumn - The column the widget follows from now on, if any
+ * @param followedColumn - The column the widget shows from now on, if any
  * @param propertyNames - The names of the properties that follow it
  * @returns A function that returns the new configuration of a property, given
  * its name, configuration, default configuration (if it has one), and
@@ -184,7 +184,7 @@ export function getFollower<TName extends string>(
 /**
  * @param previousFollowedColumns - The column each property followed until
  * now, if any, by name
- * @param followedColumn - The column the widget follows from now on, if any
+ * @param followedColumn - The column the widget shows from now on, if any
  * @param propertyNames - The names of the properties that follow it
  * @param name - The name of the property
  * @returns Whether the property starts following a numerical column: it
