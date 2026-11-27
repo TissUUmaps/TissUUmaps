@@ -260,7 +260,8 @@ export class AnnDataUtils {
       featureLeaves.push({
         leaf: {
           id: matrix.path,
-          // a layer named like X or raw keeps its path, so names stay distinct
+          // raw/X is "raw" and a layer is its name (unless X or raw); any other
+          // matrix keeps its path, so names stay distinct
           name:
             relativePath === "raw/X"
               ? "raw"
