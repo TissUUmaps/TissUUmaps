@@ -170,7 +170,9 @@ export {
   type ShapesGeometry,
 } from "./storage/shapes";
 export {
+  type TableColumnSection,
   type TableColumnQuerySuggestion,
+  type TableColumnType,
   type TableData,
   type TableDataProvider,
 } from "./storage/table";

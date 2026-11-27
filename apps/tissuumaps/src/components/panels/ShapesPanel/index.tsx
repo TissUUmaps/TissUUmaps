@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import { ProjectUtils, type Shapes } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
@@ -20,7 +18,6 @@ import { useProjectStore } from "@/stores/project";
 
 import { ShapesAnnotationsWidget } from "./ShapesAnnotationsWidget";
 import { ShapesSettingsWidget } from "./ShapesSettingsWidget";
-import type { ShapesSettingsCategory } from "./category";
 
 export type ShapesPanelProps = {
   className?: string;
@@ -74,9 +71,6 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
 
   const shapesData = useShapesData(shapes.id);
 
-  const [activeSettingsCategory, setActiveSettingsCategory] =
-    useState<ShapesSettingsCategory | null>(null);
-
   return (
     <SortableObjectListItem
       id={shapes.id}
@@ -117,17 +111,11 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
         }}
         className="bg-card"
       />
-      <ShapesSettingsWidget
-        shapes={shapes}
-        activeCategory={activeSettingsCategory}
-        onActiveCategoryChange={setActiveSettingsCategory}
-        className="bg-card"
-      />
+      <ShapesSettingsWidget shapes={shapes} className="bg-card" />
       {shapesData !== null && (
         <ShapesAnnotationsWidget
           shapes={shapes}
           data={shapesData}
-          activeSettingsCategory={activeSettingsCategory}
           className="bg-card"
         />
       )}

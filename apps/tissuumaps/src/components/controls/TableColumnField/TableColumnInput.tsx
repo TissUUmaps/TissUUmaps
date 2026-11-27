@@ -28,6 +28,8 @@ import { InputGroupAddon } from "@/components/ui/input-group";
 import { useLazyTableData } from "@/data/hooks/useLazyData";
 import { useCompressedRowVirtualizer } from "@/hooks/useCompressedRowVirtualizer";
 
+import { findColumnByName } from "./findColumnByName";
+
 /**
  * Whether the typed column is being resolved, failed to resolve, or neither
  */
@@ -36,10 +38,56 @@ export type TableColumnInputStatus = "idle" | "pending" | "invalid";
 export type TableColumnInputProps = {
   tableId: string | null;
   value: string | null;
-  onValueChange: (value: string | null) => void;
+  /**
+   * Applies a column, or none; may resolve to whether it applied, and a refused
+   * column shows the value again (must not reject)
+   */
+  onValueChange: (value: string | null) => void | Promise<boolean>;
+  /**
+   * The `id` of the leaf section to pick a column of (see
+   * `TableData.getColumnSections`); the input then shows and searches the leaf's
+   * columns by name, and a typed name has to match a column's name (see
+   * {@link findColumnByName})
+   */
+  sectionId?: string;
+  /** The name to show for the value, if it is not the query itself */
+  valueName?: string;
+  /**
+   * Called with a text that matches the name of no column of the section when
+   * it is committed (e.g. to search other sections for it)
+   */
+  onNoMatch?: (text: string) => void;
+  placeholder?: string;
+  /** Whether the input takes the focus when it mounts */
+  autoFocus?: boolean;
   onStatusChange?: (status: TableColumnInputStatus) => void;
   className?: string;
 };
+
+/**
+ * @param suggestion - A suggestion
+ * @returns The text to show for the suggestion
+ */
+function getSuggestionText(suggestion: TableColumnQuerySuggestion): string {
+  return suggestion.name ?? suggestion.query;
+}
+
+/**
+ * @param suggestion - A suggestion
+ * @param text - A searched text
+ * @returns Whether the suggestion's text contains the text, ignoring case
+ */
+function matchesText(
+  suggestion: TableColumnQuerySuggestion,
+  text: string,
+): boolean {
+  return getSuggestionText(suggestion)
+    .toLowerCase()
+    .includes(text.toLowerCase());
+}
+
+/** Milliseconds of no typing after which a text matching nothing is reported */
+const noMatchDelay = 600;
 
 /** The height of a suggestion, in pixels */
 const rowHeight = 32;
@@ -150,7 +198,10 @@ function SuggestionList({ suggestions, query, ref }: SuggestionListProps) {
               {suggestion.group && (
                 <FolderIcon className="size-3.5 shrink-0 text-muted-foreground" />
               )}
-              <SuggestionText suggestion={suggestion.query} query={query} />
+              <SuggestionText
+                suggestion={getSuggestionText(suggestion)}
+                query={query}
+              />
             </AutocompleteItem>
           );
         })}
@@ -163,28 +214,36 @@ export function TableColumnInput({
   tableId,
   value,
   onValueChange,
+  sectionId,
+  valueName,
+  onNoMatch,
+  placeholder,
+  autoFocus,
   onStatusChange,
   className,
 }: TableColumnInputProps) {
   const loadTableData = useLazyTableData(tableId);
 
-  const query = value ?? "";
+  // within a section, the input shows and searches names, not queries
+  const valueText = (value !== null ? valueName : undefined) ?? value ?? "";
 
-  const [text, setText] = useState(query);
+  const [text, setText] = useState(valueText);
   const [invalid, setInvalid] = useState(false);
   const [suggestions, setSuggestions] = useState<
     TableColumnQuerySuggestion[] | null
   >(null);
+  // the text the suggestions were made for, which lags behind while typing
+  const [suggestionsText, setSuggestionsText] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [pendingQuery, setPendingQuery] = useState<string | null>(null);
 
   // https://react.dev/reference/react/useState#storing-information-from-previous-renders
-  const [prevQuery, setPrevQuery] = useState(query);
+  const [prevValueText, setPrevValueText] = useState(valueText);
   const [prevTableId, setPrevTableId] = useState(tableId);
-  if (query !== prevQuery) {
-    setPrevQuery(query);
+  if (valueText !== prevValueText) {
+    setPrevValueText(valueText);
     setPrevTableId(tableId);
-    setText(query);
+    setText(valueText);
     setInvalid(false);
     setPendingQuery(null);
   } else if (tableId !== prevTableId) {
@@ -206,10 +265,14 @@ export function TableColumnInput({
         });
         const newSuggestions =
           (await tableData?.suggestColumnQueries(text, {
+            sectionId,
             signal: abortController.signal,
           })) ?? [];
         if (!abortController.signal.aborted) {
-          startSuggestTransition(() => setSuggestions(newSuggestions));
+          startSuggestTransition(() => {
+            setSuggestions(newSuggestions);
+            setSuggestionsText(text);
+          });
         }
       } catch (error) {
         if (!abortController.signal.aborted) {
@@ -218,18 +281,56 @@ export function TableColumnInput({
       }
     });
     return () => abortController.abort();
-  }, [open, text, loadTableData, startSuggestTransition]);
+  }, [open, text, sectionId, loadTableData, startSuggestTransition]);
 
-  const handleCommitResolved = useEffectEvent((column: string | null) => {
-    setPendingQuery(null);
-    if (column !== null) {
-      setText(column);
-      setInvalid(false);
-      onValueChange(column);
-    } else {
-      setInvalid(true);
-    }
+  // every suggestion is listed, matches first, as the table ranks them; within
+  // a section, a text that no suggestion matches is reported (see below)
+  const hasNoMatch =
+    sectionId !== undefined &&
+    text.trim() !== "" &&
+    text !== valueText &&
+    suggestionsText === text &&
+    suggestions !== null &&
+    !suggestions.some((suggestion) => matchesText(suggestion, text));
+
+  // a text matching nothing in the section is reported once typing pauses,
+  // and never before its suggestions have loaded; a committed one right away
+  const reportNoMatch = useEffectEvent((noMatchText: string) => {
+    onNoMatch?.(noMatchText);
   });
+  useEffect(() => {
+    if (!hasNoMatch) {
+      return;
+    }
+    const timeout = setTimeout(() => reportNoMatch(text), noMatchDelay);
+    return () => clearTimeout(timeout);
+  }, [hasNoMatch, text]);
+
+  const handleCommitResolved = useEffectEvent(
+    (column: string | null, name?: string) => {
+      setPendingQuery(null);
+      if (column !== null) {
+        // within a section, the input shows the found name (e.g. `CD3E` for a
+        // typed `cd3e`), so that committing it again changes nothing
+        const committedText = sectionId === undefined ? column : (name ?? text);
+        setText(committedText);
+        setInvalid(false);
+        if (column === value) {
+          return;
+        }
+        void Promise.resolve(onValueChange(column)).then((applied) => {
+          // unless typed over since
+          if (applied === false) {
+            setText((currentText) =>
+              currentText === committedText ? valueText : currentText,
+            );
+          }
+        });
+      } else {
+        setInvalid(true);
+      }
+    },
+  );
   useEffect(() => {
     if (pendingQuery === null) {
       return;
@@ -238,11 +339,26 @@ export function TableColumnInput({
     const { signal } = abortController;
     loadTableData({ signal })
       .then(async (tableData) => {
-        const column =
-          (await tableData?.resolveColumnQuery(pendingQuery, { signal })) ??
-          null;
+        // within a section, the text is a name, not a query
+        let column: string | null = null;
+        let name: string | undefined;
+        if (tableData !== null && sectionId !== undefined) {
+          const found = await findColumnByName(
+            tableData,
+            sectionId,
+            pendingQuery,
+            { signal },
+          );
+          column = found?.column ?? null;
+          name = found?.name;
+        } else if (tableData !== null) {
+          column = await tableData.resolveColumnQuery(pendingQuery, { signal });
+        }
         if (!signal.aborted) {
-          handleCommitResolved(column);
+          if (sectionId !== undefined && column === null) {
+            reportNoMatch(pendingQuery);
+          }
+          handleCommitResolved(column, name);
         }
       })
       .catch((error) => {
@@ -253,7 +369,7 @@ export function TableColumnInput({
         }
       });
     return () => abortController.abort();
-  }, [pendingQuery, loadTableData]);
+  }, [pendingQuery, sectionId, loadTableData]);
 
   // reported from an effect, as a table change sets the pending query while
   // rendering
@@ -267,7 +383,7 @@ export function TableColumnInput({
   }, [status]);
 
   function commit(newQuery: string) {
-    if (newQuery === query && !invalid) {
+    if (newQuery === valueText && !invalid) {
       setPendingQuery(null);
       setInvalid(false);
       return;
@@ -276,7 +392,7 @@ export function TableColumnInput({
       setPendingQuery(null);
       setText("");
       setInvalid(false);
-      onValueChange(null);
+      void onValueChange(null);
       return;
     }
     setPendingQuery(newQuery);
@@ -301,7 +417,7 @@ export function TableColumnInput({
     if (details.reason === "escape-key") {
       details.cancel();
       setPendingQuery(null);
-      setText(query);
+      setText(valueText);
       setInvalid(false);
       return;
     }
@@ -309,7 +425,9 @@ export function TableColumnInput({
     setText(newText);
     setInvalid(false);
     if (details.reason === "item-press") {
-      const pressed = suggestions?.find((s) => s.query === newText);
+      const pressed = suggestions?.find(
+        (s) => getSuggestionText(s) === newText,
+      );
       if (pressed?.group) {
         reopenRef.current = true;
       } else {
@@ -318,7 +436,7 @@ export function TableColumnInput({
       return;
     }
     if (details.reason === "clear-press") {
-      onValueChange(null);
+      void onValueChange(null);
     }
   }
 
@@ -344,7 +462,7 @@ export function TableColumnInput({
     if (suggestions.length === 0) {
       return text === "" ? "No columns" : `No matches for "${text}"`;
     }
-    return null;
+    return hasNoMatch ? `No matches for "${text}"` : null;
   }
 
   return (
@@ -354,7 +472,7 @@ export function TableColumnInput({
       mode="none"
       items={suggestions ?? []}
       virtualized
-      itemToStringValue={(suggestion) => suggestion.query}
+      itemToStringValue={getSuggestionText}
       openOnInputClick
       open={open}
       onOpenChange={handleOpenChange}
@@ -370,6 +488,8 @@ export function TableColumnInput({
     >
       <AutocompleteInputGroup className={className}>
         <AutocompleteInput
+          placeholder={placeholder}
+          autoFocus={autoFocus}
           aria-invalid={invalid || undefined}
           aria-busy={pendingQuery !== null || undefined}
           onKeyDown={(event) => {

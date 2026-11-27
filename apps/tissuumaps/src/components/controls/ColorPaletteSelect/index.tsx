@@ -8,12 +8,15 @@ export type ColorPaletteSelectProps = {
   colorPalettes: ColorPalette[];
   value: string | null;
   onValueChange: (newValue: string | null) => void;
+  /** Whether "None" can be picked (default: `true`) */
+  nullable?: boolean;
 };
 
 export function ColorPaletteSelect({
   colorPalettes,
   value,
   onValueChange,
+  nullable = true,
 }: ColorPaletteSelectProps) {
   return (
     <SimpleSelect
@@ -22,7 +25,7 @@ export function ColorPaletteSelect({
       itemValue={(p) => p.id}
       value={value}
       onValueChange={onValueChange}
-      nullable
+      nullable={nullable}
     />
   );
 }

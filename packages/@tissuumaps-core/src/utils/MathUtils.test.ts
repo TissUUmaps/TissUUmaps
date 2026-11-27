@@ -534,6 +534,52 @@ describe("MathUtils", () => {
     });
   });
 
+  describe("countUniqueValues", () => {
+    it("counts the distinct values up to the limit", async () => {
+      await expect(
+        MathUtils.countUniqueValues(["b", "a", "b"], 10),
+      ).resolves.toBe(2);
+      await expect(
+        MathUtils.countUniqueValues(new Float32Array([1, NaN, 1, NaN]), 10),
+      ).resolves.toBe(2);
+    });
+
+    it("returns limit + 1 once there are more distinct values", async () => {
+      const values = new Uint32Array(100_000).map((_, i) => i);
+      await expect(MathUtils.countUniqueValues(values, 1000)).resolves.toBe(
+        1001,
+      );
+    });
+
+    it("returns the exact count at the limit", async () => {
+      await expect(
+        MathUtils.countUniqueValues(new Uint8Array([1, 2, 3]), 3),
+      ).resolves.toBe(3);
+    });
+
+    it("returns 0 for empty data", async () => {
+      await expect(
+        MathUtils.countUniqueValues(new Uint8Array(0), 0),
+      ).resolves.toBe(0);
+    });
+
+    it("throws for a negative limit", async () => {
+      await expect(MathUtils.countUniqueValues<string>([], -1)).rejects.toThrow(
+        "limit must be non-negative",
+      );
+    });
+
+    it("rejects with the reason of an aborted signal", async () => {
+      const controller = new AbortController();
+      controller.abort(new Error("aborted"));
+      await expect(
+        MathUtils.countUniqueValues(new Uint8Array(10), 5, {
+          signal: controller.signal,
+        }),
+      ).rejects.toThrow("aborted");
+    });
+  });
+
   describe("toSortKey", () => {
     it("orders keys like the values", () => {
       const values = [-Infinity, -1e40, -2, -1e-50, 0, 1e-50, 1, 2.5, 1e40];

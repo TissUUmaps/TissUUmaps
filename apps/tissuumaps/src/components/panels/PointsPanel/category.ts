@@ -1,5 +1,4 @@
 export const PointsSettingsCategory = {
-  general: "general",
   transform: "transform",
   pointMarker: "pointMarker",
   pointSize: "pointSize",
@@ -7,7 +6,7 @@ export const PointsSettingsCategory = {
   pointVisibility: "pointVisibility",
   pointOpacity: "pointOpacity",
   pointOrder: "pointOrder",
-};
+} as const;
 
 export type PointsSettingsCategory =
   (typeof PointsSettingsCategory)[keyof typeof PointsSettingsCategory];

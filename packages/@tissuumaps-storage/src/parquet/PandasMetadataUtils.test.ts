@@ -128,4 +128,35 @@ describe("PandasMetadataUtils", () => {
       ).toBeUndefined();
     });
   });
+
+  describe("readCategoricalColumns", () => {
+    it("reads the columns of a category dtype by their name in the file", () => {
+      const metadata = fakePandasMetadata(
+        JSON.stringify({
+          index_columns: [],
+          columns: [
+            {
+              name: "leiden",
+              field_name: "leiden",
+              pandas_type: "categorical",
+            },
+            {
+              name: "n_counts",
+              field_name: "n_counts",
+              pandas_type: "float64",
+            },
+          ],
+        }),
+      );
+      expect(PandasMetadataUtils.readCategoricalColumns(metadata)).toEqual([
+        "leiden",
+      ]);
+    });
+
+    it("reads no columns without pandas metadata", () => {
+      expect(
+        PandasMetadataUtils.readCategoricalColumns(fakePandasMetadata()),
+      ).toEqual([]);
+    });
+  });
 });

@@ -3,6 +3,7 @@ import {
   type IDArray,
   type ProgressCallback,
   type TableColumnQuerySuggestion,
+  type TableColumnType,
   type TableData,
   type TypedArrayOrArray,
 } from "@tissuumaps/core";
@@ -24,6 +25,8 @@ export class ParquetTableData implements TableData {
   private readonly _coordinateColumns: Map<string, CoordinateColumn>;
   private _ids: IDArray | undefined;
   private readonly _names: string[] | undefined;
+  // the columns of a pandas category dtype, see PandasMetadataUtils
+  private readonly _categoricalColumns: Set<string>;
   // Both axes of a point geometry column are decoded in one pass, so the
   // second axis a point cloud reads does not decode the column again.
   private readonly _coordinates = new Map<
@@ -38,6 +41,7 @@ export class ParquetTableData implements TableData {
     coordinateColumns: CoordinateColumn[],
     ids: IDArray | undefined,
     names: string[] | undefined,
+    categoricalColumns: string[],
   ) {
     this._parts = parts;
     this._numRows = numRows;
@@ -50,6 +54,7 @@ export class ParquetTableData implements TableData {
     );
     this._ids = ids;
     this._names = names;
+    this._categoricalColumns = new Set(categoricalColumns);
   }
 
   getIds(): IDArray {
@@ -66,6 +71,10 @@ export class ParquetTableData implements TableData {
 
   getNames(): string[] | undefined {
     return this._names;
+  }
+
+  getColumnType(column: string): TableColumnType | undefined {
+    return this._categoricalColumns.has(column) ? "categorical" : undefined;
   }
 
   suggestColumnQueries(

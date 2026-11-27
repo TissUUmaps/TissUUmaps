@@ -1,0 +1,75 @@
+import { useEffect, useState } from "react";
+
+import type { TableData } from "@tissuumaps/core";
+
+/**
+ * Where a column is in a table with sections: in a leaf section, under its
+ * name there; in no section (e.g. the `obs` index); or not in the table
+ */
+export type ColumnLocation = { column: string } & (
+  | { kind: "section"; sectionId: string; name: string }
+  | { kind: "unsectioned" }
+  | { kind: "missing" }
+);
+
+/**
+ * Loads where the followed column is, for tables with sections (see
+ * `TableData.describeColumn`)
+ *
+ * The location of a column is kept until the next column's resolves, so that
+ * the rows do not change in between; its `column` tells whether it is stale. A
+ * failed load is logged and gives the column as in no section, so that the
+ * header shows it with its type.
+ *
+ * @param tableData - The object's own table, if loaded
+ * @param column - The followed column, if any
+ * @returns The location of the column, or `null` if there is no column, the
+ * table has no sections or no location was loaded for this table data yet
+ */
+export function useColumnLocation(
+  tableData: TableData | null,
+  column: string | null,
+): ColumnLocation | null {
+  const [loaded, setLoaded] = useState<{
+    tableData: TableData;
+    location: ColumnLocation;
+  } | null>(null);
+
+  useEffect(() => {
+    if (tableData?.describeColumn === undefined || column === null) {
+      return;
+    }
+    const abortController = new AbortController();
+    const { signal } = abortController;
+    const describing = tableData.describeColumn(column, { signal });
+    (async () => {
+      const description = await describing;
+      // a column in no section still resolves; a missing one does not
+      const location: ColumnLocation =
+        description !== null
+          ? { column, kind: "section", ...description }
+          : (await tableData.resolveColumnQuery(column, { signal })) !== null
+            ? { column, kind: "unsectioned" }
+            : { column, kind: "missing" };
+      if (!signal.aborted) {
+        setLoaded({ tableData, location });
+      }
+    })().catch((error: unknown) => {
+      if (!signal.aborted) {
+        console.error("Failed to describe the column", error);
+        // the rows cannot place the column; the header shows it by its query
+        setLoaded({ tableData, location: { column, kind: "unsectioned" } });
+      }
+    });
+    return () => abortController.abort();
+  }, [tableData, column]);
+
+  if (
+    column === null ||
+    tableData?.describeColumn === undefined ||
+    loaded?.tableData !== tableData
+  ) {
+    return null;
+  }
+  return loaded.location;
+}

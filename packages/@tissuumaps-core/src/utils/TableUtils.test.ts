@@ -476,6 +476,31 @@ describe("TableUtils", () => {
     });
   });
 
+  describe("loadColumnType", () => {
+    it("uses what the table declares", async () => {
+      const { data, loadValues } = createMockTableData(
+        new Uint32Array([0, 1]),
+        new Float32Array([0, 1]),
+      );
+      data.getColumnType = vi.fn().mockReturnValue("categorical");
+      await expect(TableUtils.loadColumnType(data, "col1")).resolves.toBe(
+        "categorical",
+      );
+      expect(loadValues).not.toHaveBeenCalled();
+    });
+
+    it("inspects the values otherwise", async () => {
+      const { data } = createMockTableData(
+        new Uint32Array([0, 1]),
+        new Float32Array([0, 1]),
+      );
+      data.getColumnType = vi.fn().mockReturnValue(undefined);
+      await expect(TableUtils.loadColumnType(data, "col1")).resolves.toBe(
+        "numerical",
+      );
+    });
+  });
+
   describe("fillFromTableGroups", () => {
     it("fills the buffer by grouping table values and mapping groups", async () => {
       const ids = new Uint32Array([1, 2, 3]);

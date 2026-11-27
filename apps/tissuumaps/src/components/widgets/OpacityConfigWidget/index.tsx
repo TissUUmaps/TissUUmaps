@@ -3,8 +3,8 @@ import { ProjectUtils } from "@tissuumaps/core";
 import { Field, FieldLabel } from "@/components/common/field";
 import { OpacityControl } from "@/components/common/opacity-control";
 import { GroupValueMapSelect } from "@/components/controls/GroupValueMapSelect";
+import { RangeEndInput } from "@/components/controls/RangeEndInput";
 import { TableColumnField } from "@/components/controls/TableColumnField";
-import { Input } from "@/components/ui/input";
 import { useReferencedMapIds } from "@/hooks/useReferencedMapIds";
 import { useProjectStore } from "@/stores/project";
 
@@ -95,48 +95,18 @@ function FromOpacityConfigWidget({
       <div className="grid grid-cols-2 gap-x-2">
         <Field>
           <FieldLabel>Min. value</FieldLabel>
-          <Input
-            type="number"
-            inputMode="decimal"
-            placeholder={
-              columnValueRange !== null
-                ? columnValueRange[0].toPrecision(6)
-                : undefined
-            }
-            value={rangeMin ?? ""}
-            onChange={(event) => {
-              if (event.target.value === "") {
-                setRangeMin(null);
-              } else {
-                const newValue = event.target.valueAsNumber;
-                if (!isNaN(newValue)) {
-                  setRangeMin(newValue);
-                }
-              }
-            }}
+          <RangeEndInput
+            value={rangeMin}
+            onValueChange={setRangeMin}
+            placeholder={columnValueRange?.[0]}
           />
         </Field>
         <Field>
           <FieldLabel>Max. value</FieldLabel>
-          <Input
-            type="number"
-            inputMode="decimal"
-            placeholder={
-              columnValueRange !== null
-                ? columnValueRange[1].toPrecision(6)
-                : undefined
-            }
-            value={rangeMax ?? ""}
-            onChange={(event) => {
-              if (event.target.value === "") {
-                setRangeMax(null);
-              } else {
-                const newValue = event.target.valueAsNumber;
-                if (!isNaN(newValue)) {
-                  setRangeMax(newValue);
-                }
-              }
-            }}
+          <RangeEndInput
+            value={rangeMax}
+            onValueChange={setRangeMax}
+            placeholder={columnValueRange?.[1]}
           />
         </Field>
       </div>

@@ -1,371 +1,409 @@
+import { EyeIcon, PaletteIcon } from "lucide-react";
+
 import {
   type Shapes,
+  type TableColumnType,
   defaultShapeFillColor,
-  defaultShapeFillOpacity,
-  defaultShapeFillVisibility,
-  defaultShapeOpacity,
   defaultShapeStrokeColor,
-  defaultShapeStrokeOpacity,
-  defaultShapeStrokeVisibility,
-  defaultShapeVisibility,
+  shapesDefaults,
 } from "@tissuumaps/core";
 
-import {
-  Accordion,
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  AccordionTrigger,
-  AccordionTriggerRightDownIcon,
-} from "@/components/common/accordion";
-import { Field, FieldLabel } from "@/components/common/field";
-import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
-import { SimpleSelect } from "@/components/common/simple-select";
-import { formatTableColumn } from "@/components/controls/TableColumnField/formatTableColumn";
-import { Input } from "@/components/ui/input";
-import {
-  ActiveColorConfigValue,
-  ColorConfigSourceToggleGroup,
-  ColorConfigWidget,
-} from "@/components/widgets/ColorConfigWidget";
 import { useColorConfigWidget } from "@/components/widgets/ColorConfigWidget/hooks";
+import { SettingsWidget } from "@/components/widgets/SettingsWidget";
+import { CategoricalColorPaletteRow } from "@/components/widgets/SettingsWidget/CategoricalColorPaletteRow";
+import { ColorRangeRows } from "@/components/widgets/SettingsWidget/ColorRangeRows";
+import { OpacityIcon } from "@/components/widgets/SettingsWidget/OpacityIcon";
 import {
-  ActiveOpacityConfigValue,
-  OpacityConfigSourceToggleGroup,
-  OpacityConfigWidget,
-} from "@/components/widgets/OpacityConfigWidget";
-import { useOpacityConfigWidget } from "@/components/widgets/OpacityConfigWidget/hooks";
-import { TransformSettingsWidget } from "@/components/widgets/TransformSettingsWidget";
-import {
-  ActiveVisibilityConfigValue,
-  VisibilityConfigSourceToggleGroup,
-  VisibilityConfigWidget,
-} from "@/components/widgets/VisibilityConfigWidget";
-import { useVisibilityConfigWidget } from "@/components/widgets/VisibilityConfigWidget/hooks";
-import { useControlled } from "@/hooks/useControlled";
-import { cn } from "@/lib/utils";
-import { useProjectStore } from "@/stores/project";
+  describeColorWithoutColumn,
+  findFollowedColumn,
+  getFollower,
+  isSameFollowedColumn,
+  readFollowedColumn,
+  withColorColumn,
+  withFromColumn,
+  withOpacityColumn,
+} from "@/components/widgets/SettingsWidget/follow";
+import { projectStore, useProjectStore } from "@/stores/project";
 
+import { ShapesAdvancedSettingsWidget } from "./ShapesAdvancedSettingsWidget";
 import { ShapesSettingsCategory } from "./category";
+
+/** The column types each property can follow */
+const columnTypes = {
+  [ShapesSettingsCategory.shapeFillColor]: ["categorical", "numerical"],
+  [ShapesSettingsCategory.shapeFillOpacity]: ["numerical"],
+  [ShapesSettingsCategory.shapeFillVisibility]: ["numerical"],
+  [ShapesSettingsCategory.shapeStrokeColor]: ["categorical", "numerical"],
+  [ShapesSettingsCategory.shapeStrokeOpacity]: ["numerical"],
+  [ShapesSettingsCategory.shapeStrokeVisibility]: ["numerical"],
+  [ShapesSettingsCategory.shapeOpacity]: ["numerical"],
+  [ShapesSettingsCategory.shapeVisibility]: ["numerical"],
+} satisfies Record<string, TableColumnType[]>;
 
 export type ShapesSettingsWidgetProps = {
   shapes: Shapes;
-  activeCategory?: ShapesSettingsCategory | null;
-  onActiveCategoryChange?: (
-    newActiveCategory: ShapesSettingsCategory | null,
-  ) => void;
   className?: string;
 };
 
+/**
+ * The always available settings of shapes: the column that their fill and
+ * stroke (each with its color, opacity and visibility), opacity and
+ * visibility follow
+ *
+ * If no property follows the column, the fill color follows a newly picked
+ * one.
+ */
 export function ShapesSettingsWidget({
   shapes,
-  activeCategory: controlledActiveCategory,
-  onActiveCategoryChange: setControlledActiveCategory,
   className,
 }: ShapesSettingsWidgetProps) {
-  const [activeCategory, setActiveCategory] = useControlled(
-    controlledActiveCategory,
-    setControlledActiveCategory,
-    null,
-  );
-
   const updateShapes = useProjectStore((state) => state.updateShapes);
-
-  const shapeVisibilityConfigWidgetAdapter = useVisibilityConfigWidget(
-    shapes.shapeVisibility,
-    (newVisibilityConfig) =>
-      updateShapes(shapes.id, { shapeVisibility: newVisibilityConfig }),
-    defaultShapeVisibility,
-    shapes.dataSource.table ?? null,
-  );
-  const shapeOpacityConfigWidgetAdapter = useOpacityConfigWidget(
-    shapes.shapeOpacity,
-    (newOpacityConfig) =>
-      updateShapes(shapes.id, { shapeOpacity: newOpacityConfig }),
-    defaultShapeOpacity,
-    shapes.dataSource.table ?? null,
-  );
-  const shapeFillColorConfigWidgetAdapter = useColorConfigWidget(
+  const tableId = shapes.dataSource.table ?? null;
+  const fillColorAdapter = useColorConfigWidget(
     shapes.shapeFillColor,
     (newColorConfig) =>
       updateShapes(shapes.id, { shapeFillColor: newColorConfig }),
     defaultShapeFillColor,
-    shapes.dataSource.table ?? null,
+    tableId,
   );
-  const shapeFillVisibilityConfigWidgetAdapter = useVisibilityConfigWidget(
-    shapes.shapeFillVisibility,
-    (newVisibilityConfig) =>
-      updateShapes(shapes.id, { shapeFillVisibility: newVisibilityConfig }),
-    defaultShapeFillVisibility,
-    shapes.dataSource.table ?? null,
-  );
-  const shapeFillOpacityConfigWidgetAdapter = useOpacityConfigWidget(
-    shapes.shapeFillOpacity,
-    (newOpacityConfig) =>
-      updateShapes(shapes.id, { shapeFillOpacity: newOpacityConfig }),
-    defaultShapeFillOpacity,
-    shapes.dataSource.table ?? null,
-  );
-  const shapeStrokeColorConfigWidgetAdapter = useColorConfigWidget(
+  const strokeColorAdapter = useColorConfigWidget(
     shapes.shapeStrokeColor,
     (newColorConfig) =>
       updateShapes(shapes.id, { shapeStrokeColor: newColorConfig }),
     defaultShapeStrokeColor,
-    shapes.dataSource.table ?? null,
-  );
-  const shapeStrokeVisibilityConfigWidgetAdapter = useVisibilityConfigWidget(
-    shapes.shapeStrokeVisibility,
-    (newVisibilityConfig) =>
-      updateShapes(shapes.id, {
-        shapeStrokeVisibility: newVisibilityConfig,
-      }),
-    defaultShapeStrokeVisibility,
-    shapes.dataSource.table ?? null,
-  );
-  const shapeStrokeOpacityConfigWidgetAdapter = useOpacityConfigWidget(
-    shapes.shapeStrokeOpacity,
-    (newOpacityConfig) =>
-      updateShapes(shapes.id, { shapeStrokeOpacity: newOpacityConfig }),
-    defaultShapeStrokeOpacity,
-    shapes.dataSource.table ?? null,
+    tableId,
   );
 
+  const followedColumns = readFollowedColumns(shapes);
+  const followedColumn = findFollowedColumn(Object.values(followedColumns));
+  const isOn = (name: keyof typeof followedColumns) =>
+    isSameFollowedColumn(followedColumns[name], followedColumn);
+
   return (
-    <Fieldset
-      className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
-    >
-      <FieldsetLegend className="font-medium text-foreground">
-        Settings
-      </FieldsetLegend>
-      <Accordion
-        value={activeCategory !== null ? [activeCategory] : []}
-        onValueChange={(value) =>
-          setActiveCategory(
-            value.length > 0 ? (value[0] as ShapesSettingsCategory) : null,
-          )
-        }
-      >
-        {/* General */}
-        <AccordionItem value={ShapesSettingsCategory.general}>
-          <AccordionHeader>
-            <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>General</AccordionTrigger>
-          </AccordionHeader>
-          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <GeneralShapesSettingsWidget shapes={shapes} />
-          </AccordionPanel>
-        </AccordionItem>
-        {/* Transform */}
-        <AccordionItem value={ShapesSettingsCategory.transform}>
-          <AccordionHeader>
-            <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>Transform</AccordionTrigger>
-          </AccordionHeader>
-          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <TransformSettingsWidget
-              transform={shapes.transform}
-              onTransformChange={(transform) =>
-                updateShapes(shapes.id, { transform })
+    <SettingsWidget
+      tableId={tableId}
+      followedColumn={followedColumn}
+      placeholder={describeColorWithoutColumn(
+        shapes.shapeFillColor,
+        shapesDefaults.shapeFillColor,
+      )}
+      items={[
+        {
+          name: "shapeFill",
+          label: "Shape fill",
+          icon: (
+            <FillIcon
+              filled={
+                isOn(ShapesSettingsCategory.shapeFillColor) ||
+                isOn(ShapesSettingsCategory.shapeFillOpacity) ||
+                isOn(ShapesSettingsCategory.shapeFillVisibility)
               }
             />
-          </AccordionPanel>
-        </AccordionItem>
-        {/* Shape visibility */}
-        <AccordionItem value={ShapesSettingsCategory.shapeVisibility}>
-          <AccordionHeader>
-            <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>Visibility</AccordionTrigger>
-            <ActiveVisibilityConfigValue
-              adapter={shapeVisibilityConfigWidgetAdapter}
-              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
+          ),
+          properties: [
+            {
+              name: ShapesSettingsCategory.shapeFillColor,
+              label: "Color",
+              icon: <PaletteIcon />,
+              columnTypes: columnTypes[ShapesSettingsCategory.shapeFillColor],
+              isOn: isOn(ShapesSettingsCategory.shapeFillColor),
+              categoricalOptions: (
+                <CategoricalColorPaletteRow adapter={fillColorAdapter} />
+              ),
+              numericalOptions: <ColorRangeRows adapter={fillColorAdapter} />,
+            },
+            {
+              name: ShapesSettingsCategory.shapeFillOpacity,
+              label: "Opacity",
+              icon: (
+                <OpacityIcon
+                  filled={isOn(ShapesSettingsCategory.shapeFillOpacity)}
+                />
+              ),
+              columnTypes: columnTypes[ShapesSettingsCategory.shapeFillOpacity],
+              isOn: isOn(ShapesSettingsCategory.shapeFillOpacity),
+            },
+            {
+              name: ShapesSettingsCategory.shapeFillVisibility,
+              label: "Visibility",
+              icon: <EyeIcon />,
+              columnTypes:
+                columnTypes[ShapesSettingsCategory.shapeFillVisibility],
+              hint: "hides items whose value is 0 or less",
+              isOn: isOn(ShapesSettingsCategory.shapeFillVisibility),
+            },
+          ],
+        },
+        {
+          name: "shapeStroke",
+          label: "Shape stroke",
+          icon: (
+            <StrokeIcon
+              filled={
+                isOn(ShapesSettingsCategory.shapeStrokeColor) ||
+                isOn(ShapesSettingsCategory.shapeStrokeOpacity) ||
+                isOn(ShapesSettingsCategory.shapeStrokeVisibility)
+              }
             />
-          </AccordionHeader>
-          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <VisibilityConfigSourceToggleGroup
-              adapter={shapeVisibilityConfigWidgetAdapter}
-              className="border rounded"
-            />
-            <VisibilityConfigWidget
-              adapter={shapeVisibilityConfigWidgetAdapter}
-            />
-          </AccordionPanel>
-        </AccordionItem>
-        {/* Shape opacity */}
-        <AccordionItem value={ShapesSettingsCategory.shapeOpacity}>
-          <AccordionHeader>
-            <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>Opacity</AccordionTrigger>
-            <ActiveOpacityConfigValue
-              adapter={shapeOpacityConfigWidgetAdapter}
-              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
-            />
-          </AccordionHeader>
-          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <OpacityConfigSourceToggleGroup
-              adapter={shapeOpacityConfigWidgetAdapter}
-              className="border rounded"
-            />
-            <OpacityConfigWidget adapter={shapeOpacityConfigWidgetAdapter} />
-          </AccordionPanel>
-        </AccordionItem>
-        {/* Shape fill color */}
-        <AccordionItem value={ShapesSettingsCategory.shapeFillColor}>
-          <AccordionHeader>
-            <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>Fill color</AccordionTrigger>
-            <ActiveColorConfigValue
-              adapter={shapeFillColorConfigWidgetAdapter}
-              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
-            />
-          </AccordionHeader>
-          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <ColorConfigSourceToggleGroup
-              adapter={shapeFillColorConfigWidgetAdapter}
-              className="border rounded"
-            />
-            <ColorConfigWidget adapter={shapeFillColorConfigWidgetAdapter} />
-          </AccordionPanel>
-        </AccordionItem>
-        {/* Shape fill visibility */}
-        <AccordionItem value={ShapesSettingsCategory.shapeFillVisibility}>
-          <AccordionHeader>
-            <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>Fill visibility</AccordionTrigger>
-            <ActiveVisibilityConfigValue
-              adapter={shapeFillVisibilityConfigWidgetAdapter}
-              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
-            />
-          </AccordionHeader>
-          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <VisibilityConfigSourceToggleGroup
-              adapter={shapeFillVisibilityConfigWidgetAdapter}
-              className="border rounded"
-            />
-            <VisibilityConfigWidget
-              adapter={shapeFillVisibilityConfigWidgetAdapter}
-            />
-          </AccordionPanel>
-        </AccordionItem>
-        {/* Shape fill opacity */}
-        <AccordionItem value={ShapesSettingsCategory.shapeFillOpacity}>
-          <AccordionHeader>
-            <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>Fill opacity</AccordionTrigger>
-            <ActiveOpacityConfigValue
-              adapter={shapeFillOpacityConfigWidgetAdapter}
-              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
-            />
-          </AccordionHeader>
-          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <OpacityConfigSourceToggleGroup
-              adapter={shapeFillOpacityConfigWidgetAdapter}
-              className="border rounded"
-            />
-            <OpacityConfigWidget
-              adapter={shapeFillOpacityConfigWidgetAdapter}
-            />
-          </AccordionPanel>
-        </AccordionItem>
-        {/* Shape stroke color */}
-        <AccordionItem value={ShapesSettingsCategory.shapeStrokeColor}>
-          <AccordionHeader>
-            <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>Stroke color</AccordionTrigger>
-            <ActiveColorConfigValue
-              adapter={shapeStrokeColorConfigWidgetAdapter}
-              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
-            />
-          </AccordionHeader>
-          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <ColorConfigSourceToggleGroup
-              adapter={shapeStrokeColorConfigWidgetAdapter}
-              className="border rounded"
-            />
-            <ColorConfigWidget adapter={shapeStrokeColorConfigWidgetAdapter} />
-          </AccordionPanel>
-        </AccordionItem>
-        {/* Shape stroke visibility */}
-        <AccordionItem value={ShapesSettingsCategory.shapeStrokeVisibility}>
-          <AccordionHeader>
-            <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>Stroke visibility</AccordionTrigger>
-            <ActiveVisibilityConfigValue
-              adapter={shapeStrokeVisibilityConfigWidgetAdapter}
-              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
-            />
-          </AccordionHeader>
-          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <VisibilityConfigSourceToggleGroup
-              adapter={shapeStrokeVisibilityConfigWidgetAdapter}
-              className="border rounded"
-            />
-            <VisibilityConfigWidget
-              adapter={shapeStrokeVisibilityConfigWidgetAdapter}
-            />
-          </AccordionPanel>
-        </AccordionItem>
-        {/* Shape stroke opacity */}
-        <AccordionItem value={ShapesSettingsCategory.shapeStrokeOpacity}>
-          <AccordionHeader>
-            <AccordionTriggerRightDownIcon />
-            <AccordionTrigger>Stroke opacity</AccordionTrigger>
-            <ActiveOpacityConfigValue
-              adapter={shapeStrokeOpacityConfigWidgetAdapter}
-              className="ml-auto text-sm text-slate-600 dark:text-slate-400"
-            />
-          </AccordionHeader>
-          <AccordionPanel className="flex flex-col p-2 pl-6 pb-4 gap-2">
-            <OpacityConfigSourceToggleGroup
-              adapter={shapeStrokeOpacityConfigWidgetAdapter}
-              className="border rounded"
-            />
-            <OpacityConfigWidget
-              adapter={shapeStrokeOpacityConfigWidgetAdapter}
-            />
-          </AccordionPanel>
-        </AccordionItem>
-      </Accordion>
-    </Fieldset>
+          ),
+          properties: [
+            {
+              name: ShapesSettingsCategory.shapeStrokeColor,
+              label: "Color",
+              icon: <PaletteIcon />,
+              columnTypes: columnTypes[ShapesSettingsCategory.shapeStrokeColor],
+              isOn: isOn(ShapesSettingsCategory.shapeStrokeColor),
+              categoricalOptions: (
+                <CategoricalColorPaletteRow adapter={strokeColorAdapter} />
+              ),
+              numericalOptions: <ColorRangeRows adapter={strokeColorAdapter} />,
+            },
+            {
+              name: ShapesSettingsCategory.shapeStrokeOpacity,
+              label: "Opacity",
+              icon: (
+                <OpacityIcon
+                  filled={isOn(ShapesSettingsCategory.shapeStrokeOpacity)}
+                />
+              ),
+              columnTypes:
+                columnTypes[ShapesSettingsCategory.shapeStrokeOpacity],
+              isOn: isOn(ShapesSettingsCategory.shapeStrokeOpacity),
+            },
+            {
+              name: ShapesSettingsCategory.shapeStrokeVisibility,
+              label: "Visibility",
+              icon: <EyeIcon />,
+              columnTypes:
+                columnTypes[ShapesSettingsCategory.shapeStrokeVisibility],
+              hint: "hides items whose value is 0 or less",
+              isOn: isOn(ShapesSettingsCategory.shapeStrokeVisibility),
+            },
+          ],
+        },
+        {
+          name: ShapesSettingsCategory.shapeOpacity,
+          label: "Opacity",
+          icon: (
+            <OpacityIcon filled={isOn(ShapesSettingsCategory.shapeOpacity)} />
+          ),
+          columnTypes: columnTypes[ShapesSettingsCategory.shapeOpacity],
+          isOn: isOn(ShapesSettingsCategory.shapeOpacity),
+        },
+        {
+          name: ShapesSettingsCategory.shapeVisibility,
+          label: "Visibility",
+          icon: <EyeIcon />,
+          columnTypes: columnTypes[ShapesSettingsCategory.shapeVisibility],
+          hint: "hides items whose value is 0 or less",
+          isOn: isOn(ShapesSettingsCategory.shapeVisibility),
+        },
+      ]}
+      onFollowedColumnChange={(newFollowedColumn, propertyNames) => {
+        // the shapes as they are now: the change may come after a column load
+        const current = projectStore
+          .getState()
+          .shapes.find(({ id }) => id === shapes.id);
+        if (current === undefined) {
+          return;
+        }
+        const currentTableId = current.dataSource.table ?? null;
+        const follow = getFollower(
+          readFollowedColumns(current),
+          newFollowedColumn,
+          propertyNames,
+        );
+        updateShapes(current.id, {
+          shapeFillColor: follow(
+            ShapesSettingsCategory.shapeFillColor,
+            current.shapeFillColor,
+            shapesDefaults.shapeFillColor,
+            ({ column, columnType }) =>
+              withColorColumn(
+                current.shapeFillColor,
+                column,
+                columnType,
+                currentTableId,
+              ),
+          ),
+          shapeFillOpacity: follow(
+            ShapesSettingsCategory.shapeFillOpacity,
+            current.shapeFillOpacity,
+            shapesDefaults.shapeFillOpacity,
+            ({ column }) =>
+              withOpacityColumn(
+                current.shapeFillOpacity,
+                column,
+                currentTableId,
+              ),
+          ),
+          shapeFillVisibility: follow(
+            ShapesSettingsCategory.shapeFillVisibility,
+            current.shapeFillVisibility,
+            shapesDefaults.shapeFillVisibility,
+            ({ column }) =>
+              withFromColumn(
+                current.shapeFillVisibility,
+                column,
+                currentTableId,
+              ),
+          ),
+          shapeStrokeColor: follow(
+            ShapesSettingsCategory.shapeStrokeColor,
+            current.shapeStrokeColor,
+            shapesDefaults.shapeStrokeColor,
+            ({ column, columnType }) =>
+              withColorColumn(
+                current.shapeStrokeColor,
+                column,
+                columnType,
+                currentTableId,
+              ),
+          ),
+          shapeStrokeOpacity: follow(
+            ShapesSettingsCategory.shapeStrokeOpacity,
+            current.shapeStrokeOpacity,
+            shapesDefaults.shapeStrokeOpacity,
+            ({ column }) =>
+              withOpacityColumn(
+                current.shapeStrokeOpacity,
+                column,
+                currentTableId,
+              ),
+          ),
+          shapeStrokeVisibility: follow(
+            ShapesSettingsCategory.shapeStrokeVisibility,
+            current.shapeStrokeVisibility,
+            shapesDefaults.shapeStrokeVisibility,
+            ({ column }) =>
+              withFromColumn(
+                current.shapeStrokeVisibility,
+                column,
+                currentTableId,
+              ),
+          ),
+          shapeOpacity: follow(
+            ShapesSettingsCategory.shapeOpacity,
+            current.shapeOpacity,
+            shapesDefaults.shapeOpacity,
+            ({ column }) =>
+              withOpacityColumn(current.shapeOpacity, column, currentTableId),
+          ),
+          shapeVisibility: follow(
+            ShapesSettingsCategory.shapeVisibility,
+            current.shapeVisibility,
+            shapesDefaults.shapeVisibility,
+            ({ column }) =>
+              withFromColumn(current.shapeVisibility, column, currentTableId),
+          ),
+        });
+      }}
+      advancedSettings={<ShapesAdvancedSettingsWidget shapes={shapes} />}
+      className={className}
+    />
   );
 }
 
-type GeneralShapesSettingsWidgetProps = {
-  shapes: Shapes;
-  className?: string;
-};
+/**
+ * @param shapes - The shapes
+ * @returns What the properties of the shapes follow, by name, in the order of
+ * the settings widget
+ */
+function readFollowedColumns(shapes: Shapes) {
+  const tableId = shapes.dataSource.table ?? null;
+  return {
+    [ShapesSettingsCategory.shapeFillColor]: readFollowedColumn(
+      shapes.shapeFillColor,
+      tableId,
+      columnTypes[ShapesSettingsCategory.shapeFillColor],
+    ),
+    [ShapesSettingsCategory.shapeFillOpacity]: readFollowedColumn(
+      shapes.shapeFillOpacity,
+      tableId,
+      columnTypes[ShapesSettingsCategory.shapeFillOpacity],
+    ),
+    [ShapesSettingsCategory.shapeFillVisibility]: readFollowedColumn(
+      shapes.shapeFillVisibility,
+      tableId,
+      columnTypes[ShapesSettingsCategory.shapeFillVisibility],
+    ),
+    [ShapesSettingsCategory.shapeStrokeColor]: readFollowedColumn(
+      shapes.shapeStrokeColor,
+      tableId,
+      columnTypes[ShapesSettingsCategory.shapeStrokeColor],
+    ),
+    [ShapesSettingsCategory.shapeStrokeOpacity]: readFollowedColumn(
+      shapes.shapeStrokeOpacity,
+      tableId,
+      columnTypes[ShapesSettingsCategory.shapeStrokeOpacity],
+    ),
+    [ShapesSettingsCategory.shapeStrokeVisibility]: readFollowedColumn(
+      shapes.shapeStrokeVisibility,
+      tableId,
+      columnTypes[ShapesSettingsCategory.shapeStrokeVisibility],
+    ),
+    [ShapesSettingsCategory.shapeOpacity]: readFollowedColumn(
+      shapes.shapeOpacity,
+      tableId,
+      columnTypes[ShapesSettingsCategory.shapeOpacity],
+    ),
+    [ShapesSettingsCategory.shapeVisibility]: readFollowedColumn(
+      shapes.shapeVisibility,
+      tableId,
+      columnTypes[ShapesSettingsCategory.shapeVisibility],
+    ),
+  };
+}
 
-function GeneralShapesSettingsWidget({
-  shapes,
-  className,
-}: GeneralShapesSettingsWidgetProps) {
-  const layers = useProjectStore((state) => state.layers);
-  const tables = useProjectStore((state) => state.tables);
-  const updateShapes = useProjectStore((state) => state.updateShapes);
+type FillIconProps = { filled: boolean };
 
+/** A filled square, colored while the fill follows the column */
+function FillIcon({ filled }: FillIconProps) {
   return (
-    <div className={className}>
-      <Field>
-        <FieldLabel>Layer</FieldLabel>
-        {typeof shapes.layer === "string" ? (
-          <SimpleSelect
-            items={layers}
-            itemLabel={(l) => l.name}
-            itemValue={(l) => l.id}
-            value={shapes.layer}
-            onValueChange={(value) => {
-              if (value !== null) {
-                updateShapes(shapes.id, { layer: value });
-              }
-            }}
-          />
-        ) : (
-          <Input
-            disabled
-            value={`column: ${formatTableColumn(shapes.layer, tables)}`}
-            readOnly
-          />
-        )}
-      </Field>
-    </div>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect
+        x="4"
+        y="4"
+        width="16"
+        height="16"
+        rx="3"
+        className={filled ? "fill-blue-500/70" : "fill-current/25"}
+      />
+    </svg>
+  );
+}
+
+type StrokeIconProps = { filled: boolean };
+
+/** A bold outline, colored while the stroke follows the column */
+function StrokeIcon({ filled }: StrokeIconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect
+        x="4.5"
+        y="4.5"
+        width="15"
+        height="15"
+        rx="3"
+        strokeWidth={3}
+        className={filled ? "stroke-blue-500" : undefined}
+      />
+    </svg>
   );
 }

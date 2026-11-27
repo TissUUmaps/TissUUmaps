@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import type { Labels } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
@@ -19,7 +17,6 @@ import { useProjectStore } from "@/stores/project";
 
 import { LabelsAnnotationsWidget } from "./LabelsAnnotationsWidget";
 import { LabelsSettingsWidget } from "./LabelsSettingsWidget";
-import type { LabelsSettingsCategory } from "./category";
 
 export type LabelsPanelProps = {
   className?: string;
@@ -68,9 +65,6 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
   const deleteLabels = useProjectStore((state) => state.deleteLabels);
   const loaded = useDataStore((state) => state.labelsDataRefs.has(labels.id));
 
-  const [activeSettingsCategory, setActiveSettingsCategory] =
-    useState<LabelsSettingsCategory | null>(null);
-
   return (
     <SortableObjectListItem
       id={labels.id}
@@ -111,18 +105,9 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
         }}
         className="bg-card"
       />
-      <LabelsSettingsWidget
-        labels={labels}
-        activeCategory={activeSettingsCategory}
-        onActiveCategoryChange={setActiveSettingsCategory}
-        className="bg-card"
-      />
+      <LabelsSettingsWidget labels={labels} className="bg-card" />
       {labels.dataSource.table !== undefined && (
-        <LabelsAnnotationsWidget
-          labels={labels}
-          activeSettingsCategory={activeSettingsCategory}
-          className="bg-card"
-        />
+        <LabelsAnnotationsWidget labels={labels} className="bg-card" />
       )}
     </SortableObjectListItem>
   );

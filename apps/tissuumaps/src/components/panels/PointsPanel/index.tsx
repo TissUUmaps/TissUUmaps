@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import { type Points, ProjectUtils } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
@@ -10,6 +8,11 @@ import {
   SortableObjectListItem,
 } from "@/components/controls/ObjectList";
 import { useAddPointsDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
 import { pointsDataCache } from "@/data/cache";
 import { usePointsData } from "@/data/hooks/useData";
@@ -20,7 +23,6 @@ import { useProjectStore } from "@/stores/project";
 
 import { PointsAnnotationsWidget } from "./PointsAnnotationsWidget";
 import { PointsSettingsWidget } from "./PointsSettingsWidget";
-import type { PointsSettingsCategory } from "./category";
 
 export type PointsPanelProps = {
   className?: string;
@@ -74,9 +76,6 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
 
   const pointsData = usePointsData(points.id);
 
-  const [activeSettingsCategory, setActiveSettingsCategory] =
-    useState<PointsSettingsCategory | null>(null);
-
   return (
     <SortableObjectListItem
       id={points.id}
@@ -96,11 +95,36 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
         />
       }
       trailingControls={
-        <OpacityControl
-          opacity={points.opacity}
-          name={points.name}
-          onOpacityChange={(opacity) => updatePoints(points.id, { opacity })}
-        />
+        <>
+          <InputGroup className="h-6 w-16 shrink-0">
+            <InputGroupInput
+              type="number"
+              inputMode="decimal"
+              step={0.1}
+              min={0}
+              aria-label={`Point size factor of ${points.name}`}
+              title="Point size factor"
+              value={points.pointSizeFactor}
+              onChange={(event) => {
+                const newValue = event.target.valueAsNumber;
+                if (!isNaN(newValue)) {
+                  updatePoints(points.id, {
+                    pointSizeFactor: Math.max(0, newValue),
+                  });
+                }
+              }}
+              className="h-6 px-1.5 text-xs tabular-nums"
+            />
+            <InputGroupAddon align="inline-end" className="pr-1.5 text-xs">
+              ×
+            </InputGroupAddon>
+          </InputGroup>
+          <OpacityControl
+            opacity={points.opacity}
+            name={points.name}
+            onOpacityChange={(opacity) => updatePoints(points.id, { opacity })}
+          />
+        </>
       }
       unloadDisabled={!loaded}
       onUnload={() => {
@@ -117,17 +141,11 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
         }}
         className="bg-card"
       />
-      <PointsSettingsWidget
-        points={points}
-        activeCategory={activeSettingsCategory}
-        onActiveCategoryChange={setActiveSettingsCategory}
-        className="bg-card"
-      />
+      <PointsSettingsWidget points={points} className="bg-card" />
       {pointsData !== null && (
         <PointsAnnotationsWidget
           points={points}
           data={pointsData}
-          activeSettingsCategory={activeSettingsCategory}
           className="bg-card"
         />
       )}
