@@ -64,6 +64,14 @@ export type ColumnRowsProps = {
   onColumnChange: (column: string | null) => Promise<boolean>;
 
   /**
+   * Picks the column that `loadColumn` resolves to, if any; resolves to
+   * whether it applied
+   */
+  onLoadedColumnChange: (
+    loadColumn: (options: { signal: AbortSignal }) => Promise<string | null>,
+  ) => Promise<boolean>;
+
+  /**
    * The text shown while no column is followed, in the first row for tables
    * with sections
    */
@@ -91,14 +99,16 @@ export type ColumnRowsProps = {
  * others empty; picking in any applies right away. Switching "from" keeps the
  * followed entity if the table maps it to the new leaf (see
  * `TableData.mapColumn`). A text matching no column of a leaf is looked up in
- * the other leaves of its row and offered there. A column in no section
- * fills no row. Tables without sections get one "Column" row.
+ * the other leaves of its row and offered there. A message shows only while
+ * the column it was made for is followed. A column in no section fills no
+ * row. Tables without sections get one "Column" row.
  */
 export function ColumnRows({
   tableId,
   column,
   location,
   onColumnChange,
+  onLoadedColumnChange,
   placeholder,
   columnControls,
   className,
@@ -109,14 +119,19 @@ export function ColumnRows({
   const [selectedLeafIds, setSelectedLeafIds] = useState<
     Partial<Record<string, string>>
   >({});
-  const [notice, setNotice] = useState<string | null>(null);
+  // the messages, each with the followed column it was made for
+  const [notice, setNotice] = useState<{
+    text: string;
+    forColumn: string | null;
+  } | null>(null);
   const [elsewhere, setElsewhere] = useState<{
     leaf: Row["leaves"][number];
     column: string;
     name: string;
+    forColumn: string | null;
   } | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  useEffect(() => () => abortControllerRef.current?.abort(), []);
+  const searchAbortControllerRef = useRef<AbortController | null>(null);
+  useEffect(() => () => searchAbortControllerRef.current?.abort(), []);
 
   // the leaf of the followed column, while in a section
   const sectionLocation = location?.kind === "section" ? location : null;
@@ -134,7 +149,8 @@ export function ColumnRows({
     }
   }
 
-  // a new column to follow takes back the messages
+  // a new column to follow takes back the messages, so that none shows again
+  // when its column is followed again
   // https://react.dev/reference/react/useState#storing-information-from-previous-renders
   const [prevColumn, setPrevColumn] = useState(column);
   if (column !== prevColumn) {
@@ -164,24 +180,26 @@ export function ColumnRows({
     row.leaves.some((leaf) => leaf.id === sectionLocation?.sectionId),
   );
 
-  const startSwitch = () => {
-    abortControllerRef.current?.abort();
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
+  // a switch or a search aborts the search before it and takes back its
+  // messages
+  const resetSearch = () => {
+    searchAbortControllerRef.current?.abort();
+    searchAbortControllerRef.current = null;
     setNotice(null);
     setElsewhere(null);
-    return abortController.signal;
   };
 
-  const switchLeaf = async (row: Row, sectionId: string) => {
-    const signal = startSwitch();
+  const switchLeaf = (row: Row, sectionId: string) => {
+    resetSearch();
     const newLeaf = row.leaves.find((leaf) => leaf.id === sectionId);
+    // bound, as the check below does not narrow inside the callback
+    const mapColumn = tableData?.mapColumn?.bind(tableData);
     if (
       newLeaf === undefined ||
       column === null ||
       followedRow?.id !== row.id ||
       newLeaf.id === sectionLocation?.sectionId ||
-      tableData?.mapColumn === undefined
+      mapColumn === undefined
     ) {
       setSelectedLeafIds((selected) => ({
         ...selected,
@@ -191,30 +209,22 @@ export function ColumnRows({
     }
     // the same entity, if the table maps it to the new leaf; otherwise the
     // row keeps showing the followed column and its leaf
-    try {
-      const mappedColumn = await tableData.mapColumn(column, {
-        sectionId,
-        signal,
-      });
-      if (signal.aborted) {
-        return;
+    void onLoadedColumnChange(async ({ signal }) => {
+      const mappedColumn = await mapColumn(column, { sectionId, signal });
+      if (mappedColumn === null && !signal.aborted) {
+        setNotice({ text: `No match in ${newLeaf.name}`, forColumn: column });
       }
-      if (mappedColumn !== null) {
-        void onColumnChange(mappedColumn);
-      } else {
-        setNotice(`No match in ${newLeaf.name}`);
-      }
-    } catch (error) {
-      if (!signal.aborted) {
-        console.error("Failed to find the column in the section", error);
-      }
-    }
+      return mappedColumn;
+    });
   };
 
   // a text matching no column of a leaf is searched for in the other leaves of
   // its row, by name only, and offered rather than applied
   const searchElsewhere = async (text: string, row: Row, sectionId: string) => {
-    const signal = startSwitch();
+    resetSearch();
+    const abortController = new AbortController();
+    searchAbortControllerRef.current = abortController;
+    const { signal } = abortController;
     if (tableData === null) {
       return;
     }
@@ -230,7 +240,7 @@ export function ColumnRows({
           return;
         }
         if (found !== null) {
-          setElsewhere({ leaf, ...found });
+          setElsewhere({ leaf, ...found, forColumn: column });
           return;
         }
       }
@@ -297,7 +307,7 @@ export function ColumnRows({
                       value={leaf.id}
                       onValueChange={(sectionId) => {
                         if (sectionId !== null) {
-                          void switchLeaf(row, sectionId);
+                          switchLeaf(row, sectionId);
                         }
                       }}
                       variant="compact"
@@ -310,12 +320,12 @@ export function ColumnRows({
           </SettingsRow>
         );
       })}
-      {notice !== null && (
+      {notice !== null && notice.forColumn === column && (
         <SettingsRow className={className}>
-          <span className="text-xs text-muted-foreground">{notice}</span>
+          <span className="text-xs text-muted-foreground">{notice.text}</span>
         </SettingsRow>
       )}
-      {elsewhere !== null && (
+      {elsewhere !== null && elsewhere.forColumn === column && (
         <SettingsRow className={className}>
           <span className="text-xs text-muted-foreground">
             {elsewhere.name} is in {elsewhere.leaf.name} —{" "}

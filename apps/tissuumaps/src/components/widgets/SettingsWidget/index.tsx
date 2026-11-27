@@ -163,18 +163,15 @@ export function SettingsWidget({
   const tableData = useTableData(tableId);
   const column = followedColumn?.column ?? null;
   const location = useColumnLocation(tableData, column);
-  const { isCategorical, isPending, pick, setColumnType } = useFollowedColumn(
-    tableId,
-    followedColumn,
-    (newFollowedColumn) => {
+  const { isCategorical, isPending, pick, pickLoaded, setColumnType } =
+    useFollowedColumn(tableId, followedColumn, (newFollowedColumn) => {
       onFollowedColumnChange(
         newFollowedColumn,
         newFollowedColumn !== null
           ? getFollowingNames(items, newFollowedColumn.columnType)
           : [],
       );
-    },
-  );
+    });
 
   const columnTypeMenu = followedColumn !== null && (
     <ColumnTypeMenu
@@ -225,6 +222,7 @@ export function SettingsWidget({
           column={column}
           location={location}
           onColumnChange={pick}
+          onLoadedColumnChange={pickLoaded}
           placeholder={tableId === null ? "No table" : placeholder}
           columnControls={columnTypeMenu}
         />

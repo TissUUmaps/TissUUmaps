@@ -32,7 +32,8 @@ const maxCategoryCount = 1000;
  * @param onFollowedColumnChange - Writes the column to follow, if any
  * @returns Whether the column is categorical once known, whether a pick or
  * switch is loading, `pick`, which follows a column or none and resolves to
- * whether it applied, and `setColumnType`
+ * whether it applied, `pickLoaded`, which does so for a column that is loaded
+ * first, and `setColumnType`
  */
 export function useFollowedColumn(
   tableId: string | null,
@@ -164,28 +165,46 @@ export function useFollowedColumn(
     );
   };
 
+  const loadFollowedColumn = async (
+    newColumn: string,
+    options: { signal: AbortSignal },
+  ): Promise<FollowedColumn | null> => {
+    const tableData = await loadTable(options);
+    const columnType = await TableUtils.loadColumnType(
+      tableData,
+      newColumn,
+      options,
+    );
+    if (
+      columnType === "categorical" &&
+      !(await confirmCategorical(newColumn, options))
+    ) {
+      return null;
+    }
+    return { column: newColumn, columnType };
+  };
+
   const pick = (newColumn: string | null) => {
     if (newColumn === null) {
       abortControllerRef.current?.abort();
       onFollowedColumnChange(null);
       return Promise.resolve(true);
     }
-    return run(async (options) => {
-      const tableData = await loadTable(options);
-      const columnType = await TableUtils.loadColumnType(
-        tableData,
-        newColumn,
-        options,
-      );
-      if (
-        columnType === "categorical" &&
-        !(await confirmCategorical(newColumn, options))
-      ) {
+    return run((options) => loadFollowedColumn(newColumn, options));
+  };
+
+  // loading the column is part of the pick, so that a newer pick or switch
+  // aborts it
+  const pickLoaded = (
+    loadColumn: (options: { signal: AbortSignal }) => Promise<string | null>,
+  ) =>
+    run(async (options) => {
+      const newColumn = await loadColumn(options);
+      if (newColumn === null) {
         return null;
       }
-      return { column: newColumn, columnType };
+      return loadFollowedColumn(newColumn, options);
     });
-  };
 
   const setColumnType = (newColumnType: TableColumnType) => {
     if (column === null || newColumnType === columnType) {
@@ -202,5 +221,5 @@ export function useFollowedColumn(
     });
   };
 
-  return { isCategorical, isPending, pick, setColumnType };
+  return { isCategorical, isPending, pick, pickLoaded, setColumnType };
 }
