@@ -1,4 +1,4 @@
-import type { Shapes } from "@tissuumaps/core";
+import { ProjectUtils, type Shapes } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
@@ -9,9 +9,11 @@ import {
 } from "@/components/controls/ObjectList";
 import { useAddShapesDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { shapesDataCache } from "@/data/cache";
 import { useShapesData } from "@/data/hooks/useData";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
+import { useDataStore } from "@/stores/data";
 import { useProjectStore } from "@/stores/project";
 
 import { ShapesAnnotationsWidget } from "./ShapesAnnotationsWidget";
@@ -62,6 +64,10 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
 
   const updateShapes = useProjectStore((state) => state.updateShapes);
   const deleteShapes = useProjectStore((state) => state.deleteShapes);
+  const loaded = useDataStore((state) => state.shapesDataRefs.has(shapes.id));
+  const visible = useProjectStore((state) =>
+    ProjectUtils.mayBeVisible(shapes, state.layers),
+  );
 
   const shapesData = useShapesData(shapes.id);
 
@@ -90,6 +96,11 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
           onOpacityChange={(opacity) => updateShapes(shapes.id, { opacity })}
         />
       }
+      unloadDisabled={!loaded}
+      onUnload={() => {
+        updateShapes(shapes.id, { visibility: false });
+        shapesDataCache.release(shapes.id);
+      }}
       onDelete={() => deleteShapes(shapes.id)}
     >
       <DataSourceWidget
@@ -107,6 +118,11 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
           data={shapesData}
           className="bg-card"
         />
+      )}
+      {!loaded && !visible && (
+        <p className="text-muted-foreground text-sm">
+          Show the shapes and their layer to load their annotations.
+        </p>
       )}
     </SortableObjectListItem>
   );

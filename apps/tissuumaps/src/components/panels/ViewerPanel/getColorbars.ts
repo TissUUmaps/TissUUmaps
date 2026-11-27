@@ -4,9 +4,9 @@ import {
   type Labels,
   type Layer,
   type Points,
+  ProjectUtils,
   type Shapes,
   type Table,
-  type TableColumnRef,
   type VisibilityConfig,
   getActiveConfigSource,
   isConstantConfig,
@@ -50,26 +50,6 @@ function isConstantlyHidden(visibilityConfig: VisibilityConfig): boolean {
 }
 
 /**
- * Checks whether an object is on a hidden layer
- *
- * Only a layer ID is checked: with a layer per item, a colorbar is still useful
- * for the items on the visible layers.
- *
- * @param layer - The object's layer ID, or the table column holding the layers
- * @param layers - The layers of the project
- * @returns Whether the object's layer is hidden
- */
-function isOnHiddenLayer(
-  layer: string | TableColumnRef,
-  layers: Layer[],
-): boolean {
-  return (
-    typeof layer === "string" &&
-    layers.find(({ id }) => id === layer)?.visibility === false
-  );
-}
-
-/**
  * Lists the colorbars of the shown objects whose colors come from a table
  * column
  *
@@ -90,6 +70,8 @@ export function getColorbars(state: {
   shapes: Shapes[];
 }): { key: string; name: string; from: ColorFrom; tableId: string }[] {
   const { layers, tables, labels, points, shapes } = state;
+  // a visible object with a layer per item stays in, as a colorbar is still
+  // useful for its items on the visible layers
   const objectColors = [
     ...labels
       // without a table of their own in the project, the renderer draws labels
@@ -97,8 +79,7 @@ export function getColorbars(state: {
       // mirrors OpenSeadragonLabelsRenderer._resolveDataTransfer
       .filter(
         (labels) =>
-          labels.visibility &&
-          !isOnHiddenLayer(labels.layer, layers) &&
+          ProjectUtils.mayBeVisible(labels, layers) &&
           tables.some(({ id }) => id === labels.dataSource.table),
       )
       .map((labels) => ({
@@ -110,9 +91,7 @@ export function getColorbars(state: {
         objectTableId: labels.dataSource.table,
       })),
     ...points
-      .filter(
-        (points) => points.visibility && !isOnHiddenLayer(points.layer, layers),
-      )
+      .filter((points) => ProjectUtils.mayBeVisible(points, layers))
       .map((points) => ({
         objectKey: `points:${points.id}`,
         objectName: points.name,
@@ -124,8 +103,7 @@ export function getColorbars(state: {
     ...shapes
       .filter(
         (shapes) =>
-          shapes.visibility &&
-          !isOnHiddenLayer(shapes.layer, layers) &&
+          ProjectUtils.mayBeVisible(shapes, layers) &&
           !isConstantlyHidden(shapes.shapeVisibility),
       )
       .flatMap((shapes) => [

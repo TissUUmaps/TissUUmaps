@@ -1240,6 +1240,102 @@ describe("DataCache", () => {
       expect(closeSecondData).toHaveBeenCalledOnce();
     });
   });
+
+  describe("release", () => {
+    it("destroys the data of the released object and removes its data ref", async () => {
+      const { dataCache, onObjectDataRefsRemoved } = createTestDataCache();
+      const { dataProvider, calls } = createTestDataProvider();
+      const context = createContext(dataProvider);
+      const object = createObject("a", { type: "test", source: "a.test" });
+      const { data, close } = createTestData();
+
+      const promise = dataCache.load(object, context);
+      calls.at(-1)!.deferred.resolve(data);
+      await promise;
+      dataCache.release("a");
+
+      expect(close).toHaveBeenCalledOnce();
+      expect(onObjectDataRefsRemoved).toHaveBeenCalledOnce();
+      expect(onObjectDataRefsRemoved).toHaveBeenCalledWith(new Set(["a"]));
+      expect(dataCache.retainOnly([object], context).size).toBe(0);
+    });
+
+    it("keeps a shared entry for the objects still referencing it", async () => {
+      const { dataCache, onObjectDataRefsChanged, onObjectDataRefsRemoved } =
+        createTestDataCache();
+      const { dataProvider, calls } = createTestDataProvider();
+      const context = createContext(dataProvider);
+      const first = createObject("a", { type: "test", source: "shared.test" });
+      const second = createObject("b", { type: "test", source: "shared.test" });
+      const { data, close } = createTestData();
+
+      const firstPromise = dataCache.load(first, context);
+      const secondPromise = dataCache.load(second, context);
+      dataCache.release("a");
+      onObjectDataRefsChanged.mockClear();
+      calls.at(-1)!.options!.onProgress!(1, 2);
+      calls.at(-1)!.deferred.resolve(data);
+      await Promise.all([firstPromise, secondPromise]);
+
+      expect(calls.at(-1)!.options?.signal?.aborted).toBe(false);
+      expect(close).not.toHaveBeenCalled();
+      expect(onObjectDataRefsRemoved).toHaveBeenCalledOnce();
+      expect(onObjectDataRefsRemoved).toHaveBeenCalledWith(new Set(["a"]));
+      expect(onObjectDataRefsChanged).toHaveBeenCalledTimes(2);
+      for (const [changed] of onObjectDataRefsChanged.mock.calls) {
+        expect([...changed.keys()]).toEqual(["b"]);
+      }
+      expect([
+        ...dataCache.retainOnly([first, second], context).keys(),
+      ]).toEqual(["b"]);
+    });
+
+    it("aborts the pending load of the released object", async () => {
+      const { dataCache, onObjectDataRefsChanged, onObjectDataRefsRemoved } =
+        createTestDataCache();
+      const { dataProvider, calls } = createTestDataProvider();
+      const context = createContext(dataProvider);
+      const object = createObject("a", { type: "test", source: "a.test" });
+      const { data, close } = createTestData();
+
+      const promise = dataCache.load(object, context);
+      dataCache.release("a");
+      onObjectDataRefsChanged.mockClear();
+      calls.at(-1)!.deferred.resolve(data);
+      await promise;
+      await flushAsync();
+
+      expect(calls.at(-1)!.options?.signal?.aborted).toBe(true);
+      expect(close).toHaveBeenCalledOnce();
+      expect(onObjectDataRefsChanged).not.toHaveBeenCalled();
+      expect(onObjectDataRefsRemoved).toHaveBeenCalledOnce();
+    });
+
+    it("does nothing for an object without an entry", () => {
+      const { dataCache, onObjectDataRefsRemoved } = createTestDataCache();
+
+      dataCache.release("a");
+
+      expect(onObjectDataRefsRemoved).not.toHaveBeenCalled();
+    });
+
+    it("loads the data again when the released object is loaded anew", async () => {
+      const { dataCache } = createTestDataCache();
+      const { dataProvider, load, calls } = createTestDataProvider();
+      const context = createContext(dataProvider);
+      const object = createObject("a", { type: "test", source: "a.test" });
+
+      const promise = dataCache.load(object, context);
+      calls.at(-1)!.deferred.resolve(createTestData().data);
+      await promise;
+      dataCache.release("a");
+      const reloadedPromise = dataCache.load(object, context);
+      calls.at(-1)!.deferred.resolve(createTestData("reloaded").data);
+
+      expect((await reloadedPromise).value).toBe("reloaded");
+      expect(load).toHaveBeenCalledTimes(2);
+    });
+  });
 });
 
 function createAnnotatedObject(

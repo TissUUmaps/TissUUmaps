@@ -1,4 +1,4 @@
-import type { Points } from "@tissuumaps/core";
+import { type Points, ProjectUtils } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
@@ -14,9 +14,11 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { pointsDataCache } from "@/data/cache";
 import { usePointsData } from "@/data/hooks/useData";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
+import { useDataStore } from "@/stores/data";
 import { useProjectStore } from "@/stores/project";
 
 import { PointsAnnotationsWidget } from "./PointsAnnotationsWidget";
@@ -67,6 +69,10 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
 
   const updatePoints = useProjectStore((state) => state.updatePoints);
   const deletePoints = useProjectStore((state) => state.deletePoints);
+  const loaded = useDataStore((state) => state.pointsDataRefs.has(points.id));
+  const visible = useProjectStore((state) =>
+    ProjectUtils.mayBeVisible(points, state.layers),
+  );
 
   const pointsData = usePointsData(points.id);
 
@@ -120,6 +126,11 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
           />
         </>
       }
+      unloadDisabled={!loaded}
+      onUnload={() => {
+        updatePoints(points.id, { visibility: false });
+        pointsDataCache.release(points.id);
+      }}
       onDelete={() => deletePoints(points.id)}
     >
       <DataSourceWidget
@@ -137,6 +148,11 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
           data={pointsData}
           className="bg-card"
         />
+      )}
+      {!loaded && !visible && (
+        <p className="text-muted-foreground text-sm">
+          Show the points and their layer to load their annotations.
+        </p>
       )}
     </SortableObjectListItem>
   );

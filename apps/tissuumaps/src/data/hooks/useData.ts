@@ -1,17 +1,18 @@
 import { useEffect } from "react";
 
-import type {
-  Data,
-  DataObject,
-  DataRef,
-  DataSource,
-  DataStore,
-  ImageData,
-  LabelsData,
-  PointsData,
-  ProgressCallback,
-  ShapesData,
-  TableData,
+import {
+  type Data,
+  type DataObject,
+  type DataRef,
+  type DataSource,
+  type DataStore,
+  type ImageData,
+  type LabelsData,
+  type PointsData,
+  type ProgressCallback,
+  ProjectUtils,
+  type ShapesData,
+  type TableData,
 } from "@tissuumaps/core";
 
 import { useDataStore } from "@/stores/data";
@@ -30,14 +31,18 @@ import {
  *
  * @param imageId - The ID of the image whose data to provide, if any
  * @returns The image's data, or `null` while it is loading, if loading failed,
- * or if the ID does not identify an image of the current project
+ * if the image is hidden and was never loaded, or if the ID does not identify
+ * an image of the current project
  */
 export function useImageData(imageId: string | null): ImageData | null {
   const image = useProjectStore(
     (state) => state.images.find((image) => image.id === imageId) ?? null,
   );
+  const visible = useProjectStore(
+    (state) => image !== null && ProjectUtils.mayBeVisible(image, state.layers),
+  );
   const loadImage = useImageDataLoader();
-  return useData(image, loadImage, (state) => state.imageDataRefs);
+  return useData(image, visible, loadImage, (state) => state.imageDataRefs);
 }
 
 /**
@@ -45,14 +50,19 @@ export function useImageData(imageId: string | null): ImageData | null {
  *
  * @param labelsId - The ID of the labels whose data to provide, if any
  * @returns The labels' data, or `null` while it is loading, if loading failed,
- * or if the ID does not identify labels of the current project
+ * if the labels are hidden and were never loaded, or if the ID does not identify
+ * labels of the current project
  */
 export function useLabelsData(labelsId: string | null): LabelsData | null {
   const labels = useProjectStore(
     (state) => state.labels.find((labels) => labels.id === labelsId) ?? null,
   );
+  const visible = useProjectStore(
+    (state) =>
+      labels !== null && ProjectUtils.mayBeVisible(labels, state.layers),
+  );
   const loadLabels = useLabelsDataLoader();
-  return useData(labels, loadLabels, (state) => state.labelsDataRefs);
+  return useData(labels, visible, loadLabels, (state) => state.labelsDataRefs);
 }
 
 /**
@@ -60,14 +70,19 @@ export function useLabelsData(labelsId: string | null): LabelsData | null {
  *
  * @param pointsId - The ID of the points whose data to provide, if any
  * @returns The points' data, or `null` while it is loading, if loading failed,
- * or if the ID does not identify points of the current project
+ * if the points are hidden and were never loaded, or if the ID does not identify
+ * points of the current project
  */
 export function usePointsData(pointsId: string | null): PointsData | null {
   const points = useProjectStore(
     (state) => state.points.find((points) => points.id === pointsId) ?? null,
   );
+  const visible = useProjectStore(
+    (state) =>
+      points !== null && ProjectUtils.mayBeVisible(points, state.layers),
+  );
   const loadPoints = usePointsDataLoader();
-  return useData(points, loadPoints, (state) => state.pointsDataRefs);
+  return useData(points, visible, loadPoints, (state) => state.pointsDataRefs);
 }
 
 /**
@@ -75,14 +90,19 @@ export function usePointsData(pointsId: string | null): PointsData | null {
  *
  * @param shapesId - The ID of the shapes whose data to provide, if any
  * @returns The shapes' data, or `null` while it is loading, if loading failed,
- * or if the ID does not identify shapes of the current project
+ * if the shapes are hidden and were never loaded, or if the ID does not identify
+ * shapes of the current project
  */
 export function useShapesData(shapesId: string | null): ShapesData | null {
   const shapes = useProjectStore(
     (state) => state.shapes.find((shapes) => shapes.id === shapesId) ?? null,
   );
+  const visible = useProjectStore(
+    (state) =>
+      shapes !== null && ProjectUtils.mayBeVisible(shapes, state.layers),
+  );
   const loadShapes = useShapesDataLoader();
-  return useData(shapes, loadShapes, (state) => state.shapesDataRefs);
+  return useData(shapes, visible, loadShapes, (state) => state.shapesDataRefs);
 }
 
 /**
@@ -97,17 +117,20 @@ export function useTableData(tableId: string | null): TableData | null {
     (state) => state.tables.find((table) => table.id === tableId) ?? null,
   );
   const loadTable = useTableDataLoader();
-  return useData(table, loadTable, (state) => state.tableDataRefs);
+  return useData(table, true, loadTable, (state) => state.tableDataRefs);
 }
 
 /**
  * Shared implementation of the data hooks above
  *
- * Requests the object's data whenever the object or the loader changes,
- * aborting the pending request on cleanup, and subscribes to the data store for
- * the result. Loading errors are logged; the hook keeps returning `null`.
+ * Requests the object's data whenever the object or the loader changes, if
+ * `load` is set, aborting the pending request on cleanup, and subscribes to the
+ * data store for the result. Loading errors are logged; the hook keeps
+ * returning `null`.
  *
  * @param object - The object whose data to provide, if any
+ * @param load - Whether to request the object's data, or only to provide it
+ * once loaded
  * @param loadObject - Loads the object's data through the responsible cache
  * @param selectDataRefs - Selects the data references of the object's kind
  * @returns The object's data, or `null` unless it has been loaded
@@ -118,6 +141,7 @@ function useData<
   TDataObject extends DataObject<TDataSource>,
 >(
   object: TDataObject | null,
+  load: boolean,
   loadObject: (
     object: TDataObject,
     options?: { signal?: AbortSignal; onProgress?: ProgressCallback },
@@ -125,7 +149,7 @@ function useData<
   selectDataRefs: (state: DataStore) => Map<string, DataRef<TData>>,
 ): TData | null {
   useEffect(() => {
-    if (object !== null) {
+    if (object !== null && load) {
       const abortController = new AbortController();
       loadObject(object, { signal: abortController.signal }).catch((error) => {
         if (!abortController.signal.aborted) {
@@ -134,7 +158,7 @@ function useData<
       });
       return () => abortController.abort();
     }
-  }, [object, loadObject]);
+  }, [object, load, loadObject]);
 
   return useDataStore((state) => {
     if (object !== null) {

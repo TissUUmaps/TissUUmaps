@@ -297,6 +297,31 @@ export class DataCache<
   }
 
   /**
+   * Releases an object's reference to its cached data
+   *
+   * Entries that no object references anymore are destroyed; entries shared
+   * with other objects are kept for those. Does nothing if the object does not
+   * reference any cached data.
+   *
+   * @param objectId - The ID of the object whose data to release
+   */
+  release(objectId: string): void {
+    let released = false;
+    for (const [entryKey, entry] of this._entries) {
+      if (entry.objectIds.delete(objectId)) {
+        released = true;
+        if (entry.objectIds.size === 0) {
+          this._destroyEntry(entry);
+          this._entries.delete(entryKey);
+        }
+      }
+    }
+    if (released) {
+      this._notifyObjectDataRefsRemoved(new Set([objectId]));
+    }
+  }
+
+  /**
    * Collects the values that an entry for the given data source depends on
    *
    * @param dataSource - The entry's data source, normalized unless

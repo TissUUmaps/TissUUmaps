@@ -9,8 +9,10 @@ import {
 } from "@/components/controls/ObjectList";
 import { useAddLabelsDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { labelsDataCache } from "@/data/cache";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
+import { useDataStore } from "@/stores/data";
 import { useProjectStore } from "@/stores/project";
 
 import { LabelsAnnotationsWidget } from "./LabelsAnnotationsWidget";
@@ -61,6 +63,7 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
 
   const updateLabels = useProjectStore((state) => state.updateLabels);
   const deleteLabels = useProjectStore((state) => state.deleteLabels);
+  const loaded = useDataStore((state) => state.labelsDataRefs.has(labels.id));
 
   return (
     <SortableObjectListItem
@@ -87,6 +90,11 @@ function LabelsAccordionItem({ labels, index }: LabelsAccordionItemProps) {
           onOpacityChange={(opacity) => updateLabels(labels.id, { opacity })}
         />
       }
+      unloadDisabled={!loaded}
+      onUnload={() => {
+        updateLabels(labels.id, { visibility: false });
+        labelsDataCache.release(labels.id);
+      }}
       onDelete={() => deleteLabels(labels.id)}
     >
       <DataSourceWidget

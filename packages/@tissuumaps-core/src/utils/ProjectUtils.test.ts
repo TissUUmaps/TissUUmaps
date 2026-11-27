@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createLabels } from "../model/labels";
+import { createLayer } from "../model/layer";
 import { createPoints } from "../model/points";
 import { createShapes } from "../model/shapes";
 import { ProjectUtils } from "./ProjectUtils";
@@ -25,6 +26,10 @@ describe("ProjectUtils", () => {
     dataSource: { type: "geojson" },
   });
   const project = { labels: [labels], points: [points], shapes: [shapes] };
+  const layers = [
+    createLayer({ id: "shown", name: "Shown" }),
+    createLayer({ id: "hidden", name: "Hidden", visibility: false }),
+  ];
 
   describe("hasData", () => {
     const empty = {
@@ -41,6 +46,42 @@ describe("ProjectUtils", () => {
 
     it("returns true with a data object", () => {
       expect(ProjectUtils.hasData({ ...empty, points: [points] })).toBe(true);
+    });
+  });
+
+  describe("mayBeVisible", () => {
+    it("returns true for a visible object on a visible layer", () => {
+      expect(
+        ProjectUtils.mayBeVisible({ visibility: true, layer: "shown" }, layers),
+      ).toBe(true);
+    });
+
+    it("returns false for a hidden object", () => {
+      expect(
+        ProjectUtils.mayBeVisible(
+          { visibility: false, layer: "shown" },
+          layers,
+        ),
+      ).toBe(false);
+    });
+
+    it("returns false for an object on a hidden layer", () => {
+      expect(
+        ProjectUtils.mayBeVisible(
+          { visibility: true, layer: "hidden" },
+          layers,
+        ),
+      ).toBe(false);
+    });
+
+    it("checks only the object for layers from a table column", () => {
+      const layer = { column: "layer" };
+      expect(
+        ProjectUtils.mayBeVisible({ visibility: true, layer }, layers),
+      ).toBe(true);
+      expect(
+        ProjectUtils.mayBeVisible({ visibility: false, layer }, layers),
+      ).toBe(false);
     });
   });
 

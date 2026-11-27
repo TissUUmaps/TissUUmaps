@@ -3,8 +3,10 @@ import type {
   MarkerConfig,
   OpacityConfig,
   SizeConfig,
+  TableColumnRef,
   VisibilityConfig,
 } from "../model/configs";
+import type { Layer } from "../model/layer";
 import type { Project } from "../model/project";
 
 /** Utility methods for projects */
@@ -27,6 +29,29 @@ export class ProjectUtils {
       project.points.length > 0 ||
       project.shapes.length > 0 ||
       project.tables.length > 0
+    );
+  }
+
+  /**
+   * Returns whether an object may be visible
+   *
+   * An object may be visible if it is visible itself and its layer is visible.
+   * An object whose items are assigned to layers by a table column may be
+   * visible if it is visible itself, even if all of its items' layers are
+   * hidden.
+   *
+   * @param object - The object, or only its visibility and layer
+   * @param layers - The layers of the project
+   * @returns `true` if the object may be visible
+   */
+  static mayBeVisible(
+    object: { visibility: boolean; layer: string | TableColumnRef },
+    layers: Layer[],
+  ): boolean {
+    return (
+      object.visibility &&
+      (typeof object.layer !== "string" ||
+        layers.find(({ id }) => id === object.layer)?.visibility !== false)
     );
   }
 

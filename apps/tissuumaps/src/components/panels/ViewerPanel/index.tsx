@@ -1,7 +1,7 @@
 import { useMemo, useRef } from "react";
 import { useShallow } from "zustand/shallow";
 
-import { ImageChannelViewMode } from "@tissuumaps/core";
+import { ImageChannelViewMode, ProjectUtils } from "@tissuumaps/core";
 import {
   Viewer,
   type ViewerAdapter,
@@ -18,6 +18,7 @@ import {
   useTableDataLoader,
 } from "@/data/hooks/useDataLoader";
 import { useAppStore } from "@/stores/app";
+import { useDataStore } from "@/stores/data";
 import { useProjectStore } from "@/stores/project";
 
 import { ColorbarsViewerControl } from "./ColorbarsViewerControl";
@@ -101,11 +102,68 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
     [labels, points, shapes, opacityMaps, highlightedItemGroup],
   );
 
+  // Filtered last, so that loading or unloading an object leaves the inputs of
+  // the highlight memo unchanged; plain filters keep the project order. Hidden
+  // objects are rendered only once loaded, so that they are loaded on first
+  // view and hiding them keeps them loaded.
+  const { layers } = projectState;
+  const loadedImageIds = useDataStore(
+    useShallow((state) => [...state.imageDataRefs.keys()]),
+  );
+  const loadedLabelsIds = useDataStore(
+    useShallow((state) => [...state.labelsDataRefs.keys()]),
+  );
+  const loadedPointsIds = useDataStore(
+    useShallow((state) => [...state.pointsDataRefs.keys()]),
+  );
+  const loadedShapesIds = useDataStore(
+    useShallow((state) => [...state.shapesDataRefs.keys()]),
+  );
+  const renderedImages = useMemo(
+    () =>
+      previewedImages.filter(
+        (image) =>
+          loadedImageIds.includes(image.id) ||
+          ProjectUtils.mayBeVisible(image, layers),
+      ),
+    [previewedImages, loadedImageIds, layers],
+  );
+  const renderedLabels = useMemo(
+    () =>
+      highlightedState.labels.filter(
+        (labels) =>
+          loadedLabelsIds.includes(labels.id) ||
+          ProjectUtils.mayBeVisible(labels, layers),
+      ),
+    [highlightedState.labels, loadedLabelsIds, layers],
+  );
+  const renderedPoints = useMemo(
+    () =>
+      highlightedState.points.filter(
+        (points) =>
+          loadedPointsIds.includes(points.id) ||
+          ProjectUtils.mayBeVisible(points, layers),
+      ),
+    [highlightedState.points, loadedPointsIds, layers],
+  );
+  const renderedShapes = useMemo(
+    () =>
+      highlightedState.shapes.filter(
+        (shapes) =>
+          loadedShapesIds.includes(shapes.id) ||
+          ProjectUtils.mayBeVisible(shapes, layers),
+      ),
+    [highlightedState.shapes, loadedShapesIds, layers],
+  );
+
   const viewerAdapter: ViewerAdapter = useMemo(
     () => ({
       ...projectState,
       ...highlightedState,
-      images: previewedImages,
+      images: renderedImages,
+      labels: renderedLabels,
+      points: renderedPoints,
+      shapes: renderedShapes,
       interactionMode,
       loadImage,
       loadLabels,
@@ -115,8 +173,11 @@ export function ViewerPanel({ className }: ViewerPanelProps) {
     }),
     [
       projectState,
-      previewedImages,
       highlightedState,
+      renderedImages,
+      renderedLabels,
+      renderedPoints,
+      renderedShapes,
       interactionMode,
       loadImage,
       loadLabels,

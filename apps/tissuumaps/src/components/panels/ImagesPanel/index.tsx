@@ -1,4 +1,4 @@
-import type { Image } from "@tissuumaps/core";
+import { type Image, ProjectUtils } from "@tissuumaps/core";
 
 import { OpacityControl } from "@/components/common/opacity-control";
 import { VisibilityButton } from "@/components/common/visibility-button";
@@ -9,9 +9,11 @@ import {
 } from "@/components/controls/ObjectList";
 import { useAddImageDialogParams } from "@/components/dialogs/AddDataObjectDialog/hooks";
 import { DataSourceWidget } from "@/components/widgets/DataSourceWidget";
+import { imageDataCache } from "@/data/cache";
 import { useImageData } from "@/data/hooks/useData";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app";
+import { useDataStore } from "@/stores/data";
 import { useProjectStore } from "@/stores/project";
 
 import { ChannelSettingsWidget } from "./ChannelSettingsWidget";
@@ -56,6 +58,10 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
 
   const updateImage = useProjectStore((state) => state.updateImage);
   const deleteImage = useProjectStore((state) => state.deleteImage);
+  const loaded = useDataStore((state) => state.imageDataRefs.has(image.id));
+  const visible = useProjectStore((state) =>
+    ProjectUtils.mayBeVisible(image, state.layers),
+  );
 
   const imageData = useImageData(image.id);
   const sizeC = imageData?.getSizeC();
@@ -85,6 +91,11 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
           onOpacityChange={(opacity) => updateImage(image.id, { opacity })}
         />
       }
+      unloadDisabled={!loaded}
+      onUnload={() => {
+        updateImage(image.id, { visibility: false });
+        imageDataCache.release(image.id);
+      }}
       onDelete={() => deleteImage(image.id)}
     >
       <DataSourceWidget
@@ -103,6 +114,11 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
           sizeC={sizeC}
           className="bg-card"
         />
+      )}
+      {!loaded && !visible && (
+        <p className="text-muted-foreground text-sm">
+          Show the image and its layer to load its channels.
+        </p>
       )}
     </SortableObjectListItem>
   );
