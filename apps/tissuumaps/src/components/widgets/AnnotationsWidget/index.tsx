@@ -1,5 +1,6 @@
+import type { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import { SearchIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import type {
   HighlightedItemGroup,
@@ -9,6 +10,8 @@ import type {
 
 import { Fieldset, FieldsetLegend } from "@/components/common/fieldset";
 import { TableColumnField } from "@/components/controls/TableColumnField";
+import type { TableColumnInputStatus } from "@/components/controls/TableColumnField/TableColumnInput";
+import { formatTableColumn } from "@/components/controls/TableColumnField/formatTableColumn";
 import {
   InputGroup,
   InputGroupAddon,
@@ -20,6 +23,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useProjectStore } from "@/stores/project";
 
 import {
   GroupAnnotationsTable,
@@ -88,7 +92,14 @@ export function AnnotationsWidget({
   groupColumnDefs,
   className,
 }: AnnotationsWidgetProps) {
+  const tables = useProjectStore((state) => state.tables);
   const [nameQuery, setNameQuery] = useState("");
+
+  // the popover stays open while the group-by column is being resolved or
+  // failed to resolve, so that its outcome is shown; Escape always closes it
+  const groupByActionsRef = useRef<PopoverPrimitive.Root.Actions>(null);
+  const groupByStatusRef = useRef<TableColumnInputStatus>("idle");
+  const isGroupByCloseRequestedRef = useRef(false);
 
   // the cap counts every group, as a new map is filled with every group
   const hasTooManyGroups =
@@ -130,22 +141,54 @@ export function AnnotationsWidget({
       className={cn("flex flex-col gap-y-2 border rounded-md p-2", className)}
     >
       <FieldsetLegend className="flex flex-row items-center gap-x-1 font-medium text-foreground">
-        <span className="shrink-0">Items by</span>
-        <Popover>
+        <span className="shrink-0">
+          {selectedGroupBy !== null ? "Items by" : "Items"}
+        </span>
+        <Popover
+          actionsRef={groupByActionsRef}
+          onOpenChange={(open, eventDetails) => {
+            isGroupByCloseRequestedRef.current = false;
+            if (
+              !open &&
+              eventDetails.reason !== "escape-key" &&
+              groupByStatusRef.current !== "idle"
+            ) {
+              eventDetails.cancel();
+              isGroupByCloseRequestedRef.current =
+                groupByStatusRef.current === "pending";
+            }
+          }}
+        >
           <PopoverTrigger
             disabled={tableId === null}
             title="Click to group by another column"
-            className="min-w-0 truncate underline decoration-muted-foreground decoration-dotted underline-offset-4 data-disabled:opacity-50"
+            className={cn(
+              "min-w-0 truncate underline decoration-muted-foreground decoration-dotted underline-offset-4 data-disabled:opacity-50",
+              selectedGroupBy === null && "font-normal text-muted-foreground",
+            )}
           >
-            {selectedGroupBy?.column ?? "none"}
+            {selectedGroupBy !== null
+              ? formatTableColumn(selectedGroupBy, tables)
+              : "not grouped"}
           </PopoverTrigger>
-          {/* closing must not abort a pending column resolution */}
-          <PopoverContent align="start" keepMounted className="w-80 p-3">
+          <PopoverContent align="start" className="w-96 p-3">
             <TableColumnField
               label="Group by column"
               tableId={tableId}
               value={selectedGroupBy}
               onValueChange={onSelectedGroupByChange}
+              onStatusChange={(status) => {
+                groupByStatusRef.current = status;
+                if (
+                  status !== "pending" &&
+                  isGroupByCloseRequestedRef.current
+                ) {
+                  isGroupByCloseRequestedRef.current = false;
+                  if (status === "idle") {
+                    groupByActionsRef.current?.close();
+                  }
+                }
+              }}
             />
           </PopoverContent>
         </Popover>

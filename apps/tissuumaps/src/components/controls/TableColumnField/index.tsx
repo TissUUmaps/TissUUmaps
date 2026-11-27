@@ -6,13 +6,17 @@ import { Field, FieldLabel } from "@/components/common/field";
 import { SimpleSelect } from "@/components/common/simple-select";
 import { useProjectStore } from "@/stores/project";
 
-import { TableColumnInput } from "./TableColumnInput";
+import {
+  TableColumnInput,
+  type TableColumnInputStatus,
+} from "./TableColumnInput";
 
 export type TableColumnFieldProps = {
   label: string;
   tableId: string | null;
   value: TableColumnRef | null;
   onValueChange: (value: TableColumnRef | null) => void;
+  onStatusChange?: (status: TableColumnInputStatus) => void;
   className?: string;
 };
 
@@ -36,6 +40,7 @@ export function TableColumnField({
   tableId,
   value,
   onValueChange,
+  onStatusChange,
   className,
 }: TableColumnFieldProps) {
   const tables = useProjectStore((state) => state.tables);
@@ -114,6 +119,7 @@ export function TableColumnField({
             column !== null ? { table: selectedTable, column } : null,
           )
         }
+        onStatusChange={onStatusChange}
       />
     </Field>
   );
