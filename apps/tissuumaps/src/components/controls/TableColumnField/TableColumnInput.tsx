@@ -28,10 +28,16 @@ import { InputGroupAddon } from "@/components/ui/input-group";
 import { useLazyTableData } from "@/data/hooks/useLazyData";
 import { useCompressedRowVirtualizer } from "@/hooks/useCompressedRowVirtualizer";
 
+/**
+ * Whether the typed column is being resolved, failed to resolve, or neither
+ */
+export type TableColumnInputStatus = "idle" | "pending" | "invalid";
+
 export type TableColumnInputProps = {
   tableId: string | null;
   value: string | null;
   onValueChange: (value: string | null) => void;
+  onStatusChange?: (status: TableColumnInputStatus) => void;
   className?: string;
 };
 
@@ -157,6 +163,7 @@ export function TableColumnInput({
   tableId,
   value,
   onValueChange,
+  onStatusChange,
   className,
 }: TableColumnInputProps) {
   const loadTableData = useLazyTableData(tableId);
@@ -242,10 +249,22 @@ export function TableColumnInput({
         if (!signal.aborted) {
           console.error("Failed to resolve column query", error);
           setPendingQuery(null);
+          setInvalid(true);
         }
       });
     return () => abortController.abort();
   }, [pendingQuery, loadTableData]);
+
+  // reported from an effect, as a table change sets the pending query while
+  // rendering
+  const status: TableColumnInputStatus =
+    pendingQuery !== null ? "pending" : invalid ? "invalid" : "idle";
+  const reportStatus = useEffectEvent((newStatus: TableColumnInputStatus) =>
+    onStatusChange?.(newStatus),
+  );
+  useEffect(() => {
+    reportStatus(status);
+  }, [status]);
 
   function commit(newQuery: string) {
     if (newQuery === query && !invalid) {
@@ -277,9 +296,13 @@ export function TableColumnInput({
     newText: string,
     details: AutocompletePrimitive.Root.ChangeEventDetails,
   ) {
-    // base-ui clears the input on Escape when the popup is closed
+    // base-ui clears the input on Escape when the popup is closed; Escape
+    // restores the current column instead
     if (details.reason === "escape-key") {
       details.cancel();
+      setPendingQuery(null);
+      setText(query);
+      setInvalid(false);
       return;
     }
     setPendingQuery(null);
