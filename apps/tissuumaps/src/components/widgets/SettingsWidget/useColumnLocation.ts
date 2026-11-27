@@ -16,14 +16,14 @@ export type ColumnLocation = { column: string } & (
  * Loads where the followed column is, for tables with sections (see
  * `TableData.describeColumn`)
  *
- * The location is kept until the next one resolves, so that the rows and the
- * header do not change in between; its `column` tells whether it is stale. A
+ * The location of a column is kept until the next column's resolves, so that
+ * the rows do not change in between; its `column` tells whether it is stale. A
  * failed load is logged and keeps the previous location.
  *
  * @param tableData - The object's own table, if loaded
  * @param column - The followed column, if any
- * @returns The location of the column, or `null` if there is no column or
- * the table has no sections
+ * @returns The location of the column, or `null` if there is no column, the
+ * table has no sections or no location was loaded for this table data yet
  */
 export function useColumnLocation(
   tableData: TableData | null,

@@ -16,7 +16,7 @@ export type ColumnNameBoxProps = {
   /** Whether the followed column is not in the table, if there is one */
   isMissing: boolean;
 
-  /** Follows a column, or none; resolves to whether it applied */
+  /** Picks the column to follow, or none; resolves to whether it applied */
   onColumnChange: (column: string | null) => Promise<boolean>;
 
   className?: string;
@@ -26,8 +26,8 @@ export type ColumnNameBoxProps = {
  * The query of the followed column, which turns into a query input for any
  * column of the table when clicked, like the name box of a spreadsheet
  *
- * Esc, leaving the input or a pick turns it back. A text typed but not
- * picked is dropped.
+ * Esc, leaving the input or a pick turns it back. An emptied text clears the
+ * column, as in the rows; any other text typed but not picked is dropped.
  */
 export function ColumnNameBox({
   tableId,
@@ -37,10 +37,14 @@ export function ColumnNameBox({
   className,
 }: ColumnNameBoxProps) {
   const [isEditing, setEditing] = useState(false);
+  // counts the times the input opened and closed, so that a pick that applies
+  // after the input was closed and opened again leaves the new one open
+  const editingSessionRef = useRef(0);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const stopEditing = () => {
+    editingSessionRef.current += 1;
     const hadFocus =
       wrapperRef.current?.contains(document.activeElement) ?? false;
     // the button has to be in the DOM before it can take the focus back
@@ -56,14 +60,18 @@ export function ColumnNameBox({
       <div
         ref={wrapperRef}
         className={cn("min-w-0 flex-1", className)}
-        // the input closes its suggestions on a first Esc
+        // the suggestions close on the same Esc
         onKeyDown={(event) => {
           if (event.key === "Escape") {
             stopEditing();
           }
         }}
         onBlur={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget)) {
+          // the input stays open while another window has the focus
+          if (
+            document.hasFocus() &&
+            !event.currentTarget.contains(event.relatedTarget)
+          ) {
             stopEditing();
           }
         }}
@@ -72,8 +80,9 @@ export function ColumnNameBox({
           tableId={tableId}
           value={column}
           onValueChange={async (newColumn) => {
+            const editingSession = editingSessionRef.current;
             const applied = await onColumnChange(newColumn);
-            if (applied) {
+            if (applied && editingSessionRef.current === editingSession) {
               stopEditing();
             }
             return applied;
@@ -97,7 +106,10 @@ export function ColumnNameBox({
             : `Column query: ${column}`
       }
       size="xs"
-      onClick={() => setEditing(true)}
+      onClick={() => {
+        editingSessionRef.current += 1;
+        setEditing(true);
+      }}
       className={cn(
         "min-w-0 max-w-full border-transparent font-mono font-normal hover:border-input",
         className,

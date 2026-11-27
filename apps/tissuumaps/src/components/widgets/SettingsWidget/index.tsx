@@ -187,8 +187,11 @@ export function SettingsWidget({
   );
   // tables without sections pick any column in their "Column" row
   const hasSections = (tableData?.getColumnSections?.() ?? []).length > 0;
+  // the location of a previous column is kept until the new one resolves
+  const currentLocation = location?.column === column ? location : null;
   // the rows hold only columns of a section; the header shows any other
-  const isOutsideRows = location !== null && location.kind !== "section";
+  const isOutsideRows =
+    currentLocation !== null && currentLocation.kind !== "section";
 
   return (
     <Fieldset
@@ -204,7 +207,7 @@ export function SettingsWidget({
             <ColumnNameBox
               tableId={tableId}
               column={column}
-              isMissing={location?.kind === "missing"}
+              isMissing={currentLocation?.kind === "missing"}
               onColumnChange={pick}
             />
           </div>
