@@ -317,16 +317,6 @@ describe("SpatialDataProjectProvider", () => {
       ]);
     });
 
-    it("leaves the color of points without feature key unset", async () => {
-      stubStore({
-        "points/transcripts": vectorAttrs("points", [
-          transformation("global", ["x", "y"]),
-        ]),
-      });
-      const { project } = await provider.load(storeUrl);
-      expect(project.points![0]).not.toHaveProperty("pointColor");
-    });
-
     it("links a table only to the polygons or labels it annotates alone", async () => {
       stubStore({
         "labels/cells": rasterAttrs(

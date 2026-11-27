@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { renderedDataObjectDefaults } from "./base";
 import { pointsDefaults } from "./points";
 import { createProject, projectDefaults } from "./project";
 
@@ -30,7 +31,10 @@ describe("createProject", () => {
     expect(project.osOptions.viewerOptions.animationTime).toBe(
       projectDefaults.osOptions.viewerOptions.animationTime,
     );
-    expect(project.points[0]!.visibility).toBe(true);
+    expect(project.points[0]!.visibility).toBe(
+      renderedDataObjectDefaults.visibility,
+    );
     expect(project.points[0]!.pointColor).toEqual(pointsDefaults.pointColor);
+    expect(project.points[0]!.dataSource).not.toHaveProperty("table");
   });
 });

@@ -79,6 +79,8 @@ export type Image = { ... };
 export function createImage(rawImage: RawImage): Image { ... }
 ```
 
+A field set to `undefined` gets its default, like a missing field.
+
 IDs must not contain `:`, which joins an ID with a name in keys like `${tableId}:${column}`.
 
 Data sources are carried as authored: the model only guarantees the base `DataSource` shape (`type`, and optionally `source`). Provider-specific defaults are not part of the model; the responsible data provider applies them in `normalize()` (see below).

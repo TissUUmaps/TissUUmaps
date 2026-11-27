@@ -259,7 +259,7 @@ export type Project = Model &
  * Creates a {@link Project} from a {@link RawProject} by applying {@link projectDefaults}
  *
  * @param rawProject - The raw project
- * @returns The complete project with default values applied
+ * @returns The complete project with the default values of missing or `undefined` properties
  */
 export function createProject(rawProject: RawProject): Project {
   return {
@@ -269,29 +269,25 @@ export function createProject(rawProject: RawProject): Project {
     osOptions: {
       viewerOptions: {
         ...projectDefaults.osOptions.viewerOptions,
-        ...omitUndefined(rawProject.osOptions?.viewerOptions ?? {}),
+        ...omitUndefined(rawProject.osOptions?.viewerOptions),
       },
       viewerAnimationStartOptions: {
         ...projectDefaults.osOptions.viewerAnimationStartOptions,
-        ...omitUndefined(
-          rawProject.osOptions?.viewerAnimationStartOptions ?? {},
-        ),
+        ...omitUndefined(rawProject.osOptions?.viewerAnimationStartOptions),
       },
       viewerAnimationFinishOptions: {
         ...projectDefaults.osOptions.viewerAnimationFinishOptions,
-        ...omitUndefined(
-          rawProject.osOptions?.viewerAnimationFinishOptions ?? {},
-        ),
+        ...omitUndefined(rawProject.osOptions?.viewerAnimationFinishOptions),
       },
     },
     glOptions: {
       pointsRenderOptions: {
         ...projectDefaults.glOptions.pointsRenderOptions,
-        ...omitUndefined(rawProject.glOptions?.pointsRenderOptions ?? {}),
+        ...omitUndefined(rawProject.glOptions?.pointsRenderOptions),
       },
       shapesRenderOptions: {
         ...projectDefaults.glOptions.shapesRenderOptions,
-        ...omitUndefined(rawProject.glOptions?.shapesRenderOptions ?? {}),
+        ...omitUndefined(rawProject.glOptions?.shapesRenderOptions),
       },
     },
     layers: rawProject.layers?.map(createLayer) ?? [],

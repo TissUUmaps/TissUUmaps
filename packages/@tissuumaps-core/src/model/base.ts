@@ -24,12 +24,13 @@ export type Model = object &
  * Returns a copy of a raw object without its `undefined` properties, so that
  * spreading it over defaults keeps the defaults of those properties
  *
- * @param rawObject - The raw object
- * @returns The raw object without `undefined` properties
+ * @param rawObject - The raw object, if any
+ * @returns The raw object without `undefined` properties, or an empty object
+ * if there is no raw object
  */
-export function omitUndefined<T extends object>(rawObject: T): T {
+export function omitUndefined<T extends object>(rawObject: T | undefined): T {
   return Object.fromEntries(
-    Object.entries(rawObject).filter(([, value]) => value !== undefined),
+    Object.entries(rawObject ?? {}).filter(([, value]) => value !== undefined),
   ) as T;
 }
 
@@ -37,7 +38,7 @@ export function omitUndefined<T extends object>(rawObject: T): T {
  * Creates a {@link Model} from a {@link RawModel} by applying {@link modelDefaults}
  *
  * @param rawModel - The raw model
- * @returns The complete model with default values applied
+ * @returns The complete model with the default values of missing or `undefined` properties
  */
 export function createModel(rawModel: RawModel): Model {
   return {
@@ -80,7 +81,7 @@ export type DataObject<TDataSource extends DataSource<string>> = Model &
  * Creates a {@link DataObject} from a {@link RawDataObject} by applying {@link dataObjectDefaults}
  *
  * @param rawDataObject - The raw data object
- * @returns The complete data object with default values applied
+ * @returns The complete data object with the default values of missing or `undefined` properties
  */
 export function createDataObject<
   TType extends string,
@@ -155,7 +156,7 @@ export type RenderedDataObject<TDataSource extends DataSource<string>> =
  * Creates a {@link RenderedDataObject} from a {@link RawRenderedDataObject} by applying {@link renderedDataObjectDefaults}
  *
  * @param rawRenderedDataObject - The raw rendered data object
- * @returns The complete rendered data object with default values applied
+ * @returns The complete rendered data object with the default values of missing or `undefined` properties
  */
 export function createRenderedDataObject<
   TType extends string,
@@ -209,7 +210,7 @@ export type RenderedRasterDataObject<TDataSource extends DataSource<string>> =
  * Creates a {@link RenderedRasterDataObject} from a {@link RawRenderedRasterDataObject} by applying {@link renderedRasterDataObjectDefaults}
  *
  * @param rawRenderedRasterDataObject - The raw rendered raster data object
- * @returns The complete rendered raster data object with default values applied
+ * @returns The complete rendered raster data object with the default values of missing or `undefined` properties
  */
 export function createRenderedRasterDataObject<
   TType extends string,
@@ -272,7 +273,7 @@ export type RenderedItemsDataObject<TDataSource extends DataSource<string>> =
  * Creates a {@link RenderedItemsDataObject} from a {@link RawRenderedItemsDataObject} by applying {@link renderedItemsDataObjectDefaults}
  *
  * @param rawRenderedItemsDataObject - The raw rendered items data object
- * @returns The complete rendered items data object with default values applied
+ * @returns The complete rendered items data object with the default values of missing or `undefined` properties
  */
 export function createRenderedItemsDataObject<
   TType extends string,
@@ -325,7 +326,7 @@ export type DataSource<TType extends string = string> = Model &
  * Creates a {@link DataSource} from a {@link RawDataSource} by applying {@link dataSourceDefaults}
  *
  * @param rawDataSource - The raw data source
- * @returns The complete data source with default values applied
+ * @returns The complete data source with the default values of missing or `undefined` properties
  */
 export function createDataSource<TType extends string>(
   rawDataSource: RawDataSource<TType>,
@@ -375,7 +376,7 @@ export type AnnotatedDataSource<TType extends string = string> =
  * Creates an {@link AnnotatedDataSource} from a {@link RawAnnotatedDataSource} by applying {@link annotatedDataSourceDefaults}
  *
  * @param rawAnnotatedDataSource - The raw annotated data source
- * @returns The complete annotated data source with default values applied
+ * @returns The complete annotated data source with the default values of missing or `undefined` properties
  */
 export function createAnnotatedDataSource<TType extends string>(
   rawAnnotatedDataSource: RawAnnotatedDataSource<TType>,

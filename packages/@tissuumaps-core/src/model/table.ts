@@ -30,7 +30,7 @@ export type Table = DataObject<TableDataSource<string>> &
  * Creates a {@link Table} from a {@link RawTable} by applying {@link tableDefaults}
  *
  * @param rawTable - The raw table
- * @returns The complete table with default values applied
+ * @returns The complete table with the default values of missing or `undefined` properties
  */
 export function createTable(rawTable: RawTable): Table {
   return {
@@ -69,7 +69,7 @@ export type TableDataSource<TType extends string = string> = DataSource<TType> &
  * Creates a {@link TableDataSource} from a {@link RawTableDataSource} by applying {@link tableDataSourceDefaults}
  *
  * @param rawTableDataSource - The raw table data source
- * @returns The complete table data source with default values applied
+ * @returns The complete table data source with the default values of missing or `undefined` properties
  */
 export function createTableDataSource<TType extends string>(
   rawTableDataSource: RawTableDataSource<TType>,

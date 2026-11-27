@@ -73,7 +73,7 @@ export type Layer = Model &
  * Creates a {@link Layer} from a {@link RawLayer} by applying {@link layerDefaults}
  *
  * @param rawLayer - The raw layer
- * @returns The complete layer with default values applied
+ * @returns The complete layer with the default values of missing or `undefined` properties
  */
 export function createLayer(rawLayer: RawLayer): Layer {
   return {

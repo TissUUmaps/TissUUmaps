@@ -112,7 +112,7 @@ export type Shapes = RenderedItemsDataObject<ShapesDataSource<string>> &
  * Creates a {@link Shapes} from a {@link RawShapes} by applying {@link shapesDefaults}
  *
  * @param rawShapes - The raw shapes
- * @returns The complete shapes with default values applied
+ * @returns The complete shapes with the default values of missing or `undefined` properties
  */
 export function createShapes(rawShapes: RawShapes): Shapes {
   return {
@@ -152,7 +152,7 @@ export type ShapesDataSource<TType extends string = string> =
  * Creates a {@link ShapesDataSource} from a {@link RawShapesDataSource} by applying {@link shapesDataSourceDefaults}
  *
  * @param rawShapesDataSource - The raw shapes data source
- * @returns The complete shapes data source with default values applied
+ * @returns The complete shapes data source with the default values of missing or `undefined` properties
  */
 export function createShapesDataSource<TType extends string>(
   rawShapesDataSource: RawShapesDataSource<TType>,
