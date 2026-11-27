@@ -133,7 +133,7 @@ function PointsAccordionItem({ points, index }: PointsAccordionItemProps) {
       )}
       {!loaded && !visible && (
         <p className="text-muted-foreground text-sm">
-          Show the points to load their annotations.
+          Show the points and their layer to load their annotations.
         </p>
       )}
     </SortableObjectListItem>

@@ -133,7 +133,7 @@ function ShapesAccordionItem({ shapes, index }: ShapesAccordionItemProps) {
       )}
       {!loaded && !visible && (
         <p className="text-muted-foreground text-sm">
-          Show the shapes to load their annotations.
+          Show the shapes and their layer to load their annotations.
         </p>
       )}
     </SortableObjectListItem>

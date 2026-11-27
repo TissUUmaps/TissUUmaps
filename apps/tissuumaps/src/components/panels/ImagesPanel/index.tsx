@@ -117,7 +117,7 @@ function ImageAccordionItem({ image, index }: ImageAccordionItemProps) {
       )}
       {!loaded && !visible && (
         <p className="text-muted-foreground text-sm">
-          Show the image to load its channels.
+          Show the image and its layer to load its channels.
         </p>
       )}
     </SortableObjectListItem>
