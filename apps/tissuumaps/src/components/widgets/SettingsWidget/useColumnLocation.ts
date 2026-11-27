@@ -18,7 +18,8 @@ export type ColumnLocation = { column: string } & (
  *
  * The location of a column is kept until the next column's resolves, so that
  * the rows do not change in between; its `column` tells whether it is stale. A
- * failed load is logged and keeps the previous location.
+ * failed load is logged and gives the column as in no section, so that the
+ * header shows it with its type.
  *
  * @param tableData - The object's own table, if loaded
  * @param column - The followed column, if any
@@ -56,6 +57,8 @@ export function useColumnLocation(
     })().catch((error: unknown) => {
       if (!signal.aborted) {
         console.error("Failed to describe the column", error);
+        // the rows cannot place the column; the header shows it by its query
+        setLoaded({ tableData, location: { column, kind: "unsectioned" } });
       }
     });
     return () => abortController.abort();
