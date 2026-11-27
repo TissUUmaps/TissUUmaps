@@ -27,7 +27,7 @@ import {
   isItemSupported,
   isSameFollowedColumn,
   readFollowedColumn,
-  startsFollowingNumerical,
+  startsFollowingNewNumerical,
   withColorColumn,
   withFromColumn,
   withMarkerColumn,
@@ -516,36 +516,57 @@ describe("getFollower", () => {
   });
 });
 
-describe("startsFollowingNumerical", () => {
+describe("startsFollowingNewNumerical", () => {
   const gene = { column: "gene", columnType: "categorical" } as const;
   const qv = { column: "qv", columnType: "numerical" } as const;
   const area = { column: "area", columnType: "numerical" } as const;
 
   it("starts when the property newly follows a numerical column", () => {
     expect(
-      startsFollowingNumerical({ color: null }, qv, ["color"], "color"),
+      startsFollowingNewNumerical({ color: null }, qv, ["color"], "color"),
     ).toBe(true);
     expect(
-      startsFollowingNumerical({ color: gene }, qv, ["color"], "color"),
+      startsFollowingNewNumerical({ color: gene }, qv, ["color"], "color"),
     ).toBe(true);
   });
 
   it("does not start when the property followed a numerical column", () => {
     expect(
-      startsFollowingNumerical({ color: area }, qv, ["color"], "color"),
+      startsFollowingNewNumerical({ color: area }, qv, ["color"], "color"),
+    ).toBe(false);
+  });
+
+  it("does not start on the same column", () => {
+    // the column type changes to numerical
+    expect(
+      startsFollowingNewNumerical(
+        { color: { column: "qv", columnType: "categorical" } },
+        qv,
+        ["color"],
+        "color",
+      ),
+    ).toBe(false);
+    // the color is toggled on while another property follows the column
+    expect(
+      startsFollowingNewNumerical<"color" | "size">(
+        { color: null, size: qv },
+        qv,
+        ["color", "size"],
+        "color",
+      ),
     ).toBe(false);
   });
 
   it("does not start without the property or a numerical column", () => {
     expect(
-      startsFollowingNumerical({ color: null }, qv, ["size"], "color"),
+      startsFollowingNewNumerical({ color: null }, qv, ["size"], "color"),
     ).toBe(false);
     expect(
-      startsFollowingNumerical({ color: null }, gene, ["color"], "color"),
+      startsFollowingNewNumerical({ color: null }, gene, ["color"], "color"),
     ).toBe(false);
-    expect(startsFollowingNumerical({ color: gene }, null, [], "color")).toBe(
-      false,
-    );
+    expect(
+      startsFollowingNewNumerical({ color: gene }, null, [], "color"),
+    ).toBe(false);
   });
 });
 

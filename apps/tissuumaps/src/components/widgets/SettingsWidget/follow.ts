@@ -183,21 +183,26 @@ export function getFollower<TName extends string>(
 
 /**
  * @param previousFollowedColumns - The column each property followed until
- * now, if any, by name
+ * now, if any, by name, in the order of the widget
  * @param followedColumn - The column the widget shows from now on, if any
  * @param propertyNames - The names of the properties that follow it
  * @param name - The name of the property
- * @returns Whether the property starts following a numerical column: it
- * follows one from now on and followed no numerical column until now
+ * @returns Whether the property starts following a newly picked numerical
+ * column: the widget shows a column other than the one until now, and the
+ * property follows it and followed no numerical column until now
  */
-export function startsFollowingNumerical<TName extends string>(
+export function startsFollowingNewNumerical<TName extends string>(
   previousFollowedColumns: Record<TName, FollowedColumn | null>,
   followedColumn: FollowedColumn | null,
   propertyNames: string[],
   name: TName,
 ): boolean {
+  const previousFollowedColumn = findFollowedColumn(
+    Object.values<FollowedColumn | null>(previousFollowedColumns),
+  );
   return (
     followedColumn?.columnType === "numerical" &&
+    followedColumn.column !== previousFollowedColumn?.column &&
     propertyNames.includes(name) &&
     previousFollowedColumns[name]?.columnType !== "numerical"
   );
