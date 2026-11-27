@@ -5,6 +5,7 @@ import {
   type RenderedItemsDataObject,
   createAnnotatedDataSource,
   createRenderedItemsDataObject,
+  omitUndefined,
 } from "./base";
 import type {
   ColorConfig,
@@ -108,13 +109,13 @@ export type Points = RenderedItemsDataObject<PointsDataSource<string>> &
  * Creates a {@link Points} from a {@link RawPoints} by applying {@link pointsDefaults}
  *
  * @param rawPoints - The raw points
- * @returns The complete points with default values applied
+ * @returns The complete points with the default values of missing or `undefined` properties
  */
 export function createPoints(rawPoints: RawPoints): Points {
   return {
     ...createRenderedItemsDataObject(rawPoints),
     ...structuredClone(pointsDefaults),
-    ...structuredClone(rawPoints),
+    ...structuredClone(omitUndefined(rawPoints)),
     dataSource: createPointsDataSource(rawPoints.dataSource),
   };
 }
@@ -148,7 +149,7 @@ export type PointsDataSource<TType extends string = string> =
  * Creates a {@link PointsDataSource} from a {@link RawPointsDataSource} by applying {@link pointsDataSourceDefaults}
  *
  * @param rawPointsDataSource - The raw points data source
- * @returns The complete points data source with default values applied
+ * @returns The complete points data source with the default values of missing or `undefined` properties
  */
 export function createPointsDataSource<TType extends string>(
   rawPointsDataSource: RawPointsDataSource<TType>,
@@ -156,6 +157,6 @@ export function createPointsDataSource<TType extends string>(
   return {
     ...createAnnotatedDataSource(rawPointsDataSource),
     ...structuredClone(pointsDataSourceDefaults),
-    ...structuredClone(rawPointsDataSource),
+    ...structuredClone(omitUndefined(rawPointsDataSource)),
   };
 }

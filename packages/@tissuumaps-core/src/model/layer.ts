@@ -1,4 +1,4 @@
-import { type Model, type RawModel, createModel } from "./base";
+import { type Model, type RawModel, createModel, omitUndefined } from "./base";
 import { identityTransform } from "./constants";
 import type { SimilarityTransform } from "./primitives";
 
@@ -73,12 +73,12 @@ export type Layer = Model &
  * Creates a {@link Layer} from a {@link RawLayer} by applying {@link layerDefaults}
  *
  * @param rawLayer - The raw layer
- * @returns The complete layer with default values applied
+ * @returns The complete layer with the default values of missing or `undefined` properties
  */
 export function createLayer(rawLayer: RawLayer): Layer {
   return {
     ...createModel(rawLayer),
     ...structuredClone(layerDefaults),
-    ...structuredClone(rawLayer),
+    ...structuredClone(omitUndefined(rawLayer)),
   };
 }

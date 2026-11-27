@@ -30,6 +30,11 @@ import { useCompressedRowVirtualizer } from "@/hooks/useCompressedRowVirtualizer
 
 import { findColumnByName } from "./findColumnByName";
 
+/**
+ * Whether the typed column is being resolved, failed to resolve, or neither
+ */
+export type TableColumnInputStatus = "idle" | "pending" | "invalid";
+
 export type TableColumnInputProps = {
   tableId: string | null;
   value: string | null;
@@ -55,6 +60,7 @@ export type TableColumnInputProps = {
   placeholder?: string;
   /** Whether the input takes the focus when it mounts */
   autoFocus?: boolean;
+  onStatusChange?: (status: TableColumnInputStatus) => void;
   className?: string;
 };
 
@@ -213,6 +219,7 @@ export function TableColumnInput({
   onNoMatch,
   placeholder,
   autoFocus,
+  onStatusChange,
   className,
 }: TableColumnInputProps) {
   const loadTableData = useLazyTableData(tableId);
@@ -358,10 +365,22 @@ export function TableColumnInput({
         if (!signal.aborted) {
           console.error("Failed to resolve column query", error);
           setPendingQuery(null);
+          setInvalid(true);
         }
       });
     return () => abortController.abort();
   }, [pendingQuery, sectionId, loadTableData]);
+
+  // reported from an effect, as a table change sets the pending query while
+  // rendering
+  const status: TableColumnInputStatus =
+    pendingQuery !== null ? "pending" : invalid ? "invalid" : "idle";
+  const reportStatus = useEffectEvent((newStatus: TableColumnInputStatus) =>
+    onStatusChange?.(newStatus),
+  );
+  useEffect(() => {
+    reportStatus(status);
+  }, [status]);
 
   function commit(newQuery: string) {
     if (newQuery === valueText && !invalid) {
@@ -393,9 +412,13 @@ export function TableColumnInput({
     newText: string,
     details: AutocompletePrimitive.Root.ChangeEventDetails,
   ) {
-    // base-ui clears the input on Escape when the popup is closed
+    // base-ui clears the input on Escape when the popup is closed; Escape
+    // restores the current column instead
     if (details.reason === "escape-key") {
       details.cancel();
+      setPendingQuery(null);
+      setText(valueText);
+      setInvalid(false);
       return;
     }
     setPendingQuery(null);
