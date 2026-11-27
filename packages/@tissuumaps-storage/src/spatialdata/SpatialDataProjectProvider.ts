@@ -184,26 +184,22 @@ export class SpatialDataProjectProvider implements ProjectProvider {
       );
     const { pointTables, points } =
       await SpatialDataProjectProvider._readPoints(store, source, { signal });
+    // in this order, so that a layer shows its first image if any; the order
+    // also sets the order of the layers
+    const placements = [...images, ...labels, ...shapes, ...circles, ...points];
     const layers = SpatialDataProjectProvider._createLayers(
-      [...images, ...labels, ...shapes, ...circles, ...points].map(
-        ({ coordinateSystem }) => coordinateSystem,
-      ),
+      placements.map(({ coordinateSystem }) => coordinateSystem),
     );
     const layerIDs = new Map(layers.map(({ id, name }) => [name, id]));
     // show one object per layer, as a store can hold too many to show at once
-    const shownLayerIDs = new Set<string>();
-    const placeObject = <T>({
-      coordinateSystem,
-      object,
-    }: {
-      coordinateSystem: string;
-      object: T;
-    }) => {
-      const layer = layerIDs.get(coordinateSystem)!;
-      const visibility = !shownLayerIDs.has(layer);
-      shownLayerIDs.add(layer);
-      return { ...object, layer, visibility };
-    };
+    const shownObjects = new Set(
+      [
+        ...Map.groupBy(
+          placements,
+          ({ coordinateSystem }) => coordinateSystem,
+        ).values(),
+      ].map(([placement]) => placement!.object),
+    );
     const project: RawProject = {
       name:
         source === "/"
@@ -211,11 +207,26 @@ export class SpatialDataProjectProvider implements ProjectProvider {
           : // a store served at an origin root has no stem
             SourceUtils.getStem(source) || new URL(source).host,
       layers,
-      // placed in this order, so that a layer shows its first image if any
-      images: images.map(placeObject),
-      labels: labels.map(placeObject),
-      shapes: shapes.map(placeObject),
-      points: [...circles, ...points].map(placeObject),
+      images: images.map(({ coordinateSystem, object }) => ({
+        ...object,
+        layer: layerIDs.get(coordinateSystem)!,
+        visibility: shownObjects.has(object),
+      })),
+      labels: labels.map(({ coordinateSystem, object }) => ({
+        ...object,
+        layer: layerIDs.get(coordinateSystem)!,
+        visibility: shownObjects.has(object),
+      })),
+      shapes: shapes.map(({ coordinateSystem, object }) => ({
+        ...object,
+        layer: layerIDs.get(coordinateSystem)!,
+        visibility: shownObjects.has(object),
+      })),
+      points: [...circles, ...points].map(({ coordinateSystem, object }) => ({
+        ...object,
+        layer: layerIDs.get(coordinateSystem)!,
+        visibility: shownObjects.has(object),
+      })),
       tables: [...tables, ...circleTables, ...pointTables],
     };
     return { project, source };

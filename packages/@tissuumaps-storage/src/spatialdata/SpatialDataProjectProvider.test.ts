@@ -443,6 +443,39 @@ describe("SpatialDataProjectProvider", () => {
       ]);
     });
 
+    it("shows polygons before circles, and circles before points", async () => {
+      stubStore({
+        "shapes/polygons": vectorAttrs("shapes", [
+          transformation("first", ["x", "y"]),
+        ]),
+        "shapes/circles": vectorAttrs("shapes", [
+          transformation("first", ["x", "y"]),
+          transformation("second", ["x", "y"]),
+        ]),
+        "points/transcripts": vectorAttrs("points", [
+          transformation("first", ["x", "y"]),
+          transformation("second", ["x", "y"]),
+          transformation("third", ["x", "y"]),
+        ]),
+      });
+      const { project } = await provider.load(storeUrl);
+      const layerIDs = new Map(
+        project.layers!.map(({ id, name }) => [name, id]),
+      );
+      expect(
+        [...project.shapes!, ...project.points!].map(
+          ({ name, layer, visibility }) => [name, layer, visibility],
+        ),
+      ).toEqual([
+        ["polygons", layerIDs.get("first"), true],
+        ["circles", layerIDs.get("first"), false],
+        ["circles", layerIDs.get("second"), true],
+        ["transcripts", layerIDs.get("first"), false],
+        ["transcripts", layerIDs.get("second"), false],
+        ["transcripts", layerIDs.get("third"), true],
+      ]);
+    });
+
     it("skips an element whose metadata marks another kind, with a warning", async () => {
       const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
       stubStore({
